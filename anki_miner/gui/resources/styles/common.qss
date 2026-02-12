@@ -1,0 +1,559 @@
+/*
+ * Common Base Styles for Anki Miner
+ * Shared styles that apply across all themes
+ *
+ * Variables from _variables.py are substituted at load time:
+ * - ${font-size-*}: h1, h2, h3, body, body-sm, caption, small, stat-value, icon-large
+ * - ${spacing-*}: xxs, xs, sm, md, lg, xl, xxl
+ * - ${border-radius-*}: small, default, large, pill
+ */
+
+/* ============== BASE WIDGET STYLES ============== */
+
+QWidget {
+    font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: ${font-size-body}px;
+    font-weight: 400;
+}
+
+QMainWindow {
+    font-size: ${font-size-body}px;
+}
+
+/* ============== TYPOGRAPHY HELPERS ============== */
+
+QLabel#heading1 {
+    font-size: ${font-size-h1}px;
+    font-weight: 700;
+}
+
+QLabel#heading2 {
+    font-size: ${font-size-h2}px;
+    font-weight: 600;
+}
+
+QLabel#heading3 {
+    font-size: ${font-size-h3}px;
+    font-weight: 600;
+}
+
+QLabel#caption {
+    font-size: ${font-size-caption}px;
+    padding: 2px ${spacing-xs}px;
+    border-radius: ${border-radius-small}px;
+}
+
+QLabel#small {
+    font-size: ${font-size-small}px;
+}
+
+QLabel#field-label {
+    padding: 2px ${spacing-xs}px;
+    border-radius: ${border-radius-small}px;
+}
+
+/* Japanese text support */
+*[japanese="true"] {
+    font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', sans-serif;
+    line-height: 1.75;
+}
+
+/* ============== BUTTON BASE STYLES ============== */
+
+QPushButton {
+    min-height: 28px;
+    padding: ${spacing-xxs}px ${spacing-sm}px;
+    border-radius: ${border-radius-default}px;
+    font-weight: 500;
+    border: none;
+}
+
+QPushButton:disabled {
+    opacity: 0.5;
+}
+
+QPushButton:focus {
+    outline: none;
+}
+
+/* Button variants */
+QPushButton#primary {
+    font-weight: 600;
+}
+
+QPushButton#secondary {
+    border: 1px solid;
+}
+
+QPushButton#ghost {
+    background: transparent;
+}
+
+QPushButton#danger {
+    font-weight: 600;
+}
+
+/* Icon buttons */
+QPushButton#iconButton {
+    min-width: ${spacing-xl}px;
+    min-height: ${spacing-xl}px;
+    max-width: ${spacing-xl}px;
+    max-height: ${spacing-xl}px;
+    padding: ${spacing-xxs}px;
+    border-radius: ${border-radius-default}px;
+}
+
+/* ============== INPUT FIELD STYLES ============== */
+
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+    min-height: 28px;
+    padding: ${spacing-xxs}px 10px;
+    border-radius: ${border-radius-default}px;
+    border: 1px solid;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+    border-width: 2px;
+}
+
+QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled, QComboBox:disabled {
+    opacity: 0.5;
+}
+
+/* Placeholder text */
+QLineEdit::placeholder {
+    font-style: italic;
+}
+
+/* Spin box buttons */
+QSpinBox::up-button, QDoubleSpinBox::up-button,
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    width: ${spacing-md}px;
+    border: none;
+}
+
+/* ============== GROUP BOX STYLES ============== */
+
+QGroupBox {
+    font-size: ${font-size-h3}px;
+    font-weight: 600;
+    border-radius: ${border-radius-large}px;
+    border: 1px solid;
+    margin-top: ${spacing-sm}px;
+    padding-top: ${spacing-md}px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 ${spacing-xs}px;
+    left: ${spacing-sm}px;
+}
+
+/* ============== TAB WIDGET STYLES ============== */
+
+QTabWidget::pane {
+    border: none;
+    top: -1px;
+}
+
+QTabBar::tab {
+    min-height: ${spacing-xl}px;
+    padding: ${spacing-xs}px ${spacing-md}px;
+    font-size: ${font-size-body}px;
+    font-weight: 500;
+    border: none;
+}
+
+QTabBar::tab:selected {
+    font-weight: 600;
+}
+
+/* ============== TEXT EDIT / LOG STYLES ============== */
+
+QTextEdit {
+    border-radius: ${border-radius-default}px;
+    border: 1px solid;
+    padding: ${spacing-sm}px;
+    font-family: 'JetBrains Mono', 'Consolas', 'SF Mono', monospace;
+    font-size: ${font-size-body-sm}px;
+    line-height: 1.5;
+}
+
+QTextEdit#log-widget {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+}
+
+/* ============== PROGRESS BAR STYLES ============== */
+
+QProgressBar {
+    height: ${spacing-xs}px;
+    border-radius: ${border-radius-small}px;
+    text-align: center;
+    border: none;
+}
+
+QProgressBar::chunk {
+    border-radius: ${border-radius-small}px;
+}
+
+/* ============== TABLE WIDGET STYLES ============== */
+
+QTableWidget {
+    border: 1px solid;
+    border-radius: ${border-radius-default}px;
+    gridline-color: transparent;
+    selection-background-color: transparent;
+}
+
+QTableWidget::item {
+    padding: ${spacing-xs}px;
+    border: none;
+}
+
+QTableWidget::item:selected {
+    border: none;
+}
+
+QHeaderView::section {
+    padding: 10px;
+    font-weight: 600;
+    border: none;
+    border-bottom: 1px solid;
+}
+
+QHeaderView::section:horizontal {
+    border-right: 1px solid;
+}
+
+QHeaderView::section:horizontal:last {
+    border-right: none;
+}
+
+/* ============== SCROLL BAR STYLES ============== */
+
+QScrollBar:vertical {
+    width: ${spacing-sm}px;
+    border: none;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    min-height: 30px;
+    border-radius: ${border-radius-default}px;
+    margin: 2px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+    border: none;
+}
+
+QScrollBar:horizontal {
+    height: ${spacing-sm}px;
+    border: none;
+    margin: 0;
+}
+
+QScrollBar::handle:horizontal {
+    min-width: 30px;
+    border-radius: ${border-radius-default}px;
+    margin: 2px;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0;
+    border: none;
+}
+
+/* ============== DIALOG STYLES ============== */
+
+QDialog {
+    border-radius: ${border-radius-large}px;
+}
+
+QMessageBox {
+    font-size: ${font-size-body}px;
+}
+
+QMessageBox QPushButton {
+    min-width: 80px;
+}
+
+/* ============== STATUS BAR STYLES ============== */
+
+QStatusBar {
+    font-size: ${font-size-small}px;
+    border-top: 1px solid;
+}
+
+QStatusBar::item {
+    border: none;
+}
+
+/* ============== TOOLTIP STYLES ============== */
+
+QToolTip {
+    padding: ${spacing-xxs}px 10px;
+    border-radius: ${border-radius-default}px;
+    font-size: ${font-size-caption}px;
+    border: 1px solid;
+}
+
+/* ============== MENU STYLES ============== */
+
+QMenu {
+    border: 1px solid;
+    border-radius: ${border-radius-default}px;
+    padding: ${spacing-xxs}px;
+}
+
+QMenu::item {
+    padding: ${spacing-xs}px ${spacing-lg}px ${spacing-xs}px ${spacing-sm}px;
+    border-radius: ${border-radius-small}px;
+}
+
+QMenu::separator {
+    height: 1px;
+    margin: ${spacing-xxs}px ${spacing-xs}px;
+}
+
+/* ============== COMBO BOX STYLES ============== */
+
+QComboBox::drop-down {
+    border: none;
+    width: ${spacing-md}px;
+}
+
+QComboBox::down-arrow {
+    width: ${spacing-sm}px;
+    height: ${spacing-sm}px;
+}
+
+QComboBox QAbstractItemView {
+    border: 1px solid;
+    border-radius: ${border-radius-default}px;
+    selection-background-color: transparent;
+    padding: ${spacing-xxs}px;
+}
+
+QComboBox QAbstractItemView::item {
+    min-height: ${spacing-xl}px;
+    padding: ${spacing-xxs}px ${spacing-sm}px;
+    border-radius: ${border-radius-small}px;
+}
+
+/* ============== CHECK BOX STYLES ============== */
+
+QCheckBox {
+    spacing: ${spacing-xs}px;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: ${border-radius-small}px;
+    border: 2px solid;
+}
+
+/* ============== RADIO BUTTON STYLES ============== */
+
+QRadioButton {
+    spacing: ${spacing-xs}px;
+}
+
+QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    border: 2px solid;
+}
+
+/* ============== FRAME STYLES ============== */
+
+QFrame#card {
+    border: 1px solid;
+    border-radius: ${border-radius-large}px;
+    padding: 0;
+}
+
+QFrame#divider {
+    max-height: 1px;
+    border: none;
+}
+
+/* ============== CUSTOM WIDGET HELPERS ============== */
+
+/* Log widget header */
+QWidget#log-header {
+    border-top-left-radius: ${border-radius-default}px;
+    border-top-right-radius: ${border-radius-default}px;
+    padding: ${spacing-xs}px ${spacing-sm}px;
+}
+
+/* Progress stats */
+QLabel#progress-stats {
+    font-size: ${font-size-body-sm}px;
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+}
+
+/* Status badge */
+QLabel#status-badge {
+    padding: ${spacing-xxs}px ${spacing-sm}px;
+    border-radius: 10px;
+    font-size: ${font-size-caption}px;
+    font-weight: 600;
+}
+
+/* Section header */
+QLabel#section-header {
+    font-size: ${font-size-h3}px;
+    font-weight: 600;
+    padding: ${spacing-xs}px 0;
+}
+
+/* Stat card */
+QFrame#stat-card {
+    border: 1px solid;
+    border-radius: ${border-radius-large}px;
+    padding: ${spacing-md}px;
+}
+
+QLabel#stat-value {
+    font-size: ${font-size-stat-value}px;
+    font-weight: 700;
+}
+
+QLabel#stat-label {
+    font-size: ${font-size-caption}px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Validation badge */
+QLabel#validation-badge {
+    padding: ${spacing-xxs}px ${spacing-sm}px;
+    border-radius: 10px;
+    font-size: ${font-size-caption}px;
+    font-weight: 500;
+}
+
+/* Status bar styles */
+QWidget#status-bar {
+    font-size: ${font-size-body-sm}px;
+}
+
+QLabel#status-operation {
+    font-size: ${font-size-body-sm}px;
+    font-weight: 500;
+}
+
+QLabel#status-stats {
+    font-size: ${font-size-caption}px;
+}
+
+QLabel#status-indicator {
+    padding: ${spacing-xxs}px ${spacing-xs}px;
+    border-radius: 10px;
+    font-size: ${font-size-caption}px;
+    font-weight: 500;
+}
+
+QFrame#status-separator {
+    max-width: 1px;
+}
+
+/* Queue item card */
+QFrame#queue-item-card {
+    border: 1px solid;
+    border-radius: ${border-radius-large}px;
+    padding: 0;
+    margin: ${spacing-xxs}px 0;
+}
+
+QFrame#queue-item-card:hover {
+    border-width: 2px;
+}
+
+QLabel#queue-item-title {
+    font-size: ${font-size-h3}px;
+    font-weight: 700;
+}
+
+QLabel#queue-item-path {
+    font-size: ${font-size-caption}px;
+    padding: 2px ${spacing-xxs}px;
+    border-radius: ${border-radius-small}px;
+}
+
+QLabel#queue-item-stats {
+    font-size: ${font-size-caption}px;
+    font-weight: 500;
+    padding: 2px ${spacing-xxs}px;
+    border-radius: ${border-radius-small}px;
+}
+
+/* Queue stats label - summary statistics */
+QLabel#queue-stats {
+    font-size: ${font-size-body-sm}px;
+    font-weight: 500;
+    padding: ${spacing-xxs}px 10px;
+    border-radius: ${border-radius-default}px;
+}
+
+QLabel#queue-status-badge {
+    padding: ${spacing-xxs}px 10px;
+    border-radius: 10px;
+    font-size: ${font-size-small}px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+QProgressBar#queue-progress {
+    border: none;
+    border-radius: 2px;
+}
+
+/* ============== SETTINGS TAB STYLES ============== */
+
+/* Validation status labels */
+QLabel#validation-status {
+    font-size: ${font-size-caption}px;
+    font-weight: 500;
+    padding: ${spacing-xxs}px 0;
+}
+
+/* Helper/hint text */
+QLabel#helper-text {
+    font-size: ${font-size-small}px;
+    opacity: 0.7;
+    font-style: italic;
+    padding: 2px ${spacing-xs}px;
+    border-radius: ${border-radius-small}px;
+    margin-top: ${spacing-xxs}px;
+}
+
+/* Settings tabs */
+QTabWidget#settings-tabs::pane {
+    border: none;
+    padding: 0;
+}
+
+QTabWidget#settings-tabs QTabBar::tab {
+    padding: ${spacing-sm}px ${spacing-lg}px;
+    margin-right: ${spacing-xxs}px;
+    border-radius: ${border-radius-large}px ${border-radius-large}px 0 0;
+    font-weight: 500;
+    font-size: ${font-size-body}px;
+}
+
+QTabWidget#settings-tabs QTabBar::tab:selected {
+    font-weight: 600;
+}
+
+QTabWidget#settings-tabs QTabBar::tab:hover {
+    font-weight: 600;
+}

@@ -1,0 +1,73 @@
+"""Configuration classes for Anki Miner."""
+
+import tempfile
+from dataclasses import dataclass, field
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class AnkiMinerConfig:
+    """Immutable configuration for anki mining operations.
+
+    All configuration is frozen (immutable) to ensure thread-safety
+    and prevent accidental modifications during processing.
+    """
+
+    # Anki settings
+    anki_deck_name: str = "Anki Miner"
+    anki_note_type: str = "Lapis"
+    anki_word_field: str = "Expression"
+    anki_fields: dict[str, str] = field(
+        default_factory=lambda: {
+            "word": "Expression",
+            "sentence": "Sentence",
+            "definition": "MainDefinition",
+            "picture": "Picture",
+            "audio": "SentenceAudio",
+            "expression_furigana": "ExpressionFurigana",
+            "sentence_furigana": "SentenceFurigana",
+        }
+    )
+    ankiconnect_url: str = "http://127.0.0.1:8765"
+
+    # Media extraction settings
+    audio_padding: float = 0.3  # Seconds to add before/after subtitle timing
+    screenshot_offset: float = 1.0  # Seconds after subtitle start for screenshot
+    media_temp_folder: Path = field(
+        default_factory=lambda: Path(tempfile.gettempdir()) / "anki_miner_temp"
+    )
+    subtitle_offset: float = 0.0  # Seconds to shift subtitles (+ later, - earlier)
+
+    # Word filtering settings
+    min_word_length: int = 2
+    allowed_pos: list[str] = field(
+        default_factory=lambda: ["名詞", "動詞", "形容詞", "副詞", "形状詞"]
+    )
+    excluded_subtypes: list[str] = field(
+        default_factory=lambda: [
+            "非自立",
+            "代名詞",
+            "数詞",
+            "接尾",
+            "助動詞",
+            "接頭",
+            "固有名詞",
+        ]
+    )
+
+    # Dictionary settings
+    jmdict_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "JMdict_e")
+    use_offline_dict: bool = True
+    jisho_api_url: str = "https://jisho.org/api/v1/search/words"
+    jisho_delay: float = 0.5  # Seconds between API calls
+
+    # Performance settings
+    max_parallel_workers: int = 6  # Number of parallel ffmpeg processes
+
+    def __post_init__(self):
+        """Convert string paths to Path objects if needed."""
+        # Convert paths to Path objects (handles both str and Path inputs)
+        if isinstance(self.media_temp_folder, str):
+            object.__setattr__(self, "media_temp_folder", Path(self.media_temp_folder))
+        if isinstance(self.jmdict_path, str):
+            object.__setattr__(self, "jmdict_path", Path(self.jmdict_path))
