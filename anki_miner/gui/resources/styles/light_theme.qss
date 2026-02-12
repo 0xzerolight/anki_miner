@@ -1,0 +1,540 @@
+/*
+ * Light Theme for Anki Miner
+ * Modern minimalist design with clean typography and subtle shadows
+ */
+
+/* ============== BASE COLORS ============== */
+
+QWidget {
+    color: #111827;
+    background-color: #F9FAFB;
+}
+
+QMainWindow {
+    background-color: #F9FAFB;
+}
+
+/* ============== BUTTONS ============== */
+
+QPushButton {
+    background-color: #6366F1;
+    color: #FFFFFF;
+}
+
+QPushButton:hover {
+    background-color: #4F46E5;
+}
+
+QPushButton:pressed {
+    background-color: #4338CA;
+}
+
+QPushButton:disabled {
+    background-color: #9CA3AF;
+    color: #FFFFFF;
+}
+
+QPushButton#secondary {
+    background-color: transparent;
+    color: #6366F1;
+    border-color: #6366F1;
+}
+
+QPushButton#secondary:hover {
+    background-color: #EEF2FF;
+    border-color: #4F46E5;
+}
+
+QPushButton#ghost {
+    color: #111827;
+}
+
+QPushButton#ghost:hover {
+    background-color: #F3F4F6;
+}
+
+QPushButton#danger {
+    background-color: #EF4444;
+    color: #FFFFFF;
+}
+
+QPushButton#danger:hover {
+    background-color: #DC2626;
+}
+
+/* ============== INPUT FIELDS ============== */
+
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+    background-color: #FFFFFF;
+    color: #111827;
+    border-color: #E5E7EB;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+    border-color: #6366F1;
+    background-color: #FFFFFF;
+}
+
+QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled, QComboBox:disabled {
+    background-color: #F3F4F6;
+    color: #9CA3AF;
+}
+
+QLineEdit::placeholder {
+    color: #6B7280;
+}
+
+/* ============== GROUP BOXES ============== */
+
+QGroupBox {
+    color: #111827;
+    background-color: #FFFFFF;
+    border-color: #E5E7EB;
+}
+
+QGroupBox::title {
+    color: #111827;
+}
+
+/* ============== TABS ============== */
+
+QTabWidget::pane {
+    background-color: transparent;
+    border: none;
+}
+
+QTabBar::tab {
+    color: #6B7280;
+    background-color: transparent;
+}
+
+QTabBar::tab:hover {
+    color: #111827;
+    background-color: #F3F4F6;
+}
+
+QTabBar::tab:selected {
+    color: #6366F1;
+    background-color: transparent;
+    border-bottom: 3px solid #6366F1;
+}
+
+/* ============== TEXT EDIT / LOG ============== */
+
+QTextEdit {
+    background-color: #FFFFFF;
+    color: #111827;
+    border-color: #E5E7EB;
+}
+
+QTextEdit#log-widget {
+    background-color: #FFFFFF;
+}
+
+/* ============== PROGRESS BAR ============== */
+
+QProgressBar {
+    background-color: #E5E7EB;
+    color: #111827;
+}
+
+QProgressBar::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #6366F1, stop:1 #8B5CF6);
+}
+
+/* ============== TABLES ============== */
+
+QTableWidget {
+    background-color: #FFFFFF;
+    color: #111827;
+    border-color: #E5E7EB;
+}
+
+QTableWidget::item:hover {
+    background-color: #F3F4F6;
+}
+
+QTableWidget::item:selected {
+    background-color: #EEF2FF;
+    color: #4F46E5;
+}
+
+QHeaderView::section {
+    background-color: #F9FAFB;
+    color: #111827;
+    border-color: #E5E7EB;
+}
+
+/* ============== SCROLL BARS ============== */
+
+QScrollBar:vertical, QScrollBar:horizontal {
+    background-color: transparent;
+}
+
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+    background-color: #D1D5DB;
+}
+
+QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
+    background-color: #9CA3AF;
+}
+
+/* ============== STATUS BAR ============== */
+
+QStatusBar {
+    background-color: #FFFFFF;
+    color: #6B7280;
+    border-color: #E5E7EB;
+}
+
+/* ============== TOOLTIPS ============== */
+
+QToolTip {
+    background-color: #1F2937;
+    color: #F3F4F6;
+    border-color: #374151;
+}
+
+/* ============== MENUS ============== */
+
+QMenu {
+    background-color: #FFFFFF;
+    color: #111827;
+    border-color: #E5E7EB;
+}
+
+QMenu::item:selected {
+    background-color: #F3F4F6;
+    color: #111827;
+}
+
+QMenu::separator {
+    background-color: #E5E7EB;
+}
+
+/* ============== COMBO BOX ============== */
+
+QComboBox QAbstractItemView {
+    background-color: #FFFFFF;
+    color: #111827;
+    border-color: #E5E7EB;
+}
+
+QComboBox QAbstractItemView::item:hover {
+    background-color: #F3F4F6;
+}
+
+QComboBox QAbstractItemView::item:selected {
+    background-color: #EEF2FF;
+    color: #4F46E5;
+}
+
+/* ============== CHECK BOXES & RADIO BUTTONS ============== */
+
+QCheckBox, QRadioButton {
+    color: #111827;
+}
+
+QCheckBox::indicator, QRadioButton::indicator {
+    background-color: #FFFFFF;
+    border-color: #D1D5DB;
+}
+
+QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+    border-color: #6366F1;
+}
+
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+    background-color: #6366F1;
+    border-color: #6366F1;
+}
+
+/* ============== DIALOGS ============== */
+
+QDialog {
+    background-color: #FFFFFF;
+    color: #111827;
+}
+
+QMessageBox {
+    background-color: #FFFFFF;
+}
+
+/* ============== CUSTOM WIDGETS ============== */
+
+/* Log header */
+QWidget#log-header {
+    background-color: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+/* Status badges */
+QLabel#status-badge[status="success"] {
+    background-color: #D1FAE5;
+    color: #065F46;
+}
+
+QLabel#status-badge[status="warning"] {
+    background-color: #FEF3C7;
+    color: #92400E;
+}
+
+QLabel#status-badge[status="error"] {
+    background-color: #FEE2E2;
+    color: #991B1B;
+}
+
+QLabel#status-badge[status="info"] {
+    background-color: #DBEAFE;
+    color: #1E40AF;
+}
+
+QLabel#status-badge[status="pending"] {
+    background-color: #F3F4F6;
+    color: #6B7280;
+}
+
+/* Stat cards */
+QFrame#stat-card {
+    background-color: #FFFFFF;
+    border-color: #E5E7EB;
+}
+
+QLabel#stat-value {
+    color: #6366F1;
+}
+
+QLabel#stat-label {
+    color: #6B7280;
+}
+
+/* Section headers */
+QLabel#section-header {
+    color: #111827;
+}
+
+/* Frames and cards */
+QFrame#card {
+    background-color: #FFFFFF;
+    border-color: #E5E7EB;
+}
+
+QFrame#divider {
+    background-color: #E5E7EB;
+}
+
+/* Progress stats */
+QLabel#progress-stats {
+    color: #6B7280;
+}
+
+/* ============== SPECIAL STATES ============== */
+
+/* Error state for inputs */
+QLineEdit[error="true"] {
+    border-color: #EF4444;
+    border-width: 2px;
+}
+
+/* Success state for inputs */
+QLineEdit[success="true"] {
+    border-color: #10B981;
+    border-width: 2px;
+}
+
+/* Warning state for inputs */
+QLineEdit[warning="true"] {
+    border-color: #F59E0B;
+    border-width: 2px;
+}
+
+/* ============== VALIDATION BADGES ============== */
+
+QLabel#validation-badge {
+    border: 1px solid #E5E7EB;
+}
+
+QLabel#validation-badge[status="checking"] {
+    background-color: #F3F4F6;
+    color: #6B7280;
+    border-color: #D1D5DB;
+}
+
+QLabel#validation-badge[status="success"] {
+    background-color: #D1FAE5;
+    color: #065F46;
+    border-color: #10B981;
+}
+
+QLabel#validation-badge[status="error"] {
+    background-color: #FEE2E2;
+    color: #991B1B;
+    border-color: #EF4444;
+}
+
+QLabel#validation-badge[status="warning"] {
+    background-color: #FEF3C7;
+    color: #92400E;
+    border-color: #F59E0B;
+}
+
+/* ============== STATUS BAR ============== */
+
+QWidget#status-bar {
+    background-color: #FFFFFF;
+    border-top: 1px solid #E5E7EB;
+}
+
+QLabel#status-operation[level="info"] {
+    color: #3B82F6;
+}
+
+QLabel#status-operation[level="success"] {
+    color: #10B981;
+}
+
+QLabel#status-operation[level="warning"] {
+    color: #F59E0B;
+}
+
+QLabel#status-operation[level="error"] {
+    color: #EF4444;
+}
+
+QLabel#status-stats {
+    color: #6B7280;
+}
+
+QLabel#status-indicator[status="success"] {
+    background-color: #D1FAE5;
+    color: #065F46;
+}
+
+QLabel#status-indicator[status="error"] {
+    background-color: #FEE2E2;
+    color: #991B1B;
+}
+
+QFrame#status-separator {
+    background-color: #E5E7EB;
+}
+
+/* ============== QUEUE ITEM CARD ============== */
+
+QFrame#queue-item-card {
+    background-color: #FFFFFF;
+    border-color: #E5E7EB;
+}
+
+QFrame#queue-item-card:hover {
+    border-color: #6366F1;
+    background-color: #F9FAFB;
+}
+
+QLabel#queue-item-title {
+    color: #111827;
+}
+
+QLabel#queue-item-path {
+    color: #6B7280;
+}
+
+QLabel#queue-item-stats {
+    color: #6366F1;
+}
+
+/* Queue stats label background */
+QLabel#queue-stats {
+    background-color: #EEF2FF;
+    color: #4F46E5;
+}
+
+QLabel#queue-status-badge[status="pending"] {
+    background-color: #F3F4F6;
+    color: #6B7280;
+}
+
+QLabel#queue-status-badge[status="processing"] {
+    background-color: #DBEAFE;
+    color: #1E40AF;
+}
+
+QLabel#queue-status-badge[status="complete"] {
+    background-color: #D1FAE5;
+    color: #065F46;
+}
+
+QProgressBar#queue-progress {
+    background-color: #E5E7EB;
+}
+
+QProgressBar#queue-progress::chunk {
+    background-color: #6366F1;
+}
+
+/* ============== SETTINGS TAB THEME COLORS ============== */
+
+/* Status badge - default/unknown */
+QLabel#status-badge {
+    background-color: #F3F4F6;
+    color: #6B7280;
+    border-color: #D1D5DB;
+}
+
+/* Status badge - connected/success */
+QLabel#status-badge[status="success"] {
+    background-color: #D1FAE5;
+    color: #065F46;
+    border-color: #10B981;
+}
+
+/* Status badge - disconnected/error */
+QLabel#status-badge[status="error"] {
+    background-color: #FEE2E2;
+    color: #991B1B;
+    border-color: #EF4444;
+}
+
+/* Status badge - checking */
+QLabel#status-badge[status="checking"] {
+    background-color: #DBEAFE;
+    color: #1E40AF;
+    border-color: #3B82F6;
+}
+
+/* Validation status labels */
+QLabel#validation-status[status="success"] {
+    color: #10B981;
+}
+
+QLabel#validation-status[status="error"] {
+    color: #EF4444;
+}
+
+QLabel#validation-status[status="checking"] {
+    color: #3B82F6;
+}
+
+/* Helper text */
+QLabel#helper-text {
+    color: #6B7280;
+}
+
+/* Settings tabs */
+QTabWidget#settings-tabs QTabBar::tab {
+    background-color: transparent;
+    color: #6B7280;
+    border-bottom: 2px solid transparent;
+}
+
+QTabWidget#settings-tabs QTabBar::tab:selected {
+    background-color: #F9FAFB;
+    color: #111827;
+    border-bottom: 2px solid #6366F1;
+}
+
+QTabWidget#settings-tabs QTabBar::tab:hover {
+    background-color: #F3F4F6;
+    color: #111827;
+}

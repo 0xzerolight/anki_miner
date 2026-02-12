@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<JMdict>
+<entry>
+<k_ele><keb>食べる</keb></k_ele>
+<r_ele><reb>たべる</reb></r_ele>
+<sense>
+<gloss>to eat</gloss>
+</sense>
+<sense>
+<gloss>to live on (e.g. a salary)</gloss>
+<gloss>to live off</gloss>
+</sense>
+</entry>
+<entry>
+<k_ele><keb>学生</keb></k_ele>
+<r_ele><reb>がくせい</reb></r_ele>
+<sense>
+<gloss>student (esp. a university student)</gloss>
+</sense>
+</entry>
+<entry>
+<k_ele><keb>走る</keb></k_ele>
+<r_ele><reb>はしる</reb></r_ele>
+<sense>
+<gloss>to run</gloss>
+</sense>
+<sense>
+<gloss>to travel (movement of vehicles)</gloss>
+<gloss>to drive</gloss>
+</sense>
+<sense>
+<gloss>to hurry to</gloss>
+</sense>
+</entry>
+</JMdict>
