@@ -7,10 +7,10 @@ Automated Japanese vocabulary mining from anime subtitles. Extracts unknown word
 
 ## Showcase
 
-### App Workflow
+### App Showcase
 ![Anki Miner Showcase](gifs/anki_miner_showcase.gif)
 
-### Cards Created
+### Cards Created with Anki Miner
 | | | |
 |---|---|---|
 | ![Cowboy Bebop](gifs/cowboy_bebop.gif) | ![Frieren](gifs/frieren.gif) | ![Steins;Gate](gifs/steins;gate.gif) |
