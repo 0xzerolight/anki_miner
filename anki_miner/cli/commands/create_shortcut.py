@@ -14,8 +14,16 @@ APP_ID = "anki-miner"
 APP_COMMENT = "Japanese vocabulary mining from anime subtitles"
 ICON_FILENAME = "anki_miner.svg"
 
+
+def _get_icon_source() -> Path:
+    """Get the icon source directory, accounting for PyInstaller bundles."""
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS) / "anki_miner" / "gui" / "resources" / "icons"
+    return Path(__file__).resolve().parent.parent.parent / "gui" / "resources" / "icons"
+
+
 # Resolve the icon path relative to the installed package
-ICON_SOURCE = Path(__file__).resolve().parent.parent.parent / "gui" / "resources" / "icons"
+ICON_SOURCE = _get_icon_source()
 
 
 def _find_executable() -> Path | None:

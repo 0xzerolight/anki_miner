@@ -1,0 +1,83 @@
+name: Build Executables
+
+on:
+  push:
+    tags:
+      - "v*"
+  # Uncomment to enable manual triggering for testing:
+  # workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact_name: AnkiMiner-Linux-x86_64
+          - os: windows-latest
+            artifact_name: AnkiMiner-Windows-x86_64
+          - os: macos-latest
+            artifact_name: AnkiMiner-macOS-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxcb-xinerama0 libxkbcommon-x11-0 libegl1
+
+      - name: Install dependencies
+        run: |
+          pip install .
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: pyinstaller anki_miner.spec
+
+      - name: Create archive (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          cd dist
+          tar -czf ${{ matrix.artifact_name }}.tar.gz AnkiMiner/
+
+      - name: Create archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\AnkiMiner\* -DestinationPath dist\${{ matrix.artifact_name }}.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            dist/${{ matrix.artifact_name }}.tar.gz
+            dist/${{ matrix.artifact_name }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/**/*.tar.gz
+            artifacts/**/*.zip

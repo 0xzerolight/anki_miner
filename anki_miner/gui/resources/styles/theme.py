@@ -12,6 +12,8 @@ from typing import Literal
 
 from PyQt6.QtCore import QSettings
 
+from anki_miner.gui.resources import get_resource_dir
+
 from ._variables import get_variable_dict
 
 ThemeMode = Literal["light", "dark", "sakura"]
@@ -282,7 +284,7 @@ class Theme:
             mode = cls.get_current_mode()
 
         # Get the styles directory path
-        styles_dir = Path(__file__).parent
+        styles_dir = get_resource_dir() / "styles"
 
         # Load common styles
         common_qss = cls._load_qss_file(styles_dir / "common.qss")
