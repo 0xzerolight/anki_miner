@@ -23,11 +23,14 @@ else:
         project_root, "anki_miner", "gui", "resources", "icons", "anki_miner.svg"
     )
 
-# Fall back to SVG if platform-specific icon doesn't exist
+# Fall back to SVG on Linux; skip icon on Windows/macOS if native format not found
 if not os.path.exists(icon_file):
-    icon_file = os.path.join(
-        project_root, "anki_miner", "gui", "resources", "icons", "anki_miner.svg"
-    )
+    if platform.system() == "Linux":
+        icon_file = os.path.join(
+            project_root, "anki_miner", "gui", "resources", "icons", "anki_miner.svg"
+        )
+    else:
+        icon_file = None
 
 a = Analysis(
     [os.path.join(project_root, "anki_miner", "gui", "app.py")],
