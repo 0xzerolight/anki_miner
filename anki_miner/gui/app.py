@@ -1,7 +1,6 @@
 """Main GUI application entry point."""
 
 import sys
-from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
@@ -9,6 +8,7 @@ from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
+from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
@@ -28,7 +28,7 @@ def main():
     app.setOrganizationName("AnkiMiner")
 
     # Set application icon
-    icon_path = Path(__file__).parent / "resources" / "icons" / "anki_miner.svg"
+    icon_path = get_resource_dir() / "icons" / "anki_miner.svg"
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
 

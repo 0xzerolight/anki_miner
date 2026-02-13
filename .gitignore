@@ -48,6 +48,7 @@ JMdict_e
 .claude/
 .mypy_cache/
 .ruff_cache/
+docs/
 
 # OS
 .DS_Store

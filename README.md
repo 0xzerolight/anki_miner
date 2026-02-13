@@ -1,5 +1,6 @@
 # Anki Miner
 
+[![PyPI version](https://img.shields.io/pypi/v/anki-miner.svg)](https://pypi.org/project/anki-miner/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
@@ -48,10 +49,10 @@ Automated Japanese vocabulary mining from anime subtitles. Extracts unknown word
 
 ### Install Anki Miner
 
-The easiest way to install is with [pipx](https://pipx.pypa.io/), which creates an isolated environment automatically:
+Install with [pipx](https://pipx.pypa.io/) (recommended, creates an isolated environment):
 
 ```bash
-pipx install git+https://github.com/0xzerolight/anki_miner.git
+pipx install anki-miner
 ```
 
 > **Don't have pipx?** Install it first: `pip install pipx && pipx ensurepath`, then restart your terminal.
@@ -59,8 +60,25 @@ pipx install git+https://github.com/0xzerolight/anki_miner.git
 Or install with pip directly:
 
 ```bash
-pip install git+https://github.com/0xzerolight/anki_miner.git
+pip install anki-miner
 ```
+
+<details>
+<summary><strong>Download standalone executable (no Python required)</strong></summary>
+
+Download the latest release for your platform:
+
+| Platform | Download |
+|----------|----------|
+| Windows  | [AnkiMiner-Windows-x86_64.zip](https://github.com/0xzerolight/anki_miner/releases/latest) |
+| macOS    | [AnkiMiner-macOS-arm64.tar.gz](https://github.com/0xzerolight/anki_miner/releases/latest) |
+| Linux    | [AnkiMiner-Linux-x86_64.tar.gz](https://github.com/0xzerolight/anki_miner/releases/latest) |
+
+> **Note:** You still need [ffmpeg](https://ffmpeg.org/download.html) installed and
+> [Anki](https://apps.ankiweb.net/) running with the
+> [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on.
+
+</details>
 
 <details>
 <summary><strong>Manual installation (from source)</strong></summary>
