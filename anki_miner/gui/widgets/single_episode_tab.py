@@ -1,9 +1,10 @@
 """Single episode mining tab for GUI."""
 
+import threading
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QDoubleSpinBox,
@@ -39,6 +40,9 @@ class SingleEpisodeTab(QWidget):
     offset, and process the episode to mine vocabulary and create Anki cards.
     """
 
+    # Signal for cross-thread curation: emitted from worker, handled on GUI thread
+    _curation_requested = pyqtSignal(list)
+
     def __init__(
         self,
         config: AnkiMinerConfig,
@@ -61,6 +65,11 @@ class SingleEpisodeTab(QWidget):
         self.worker_thread: EpisodeWorkerThread | None = None
         self._is_processing = False
         self._current_phase = ""
+
+        # Curation bridge: allows worker thread to show dialog on GUI thread
+        self._curation_event = threading.Event()
+        self._curation_result: list = []
+        self._curation_requested.connect(self._on_curation_requested)
 
         # Connect progress callback signals
         self.progress_callback.start_signal.connect(self._on_progress_start)
@@ -102,11 +111,17 @@ class SingleEpisodeTab(QWidget):
         self.process_button = ModernButton("Process Episode", icon="play", variant="primary")
         self.process_button.setToolTip("Create Anki cards from the episode")
 
+        self.cancel_button = ModernButton("Cancel", icon="stop", variant="danger")
+        self.cancel_button.setToolTip("Cancel processing")
+        self.cancel_button.hide()
+
         self.preview_button.clicked.connect(self._on_preview_clicked)
         self.process_button.clicked.connect(self._on_process_clicked)
+        self.cancel_button.clicked.connect(self._on_cancel_clicked)
 
         button_layout.addWidget(self.preview_button)
         button_layout.addWidget(self.process_button)
+        button_layout.addWidget(self.cancel_button)
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
@@ -294,21 +309,31 @@ class SingleEpisodeTab(QWidget):
         # Clear log
         self.log_widget.clear_log()
 
-        # Disable buttons and set processing flag
+        # Hide action buttons, show cancel button
         self._is_processing = True
-        self.preview_button.setEnabled(False)
-        self.process_button.setEnabled(False)
+        self.preview_button.hide()
+        self.process_button.hide()
+        self.cancel_button.setText("\u25a0 Cancel")
+        self.cancel_button.setEnabled(True)
+        self.cancel_button.show()
 
         # Create processor using service factory
         processor = create_episode_processor(config_with_offset, self.presenter)
 
         # Create and start worker thread
+        curation_cb = self._curation_bridge if not preview_mode else None
         self.worker_thread = EpisodeWorkerThread(
-            processor, video_file, subtitle_file, preview_mode, self.progress_callback
+            processor,
+            video_file,
+            subtitle_file,
+            preview_mode,
+            self.progress_callback,
+            curation_callback=curation_cb,
         )
 
         self.worker_thread.result_ready.connect(self._on_processing_finished)
         self.worker_thread.error.connect(self._on_processing_error)
+        self.worker_thread.finished.connect(self._restore_buttons)
         self.worker_thread.start()
 
     def _on_progress_start(self, total: int, description: str) -> None:
@@ -347,16 +372,51 @@ class SingleEpisodeTab(QWidget):
         """
         self.log_widget.append_error(f"Failed: {item} \u2014 {error}")
 
+    def _curation_bridge(self, words: list) -> list:
+        """Thread-safe bridge: called from worker thread, shows dialog on GUI thread.
+
+        Emits a signal to the GUI thread, then blocks until the user completes
+        the curation dialog. Returns the user's selected words.
+        """
+        self._curation_event.clear()
+        self._curation_result = []
+        self._curation_requested.emit(words)
+        self._curation_event.wait()  # Block worker thread until dialog completes
+        return self._curation_result
+
+    def _on_curation_requested(self, words: list) -> None:
+        """Slot called on GUI thread when curation is needed."""
+        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+
+        dialog = WordCurationDialog(words, self)
+        if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
+            self._curation_result = dialog.get_selected_words()
+        else:
+            self._curation_result = []
+        self._curation_event.set()  # Unblock the worker thread
+
+    def _on_cancel_clicked(self) -> None:
+        """Handle cancel button click."""
+        if self.worker_thread is not None:
+            self.worker_thread.cancel()
+        self.cancel_button.setText("Cancelling...")
+        self.cancel_button.setEnabled(False)
+        self.progress_widget.set_status("Cancelling...")
+
+    def _restore_buttons(self) -> None:
+        """Restore normal button state after processing ends."""
+        self._is_processing = False
+        self.cancel_button.hide()
+        self.preview_button.show()
+        self.process_button.show()
+
     def _on_processing_finished(self, result) -> None:
         """Handle processing finished signal.
 
         Args:
             result: ProcessingResult object
         """
-        # Re-enable buttons
-        self._is_processing = False
-        self.preview_button.setEnabled(True)
-        self.process_button.setEnabled(True)
+        self._restore_buttons()
 
         # Show result
         self.presenter.show_processing_result(result)
@@ -367,10 +427,7 @@ class SingleEpisodeTab(QWidget):
         Args:
             error_message: Error message
         """
-        # Re-enable buttons
-        self._is_processing = False
-        self.preview_button.setEnabled(True)
-        self.process_button.setEnabled(True)
+        self._restore_buttons()
 
         # Show error
         self.presenter.show_error(error_message)

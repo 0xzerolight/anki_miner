@@ -218,6 +218,12 @@ class BatchProcessingTab(QWidget):
         self.process_pairs_button.setToolTip("Process all discovered episode pairs")
         button_layout.addWidget(self.process_pairs_button)
 
+        self.cancel_button = ModernButton("Cancel", icon="stop", variant="danger")
+        self.cancel_button.setToolTip("Cancel processing")
+        self.cancel_button.clicked.connect(self._on_cancel_clicked)
+        self.cancel_button.hide()
+        button_layout.addWidget(self.cancel_button)
+
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
@@ -321,9 +327,9 @@ class BatchProcessingTab(QWidget):
         # Clear log
         self.log_widget.clear_log()
 
-        # Disable buttons and set processing flag
+        # Hide action buttons, show cancel
         self._is_processing = True
-        self._set_buttons_enabled(False)
+        self._show_cancel_state()
 
         # Log start
         self.presenter.show_info(f"Starting batch processing of {len(pairs)} episodes...")
@@ -340,6 +346,7 @@ class BatchProcessingTab(QWidget):
 
         self.worker_thread.result_ready.connect(self._on_processing_finished)
         self.worker_thread.error.connect(self._on_processing_error)
+        self.worker_thread.finished.connect(self._restore_buttons)
         self.worker_thread.start()
 
     def _warn_incomplete_items(self) -> None:
@@ -396,7 +403,7 @@ class BatchProcessingTab(QWidget):
         # Prepare UI for processing
         self._is_processing = True
         self.log_widget.clear_log()
-        self._set_buttons_enabled(False)
+        self._show_cancel_state()
         self.presenter.show_info(
             f"Starting queue processing ({self.batch_queue.pending_count} series)..."
         )
@@ -413,6 +420,31 @@ class BatchProcessingTab(QWidget):
         self.preview_pairs_button.setEnabled(enabled)
         self.process_pairs_button.setEnabled(enabled)
         self.queue_panel.set_buttons_enabled(enabled)
+
+    def _show_cancel_state(self) -> None:
+        """Hide action buttons and show cancel button."""
+        self.preview_pairs_button.hide()
+        self.process_pairs_button.hide()
+        self.cancel_button.setText("\u25a0 Cancel")
+        self.cancel_button.setEnabled(True)
+        self.cancel_button.show()
+        self.queue_panel.set_buttons_enabled(False)
+
+    def _restore_buttons(self) -> None:
+        """Restore normal button state after processing ends."""
+        self._is_processing = False
+        self.cancel_button.hide()
+        self.preview_pairs_button.show()
+        self.process_pairs_button.show()
+        self._set_buttons_enabled(True)
+
+    def _on_cancel_clicked(self) -> None:
+        """Handle cancel button click."""
+        if self.worker_thread is not None:
+            self.worker_thread.cancel()
+        self.cancel_button.setText("Cancelling...")
+        self.cancel_button.setEnabled(False)
+        self.current_progress_widget.set_status("Cancelling...")
 
     def _on_queue_started(self, total_items: int) -> None:
         """Called when queue processing starts.
@@ -489,9 +521,7 @@ class BatchProcessingTab(QWidget):
         Args:
             total_cards: Total cards created across all series
         """
-        # Re-enable buttons
-        self._is_processing = False
-        self._set_buttons_enabled(True)
+        self._restore_buttons()
 
         # Update queue stats
         self.queue_panel.update_stats()
@@ -547,9 +577,7 @@ class BatchProcessingTab(QWidget):
         Args:
             results: List of processing results
         """
-        # Re-enable buttons
-        self._is_processing = False
-        self._set_buttons_enabled(True)
+        self._restore_buttons()
 
         # Show summary
         total_cards = sum(r.cards_created for r in results)
@@ -565,9 +593,7 @@ class BatchProcessingTab(QWidget):
         Args:
             error_message: Error message
         """
-        # Re-enable buttons
-        self._is_processing = False
-        self._set_buttons_enabled(True)
+        self._restore_buttons()
 
         # Show error
         self.presenter.show_error(error_message)

@@ -4,6 +4,7 @@ import json
 import logging
 import subprocess
 import threading
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -73,6 +74,7 @@ class MediaExtractorService:
         video_file: Path,
         words: list[TokenizedWord],
         progress_callback: ProgressCallback | None = None,
+        cancelled_check: Callable[[], bool] | None = None,
     ) -> list[tuple[TokenizedWord, MediaData]]:
         """Extract media for multiple words in parallel.
 
@@ -89,6 +91,7 @@ class MediaExtractorService:
 
         media_data_list = []
         max_workers = self.config.max_parallel_workers
+        was_cancelled = False
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all extraction jobs
@@ -98,6 +101,12 @@ class MediaExtractorService:
 
             # Collect results as they complete
             for completed, future in enumerate(as_completed(future_to_word), 1):
+                # Check cancellation between items
+                if cancelled_check and cancelled_check():
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    was_cancelled = True
+                    break
+
                 word = future_to_word[future]
 
                 try:
@@ -117,7 +126,7 @@ class MediaExtractorService:
                     if progress_callback:
                         progress_callback.on_error(word.lemma, str(e))
 
-        if progress_callback:
+        if progress_callback and not was_cancelled:
             progress_callback.on_complete()
 
         return media_data_list
