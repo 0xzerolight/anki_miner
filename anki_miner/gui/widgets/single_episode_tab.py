@@ -4,8 +4,9 @@ from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
+    QComboBox,
     QDoubleSpinBox,
     QFrame,
     QHBoxLayout,
@@ -25,11 +26,15 @@ from anki_miner.gui.constants import (
 )
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets.base import configure_expanding_container, make_label_fit_text
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+
+VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".m4v", ".mov"}
+SUBTITLE_EXTENSIONS = {".ass", ".srt", ".ssa"}
 
 
 class SingleEpisodeTab(QWidget):
@@ -61,6 +66,7 @@ class SingleEpisodeTab(QWidget):
         self.worker_thread: EpisodeWorkerThread | None = None
         self._is_processing = False
         self._current_phase = ""
+        self.recent_manager = RecentFilesManager()
 
         # Connect progress callback signals
         self.progress_callback.start_signal.connect(self._on_progress_start)
@@ -69,6 +75,9 @@ class SingleEpisodeTab(QWidget):
         self.progress_callback.error_signal.connect(self._on_progress_error)
 
         self._setup_ui()
+
+        # Enable drag-and-drop on the tab
+        self.setAcceptDrops(True)
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -190,6 +199,23 @@ class SingleEpisodeTab(QWidget):
         # Section header
         header = SectionHeader("File Selection", icon="folder")
         layout.addWidget(header)
+
+        # Recent files dropdown
+        recent_layout = QHBoxLayout()
+        recent_layout.setSpacing(SPACING.xs)
+        recent_label = QLabel("Recent Files:")
+        recent_label.setObjectName("field-label")
+        recent_label.setMinimumWidth(100)
+        make_label_fit_text(recent_label)
+        recent_layout.addWidget(recent_label)
+
+        self.recent_combo = QComboBox()
+        self.recent_combo.addItem("Select recent file pair...")
+        self.recent_combo.currentIndexChanged.connect(self._on_recent_selected)
+        recent_layout.addWidget(self.recent_combo, 1)
+        layout.addLayout(recent_layout)
+
+        self._refresh_recent_combo()
 
         # Video file selector
         self.video_selector = FileSelector(
@@ -358,6 +384,13 @@ class SingleEpisodeTab(QWidget):
         self.preview_button.setEnabled(True)
         self.process_button.setEnabled(True)
 
+        # Add to recent files
+        video_path = self.video_selector.get_path().strip()
+        subtitle_path = self.subtitle_selector.get_path().strip()
+        if video_path and subtitle_path:
+            self.recent_manager.add_entry(Path(video_path), Path(subtitle_path))
+            self._refresh_recent_combo()
+
         # Show result
         self.presenter.show_processing_result(result)
 
@@ -377,6 +410,61 @@ class SingleEpisodeTab(QWidget):
 
         # Reset progress
         self.progress_widget.reset()
+
+    def _refresh_recent_combo(self) -> None:
+        """Refresh the recent files combo box from disk."""
+        self.recent_combo.blockSignals(True)
+        self.recent_combo.clear()
+        self.recent_combo.addItem("Select recent file pair...")
+
+        entries = self.recent_manager.get_recent()
+        for entry in entries:
+            video_name = Path(entry["video"]).name
+            subtitle_name = Path(entry["subtitle"]).name
+            self.recent_combo.addItem(
+                f"{video_name} + {subtitle_name}",
+                userData=entry,
+            )
+
+        self.recent_combo.blockSignals(False)
+
+    def _on_recent_selected(self, index: int) -> None:
+        """Handle recent file selection from combo box.
+
+        Args:
+            index: Selected combo box index (0 = placeholder)
+        """
+        if index <= 0:
+            return
+
+        entry = self.recent_combo.itemData(index)
+        if entry:
+            self.video_selector.set_path(entry["video"])
+            self.subtitle_selector.set_path(entry["subtitle"])
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        """Accept drag if files have video or subtitle extensions."""
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                suffix = Path(url.toLocalFile()).suffix.lower()
+                if suffix in VIDEO_EXTENSIONS or suffix in SUBTITLE_EXTENSIONS:
+                    event.acceptProposedAction()
+                    return
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        """Accept drag move events."""
+        event.acceptProposedAction()
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        """Route dropped files to the appropriate file selector."""
+        for url in event.mimeData().urls():
+            file_path = url.toLocalFile()
+            suffix = Path(file_path).suffix.lower()
+            if suffix in VIDEO_EXTENSIONS:
+                self.video_selector.set_path(file_path)
+            elif suffix in SUBTITLE_EXTENSIONS:
+                self.subtitle_selector.set_path(file_path)
+        event.acceptProposedAction()
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration.
