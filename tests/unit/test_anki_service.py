@@ -751,3 +751,252 @@ def make_word_helper():
         end_time=3.0,
         duration=2.0,
     )
+
+
+# ---------------------------------------------------------------------------
+# TestDeleteNotes
+# ---------------------------------------------------------------------------
+
+
+class TestDeleteNotes:
+    """Tests for AnkiService.delete_notes."""
+
+    def test_success_returns_count(self, test_config):
+        """Should send deleteNotes request and return count of deleted notes."""
+        service = AnkiService(test_config)
+        resp = _mock_response(result=None)
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            result = service.delete_notes([100, 200, 300])
+
+        assert result == 3
+        payload = mock_post.call_args[1]["json"]
+        assert payload["action"] == "deleteNotes"
+        assert payload["version"] == 6
+        assert payload["params"]["notes"] == [100, 200, 300]
+
+    def test_empty_list_returns_zero(self, test_config):
+        """Should return 0 immediately for an empty list."""
+        service = AnkiService(test_config)
+        result = service.delete_notes([])
+        assert result == 0
+
+    def test_anki_error_raises(self, test_config):
+        """Should raise AnkiConnectionError when AnkiConnect reports an error."""
+        service = AnkiService(test_config)
+        resp = _mock_response(error="notes not found")
+
+        with (
+            patch("requests.post", return_value=resp),
+            pytest.raises(AnkiConnectionError, match="Failed to delete"),
+        ):
+            service.delete_notes([100])
+
+    def test_connection_error_raises(self, test_config):
+        """Should raise AnkiConnectionError on ConnectionError."""
+        service = AnkiService(test_config)
+
+        with (
+            patch("requests.post", side_effect=requests.exceptions.ConnectionError()),
+            pytest.raises(AnkiConnectionError, match="Cannot connect"),
+        ):
+            service.delete_notes([100])
+
+
+# ---------------------------------------------------------------------------
+# TestLastCreatedNoteIds
+# ---------------------------------------------------------------------------
+
+
+class TestLastCreatedNoteIds:
+    """Tests for AnkiService.last_created_note_ids tracking."""
+
+    def _make_word_data(self, make_tokenized_word, n=1):
+        """Helper to create a list of (word, media, definition) tuples."""
+        items = []
+        for i in range(n):
+            word = make_tokenized_word(lemma=f"word_{i}")
+            media = MediaData()
+            items.append((word, media, f"def_{i}"))
+        return items
+
+    def test_batch_populates_last_created_note_ids(self, test_config, make_tokenized_word):
+        """After create_cards_batch, last_created_note_ids should contain the IDs."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=3)
+        resp = _mock_response(result=[100, 101, 102])
+
+        with patch("requests.post", return_value=resp):
+            service.create_cards_batch(items)
+
+        assert service.last_created_note_ids == [100, 101, 102]
+
+    def test_batch_resets_on_new_call(self, test_config, make_tokenized_word):
+        """Calling create_cards_batch again should reset last_created_note_ids."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=2)
+
+        resp1 = _mock_response(result=[100, 101])
+        resp2 = _mock_response(result=[200])
+
+        with patch("requests.post", return_value=resp1):
+            service.create_cards_batch(items)
+        assert service.last_created_note_ids == [100, 101]
+
+        items2 = self._make_word_data(make_tokenized_word, n=1)
+        with patch("requests.post", return_value=resp2):
+            service.create_cards_batch(items2)
+        assert service.last_created_note_ids == [200]
+
+    def test_null_ids_filtered_out(self, test_config, make_tokenized_word):
+        """Null IDs (failed cards) should not appear in last_created_note_ids."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=5)
+        resp = _mock_response(result=[100, None, 102, None, 104])
+
+        with patch("requests.post", return_value=resp):
+            service.create_cards_batch(items)
+
+        assert service.last_created_note_ids == [100, 102, 104]
+
+    def test_empty_list_resets(self, test_config):
+        """Calling create_cards_batch with empty list resets last_created_note_ids."""
+        service = AnkiService(test_config)
+        service.last_created_note_ids = [999]  # Set some old value
+        service.create_cards_batch([])
+        assert service.last_created_note_ids == []
+
+    def test_initialized_as_empty(self, test_config):
+        """last_created_note_ids should be empty on service creation."""
+        service = AnkiService(test_config)
+        assert service.last_created_note_ids == []
+
+
+# ---------------------------------------------------------------------------
+# TestGetNoteTypeFields
+# ---------------------------------------------------------------------------
+
+
+class TestGetNoteTypeFields:
+    """Tests for AnkiService.get_note_type_fields."""
+
+    def test_success_returns_field_list(self, test_config):
+        """Should return list of field names on success."""
+        service = AnkiService(test_config)
+        resp = _mock_response(result=["Expression", "Sentence", "Definition"])
+
+        with patch("requests.post", return_value=resp):
+            result = service.get_note_type_fields()
+
+        assert result == ["Expression", "Sentence", "Definition"]
+
+    def test_uses_config_note_type_by_default(self, test_config):
+        """Should use config.anki_note_type when no model_name passed."""
+        service = AnkiService(test_config)
+        resp = _mock_response(result=["Field1"])
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            service.get_note_type_fields()
+
+        payload = mock_post.call_args[1]["json"]
+        assert payload["params"]["modelName"] == test_config.anki_note_type
+
+    def test_uses_explicit_model_name(self, test_config):
+        """Should use explicit model_name when provided."""
+        service = AnkiService(test_config)
+        resp = _mock_response(result=["Field1"])
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            service.get_note_type_fields("CustomNote")
+
+        payload = mock_post.call_args[1]["json"]
+        assert payload["params"]["modelName"] == "CustomNote"
+
+    def test_error_returns_empty_list(self, test_config):
+        """Should return empty list when AnkiConnect reports an error."""
+        service = AnkiService(test_config)
+        resp = _mock_response(error="model not found")
+
+        with patch("requests.post", return_value=resp):
+            result = service.get_note_type_fields()
+
+        assert result == []
+
+    def test_connection_error_returns_empty_list(self, test_config):
+        """Should return empty list on connection error."""
+        service = AnkiService(test_config)
+
+        with patch("requests.post", side_effect=requests.exceptions.ConnectionError()):
+            result = service.get_note_type_fields()
+
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# TestConfigurableFields
+# ---------------------------------------------------------------------------
+
+
+class TestConfigurableFields:
+    """Tests for configurable card fields (empty field names skip the field)."""
+
+    def _config_with_empty_fields(self, temp_dir, empty_keys):
+        """Create a config where certain field mappings are empty strings."""
+        from anki_miner.config import AnkiMinerConfig
+
+        fields = {
+            "word": "word",
+            "sentence": "sentence",
+            "definition": "definition",
+            "picture": "picture",
+            "audio": "audio",
+            "expression_furigana": "expression_furigana",
+            "sentence_furigana": "sentence_furigana",
+            "pitch_accent": "",
+            "frequency_rank": "",
+        }
+        for key in empty_keys:
+            fields[key] = ""
+
+        return AnkiMinerConfig(
+            anki_fields=fields,
+            media_temp_folder=temp_dir / "temp",
+            jmdict_path=temp_dir / "dict",
+        )
+
+    def test_create_card_skips_empty_field(self, temp_dir, make_tokenized_word):
+        """When a field mapping is empty, it should not appear in the note."""
+        config = self._config_with_empty_fields(temp_dir, ["picture", "audio"])
+        service = AnkiService(config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=12345)
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            service.create_card(word, media, "definition")
+
+        payload = mock_post.call_args[1]["json"]
+        note_fields = payload["params"]["note"]["fields"]
+        assert "picture" not in note_fields
+        assert "audio" not in note_fields
+        # Non-empty fields should still be present
+        assert "word" in note_fields
+        assert "sentence" in note_fields
+
+    def test_create_cards_batch_skips_empty_field(self, temp_dir, make_tokenized_word):
+        """Batch creation should also skip empty-mapped fields."""
+        config = self._config_with_empty_fields(temp_dir, ["sentence_furigana"])
+        service = AnkiService(config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=[12345])
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            service.create_cards_batch([(word, media, "def")])
+
+        payload = mock_post.call_args[1]["json"]
+        note_fields = payload["params"]["notes"][0]["fields"]
+        assert "sentence_furigana" not in note_fields
+        assert "word" in note_fields

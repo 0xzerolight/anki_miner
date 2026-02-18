@@ -30,6 +30,7 @@ class AnkiSettingsPanel(FormPanel):
     deck_sync_requested = pyqtSignal()
     notetype_sync_requested = pyqtSignal()
     test_connection_requested = pyqtSignal()
+    fetch_fields_requested = pyqtSignal()
 
     # Dynamically created by _add_labeled_field_with_button via setattr
     deck_input: QLineEdit
@@ -124,11 +125,25 @@ class AnkiSettingsPanel(FormPanel):
 
         # Helper text for card fields
         card_fields_helper = QLabel(
-            "Map your data to Anki note fields. " "Field names must match your note type exactly."
+            "Map your data to Anki note fields. Field names must match your note type exactly. "
+            "Leave a field empty to skip it during card creation."
         )
         card_fields_helper.setObjectName("helper-text")
         card_fields_helper.setWordWrap(True)
         self.add_widget(card_fields_helper)
+
+        # Fetch fields from note type button
+        fetch_layout = QHBoxLayout()
+        fetch_layout.addStretch()
+        self.fetch_fields_button = ModernButton(
+            "Fetch Fields from Note Type", icon="refresh", variant="secondary"
+        )
+        self.fetch_fields_button.setToolTip(
+            "Query AnkiConnect for the note type's field names and auto-map them"
+        )
+        self.fetch_fields_button.clicked.connect(self._on_fetch_fields)
+        fetch_layout.addWidget(self.fetch_fields_button)
+        self.add_layout(fetch_layout)
 
         self.add_spacing(SPACING.xs)
 
@@ -397,24 +412,70 @@ class AnkiSettingsPanel(FormPanel):
             style.unpolish(self.notetype_status)
             style.polish(self.notetype_status)
 
+    def _on_fetch_fields(self) -> None:
+        """Handle fetch fields button click."""
+        self.fetch_fields_requested.emit()
+
+    def populate_from_field_list(self, field_names: list[str]) -> None:
+        """Auto-map fetched field names to the card field inputs.
+
+        Tries to match fetched field names to known data types using
+        common naming patterns.
+
+        Args:
+            field_names: List of field names from AnkiConnect
+        """
+        # Mapping of data keys to input widgets and keywords to match
+        mapping = {
+            "word": (self.expression_field_input, ["expression", "word", "vocab"]),
+            "sentence": (self.sentence_field_input, ["sentence", "context", "example"]),
+            "definition": (
+                self.definition_field_input,
+                ["definition", "meaning", "maindefinition"],
+            ),
+            "picture": (self.picture_field_input, ["picture", "image", "screenshot", "photo"]),
+            "audio": (self.audio_field_input, ["audio", "sound", "sentenceaudio"]),
+            "expression_furigana": (
+                self.expression_furigana_field_input,
+                ["expressionfurigana", "wordfurigana"],
+            ),
+            "sentence_furigana": (
+                self.sentence_furigana_field_input,
+                ["sentencefurigana", "contextfurigana"],
+            ),
+            "pitch_accent": (self.pitch_accent_field_input, ["pitch", "accent", "pitchaccent"]),
+            "frequency_rank": (
+                self.frequency_rank_field_input,
+                ["frequency", "freq", "rank", "frequencyrank"],
+            ),
+        }
+
+        for _key, (widget, keywords) in mapping.items():
+            for field_name in field_names:
+                if field_name.lower().replace(" ", "").replace("_", "") in [
+                    kw.lower() for kw in keywords
+                ]:
+                    widget.setText(field_name)
+                    break
+
     # Getters for card field values
     def get_card_fields(self) -> dict:
         """Get the card field mappings.
 
         Returns:
-            Dictionary mapping data types to Anki field names
+            Dictionary mapping data types to Anki field names.
+            Empty string values mean "skip this field during card creation".
         """
         return {
-            "word": self.expression_field_input.text() or "Expression",
-            "sentence": self.sentence_field_input.text() or "Sentence",
-            "definition": self.definition_field_input.text() or "MainDefinition",
-            "picture": self.picture_field_input.text() or "Picture",
-            "audio": self.audio_field_input.text() or "SentenceAudio",
-            "expression_furigana": self.expression_furigana_field_input.text()
-            or "ExpressionFurigana",
-            "sentence_furigana": self.sentence_furigana_field_input.text() or "SentenceFurigana",
-            "pitch_accent": self.pitch_accent_field_input.text(),
-            "frequency_rank": self.frequency_rank_field_input.text(),
+            "word": self.expression_field_input.text().strip(),
+            "sentence": self.sentence_field_input.text().strip(),
+            "definition": self.definition_field_input.text().strip(),
+            "picture": self.picture_field_input.text().strip(),
+            "audio": self.audio_field_input.text().strip(),
+            "expression_furigana": self.expression_furigana_field_input.text().strip(),
+            "sentence_furigana": self.sentence_furigana_field_input.text().strip(),
+            "pitch_accent": self.pitch_accent_field_input.text().strip(),
+            "frequency_rank": self.frequency_rank_field_input.text().strip(),
         }
 
     def set_card_fields(self, fields: dict) -> None:

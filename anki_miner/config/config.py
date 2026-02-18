@@ -76,6 +76,15 @@ class AnkiMinerConfig:
     use_frequency_data: bool = False
     max_frequency_rank: int = 0  # 0 = no filtering; e.g. 10000 = only top 10k words
 
+    # History settings
+    history_db_path: Path = field(
+        default_factory=lambda: Path.home() / ".anki_miner" / "history.db"
+    )
+    enable_history: bool = True
+
+    # Update settings
+    check_for_updates: bool = True
+
     # Performance settings
     max_parallel_workers: int = 6  # Number of parallel ffmpeg processes
 
@@ -90,3 +99,5 @@ class AnkiMinerConfig:
             object.__setattr__(self, "pitch_accent_path", Path(self.pitch_accent_path))
         if isinstance(self.frequency_list_path, str):
             object.__setattr__(self, "frequency_list_path", Path(self.frequency_list_path))
+        if isinstance(self.history_db_path, str):
+            object.__setattr__(self, "history_db_path", Path(self.history_db_path))
