@@ -1,5 +1,8 @@
 """Worker thread for episode processing."""
 
+from __future__ import annotations
+
+from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
@@ -27,6 +30,7 @@ class EpisodeWorkerThread(CancellableWorker):
         subtitle_file: Path,
         preview_mode: bool,
         progress_callback: GUIProgressCallback,
+        curation_callback: Callable[[list], list] | None = None,
         parent=None,
     ):
         """Initialize the episode worker thread.
@@ -37,6 +41,7 @@ class EpisodeWorkerThread(CancellableWorker):
             subtitle_file: Path to subtitle file
             preview_mode: If True, only preview words without creating cards
             progress_callback: Progress callback for updates
+            curation_callback: Optional callback for word curation
             parent: Optional parent QObject
         """
         super().__init__(parent)
@@ -45,6 +50,12 @@ class EpisodeWorkerThread(CancellableWorker):
         self.subtitle_file = subtitle_file
         self.preview_mode = preview_mode
         self.progress_callback = progress_callback
+        self.curation_callback = curation_callback
+
+    def cancel(self) -> None:
+        """Cancel processing, propagating to the processor."""
+        super().cancel()
+        self.processor.cancel()
 
     def run(self) -> None:
         """Execute episode processing in background thread."""
@@ -53,7 +64,11 @@ class EpisodeWorkerThread(CancellableWorker):
                 return
 
             result = self.processor.process_episode(
-                self.video_file, self.subtitle_file, self.preview_mode, self.progress_callback
+                self.video_file,
+                self.subtitle_file,
+                self.preview_mode,
+                self.progress_callback,
+                curation_callback=self.curation_callback,
             )
 
             if not self.check_cancelled():

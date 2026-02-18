@@ -35,6 +35,11 @@ class ManualPairWorkerThread(CancellableWorker):
         self.pairs = pairs
         self.progress_callback = progress_callback
 
+    def cancel(self) -> None:
+        """Cancel processing, propagating to the processor."""
+        super().cancel()
+        self.episode_processor.cancel()
+
     def run(self):
         """Process all pairs sequentially in background thread."""
         try:
