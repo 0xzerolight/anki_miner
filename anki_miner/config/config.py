@@ -91,6 +91,10 @@ class AnkiMinerConfig:
     # Deduplication settings
     deduplicate_sentences: bool = True
 
+    # Cross-episode frequency settings
+    use_cross_episode_priority: bool = False
+    min_episode_appearances: int = 2  # Only mine words appearing in at least N episodes
+
     # Performance settings
     max_parallel_workers: int = 6  # Number of parallel ffmpeg processes
 

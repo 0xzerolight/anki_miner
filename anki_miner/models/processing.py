@@ -12,6 +12,7 @@ class ProcessingResult:
     cards_created: int
     errors: list[str] = field(default_factory=list)
     elapsed_time: float = 0.0
+    comprehension_percentage: float = 0.0  # Percentage of words already known
 
     @property
     def success(self) -> bool:
