@@ -53,6 +53,7 @@ class SingleEpisodeTab(QWidget):
         config: AnkiMinerConfig,
         presenter: GUIPresenter,
         progress_callback: GUIProgressCallback,
+        stats_service=None,
         parent=None,
     ):
         """Initialize the single episode tab.
@@ -61,12 +62,14 @@ class SingleEpisodeTab(QWidget):
             config: Application configuration
             presenter: GUI presenter for output
             progress_callback: Progress callback for updates
+            stats_service: Optional statistics recording service
             parent: Optional parent widget
         """
         super().__init__(parent)
         self.config = config
         self.presenter = presenter
         self.progress_callback = progress_callback
+        self.stats_service = stats_service
         self.worker_thread: EpisodeWorkerThread | None = None
         self._is_processing = False
         self._current_phase = ""
@@ -344,7 +347,7 @@ class SingleEpisodeTab(QWidget):
         self.cancel_button.show()
 
         # Create processor using service factory
-        processor = create_episode_processor(config_with_offset, self.presenter)
+        processor = create_episode_processor(config_with_offset, self.presenter, self.stats_service)
 
         # Create and start worker thread
         curation_cb = self._curation_bridge if not preview_mode else None

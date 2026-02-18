@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from anki_miner.services.frequency_service import FrequencyService
     from anki_miner.services.known_word_db import KnownWordDB
     from anki_miner.services.pitch_accent_service import PitchAccentService
+    from anki_miner.services.stats_service import StatsService
     from anki_miner.services.word_list_service import WordListService
 
 
@@ -43,6 +44,7 @@ class EpisodeProcessor:
         frequency_service: FrequencyService | None = None,
         known_word_db: KnownWordDB | None = None,
         word_list_service: WordListService | None = None,
+        stats_service: StatsService | None = None,
     ):
         """Initialize the episode processor.
 
@@ -58,6 +60,7 @@ class EpisodeProcessor:
             frequency_service: Optional word frequency lookup service
             known_word_db: Optional local known word database
             word_list_service: Optional word blacklist/whitelist service
+            stats_service: Optional statistics recording service
         """
         self.config = config
         self.subtitle_parser = subtitle_parser
@@ -70,6 +73,7 @@ class EpisodeProcessor:
         self.frequency_service = frequency_service
         self.known_word_db = known_word_db
         self.word_list_service = word_list_service
+        self.stats_service = stats_service
         self._cancelled = False
 
     def cancel(self) -> None:
@@ -233,6 +237,16 @@ class EpisodeProcessor:
                         f"appearing in fewer than {self.config.min_episode_appearances} episodes"
                     )
 
+            # Record difficulty data if stats service available
+            if self.stats_service and self.stats_service.is_available():
+                self.stats_service.record_difficulty(
+                    series_name=video_file.parent.name,
+                    episode_name=video_file.stem,
+                    total_words=len(all_words),
+                    unknown_words=len(unknown_words),
+                    unique_words=len(all_words),
+                )
+
             if not unknown_words:
                 self.presenter.show_info("All words already in Anki!")
                 return ProcessingResult(
@@ -368,7 +382,7 @@ class EpisodeProcessor:
                 mined_words = {word.lemma for word, _, _, _ in card_data}
                 self.known_word_db.add_words(mined_words, source="mined")
 
-            return ProcessingResult(
+            result = ProcessingResult(
                 total_words_found=len(all_words),
                 new_words_found=len(unknown_words),
                 cards_created=cards_created,
@@ -376,6 +390,23 @@ class EpisodeProcessor:
                 elapsed_time=time.time() - start_time,
                 comprehension_percentage=comprehension,
             )
+
+            # Record mining session if stats service available
+            if self.stats_service and self.stats_service.is_available():
+                from anki_miner.models.stats import MiningSession
+
+                self.stats_service.record_session(
+                    MiningSession(
+                        series_name=video_file.parent.name,
+                        episode_name=video_file.stem,
+                        total_words=result.total_words_found,
+                        unknown_words=result.new_words_found,
+                        cards_created=result.cards_created,
+                        elapsed_time=result.elapsed_time,
+                    )
+                )
+
+            return result
 
         except AnkiMinerException as e:
             errors.append(str(e))
