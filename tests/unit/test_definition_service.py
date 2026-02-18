@@ -2,11 +2,10 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 import requests
 
-from anki_miner.exceptions import SetupError
 from anki_miner.services.definition_service import DefinitionService
+from anki_miner.services.providers.jisho_provider import JishoProvider
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -105,12 +104,13 @@ class TestLoadOfflineDictionary:
         assert result is False
         assert service._jmdict is None
 
-    def test_raises_setup_error_when_file_missing(self, test_config):
-        """Should raise SetupError when the JMdict file does not exist."""
+    def test_returns_false_when_file_missing(self, test_config):
+        """Should return False when the JMdict file does not exist."""
         service = DefinitionService(test_config)
 
-        with pytest.raises(SetupError, match="JMdict file not found"):
-            service.load_offline_dictionary()
+        result = service.load_offline_dictionary()
+
+        assert result is False
 
     def test_loads_valid_xml(self, test_config, tmp_path):
         """Should parse a valid JMdict XML and populate the dictionary."""
@@ -124,14 +124,15 @@ class TestLoadOfflineDictionary:
         assert "食べる" in service._jmdict
         assert "飲む" in service._jmdict
 
-    def test_raises_setup_error_on_parse_error(self, test_config, tmp_path):
-        """Should raise SetupError when XML is malformed."""
+    def test_returns_false_on_parse_error(self, test_config, tmp_path):
+        """Should return False when XML is malformed."""
         path = tmp_path / "JMdict_e"
         path.write_text("<<< not valid xml >>>", encoding="utf-8")
         service = DefinitionService(test_config)
 
-        with pytest.raises(SetupError, match="Error parsing JMdict XML"):
-            service.load_offline_dictionary()
+        result = service.load_offline_dictionary()
+
+        assert result is False
 
     def test_stores_multiple_readings_per_entry(self, test_config, tmp_path):
         """Both kanji and kana readings should be stored as separate keys."""
@@ -165,10 +166,10 @@ class TestGetDefinition:
         service = DefinitionService(test_config)
         service.load_offline_dictionary()
 
-        with patch("anki_miner.services.definition_service.requests.get") as mock_get:
+        with patch.object(JishoProvider, "lookup") as mock_jisho:
             result = service.get_definition("食べる")
 
-        mock_get.assert_not_called()
+        mock_jisho.assert_not_called()
         assert result is not None
         assert "to eat" in result
 
@@ -182,26 +183,23 @@ class TestGetDefinition:
         service = DefinitionService(test_config)
         service.load_offline_dictionary()
 
-        with patch("anki_miner.services.definition_service.requests.get") as mock_get:
+        with patch.object(JishoProvider, "lookup") as mock_jisho:
             result = service.get_definition("走る")
 
-        mock_get.assert_not_called()
+        mock_jisho.assert_not_called()
         assert result is None
 
     def test_falls_back_to_jisho_when_jmdict_none(self, test_config):
         """Should query Jisho when use_offline_dict=True but dict failed to load."""
         service = DefinitionService(test_config)
-        # _jmdict is None (never loaded)
-
-        mock_resp = _jisho_response(
-            [
-                {"english_definitions": ["to run"]},
-            ]
-        )
+        # _jmdict is None (never loaded), so falls back to Jisho
 
         with (
-            patch("anki_miner.services.definition_service.requests.get", return_value=mock_resp),
-            patch("anki_miner.services.definition_service.time.sleep"),
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                return_value=_jisho_response([{"english_definitions": ["to run"]}]),
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
         ):
             result = service.get_definition("走る")
 
@@ -215,15 +213,12 @@ class TestGetDefinition:
         config = replace(test_config, use_offline_dict=False)
         service = DefinitionService(config)
 
-        mock_resp = _jisho_response(
-            [
-                {"english_definitions": ["to eat"]},
-            ]
-        )
-
         with (
-            patch("anki_miner.services.definition_service.requests.get", return_value=mock_resp),
-            patch("anki_miner.services.definition_service.time.sleep"),
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                return_value=_jisho_response([{"english_definitions": ["to eat"]}]),
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
         ):
             result = service.get_definition("食べる")
 
@@ -232,7 +227,7 @@ class TestGetDefinition:
 
 
 class TestGetDefinitionOffline:
-    """Tests for _get_definition_offline method."""
+    """Tests for offline definition lookup via the JMdict provider."""
 
     def test_returns_formatted_html_with_numbered_list(self, test_config, tmp_path):
         """Should return definitions as numbered HTML lines."""
@@ -240,7 +235,7 @@ class TestGetDefinitionOffline:
         service = DefinitionService(test_config)
         service.load_offline_dictionary()
 
-        result = service._get_definition_offline("食べる")
+        result = service.get_definition("食べる")
 
         assert result == "1. to eat<br>2. to consume; to devour"
 
@@ -250,7 +245,7 @@ class TestGetDefinitionOffline:
         service = DefinitionService(test_config)
         service.load_offline_dictionary()
 
-        result = service._get_definition_offline("走る")
+        result = service.get_definition("走る")
 
         assert result is None
 
@@ -260,7 +255,7 @@ class TestGetDefinitionOffline:
         service = DefinitionService(test_config)
         service.load_offline_dictionary()
 
-        result = service._get_definition_offline("取る")
+        result = service.get_definition("取る")
 
         # The word has 7 senses; only 5 should appear
         assert result is not None
@@ -276,17 +271,34 @@ class TestGetDefinitionOffline:
         """Should return None when the offline dictionary has not been loaded."""
         service = DefinitionService(test_config)
 
-        result = service._get_definition_offline("食べる")
+        # JMdict not loaded, Jisho is fallback but we mock it to return None
+        with (
+            patch("anki_miner.services.providers.jisho_provider.requests.get") as mock_get,
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
+        ):
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {"data": []}
+            mock_get.return_value = mock_resp
+
+            result = service.get_definition("食べる")
 
         assert result is None
 
 
 class TestGetDefinitionJisho:
-    """Tests for _get_definition_jisho method."""
+    """Tests for Jisho API lookup via the JishoProvider through DefinitionService."""
+
+    def _make_service(self, test_config):
+        """Create a DefinitionService with use_offline_dict=False (Jisho only)."""
+        from dataclasses import replace
+
+        config = replace(test_config, use_offline_dict=False)
+        return DefinitionService(config)
 
     def test_success_returns_formatted_html(self, test_config):
         """Should return numbered HTML definitions on successful API call."""
-        service = DefinitionService(test_config)
+        service = self._make_service(test_config)
         mock_resp = _jisho_response(
             [
                 {"english_definitions": ["to eat", "to consume"]},
@@ -294,92 +306,112 @@ class TestGetDefinitionJisho:
             ]
         )
 
-        with patch("anki_miner.services.definition_service.requests.get", return_value=mock_resp):
-            result = service._get_definition_jisho("食べる", apply_delay=False)
+        with (
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                return_value=mock_resp,
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
+        ):
+            result = service.get_definition("食べる")
 
         assert result == "1. to eat; to consume<br>2. to live on"
 
     def test_non_200_status_returns_none(self, test_config):
         """Should return None when API responds with non-200 status."""
-        service = DefinitionService(test_config)
+        service = self._make_service(test_config)
         mock_resp = MagicMock()
         mock_resp.status_code = 503
 
-        with patch("anki_miner.services.definition_service.requests.get", return_value=mock_resp):
-            result = service._get_definition_jisho("食べる", apply_delay=False)
+        with (
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                return_value=mock_resp,
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
+        ):
+            result = service.get_definition("食べる")
 
         assert result is None
 
     def test_empty_results_returns_none(self, test_config):
         """Should return None when API returns empty results."""
-        service = DefinitionService(test_config)
+        service = self._make_service(test_config)
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = {"data": []}
 
-        with patch("anki_miner.services.definition_service.requests.get", return_value=mock_resp):
-            result = service._get_definition_jisho("xyzzy", apply_delay=False)
+        with (
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                return_value=mock_resp,
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
+        ):
+            result = service.get_definition("xyzzy")
 
         assert result is None
 
     def test_timeout_returns_none(self, test_config):
         """Should return None when the request times out."""
-        service = DefinitionService(test_config)
+        service = self._make_service(test_config)
 
-        with patch(
-            "anki_miner.services.definition_service.requests.get",
-            side_effect=requests.exceptions.Timeout(),
+        with (
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                side_effect=requests.exceptions.Timeout(),
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
         ):
-            result = service._get_definition_jisho("食べる", apply_delay=False)
+            result = service.get_definition("食べる")
 
         assert result is None
 
     def test_request_exception_returns_none(self, test_config):
         """Should return None on generic request exception."""
-        service = DefinitionService(test_config)
+        service = self._make_service(test_config)
 
-        with patch(
-            "anki_miner.services.definition_service.requests.get",
-            side_effect=requests.exceptions.ConnectionError(),
+        with (
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                side_effect=requests.exceptions.ConnectionError(),
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
         ):
-            result = service._get_definition_jisho("食べる", apply_delay=False)
+            result = service.get_definition("食べる")
 
         assert result is None
 
     def test_rate_limiting_delay_applied(self, test_config):
-        """Should call time.sleep with jisho_delay when apply_delay is True."""
-        service = DefinitionService(test_config)
+        """Should call time.sleep with the configured delay."""
+        service = self._make_service(test_config)
         mock_resp = _jisho_response([{"english_definitions": ["to eat"]}])
 
         with (
-            patch("anki_miner.services.definition_service.requests.get", return_value=mock_resp),
-            patch("anki_miner.services.definition_service.time.sleep") as mock_sleep,
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                return_value=mock_resp,
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep") as mock_sleep,
         ):
-            service._get_definition_jisho("食べる", apply_delay=True)
+            service.get_definition("食べる")
 
         mock_sleep.assert_called_once_with(test_config.jisho_delay)
 
-    def test_delay_skipped_when_apply_delay_false(self, test_config):
-        """Should NOT call time.sleep when apply_delay is False."""
-        service = DefinitionService(test_config)
-        mock_resp = _jisho_response([{"english_definitions": ["to eat"]}])
-
-        with (
-            patch("anki_miner.services.definition_service.requests.get", return_value=mock_resp),
-            patch("anki_miner.services.definition_service.time.sleep") as mock_sleep,
-        ):
-            service._get_definition_jisho("食べる", apply_delay=False)
-
-        mock_sleep.assert_not_called()
-
     def test_limits_to_five_senses(self, test_config):
         """Should include at most 5 senses from the Jisho response."""
-        service = DefinitionService(test_config)
+        service = self._make_service(test_config)
         senses = [{"english_definitions": [f"meaning {i}"]} for i in range(1, 8)]
         mock_resp = _jisho_response(senses)
 
-        with patch("anki_miner.services.definition_service.requests.get", return_value=mock_resp):
-            result = service._get_definition_jisho("取る", apply_delay=False)
+        with (
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                return_value=mock_resp,
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
+        ):
+            result = service.get_definition("取る")
 
         assert result is not None
         lines = result.split("<br>")
@@ -437,3 +469,112 @@ class TestGetDefinitionsBatch:
         results = service.get_definitions_batch([])
 
         assert results == []
+
+
+class TestCustomProviders:
+    """Tests for DefinitionService with explicitly provided custom providers."""
+
+    def _mock_provider(self, name, available=True, lookup_return=None):
+        """Create a mock DictionaryProvider."""
+        provider = MagicMock()
+        provider.name = name
+        provider.is_available.return_value = available
+        provider.lookup.return_value = lookup_return
+        provider.load.return_value = True
+        return provider
+
+    def test_tries_providers_in_order(self, test_config):
+        """Should try providers in order and return second when first misses."""
+        p1 = self._mock_provider("first", lookup_return=None)
+        p2 = self._mock_provider("second", lookup_return="1. to run")
+
+        service = DefinitionService(test_config, providers=[p1, p2])
+        result = service.get_definition("走る")
+
+        assert result == "1. to run"
+        p1.lookup.assert_called_once_with("走る")
+        p2.lookup.assert_called_once_with("走る")
+
+    def test_first_hit_wins(self, test_config):
+        """Should return the first provider's result and not call the second."""
+        p1 = self._mock_provider("first", lookup_return="1. to eat")
+        p2 = self._mock_provider("second", lookup_return="1. to consume")
+
+        service = DefinitionService(test_config, providers=[p1, p2])
+        result = service.get_definition("食べる")
+
+        assert result == "1. to eat"
+        p1.lookup.assert_called_once()
+        p2.lookup.assert_not_called()
+
+    def test_skips_unavailable_provider(self, test_config):
+        """Should skip providers where is_available() returns False."""
+        p1 = self._mock_provider("offline", available=False, lookup_return="1. def")
+        p2 = self._mock_provider("online", available=True, lookup_return="1. to run")
+
+        service = DefinitionService(test_config, providers=[p1, p2])
+        result = service.get_definition("走る")
+
+        assert result == "1. to run"
+        p1.lookup.assert_not_called()
+        p2.lookup.assert_called_once()
+
+    def test_returns_none_when_all_miss(self, test_config):
+        """Should return None when all providers return None."""
+        p1 = self._mock_provider("first", lookup_return=None)
+        p2 = self._mock_provider("second", lookup_return=None)
+
+        service = DefinitionService(test_config, providers=[p1, p2])
+        result = service.get_definition("不明")
+
+        assert result is None
+
+    def test_empty_provider_list(self, test_config):
+        """Should return None when providers list is empty."""
+        service = DefinitionService(test_config, providers=[])
+        result = service.get_definition("食べる")
+
+        assert result is None
+
+
+class TestLoadProviders:
+    """Tests for DefinitionService.load_providers method."""
+
+    def _mock_provider(self, name, load_success=True, load_raises=None):
+        """Create a mock provider with configurable load behavior."""
+        provider = MagicMock()
+        provider.name = name
+        if load_raises:
+            provider.load.side_effect = load_raises
+        else:
+            provider.load.return_value = load_success
+        return provider
+
+    def test_returns_success_dict(self, test_config):
+        """Should return dict mapping provider names to load success status."""
+        p1 = self._mock_provider("DictA", load_success=True)
+        p2 = self._mock_provider("DictB", load_success=True)
+
+        service = DefinitionService(test_config, providers=[p1, p2])
+        results = service.load_providers()
+
+        assert results == {"DictA": True, "DictB": True}
+
+    def test_catches_provider_load_exception(self, test_config):
+        """Should catch exceptions from provider.load() and mark as False."""
+        p1 = self._mock_provider("Broken", load_raises=Exception("file corrupt"))
+
+        service = DefinitionService(test_config, providers=[p1])
+        results = service.load_providers()
+
+        assert results == {"Broken": False}
+
+    def test_partial_failure(self, test_config):
+        """Should reflect mixed success/failure in results dict."""
+        p1 = self._mock_provider("Good", load_success=True)
+        p2 = self._mock_provider("Bad", load_raises=Exception("oops"))
+
+        service = DefinitionService(test_config, providers=[p1, p2])
+        results = service.load_providers()
+
+        assert results == {"Good": True, "Bad": False}

@@ -1,12 +1,15 @@
 """Orchestrator for processing a single episode."""
 
+from __future__ import annotations
+
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
-from anki_miner.models import MediaData, ProcessingResult, TokenizedWord
+from anki_miner.models import ProcessingResult
 from anki_miner.services import (
     AnkiService,
     DefinitionService,
@@ -15,6 +18,10 @@ from anki_miner.services import (
     WordFilterService,
 )
 from anki_miner.utils.file_utils import cleanup_temp_files
+
+if TYPE_CHECKING:
+    from anki_miner.services.frequency_service import FrequencyService
+    from anki_miner.services.pitch_accent_service import PitchAccentService
 
 
 class EpisodeProcessor:
@@ -29,6 +36,8 @@ class EpisodeProcessor:
         definition_service: DefinitionService,
         anki_service: AnkiService,
         presenter: PresenterProtocol,
+        pitch_accent_service: PitchAccentService | None = None,
+        frequency_service: FrequencyService | None = None,
     ):
         """Initialize the episode processor.
 
@@ -40,6 +49,8 @@ class EpisodeProcessor:
             definition_service: Definition lookup service
             anki_service: Anki integration service
             presenter: Output presenter
+            pitch_accent_service: Optional pitch accent lookup service
+            frequency_service: Optional word frequency lookup service
         """
         self.config = config
         self.subtitle_parser = subtitle_parser
@@ -48,6 +59,8 @@ class EpisodeProcessor:
         self.definition_service = definition_service
         self.anki_service = anki_service
         self.presenter = presenter
+        self.pitch_accent_service = pitch_accent_service
+        self.frequency_service = frequency_service
 
     def process_episode(
         self,
@@ -93,11 +106,33 @@ class EpisodeProcessor:
                     elapsed_time=time.time() - start_time,
                 )
 
+            # Attach frequency data if available
+            if self.frequency_service and self.frequency_service.is_available():
+                for word in all_words:
+                    word.frequency_rank = self.frequency_service.lookup(word.lemma)
+                ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
+                self.presenter.show_info(
+                    f"Frequency data: {ranked_count}/{len(all_words)} words ranked"
+                )
+
             # Phase 2: Filter against existing vocabulary
             self.presenter.show_info("Step 2/5 \u2014 Filtering against known vocabulary")
             existing_words = self.anki_service.get_existing_vocabulary()
             unknown_words = self.word_filter.filter_unknown(all_words, existing_words)
             self.presenter.show_success(f"{len(unknown_words)} new words to mine")
+
+            # Apply frequency filter if configured
+            if self.config.max_frequency_rank > 0:
+                before = len(unknown_words)
+                unknown_words = self.word_filter.filter_by_frequency(
+                    unknown_words, self.config.max_frequency_rank
+                )
+                filtered_out = before - len(unknown_words)
+                if filtered_out > 0:
+                    self.presenter.show_info(
+                        f"Frequency filter: removed {filtered_out} words "
+                        f"outside top {self.config.max_frequency_rank}"
+                    )
 
             if not unknown_words:
                 self.presenter.show_info("All words already in Anki!")
@@ -147,14 +182,35 @@ class EpisodeProcessor:
             )
             self.presenter.show_success(f"Found {sum(1 for d in definitions if d)} definitions")
 
+            # Look up pitch accents if available
+            pitch_accents: list[str | None] = [None] * len(words_with_media)
+            if self.pitch_accent_service and self.pitch_accent_service.is_available():
+                pitch_accents = self.pitch_accent_service.lookup_batch(
+                    [(w.lemma, w.reading) for w in words_with_media]
+                )
+                found_count = sum(1 for p in pitch_accents if p)
+                self.presenter.show_info(
+                    f"Pitch accent data: {found_count}/{len(words_with_media)} words"
+                )
+
             # Phase 5: Create cards
             self.presenter.show_info("Step 5/5 \u2014 Creating Anki cards")
-            # Combine words, media, and definitions (skip words with no definition)
-            card_data: list[tuple[TokenizedWord, MediaData, str | None]] = [
-                (word, media, definition)
-                for (word, media), definition in zip(media_results, definitions, strict=True)
-                if definition is not None
-            ]
+            # Combine words, media, definitions, and extra data
+            card_data: list[tuple] = []
+            for (word, media), definition, pitch_accent in zip(
+                media_results, definitions, pitch_accents, strict=True
+            ):
+                if definition is None:
+                    continue
+
+                extra_fields: dict[str, str] = {}
+                if pitch_accent:
+                    extra_fields["pitch_accent"] = pitch_accent
+                if word.frequency_rank is not None:
+                    extra_fields["frequency_rank"] = str(word.frequency_rank)
+
+                card_data.append((word, media, definition, extra_fields if extra_fields else None))
+
             skipped = len(media_results) - len(card_data)
             if skipped:
                 self.presenter.show_warning(f"Skipped {skipped} words with no definition found")

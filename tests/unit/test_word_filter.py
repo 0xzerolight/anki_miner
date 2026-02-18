@@ -144,3 +144,76 @@ class TestWordFilterService:
             result = service.filter_by_length([], min_length=1)
 
             assert result == []
+
+    class TestFilterByFrequency:
+        """Tests for filter_by_frequency method."""
+
+        def _word_with_freq(self, lemma, rank):
+            """Helper to create a word with a frequency rank."""
+            word = create_word(lemma)
+            word.frequency_rank = rank
+            return word
+
+        def test_keeps_words_within_rank(self, test_config):
+            """Should keep words within the max frequency rank."""
+            service = WordFilterService(test_config)
+            words = [
+                self._word_with_freq("の", 1),
+                self._word_with_freq("食べる", 500),
+                self._word_with_freq("飲む", 1000),
+            ]
+
+            result = service.filter_by_frequency(words, max_rank=1000)
+            assert len(result) == 3
+
+        def test_removes_words_above_rank(self, test_config):
+            """Should remove words ranked above the threshold."""
+            service = WordFilterService(test_config)
+            words = [
+                self._word_with_freq("の", 1),
+                self._word_with_freq("食べる", 500),
+                self._word_with_freq("稀な単語", 50000),
+            ]
+
+            result = service.filter_by_frequency(words, max_rank=10000)
+            assert len(result) == 2
+            assert all(w.frequency_rank <= 10000 for w in result)
+
+        def test_keeps_words_with_no_rank_data(self, test_config):
+            """Words without frequency data should pass through."""
+            service = WordFilterService(test_config)
+            words = [
+                self._word_with_freq("の", 1),
+                create_word("不明"),  # No frequency rank (None)
+            ]
+
+            result = service.filter_by_frequency(words, max_rank=5000)
+            assert len(result) == 2
+
+        def test_no_filtering_when_max_rank_zero(self, test_config):
+            """Should return all words when max_rank is 0."""
+            service = WordFilterService(test_config)
+            words = [
+                self._word_with_freq("の", 1),
+                self._word_with_freq("稀", 99999),
+            ]
+
+            result = service.filter_by_frequency(words, max_rank=0)
+            assert len(result) == 2
+
+        def test_no_filtering_when_max_rank_none(self, test_config):
+            """Should return all words when max_rank is None."""
+            service = WordFilterService(test_config)
+            words = [
+                self._word_with_freq("の", 1),
+                self._word_with_freq("稀", 99999),
+            ]
+
+            result = service.filter_by_frequency(words, max_rank=None)
+            assert len(result) == 2
+
+        def test_empty_list(self, test_config):
+            """Should return empty list when no words provided."""
+            service = WordFilterService(test_config)
+            result = service.filter_by_frequency([], max_rank=5000)
+            assert result == []

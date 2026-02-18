@@ -12,6 +12,8 @@ class DictionarySettingsPanel(FormPanel):
     Provides:
     - JMdict file path selection
     - Offline dictionary toggle
+    - Pitch accent file path selection
+    - Pitch accent toggle
     """
 
     def __init__(self, parent=None):
@@ -39,6 +41,29 @@ class DictionarySettingsPanel(FormPanel):
             "",
             self.use_offline_checkbox,
             helper="Enable to use local JMdict file instead of online dictionary API",
+        )
+
+        # Pitch Accent section
+        self.add_section("Pitch Accent")
+
+        # Pitch accent file path
+        self.pitch_accent_selector = FileSelector(
+            label="", file_mode=True, placeholder="Select pitch accent CSV file..."
+        )
+        self.pitch_accent_selector.setToolTip("Path to Kanjium pitch accent CSV file")
+        self.add_field(
+            "Pitch Accent File",
+            self.pitch_accent_selector,
+            helper="Path to Kanjium pitch accent CSV for pitch accent annotations",
+        )
+
+        # Use pitch accent checkbox
+        self.use_pitch_accent_checkbox = QCheckBox("Enable Pitch Accent")
+        self.use_pitch_accent_checkbox.setToolTip("Add pitch accent data to Anki cards")
+        self.add_field(
+            "",
+            self.use_pitch_accent_checkbox,
+            helper="Enable to look up and add pitch accent patterns to cards",
         )
 
         self.add_stretch()

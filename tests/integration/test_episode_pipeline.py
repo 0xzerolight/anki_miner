@@ -109,8 +109,8 @@ class TestEpisodePipeline:
             patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
             patch("anki_miner.services.media_extractor.subprocess.run", return_value=mock_proc),
             patch("anki_miner.services.media_extractor.ensure_directory"),
-            patch("anki_miner.services.definition_service.requests.get") as mock_get,
-            patch("anki_miner.services.definition_service.time.sleep"),
+            patch("anki_miner.services.providers.jisho_provider.requests.get") as mock_get,
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
             patch("anki_miner.services.anki_service.requests.post") as mock_post,
         ):
 
