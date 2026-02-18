@@ -105,7 +105,7 @@ class MainWindow(QMainWindow):
         # Set accessible names for main components
         self.tabs.setAccessibleName("Main Tabs")
         self.tabs.setAccessibleDescription(
-            "Navigate between Episode Mining, Batch Processing, and Settings"
+            "Navigate between Episode Mining, Batch Processing, Analytics, and Settings"
         )
 
         self.header.setAccessibleName("Application Header")
@@ -121,8 +121,8 @@ class MainWindow(QMainWindow):
 
     def _setup_shortcuts(self) -> None:
         """Set up global keyboard shortcuts."""
-        # Tab switching shortcuts (Ctrl+1/2/3)
-        for i in range(1, 4):
+        # Tab switching shortcuts (Ctrl+1/2/3/4)
+        for i in range(1, 5):
             shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
             shortcut.activated.connect(lambda idx=i - 1: self._switch_to_tab(idx))
 
@@ -184,12 +184,13 @@ class MainWindow(QMainWindow):
             <li>Automatic media extraction (screenshots & audio)</li>
             <li>Dictionary definitions from JMDict</li>
             <li>Frequency filtering to focus on common words</li>
+            <li>Mining analytics and progress tracking</li>
             <li>Three beautiful themes: Light, Dark, Sakura</li>
         </ul>
         <br>
         <p><b>Keyboard Shortcuts:</b></p>
         <ul>
-            <li><b>Ctrl+1/2/3:</b> Switch tabs</li>
+            <li><b>Ctrl+1/2/3/4:</b> Switch tabs</li>
             <li><b>Ctrl+T:</b> Cycle themes</li>
             <li><b>Ctrl+,:</b> Open Settings</li>
             <li><b>Ctrl+Shift+V:</b> Run system validation</li>
