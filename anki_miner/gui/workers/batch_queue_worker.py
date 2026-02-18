@@ -46,6 +46,13 @@ class BatchQueueWorkerThread(CancellableWorker):
         self.config = config
         self.presenter = presenter
         self.progress_callback = progress_callback
+        self._current_processor = None
+
+    def cancel(self) -> None:
+        """Cancel processing, propagating to the current processor."""
+        super().cancel()
+        if self._current_processor is not None:
+            self._current_processor.cancel()
 
     def run(self):
         """Process all pending items in queue sequentially."""
@@ -68,6 +75,7 @@ class BatchQueueWorkerThread(CancellableWorker):
 
                 # Create processor for this item with its specific offset
                 episode_processor = create_episode_processor(config_with_offset, self.presenter)
+                self._current_processor = episode_processor
 
                 # Use FilePairMatcher for cross-folder pairing
                 from anki_miner.utils.file_pairing import FilePairMatcher
