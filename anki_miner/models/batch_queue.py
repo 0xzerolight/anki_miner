@@ -27,6 +27,8 @@ class QueueItem:
     cards_created: int = 0
     error_message: str = ""
     subtitle_offset: float = 0.0  # Per-item subtitle offset in seconds
+    retry_count: int = 0
+    max_retries: int = 2
 
     @property
     def status_icon(self) -> str:
@@ -128,6 +130,33 @@ class BatchQueue:
     def completed_count(self) -> int:
         """Get count of completed items."""
         return sum(1 for item in self._items if item.status == QueueItemStatus.COMPLETED)
+
+    @property
+    def has_failed_items(self) -> bool:
+        """Check if any items have ERROR status."""
+        return any(item.status == QueueItemStatus.ERROR for item in self._items)
+
+    @property
+    def failed_count(self) -> int:
+        """Get count of failed items."""
+        return sum(1 for item in self._items if item.status == QueueItemStatus.ERROR)
+
+    def reset_failed_for_retry(self) -> int:
+        """Reset failed items to PENDING for retry.
+
+        Only resets items that haven't exceeded their max_retries.
+
+        Returns:
+            Number of items reset for retry
+        """
+        reset_count = 0
+        for item in self._items:
+            if item.status == QueueItemStatus.ERROR and item.retry_count < item.max_retries:
+                item.status = QueueItemStatus.PENDING
+                item.retry_count += 1
+                item.error_message = ""
+                reset_count += 1
+        return reset_count
 
     @property
     def total_cards_created(self) -> int:

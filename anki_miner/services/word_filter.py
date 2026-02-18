@@ -142,3 +142,28 @@ class WordFilterService:
                 seen_sentences.add(word.sentence)
                 result.append(word)
         return result
+
+    def filter_by_episode_count(
+        self,
+        words: list[TokenizedWord],
+        cross_episode_counts: dict[str, int],
+        min_appearances: int,
+    ) -> list[TokenizedWord]:
+        """Filter words by cross-episode appearance count.
+
+        Only keeps words that appear in at least `min_appearances` episodes.
+
+        Args:
+            words: List of words to filter.
+            cross_episode_counts: Mapping of lemma to episode count.
+            min_appearances: Minimum number of episodes a word must appear in.
+
+        Returns:
+            Filtered list of words.
+        """
+        if min_appearances <= 1:
+            return words
+
+        return [
+            word for word in words if cross_episode_counts.get(word.lemma, 0) >= min_appearances
+        ]

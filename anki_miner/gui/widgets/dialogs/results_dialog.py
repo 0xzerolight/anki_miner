@@ -98,6 +98,17 @@ class ResultsDialog(EnhancedDialog):
             )
             row2_layout.addWidget(speed_card)
 
+        # Comprehension percentage card with color indicator
+        comp_pct = self.processing_result.comprehension_percentage
+        if comp_pct > 80:
+            comp_icon = "complete"
+        elif comp_pct >= 60:
+            comp_icon = "warning"
+        else:
+            comp_icon = "error"
+        comp_card = StatCard(icon=comp_icon, value=f"{comp_pct:.1f}%", label="Comprehension")
+        row2_layout.addWidget(comp_card)
+
         stats_layout.addLayout(row2_layout)
 
         stats_container.setLayout(stats_layout)

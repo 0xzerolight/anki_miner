@@ -1,5 +1,6 @@
 """Orchestrator for processing a folder of episodes."""
 
+from collections import defaultdict
 from pathlib import Path
 
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
@@ -56,6 +57,33 @@ class FolderProcessor:
 
         return pairs
 
+    def collect_cross_episode_frequencies(self, pairs: list[tuple[Path, Path]]) -> dict[str, int]:
+        """Collect word frequencies across episodes (first pass).
+
+        For each subtitle file, parses words and counts how many distinct
+        episodes each lemma appears in.
+
+        Args:
+            pairs: List of (video_path, subtitle_path) tuples
+
+        Returns:
+            Mapping of lemma to number of episodes it appears in
+        """
+        # Track which episodes each lemma appears in
+        lemma_episodes: dict[str, set[int]] = defaultdict(set)
+
+        for i, (_, subtitle_file) in enumerate(pairs):
+            try:
+                words = self.episode_processor.subtitle_parser.parse_subtitle_file(subtitle_file)
+                for word in words:
+                    lemma_episodes[word.lemma].add(i)
+            except Exception as e:
+                self.presenter.show_warning(
+                    f"Cross-episode scan: skipping {subtitle_file.name}: {e}"
+                )
+
+        return {lemma: len(episodes) for lemma, episodes in lemma_episodes.items()}
+
     def process_folder(
         self,
         folder: Path,
@@ -82,6 +110,20 @@ class FolderProcessor:
 
         self.presenter.show_success(f"Found {len(pairs)} video/subtitle pairs")
 
+        # First pass: collect cross-episode frequencies if enabled
+        cross_episode_counts: dict[str, int] | None = None
+        config = self.episode_processor.config
+        if config.use_cross_episode_priority:
+            self.presenter.show_info("Cross-episode analysis: scanning all subtitles...")
+            cross_episode_counts = self.collect_cross_episode_frequencies(pairs)
+            multi_episode = sum(
+                1 for c in cross_episode_counts.values() if c >= config.min_episode_appearances
+            )
+            self.presenter.show_success(
+                f"Cross-episode analysis complete: {multi_episode} words appear "
+                f"in {config.min_episode_appearances}+ episodes"
+            )
+
         # Process each pair
         results = []
         total_cards = 0
@@ -98,6 +140,7 @@ class FolderProcessor:
                     subtitle_file,
                     preview_mode=preview_mode,
                     progress_callback=None,  # Don't pass nested progress
+                    cross_episode_counts=cross_episode_counts,
                 )
 
                 results.append(result)
