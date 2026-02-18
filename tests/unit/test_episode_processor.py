@@ -182,12 +182,12 @@ class TestProcessEpisode:
         ds_args = mock_services["definition_service"].get_definitions_batch.call_args
         assert ds_args[0][0] == ["食べる"]
 
-        # Verify anki_service gets combined (word, media, definition)
+        # Verify anki_service gets combined (word, media, definition, extra_fields)
         mock_services["anki_service"].create_cards_batch.assert_called_once()
         as_args = mock_services["anki_service"].create_cards_batch.call_args
         card_data = as_args[0][0]
         assert len(card_data) == 1
-        assert card_data[0] == (word, media, "1. to eat")
+        assert card_data[0] == (word, media, "1. to eat", None)
 
     def test_subtitle_parse_error_handling(self, processor, mock_services, tmp_path):
         """SubtitleParseError should be caught and returned as error."""
@@ -242,3 +242,158 @@ class TestProcessEpisode:
         assert ds_args[0][0] == ["食べる"]
 
         assert result.cards_created == 1
+
+
+class TestOptionalServices:
+    """Tests for EpisodeProcessor with optional pitch accent and frequency services."""
+
+    @pytest.fixture
+    def mock_services(self):
+        """Create a set of mock services for the episode processor."""
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_frequency_service_attaches_ranks(self, test_config, mock_services, tmp_path):
+        """Frequency service should attach ranks to words after parsing."""
+        word = _make_word("食べる")
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup.return_value = 500
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Verify frequency lookup was called for the word
+        mock_frequency.lookup.assert_called_with(word.lemma)
+        # Verify the word now has a frequency rank
+        assert word.frequency_rank == 500
+
+    def test_frequency_filter_removes_words(self, test_config, mock_services, tmp_path):
+        """Frequency filter should remove words outside the threshold."""
+        from dataclasses import replace
+
+        config = replace(test_config, max_frequency_rank=1000)
+
+        word1 = _make_word("食べる")
+        word1.frequency_rank = 500
+        word2 = _make_word("走る", 5.0)
+        word2.frequency_rank = 5000
+
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup.side_effect = [500, 5000]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
+        # word_filter.filter_by_frequency should be called; make it filter to just word1
+        mock_services["word_filter"].filter_by_frequency.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Verify filter_by_frequency was called with the max_rank
+        mock_services["word_filter"].filter_by_frequency.assert_called_once_with(
+            [word1, word2], 1000
+        )
+
+    def test_pitch_accent_populates_extra_fields(self, test_config, mock_services, tmp_path):
+        """Pitch accent service should populate extra_fields in card data."""
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_pitch = MagicMock()
+        mock_pitch.is_available.return_value = True
+        mock_pitch.lookup_batch.return_value = ["0"]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            pitch_accent_service=mock_pitch,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Verify card data includes pitch accent in extra_fields
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        assert len(card_data) == 1
+        _, _, _, extra_fields = card_data[0]
+        assert extra_fields is not None
+        assert extra_fields["pitch_accent"] == "0"
+
+    def test_both_services_full_pipeline(self, test_config, mock_services, tmp_path):
+        """Both services active should produce card data with both extra fields."""
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_pitch = MagicMock()
+        mock_pitch.is_available.return_value = True
+        mock_pitch.lookup_batch.return_value = ["0"]
+
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup.return_value = 500
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            pitch_accent_service=mock_pitch,
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.cards_created == 1
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        _, _, _, extra_fields = card_data[0]
+        assert extra_fields is not None
+        assert extra_fields["pitch_accent"] == "0"
+        assert extra_fields["frequency_rank"] == "500"

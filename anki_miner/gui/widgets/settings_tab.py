@@ -162,8 +162,17 @@ class SettingsTab(QWidget):
         self.dictionary_panel.jmdict_selector.set_path(str(self.config.jmdict_path))
         self.dictionary_panel.use_offline_checkbox.setChecked(self.config.use_offline_dict)
 
+        # Pitch accent settings
+        self.dictionary_panel.pitch_accent_selector.set_path(str(self.config.pitch_accent_path))
+        self.dictionary_panel.use_pitch_accent_checkbox.setChecked(self.config.use_pitch_accent)
+
         # Filtering settings
         self.filtering_panel.min_length_spinbox.setValue(self.config.min_word_length)
+
+        # Frequency settings
+        self.filtering_panel.frequency_selector.set_path(str(self.config.frequency_list_path))
+        self.filtering_panel.use_frequency_checkbox.setChecked(self.config.use_frequency_data)
+        self.filtering_panel.max_frequency_spinbox.setValue(self.config.max_frequency_rank)
 
     def _on_save_clicked(self) -> None:
         """Handle save button click."""
@@ -186,8 +195,23 @@ class SettingsTab(QWidget):
                 else Path("")
             ),
             use_offline_dict=self.dictionary_panel.use_offline_checkbox.isChecked(),
+            # Pitch accent settings
+            pitch_accent_path=(
+                Path(self.dictionary_panel.pitch_accent_selector.get_path())
+                if self.dictionary_panel.pitch_accent_selector.get_path()
+                else Path("")
+            ),
+            use_pitch_accent=self.dictionary_panel.use_pitch_accent_checkbox.isChecked(),
             # Filtering settings
             min_word_length=self.filtering_panel.min_length_spinbox.value(),
+            # Frequency settings
+            frequency_list_path=(
+                Path(self.filtering_panel.frequency_selector.get_path())
+                if self.filtering_panel.frequency_selector.get_path()
+                else Path("")
+            ),
+            use_frequency_data=self.filtering_panel.use_frequency_checkbox.isChecked(),
+            max_frequency_rank=self.filtering_panel.max_frequency_spinbox.value(),
         )
 
         # Emit signal to notify listeners of config change

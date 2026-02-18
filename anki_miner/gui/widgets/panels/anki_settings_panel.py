@@ -198,6 +198,37 @@ class AnkiSettingsPanel(FormPanel):
             "Anki field that stores the sentence with furigana readings",
         )
 
+        # Optional Card Fields section
+        self.add_section("Optional Card Fields")
+
+        optional_helper = QLabel(
+            "These fields are only populated if the corresponding data source is enabled "
+            "and your Anki note type has a matching field. Leave blank to skip."
+        )
+        optional_helper.setObjectName("helper-text")
+        optional_helper.setWordWrap(True)
+        self.add_widget(optional_helper)
+
+        # Pitch Accent field
+        self.pitch_accent_field_input = QLineEdit()
+        self.pitch_accent_field_input.setPlaceholderText("PitchAccent (optional)")
+        self.pitch_accent_field_input.setToolTip("Anki field for pitch accent data")
+        self._add_simple_field(
+            "Pitch Accent Field",
+            self.pitch_accent_field_input,
+            "Anki field that stores pitch accent pattern (leave blank to skip)",
+        )
+
+        # Frequency Rank field
+        self.frequency_rank_field_input = QLineEdit()
+        self.frequency_rank_field_input.setPlaceholderText("FrequencyRank (optional)")
+        self.frequency_rank_field_input.setToolTip("Anki field for word frequency rank")
+        self._add_simple_field(
+            "Frequency Rank Field",
+            self.frequency_rank_field_input,
+            "Anki field that stores word frequency rank (leave blank to skip)",
+        )
+
     def _add_labeled_field_with_button(
         self,
         label_text: str,
@@ -382,6 +413,8 @@ class AnkiSettingsPanel(FormPanel):
             "expression_furigana": self.expression_furigana_field_input.text()
             or "ExpressionFurigana",
             "sentence_furigana": self.sentence_furigana_field_input.text() or "SentenceFurigana",
+            "pitch_accent": self.pitch_accent_field_input.text(),
+            "frequency_rank": self.frequency_rank_field_input.text(),
         }
 
     def set_card_fields(self, fields: dict) -> None:
@@ -401,3 +434,5 @@ class AnkiSettingsPanel(FormPanel):
         self.sentence_furigana_field_input.setText(
             fields.get("sentence_furigana", "SentenceFurigana")
         )
+        self.pitch_accent_field_input.setText(fields.get("pitch_accent", ""))
+        self.frequency_rank_field_input.setText(fields.get("frequency_rank", ""))

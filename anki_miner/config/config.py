@@ -26,6 +26,8 @@ class AnkiMinerConfig:
             "audio": "SentenceAudio",
             "expression_furigana": "ExpressionFurigana",
             "sentence_furigana": "SentenceFurigana",
+            "pitch_accent": "",
+            "frequency_rank": "",
         }
     )
     ankiconnect_url: str = "http://127.0.0.1:8765"
@@ -61,6 +63,19 @@ class AnkiMinerConfig:
     jisho_api_url: str = "https://jisho.org/api/v1/search/words"
     jisho_delay: float = 0.5  # Seconds between API calls
 
+    # Pitch accent settings
+    pitch_accent_path: Path = field(
+        default_factory=lambda: Path.home() / ".anki_miner" / "pitch_accent.csv"
+    )
+    use_pitch_accent: bool = False
+
+    # Frequency settings
+    frequency_list_path: Path = field(
+        default_factory=lambda: Path.home() / ".anki_miner" / "frequency.csv"
+    )
+    use_frequency_data: bool = False
+    max_frequency_rank: int = 0  # 0 = no filtering; e.g. 10000 = only top 10k words
+
     # Performance settings
     max_parallel_workers: int = 6  # Number of parallel ffmpeg processes
 
@@ -71,3 +86,7 @@ class AnkiMinerConfig:
             object.__setattr__(self, "media_temp_folder", Path(self.media_temp_folder))
         if isinstance(self.jmdict_path, str):
             object.__setattr__(self, "jmdict_path", Path(self.jmdict_path))
+        if isinstance(self.pitch_accent_path, str):
+            object.__setattr__(self, "pitch_accent_path", Path(self.pitch_accent_path))
+        if isinstance(self.frequency_list_path, str):
+            object.__setattr__(self, "frequency_list_path", Path(self.frequency_list_path))

@@ -2,7 +2,10 @@
 
 from .anki_service import AnkiService
 from .definition_service import DefinitionService
+from .frequency_service import FrequencyService
 from .media_extractor import MediaExtractorService
+from .pitch_accent_service import PitchAccentService
+from .providers import JishoProvider, JMdictProvider
 from .subtitle_parser import SubtitleParserService
 from .validation_service import ValidationService
 from .word_filter import WordFilterService
@@ -14,4 +17,8 @@ __all__ = [
     "DefinitionService",
     "AnkiService",
     "ValidationService",
+    "PitchAccentService",
+    "FrequencyService",
+    "JMdictProvider",
+    "JishoProvider",
 ]

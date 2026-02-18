@@ -28,6 +28,11 @@ class AnkiService:
         "sentence_furigana",
     }
 
+    OPTIONAL_FIELD_KEYS = {
+        "pitch_accent",
+        "frequency_rank",
+    }
+
     def __init__(self, config: AnkiMinerConfig):
         """Initialize the Anki service.
 
@@ -149,6 +154,7 @@ class AnkiService:
         word: TokenizedWord,
         media: MediaData,
         definition: str | None,
+        extra_fields: dict[str, str] | None = None,
     ) -> bool:
         """Create a single Anki card.
 
@@ -156,6 +162,7 @@ class AnkiService:
             word: TokenizedWord with word information
             media: MediaData with media file paths
             definition: HTML-formatted definition (optional)
+            extra_fields: Optional dict of extra field data (e.g. pitch_accent, frequency_rank)
 
         Returns:
             True if card created successfully, False otherwise
@@ -180,6 +187,24 @@ class AnkiService:
         if media.audio_filename and audio_stored:
             audio_ref = f"[sound:{media.audio_filename}]"
 
+        # Build required fields
+        fields = {
+            self.config.anki_fields["word"]: html.escape(word.lemma),
+            self.config.anki_fields["sentence"]: html.escape(word.sentence),
+            self.config.anki_fields["definition"]: definition or "",
+            self.config.anki_fields["picture"]: picture_html,
+            self.config.anki_fields["audio"]: audio_ref,
+            self.config.anki_fields["expression_furigana"]: html.escape(word.expression_furigana),
+            self.config.anki_fields["sentence_furigana"]: html.escape(word.sentence_furigana),
+        }
+
+        # Add optional fields if configured and data available
+        if extra_fields:
+            for key, value in extra_fields.items():
+                anki_field_name = self.config.anki_fields.get(key, "")
+                if key in self.OPTIONAL_FIELD_KEYS and anki_field_name and value:
+                    fields[anki_field_name] = html.escape(str(value))
+
         # Create note
         try:
             response = requests.post(
@@ -191,19 +216,7 @@ class AnkiService:
                         "note": {
                             "deckName": self.config.anki_deck_name,
                             "modelName": self.config.anki_note_type,
-                            "fields": {
-                                self.config.anki_fields["word"]: html.escape(word.lemma),
-                                self.config.anki_fields["sentence"]: html.escape(word.sentence),
-                                self.config.anki_fields["definition"]: definition or "",
-                                self.config.anki_fields["picture"]: picture_html,
-                                self.config.anki_fields["audio"]: audio_ref,
-                                self.config.anki_fields["expression_furigana"]: html.escape(
-                                    word.expression_furigana
-                                ),
-                                self.config.anki_fields["sentence_furigana"]: html.escape(
-                                    word.sentence_furigana
-                                ),
-                            },
+                            "fields": fields,
                             "tags": ["auto-mined"],
                         }
                     },
@@ -219,13 +232,14 @@ class AnkiService:
 
     def create_cards_batch(
         self,
-        word_data_list: list[tuple[TokenizedWord, MediaData, str | None]],
+        word_data_list: list[tuple],
         progress_callback: ProgressCallback | None = None,
     ) -> int:
         """Create multiple Anki cards in batches.
 
         Args:
-            word_data_list: List of (word, media, definition) tuples
+            word_data_list: List of (word, media, definition) or
+                            (word, media, definition, extra_fields) tuples
             progress_callback: Optional callback for progress reporting
 
         Returns:
@@ -249,7 +263,14 @@ class AnkiService:
 
             # Build notes array for this batch
             notes = []
-            for word, media, definition in batch:
+            for item in batch:
+                # Support both 3-tuples and 4-tuples for backwards compatibility
+                if len(item) == 4:
+                    word, media, definition, extra_fields = item
+                else:
+                    word, media, definition = item
+                    extra_fields = None
+
                 # Build field values (only reference successfully stored media)
                 picture_html = ""
                 if media.screenshot_filename and media.screenshot_filename in stored_files:
@@ -259,23 +280,32 @@ class AnkiService:
                 if media.audio_filename and media.audio_filename in stored_files:
                     audio_ref = f"[sound:{media.audio_filename}]"
 
+                fields = {
+                    self.config.anki_fields["word"]: html.escape(word.lemma),
+                    self.config.anki_fields["sentence"]: html.escape(word.sentence),
+                    self.config.anki_fields["definition"]: definition or "",
+                    self.config.anki_fields["picture"]: picture_html,
+                    self.config.anki_fields["audio"]: audio_ref,
+                    self.config.anki_fields["expression_furigana"]: html.escape(
+                        word.expression_furigana
+                    ),
+                    self.config.anki_fields["sentence_furigana"]: html.escape(
+                        word.sentence_furigana
+                    ),
+                }
+
+                # Add optional fields if configured and data available
+                if extra_fields:
+                    for key, value in extra_fields.items():
+                        anki_field_name = self.config.anki_fields.get(key, "")
+                        if key in self.OPTIONAL_FIELD_KEYS and anki_field_name and value:
+                            fields[anki_field_name] = html.escape(str(value))
+
                 notes.append(
                     {
                         "deckName": self.config.anki_deck_name,
                         "modelName": self.config.anki_note_type,
-                        "fields": {
-                            self.config.anki_fields["word"]: html.escape(word.lemma),
-                            self.config.anki_fields["sentence"]: html.escape(word.sentence),
-                            self.config.anki_fields["definition"]: definition or "",
-                            self.config.anki_fields["picture"]: picture_html,
-                            self.config.anki_fields["audio"]: audio_ref,
-                            self.config.anki_fields["expression_furigana"]: html.escape(
-                                word.expression_furigana
-                            ),
-                            self.config.anki_fields["sentence_furigana"]: html.escape(
-                                word.sentence_furigana
-                            ),
-                        },
+                        "fields": fields,
                         "tags": ["auto-mined"],
                     }
                 )
@@ -321,12 +351,12 @@ class AnkiService:
 
     def _store_media_files_batch(
         self,
-        word_data_list: list[tuple[TokenizedWord, MediaData, str | None]],
+        word_data_list: list[tuple],
     ) -> set[str]:
         """Store all media files in Anki collection.
 
         Args:
-            word_data_list: List of (word, media, definition) tuples
+            word_data_list: List of (word, media, definition[, extra_fields]) tuples
 
         Returns:
             Set of filenames that were successfully stored
@@ -337,7 +367,8 @@ class AnkiService:
         for i in range(0, len(word_data_list), batch_size):
             batch = word_data_list[i : i + batch_size]
 
-            for _word, media, _definition in batch:
+            for item in batch:
+                media = item[1]  # media is always the second element
                 # Store screenshot
                 if (
                     media.screenshot_path

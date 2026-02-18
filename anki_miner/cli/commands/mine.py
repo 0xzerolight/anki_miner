@@ -77,6 +77,34 @@ def mine_command(args) -> int:
             presenter.show_warning(f"Could not load offline dictionary: {e}")
             presenter.show_info("Falling back to Jisho API")
 
+    # Load pitch accent data if enabled
+    pitch_accent_service = None
+    if config.use_pitch_accent:
+        try:
+            from anki_miner.services.pitch_accent_service import PitchAccentService
+
+            pitch_accent_service = PitchAccentService(config.pitch_accent_path)
+            presenter.show_info("Loading pitch accent data...")
+            if pitch_accent_service.load():
+                presenter.show_success("Pitch accent data loaded")
+        except Exception as e:
+            presenter.show_warning(f"Could not load pitch accent data: {e}")
+            pitch_accent_service = None
+
+    # Load frequency data if enabled
+    frequency_service = None
+    if config.use_frequency_data:
+        try:
+            from anki_miner.services.frequency_service import FrequencyService
+
+            frequency_service = FrequencyService(config.frequency_list_path)
+            presenter.show_info("Loading frequency data...")
+            if frequency_service.load():
+                presenter.show_success("Frequency data loaded")
+        except Exception as e:
+            presenter.show_warning(f"Could not load frequency data: {e}")
+            frequency_service = None
+
     # Create processor
     processor = EpisodeProcessor(
         config=config,
@@ -86,6 +114,8 @@ def mine_command(args) -> int:
         definition_service=definition_service,
         anki_service=anki_service,
         presenter=presenter,
+        pitch_accent_service=pitch_accent_service,
+        frequency_service=frequency_service,
     )
 
     # Process episode

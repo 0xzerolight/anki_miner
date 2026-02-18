@@ -1,9 +1,9 @@
 """Word filtering settings panel."""
 
-from PyQt6.QtWidgets import QLabel, QSpinBox
+from PyQt6.QtWidgets import QCheckBox, QSpinBox
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.widgets.base import FormPanel
+from anki_miner.gui.widgets.enhanced import FileSelector
 
 
 class FilteringSettingsPanel(FormPanel):
@@ -11,7 +11,7 @@ class FilteringSettingsPanel(FormPanel):
 
     Provides:
     - Minimum word length configuration
-    - (Future: additional filtering options)
+    - Word frequency filtering options
     """
 
     def __init__(self, parent=None):
@@ -31,12 +31,40 @@ class FilteringSettingsPanel(FormPanel):
             helper="Words shorter than this will be ignored during processing",
         )
 
-        # Future options note
-        helper = QLabel(
-            f"{IconProvider.get_icon('info')} Additional filtering options will be added in future versions"
+        # Word Frequency section
+        self.add_section("Word Frequency")
+
+        # Frequency file path
+        self.frequency_selector = FileSelector(
+            label="", file_mode=True, placeholder="Select frequency list CSV..."
         )
-        helper.setObjectName("helper-text")
-        helper.setWordWrap(True)
-        self.add_widget(helper)
+        self.frequency_selector.setToolTip("Path to word frequency list CSV")
+        self.add_field(
+            "Frequency List File",
+            self.frequency_selector,
+            helper="Path to a Japanese word frequency list (CSV format: word, rank)",
+        )
+
+        # Use frequency data checkbox
+        self.use_frequency_checkbox = QCheckBox("Enable Frequency Data")
+        self.use_frequency_checkbox.setToolTip("Attach word frequency ranks to cards")
+        self.add_field(
+            "",
+            self.use_frequency_checkbox,
+            helper="Enable to display word frequency rank on cards",
+        )
+
+        # Max frequency rank
+        self.max_frequency_spinbox = QSpinBox()
+        self.max_frequency_spinbox.setRange(0, 100000)
+        self.max_frequency_spinbox.setSpecialValueText("No limit")
+        self.max_frequency_spinbox.setToolTip(
+            "Only mine words within the top N most frequent (0 = no limit)"
+        )
+        self.add_field(
+            "Max Frequency Rank",
+            self.max_frequency_spinbox,
+            helper="Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words",
+        )
 
         self.add_stretch()
