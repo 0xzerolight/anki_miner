@@ -43,11 +43,39 @@ class AnkiService:
             ValueError: If required field keys are missing from config
         """
         self.config = config
+        self.last_created_note_ids: list[int] = []
 
         # Validate required field keys upfront
         missing = self.REQUIRED_FIELD_KEYS - set(config.anki_fields.keys())
         if missing:
             raise ValueError(f"Missing required anki_fields keys: {', '.join(sorted(missing))}")
+
+    def get_note_type_fields(self, model_name: str | None = None) -> list[str]:
+        """Get field names for a note type from AnkiConnect.
+
+        Args:
+            model_name: Note type name. Uses config value if None.
+
+        Returns:
+            List of field names, or empty list on error.
+        """
+        name = model_name or self.config.anki_note_type
+        try:
+            response = requests.post(
+                self.config.ankiconnect_url,
+                json={
+                    "action": "modelFieldNames",
+                    "version": 6,
+                    "params": {"modelName": name},
+                },
+                timeout=15,
+            )
+            result = response.json()
+            if result.get("error"):
+                return []
+            return result.get("result", [])
+        except (requests.RequestException, ValueError):
+            return []
 
     def get_existing_vocabulary(self) -> set[str]:
         """Get all vocabulary words already in Anki across ALL decks.
@@ -187,16 +215,21 @@ class AnkiService:
         if media.audio_filename and audio_stored:
             audio_ref = f"[sound:{media.audio_filename}]"
 
-        # Build required fields
-        fields = {
-            self.config.anki_fields["word"]: html.escape(word.lemma),
-            self.config.anki_fields["sentence"]: html.escape(word.sentence),
-            self.config.anki_fields["definition"]: definition or "",
-            self.config.anki_fields["picture"]: picture_html,
-            self.config.anki_fields["audio"]: audio_ref,
-            self.config.anki_fields["expression_furigana"]: html.escape(word.expression_furigana),
-            self.config.anki_fields["sentence_furigana"]: html.escape(word.sentence_furigana),
+        # Build fields, skipping any with empty config mapping
+        field_data = {
+            "word": html.escape(word.lemma),
+            "sentence": html.escape(word.sentence),
+            "definition": definition or "",
+            "picture": picture_html,
+            "audio": audio_ref,
+            "expression_furigana": html.escape(word.expression_furigana),
+            "sentence_furigana": html.escape(word.sentence_furigana),
         }
+        fields = {}
+        for key, value in field_data.items():
+            anki_field_name = self.config.anki_fields.get(key, "")
+            if anki_field_name:
+                fields[anki_field_name] = value
 
         # Add optional fields if configured and data available
         if extra_fields:
@@ -246,7 +279,11 @@ class AnkiService:
             Number of successfully created cards
         """
         if not word_data_list:
+            self.last_created_note_ids = []
             return 0
+
+        self.last_created_note_ids = []
+        all_created_ids: list[int] = []
 
         if progress_callback:
             progress_callback.on_start(len(word_data_list), "Creating Anki cards")
@@ -280,19 +317,21 @@ class AnkiService:
                 if media.audio_filename and media.audio_filename in stored_files:
                     audio_ref = f"[sound:{media.audio_filename}]"
 
-                fields = {
-                    self.config.anki_fields["word"]: html.escape(word.lemma),
-                    self.config.anki_fields["sentence"]: html.escape(word.sentence),
-                    self.config.anki_fields["definition"]: definition or "",
-                    self.config.anki_fields["picture"]: picture_html,
-                    self.config.anki_fields["audio"]: audio_ref,
-                    self.config.anki_fields["expression_furigana"]: html.escape(
-                        word.expression_furigana
-                    ),
-                    self.config.anki_fields["sentence_furigana"]: html.escape(
-                        word.sentence_furigana
-                    ),
+                # Build fields, skipping any with empty config mapping
+                field_data = {
+                    "word": html.escape(word.lemma),
+                    "sentence": html.escape(word.sentence),
+                    "definition": definition or "",
+                    "picture": picture_html,
+                    "audio": audio_ref,
+                    "expression_furigana": html.escape(word.expression_furigana),
+                    "sentence_furigana": html.escape(word.sentence_furigana),
                 }
+                fields = {}
+                for key, value in field_data.items():
+                    anki_field_name = self.config.anki_fields.get(key, "")
+                    if anki_field_name:
+                        fields[anki_field_name] = value
 
                 # Add optional fields if configured and data available
                 if extra_fields:
@@ -328,6 +367,7 @@ class AnkiService:
                     note_ids = result.get("result", [])
                     batch_created = sum(1 for nid in note_ids if nid is not None)
                     total_created += batch_created
+                    all_created_ids.extend(nid for nid in note_ids if nid is not None)
 
                     if progress_callback:
                         progress_callback.on_progress(
@@ -347,6 +387,7 @@ class AnkiService:
         if progress_callback:
             progress_callback.on_complete()
 
+        self.last_created_note_ids = all_created_ids
         return total_created
 
     def _store_media_files_batch(
@@ -422,3 +463,43 @@ class AnkiService:
                         logger.warning(f"Failed to store audio {media.audio_filename}: {e}")
 
         return stored
+
+    def delete_notes(self, note_ids: list[int]) -> int:
+        """Delete notes from Anki by their IDs.
+
+        Note: AnkiConnect's deleteNotes action does not report per-note
+        success/failure, so this returns the number of notes *requested*
+        for deletion, not a verified count.
+
+        Args:
+            note_ids: List of Anki note IDs to delete
+
+        Returns:
+            Number of notes requested for deletion (assumes all succeeded
+            if no error was raised)
+
+        Raises:
+            AnkiConnectionError: If cannot connect to AnkiConnect or deletion fails
+        """
+        if not note_ids:
+            return 0
+
+        try:
+            response = requests.post(
+                self.config.ankiconnect_url,
+                json={
+                    "action": "deleteNotes",
+                    "version": 6,
+                    "params": {"notes": note_ids},
+                },
+                timeout=30,
+            )
+
+            result = response.json()
+            if result.get("error"):
+                raise AnkiConnectionError(f"Failed to delete notes: {result['error']}")
+
+            return len(note_ids)
+
+        except requests.exceptions.ConnectionError as e:
+            raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e

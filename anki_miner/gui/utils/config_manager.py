@@ -129,6 +129,7 @@ class GUIConfigManager:
             "jmdict_path",
             "pitch_accent_path",
             "frequency_list_path",
+            "history_db_path",
         }
 
         result: dict[str, Any] = {}
