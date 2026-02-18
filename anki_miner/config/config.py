@@ -76,6 +76,10 @@ class AnkiMinerConfig:
     use_frequency_data: bool = False
     max_frequency_rank: int = 0  # 0 = no filtering; e.g. 10000 = only top 10k words
 
+    # Cross-episode frequency settings
+    use_cross_episode_priority: bool = False
+    min_episode_appearances: int = 2  # Only mine words appearing in at least N episodes
+
     # Performance settings
     max_parallel_workers: int = 6  # Number of parallel ffmpeg processes
 
