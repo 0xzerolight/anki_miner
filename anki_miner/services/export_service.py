@@ -67,7 +67,7 @@ class ExportService:
 
         lines: list[str] = []
         for lemma, word_data in seen.items():
-            if format == "takoboto":
+            if fmt == "takoboto":
                 lines.append(f"{lemma}\t{word_data.word.reading}")
             else:
                 # "plain" and "jpdb" are both one lemma per line
