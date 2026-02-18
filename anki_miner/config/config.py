@@ -79,6 +79,9 @@ class AnkiMinerConfig:
     # Performance settings
     max_parallel_workers: int = 6  # Number of parallel ffmpeg processes
 
+    # Analytics settings
+    stats_db_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "stats.db")
+
     def __post_init__(self):
         """Convert string paths to Path objects if needed."""
         # Convert paths to Path objects (handles both str and Path inputs)
@@ -90,3 +93,5 @@ class AnkiMinerConfig:
             object.__setattr__(self, "pitch_accent_path", Path(self.pitch_accent_path))
         if isinstance(self.frequency_list_path, str):
             object.__setattr__(self, "frequency_list_path", Path(self.frequency_list_path))
+        if isinstance(self.stats_db_path, str):
+            object.__setattr__(self, "stats_db_path", Path(self.stats_db_path))

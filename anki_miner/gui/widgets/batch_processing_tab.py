@@ -49,6 +49,7 @@ class BatchProcessingTab(QWidget):
         config: AnkiMinerConfig,
         presenter: GUIPresenter,
         progress_callback: GUIProgressCallback,
+        stats_service=None,
         parent=None,
     ):
         """Initialize the batch processing tab.
@@ -57,12 +58,14 @@ class BatchProcessingTab(QWidget):
             config: Application configuration
             presenter: GUI presenter for output
             progress_callback: Progress callback for updates
+            stats_service: Optional statistics recording service
             parent: Optional parent widget
         """
         super().__init__(parent)
         self.config = config
         self.presenter = presenter
         self.progress_callback = progress_callback
+        self.stats_service = stats_service
         self.worker_thread: ManualPairWorkerThread | BatchQueueWorkerThread | None = None
         self._is_processing = False
         self._current_phase = ""
@@ -329,7 +332,9 @@ class BatchProcessingTab(QWidget):
         self.presenter.show_info(f"Starting batch processing of {len(pairs)} episodes...")
 
         # Create episode processor using service factory
-        episode_processor = create_episode_processor(self.config, self.presenter)
+        episode_processor = create_episode_processor(
+            self.config, self.presenter, self.stats_service
+        )
 
         # Process each pair sequentially in worker thread
         from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
@@ -364,7 +369,11 @@ class BatchProcessingTab(QWidget):
         from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
 
         self.worker_thread = BatchQueueWorkerThread(
-            self.batch_queue, self.config, self.presenter, self.progress_callback
+            self.batch_queue,
+            self.config,
+            self.presenter,
+            self.progress_callback,
+            stats_service=self.stats_service,
         )
 
         self.worker_thread.queue_started.connect(self._on_queue_started)

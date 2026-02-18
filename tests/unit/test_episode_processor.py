@@ -397,3 +397,110 @@ class TestOptionalServices:
         assert extra_fields is not None
         assert extra_fields["pitch_accent"] == "0"
         assert extra_fields["frequency_rank"] == "500"
+
+
+class TestStatsServiceIntegration:
+    """Tests for EpisodeProcessor with stats_service."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_records_session_on_success(self, test_config, mock_services, tmp_path):
+        """Stats service should record a session after successful processing."""
+        mock_stats = MagicMock()
+        mock_stats.is_available.return_value = True
+
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_stats.record_session.assert_called_once()
+        mock_stats.record_difficulty.assert_called_once()
+
+    def test_records_difficulty_after_phase2(self, test_config, mock_services, tmp_path):
+        """Difficulty should be recorded with correct word counts."""
+        mock_stats = MagicMock()
+        mock_stats.is_available.return_value = True
+
+        words = [_make_word("食べる"), _make_word("走る", 5.0)]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [words[0]]  # 1 unknown
+        mock_services["media_extractor"].extract_media_batch.return_value = [
+            (words[0], _make_media())
+        ]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Verify difficulty was recorded with correct counts
+        call_args = mock_stats.record_difficulty.call_args
+        assert call_args.kwargs["total_words"] == 2  # len(all_words)
+        assert call_args.kwargs["unknown_words"] == 1  # len(unknown_words)
+
+    def test_no_crash_without_stats_service(self, test_config, mock_services, tmp_path):
+        """Processing should work fine without stats_service."""
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+        assert result.total_words_found == 0
+
+    def test_no_session_recorded_on_error(self, test_config, mock_services, tmp_path):
+        """Stats service should NOT record a session if processing fails."""
+        mock_stats = MagicMock()
+        mock_stats.is_available.return_value = True
+
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = RuntimeError("fail")
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+        assert result.success is False
+        mock_stats.record_session.assert_not_called()
+        mock_stats.record_difficulty.assert_not_called()
