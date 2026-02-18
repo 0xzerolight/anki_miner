@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -61,6 +62,32 @@ class EpisodeProcessor:
         self.presenter = presenter
         self.pitch_accent_service = pitch_accent_service
         self.frequency_service = frequency_service
+        self._cancelled = False
+
+    def cancel(self) -> None:
+        """Request cancellation of processing."""
+        self._cancelled = True
+
+    @property
+    def cancelled(self) -> bool:
+        """Check if cancellation has been requested."""
+        return self._cancelled
+
+    def _make_cancelled_result(
+        self,
+        start_time: float,
+        total_words_found: int = 0,
+        new_words_found: int = 0,
+        cards_created: int = 0,
+    ) -> ProcessingResult:
+        """Create a ProcessingResult for a cancelled operation."""
+        return ProcessingResult(
+            total_words_found=total_words_found,
+            new_words_found=new_words_found,
+            cards_created=cards_created,
+            errors=["Processing cancelled by user"],
+            elapsed_time=time.time() - start_time,
+        )
 
     def process_episode(
         self,
@@ -68,6 +95,7 @@ class EpisodeProcessor:
         subtitle_file: Path,
         preview_mode: bool = False,
         progress_callback: ProgressCallback | None = None,
+        curation_callback: Callable[[list], list] | None = None,
     ) -> ProcessingResult:
         """Process a single episode and create Anki cards.
 
@@ -83,6 +111,8 @@ class EpisodeProcessor:
             subtitle_file: Path to subtitle file
             preview_mode: If True, only show words without creating cards
             progress_callback: Optional progress callback
+            curation_callback: Optional callback for word curation. Receives
+                filtered words, returns user-selected subset. Empty list cancels.
 
         Returns:
             ProcessingResult with statistics
@@ -105,6 +135,10 @@ class EpisodeProcessor:
                     errors=[],
                     elapsed_time=time.time() - start_time,
                 )
+
+            # Check cancellation after Phase 1
+            if self._cancelled:
+                return self._make_cancelled_result(start_time, total_words_found=len(all_words))
 
             # Attach frequency data if available
             if self.frequency_service and self.frequency_service.is_available():
@@ -144,6 +178,27 @@ class EpisodeProcessor:
                     elapsed_time=time.time() - start_time,
                 )
 
+            # Check cancellation after Phase 2
+            if self._cancelled:
+                return self._make_cancelled_result(
+                    start_time,
+                    total_words_found=len(all_words),
+                    new_words_found=len(unknown_words),
+                )
+
+            # Word curation callback (if provided, not in preview mode)
+            if curation_callback is not None and not preview_mode:
+                unknown_words = curation_callback(unknown_words)
+                if not unknown_words:
+                    return self._make_cancelled_result(
+                        start_time,
+                        total_words_found=len(all_words),
+                        new_words_found=0,
+                    )
+                self.presenter.show_info(
+                    f"User selected {len(unknown_words)} words for card creation"
+                )
+
             # Preview mode - show and return
             if preview_mode:
                 self.presenter.show_word_preview(unknown_words)
@@ -158,8 +213,18 @@ class EpisodeProcessor:
             # Phase 3: Extract media
             self.presenter.show_info("Step 3/5 \u2014 Extracting media from video")
             media_results = self.media_extractor.extract_media_batch(
-                video_file, unknown_words, progress_callback
+                video_file,
+                unknown_words,
+                progress_callback,
+                cancelled_check=lambda: self._cancelled,
             )
+
+            if self._cancelled:
+                return self._make_cancelled_result(
+                    start_time,
+                    total_words_found=len(all_words),
+                    new_words_found=len(unknown_words),
+                )
 
             if not media_results:
                 self.presenter.show_warning("No media extracted successfully")
@@ -181,6 +246,14 @@ class EpisodeProcessor:
                 progress_callback,
             )
             self.presenter.show_success(f"Found {sum(1 for d in definitions if d)} definitions")
+
+            # Check cancellation after Phase 4
+            if self._cancelled:
+                return self._make_cancelled_result(
+                    start_time,
+                    total_words_found=len(all_words),
+                    new_words_found=len(unknown_words),
+                )
 
             # Look up pitch accents if available
             pitch_accents: list[str | None] = [None] * len(words_with_media)
