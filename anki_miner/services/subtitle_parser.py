@@ -23,6 +23,37 @@ class SubtitleParserService:
         self.config = config
         self.tagger = fugashi.Tagger()
 
+    def parse_raw_entries(self, subtitle_file: Path) -> list[tuple[float, float, str]]:
+        """Parse subtitle file and return raw timing entries without tokenization.
+
+        Args:
+            subtitle_file: Path to subtitle file (.ass, .srt, .ssa)
+
+        Returns:
+            List of (start_seconds, end_seconds, text) tuples
+
+        Raises:
+            SubtitleParseError: If subtitle file cannot be parsed
+        """
+        try:
+            subs = pysubs2.load(str(subtitle_file))
+        except FileNotFoundError as e:
+            raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e
+        except Exception as e:
+            raise SubtitleParseError(f"Failed to parse subtitle file: {e}") from e
+
+        entries = []
+        for line in subs:
+            text = clean_subtitle_text(line.text)
+            if not text:
+                continue
+
+            start_time = max(0.0, (line.start / 1000.0) + self.config.subtitle_offset)
+            end_time = max(start_time, (line.end / 1000.0) + self.config.subtitle_offset)
+            entries.append((start_time, end_time, text))
+
+        return entries
+
     def parse_subtitle_file(self, subtitle_file: Path) -> list[TokenizedWord]:
         """Parse subtitle file and extract vocabulary words.
 

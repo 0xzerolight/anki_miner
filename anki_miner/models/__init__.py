@@ -1,5 +1,6 @@
 """Data models for Anki Miner."""
 
+from .history import HistoryEntry
 from .media import MediaData
 from .processing import ProcessingResult, ValidationIssue, ValidationResult
 from .stats import DifficultyEntry, Milestone, MiningSession, OverallStats, SeriesStats
@@ -17,4 +18,5 @@ __all__ = [
     "OverallStats",
     "DifficultyEntry",
     "Milestone",
+    "HistoryEntry",
 ]

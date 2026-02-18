@@ -133,6 +133,8 @@ class EpisodeProcessor:
         """
         start_time = time.time()
         errors: list[str] = []
+        vf = str(video_file)
+        sf = str(subtitle_file)
 
         try:
             # Phase 1: Parse subtitles
@@ -148,6 +150,8 @@ class EpisodeProcessor:
                     cards_created=0,
                     errors=[],
                     elapsed_time=time.time() - start_time,
+                    video_file=vf,
+                    subtitle_file=sf,
                 )
 
             # Check cancellation after Phase 1
@@ -256,6 +260,8 @@ class EpisodeProcessor:
                     errors=[],
                     elapsed_time=time.time() - start_time,
                     comprehension_percentage=comprehension,
+                    video_file=vf,
+                    subtitle_file=sf,
                 )
 
             # Check cancellation after Phase 2
@@ -289,6 +295,8 @@ class EpisodeProcessor:
                     errors=[],
                     elapsed_time=time.time() - start_time,
                     comprehension_percentage=comprehension,
+                    video_file=vf,
+                    subtitle_file=sf,
                 )
 
             # Phase 3: Extract media
@@ -316,6 +324,8 @@ class EpisodeProcessor:
                     errors=["Media extraction failed for all words"],
                     elapsed_time=time.time() - start_time,
                     comprehension_percentage=comprehension,
+                    video_file=vf,
+                    subtitle_file=sf,
                 )
 
             self.presenter.show_success(f"Extracted media for {len(media_results)} words")
@@ -374,6 +384,7 @@ class EpisodeProcessor:
                 card_data,
                 progress_callback,
             )
+            created_note_ids = list(self.anki_service.last_created_note_ids)
 
             self.presenter.show_success(f"Successfully created {cards_created} cards")
 
@@ -389,6 +400,9 @@ class EpisodeProcessor:
                 errors=errors,
                 elapsed_time=time.time() - start_time,
                 comprehension_percentage=comprehension,
+                card_ids=created_note_ids,
+                video_file=vf,
+                subtitle_file=sf,
             )
 
             # Record mining session if stats service available
@@ -417,6 +431,8 @@ class EpisodeProcessor:
                 cards_created=0,
                 errors=errors,
                 elapsed_time=time.time() - start_time,
+                video_file=vf,
+                subtitle_file=sf,
             )
         except Exception as e:
             errors.append(f"Unexpected error: {e}")
@@ -427,6 +443,8 @@ class EpisodeProcessor:
                 cards_created=0,
                 errors=errors,
                 elapsed_time=time.time() - start_time,
+                video_file=vf,
+                subtitle_file=sf,
             )
         finally:
             # Clean up temporary media files

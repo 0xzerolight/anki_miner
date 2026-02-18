@@ -95,6 +95,15 @@ class AnkiMinerConfig:
     use_cross_episode_priority: bool = False
     min_episode_appearances: int = 2  # Only mine words appearing in at least N episodes
 
+    # History settings
+    history_db_path: Path = field(
+        default_factory=lambda: Path.home() / ".anki_miner" / "history.db"
+    )
+    enable_history: bool = True
+
+    # Update settings
+    check_for_updates: bool = True
+
     # Performance settings
     max_parallel_workers: int = 6  # Number of parallel ffmpeg processes
 
@@ -124,3 +133,5 @@ class AnkiMinerConfig:
             )
         if isinstance(self.stats_db_path, str):
             object.__setattr__(self, "stats_db_path", Path(self.stats_db_path))
+        if isinstance(self.history_db_path, str):
+            object.__setattr__(self, "history_db_path", Path(self.history_db_path))
