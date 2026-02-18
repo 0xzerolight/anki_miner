@@ -11,6 +11,7 @@ from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.frequency_service import FrequencyService
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.services.pitch_accent_service import PitchAccentService
+from anki_miner.services.stats_service import StatsService
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.word_filter import WordFilterService
 
@@ -65,13 +66,16 @@ def create_services(config: AnkiMinerConfig) -> tuple:
 
 
 def create_episode_processor(
-    config: AnkiMinerConfig, presenter: PresenterProtocol
+    config: AnkiMinerConfig,
+    presenter: PresenterProtocol,
+    stats_service: StatsService | None = None,
 ) -> EpisodeProcessor:
     """Create an EpisodeProcessor with all required services.
 
     Args:
         config: Mining configuration
         presenter: Output presenter for messages
+        stats_service: Optional statistics recording service
 
     Returns:
         Configured EpisodeProcessor instance
@@ -96,20 +100,24 @@ def create_episode_processor(
         presenter=presenter,
         pitch_accent_service=pitch_accent_service,
         frequency_service=frequency_service,
+        stats_service=stats_service,
     )
 
 
 def create_folder_processor(
-    config: AnkiMinerConfig, presenter: PresenterProtocol
+    config: AnkiMinerConfig,
+    presenter: PresenterProtocol,
+    stats_service: StatsService | None = None,
 ) -> FolderProcessor:
     """Create a FolderProcessor with all required services.
 
     Args:
         config: Mining configuration
         presenter: Output presenter for messages
+        stats_service: Optional statistics recording service
 
     Returns:
         Configured FolderProcessor instance
     """
-    episode_processor = create_episode_processor(config, presenter)
+    episode_processor = create_episode_processor(config, presenter, stats_service)
     return FolderProcessor(episode_processor=episode_processor, presenter=presenter)

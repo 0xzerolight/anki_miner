@@ -35,6 +35,7 @@ def test_config(temp_dir):
         jmdict_path=temp_dir / "JMdict_e",
         subtitle_offset=0.0,
         max_parallel_workers=2,  # Reduced for tests
+        stats_db_path=temp_dir / "stats.db",
     )
 
 

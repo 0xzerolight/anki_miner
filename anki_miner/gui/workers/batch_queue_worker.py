@@ -30,6 +30,7 @@ class BatchQueueWorkerThread(CancellableWorker):
         config: AnkiMinerConfig,
         presenter: GUIPresenter,
         progress_callback: GUIProgressCallback | None = None,
+        stats_service=None,
         parent=None,
     ):
         """Initialize the batch queue worker thread.
@@ -39,6 +40,7 @@ class BatchQueueWorkerThread(CancellableWorker):
             config: Application configuration (will be modified per-item for offset)
             presenter: GUI presenter for output
             progress_callback: Optional progress callback for updates
+            stats_service: Optional statistics recording service
             parent: Optional parent QObject
         """
         super().__init__(parent)
@@ -46,6 +48,7 @@ class BatchQueueWorkerThread(CancellableWorker):
         self.config = config
         self.presenter = presenter
         self.progress_callback = progress_callback
+        self.stats_service = stats_service
 
     def run(self):
         """Process all pending items in queue sequentially."""
@@ -67,7 +70,9 @@ class BatchQueueWorkerThread(CancellableWorker):
                 config_with_offset = replace(self.config, subtitle_offset=item.subtitle_offset)
 
                 # Create processor for this item with its specific offset
-                episode_processor = create_episode_processor(config_with_offset, self.presenter)
+                episode_processor = create_episode_processor(
+                    config_with_offset, self.presenter, self.stats_service
+                )
 
                 # Use FilePairMatcher for cross-folder pairing
                 from anki_miner.utils.file_pairing import FilePairMatcher
