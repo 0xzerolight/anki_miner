@@ -28,6 +28,8 @@ def test_config(temp_dir):
             "audio": "audio",
             "expression_furigana": "expression_furigana",
             "sentence_furigana": "sentence_furigana",
+            "pitch_accent": "PitchAccent",
+            "frequency_rank": "FrequencyRank",
         },
         media_temp_folder=temp_dir / "temp_media",
         jmdict_path=temp_dir / "JMdict_e",
@@ -63,6 +65,7 @@ def make_tokenized_word():
         video_file=None,
         expression_furigana="",
         sentence_furigana="",
+        frequency_rank=None,
     ):
         return TokenizedWord(
             surface=surface,
@@ -75,6 +78,7 @@ def make_tokenized_word():
             video_file=video_file,
             expression_furigana=expression_furigana,
             sentence_furigana=sentence_furigana,
+            frequency_rank=frequency_rank,
         )
 
     return _make

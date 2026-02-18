@@ -18,6 +18,7 @@ class TokenizedWord:
     video_file: Path | None = None  # Source video (for batch processing)
     expression_furigana: str = ""  # Furigana for expression, e.g. "食べる[たべる]"
     sentence_furigana: str = ""  # Furigana for sentence, e.g. "日本語[にほんご]を食べる[たべる]。"
+    frequency_rank: int | None = None  # Word frequency rank (1 = most common)
 
     def __str__(self) -> str:
         return f"{self.lemma} ({self.reading})"
@@ -36,6 +37,8 @@ class WordData:
     audio_path: Path | None = None
     screenshot_filename: str | None = None
     audio_filename: str | None = None
+    pitch_accent: str | None = None
+    frequency_rank: int | None = None
 
     @property
     def has_media(self) -> bool:

@@ -127,6 +127,8 @@ class GUIConfigManager:
         path_keys = {
             "media_temp_folder",
             "jmdict_path",
+            "pitch_accent_path",
+            "frequency_list_path",
         }
 
         result: dict[str, Any] = {}

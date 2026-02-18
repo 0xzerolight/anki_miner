@@ -609,3 +609,145 @@ class TestStoreMediaFilesBatch:
         ):
             # Should not raise
             service._store_media_files_batch([(word, media, "def")])
+
+
+# ---------------------------------------------------------------------------
+# TestOptionalFields
+# ---------------------------------------------------------------------------
+
+
+class TestOptionalFields:
+    """Tests for optional field handling (pitch_accent, frequency_rank)."""
+
+    def test_create_card_with_extra_fields(self, test_config, make_tokenized_word):
+        """Should include mapped optional fields in the note payload."""
+        service = AnkiService(test_config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=12345)
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            result = service.create_card(
+                word,
+                media,
+                "definition",
+                extra_fields={"pitch_accent": "0", "frequency_rank": "500"},
+            )
+
+        assert result is True
+        payload = mock_post.call_args[1]["json"]
+        note_fields = payload["params"]["note"]["fields"]
+        assert note_fields["PitchAccent"] == "0"
+        assert note_fields["FrequencyRank"] == "500"
+
+    def test_create_card_extra_fields_skipped_when_not_mapped(self, temp_dir):
+        """Should not include optional fields when config maps them to empty string."""
+        from anki_miner.config import AnkiMinerConfig
+
+        config = AnkiMinerConfig(
+            anki_fields={
+                "word": "word",
+                "sentence": "sentence",
+                "definition": "definition",
+                "picture": "picture",
+                "audio": "audio",
+                "expression_furigana": "expression_furigana",
+                "sentence_furigana": "sentence_furigana",
+                "pitch_accent": "",  # Not mapped
+                "frequency_rank": "",  # Not mapped
+            },
+            media_temp_folder=temp_dir / "temp",
+            jmdict_path=temp_dir / "dict",
+        )
+        service = AnkiService(config)
+        word = make_word_helper()
+        media = MediaData()
+
+        resp = _mock_response(result=12345)
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            service.create_card(
+                word,
+                media,
+                "definition",
+                extra_fields={"pitch_accent": "0", "frequency_rank": "500"},
+            )
+
+        payload = mock_post.call_args[1]["json"]
+        note_fields = payload["params"]["note"]["fields"]
+        # Empty-mapped fields should NOT appear
+        assert "PitchAccent" not in note_fields
+        assert "FrequencyRank" not in note_fields
+        assert "" not in note_fields
+
+    def test_create_card_ignores_unknown_extra_keys(self, test_config, make_tokenized_word):
+        """Should silently ignore extra_fields keys not in OPTIONAL_FIELD_KEYS."""
+        service = AnkiService(test_config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=12345)
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            service.create_card(
+                word,
+                media,
+                "definition",
+                extra_fields={"unknown_key": "some_value"},
+            )
+
+        payload = mock_post.call_args[1]["json"]
+        note_fields = payload["params"]["note"]["fields"]
+        assert "some_value" not in note_fields.values()
+
+    def test_create_card_no_extra_fields(self, test_config, make_tokenized_word):
+        """Should work normally when extra_fields is None."""
+        service = AnkiService(test_config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=12345)
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            result = service.create_card(word, media, "definition", extra_fields=None)
+
+        assert result is True
+        payload = mock_post.call_args[1]["json"]
+        note_fields = payload["params"]["note"]["fields"]
+        # Optional fields should not appear when extra_fields is None
+        assert "PitchAccent" not in note_fields
+        assert "FrequencyRank" not in note_fields
+
+    def test_batch_with_4_tuples_and_extra_fields(self, test_config, make_tokenized_word):
+        """Should include optional fields when batch items are 4-tuples."""
+        service = AnkiService(test_config)
+        word = make_tokenized_word()
+        media = MediaData()
+        extra = {"pitch_accent": "1", "frequency_rank": "200"}
+
+        resp = _mock_response(result=[12345])
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            result = service.create_cards_batch([(word, media, "definition", extra)])
+
+        assert result == 1
+        payload = mock_post.call_args[1]["json"]
+        note = payload["params"]["notes"][0]
+        assert note["fields"]["PitchAccent"] == "1"
+        assert note["fields"]["FrequencyRank"] == "200"
+
+
+def make_word_helper():
+    """Standalone helper to create a TokenizedWord without fixtures."""
+    from anki_miner.models import TokenizedWord
+
+    return TokenizedWord(
+        surface="食べる",
+        lemma="食べる",
+        reading="タベル",
+        sentence="日本語を食べる。",
+        start_time=1.0,
+        end_time=3.0,
+        duration=2.0,
+    )

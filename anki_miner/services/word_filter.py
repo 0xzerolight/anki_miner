@@ -64,3 +64,27 @@ class WordFilterService:
                 filtered.append(word)
 
         return filtered
+
+    def filter_by_frequency(
+        self,
+        words: list[TokenizedWord],
+        max_rank: int | None = None,
+    ) -> list[TokenizedWord]:
+        """Filter words by frequency rank (keep only top-N most common words).
+
+        Words without a frequency rank are always included (benefit of the doubt).
+
+        Args:
+            words: List of words to filter.
+            max_rank: Maximum frequency rank to include (e.g., 10000 means
+                      only words ranked 1-10000 are kept). None or 0 means no filtering.
+
+        Returns:
+            Filtered list of words.
+        """
+        if not max_rank or max_rank <= 0:
+            return words
+
+        return [
+            word for word in words if word.frequency_rank is None or word.frequency_rank <= max_rank
+        ]
