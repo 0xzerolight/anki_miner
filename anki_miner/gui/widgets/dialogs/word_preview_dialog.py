@@ -1,28 +1,27 @@
 """Enhanced dialog for previewing discovered words with search, grouping, and export."""
 
-import csv
-
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
-    QMessageBox,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
 )
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.widgets.dialogs.export_dialog import ExportDialog
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.models import TokenizedWord
+from anki_miner.models.word import WordData
 
 
 class WordPreviewDialog(QDialog):
@@ -37,14 +36,16 @@ class WordPreviewDialog(QDialog):
     - Modern card-based layout
     """
 
-    def __init__(self, words: list[TokenizedWord], parent=None):
+    def __init__(self, words: list[TokenizedWord], config: AnkiMinerConfig, parent=None):
         """Initialize the word preview dialog.
 
         Args:
             words: List of discovered words to preview
+            config: Application configuration
             parent: Optional parent widget
         """
         super().__init__(parent)
+        self._config = config
         self.all_words = words  # All words (never filtered)
         self.filtered_words = words.copy()  # Currently displayed words
         self._setup_ui()
@@ -101,9 +102,9 @@ class WordPreviewDialog(QDialog):
 
         controls_layout.addStretch()
 
-        # Export CSV button
-        export_button = ModernButton("Export CSV", icon="save", variant="secondary")
-        export_button.clicked.connect(self._on_export_csv)
+        # Export button
+        export_button = ModernButton("Export...", icon="save", variant="secondary")
+        export_button.clicked.connect(self._on_export)
         controls_layout.addWidget(export_button)
 
         controls_frame.setLayout(controls_layout)
@@ -427,55 +428,8 @@ class WordPreviewDialog(QDialog):
         """
         self._populate_table()
 
-    def _on_export_csv(self) -> None:
-        """Handle export to CSV button click."""
-        # Ask user for save location
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export Words to CSV", "words.csv", "CSV Files (*.csv);;All Files (*)"
-        )
-
-        if not file_path:
-            return  # User cancelled
-
-        try:
-            # Write CSV file
-            with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
-                writer = csv.writer(csvfile)
-
-                # Write header
-                writer.writerow(
-                    [
-                        "Surface",
-                        "Lemma",
-                        "Reading",
-                        "Sentence",
-                        "Start Time",
-                        "End Time",
-                        "Duration",
-                        "Video File",
-                    ]
-                )
-
-                # Write data
-                for word in self.filtered_words:
-                    writer.writerow(
-                        [
-                            word.surface,
-                            word.lemma,
-                            word.reading,
-                            word.sentence,
-                            f"{word.start_time:.2f}",
-                            f"{word.end_time:.2f}",
-                            f"{word.duration:.2f}",
-                            str(word.video_file) if word.video_file else "",
-                        ]
-                    )
-
-            QMessageBox.information(
-                self,
-                "Export Complete",
-                f"Successfully exported {len(self.filtered_words)} words to:\n{file_path}",
-            )
-
-        except Exception as e:
-            QMessageBox.critical(self, "Export Failed", f"Failed to export CSV file:\n{str(e)}")
+    def _on_export(self) -> None:
+        """Open the export dialog for the currently filtered words."""
+        word_data = [WordData(word=w) for w in self.filtered_words]
+        dialog = ExportDialog(word_data, self._config, self)
+        dialog.exec()
