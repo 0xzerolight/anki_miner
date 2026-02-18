@@ -24,7 +24,8 @@ THEME_INDEX_MAP = {"light": 0, "dark": 1, "sakura": 2}
 # =============================================================================
 TAB_SINGLE_EPISODE = 0
 TAB_BATCH_PROCESSING = 1
-TAB_SETTINGS = 2
+TAB_ANALYTICS = 2
+TAB_SETTINGS = 3
 
 # =============================================================================
 # WIDGET MINIMUM HEIGHTS

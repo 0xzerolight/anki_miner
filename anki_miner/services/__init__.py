@@ -7,6 +7,7 @@ from .frequency_service import FrequencyService
 from .media_extractor import MediaExtractorService
 from .pitch_accent_service import PitchAccentService
 from .providers import JishoProvider, JMdictProvider
+from .stats_service import StatsService
 from .subtitle_parser import SubtitleParserService
 from .validation_service import ValidationService
 from .word_filter import WordFilterService
@@ -21,6 +22,7 @@ __all__ = [
     "ValidationService",
     "PitchAccentService",
     "FrequencyService",
+    "StatsService",
     "JMdictProvider",
     "JishoProvider",
 ]

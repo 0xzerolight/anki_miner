@@ -10,9 +10,11 @@ from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
+from anki_miner.services.stats_service import StatsService
 
 
 def main():
@@ -42,15 +44,29 @@ def main():
     # Create main window
     window = MainWindow()
 
+    # Initialize stats service for analytics
+    stats_service = StatsService(window.get_config().stats_db_path)
+    stats_service.load()
+
     # Create per-tab presenters and progress callbacks to avoid cross-tab signal pollution
     episode_presenter = GUIPresenter(window)
     episode_progress = GUIProgressCallback(window)
-    episode_tab = SingleEpisodeTab(window.get_config(), episode_presenter, episode_progress)
+    episode_tab = SingleEpisodeTab(
+        window.get_config(),
+        episode_presenter,
+        episode_progress,
+        stats_service=stats_service,
+    )
     window.tabs.addTab(episode_tab, "Episode Mining")
 
     batch_presenter = GUIPresenter(window)
     batch_progress = GUIProgressCallback(window)
-    batch_tab = BatchProcessingTab(window.get_config(), batch_presenter, batch_progress)
+    batch_tab = BatchProcessingTab(
+        window.get_config(),
+        batch_presenter,
+        batch_progress,
+        stats_service=stats_service,
+    )
     window.tabs.addTab(batch_tab, "Batch Mining")
 
     # Connect both tab presenters to MainWindow status bar handlers
@@ -61,6 +77,10 @@ def main():
         presenter.error_signal.connect(window._on_error_message)
         presenter.processing_result_signal.connect(window._on_processing_result)
         presenter.word_preview_signal.connect(window._on_word_preview)
+
+    # Analytics tab
+    analytics_tab = AnalyticsTab(stats_service)
+    window.tabs.addTab(analytics_tab, "Analytics")
 
     settings_tab = SettingsTab(window.get_config())
     settings_tab.config_changed.connect(window.update_config)
