@@ -4,15 +4,16 @@ import pytest
 
 from anki_miner.models.word import TokenizedWord
 from anki_miner.services.word_filter import WordFilterService
+from anki_miner.services.word_list_service import WordListService
 
 
-def create_word(lemma: str, surface: str = None) -> TokenizedWord:
+def create_word(lemma: str, surface: str = None, sentence: str = "Test sentence") -> TokenizedWord:
     """Helper to create a TokenizedWord for testing."""
     return TokenizedWord(
         surface=surface or lemma,
         lemma=lemma,
         reading="",
-        sentence="Test sentence",
+        sentence=sentence,
         start_time=0.0,
         end_time=1.0,
         duration=1.0,
@@ -217,3 +218,106 @@ class TestWordFilterService:
             service = WordFilterService(test_config)
             result = service.filter_by_frequency([], max_rank=5000)
             assert result == []
+
+    class TestFilterByWordLists:
+        """Tests for filter_by_word_lists method."""
+
+        def test_removes_blacklisted_words(self, test_config, tmp_path):
+            """Should remove words on the blacklist."""
+            bl = tmp_path / "bl.txt"
+            bl.write_text("食べる\n", encoding="utf-8")
+            wls = WordListService(blacklist_path=bl)
+            wls.load()
+
+            service = WordFilterService(test_config)
+            words = [create_word("食べる"), create_word("飲む")]
+
+            result = service.filter_by_word_lists(words, wls)
+            assert len(result) == 1
+            assert result[0].lemma == "飲む"
+
+        def test_keeps_whitelisted_words(self, test_config, tmp_path):
+            """Whitelisted words should always be kept."""
+            wl = tmp_path / "wl.txt"
+            wl.write_text("食べる\n", encoding="utf-8")
+            wls = WordListService(whitelist_path=wl)
+            wls.load()
+
+            service = WordFilterService(test_config)
+            words = [create_word("食べる"), create_word("飲む")]
+
+            result = service.filter_by_word_lists(words, wls)
+            assert len(result) == 2
+
+        def test_whitelist_overrides_blacklist(self, test_config, tmp_path):
+            """If a word is on both lists, whitelist wins."""
+            bl = tmp_path / "bl.txt"
+            bl.write_text("食べる\n", encoding="utf-8")
+            wl = tmp_path / "wl.txt"
+            wl.write_text("食べる\n", encoding="utf-8")
+            wls = WordListService(blacklist_path=bl, whitelist_path=wl)
+            wls.load()
+
+            service = WordFilterService(test_config)
+            words = [create_word("食べる")]
+
+            result = service.filter_by_word_lists(words, wls)
+            assert len(result) == 1
+
+        def test_empty_list(self, test_config, tmp_path):
+            """Should return empty list for empty input."""
+            wls = WordListService()
+            wls.load()
+
+            service = WordFilterService(test_config)
+            result = service.filter_by_word_lists([], wls)
+            assert result == []
+
+    class TestDeduplicateBySentence:
+        """Tests for deduplicate_by_sentence method."""
+
+        def test_removes_duplicate_sentences(self, test_config):
+            """Should keep only the first word per sentence."""
+            service = WordFilterService(test_config)
+            words = [
+                create_word("食べる", sentence="今日は良い天気です。"),
+                create_word("飲む", sentence="今日は良い天気です。"),
+                create_word("走る", sentence="別の文章です。"),
+            ]
+
+            result = service.deduplicate_by_sentence(words)
+            assert len(result) == 2
+            assert result[0].lemma == "食べる"
+            assert result[1].lemma == "走る"
+
+        def test_keeps_unique_sentences(self, test_config):
+            """Should keep all words when sentences are unique."""
+            service = WordFilterService(test_config)
+            words = [
+                create_word("食べる", sentence="文1"),
+                create_word("飲む", sentence="文2"),
+                create_word("走る", sentence="文3"),
+            ]
+
+            result = service.deduplicate_by_sentence(words)
+            assert len(result) == 3
+
+        def test_empty_list(self, test_config):
+            """Should return empty list for empty input."""
+            service = WordFilterService(test_config)
+            result = service.deduplicate_by_sentence([])
+            assert result == []
+
+        def test_preserves_order(self, test_config):
+            """Should preserve the order of first occurrences."""
+            service = WordFilterService(test_config)
+            words = [
+                create_word("A", sentence="s1"),
+                create_word("B", sentence="s2"),
+                create_word("C", sentence="s1"),
+                create_word("D", sentence="s3"),
+                create_word("E", sentence="s2"),
+            ]
+
+            result = service.deduplicate_by_sentence(words)
+            assert [w.lemma for w in result] == ["A", "B", "D"]

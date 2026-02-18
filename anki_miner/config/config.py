@@ -76,6 +76,21 @@ class AnkiMinerConfig:
     use_frequency_data: bool = False
     max_frequency_rank: int = 0  # 0 = no filtering; e.g. 10000 = only top 10k words
 
+    # Known word database
+    known_words_db_path: Path = field(
+        default_factory=lambda: Path.home() / ".anki_miner" / "known_words.db"
+    )
+    use_known_words_db: bool = False
+
+    # Word list settings
+    blacklist_path: Path | None = None
+    whitelist_path: Path | None = None
+    use_blacklist: bool = False
+    use_whitelist: bool = False
+
+    # Deduplication settings
+    deduplicate_sentences: bool = True
+
     # Performance settings
     max_parallel_workers: int = 6  # Number of parallel ffmpeg processes
 
@@ -90,3 +105,13 @@ class AnkiMinerConfig:
             object.__setattr__(self, "pitch_accent_path", Path(self.pitch_accent_path))
         if isinstance(self.frequency_list_path, str):
             object.__setattr__(self, "frequency_list_path", Path(self.frequency_list_path))
+        if isinstance(self.known_words_db_path, str):
+            object.__setattr__(self, "known_words_db_path", Path(self.known_words_db_path))
+        if isinstance(self.blacklist_path, str):
+            object.__setattr__(
+                self, "blacklist_path", Path(self.blacklist_path) if self.blacklist_path else None
+            )
+        if isinstance(self.whitelist_path, str):
+            object.__setattr__(
+                self, "whitelist_path", Path(self.whitelist_path) if self.whitelist_path else None
+            )
