@@ -1,7 +1,14 @@
 """Service for filtering vocabulary words."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import TokenizedWord
+
+if TYPE_CHECKING:
+    from anki_miner.services.word_list_service import WordListService
 
 
 class WordFilterService:
@@ -88,3 +95,50 @@ class WordFilterService:
         return [
             word for word in words if word.frequency_rank is None or word.frequency_rank <= max_rank
         ]
+
+    def filter_by_word_lists(
+        self,
+        words: list[TokenizedWord],
+        word_list_service: WordListService,
+    ) -> list[TokenizedWord]:
+        """Filter words using blacklist/whitelist.
+
+        Removes blacklisted words. Whitelisted words are always kept.
+        If a word is on both lists, whitelist wins.
+
+        Args:
+            words: List of words to filter.
+            word_list_service: Service providing blacklist/whitelist lookups.
+
+        Returns:
+            Filtered list of words.
+        """
+        result = []
+        for word in words:
+            if word_list_service.is_whitelisted(word.lemma) or not word_list_service.is_blacklisted(
+                word.lemma
+            ):
+                result.append(word)
+        return result
+
+    def deduplicate_by_sentence(
+        self,
+        words: list[TokenizedWord],
+    ) -> list[TokenizedWord]:
+        """Remove words that share a sentence with an already-selected word.
+
+        For each unique sentence text, only the first word is kept.
+
+        Args:
+            words: List of words to deduplicate.
+
+        Returns:
+            Deduplicated list of words.
+        """
+        seen_sentences: set[str] = set()
+        result = []
+        for word in words:
+            if word.sentence not in seen_sentences:
+                seen_sentences.add(word.sentence)
+                result.append(word)
+        return result

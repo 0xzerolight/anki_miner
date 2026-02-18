@@ -40,6 +40,7 @@ class TestProcessEpisode:
         """Create a set of mock services for the episode processor."""
         subtitle_parser = MagicMock()
         word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
         media_extractor = MagicMock()
         definition_service = MagicMock()
         anki_service = MagicMock()
@@ -252,6 +253,7 @@ class TestOptionalServices:
         """Create a set of mock services for the episode processor."""
         subtitle_parser = MagicMock()
         word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
         media_extractor = MagicMock()
         definition_service = MagicMock()
         anki_service = MagicMock()

@@ -67,4 +67,63 @@ class FilteringSettingsPanel(FormPanel):
             helper="Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words",
         )
 
+        # Known Words Database section
+        self.add_section("Known Words Database")
+
+        self.use_known_words_db_checkbox = QCheckBox("Use Local Known Words Database")
+        self.use_known_words_db_checkbox.setToolTip("Cache known words locally for faster startup")
+        self.add_field(
+            "",
+            self.use_known_words_db_checkbox,
+            helper="Caches known words in a local SQLite database to avoid querying Anki on every run",
+        )
+
+        # Word Lists section
+        self.add_section("Word Lists")
+
+        self.blacklist_selector = FileSelector(
+            label="", file_mode=True, placeholder="Select blacklist file..."
+        )
+        self.add_field(
+            "Blacklist File",
+            self.blacklist_selector,
+            helper="Text file with one word per line to always skip",
+        )
+
+        self.use_blacklist_checkbox = QCheckBox("Enable Blacklist")
+        self.add_field(
+            "",
+            self.use_blacklist_checkbox,
+            helper="Skip words found in the blacklist file",
+        )
+
+        self.whitelist_selector = FileSelector(
+            label="", file_mode=True, placeholder="Select whitelist file..."
+        )
+        self.add_field(
+            "Whitelist File",
+            self.whitelist_selector,
+            helper="Text file with one word per line to always include",
+        )
+
+        self.use_whitelist_checkbox = QCheckBox("Enable Whitelist")
+        self.add_field(
+            "",
+            self.use_whitelist_checkbox,
+            helper="Always include words found in the whitelist file",
+        )
+
+        # Deduplication section
+        self.add_section("Deduplication")
+
+        self.deduplicate_sentences_checkbox = QCheckBox("Deduplicate by Sentence")
+        self.deduplicate_sentences_checkbox.setToolTip(
+            "Skip words that share an identical sentence with an already-selected word"
+        )
+        self.add_field(
+            "",
+            self.deduplicate_sentences_checkbox,
+            helper="Skip words that share an identical sentence with an already-selected word",
+        )
+
         self.add_stretch()
