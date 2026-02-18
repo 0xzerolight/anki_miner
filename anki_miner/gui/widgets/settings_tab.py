@@ -174,6 +174,22 @@ class SettingsTab(QWidget):
         self.filtering_panel.use_frequency_checkbox.setChecked(self.config.use_frequency_data)
         self.filtering_panel.max_frequency_spinbox.setValue(self.config.max_frequency_rank)
 
+        # Known words database settings
+        self.filtering_panel.use_known_words_db_checkbox.setChecked(self.config.use_known_words_db)
+
+        # Word list settings
+        if self.config.blacklist_path:
+            self.filtering_panel.blacklist_selector.set_path(str(self.config.blacklist_path))
+        self.filtering_panel.use_blacklist_checkbox.setChecked(self.config.use_blacklist)
+        if self.config.whitelist_path:
+            self.filtering_panel.whitelist_selector.set_path(str(self.config.whitelist_path))
+        self.filtering_panel.use_whitelist_checkbox.setChecked(self.config.use_whitelist)
+
+        # Deduplication settings
+        self.filtering_panel.deduplicate_sentences_checkbox.setChecked(
+            self.config.deduplicate_sentences
+        )
+
     def _on_save_clicked(self) -> None:
         """Handle save button click."""
         # Create updated config from all panels
@@ -212,6 +228,23 @@ class SettingsTab(QWidget):
             ),
             use_frequency_data=self.filtering_panel.use_frequency_checkbox.isChecked(),
             max_frequency_rank=self.filtering_panel.max_frequency_spinbox.value(),
+            # Known words database settings
+            use_known_words_db=self.filtering_panel.use_known_words_db_checkbox.isChecked(),
+            # Word list settings
+            blacklist_path=(
+                Path(self.filtering_panel.blacklist_selector.get_path())
+                if self.filtering_panel.blacklist_selector.get_path()
+                else None
+            ),
+            use_blacklist=self.filtering_panel.use_blacklist_checkbox.isChecked(),
+            whitelist_path=(
+                Path(self.filtering_panel.whitelist_selector.get_path())
+                if self.filtering_panel.whitelist_selector.get_path()
+                else None
+            ),
+            use_whitelist=self.filtering_panel.use_whitelist_checkbox.isChecked(),
+            # Deduplication settings
+            deduplicate_sentences=self.filtering_panel.deduplicate_sentences_checkbox.isChecked(),
         )
 
         # Emit signal to notify listeners of config change

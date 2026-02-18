@@ -129,6 +129,9 @@ class GUIConfigManager:
             "jmdict_path",
             "pitch_accent_path",
             "frequency_list_path",
+            "known_words_db_path",
+            "blacklist_path",
+            "whitelist_path",
         }
 
         result: dict[str, Any] = {}

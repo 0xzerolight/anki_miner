@@ -21,7 +21,9 @@ from anki_miner.utils.file_utils import cleanup_temp_files
 
 if TYPE_CHECKING:
     from anki_miner.services.frequency_service import FrequencyService
+    from anki_miner.services.known_word_db import KnownWordDB
     from anki_miner.services.pitch_accent_service import PitchAccentService
+    from anki_miner.services.word_list_service import WordListService
 
 
 class EpisodeProcessor:
@@ -38,6 +40,8 @@ class EpisodeProcessor:
         presenter: PresenterProtocol,
         pitch_accent_service: PitchAccentService | None = None,
         frequency_service: FrequencyService | None = None,
+        known_word_db: KnownWordDB | None = None,
+        word_list_service: WordListService | None = None,
     ):
         """Initialize the episode processor.
 
@@ -51,6 +55,8 @@ class EpisodeProcessor:
             presenter: Output presenter
             pitch_accent_service: Optional pitch accent lookup service
             frequency_service: Optional word frequency lookup service
+            known_word_db: Optional local known word database
+            word_list_service: Optional word blacklist/whitelist service
         """
         self.config = config
         self.subtitle_parser = subtitle_parser
@@ -61,6 +67,8 @@ class EpisodeProcessor:
         self.presenter = presenter
         self.pitch_accent_service = pitch_accent_service
         self.frequency_service = frequency_service
+        self.known_word_db = known_word_db
+        self.word_list_service = word_list_service
 
     def process_episode(
         self,
@@ -117,8 +125,22 @@ class EpisodeProcessor:
 
             # Phase 2: Filter against existing vocabulary
             self.presenter.show_info("Step 2/5 \u2014 Filtering against known vocabulary")
-            existing_words = self.anki_service.get_existing_vocabulary()
-            unknown_words = self.word_filter.filter_unknown(all_words, existing_words)
+            if self.known_word_db and self.known_word_db.is_available():
+                known_words = self.known_word_db.get_known_words()
+                unknown_words = self.word_filter.filter_unknown(all_words, known_words)
+                # Sync with Anki to keep DB up to date
+                anki_vocab = self.anki_service.get_existing_vocabulary()
+                added, total = self.known_word_db.sync_with_anki(anki_vocab)
+                if added > 0:
+                    self.presenter.show_info(
+                        f"Known word DB synced: {added} new words ({total} total)"
+                    )
+                    # Re-filter with updated known words
+                    known_words = self.known_word_db.get_known_words()
+                    unknown_words = self.word_filter.filter_unknown(all_words, known_words)
+            else:
+                existing_words = self.anki_service.get_existing_vocabulary()
+                unknown_words = self.word_filter.filter_unknown(all_words, existing_words)
             self.presenter.show_success(f"{len(unknown_words)} new words to mine")
 
             # Apply frequency filter if configured
@@ -132,6 +154,26 @@ class EpisodeProcessor:
                     self.presenter.show_info(
                         f"Frequency filter: removed {filtered_out} words "
                         f"outside top {self.config.max_frequency_rank}"
+                    )
+
+            # Apply word list filtering if available
+            if self.word_list_service and self.word_list_service.is_available():
+                before = len(unknown_words)
+                unknown_words = self.word_filter.filter_by_word_lists(
+                    unknown_words, self.word_list_service
+                )
+                filtered_out = before - len(unknown_words)
+                if filtered_out > 0:
+                    self.presenter.show_info(f"Word list filter: removed {filtered_out} words")
+
+            # Apply sentence deduplication if configured
+            if self.config.deduplicate_sentences:
+                before = len(unknown_words)
+                unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
+                deduped = before - len(unknown_words)
+                if deduped > 0:
+                    self.presenter.show_info(
+                        f"Sentence deduplication: removed {deduped} duplicate-sentence words"
                     )
 
             if not unknown_words:
@@ -221,6 +263,11 @@ class EpisodeProcessor:
             )
 
             self.presenter.show_success(f"Successfully created {cards_created} cards")
+
+            # Add newly mined words to known word DB
+            if self.known_word_db and self.known_word_db.is_available() and card_data:
+                mined_words = {word.lemma for word, _, _, _ in card_data}
+                self.known_word_db.add_words(mined_words, source="mined")
 
             return ProcessingResult(
                 total_words_found=len(all_words),

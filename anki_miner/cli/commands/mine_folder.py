@@ -101,6 +101,37 @@ def mine_folder_command(args) -> int:
             presenter.show_warning(f"Could not load frequency data: {e}")
             frequency_service = None
 
+    # Initialize known word database if enabled
+    known_word_db = None
+    if config.use_known_words_db:
+        try:
+            from anki_miner.services.known_word_db import KnownWordDB
+
+            known_word_db = KnownWordDB(config.known_words_db_path)
+            presenter.show_info("Initializing known word database...")
+            known_word_db.initialize()
+            presenter.show_success(f"Known word DB ready ({known_word_db.word_count()} words)")
+        except Exception as e:
+            presenter.show_warning(f"Could not initialize known word database: {e}")
+            known_word_db = None
+
+    # Load word lists if enabled
+    word_list_service = None
+    if config.use_blacklist or config.use_whitelist:
+        try:
+            from anki_miner.services.word_list_service import WordListService
+
+            word_list_service = WordListService(
+                blacklist_path=config.blacklist_path if config.use_blacklist else None,
+                whitelist_path=config.whitelist_path if config.use_whitelist else None,
+            )
+            presenter.show_info("Loading word lists...")
+            word_list_service.load()
+            presenter.show_success("Word lists loaded")
+        except Exception as e:
+            presenter.show_warning(f"Could not load word lists: {e}")
+            word_list_service = None
+
     # Create processors
     episode_processor = EpisodeProcessor(
         config=config,
@@ -112,6 +143,8 @@ def mine_folder_command(args) -> int:
         presenter=presenter,
         pitch_accent_service=pitch_accent_service,
         frequency_service=frequency_service,
+        known_word_db=known_word_db,
+        word_list_service=word_list_service,
     )
 
     folder_processor = FolderProcessor(
