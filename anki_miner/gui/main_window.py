@@ -293,7 +293,7 @@ class MainWindow(QMainWindow):
         Args:
             words: List of TokenizedWord objects
         """
-        dialog = WordPreviewDialog(words, self)
+        dialog = WordPreviewDialog(words, self.config, self)
         dialog.exec()
 
     def get_config(self) -> AnkiMinerConfig:

@@ -2,6 +2,7 @@
 
 from .anki_service import AnkiService
 from .definition_service import DefinitionService
+from .export_service import ExportService
 from .frequency_service import FrequencyService
 from .media_extractor import MediaExtractorService
 from .pitch_accent_service import PitchAccentService
@@ -16,6 +17,7 @@ __all__ = [
     "MediaExtractorService",
     "DefinitionService",
     "AnkiService",
+    "ExportService",
     "ValidationService",
     "PitchAccentService",
     "FrequencyService",
