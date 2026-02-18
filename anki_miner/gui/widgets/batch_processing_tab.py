@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QKeySequence, QShortcut
+from PyQt6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -80,6 +80,9 @@ class BatchProcessingTab(QWidget):
 
         self._setup_ui()
 
+        # Enable drag-and-drop on the tab
+        self.setAcceptDrops(True)
+
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         # Create scroll area for tab content
@@ -123,6 +126,12 @@ class BatchProcessingTab(QWidget):
 
         self.current_progress_widget = ProgressWidget()
         layout.addWidget(self.current_progress_widget)
+
+        # Retry Failed button (hidden by default)
+        self.retry_button = ModernButton("Retry Failed", icon="play", variant="secondary")
+        self.retry_button.setVisible(False)
+        self.retry_button.clicked.connect(self._retry_failed_items)
+        layout.addWidget(self.retry_button)
 
         # Log widget
         self.log_widget = LogWidget()
@@ -496,14 +505,44 @@ class BatchProcessingTab(QWidget):
         # Update queue stats
         self.queue_panel.update_stats()
 
+        # Show retry button if there are failed items that can be retried
+        has_retryable = any(
+            item.status == QueueItemStatus.ERROR and item.retry_count < item.max_retries
+            for item in self.batch_queue.get_all_items()
+        )
+        self.retry_button.setVisible(has_retryable)
+
         # Show summary
         self.overall_progress_widget.set_status("Queue processing complete")
-        QMessageBox.information(
-            self,
-            "Queue Processing Complete",
+        failed = self.batch_queue.failed_count
+        summary = (
             f"Processed {self.batch_queue.total_items} anime series\n"
-            f"Total cards created: {total_cards}",
+            f"Total cards created: {total_cards}"
         )
+        if failed > 0:
+            summary += f"\n{failed} series failed"
+        QMessageBox.information(self, "Queue Processing Complete", summary)
+
+    def _retry_failed_items(self) -> None:
+        """Retry failed items in the batch queue."""
+        if self._is_processing:
+            return
+
+        reset_count = self.batch_queue.reset_failed_for_retry()
+        if reset_count == 0:
+            QMessageBox.information(
+                self, "No Items to Retry", "No failed items eligible for retry."
+            )
+            self.retry_button.setVisible(False)
+            return
+
+        # Hide retry button and start processing
+        self.retry_button.setVisible(False)
+        self._is_processing = True
+        self._set_buttons_enabled(False)
+
+        self.presenter.show_info(f"Retrying {reset_count} failed items...")
+        self._start_queue_worker()
 
     def _on_progress_start(self, total: int, description: str) -> None:
         """Handle progress start signal.
@@ -575,6 +614,29 @@ class BatchProcessingTab(QWidget):
         # Reset progress
         self.current_progress_widget.reset()
         self.overall_progress_widget.reset()
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        """Accept drag if any URL is a directory."""
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if Path(url.toLocalFile()).is_dir():
+                    event.acceptProposedAction()
+                    return
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        """Accept drag move events."""
+        event.acceptProposedAction()
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        """Route dropped folders to the appropriate folder selector."""
+        folders = [
+            url.toLocalFile() for url in event.mimeData().urls() if Path(url.toLocalFile()).is_dir()
+        ]
+        if len(folders) >= 1:
+            self.anime_folder_selector.set_path(folders[0])
+        if len(folders) >= 2:
+            self.subtitle_folder_selector.set_path(folders[1])
+        event.acceptProposedAction()
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration.

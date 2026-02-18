@@ -68,6 +68,7 @@ class EpisodeProcessor:
         subtitle_file: Path,
         preview_mode: bool = False,
         progress_callback: ProgressCallback | None = None,
+        cross_episode_counts: dict[str, int] | None = None,
     ) -> ProcessingResult:
         """Process a single episode and create Anki cards.
 
@@ -83,6 +84,7 @@ class EpisodeProcessor:
             subtitle_file: Path to subtitle file
             preview_mode: If True, only show words without creating cards
             progress_callback: Optional progress callback
+            cross_episode_counts: Optional cross-episode word frequency counts
 
         Returns:
             ProcessingResult with statistics
@@ -121,6 +123,12 @@ class EpisodeProcessor:
             unknown_words = self.word_filter.filter_unknown(all_words, existing_words)
             self.presenter.show_success(f"{len(unknown_words)} new words to mine")
 
+            # Calculate comprehension percentage
+            comprehension = (
+                ((len(all_words) - len(unknown_words)) / len(all_words)) * 100 if all_words else 0.0
+            )
+            self.presenter.show_info(f"Comprehension: {comprehension:.1f}% of words already known")
+
             # Apply frequency filter if configured
             if self.config.max_frequency_rank > 0:
                 before = len(unknown_words)
@@ -134,6 +142,21 @@ class EpisodeProcessor:
                         f"outside top {self.config.max_frequency_rank}"
                     )
 
+            # Apply cross-episode frequency filter if provided
+            if cross_episode_counts is not None and self.config.min_episode_appearances > 1:
+                before = len(unknown_words)
+                unknown_words = self.word_filter.filter_by_episode_count(
+                    unknown_words,
+                    cross_episode_counts,
+                    self.config.min_episode_appearances,
+                )
+                filtered_out = before - len(unknown_words)
+                if filtered_out > 0:
+                    self.presenter.show_info(
+                        f"Cross-episode filter: removed {filtered_out} words "
+                        f"appearing in fewer than {self.config.min_episode_appearances} episodes"
+                    )
+
             if not unknown_words:
                 self.presenter.show_info("All words already in Anki!")
                 return ProcessingResult(
@@ -142,6 +165,7 @@ class EpisodeProcessor:
                     cards_created=0,
                     errors=[],
                     elapsed_time=time.time() - start_time,
+                    comprehension_percentage=comprehension,
                 )
 
             # Preview mode - show and return
@@ -153,6 +177,7 @@ class EpisodeProcessor:
                     cards_created=0,
                     errors=[],
                     elapsed_time=time.time() - start_time,
+                    comprehension_percentage=comprehension,
                 )
 
             # Phase 3: Extract media
@@ -169,6 +194,7 @@ class EpisodeProcessor:
                     cards_created=0,
                     errors=["Media extraction failed for all words"],
                     elapsed_time=time.time() - start_time,
+                    comprehension_percentage=comprehension,
                 )
 
             self.presenter.show_success(f"Extracted media for {len(media_results)} words")
@@ -228,6 +254,7 @@ class EpisodeProcessor:
                 cards_created=cards_created,
                 errors=errors,
                 elapsed_time=time.time() - start_time,
+                comprehension_percentage=comprehension,
             )
 
         except AnkiMinerException as e:
