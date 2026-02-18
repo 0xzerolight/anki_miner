@@ -274,7 +274,7 @@ class TestExportTsv:
 class TestExportVocabList:
     def test_plain_format(self, export_service, sample_words, tmp_path):
         out = tmp_path / "vocab.txt"
-        count = export_service.export_vocab_list(sample_words, out, format="plain")
+        count = export_service.export_vocab_list(sample_words, out, fmt="plain")
 
         lines = out.read_text(encoding="utf-8").strip().split("\n")
         assert count == 3
@@ -282,7 +282,7 @@ class TestExportVocabList:
 
     def test_takoboto_format(self, export_service, sample_words, tmp_path):
         out = tmp_path / "vocab.txt"
-        count = export_service.export_vocab_list(sample_words, out, format="takoboto")
+        count = export_service.export_vocab_list(sample_words, out, fmt="takoboto")
 
         lines = out.read_text(encoding="utf-8").strip().split("\n")
         assert count == 3
@@ -292,7 +292,7 @@ class TestExportVocabList:
 
     def test_jpdb_format(self, export_service, sample_words, tmp_path):
         out = tmp_path / "vocab.txt"
-        count = export_service.export_vocab_list(sample_words, out, format="jpdb")
+        count = export_service.export_vocab_list(sample_words, out, fmt="jpdb")
 
         lines = out.read_text(encoding="utf-8").strip().split("\n")
         assert count == 3
@@ -305,7 +305,7 @@ class TestExportVocabList:
             make_word_data(lemma="飲む", surface="飲む"),
         ]
         out = tmp_path / "vocab.txt"
-        count = export_service.export_vocab_list(words, out, format="plain")
+        count = export_service.export_vocab_list(words, out, fmt="plain")
 
         lines = out.read_text(encoding="utf-8").strip().split("\n")
         assert count == 2
@@ -313,7 +313,7 @@ class TestExportVocabList:
 
     def test_handles_empty_list(self, export_service, tmp_path):
         out = tmp_path / "vocab.txt"
-        count = export_service.export_vocab_list([], out, format="plain")
+        count = export_service.export_vocab_list([], out, fmt="plain")
 
         assert count == 0
         assert out.read_text(encoding="utf-8") == ""
