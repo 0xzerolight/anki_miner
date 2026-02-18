@@ -356,3 +356,97 @@ class TestExtractReading:
     def test_falls_back_to_surface(self, service):
         token = _make_token_no_feature("食べる")
         assert service._extract_reading(token) == "食べる"
+
+
+class TestParseRawEntries:
+    """Tests for parse_raw_entries method."""
+
+    def test_returns_tuples_of_start_end_text(self, test_config, tmp_path):
+        """Should return list of (start, end, text) tuples."""
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_line = MagicMock()
+        mock_line.text = "こんにちは"
+        mock_line.start = 1000
+        mock_line.end = 3000
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+
+        with (
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+        ):
+            service = SubtitleParserService(test_config)
+            entries = service.parse_raw_entries(sub_file)
+
+        assert len(entries) == 1
+        start, end, text = entries[0]
+        assert start == pytest.approx(1.0)
+        assert end == pytest.approx(3.0)
+        assert text == "こんにちは"
+
+    def test_skips_empty_lines(self, test_config, tmp_path):
+        """Should skip subtitle lines with empty text."""
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        line1 = MagicMock()
+        line1.text = ""
+        line1.start = 0
+        line1.end = 1000
+
+        line2 = MagicMock()
+        line2.text = "テスト"
+        line2.start = 2000
+        line2.end = 4000
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([line1, line2]))
+
+        with (
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+        ):
+            service = SubtitleParserService(test_config)
+            entries = service.parse_raw_entries(sub_file)
+
+        assert len(entries) == 1
+        assert entries[0][2] == "テスト"
+
+    def test_file_not_found_raises_error(self, test_config):
+        """Should raise SubtitleParseError for missing file."""
+        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+            service = SubtitleParserService(test_config)
+
+        with pytest.raises(SubtitleParseError, match="not found"):
+            service.parse_raw_entries(Path("/nonexistent/file.ass"))
+
+    def test_applies_subtitle_offset(self, tmp_path):
+        """Should apply config subtitle_offset to timing."""
+
+        config = AnkiMinerConfig(subtitle_offset=2.0)
+
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_line = MagicMock()
+        mock_line.text = "テスト"
+        mock_line.start = 1000  # 1.0s
+        mock_line.end = 3000  # 3.0s
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+
+        with (
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+        ):
+            service = SubtitleParserService(config)
+            entries = service.parse_raw_entries(sub_file)
+
+        assert len(entries) == 1
+        start, end, _ = entries[0]
+        assert start == pytest.approx(3.0)  # 1.0 + 2.0 offset
+        assert end == pytest.approx(5.0)  # 3.0 + 2.0 offset

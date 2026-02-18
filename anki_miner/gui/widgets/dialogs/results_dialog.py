@@ -1,13 +1,18 @@
 """Enhanced dialog for displaying processing results with stat cards."""
 
+import logging
+from typing import Callable
+
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QTextEdit, QVBoxLayout
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout
 
 from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import StatCard
 from anki_miner.models import ProcessingResult
+
+logger = logging.getLogger(__name__)
 
 
 class ResultsDialog(EnhancedDialog):
@@ -19,18 +24,27 @@ class ResultsDialog(EnhancedDialog):
     - Large success/error icon and message
     - Stat cards for key metrics (words, cards, time)
     - Error display if any
+    - Undo button to delete created cards (if card IDs are available)
     - Modern styling with card layout
     """
 
-    def __init__(self, result: ProcessingResult, parent=None):
+    def __init__(
+        self,
+        result: ProcessingResult,
+        parent=None,
+        undo_callback: Callable[[list[int]], int] | None = None,
+    ):
         """Initialize the results dialog.
 
         Args:
             result: Processing result to display
             parent: Optional parent widget
+            undo_callback: Optional callback that accepts card IDs and returns deleted count
         """
         super().__init__(parent, title="Processing Results")
         self.processing_result = result
+        self._undo_callback = undo_callback
+        self.undo_completed = False
         self._setup_content()
 
     def _setup_content(self) -> None:
@@ -131,5 +145,37 @@ class ResultsDialog(EnhancedDialog):
             error_text.setMaximumHeight(150)
             self.add_content(error_text)
 
+        # Add undo button if callback and card IDs are available
+        if self._undo_callback and self.processing_result.card_ids:
+            self._undo_button = self.add_button(
+                f"Undo ({len(self.processing_result.card_ids)} cards)",
+                "danger",
+                self._on_undo_clicked,
+            )
+
         # Add close button using EnhancedDialog method
         self.add_close_button("Close")
+
+    def _on_undo_clicked(self) -> None:
+        """Handle undo button click with confirmation."""
+        count = len(self.processing_result.card_ids)
+        reply = QMessageBox.question(
+            self,
+            "Confirm Undo",
+            f"This will delete {count} cards from Anki.\n\nThis cannot be undone. Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        self._undo_button.setEnabled(False)
+        try:
+            deleted = self._undo_callback(self.processing_result.card_ids)
+            self._undo_button.setText(f"Undone ({deleted} cards deleted)")
+            self.undo_completed = True
+        except Exception as e:
+            self._undo_button.setEnabled(True)
+            logger.error(f"Undo failed: {e}")
+            QMessageBox.critical(self, "Undo Failed", f"Could not delete cards:\n{e}")

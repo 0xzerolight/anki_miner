@@ -122,6 +122,8 @@ class SingleEpisodeTab(QWidget):
         self.preview_button.setToolTip("Preview discovered words before creating cards")
         self.process_button = ModernButton("Process Episode", icon="play", variant="primary")
         self.process_button.setToolTip("Create Anki cards from the episode")
+        self.timing_button = ModernButton("Test Timing", icon="settings", variant="secondary")
+        self.timing_button.setToolTip("Preview video with subtitles to adjust timing offset")
 
         self.cancel_button = ModernButton("Cancel", icon="stop", variant="danger")
         self.cancel_button.setToolTip("Cancel processing")
@@ -130,9 +132,11 @@ class SingleEpisodeTab(QWidget):
         self.preview_button.clicked.connect(self._on_preview_clicked)
         self.process_button.clicked.connect(self._on_process_clicked)
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
+        self.timing_button.clicked.connect(self._on_timing_clicked)
 
         button_layout.addWidget(self.preview_button)
         button_layout.addWidget(self.process_button)
+        button_layout.addWidget(self.timing_button)
         button_layout.addWidget(self.cancel_button)
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -300,6 +304,52 @@ class SingleEpisodeTab(QWidget):
     def _on_process_clicked(self) -> None:
         """Handle process button click."""
         self._start_processing(preview_mode=False)
+
+    def _on_timing_clicked(self) -> None:
+        """Handle test timing button click. Opens the subtitle viewer dialog."""
+        video_path = self.video_selector.get_path().strip()
+        subtitle_path = self.subtitle_selector.get_path().strip()
+
+        if not video_path or not subtitle_path:
+            QMessageBox.warning(
+                self, "Missing Files", "Please select both video and subtitle files"
+            )
+            return
+
+        if not self.video_selector.is_valid():
+            QMessageBox.warning(self, "File Not Found", f"Video file not found: {video_path}")
+            return
+
+        if not self.subtitle_selector.is_valid():
+            QMessageBox.warning(self, "File Not Found", f"Subtitle file not found: {subtitle_path}")
+            return
+
+        video_file = Path(video_path)
+        subtitle_file = Path(subtitle_path)
+
+        # Parse raw subtitle entries
+        from anki_miner.services.subtitle_parser import SubtitleParserService
+
+        try:
+            offset = self.offset_spinbox.value()
+            # Parse with zero offset — SubtitleViewer handles offsetting itself
+            config_no_offset = replace(self.config, subtitle_offset=0.0)
+            parser = SubtitleParserService(config_no_offset)
+            entries = parser.parse_raw_entries(subtitle_file)
+        except Exception as e:
+            QMessageBox.critical(self, "Parse Error", f"Failed to parse subtitles: {e}")
+            return
+
+        if not entries:
+            QMessageBox.information(self, "No Subtitles", "No subtitle entries found in the file.")
+            return
+
+        # Open subtitle viewer
+        from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
+
+        viewer = SubtitleViewer(video_file, entries, initial_offset=offset, parent=self)
+        if viewer.exec() == SubtitleViewer.DialogCode.Accepted:
+            self.offset_spinbox.setValue(viewer.get_offset())
 
     def _start_processing(self, preview_mode: bool) -> None:
         """Start episode processing.

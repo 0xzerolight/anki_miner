@@ -13,6 +13,9 @@ class ProcessingResult:
     errors: list[str] = field(default_factory=list)
     elapsed_time: float = 0.0
     comprehension_percentage: float = 0.0  # Percentage of words already known
+    card_ids: list[int] = field(default_factory=list)
+    video_file: str = ""
+    subtitle_file: str = ""
 
     @property
     def success(self) -> bool:

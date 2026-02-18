@@ -133,6 +133,7 @@ class GUIConfigManager:
             "blacklist_path",
             "whitelist_path",
             "stats_db_path",
+            "history_db_path",
         }
 
         result: dict[str, Any] = {}
