@@ -55,9 +55,16 @@ class MainWindow(QMainWindow):
         # Set up UI
         self._setup_ui()
 
+        # Track update worker
+        self.update_worker = None
+
         # Auto-check system status on startup (silently, no popup)
         self._validation_silent = True
         self._run_validation()
+
+        # Auto-check for updates on startup
+        if self.config.check_for_updates:
+            self._check_for_updates()
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -67,26 +74,29 @@ class MainWindow(QMainWindow):
 
         # Create central widget with layout
         central_widget = QWidget()
-        central_layout = QVBoxLayout()
-        central_layout.setContentsMargins(0, 0, 0, 0)
-        central_layout.setSpacing(0)
+        self.central_layout = QVBoxLayout()
+        self.central_layout.setContentsMargins(0, 0, 0, 0)
+        self.central_layout.setSpacing(0)
 
         # Add header
         self.header = HeaderWidget()
         self.header.theme_changed.connect(self._on_theme_changed)
-        central_layout.addWidget(self.header)
+        self.central_layout.addWidget(self.header)
 
         # Create tab widget
         self.tabs = QTabWidget()
-        central_layout.addWidget(self.tabs)
+        self.central_layout.addWidget(self.tabs)
 
-        central_widget.setLayout(central_layout)
+        central_widget.setLayout(self.central_layout)
         self.setCentralWidget(central_widget)
 
         # Enhanced status bar
         self.status_bar = StatusBarWidget()
         self.status_bar.system_status_clicked.connect(self._on_system_status_clicked)
         self.setStatusBar(self.status_bar)
+
+        # Set up menu bar
+        self._setup_menu_bar()
 
         # Set up keyboard shortcuts
         self._setup_shortcuts()
@@ -119,6 +129,25 @@ class MainWindow(QMainWindow):
         # Set tab order: header -> tabs -> status bar
         self.setTabOrder(self.header, self.tabs)
 
+    def _setup_menu_bar(self) -> None:
+        """Set up the application menu bar."""
+        menu_bar = self.menuBar()
+
+        # Help menu
+        help_menu = menu_bar.addMenu("&Help")
+
+        about_action = help_menu.addAction("About Anki Miner")
+        about_action.setShortcut(QKeySequence("F1"))
+        about_action.triggered.connect(self._show_about)
+
+        help_menu.addSeparator()
+
+        report_action = help_menu.addAction("Report an Issue")
+        report_action.triggered.connect(self._report_issue)
+
+        check_updates_action = help_menu.addAction("Check for Updates")
+        check_updates_action.triggered.connect(self._check_for_updates)
+
     def _setup_shortcuts(self) -> None:
         """Set up global keyboard shortcuts."""
         # Tab switching shortcuts (Ctrl+1/2/3)
@@ -133,10 +162,6 @@ class MainWindow(QMainWindow):
         # Settings shortcut (Ctrl+,)
         settings_shortcut = QShortcut(QKeySequence("Ctrl+,"), self)
         settings_shortcut.activated.connect(self._open_settings)
-
-        # Help/About (F1)
-        help_shortcut = QShortcut(QKeySequence("F1"), self)
-        help_shortcut.activated.connect(self._show_about)
 
         # System validation (Ctrl+Shift+V)
         validation_shortcut = QShortcut(QKeySequence("Ctrl+Shift+V"), self)
@@ -166,6 +191,13 @@ class MainWindow(QMainWindow):
     def _open_settings(self) -> None:
         """Open the Settings tab."""
         self.tabs.setCurrentIndex(TAB_SETTINGS)
+
+    def _report_issue(self) -> None:
+        """Open the GitHub issues page in the default browser."""
+        from PyQt6.QtCore import QUrl
+        from PyQt6.QtGui import QDesktopServices
+
+        QDesktopServices.openUrl(QUrl("https://github.com/0xzerolight/anki_miner/issues"))
 
     def _show_about(self) -> None:
         """Show the About dialog."""
@@ -283,9 +315,48 @@ class MainWindow(QMainWindow):
         # Update session statistics
         self.status_bar.increment_cards_created(result.cards_created)
 
-        # Show results dialog
-        dialog = ResultsDialog(result, self)
+        # Create undo callback
+        def undo_callback(note_ids: list[int]) -> int:
+            from anki_miner.services.anki_service import AnkiService
+
+            service = AnkiService(self.config)
+            deleted = service.delete_notes(note_ids)
+            self.status_bar.increment_cards_created(-deleted)
+            return deleted
+
+        # Show results dialog with undo support
+        dialog = ResultsDialog(result, self, undo_callback=undo_callback)
         dialog.exec()
+
+        # Record to history after dialog closes (skip if user undid the cards)
+        if self.config.enable_history and result.cards_created > 0 and not dialog.undo_completed:
+            self._record_history(result)
+
+    def _record_history(self, result: ProcessingResult) -> None:
+        """Record processing result to history database.
+
+        Args:
+            result: Processing result to record
+        """
+        import logging
+
+        from anki_miner.services.history_service import HistoryService
+
+        try:
+            service = HistoryService(self.config.history_db_path)
+            service.initialize()
+            from pathlib import Path
+
+            service.record_session(
+                video_file=Path(result.video_file) if result.video_file else Path("unknown"),
+                subtitle_file=(
+                    Path(result.subtitle_file) if result.subtitle_file else Path("unknown")
+                ),
+                result=result,
+                card_ids=result.card_ids,
+            )
+        except Exception:
+            logging.getLogger(__name__).debug("Failed to record history", exc_info=True)
 
     def _on_word_preview(self, words: list) -> None:
         """Handle word preview from presenter.
@@ -323,6 +394,11 @@ class MainWindow(QMainWindow):
         if self.validation_worker and self.validation_worker.isRunning():
             self.validation_worker.cancel()
             self.validation_worker.wait(2000)
+
+        # Cancel and wait for update worker if running
+        if self.update_worker and self.update_worker.isRunning():
+            self.update_worker.cancel()
+            self.update_worker.wait(2000)
 
         # Cancel and wait for any processing workers in tabs
         from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
@@ -382,6 +458,44 @@ class MainWindow(QMainWindow):
         self.status_bar.set_operation(f"Validation error: {error_message}", "error")
         if not silent:
             QMessageBox.critical(self, "Validation Error", error_message)
+
+    def _check_for_updates(self) -> None:
+        """Check for application updates in background thread."""
+        if self.update_worker and self.update_worker.isRunning():
+            return
+
+        from anki_miner import __version__
+        from anki_miner.gui.workers.update_worker import UpdateWorkerThread
+        from anki_miner.services.update_checker import UpdateChecker
+
+        checker = UpdateChecker(__version__)
+        self.update_worker = UpdateWorkerThread(checker, self)
+        self.update_worker.result_ready.connect(self._on_update_check_result)
+        self.update_worker.start()
+
+    def _on_update_check_result(
+        self, update_available: bool, latest_version: str, release_url: str
+    ) -> None:
+        """Handle update check result.
+
+        Args:
+            update_available: Whether a newer version exists
+            latest_version: The latest version string
+            release_url: URL to the release page
+        """
+        if update_available:
+            from anki_miner.gui.widgets.update_banner import UpdateBanner
+
+            # Remove existing banner if present
+            for i in range(self.central_layout.count()):
+                item = self.central_layout.itemAt(i)
+                if item and isinstance(item.widget(), UpdateBanner):
+                    item.widget().deleteLater()
+                    break
+
+            banner = UpdateBanner(latest_version, release_url, self)
+            # Insert banner after header (index 1)
+            self.central_layout.insertWidget(1, banner)
 
     def _on_theme_changed(self, theme_name: str) -> None:
         """Handle theme change from header widget.
