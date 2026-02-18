@@ -132,6 +132,7 @@ class GUIConfigManager:
             "known_words_db_path",
             "blacklist_path",
             "whitelist_path",
+            "stats_db_path",
         }
 
         result: dict[str, Any] = {}
