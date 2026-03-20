@@ -16,10 +16,6 @@ QWidget {
     font-weight: 400;
 }
 
-QLabel {
-    background: transparent;
-}
-
 QMainWindow {
     font-size: ${font-size-body}px;
 }
