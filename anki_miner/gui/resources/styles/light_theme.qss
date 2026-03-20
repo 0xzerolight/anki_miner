@@ -7,7 +7,6 @@
 
 QWidget {
     color: #111827;
-    background-color: #F9FAFB;
 }
 
 QMainWindow {
