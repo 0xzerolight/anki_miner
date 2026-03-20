@@ -160,3 +160,21 @@ class TestIsAvailable:
         service = FrequencyService(csv_file)
         service.load()
         assert service.is_available() is True
+
+
+class TestLoadException:
+    """Tests for error handling during load."""
+
+    def test_load_raises_setup_error_on_exception(self, tmp_path):
+        """Should raise SetupError when file reading fails."""
+        from unittest.mock import patch
+
+        csv_file = tmp_path / "freq.csv"
+        csv_file.write_text("1,食べる\n", encoding="utf-8")
+        service = FrequencyService(csv_file)
+
+        with (
+            patch("builtins.open", side_effect=PermissionError("access denied")),
+            pytest.raises(SetupError, match="Error loading frequency data"),
+        ):
+            service.load()

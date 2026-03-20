@@ -187,7 +187,7 @@ class ExportDialog(QDialog):
     def _on_format_changed(self, button_id: int, checked: bool) -> None:
         if not checked:
             return
-        self._vocab_options_frame.setVisible(id == FORMAT_VOCAB)
+        self._vocab_options_frame.setVisible(button_id == FORMAT_VOCAB)
         # Reset path when format changes
         self._output_path = None
         self._path_input.clear()
@@ -218,7 +218,7 @@ class ExportDialog(QDialog):
                 count = service.export_tsv(self._words, self._output_path)
             else:
                 vocab_fmt = ["plain", "takoboto", "jpdb"][self._vocab_format_combo.currentIndex()]
-                count = service.export_vocab_list(self._words, self._output_path, format=vocab_fmt)
+                count = service.export_vocab_list(self._words, self._output_path, fmt=vocab_fmt)
 
             QMessageBox.information(
                 self,

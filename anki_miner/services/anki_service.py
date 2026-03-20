@@ -73,7 +73,8 @@ class AnkiService:
             result = response.json()
             if result.get("error"):
                 return []
-            return result.get("result", [])
+            decks: list[str] = result.get("result", [])
+            return decks
         except (requests.RequestException, ValueError):
             return []
 

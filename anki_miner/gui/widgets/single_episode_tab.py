@@ -552,22 +552,27 @@ class SingleEpisodeTab(QWidget):
             self.video_selector.set_path(entry["video"])
             self.subtitle_selector.set_path(entry["subtitle"])
 
-    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+    def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept drag if files have video or subtitle extensions."""
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
+        if event is None or event.mimeData() is None:
+            return
+        if event.mimeData().hasUrls():  # type: ignore[union-attr]
+            for url in event.mimeData().urls():  # type: ignore[union-attr]
                 suffix = Path(url.toLocalFile()).suffix.lower()
                 if suffix in VIDEO_EXTENSIONS or suffix in SUBTITLE_EXTENSIONS:
                     event.acceptProposedAction()
                     return
 
-    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+    def dragMoveEvent(self, event: QDragMoveEvent | None) -> None:
         """Accept drag move events."""
-        event.acceptProposedAction()
+        if event is not None:
+            event.acceptProposedAction()
 
-    def dropEvent(self, event: QDropEvent) -> None:
+    def dropEvent(self, event: QDropEvent | None) -> None:
         """Route dropped files to the appropriate file selector."""
-        for url in event.mimeData().urls():
+        if event is None or event.mimeData() is None:
+            return
+        for url in event.mimeData().urls():  # type: ignore[union-attr]
             file_path = url.toLocalFile()
             suffix = Path(file_path).suffix.lower()
             if suffix in VIDEO_EXTENSIONS:

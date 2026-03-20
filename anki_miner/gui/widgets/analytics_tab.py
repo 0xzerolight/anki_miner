@@ -121,8 +121,8 @@ class AnalyticsTab(QWidget):
         self.sessions_table.setHorizontalHeaderLabels(
             ["Date", "Series", "Episode", "Words", "New Words", "Cards"]
         )
-        self.sessions_table.horizontalHeader().setStretchLastSection(True)
-        self.sessions_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.sessions_table.horizontalHeader().setStretchLastSection(True)  # type: ignore[union-attr]
+        self.sessions_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)  # type: ignore[union-attr]
         self.sessions_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.sessions_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.sessions_table.setMinimumHeight(200)
@@ -156,8 +156,8 @@ class AnalyticsTab(QWidget):
         self.difficulty_table.setHorizontalHeaderLabels(
             ["Rank", "Series", "Avg Words", "Avg Unknown", "Difficulty"]
         )
-        self.difficulty_table.horizontalHeader().setStretchLastSection(True)
-        self.difficulty_table.horizontalHeader().setSectionResizeMode(
+        self.difficulty_table.horizontalHeader().setStretchLastSection(True)  # type: ignore[union-attr]
+        self.difficulty_table.horizontalHeader().setSectionResizeMode(  # type: ignore[union-attr]
             QHeaderView.ResizeMode.Stretch
         )
         self.difficulty_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -244,8 +244,8 @@ class AnalyticsTab(QWidget):
         # Clear existing milestone widgets
         while self.milestones_layout.count():
             child = self.milestones_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+            if child and child.widget():
+                child.widget().deleteLater()  # type: ignore[union-attr]
 
         milestones = self.stats_service.get_milestones(stats=stats)
         for milestone in milestones:

@@ -401,6 +401,249 @@ class TestOptionalServices:
         assert extra_fields["frequency_rank"] == "500"
 
 
+class TestKnownWordDBIntegration:
+    """Tests for EpisodeProcessor with known_word_db."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_known_word_db_syncs_and_refilters(self, test_config, mock_services, tmp_path):
+        """Known word DB should sync with Anki and re-filter when new words are added."""
+        word1 = _make_word("食べる")
+        word2 = _make_word("走る", start_time=5.0)
+        media1 = _make_media("taberu")
+
+        mock_known_db = MagicMock()
+        mock_known_db.is_available.return_value = True
+        mock_known_db.get_known_words.side_effect = [
+            {"走る"},  # First call: before sync
+            {"走る", "泳ぐ"},  # Second call: after sync (new word added)
+        ]
+        mock_known_db.sync_with_anki.return_value = (1, 10)  # 1 added, 10 total
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = {"走る", "泳ぐ"}
+        # First filter: word1 passes, word2 filtered. Second filter after sync: same result.
+        mock_services["word_filter"].filter_unknown.side_effect = [[word1], [word1]]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media1)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            known_word_db=mock_known_db,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_known_db.sync_with_anki.assert_called_once()
+        assert mock_services["word_filter"].filter_unknown.call_count == 2
+        assert result.cards_created == 1
+
+    def test_known_word_db_records_mined_words(self, test_config, mock_services, tmp_path):
+        """After creating cards, mined words should be added to the known word DB."""
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_known_db = MagicMock()
+        mock_known_db.is_available.return_value = True
+        mock_known_db.get_known_words.return_value = set()
+        mock_known_db.sync_with_anki.return_value = (0, 0)
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            known_word_db=mock_known_db,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_known_db.add_words.assert_called_once_with({"食べる"}, source="mined")
+
+
+class TestWordListServiceIntegration:
+    """Tests for EpisodeProcessor with word_list_service."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_word_list_service_filters_words(self, test_config, mock_services, tmp_path):
+        """Word list service should apply blacklist/whitelist filtering."""
+        word1 = _make_word("食べる")
+        word2 = _make_word("走る", start_time=5.0)
+        media = _make_media()
+
+        mock_wls = MagicMock()
+        mock_wls.is_available.return_value = True
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
+        # filter_by_word_lists removes word2
+        mock_services["word_filter"].filter_by_word_lists.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            word_list_service=mock_wls,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_word_lists.assert_called_once_with(
+            [word1, word2], mock_wls
+        )
+        assert result.cards_created == 1
+
+
+class TestCrossEpisodeFiltering:
+    """Tests for cross-episode frequency filtering."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_cross_episode_counts_filters_words(self, test_config, mock_services, tmp_path):
+        """Words below min_episode_appearances should be filtered out."""
+        from dataclasses import replace
+
+        config = replace(test_config, min_episode_appearances=3)
+
+        word1 = _make_word("食べる")
+        word2 = _make_word("走る", start_time=5.0)
+        media = _make_media()
+
+        cross_counts = {"食べる": 5, "走る": 1}  # word2 appears in only 1 episode
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
+        # filter_by_episode_count removes word2
+        mock_services["word_filter"].filter_by_episode_count.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        result = processor.process_episode(
+            tmp_path / "v.mkv", tmp_path / "s.ass", cross_episode_counts=cross_counts
+        )
+
+        mock_services["word_filter"].filter_by_episode_count.assert_called_once_with(
+            [word1, word2], cross_counts, 3
+        )
+        assert result.cards_created == 1
+
+
+class TestDefinitionSkipping:
+    """Tests for skipping words without definitions."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_skips_words_without_definitions(self, test_config, mock_services, tmp_path):
+        """Words with None definitions should be skipped when creating cards."""
+        word1 = _make_word("食べる")
+        word2 = _make_word("走る", start_time=5.0)
+        media1, media2 = _make_media("taberu"), _make_media("hashiru")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
+        mock_services["media_extractor"].extract_media_batch.return_value = [
+            (word1, media1),
+            (word2, media2),
+        ]
+        # word1 has a definition, word2 does not
+        mock_services["definition_service"].get_definitions_batch.return_value = [
+            "1. to eat",
+            None,
+        ]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Only 1 card should be created (word2 skipped)
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        assert len(card_data) == 1
+        assert card_data[0][0] == word1
+
+
 class TestStatsServiceIntegration:
     """Tests for EpisodeProcessor with stats_service."""
 

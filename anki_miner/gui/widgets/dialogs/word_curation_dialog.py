@@ -273,5 +273,6 @@ class WordCurationDialog(QDialog):
             item = self.table.item(row, 0)
             if item and item.checkState() == Qt.CheckState.Checked:
                 original_index = item.data(Qt.ItemDataRole.UserRole)
-                selected.append(self._words[original_index])
+                if original_index is not None and 0 <= original_index < len(self._words):
+                    selected.append(self._words[original_index])
         return selected

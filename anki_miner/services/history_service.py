@@ -144,7 +144,8 @@ class HistoryService:
         if row is None:
             return []
         try:
-            return json.loads(row[0])
+            result: list[int] = json.loads(row[0])
+            return result
         except (json.JSONDecodeError, TypeError):
             return []
 

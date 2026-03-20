@@ -147,3 +147,25 @@ class TestBothLists:
         assert service.is_whitelisted("食べる") is False
         assert service.is_blacklisted("飲む") is False
         assert service.is_whitelisted("飲む") is True
+
+
+class TestReadWordFileException:
+    """Tests for error handling in _read_word_file."""
+
+    def test_raises_setup_error_on_read_failure(self, tmp_path):
+        """Should raise SetupError when file reading fails after existence check."""
+        from unittest.mock import patch
+
+        bl = tmp_path / "blacklist.txt"
+        bl.write_text("食べる\n", encoding="utf-8")
+        service = WordListService(blacklist_path=bl)
+
+        with (
+            patch.object(
+                type(bl),
+                "open",
+                side_effect=UnicodeDecodeError("utf-8", b"", 0, 1, "invalid"),
+            ),
+            pytest.raises(SetupError, match="Error reading word list file"),
+        ):
+            service.load()

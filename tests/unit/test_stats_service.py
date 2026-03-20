@@ -31,6 +31,29 @@ class TestInitialization:
         assert service.load() is True
         assert service.load() is True
 
+    def test_load_exception_returns_false(self, tmp_path):
+        """Database initialization failure should return False."""
+        from unittest.mock import patch
+
+        service = StatsService(tmp_path / "stats.db")
+        with patch.object(service, "_connect", side_effect=RuntimeError("db error")):
+            assert service.load() is False
+        assert service.is_available() is False
+
+    def test_methods_return_empty_when_not_initialized(self, tmp_path):
+        """All query methods should return safe defaults when not initialized."""
+        from anki_miner.models.stats import OverallStats
+
+        service = StatsService(tmp_path / "stats.db")
+        # Don't call load()
+
+        overall = service.get_overall_stats()
+        assert isinstance(overall, OverallStats)
+        assert overall.total_sessions == 0
+
+        assert service.get_recent_sessions() == []
+        assert service.get_series_stats() == []
+
 
 class TestRecordSession:
     """Tests for recording mining sessions."""
@@ -231,7 +254,7 @@ class TestDifficulty:
 
 
 class TestMilestones:
-    """Tests for milestone calculations."""
+    """Tests for milestone calculations (one per category)."""
 
     @pytest.fixture
     def service(self, tmp_path):
@@ -239,13 +262,26 @@ class TestMilestones:
         svc.load()
         return svc
 
-    def test_no_milestones_achieved_initially(self, service):
+    def test_returns_one_per_category(self, service):
+        """Should return exactly 3 milestones (cards, sessions, series)."""
         milestones = service.get_milestones()
-        assert len(milestones) > 0
-        assert all(not m.achieved for m in milestones)
+        assert len(milestones) == 3
 
-    def test_card_milestone_achieved(self, service):
-        # Create enough sessions to get 60 cards (50+ threshold)
+    def test_shows_first_unachieved_initially(self, service):
+        """At zero progress, each milestone should be the lowest threshold."""
+        milestones = service.get_milestones()
+        assert all(not m.achieved for m in milestones)
+        # First card milestone is 50
+        assert milestones[0].threshold == 50
+        assert milestones[0].name == "First Steps"
+        # First session milestone is 5
+        assert milestones[1].threshold == 5
+        # First series milestone is 3
+        assert milestones[2].threshold == 3
+
+    def test_advances_to_next_milestone(self, service):
+        """After achieving a milestone, should show the next one in that category."""
+        # Create 60 cards across 5 sessions from 1 series
         for i in range(5):
             service.record_session(
                 MiningSession(
@@ -258,25 +294,34 @@ class TestMilestones:
                 )
             )
         milestones = service.get_milestones()
-        first_step = next(m for m in milestones if m.name == "First Steps")
-        assert first_step.achieved is True
-        assert first_step.current_value == 60
+        # Cards: 60 achieved, so 50-card milestone passed → shows 100-card milestone
+        card_milestone = milestones[0]
+        assert card_milestone.threshold == 100
+        assert card_milestone.current_value == 60
+        assert card_milestone.achieved is False
+        # Sessions: 5 achieved → shows 10-session milestone
+        session_milestone = milestones[1]
+        assert session_milestone.threshold == 10
+        assert session_milestone.achieved is False
 
-    def test_session_milestone_achieved(self, service):
-        for i in range(5):
-            service.record_session(
-                MiningSession(
-                    series_name="Test",
-                    episode_name=f"ep_{i:02d}",
-                    total_words=100,
-                    unknown_words=20,
-                    cards_created=5,
-                    elapsed_time=5.0,
-                )
-            )
-        milestones = service.get_milestones()
-        regular = next(m for m in milestones if m.name == "Regular Miner")
-        assert regular.achieved is True
+    def test_shows_last_when_all_achieved(self, service):
+        """When all milestones in a category are achieved, show the last one."""
+        from anki_miner.models.stats import OverallStats
+
+        stats = OverallStats(
+            total_sessions=999,
+            total_cards_created=99999,
+            series_count=999,
+        )
+        milestones = service.get_milestones(stats=stats)
+        assert len(milestones) == 3
+        assert all(m.achieved for m in milestones)
+        # Last card milestone is 10000
+        assert milestones[0].threshold == 10000
+        # Last session milestone is 100
+        assert milestones[1].threshold == 100
+        # Last series milestone is 25
+        assert milestones[2].threshold == 25
 
     def test_milestones_returns_empty_when_not_initialized(self, tmp_path):
         service = StatsService(tmp_path / "stats.db")

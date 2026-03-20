@@ -16,6 +16,10 @@ QWidget {
     font-weight: 400;
 }
 
+QLabel {
+    background: transparent;
+}
+
 QMainWindow {
     font-size: ${font-size-body}px;
 }
@@ -441,9 +445,44 @@ QLabel#validation-badge {
     font-weight: 500;
 }
 
+/* Header widget */
+QWidget#header-widget {
+    border-bottom: 1px solid;
+}
+
+/* Update banner */
+QFrame#update-banner {
+    border-radius: ${border-radius-default}px;
+    margin: ${spacing-xxs}px ${spacing-xs}px;
+    padding: ${spacing-xxs}px ${spacing-xs}px;
+}
+
+QFrame#update-banner QLabel {
+    font-size: ${font-size-body-sm}px;
+}
+
+QFrame#update-banner QPushButton {
+    border: 1px solid;
+    border-radius: ${border-radius-small}px;
+    padding: 2px 10px;
+    font-size: ${font-size-caption}px;
+}
+
+QFrame#update-banner QPushButton:hover {
+    border: 1px solid;
+}
+
+QFrame#update-banner QPushButton#dismissBtn {
+    border: none;
+    font-size: ${font-size-body}px;
+    font-weight: bold;
+    padding: 2px 6px;
+}
+
 /* Status bar styles */
 QWidget#status-bar {
     font-size: ${font-size-body-sm}px;
+    border-radius: ${border-radius-default}px;
 }
 
 QLabel#status-operation {
