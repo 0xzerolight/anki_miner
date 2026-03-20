@@ -319,6 +319,18 @@ class TestShouldIncludeWord:
         token = _make_token("接続詞", "接続詞", lemma="接続詞")
         assert service._should_include_word(token) is False
 
+    def test_excludes_hiragana_only_word(self, service):
+        """Hiragana-only words (no kanji, not katakana) should return False."""
+        token = _make_token("ところ", "名詞", lemma="ところ")
+        assert service._should_include_word(token) is False
+
+    def test_excludes_three_char_katakana_ending_tsu(self, service):
+        """Three-char katakana ending in ッ should be excluded as sound effect."""
+        token = _make_token("ガッ", "副詞", lemma="ガッ")
+        assert service._should_include_word(token) is False
+        token2 = _make_token("ドンッ", "副詞", lemma="ドンッ")
+        assert service._should_include_word(token2) is False
+
 
 class TestExtractLemma:
     """Tests for _extract_lemma method."""

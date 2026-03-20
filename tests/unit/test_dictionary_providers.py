@@ -255,3 +255,22 @@ class TestJishoProvider:
             result = provider.lookup("食べる")
 
         assert result is None
+
+
+class TestJMdictLoadException:
+    """Tests for JMdict load error handling."""
+
+    def test_generic_exception_raises_setup_error(self, tmp_path):
+        """Should raise SetupError when XML loading fails unexpectedly."""
+        xml_file = tmp_path / "jmdict.xml"
+        xml_file.write_text("<JMdict></JMdict>", encoding="utf-8")
+        provider = JMdictProvider(xml_file)
+
+        with (
+            patch(
+                "anki_miner.services.providers.jmdict_provider.ET.parse",
+                side_effect=RuntimeError("disk error"),
+            ),
+            pytest.raises(SetupError, match="Error loading JMdict"),
+        ):
+            provider.load()

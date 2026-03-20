@@ -650,22 +650,29 @@ class BatchProcessingTab(QWidget):
         self.current_progress_widget.reset()
         self.overall_progress_widget.reset()
 
-    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+    def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept drag if any URL is a directory."""
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
+        if event is None or event.mimeData() is None:
+            return
+        if event.mimeData().hasUrls():  # type: ignore[union-attr]
+            for url in event.mimeData().urls():  # type: ignore[union-attr]
                 if Path(url.toLocalFile()).is_dir():
                     event.acceptProposedAction()
                     return
 
-    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+    def dragMoveEvent(self, event: QDragMoveEvent | None) -> None:
         """Accept drag move events."""
-        event.acceptProposedAction()
+        if event is not None:
+            event.acceptProposedAction()
 
-    def dropEvent(self, event: QDropEvent) -> None:
+    def dropEvent(self, event: QDropEvent | None) -> None:
         """Route dropped folders to the appropriate folder selector."""
+        if event is None or event.mimeData() is None:
+            return
         folders = [
-            url.toLocalFile() for url in event.mimeData().urls() if Path(url.toLocalFile()).is_dir()
+            url.toLocalFile()
+            for url in event.mimeData().urls()  # type: ignore[union-attr]
+            if Path(url.toLocalFile()).is_dir()
         ]
         if len(folders) >= 1:
             self.anime_folder_selector.set_path(folders[0])

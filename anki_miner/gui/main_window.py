@@ -132,20 +132,25 @@ class MainWindow(QMainWindow):
     def _setup_menu_bar(self) -> None:
         """Set up the application menu bar."""
         menu_bar = self.menuBar()
+        assert menu_bar is not None
 
         # Help menu
         help_menu = menu_bar.addMenu("&Help")
+        assert help_menu is not None
 
         about_action = help_menu.addAction("About Anki Miner")
+        assert about_action is not None
         about_action.setShortcut(QKeySequence("F1"))
         about_action.triggered.connect(self._show_about)
 
         help_menu.addSeparator()
 
         report_action = help_menu.addAction("Report an Issue")
+        assert report_action is not None
         report_action.triggered.connect(self._report_issue)
 
         check_updates_action = help_menu.addAction("Check for Updates")
+        assert check_updates_action is not None
         check_updates_action.triggered.connect(self._check_for_updates)
 
     def _setup_shortcuts(self) -> None:
@@ -490,8 +495,9 @@ class MainWindow(QMainWindow):
             # Remove existing banner if present
             for i in range(self.central_layout.count()):
                 item = self.central_layout.itemAt(i)
-                if item and isinstance(item.widget(), UpdateBanner):
-                    item.widget().deleteLater()
+                widget = item.widget() if item else None
+                if isinstance(widget, UpdateBanner):
+                    widget.deleteLater()
                     break
 
             banner = UpdateBanner(latest_version, release_url, self)

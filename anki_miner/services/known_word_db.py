@@ -123,4 +123,4 @@ class KnownWordDB:
     def _count(conn: sqlite3.Connection) -> int:
         """Count rows in the known_words table using an open connection."""
         cursor = conn.execute("SELECT COUNT(*) FROM known_words")
-        return cursor.fetchone()[0]
+        return int(cursor.fetchone()[0])
