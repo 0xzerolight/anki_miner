@@ -1,5 +1,7 @@
 """Tests for file_utils module."""
 
+from pathlib import Path
+
 import pytest
 
 from anki_miner.utils.file_utils import cleanup_temp_files, ensure_directory, safe_filename
@@ -132,3 +134,59 @@ class TestSafeFilename:
     def test_japanese_characters_preserved(self):
         """Should preserve Japanese characters."""
         assert safe_filename("日本語ファイル.txt") == "日本語ファイル.txt"
+
+    @pytest.mark.parametrize(
+        "reserved",
+        ["CON", "PRN", "AUX", "NUL", "COM1", "COM9", "LPT1", "LPT9"],
+        ids=["CON", "PRN", "AUX", "NUL", "COM1", "COM9", "LPT1", "LPT9"],
+    )
+    def test_windows_reserved_names_prefixed(self, reserved):
+        """Windows reserved names should get an underscore prefix."""
+        result = safe_filename(f"{reserved}.txt")
+        assert result == f"_{reserved}.txt"
+
+    def test_windows_reserved_names_case_insensitive(self):
+        """Reserved name check should be case-insensitive."""
+        result = safe_filename("con.txt")
+        assert result == "_con.txt"
+
+    def test_truncates_long_filename_to_255_bytes(self):
+        """Filenames exceeding 255 UTF-8 bytes should be truncated."""
+        # Each Japanese char is 3 bytes in UTF-8, so 90 chars = 270 bytes + ".txt" = 274 bytes
+        long_name = "あ" * 90 + ".txt"
+        result = safe_filename(long_name)
+        assert len(result.encode("utf-8")) <= 255
+        assert result.endswith(".txt")
+
+    def test_truncates_preserves_extension(self):
+        """Truncation should preserve the file extension."""
+        long_name = "x" * 260 + ".mp3"
+        result = safe_filename(long_name)
+        assert len(result.encode("utf-8")) <= 255
+        assert result.endswith(".mp3")
+
+
+class TestCleanupTempFilesErrorHandling:
+    """Tests for error handling in cleanup_temp_files."""
+
+    def test_skips_files_that_fail_to_unlink(self, tmp_path):
+        """Should skip files that raise OSError on unlink and continue."""
+        (tmp_path / "file1.tmp").write_text("a")
+        (tmp_path / "file2.tmp").write_text("b")
+
+        original_unlink = Path.unlink
+
+        def mock_unlink(self, *args, **kwargs):
+            if self.name == "file1.tmp":
+                raise OSError("permission denied")
+            original_unlink(self, *args, **kwargs)
+
+        from unittest.mock import patch
+
+        with patch.object(Path, "unlink", mock_unlink):
+            count = cleanup_temp_files(tmp_path, "*.tmp")
+
+        # file1 failed, file2 succeeded
+        assert count == 1
+        assert (tmp_path / "file1.tmp").exists()
+        assert not (tmp_path / "file2.tmp").exists()

@@ -47,9 +47,10 @@ class StatCard(QFrame):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(SPACING.xs)
 
-        # Icon (large emoji)
-        if self._icon:
-            self.icon_label = QLabel(IconProvider.get_icon(self._icon))
+        # Icon (large emoji) — only create label if icon text is non-empty
+        icon_text = IconProvider.get_icon(self._icon) if self._icon else ""
+        if icon_text:
+            self.icon_label = QLabel(icon_text)
             icon_font = QFont()
             icon_font.setPixelSize(FONT_SIZES.stat_value)
             self.icon_label.setFont(icon_font)

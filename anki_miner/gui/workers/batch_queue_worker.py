@@ -9,6 +9,7 @@ from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.models.batch_queue import BatchQueue
+from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
 
 class BatchQueueWorkerThread(CancellableWorker):
@@ -49,7 +50,7 @@ class BatchQueueWorkerThread(CancellableWorker):
         self.presenter = presenter
         self.progress_callback = progress_callback
         self.stats_service = stats_service
-        self._current_processor = None
+        self._current_processor: EpisodeProcessor | None = None
 
     def cancel(self) -> None:
         """Cancel processing, propagating to the current processor."""

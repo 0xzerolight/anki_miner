@@ -417,6 +417,32 @@ QLabel#validation-badge[status="warning"] {
     border-color: #FF9800;
 }
 
+/* ============== HEADER WIDGET ============== */
+
+QWidget#header-widget {
+    background-color: #FFF8F5;
+    border-color: #E8D5D9;
+}
+
+/* ============== UPDATE BANNER ============== */
+
+QFrame#update-banner {
+    background-color: #BE185D;
+}
+
+QFrame#update-banner QLabel {
+    color: #FFF1F2;
+}
+
+QFrame#update-banner QPushButton {
+    color: #FFF1F2;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+QFrame#update-banner QPushButton:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
 /* ============== STATUS BAR ============== */
 
 QWidget#status-bar {

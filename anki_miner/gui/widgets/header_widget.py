@@ -97,13 +97,7 @@ class HeaderWidget(QWidget):
         # Alias for compatibility
         self.theme_selector = self.theme_combo
 
-        # Apply custom styling
-        self.setStyleSheet("""
-            QWidget#header-widget {
-                background-color: palette(window);
-                border-bottom: 1px solid palette(mid);
-            }
-        """)
+        # Styling handled by QSS theme files (common.qss + theme-specific)
 
     def _on_theme_changed(self, index: int) -> None:
         """Handle theme selection change.

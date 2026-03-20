@@ -22,35 +22,7 @@ class UpdateBanner(QFrame):
         super().__init__(parent)
         self.release_url = release_url
 
-        self.setObjectName("updateBanner")
-        self.setStyleSheet("""
-            #updateBanner {
-                background-color: #1a73e8;
-                border-radius: 4px;
-                margin: 4px 8px;
-                padding: 4px 8px;
-            }
-            #updateBanner QLabel {
-                color: white;
-                font-size: 13px;
-            }
-            #updateBanner QPushButton {
-                color: white;
-                border: 1px solid rgba(255,255,255,0.5);
-                border-radius: 3px;
-                padding: 2px 10px;
-                font-size: 12px;
-            }
-            #updateBanner QPushButton:hover {
-                background-color: rgba(255,255,255,0.2);
-            }
-            #updateBanner #dismissBtn {
-                border: none;
-                font-size: 14px;
-                font-weight: bold;
-                padding: 2px 6px;
-            }
-            """)
+        self.setObjectName("update-banner")
 
         layout = QHBoxLayout()
         layout.setContentsMargins(8, 4, 8, 4)

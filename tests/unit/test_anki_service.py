@@ -27,6 +27,18 @@ def _mock_response(result=None, error=None):
 # ---------------------------------------------------------------------------
 
 
+class TestInit:
+    """Tests for AnkiService initialization."""
+
+    def test_missing_required_fields_raises_valueerror(self, test_config):
+        """Should raise ValueError when required anki_fields keys are missing."""
+        from dataclasses import replace
+
+        bad_config = replace(test_config, anki_fields={"word": "word"})  # Missing many keys
+        with pytest.raises(ValueError, match="Missing required anki_fields keys"):
+            AnkiService(bad_config)
+
+
 class TestGetExistingVocabulary:
     """Tests for AnkiService.get_existing_vocabulary."""
 

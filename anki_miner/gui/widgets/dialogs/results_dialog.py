@@ -172,6 +172,8 @@ class ResultsDialog(EnhancedDialog):
 
         self._undo_button.setEnabled(False)
         try:
+            if self._undo_callback is None:
+                return
             deleted = self._undo_callback(self.processing_result.card_ids)
             self._undo_button.setText(f"Undone ({deleted} cards deleted)")
             self.undo_completed = True

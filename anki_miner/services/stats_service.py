@@ -211,10 +211,10 @@ class StatsService:
                 SeriesStats(
                     series_name=row["series_name"],
                     episodes_mined=row["episodes_mined"],
-                    total_words=row["total_words"],
-                    total_unknown=row["total_unknown"],
-                    total_cards_created=row["total_cards"],
-                    total_time=row["total_time"],
+                    total_words=row["total_words"] or 0,
+                    total_unknown=row["total_unknown"] or 0,
+                    total_cards_created=row["total_cards"] or 0,
+                    total_time=row["total_time"] or 0.0,
                 )
                 for row in rows
             ]
@@ -281,10 +281,10 @@ class StatsService:
             return [
                 DifficultyEntry(
                     series_name=row["series_name"],
-                    total_words=row["total_words"],
-                    unknown_words=row["unknown_words"],
-                    unique_words=row["unique_words"],
-                    difficulty_score=row["difficulty_score"],
+                    total_words=row["total_words"] or 0,
+                    unknown_words=row["unknown_words"] or 0,
+                    unique_words=row["unique_words"] or 0,
+                    difficulty_score=row["difficulty_score"] or 0.0,
                     recorded_at=datetime.fromisoformat(row["recorded_at"]),
                 )
                 for row in rows
@@ -295,7 +295,11 @@ class StatsService:
     # === Feature 3: Progress Milestones ===
 
     def get_milestones(self, stats: OverallStats | None = None) -> list[Milestone]:
-        """Compute all progress milestones based on current stats.
+        """Get the next unachieved milestone for each category.
+
+        Returns at most 3 milestones (one per category: cards, sessions, series).
+        For each category, returns the first unachieved milestone. If all milestones
+        in a category are achieved, the last (highest) milestone is returned.
 
         Args:
             stats: Pre-fetched overall stats to avoid a duplicate query.
@@ -308,38 +312,24 @@ class StatsService:
             stats = self.get_overall_stats()
         milestones: list[Milestone] = []
 
-        for threshold, name, description in CARD_MILESTONES:
-            milestones.append(
-                Milestone(
+        for milestone_list, current_value in [
+            (CARD_MILESTONES, stats.total_cards_created),
+            (SESSION_MILESTONES, stats.total_sessions),
+            (SERIES_MILESTONES, stats.series_count),
+        ]:
+            selected = None
+            for threshold, name, description in milestone_list:
+                selected = Milestone(
                     name=name,
                     description=description,
                     threshold=threshold,
-                    current_value=stats.total_cards_created,
-                    achieved=stats.total_cards_created >= threshold,
+                    current_value=current_value,
+                    achieved=current_value >= threshold,
                 )
-            )
-
-        for threshold, name, description in SESSION_MILESTONES:
-            milestones.append(
-                Milestone(
-                    name=name,
-                    description=description,
-                    threshold=threshold,
-                    current_value=stats.total_sessions,
-                    achieved=stats.total_sessions >= threshold,
-                )
-            )
-
-        for threshold, name, description in SERIES_MILESTONES:
-            milestones.append(
-                Milestone(
-                    name=name,
-                    description=description,
-                    threshold=threshold,
-                    current_value=stats.series_count,
-                    achieved=stats.series_count >= threshold,
-                )
-            )
+                if not selected.achieved:
+                    break
+            if selected:
+                milestones.append(selected)
 
         return milestones
 

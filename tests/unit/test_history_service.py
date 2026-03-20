@@ -247,3 +247,77 @@ class TestDeleteSession:
         id2 = history_service.record_session(video, subtitle, sample_result)
         history_service.delete_session(id1)
         assert history_service.get_session(id2) is not None
+
+
+# ---------------------------------------------------------------------------
+# TestCorruptedJSON
+# ---------------------------------------------------------------------------
+
+
+class TestCorruptedJSON:
+    """Tests for graceful handling of corrupted JSON fields in the database."""
+
+    def test_get_card_ids_corrupted_json_returns_empty(self, tmp_path):
+        """Should return empty list when card_ids contains invalid JSON."""
+        import sqlite3
+
+        db_path = tmp_path / "history.db"
+        service = HistoryService(db_path)
+        service.initialize()
+
+        # Manually insert a row with corrupted JSON
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute(
+                """INSERT INTO mining_history
+                   (timestamp, video_file, subtitle_file, series_name,
+                    cards_created, card_ids, words_mined, elapsed_time)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                ("2024-01-01", "v.mkv", "s.ass", "test", 3, "NOT VALID JSON", "[]", 1.0),
+            )
+
+        ids = service.get_card_ids_for_session(1)
+        assert ids == []
+
+    def test_row_to_dict_corrupted_card_ids(self, tmp_path):
+        """Should default to empty list when card_ids JSON is corrupted."""
+        import sqlite3
+
+        db_path = tmp_path / "history.db"
+        service = HistoryService(db_path)
+        service.initialize()
+
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute(
+                """INSERT INTO mining_history
+                   (timestamp, video_file, subtitle_file, series_name,
+                    cards_created, card_ids, words_mined, elapsed_time)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                ("2024-01-01", "v.mkv", "s.ass", "test", 0, "{bad json", '["word1"]', 1.0),
+            )
+
+        history = service.get_history()
+        assert len(history) == 1
+        assert history[0]["card_ids"] == []
+        assert history[0]["words_mined"] == ["word1"]
+
+    def test_row_to_dict_corrupted_words_mined(self, tmp_path):
+        """Should default to empty list when words_mined JSON is corrupted."""
+        import sqlite3
+
+        db_path = tmp_path / "history.db"
+        service = HistoryService(db_path)
+        service.initialize()
+
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute(
+                """INSERT INTO mining_history
+                   (timestamp, video_file, subtitle_file, series_name,
+                    cards_created, card_ids, words_mined, elapsed_time)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                ("2024-01-01", "v.mkv", "s.ass", "test", 0, "[1,2]", "NOT JSON", 1.0),
+            )
+
+        history = service.get_history()
+        assert len(history) == 1
+        assert history[0]["card_ids"] == [1, 2]
+        assert history[0]["words_mined"] == []
