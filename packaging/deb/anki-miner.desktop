@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Anki Miner
+Comment=Japanese vocabulary mining from anime subtitles
+Exec=/usr/bin/anki-miner
+Icon=anki-miner
+Categories=Education;Languages;
+Terminal=false
+StartupWMClass=anki_miner
