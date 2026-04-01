@@ -38,5 +38,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install Qt system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libpulse0 libxkbcommon0
       - run: pip install -e ".[dev]"
       - run: pytest --cov=anki_miner --cov-report=term-missing
+        env:
+          QT_QPA_PLATFORM: offscreen

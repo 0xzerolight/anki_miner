@@ -3,33 +3,15 @@
 These tests validate the dialog's internal methods (_toggle_current_row,
 _select_all, _deselect_all, get_selected_words) which are the underlying
 logic invoked by keyboard shortcuts.
-
-Requires PyQt6 to be importable. Tests are skipped if PyQt6 or a display is unavailable.
 """
 
-import os
-
 import pytest
+from PyQt6.QtWidgets import QApplication
 
 from anki_miner.models import TokenizedWord
 
-# Skip all tests in this module if PyQt6 is not available or no display
-try:
-    from PyQt6.QtWidgets import QApplication
-
-    # Create QApplication if not already running (needed for any widget)
-    _app = QApplication.instance() or QApplication([])
-    _HAS_QT = True
-except (ImportError, RuntimeError):
-    _HAS_QT = False
-
-# Also skip if no display available (headless CI without virtual display)
-_HAS_DISPLAY = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY") or _HAS_QT)
-
-pytestmark = pytest.mark.skipif(
-    not (_HAS_QT and _HAS_DISPLAY),
-    reason="PyQt6 or display not available",
-)
+# QApplication instance needed for any widget test
+_app = QApplication.instance() or QApplication([])
 
 
 def _make_words(count=3):
