@@ -40,8 +40,41 @@ jobs:
           pip install .
           pip install pyinstaller
 
+      - name: Extract version from pyproject.toml
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION"
+
       - name: Build with PyInstaller
         run: pyinstaller anki_miner.spec
+
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        run: iscc /DAppVersion=${{ steps.version.outputs.version }} packaging\innosetup\anki_miner.iss
+
+      - name: Build AppImage (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          chmod +x packaging/appimage/build-appimage.sh
+          packaging/appimage/build-appimage.sh ${{ steps.version.outputs.version }}
+
+      - name: Install nfpm (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          wget -q https://github.com/goreleaser/nfpm/releases/download/v2.46.0/nfpm_2.46.0_Linux_x86_64.tar.gz
+          tar -xzf nfpm_2.46.0_Linux_x86_64.tar.gz nfpm
+          chmod +x nfpm
+
+      - name: Build .deb package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          VERSION=${{ steps.version.outputs.version }} ./nfpm package \
+            --config packaging/nfpm.yaml \
+            --packager deb \
+            --target dist/anki-miner_${{ steps.version.outputs.version }}_amd64.deb
 
       - name: Create archive (Linux/macOS)
         if: runner.os != 'Windows'
@@ -62,6 +95,9 @@ jobs:
           path: |
             dist/${{ matrix.artifact_name }}.tar.gz
             dist/${{ matrix.artifact_name }}.zip
+            dist/AnkiMiner-*-Setup.exe
+            dist/AnkiMiner-*.AppImage
+            dist/anki-miner_*.deb
 
   release:
     needs: build
@@ -81,3 +117,6 @@ jobs:
           files: |
             artifacts/**/*.tar.gz
             artifacts/**/*.zip
+            artifacts/**/*-Setup.exe
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb

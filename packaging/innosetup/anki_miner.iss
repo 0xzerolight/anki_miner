@@ -1,0 +1,44 @@
+; Inno Setup script for Anki Miner
+; Compile with: iscc /DAppVersion=X.Y.Z anki_miner.iss
+
+#ifndef AppVersion
+  #define AppVersion "dev"
+#endif
+
+[Setup]
+AppId={{15B09250-AC39-4792-A15A-B73BD8E218A1}
+AppName=Anki Miner
+AppVersion={#AppVersion}
+AppVerName=Anki Miner {#AppVersion}
+AppPublisher=Anki Miner Contributors
+AppPublisherURL=https://github.com/0xzerolight/anki_miner
+DefaultDirName={autopf}\AnkiMiner
+DefaultGroupName=Anki Miner
+UninstallDisplayIcon={app}\AnkiMiner.exe
+OutputDir=..\..\dist
+OutputBaseFilename=AnkiMiner-{#AppVersion}-Windows-x86_64-Setup
+SetupIconFile=..\..\anki_miner\gui\resources\icons\anki_miner.ico
+LicenseFile=..\..\LICENSE
+Compression=lzma2/ultra64
+SolidCompression=yes
+WizardStyle=modern
+PrivilegesRequired=lowest
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"
+
+[Files]
+Source: "..\..\dist\AnkiMiner\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[Icons]
+Name: "{group}\Anki Miner"; Filename: "{app}\AnkiMiner.exe"
+Name: "{group}\Uninstall Anki Miner"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\Anki Miner"; Filename: "{app}\AnkiMiner.exe"; Tasks: desktopicon
+
+[Run]
+Filename: "{app}\AnkiMiner.exe"; Description: "Launch Anki Miner"; Flags: nowait postinstall skipifsilent
