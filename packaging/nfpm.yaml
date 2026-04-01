@@ -1,0 +1,39 @@
+name: anki-miner
+arch: amd64
+platform: linux
+version: "${VERSION}"
+maintainer: "Anki Miner Contributors <noreply@github.com>"
+description: "Japanese vocabulary mining from anime subtitles with Anki integration"
+vendor: "Anki Miner Contributors"
+homepage: "https://github.com/0xzerolight/anki_miner"
+license: "GPL-3.0-or-later"
+section: "education"
+priority: "optional"
+
+overrides:
+  deb:
+    recommends:
+      - ffmpeg
+
+contents:
+  # Install the PyInstaller bundle to /opt/anki-miner/
+  - src: dist/AnkiMiner/
+    dst: /opt/anki-miner/
+    type: tree
+
+  # Symlink the executable into PATH
+  - src: /opt/anki-miner/AnkiMiner
+    dst: /usr/bin/anki-miner
+    type: symlink
+
+  # Desktop entry
+  - src: packaging/deb/anki-miner.desktop
+    dst: /usr/share/applications/anki-miner.desktop
+    file_info:
+      mode: 0644
+
+  # Application icon
+  - src: anki_miner/gui/resources/icons/anki_miner.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/anki-miner.svg
+    file_info:
+      mode: 0644
