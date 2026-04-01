@@ -50,6 +50,7 @@ JMdict_e
 .mypy_cache/
 .ruff_cache/
 docs/
+.claude-runner/
 
 # OS
 .DS_Store
