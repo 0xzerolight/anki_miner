@@ -42,7 +42,6 @@ htmlcov/
 
 # Project specific
 temp_media/
-gif_demos/
 *.log
 rename_log.txt
 JMdict_e
