@@ -4,6 +4,7 @@ import json
 import logging
 import re
 from pathlib import Path
+from typing import Any
 
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QColor, QPalette
@@ -154,7 +155,7 @@ class Theme:
 
     _instance: "Theme | None" = None
     _current_mode: str = "light"
-    _themes: dict[str, dict] = {}
+    _themes: dict[str, dict[str, Any]] = {}
 
     def __init__(self) -> None:
         """Initialize theme manager: discover themes and load saved preference."""
@@ -232,7 +233,8 @@ class Theme:
         theme_data = instance._themes.get(mode)
         if theme_data is None:
             theme_data = next(iter(instance._themes.values()))
-        return theme_data["colors"]
+        colors: dict[str, str] = theme_data["colors"]
+        return colors
 
     @classmethod
     def get_stylesheet(cls, mode: str | None = None) -> str:
