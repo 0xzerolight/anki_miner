@@ -16,7 +16,6 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.constants import PATH_MAX_DISPLAY_LENGTH
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 
 
@@ -73,7 +72,7 @@ class QueueItemWidget(QFrame):
         header_layout.setSpacing(SPACING.sm)
 
         # Series name with icon
-        self.series_label = QLabel(f"{IconProvider.get_icon('video')} {self.display_name}")
+        self.series_label = QLabel(self.display_name)
         self.series_label.setObjectName("queue-item-title")
         series_font = QFont()
         series_font.setPixelSize(FONT_SIZES.h3)
@@ -146,14 +145,14 @@ class QueueItemWidget(QFrame):
         footer_layout.addStretch()
 
         # Edit button
-        self.edit_button = QPushButton(f"{IconProvider.get_icon('edit')} Edit")
+        self.edit_button = QPushButton("Edit")
         self.edit_button.setObjectName("secondary")
         self.edit_button.clicked.connect(self.edited.emit)
         self.edit_button.setToolTip("Edit anime and subtitle folders")
         footer_layout.addWidget(self.edit_button)
 
         # Remove button
-        self.remove_button = QPushButton(f"{IconProvider.get_icon('delete')} Remove")
+        self.remove_button = QPushButton("Remove")
         self.remove_button.setObjectName("danger")
         self.remove_button.clicked.connect(self.removed.emit)
         self.remove_button.setToolTip("Remove from queue")
@@ -295,16 +294,13 @@ class QueueItemWidget(QFrame):
     def _update_status_badge(self) -> None:
         """Update the status badge display."""
         status_map = {
-            "pending": ("progress", "Pending", "pending"),
-            "processing": ("loading", "Processing", "processing"),
-            "complete": ("complete", "Complete", "complete"),
+            "pending": ("Pending", "pending"),
+            "processing": ("Processing", "processing"),
+            "complete": ("Complete", "complete"),
         }
 
-        icon_name, text, prop_value = status_map.get(
-            self._status, ("progress", "Pending", "pending")
-        )
-        icon = IconProvider.get_icon(icon_name)
-        self.status_badge.setText(f"{icon} {text}")
+        text, prop_value = status_map.get(self._status, ("Pending", "pending"))
+        self.status_badge.setText(text)
         self.status_badge.setProperty("status", prop_value)
 
         # Force style refresh
@@ -314,33 +310,28 @@ class QueueItemWidget(QFrame):
 
     def _update_paths(self) -> None:
         """Update the path labels with truncation."""
-        folder_icon = IconProvider.get_icon("folder")
-        subtitle_icon = IconProvider.get_icon("subtitle")
-
         if self._anime_folder:
             # Truncate path for display
             anime_path = Path(self._anime_folder)
             display_path = self._truncate_path(str(anime_path))
-            self.anime_path_label.setText(f"{folder_icon} {display_path}")
+            self.anime_path_label.setText(display_path)
             self.anime_path_label.setToolTip(str(anime_path))
         else:
-            self.anime_path_label.setText(f"{folder_icon} No anime folder selected")
+            self.anime_path_label.setText("No anime folder selected")
             self.anime_path_label.setToolTip("")
 
         if self._subtitle_folder:
             # Truncate path for display
             subtitle_path = Path(self._subtitle_folder)
             display_path = self._truncate_path(str(subtitle_path))
-            self.subtitle_path_label.setText(f"{subtitle_icon} {display_path}")
+            self.subtitle_path_label.setText(display_path)
             self.subtitle_path_label.setToolTip(str(subtitle_path))
         else:
-            self.subtitle_path_label.setText(f"{subtitle_icon} No subtitle folder selected")
+            self.subtitle_path_label.setText("No subtitle folder selected")
             self.subtitle_path_label.setToolTip("")
 
     def _update_stats(self) -> None:
         """Update the statistics label."""
-        stats_icon = IconProvider.get_icon("info")
-
         # Build offset string if non-zero
         offset_str = ""
         if self._subtitle_offset != 0.0:
@@ -348,16 +339,13 @@ class QueueItemWidget(QFrame):
             offset_str = f" • Offset: {sign}{self._subtitle_offset:.1f}s"
 
         if self._status == "complete" and self._cards_created > 0:
-            stats_text = f"{stats_icon} {self._episode_count} episodes • {self._cards_created} cards created{offset_str}"
-        elif self._episode_count > 0:
             stats_text = (
-                f"{stats_icon} {self._episode_count} episodes • Ready to process{offset_str}"
+                f"{self._episode_count} episodes • {self._cards_created} cards created{offset_str}"
             )
+        elif self._episode_count > 0:
+            stats_text = f"{self._episode_count} episodes • Ready to process{offset_str}"
         else:
-            if offset_str:
-                stats_text = f"{stats_icon} Not configured{offset_str}"
-            else:
-                stats_text = f"{stats_icon} Not configured"
+            stats_text = f"Not configured{offset_str}" if offset_str else "Not configured"
 
         self.stats_label.setText(stats_text)
 

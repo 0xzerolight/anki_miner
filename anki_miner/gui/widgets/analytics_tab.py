@@ -59,7 +59,7 @@ class AnalyticsTab(QWidget):
         # Refresh button
         button_layout = QHBoxLayout()
         button_layout.addStretch()
-        self.refresh_button = ModernButton("Refresh", icon="refresh", variant="secondary")
+        self.refresh_button = ModernButton("Refresh", variant="secondary")
         self.refresh_button.clicked.connect(self.refresh_data)
         button_layout.addWidget(self.refresh_button)
         layout.addLayout(button_layout)
@@ -87,16 +87,16 @@ class AnalyticsTab(QWidget):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        header = SectionHeader("Overview", icon="stats")
+        header = SectionHeader("Overview")
         layout.addWidget(header)
 
         grid = QGridLayout()
         grid.setSpacing(SPACING.sm)
 
-        self.card_total_cards = StatCard(icon="card", value="0", label="Total Cards")
-        self.card_total_sessions = StatCard(icon="play", value="0", label="Sessions")
-        self.card_total_series = StatCard(icon="folder", value="0", label="Series Mined")
-        self.card_avg_cards = StatCard(icon="stats", value="0", label="Avg Cards/Session")
+        self.card_total_cards = StatCard(value="0", label="Total Cards")
+        self.card_total_sessions = StatCard(value="0", label="Sessions")
+        self.card_total_series = StatCard(value="0", label="Series Mined")
+        self.card_avg_cards = StatCard(value="0", label="Avg Cards/Session")
 
         grid.addWidget(self.card_total_cards, 0, 0)
         grid.addWidget(self.card_total_sessions, 0, 1)
@@ -114,7 +114,7 @@ class AnalyticsTab(QWidget):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        header = SectionHeader("Recent Sessions", icon="time")
+        header = SectionHeader("Recent Sessions")
         layout.addWidget(header)
 
         self.sessions_empty_label = QLabel(
@@ -148,7 +148,7 @@ class AnalyticsTab(QWidget):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        header = SectionHeader("Series Difficulty Ranking", icon="filter")
+        header = SectionHeader("Series Difficulty Ranking")
         layout.addWidget(header)
 
         explanation = QLabel(
@@ -190,7 +190,7 @@ class AnalyticsTab(QWidget):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        header = SectionHeader("Milestones", icon="success")
+        header = SectionHeader("Milestones")
         layout.addWidget(header)
 
         self.milestones_layout = QVBoxLayout()

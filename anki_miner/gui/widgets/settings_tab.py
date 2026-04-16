@@ -16,7 +16,6 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
@@ -71,26 +70,10 @@ class SettingsTab(QWidget):
         self.filtering_panel = FilteringSettingsPanel()
 
         # Add tabs with scroll areas for each panel
-        card_icon = IconProvider.get_icon("card")
-        video_icon = IconProvider.get_icon("video")
-        word_icon = IconProvider.get_icon("word")
-        filter_icon = IconProvider.get_icon("filter")
-        self.tab_widget.addTab(
-            self._wrap_in_scroll_area(self.anki_panel),
-            f"{card_icon} Anki" if card_icon else "Anki",
-        )
-        self.tab_widget.addTab(
-            self._wrap_in_scroll_area(self.media_panel),
-            f"{video_icon} Media" if video_icon else "Media",
-        )
-        self.tab_widget.addTab(
-            self._wrap_in_scroll_area(self.dictionary_panel),
-            f"{word_icon} Dictionary" if word_icon else "Dictionary",
-        )
-        self.tab_widget.addTab(
-            self._wrap_in_scroll_area(self.filtering_panel),
-            f"{filter_icon} Filtering" if filter_icon else "Filtering",
-        )
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.anki_panel), "Anki")
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.media_panel), "Media")
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.dictionary_panel), "Dictionary")
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), "Filtering")
 
         layout.addWidget(self.tab_widget)
 
@@ -99,12 +82,12 @@ class SettingsTab(QWidget):
         button_layout.setSpacing(SPACING.sm)
         button_layout.addStretch()
 
-        self.reset_button = ModernButton("Reset to Defaults", icon="refresh", variant="secondary")
+        self.reset_button = ModernButton("Reset to Defaults", variant="secondary")
         self.reset_button.clicked.connect(self._on_reset_clicked)
         self.reset_button.setToolTip("Reset all settings to default values (Ctrl+R)")
         button_layout.addWidget(self.reset_button)
 
-        self.save_button = ModernButton("Save Settings", icon="save", variant="primary")
+        self.save_button = ModernButton("Save Settings", variant="primary")
         self.save_button.clicked.connect(self._on_save_clicked)
         self.save_button.setToolTip("Save settings to disk (Ctrl+S)")
         button_layout.addWidget(self.save_button)
@@ -256,12 +239,10 @@ class SettingsTab(QWidget):
         # Emit signal to notify listeners of config change
         self.config = new_config
         self.config_changed.emit(new_config)
-        success_icon = IconProvider.get_icon("success")
-        prefix = f"{success_icon} " if success_icon else ""
         QMessageBox.information(
             self,
             "Settings Saved",
-            f"{prefix}Settings have been saved successfully",
+            "Settings have been saved successfully",
         )
 
     def _on_reset_clicked(self) -> None:

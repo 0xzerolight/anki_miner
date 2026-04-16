@@ -6,7 +6,6 @@ from typing import Callable
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import StatCard
@@ -72,7 +71,6 @@ class ResultsDialog(EnhancedDialog):
 
         # Words discovered card
         words_card = StatCard(
-            icon="word",
             value=str(self.processing_result.total_words_found),
             label="Words Discovered",
         )
@@ -80,13 +78,13 @@ class ResultsDialog(EnhancedDialog):
 
         # New words card
         new_words_card = StatCard(
-            icon="card", value=str(self.processing_result.new_words_found), label="New Words"
+            value=str(self.processing_result.new_words_found), label="New Words"
         )
         row1_layout.addWidget(new_words_card)
 
         # Cards created card
         cards_card = StatCard(
-            icon="complete", value=str(self.processing_result.cards_created), label="Cards Created"
+            value=str(self.processing_result.cards_created), label="Cards Created"
         )
         row1_layout.addWidget(cards_card)
 
@@ -101,26 +99,18 @@ class ResultsDialog(EnhancedDialog):
         time_seconds = int(self.processing_result.elapsed_time % 60)
         time_str = f"{time_minutes:02d}:{time_seconds:02d}"
 
-        time_card = StatCard(icon="time", value=time_str, label="Processing Time")
+        time_card = StatCard(value=time_str, label="Processing Time")
         row2_layout.addWidget(time_card)
 
         # Processing speed card
         if self.processing_result.elapsed_time > 0:
             speed = self.processing_result.cards_created / self.processing_result.elapsed_time
-            speed_card = StatCard(
-                icon="progress", value=f"{speed:.1f}/sec", label="Processing Rate"
-            )
+            speed_card = StatCard(value=f"{speed:.1f}/sec", label="Processing Rate")
             row2_layout.addWidget(speed_card)
 
         # Comprehension percentage card with color indicator
         comp_pct = self.processing_result.comprehension_percentage
-        if comp_pct > 80:
-            comp_icon = "complete"
-        elif comp_pct >= 60:
-            comp_icon = "warning"
-        else:
-            comp_icon = "error"
-        comp_card = StatCard(icon=comp_icon, value=f"{comp_pct:.1f}%", label="Comprehension")
+        comp_card = StatCard(value=f"{comp_pct:.1f}%", label="Comprehension")
         row2_layout.addWidget(comp_card)
 
         stats_layout.addLayout(row2_layout)
@@ -130,7 +120,7 @@ class ResultsDialog(EnhancedDialog):
 
         # Errors section (if any)
         if self.processing_result.errors:
-            error_header = QLabel(f"{IconProvider.get_icon('warning')} Errors Occurred")
+            error_header = QLabel("Errors Occurred")
             error_header.setObjectName("heading3")
             error_font = QFont()
             error_font.setPixelSize(FONT_SIZES.h3)

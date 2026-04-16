@@ -5,7 +5,6 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import QCheckBox, QSpinBox
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
 
@@ -22,7 +21,7 @@ class FilteringSettingsPanel(FormPanel):
 
     def __init__(self, parent=None):
         """Initialize the filtering settings panel."""
-        super().__init__("Word Filtering", icon="filter", parent=parent)
+        super().__init__("Word Filtering", parent=parent)
         self._setup_fields()
         self._connect_validation()
 
@@ -150,10 +149,8 @@ class FilteringSettingsPanel(FormPanel):
             service = FrequencyService(Path(path_str))
             service.load()
             count = service.entry_count
-            icon = IconProvider.get_icon("success")
             self.frequency_selector.status_label.setText(
-                f"{icon} {Path(path_str).name} ({count:,} entries)"
+                f"{Path(path_str).name} ({count:,} entries)"
             )
         except Exception as e:
-            icon = IconProvider.get_icon("error")
-            self.frequency_selector.status_label.setText(f"{icon} Could not parse file: {e}")
+            self.frequency_selector.status_label.setText(f"Could not parse file: {e}")

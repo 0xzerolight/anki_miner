@@ -4,7 +4,6 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCursor, QFont
 from PyQt6.QtWidgets import QLabel, QSizePolicy
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES
 
 
@@ -72,18 +71,7 @@ class StatusBadge(QLabel):
 
     def _update_display(self) -> None:
         """Update badge text and styling."""
-        icon_map = {
-            self.STATUS_CHECKING: "progress",
-            self.STATUS_SUCCESS: "success",
-            self.STATUS_ERROR: "error",
-            self.STATUS_WARNING: "warning",
-            self.STATUS_INFO: "info",
-            self.STATUS_PENDING: "pending",
-        }
-
-        icon_name = icon_map.get(self._status, "progress")
-        icon = IconProvider.get_icon(icon_name)
-        self.setText(f"{icon} {self._name}" if icon else self._name)
+        self.setText(self._name)
 
         # Set property for QSS styling and refresh
         self.setProperty("status", self._status)

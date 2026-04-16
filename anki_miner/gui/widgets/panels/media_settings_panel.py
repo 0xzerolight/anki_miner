@@ -16,7 +16,7 @@ class MediaSettingsPanel(FormPanel):
 
     def __init__(self, parent=None):
         """Initialize the media settings panel."""
-        super().__init__("Media Extraction Settings", icon="video", parent=parent)
+        super().__init__("Media Extraction Settings", parent=parent)
         self._setup_fields()
 
     def _setup_fields(self) -> None:

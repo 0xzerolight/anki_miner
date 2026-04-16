@@ -4,7 +4,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 
 
@@ -12,7 +11,6 @@ class StatCard(QFrame):
     """Card widget for displaying a single metric/statistic.
 
     Features:
-    - Large icon
     - Large value display (with optional animated counting)
     - Small label
     - Card styling with border and shadow
@@ -21,18 +19,16 @@ class StatCard(QFrame):
     Typical usage: Display processing results like cards created, words discovered, etc.
     """
 
-    def __init__(self, icon: str = "", value: str = "0", label: str = "", parent=None):
+    def __init__(self, value: str = "0", label: str = "", parent=None):
         """Initialize the stat card.
 
         Args:
-            icon: Icon name from IconProvider
             value: Value to display (as string to support formatted numbers)
             label: Label text describing the metric
             parent: Optional parent widget
         """
         super().__init__(parent)
 
-        self._icon = icon
         self._value = value
         self._label = label
 
@@ -46,16 +42,6 @@ class StatCard(QFrame):
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(SPACING.xs)
-
-        # Icon (large emoji) — only create label if icon text is non-empty
-        icon_text = IconProvider.get_icon(self._icon) if self._icon else ""
-        if icon_text:
-            self.icon_label = QLabel(icon_text)
-            icon_font = QFont()
-            icon_font.setPixelSize(FONT_SIZES.stat_value)
-            self.icon_label.setFont(icon_font)
-            self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            layout.addWidget(self.icon_label)
 
         # Value (large, bold)
         self.value_label = QLabel(self._value)
@@ -96,17 +82,3 @@ class StatCard(QFrame):
         """
         self._label = label
         self.label_widget.setText(label.upper())
-
-    def set_icon(self, icon: str) -> None:
-        """Update the icon.
-
-        Args:
-            icon: Icon name from IconProvider
-        """
-        self._icon = icon
-        icon_text = IconProvider.get_icon(icon) if icon else ""
-        if hasattr(self, "icon_label"):
-            if icon_text:
-                self.icon_label.setText(icon_text)
-            else:
-                self.icon_label.hide()

@@ -112,20 +112,20 @@ class SingleEpisodeTab(QWidget):
         # Actions section
         from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 
-        actions_header = SectionHeader("Actions", icon="play")
+        actions_header = SectionHeader("Actions")
         layout.addWidget(actions_header)
 
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.xs)
 
-        self.preview_button = ModernButton("Preview Words", icon="preview", variant="secondary")
+        self.preview_button = ModernButton("Preview Words", variant="secondary")
         self.preview_button.setToolTip("Preview discovered words before creating cards")
-        self.process_button = ModernButton("Process Episode", icon="play", variant="primary")
+        self.process_button = ModernButton("Process Episode", variant="primary")
         self.process_button.setToolTip("Create Anki cards from the episode")
-        self.timing_button = ModernButton("Test Timing", icon="settings", variant="secondary")
+        self.timing_button = ModernButton("Test Timing", variant="secondary")
         self.timing_button.setToolTip("Preview video with subtitles to adjust timing offset")
 
-        self.cancel_button = ModernButton("Cancel", icon="stop", variant="danger")
+        self.cancel_button = ModernButton("Cancel", variant="danger")
         self.cancel_button.setToolTip("Cancel processing")
         self.cancel_button.hide()
 
@@ -142,7 +142,7 @@ class SingleEpisodeTab(QWidget):
         layout.addLayout(button_layout)
 
         # Progress section
-        progress_header = SectionHeader("Progress", icon="stats")
+        progress_header = SectionHeader("Progress")
         layout.addWidget(progress_header)
 
         self.progress_widget = ProgressWidget()
@@ -219,7 +219,7 @@ class SingleEpisodeTab(QWidget):
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
         # Section header
-        header = SectionHeader("File Selection", icon="folder")
+        header = SectionHeader("File Selection")
         layout.addWidget(header)
 
         # Recent files dropdown

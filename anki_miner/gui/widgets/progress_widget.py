@@ -7,7 +7,6 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QSizePolicy, QVBoxLayout, QWidget
 
 from anki_miner.gui.constants import MIN_HEIGHT_PROGRESS_WIDGET
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 
 
@@ -185,12 +184,7 @@ class ProgressWidget(QWidget):
         rate = self._items_processed / elapsed if elapsed > 0 else 0
 
         # Build stats string
-        time_icon = IconProvider.get_icon("time")
-        rate_icon = IconProvider.get_icon("progress")
-
-        time_prefix = f"{time_icon} " if time_icon else ""
-        rate_prefix = f"{rate_icon} " if rate_icon else ""
-        stats_parts = [f"{time_prefix}{elapsed_str}", f"{rate_prefix}{rate:.1f}/sec"]
+        stats_parts = [f"{elapsed_str}", f"{rate:.1f}/sec"]
 
         # Calculate ETA if we have total
         if self._total_items > 0 and rate > 0:
