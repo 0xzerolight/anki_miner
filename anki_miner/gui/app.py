@@ -34,12 +34,9 @@ def main():
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
 
-    # Initialize theme system
-    theme = Theme.get_instance()
-
-    # Apply stylesheet
-    stylesheet = theme.get_stylesheet()
-    app.setStyleSheet(stylesheet)
+    # Initialize theme system and apply stylesheet + palette
+    Theme.get_instance()
+    Theme.apply_to_app(app)
 
     # Create main window
     window = MainWindow()
