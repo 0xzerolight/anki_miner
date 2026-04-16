@@ -32,7 +32,16 @@ Automated Japanese vocabulary mining from anime subtitles. Extracts unknown word
 - **Parallel media extraction** — Concurrent ffmpeg processes for speed
 - **Preview mode** — See what words would be mined without creating any cards
 - **Smart filtering** — Skips particles, pronouns, onomatopoeia, sound effects, and words you already know
-- **Theming** — Light, Dark, and Japanese-inspired GUI themes
+- **Theming** — Four GUI themes (Light, Dark, Sakura, Tokyo Night) with a JSON-based theme system supporting custom themes
+- **Analytics dashboard** — Track mining statistics, series difficulty rankings, and milestone achievements
+- **Word curation** — Select which discovered words to mine via an interactive dialog
+- **Export** — Export results to CSV, TSV, or vocabulary list formats
+- **Pitch accent data** — Optional pitch accent position and category fields on cards
+- **Word frequency rankings** — Filter or annotate words by frequency rank
+- **Known words database** — Persistent SQLite cache of known vocabulary, synced with Anki
+- **Update checker** — Automatic check for new versions via GitHub Releases
+- **Blacklist/whitelist** — Custom word lists to always include or exclude specific words
+- **Cross-episode frequency analysis** — Prioritize words appearing across multiple episodes
 
 ## Installation
 
@@ -118,13 +127,20 @@ Anki Miner uses the [Lapis](https://github.com/donkuri/lapis) note type fields b
 
 The default field mapping:
 
-| Anki Miner Field | Note Field     | Content                     |
-|------------------|----------------|-----------------------------|
-| word             | Expression     | Dictionary form of the word |
-| sentence         | Sentence       | Original subtitle line      |
-| definition       | MainDefinition | English definitions         |
-| picture          | Picture        | Screenshot from the video   |
-| audio            | SentenceAudio  | Audio clip of the sentence  |
+| Anki Miner Field       | Note Field          | Content                       |
+|------------------------|---------------------|-------------------------------|
+| word                   | Expression          | Dictionary form of the word   |
+| sentence               | Sentence            | Original subtitle line        |
+| definition             | MainDefinition      | English definitions           |
+| picture                | Picture             | Screenshot from the video     |
+| audio                  | SentenceAudio       | Audio clip of the sentence    |
+| expression_furigana    | ExpressionFurigana  | Word with furigana reading    |
+| sentence_furigana      | SentenceFurigana    | Sentence with furigana reading|
+| pitch_position         | *(unmapped)*        | Pitch accent position number  |
+| pitch_category         | *(unmapped)*        | Pitch accent category         |
+| frequency              | *(unmapped)*        | Word frequency rank           |
+
+Fields marked *(unmapped)* have no default Lapis mapping. Map them in Settings if your note type supports them.
 
 You can use a different note type by changing the field mappings in the GUI settings.
 As long as the note type contains all the 'Anki Miner' fields, it should work well with the app.
@@ -168,9 +184,10 @@ anki_miner mine-folder ./episodes/ --preview
 anki_miner_gui
 ```
 
-The GUI provides three tabs:
+The GUI provides four tabs:
 - **Single Episode** — Mine one video/subtitle pair with file selectors and progress tracking
 - **Batch Processing** — Queue multiple series for sequential processing
+- **Analytics** — Mining statistics dashboard with overview cards, recent sessions, series difficulty rankings, and milestone achievements
 - **Settings** — Configure Anki connection, media extraction, dictionary, and word filtering options
 
 ## Configuration
@@ -187,6 +204,15 @@ All settings can be adjusted in the GUI Settings tab. Here are the key options:
 | `max_parallel_workers` | `6`            | Concurrent ffmpeg processes                 |
 | `use_offline_dict`     | `true`         | Use JMdict instead of Jisho API             |
 | `subtitle_offset`      | `0.0`          | Global subtitle timing adjustment           |
+| `use_pitch_accent`     | `false`        | Enable pitch accent data on cards           |
+| `use_frequency_data`   | `false`        | Enable word frequency ranking               |
+| `max_frequency_rank`   | `0`            | Frequency rank cutoff (0 = no filter)       |
+| `use_known_words_db`   | `false`        | Persistent known word cache                 |
+| `enable_history`       | `true`         | Track mining history with undo support      |
+| `use_cross_episode`    | `false`        | Prioritize cross-episode words              |
+| `min_episode_appearances` | `2`         | Minimum episodes for cross-episode filter   |
+| `use_blacklist`        | `false`        | Enable blacklist word filtering             |
+| `use_whitelist`        | `false`        | Enable whitelist word filtering             |
 
 GUI settings are saved to `~/.anki_miner/gui_config.json`. CLI commands use the default values shown above.
 
