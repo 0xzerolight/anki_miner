@@ -83,7 +83,7 @@ class StatusBadge(QLabel):
 
         icon_name = icon_map.get(self._status, "progress")
         icon = IconProvider.get_icon(icon_name)
-        self.setText(f"{icon} {self._name}")
+        self.setText(f"{icon} {self._name}" if icon else self._name)
 
         # Set property for QSS styling and refresh
         self.setProperty("status", self._status)

@@ -183,7 +183,7 @@ class MainWindow(QMainWindow):
 
     def _cycle_theme(self) -> None:
         """Cycle through available themes: Light → Dark → Sakura → Light."""
-        current_theme = self.header.theme_selector.currentText().lower()
+        current_theme = self.header.theme_combo.currentData()
 
         try:
             current_index = THEME_ORDER.index(current_theme)
@@ -191,7 +191,7 @@ class MainWindow(QMainWindow):
         except ValueError:
             next_index = 0  # Default to first theme if current not found
 
-        self.header.theme_selector.setCurrentIndex(next_index)
+        self.header.theme_combo.setCurrentIndex(next_index)
 
     def _open_settings(self) -> None:
         """Open the Settings tab."""
