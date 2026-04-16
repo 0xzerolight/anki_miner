@@ -40,6 +40,58 @@ class TestLoad:
         assert service.lookup("食べる") == "0"
         assert service.lookup("飲む") == "1"
 
+    def test_loads_tsv_format(self, tmp_path):
+        """Test loading tab-separated pitch accent data."""
+        tsv_file = tmp_path / "pitch.txt"
+        tsv_file.write_text(
+            "たべる\t食べる\t0\n" "のむ\t飲む\t1\n",
+            encoding="utf-8",
+        )
+
+        service = PitchAccentService(tsv_file)
+        service.load()
+        assert service.lookup("食べる") == "0"
+        assert service.lookup("飲む") == "1"
+
+    def test_skips_header_row(self, tmp_path):
+        """Test that a header row is automatically skipped."""
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text(
+            "reading,kanji,frequency\n" "たべる,食べる,0\n" "のむ,飲む,1\n",
+            encoding="utf-8",
+        )
+
+        service = PitchAccentService(csv_file)
+        service.load()
+        assert service.lookup("食べる") == "0"
+        assert service.lookup("reading") is None
+
+    def test_skips_header_row_tsv(self, tmp_path):
+        """Test that a header row is skipped in TSV files."""
+        tsv_file = tmp_path / "pitch.txt"
+        tsv_file.write_text(
+            "kana\tkanji\trank\n" "たべる\t食べる\t0\n" "のむ\t飲む\t1\n",
+            encoding="utf-8",
+        )
+
+        service = PitchAccentService(tsv_file)
+        service.load()
+        assert service.lookup("食べる") == "0"
+        assert service.lookup("kana") is None
+
+    def test_entry_count_property(self, tmp_path):
+        """Test that entry_count reflects number of loaded entries."""
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text(
+            "たべる,食べる,0\nのむ,飲む,1\n",
+            encoding="utf-8",
+        )
+
+        service = PitchAccentService(csv_file)
+        assert service.entry_count == 0
+        service.load()
+        assert service.entry_count == 4  # 2 kanji + 2 reading entries
+
     def test_first_entry_wins_on_duplicate_key(self, tmp_path):
         """Test that the first entry wins when keys are duplicated."""
         csv_file = tmp_path / "pitch.csv"

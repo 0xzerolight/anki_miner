@@ -1,9 +1,15 @@
 """Dictionary settings panel."""
 
+import logging
+from pathlib import Path
+
 from PyQt6.QtWidgets import QCheckBox
 
+from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
+
+logger = logging.getLogger(__name__)
 
 
 class DictionarySettingsPanel(FormPanel):
@@ -20,6 +26,7 @@ class DictionarySettingsPanel(FormPanel):
         """Initialize the dictionary settings panel."""
         super().__init__("Dictionary Settings", icon="word", parent=parent)
         self._setup_fields()
+        self._connect_validation()
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
@@ -48,13 +55,13 @@ class DictionarySettingsPanel(FormPanel):
 
         # Pitch accent file path
         self.pitch_accent_selector = FileSelector(
-            label="", file_mode=True, placeholder="Select pitch accent CSV file..."
+            label="", file_mode=True, placeholder="Select pitch accent file (CSV/TSV)..."
         )
-        self.pitch_accent_selector.setToolTip("Path to Kanjium pitch accent CSV file")
+        self.pitch_accent_selector.setToolTip("Path to pitch accent data file (CSV or TSV)")
         self.add_field(
             "Pitch Accent File",
             self.pitch_accent_selector,
-            helper="Path to Kanjium pitch accent CSV for pitch accent annotations",
+            helper="CSV/TSV file with columns: reading, kanji, pattern (e.g. Kanjium format)",
         )
 
         # Use pitch accent checkbox
@@ -67,3 +74,32 @@ class DictionarySettingsPanel(FormPanel):
         )
 
         self.add_stretch()
+
+    def _connect_validation(self) -> None:
+        """Connect file selector signals to validation handlers."""
+        self.pitch_accent_selector.path_validated.connect(self._validate_pitch_accent_file)
+
+    def _validate_pitch_accent_file(self, is_valid: bool, path_str: str) -> None:
+        """Validate pitch accent file and show entry count."""
+        if not is_valid or not path_str:
+            return
+
+        try:
+            from anki_miner.services.pitch_accent_service import PitchAccentService
+
+            service = PitchAccentService(Path(path_str))
+            service.load()
+            count = service.entry_count
+            icon = IconProvider.get_icon("success")
+            if count > 0:
+                self.pitch_accent_selector.status_label.setText(
+                    f"{icon} {Path(path_str).name} ({count:,} entries)"
+                )
+            else:
+                icon = IconProvider.get_icon("warning")
+                self.pitch_accent_selector.status_label.setText(
+                    f"{icon} {Path(path_str).name} (0 entries - check file format)"
+                )
+        except Exception as e:
+            icon = IconProvider.get_icon("error")
+            self.pitch_accent_selector.status_label.setText(f"{icon} Could not parse file: {e}")

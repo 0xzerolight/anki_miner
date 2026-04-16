@@ -54,6 +54,69 @@ class TestLoad:
         assert service.lookup("食べる") == 1
         assert service.lookup("飲む") == 2
 
+    def test_loads_tsv_rank_word_format(self, tmp_path):
+        """Test loading TSV with rank, word format."""
+        tsv_file = tmp_path / "freq.tsv"
+        tsv_file.write_text(
+            "1\tの\n" "2\tに\n" "100\t食べる\n",
+            encoding="utf-8",
+        )
+
+        service = FrequencyService(tsv_file)
+        service.load()
+        assert service.lookup("の") == 1
+        assert service.lookup("食べる") == 100
+
+    def test_loads_tsv_word_rank_format(self, tmp_path):
+        """Test loading TSV with word, rank format."""
+        tsv_file = tmp_path / "freq.tsv"
+        tsv_file.write_text(
+            "の\t1\n" "に\t2\n" "食べる\t100\n",
+            encoding="utf-8",
+        )
+
+        service = FrequencyService(tsv_file)
+        service.load()
+        assert service.lookup("の") == 1
+        assert service.lookup("食べる") == 100
+
+    def test_skips_header_row(self, tmp_path):
+        """Test that a header row is automatically skipped."""
+        csv_file = tmp_path / "freq.csv"
+        csv_file.write_text(
+            "rank,word\n" "1,の\n" "2,に\n" "100,食べる\n",
+            encoding="utf-8",
+        )
+
+        service = FrequencyService(csv_file)
+        service.load()
+        assert service.lookup("の") == 1
+        assert service.lookup("食べる") == 100
+        assert service.lookup("word") is None
+
+    def test_skips_header_row_tsv(self, tmp_path):
+        """Test that a header row is skipped in TSV files."""
+        tsv_file = tmp_path / "freq.tsv"
+        tsv_file.write_text(
+            "frequency\tlemma\n" "1\tの\n" "100\t食べる\n",
+            encoding="utf-8",
+        )
+
+        service = FrequencyService(tsv_file)
+        service.load()
+        assert service.lookup("の") == 1
+        assert service.lookup("食べる") == 100
+
+    def test_entry_count_property(self, tmp_path):
+        """Test that entry_count reflects number of loaded entries."""
+        csv_file = tmp_path / "freq.csv"
+        csv_file.write_text("1,の\n2,に\n100,食べる\n", encoding="utf-8")
+
+        service = FrequencyService(csv_file)
+        assert service.entry_count == 0
+        service.load()
+        assert service.entry_count == 3
+
     def test_first_entry_wins_on_duplicate(self, tmp_path):
         """Test that the first entry wins when words are duplicated."""
         csv_file = tmp_path / "freq.csv"

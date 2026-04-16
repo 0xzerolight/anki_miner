@@ -82,7 +82,9 @@ def mine_folder_command(args) -> int:
             pitch_accent_service = PitchAccentService(config.pitch_accent_path)
             presenter.show_info("Loading pitch accent data...")
             if pitch_accent_service.load():
-                presenter.show_success("Pitch accent data loaded")
+                presenter.show_success(
+                    f"Pitch accent data loaded ({pitch_accent_service.entry_count:,} entries)"
+                )
         except Exception as e:
             presenter.show_warning(f"Could not load pitch accent data: {e}")
             pitch_accent_service = None
@@ -96,7 +98,9 @@ def mine_folder_command(args) -> int:
             frequency_service = FrequencyService(config.frequency_list_path)
             presenter.show_info("Loading frequency data...")
             if frequency_service.load():
-                presenter.show_success("Frequency data loaded")
+                presenter.show_success(
+                    f"Frequency data loaded ({frequency_service.entry_count:,} entries)"
+                )
         except Exception as e:
             presenter.show_warning(f"Could not load frequency data: {e}")
             frequency_service = None

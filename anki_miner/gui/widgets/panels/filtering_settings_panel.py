@@ -1,9 +1,15 @@
 """Word filtering settings panel."""
 
+import logging
+from pathlib import Path
+
 from PyQt6.QtWidgets import QCheckBox, QSpinBox
 
+from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
+
+logger = logging.getLogger(__name__)
 
 
 class FilteringSettingsPanel(FormPanel):
@@ -18,6 +24,7 @@ class FilteringSettingsPanel(FormPanel):
         """Initialize the filtering settings panel."""
         super().__init__("Word Filtering", icon="filter", parent=parent)
         self._setup_fields()
+        self._connect_validation()
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
@@ -127,3 +134,26 @@ class FilteringSettingsPanel(FormPanel):
         )
 
         self.add_stretch()
+
+    def _connect_validation(self) -> None:
+        """Connect file selector signals to validation handlers."""
+        self.frequency_selector.path_validated.connect(self._validate_frequency_file)
+
+    def _validate_frequency_file(self, is_valid: bool, path_str: str) -> None:
+        """Validate frequency file and show entry count."""
+        if not is_valid or not path_str:
+            return
+
+        try:
+            from anki_miner.services.frequency_service import FrequencyService
+
+            service = FrequencyService(Path(path_str))
+            service.load()
+            count = service.entry_count
+            icon = IconProvider.get_icon("success")
+            self.frequency_selector.status_label.setText(
+                f"{icon} {Path(path_str).name} ({count:,} entries)"
+            )
+        except Exception as e:
+            icon = IconProvider.get_icon("error")
+            self.frequency_selector.status_label.setText(f"{icon} Could not parse file: {e}")
