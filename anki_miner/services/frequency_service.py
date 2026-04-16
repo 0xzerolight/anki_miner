@@ -31,6 +31,57 @@ def _is_header_row(row: list[str]) -> bool:
     return any(cell.strip().lower() in _HEADER_KEYWORDS for cell in row)
 
 
+def _extract_word_rank(row: list[str]) -> tuple[str, int | None]:
+    """Extract a word and numeric rank from a row with any number of columns.
+
+    Tries adjacent column pairs (0,1), (1,0), (0,2), (2,0), etc.
+    to find a non-numeric word and a numeric rank.
+
+    Args:
+        row: CSV/TSV row as list of strings.
+
+    Returns:
+        Tuple of (word, rank) or ("", None) if no valid pair found.
+    """
+    # Try standard 2-column formats first: (rank, word) then (word, rank)
+    try:
+        rank = int(row[0].strip())
+        word = row[1].strip()
+        if word:
+            return word, rank
+    except ValueError:
+        pass
+
+    try:
+        word = row[0].strip()
+        rank = int(row[1].strip())
+        if word:
+            return word, rank
+    except ValueError:
+        pass
+
+    # For multi-column files (e.g. term, reading, frequency, ...),
+    # find first non-numeric column as word and first numeric column as rank
+    if len(row) > 2:
+        first_word = ""
+        first_rank: int | None = None
+        for cell in row:
+            val = cell.strip()
+            if not val:
+                continue
+            try:
+                num = int(val)
+                if first_rank is None:
+                    first_rank = num
+            except ValueError:
+                if not first_word:
+                    first_word = val
+            if first_word and first_rank is not None:
+                return first_word, first_rank
+
+    return "", None
+
+
 class FrequencyService:
     """Load and look up word frequency rankings from CSV/TSV.
 
@@ -88,20 +139,9 @@ class FrequencyService:
                         first_row = False
                         if _is_header_row(row):
                             continue
-                    # Auto-detect format
-                    try:
-                        # Format: rank, word
-                        rank = int(row[0])
-                        word = row[1].strip()
-                    except ValueError:
-                        # Format: word, rank
-                        word = row[0].strip()
-                        try:
-                            rank = int(row[1])
-                        except ValueError:
-                            continue  # Skip unparseable rows
 
-                    if word and word not in data:
+                    word, rank = _extract_word_rank(row)
+                    if word and rank is not None and word not in data:
                         data[word] = rank
 
             self._data = data

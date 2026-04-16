@@ -629,7 +629,7 @@ class TestStoreMediaFilesBatch:
 
 
 class TestOptionalFields:
-    """Tests for optional field handling (pitch_accent, frequency_rank)."""
+    """Tests for optional field handling (pitch_position, pitch_category, frequency)."""
 
     def test_create_card_with_extra_fields(self, test_config, make_tokenized_word):
         """Should include mapped optional fields in the note payload."""
@@ -644,14 +644,15 @@ class TestOptionalFields:
                 word,
                 media,
                 "definition",
-                extra_fields={"pitch_accent": "0", "frequency_rank": "500"},
+                extra_fields={"pitch_position": "0", "pitch_category": "平板", "frequency": "500"},
             )
 
         assert result is True
         payload = mock_post.call_args[1]["json"]
         note_fields = payload["params"]["note"]["fields"]
-        assert note_fields["PitchAccent"] == "0"
-        assert note_fields["FrequencyRank"] == "500"
+        assert note_fields["PitchPosition"] == "0"
+        assert note_fields["PitchCategory"] == "平板"
+        assert note_fields["Frequency"] == "500"
 
     def test_create_card_extra_fields_skipped_when_not_mapped(self, temp_dir):
         """Should not include optional fields when config maps them to empty string."""
@@ -666,8 +667,9 @@ class TestOptionalFields:
                 "audio": "audio",
                 "expression_furigana": "expression_furigana",
                 "sentence_furigana": "sentence_furigana",
-                "pitch_accent": "",  # Not mapped
-                "frequency_rank": "",  # Not mapped
+                "pitch_position": "",  # Not mapped
+                "pitch_category": "",  # Not mapped
+                "frequency": "",  # Not mapped
             },
             media_temp_folder=temp_dir / "temp",
             jmdict_path=temp_dir / "dict",
@@ -683,14 +685,15 @@ class TestOptionalFields:
                 word,
                 media,
                 "definition",
-                extra_fields={"pitch_accent": "0", "frequency_rank": "500"},
+                extra_fields={"pitch_position": "0", "pitch_category": "平板", "frequency": "500"},
             )
 
         payload = mock_post.call_args[1]["json"]
         note_fields = payload["params"]["note"]["fields"]
         # Empty-mapped fields should NOT appear
-        assert "PitchAccent" not in note_fields
-        assert "FrequencyRank" not in note_fields
+        assert "PitchPosition" not in note_fields
+        assert "PitchCategory" not in note_fields
+        assert "Frequency" not in note_fields
         assert "" not in note_fields
 
     def test_create_card_ignores_unknown_extra_keys(self, test_config, make_tokenized_word):
@@ -728,15 +731,16 @@ class TestOptionalFields:
         payload = mock_post.call_args[1]["json"]
         note_fields = payload["params"]["note"]["fields"]
         # Optional fields should not appear when extra_fields is None
-        assert "PitchAccent" not in note_fields
-        assert "FrequencyRank" not in note_fields
+        assert "PitchPosition" not in note_fields
+        assert "PitchCategory" not in note_fields
+        assert "Frequency" not in note_fields
 
     def test_batch_with_4_tuples_and_extra_fields(self, test_config, make_tokenized_word):
         """Should include optional fields when batch items are 4-tuples."""
         service = AnkiService(test_config)
         word = make_tokenized_word()
         media = MediaData()
-        extra = {"pitch_accent": "1", "frequency_rank": "200"}
+        extra = {"pitch_position": "1", "pitch_category": "頭高", "frequency": "200"}
 
         resp = _mock_response(result=[12345])
 
@@ -746,8 +750,9 @@ class TestOptionalFields:
         assert result == 1
         payload = mock_post.call_args[1]["json"]
         note = payload["params"]["notes"][0]
-        assert note["fields"]["PitchAccent"] == "1"
-        assert note["fields"]["FrequencyRank"] == "200"
+        assert note["fields"]["PitchPosition"] == "1"
+        assert note["fields"]["PitchCategory"] == "頭高"
+        assert note["fields"]["Frequency"] == "200"
 
 
 def make_word_helper():
@@ -964,8 +969,9 @@ class TestConfigurableFields:
             "audio": "audio",
             "expression_furigana": "expression_furigana",
             "sentence_furigana": "sentence_furigana",
-            "pitch_accent": "",
-            "frequency_rank": "",
+            "pitch_position": "",
+            "pitch_category": "",
+            "frequency": "",
         }
         for key in empty_keys:
             fields[key] = ""

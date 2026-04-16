@@ -44,12 +44,12 @@ htmlcov/
 temp_media/
 *.log
 rename_log.txt
-JMdict_e
 .claude/
 .mypy_cache/
 .ruff_cache/
 docs/
 .claude-runner/
+resources/
 
 # OS
 .DS_Store

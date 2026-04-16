@@ -29,8 +29,9 @@ class AnkiService:
     }
 
     OPTIONAL_FIELD_KEYS = {
-        "pitch_accent",
-        "frequency_rank",
+        "pitch_position",
+        "pitch_category",
+        "frequency",
     }
 
     def __init__(self, config: AnkiMinerConfig):

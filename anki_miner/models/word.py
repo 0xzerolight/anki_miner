@@ -37,7 +37,8 @@ class WordData:
     audio_path: Path | None = None
     screenshot_filename: str | None = None
     audio_filename: str | None = None
-    pitch_accent: str | None = None
+    pitch_position: str | None = None
+    pitch_category: str | None = None
     frequency_rank: int | None = None
 
     @property

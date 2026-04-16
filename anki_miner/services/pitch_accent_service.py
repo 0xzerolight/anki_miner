@@ -9,6 +9,44 @@ from anki_miner.services.frequency_service import _detect_delimiter, _is_header_
 
 logger = logging.getLogger(__name__)
 
+# Small kana that combine with the previous kana (not separate mora)
+_COMBINING_KANA = set("ゃゅょぁぃぅぇぉゎャュョァィゥェォヮ")
+
+
+def count_mora(reading: str) -> int:
+    """Count the number of mora in a Japanese kana reading.
+
+    Each kana = 1 mora, except small combining kana (ゃゅょ etc.)
+    which merge with the previous kana. Long vowel ー and small っ/ッ
+    each count as 1 mora.
+
+    Args:
+        reading: Kana string.
+
+    Returns:
+        Number of mora.
+    """
+    return sum(1 for ch in reading if ch not in _COMBINING_KANA)
+
+
+def classify_pitch(position: int, mora_count: int) -> str:
+    """Classify pitch accent pattern into a category.
+
+    Args:
+        position: Pitch drop position (0 = heiban).
+        mora_count: Number of mora in the word.
+
+    Returns:
+        Category string: 平板, 頭高, 中高, or 尾高.
+    """
+    if position == 0:
+        return "平板"
+    if position == 1:
+        return "頭高"
+    if position == mora_count:
+        return "尾高"
+    return "中高"
+
 
 class PitchAccentService:
     """Load and look up pitch accent patterns from CSV/TSV.
@@ -124,3 +162,45 @@ class PitchAccentService:
             List of pitch accent patterns (same order as input).
         """
         return [self.lookup(word, reading) for word, reading in words]
+
+    def lookup_detailed(self, word: str, reading: str = "") -> tuple[str | None, str | None]:
+        """Look up pitch position and derived category for a word.
+
+        Args:
+            word: Word to look up (kanji or kana form).
+            reading: Kana reading (used for category derivation and fallback lookup).
+
+        Returns:
+            Tuple of (position_str, category) or (None, None) if not found.
+            For multi-pattern entries (e.g. "0,2"), uses the first value.
+        """
+        pattern = self.lookup(word, reading)
+        if pattern is None:
+            return None, None
+
+        # Use first pattern for category classification
+        first_pattern = pattern.split(",")[0].strip()
+        try:
+            position = int(first_pattern)
+        except ValueError:
+            return pattern, None
+
+        # Derive category from position + mora count
+        lookup_reading = reading or word
+        mora = count_mora(lookup_reading)
+        category = classify_pitch(position, mora)
+
+        return pattern, category
+
+    def lookup_batch_detailed(
+        self, words: list[tuple[str, str]]
+    ) -> list[tuple[str | None, str | None]]:
+        """Look up pitch position and category for multiple (word, reading) pairs.
+
+        Args:
+            words: List of (word, reading) tuples.
+
+        Returns:
+            List of (position_str, category) tuples (same order as input).
+        """
+        return [self.lookup_detailed(word, reading) for word, reading in words]

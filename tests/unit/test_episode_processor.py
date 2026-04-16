@@ -338,7 +338,7 @@ class TestOptionalServices:
 
         mock_pitch = MagicMock()
         mock_pitch.is_available.return_value = True
-        mock_pitch.lookup_batch.return_value = ["0"]
+        mock_pitch.lookup_batch_detailed.return_value = [("0", "平板")]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -356,12 +356,13 @@ class TestOptionalServices:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        # Verify card data includes pitch accent in extra_fields
+        # Verify card data includes pitch fields in extra_fields
         card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
         assert len(card_data) == 1
         _, _, _, extra_fields = card_data[0]
         assert extra_fields is not None
-        assert extra_fields["pitch_accent"] == "0"
+        assert extra_fields["pitch_position"] == "0"
+        assert extra_fields["pitch_category"] == "平板"
 
     def test_both_services_full_pipeline(self, test_config, mock_services, tmp_path):
         """Both services active should produce card data with both extra fields."""
@@ -370,7 +371,7 @@ class TestOptionalServices:
 
         mock_pitch = MagicMock()
         mock_pitch.is_available.return_value = True
-        mock_pitch.lookup_batch.return_value = ["0"]
+        mock_pitch.lookup_batch_detailed.return_value = [("0", "平板")]
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
@@ -397,8 +398,9 @@ class TestOptionalServices:
         card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
         _, _, _, extra_fields = card_data[0]
         assert extra_fields is not None
-        assert extra_fields["pitch_accent"] == "0"
-        assert extra_fields["frequency_rank"] == "500"
+        assert extra_fields["pitch_position"] == "0"
+        assert extra_fields["pitch_category"] == "平板"
+        assert extra_fields["frequency"] == "500"
 
 
 class TestKnownWordDBIntegration:
