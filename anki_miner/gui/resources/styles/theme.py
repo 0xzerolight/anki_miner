@@ -1,16 +1,9 @@
-"""Theme management system for Anki Miner GUI.
-
-This module provides centralized theme management with support for three themes:
-- Light: Modern minimalist design with clean typography
-- Dark: Comfortable dark palette for night usage
-- Sakura: Culturally-inspired aesthetic with cherry blossom motifs
-"""
+"""Theme management system for Anki Miner GUI."""
 
 import json
 import logging
 import re
 from pathlib import Path
-from typing import Literal
 
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QColor, QPalette
@@ -152,230 +145,160 @@ def get_color_variables(theme_data: dict) -> dict[str, str]:
     return {f"color-{key}": value for key, value in theme_data["colors"].items()}
 
 
-ThemeMode = Literal["light", "dark", "sakura"]
-
-
 class Theme:
-    """Centralized theme management for the application.
+    """Centralized theme management using JSON theme files.
 
-    This class provides color palettes, spacing constants, typography settings,
-    and stylesheet management for all three supported themes.
+    Discovers theme JSON files in the themes/ directory at startup.
+    Each theme defines color tokens used for QSS variable substitution.
     """
 
-    # Singleton instance
-    _instance = None
-    _current_mode: ThemeMode = "light"
+    _instance: "Theme | None" = None
+    _current_mode: str = "light"
+    _themes: dict[str, dict] = {}
 
-    # ============== THEME COLOR PALETTES ==============
+    def __init__(self) -> None:
+        """Initialize theme manager: discover themes and load saved preference."""
+        styles_dir = get_resource_dir() / "styles"
+        themes_dir = styles_dir / "themes"
+        self._themes = discover_themes(themes_dir)
 
-    LIGHT_COLORS = {
-        # Primary Colors
-        "primary": "#6366F1",  # Indigo 500
-        "primary_hover": "#4F46E5",  # Indigo 600
-        "secondary": "#8B5CF6",  # Purple 500
-        # Status Colors
-        "success": "#10B981",  # Emerald 500
-        "warning": "#F59E0B",  # Amber 500
-        "error": "#EF4444",  # Red 500
-        "info": "#3B82F6",  # Blue 500
-        # Background Colors
-        "background": "#F9FAFB",  # Gray 50
-        "surface": "#FFFFFF",  # White
-        "hover_surface": "#F3F4F6",  # Gray 100
-        # Border Colors
-        "border": "#E5E7EB",  # Gray 200
-        "border_focus": "#6366F1",  # Indigo 500
-        # Text Colors
-        "text_primary": "#111827",  # Gray 900
-        "text_secondary": "#6B7280",  # Gray 500
-        "text_disabled": "#9CA3AF",  # Gray 400
-        "text_on_primary": "#FFFFFF",  # White
-        # Special
-        "disabled": "#9CA3AF",  # Gray 400
-    }
+        if not self._themes:
+            raise RuntimeError(
+                f"No valid theme files found in {themes_dir}. "
+                "At least one valid JSON theme file is required."
+            )
 
-    DARK_COLORS = {
-        # Primary Colors
-        "primary": "#6366F1",  # Indigo 500
-        "primary_hover": "#818CF8",  # Indigo 400
-        "secondary": "#8B5CF6",  # Purple 500
-        # Status Colors
-        "success": "#10B981",  # Emerald 500
-        "warning": "#F59E0B",  # Amber 500
-        "error": "#EF4444",  # Red 500
-        "info": "#3B82F6",  # Blue 500
-        # Background Colors
-        "background": "#0F172A",  # Slate 900
-        "surface": "#1E293B",  # Slate 800
-        "hover_surface": "#334155",  # Slate 700
-        # Border Colors
-        "border": "#475569",  # Slate 600
-        "border_focus": "#818CF8",  # Indigo 400
-        # Text Colors
-        "text_primary": "#F1F5F9",  # Slate 100
-        "text_secondary": "#94A3B8",  # Slate 400
-        "text_disabled": "#64748B",  # Slate 500
-        "text_on_primary": "#FFFFFF",  # White
-        # Special
-        "disabled": "#64748B",  # Slate 500
-    }
-
-    SAKURA_COLORS = {
-        # Primary Colors
-        "primary": "#D946A6",  # Sakura Pink (cherry blossom)
-        "primary_hover": "#C7389F",  # Darker Sakura
-        "secondary": "#7CB342",  # Bamboo Green
-        # Status Colors
-        "success": "#4CAF50",  # Natural Green
-        "warning": "#FF9800",  # Autumn Orange
-        "error": "#E53935",  # Red Torii
-        "info": "#1976D2",  # Sky Blue
-        # Background Colors
-        "background": "#FFF8F5",  # Washi Paper White
-        "surface": "#FFFBF7",  # Soft Cream
-        "surface_alt": "#F5E6E8",  # Light Sakura
-        "hover_surface": "#FFE9ED",  # Pale Sakura
-        # Border Colors
-        "border": "#E8D5D9",  # Soft Pink-Gray
-        "border_accent": "#D946A6",  # Sakura Pink
-        "border_focus": "#D946A6",  # Sakura Pink
-        # Text Colors
-        "text_primary": "#2C1810",  # Sumi Ink (traditional black ink)
-        "text_secondary": "#8B7355",  # Tea Brown
-        "text_disabled": "#C4B5A8",  # Faded Brown
-        "text_on_primary": "#FFFFFF",  # White
-        # Special/Decorative
-        "decorative": "#FFB7C5",  # Cherry Blossom Petals
-        "disabled": "#C4B5A8",  # Faded Brown
-    }
-
-    # Spacing, font sizes, border radius, and component specs are defined in
-    # _variables.py as the single source of truth. They are substituted into
-    # QSS files via ${var-name} syntax at load time.
-
-    def __init__(self):
-        """Initialize theme manager."""
-        # Load saved theme preference
+        # Load saved preference
         settings = QSettings("AnkiMiner", "GUI")
         saved_theme = settings.value("theme", "light")
-        if saved_theme in ["light", "dark", "sakura"]:
+
+        # Validate saved theme exists, fall back to first available
+        if saved_theme in self._themes:
             self._current_mode = saved_theme
+        else:
+            self._current_mode = next(iter(self._themes))
 
     @classmethod
     def get_instance(cls) -> "Theme":
-        """Get or create the singleton Theme instance.
-
-        Returns:
-            The Theme singleton instance
-        """
+        """Get or create the singleton Theme instance."""
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
 
     @classmethod
-    def get_current_mode(cls) -> ThemeMode:
-        """Get the current theme mode.
-
-        Returns:
-            Current theme mode
-        """
+    def get_current_mode(cls) -> str:
+        """Get the current theme mode (theme key, e.g. 'light', 'dark')."""
         instance = cls.get_instance()
         return instance._current_mode
 
     @classmethod
-    def set_mode(cls, mode: ThemeMode) -> None:
+    def get_available_themes(cls) -> dict[str, str]:
+        """Get available themes as {key: display_name}.
+
+        Returns:
+            Dict mapping theme key to display name, in discovery order.
+        """
+        instance = cls.get_instance()
+        return {key: data["name"] for key, data in instance._themes.items()}
+
+    @classmethod
+    def set_mode(cls, mode: str) -> None:
         """Set the current theme mode and save preference.
 
         Args:
-            mode: Theme mode to set ('light', 'dark', or 'sakura')
+            mode: Theme key (e.g. 'light', 'dark', 'sakura')
         """
         instance = cls.get_instance()
+        if mode not in instance._themes:
+            logger.warning("Theme '%s' not found, keeping current theme", mode)
+            return
         instance._current_mode = mode
-
-        # Save to settings
         settings = QSettings("AnkiMiner", "GUI")
         settings.setValue("theme", mode)
 
     @classmethod
-    def get_colors(cls, mode: ThemeMode | None = None) -> dict[str, str]:
+    def get_colors(cls, mode: str | None = None) -> dict[str, str]:
         """Get color palette for a theme mode.
 
         Args:
-            mode: Theme mode, or None to use current mode
+            mode: Theme key, or None for current mode
 
         Returns:
             Dictionary of color values
         """
+        instance = cls.get_instance()
         if mode is None:
-            mode = cls.get_current_mode()
-
-        color_map = {
-            "light": cls.LIGHT_COLORS,
-            "dark": cls.DARK_COLORS,
-            "sakura": cls.SAKURA_COLORS,
-        }
-        return color_map.get(mode, cls.LIGHT_COLORS)
+            mode = instance._current_mode
+        theme_data = instance._themes.get(mode)
+        if theme_data is None:
+            theme_data = next(iter(instance._themes.values()))
+        return theme_data["colors"]
 
     @classmethod
-    def get_stylesheet(cls, mode: ThemeMode | None = None) -> str:
+    def get_stylesheet(cls, mode: str | None = None) -> str:
         """Get the complete QSS stylesheet for a theme mode.
 
         Args:
-            mode: Theme mode, or None to use current mode
+            mode: Theme key, or None for current mode
 
         Returns:
-            Complete QSS stylesheet as string
+            Complete QSS stylesheet with all variables substituted
         """
+        instance = cls.get_instance()
         if mode is None:
-            mode = cls.get_current_mode()
+            mode = instance._current_mode
 
-        # Get the styles directory path
         styles_dir = get_resource_dir() / "styles"
-
-        # Load common styles
-        common_qss = cls._load_qss_file(styles_dir / "common.qss")
-
-        # Load theme-specific styles
-        theme_file = f"{mode}_theme.qss"
-        theme_qss = cls._load_qss_file(styles_dir / theme_file)
-
-        # Combine stylesheets
-        return common_qss + "\n\n" + theme_qss
+        common_qss = cls._load_qss_file(styles_dir / "common.qss", mode)
+        return common_qss
 
     @classmethod
-    def apply_to_app(cls, app: QApplication, mode: ThemeMode | None = None) -> None:
+    def apply_to_app(cls, app: QApplication, mode: str | None = None) -> None:
         """Apply theme stylesheet and palette to the application.
-
-        Sets both QSS stylesheet and QPalette to ensure the theme background
-        overrides the system theme (e.g. KDE dark) on all unstyled containers.
 
         Args:
             app: QApplication instance
-            mode: Theme mode, or None to use current mode
+            mode: Theme key, or None for current mode
         """
         if mode is None:
             mode = cls.get_current_mode()
 
-        # Clear stylesheet first to force Qt to reset all widget styles,
-        # preventing stale colors from the previous theme bleeding through.
         app.setStyleSheet("")
 
-        # Build fresh palette with theme background to override KDE/system palette.
         colors = cls.get_colors(mode)
         palette = QPalette()
         palette.setColor(QPalette.ColorRole.Window, QColor(colors["background"]))
-        palette.setColor(QPalette.ColorRole.WindowText, QColor(colors["text_primary"]))
+        palette.setColor(QPalette.ColorRole.WindowText, QColor(colors["text"]))
         app.setPalette(palette)
 
-        # Apply stylesheet after palette so QSS takes precedence for styled widgets.
         app.setStyleSheet(cls.get_stylesheet(mode))
 
     @classmethod
-    def _load_qss_file(cls, file_path: Path) -> str:
+    def cycle_theme(cls) -> str:
+        """Cycle to the next available theme.
+
+        Returns:
+            The new theme key
+        """
+        instance = cls.get_instance()
+        keys = list(instance._themes.keys())
+        try:
+            current_index = keys.index(instance._current_mode)
+            next_index = (current_index + 1) % len(keys)
+        except ValueError:
+            next_index = 0
+
+        new_mode = keys[next_index]
+        cls.set_mode(new_mode)
+        return new_mode
+
+    @classmethod
+    def _load_qss_file(cls, file_path: Path, mode: str | None = None) -> str:
         """Load QSS file and perform variable substitution.
 
         Args:
             file_path: Path to QSS file
+            mode: Theme key for color variable resolution
 
         Returns:
             QSS content with variables substituted
@@ -386,49 +309,35 @@ class Theme:
         with open(file_path, encoding="utf-8") as f:
             qss_content = f.read()
 
-        # Perform variable substitution for ${var} syntax
-        qss_content = cls._substitute_variables(qss_content)
-
-        return qss_content
+        return cls._substitute_variables(qss_content, mode)
 
     @classmethod
-    def _substitute_variables(cls, qss_content: str) -> str:
+    def _substitute_variables(cls, qss_content: str, mode: str | None = None) -> str:
         """Substitute ${variable-name} placeholders with actual values.
 
-        Supports variables from _variables.py:
-        - ${spacing-xs}, ${spacing-md}, etc.
-        - ${font-size-h1}, ${font-size-body}, etc.
-        - ${border-radius-small}, ${border-radius-large}, etc.
+        Supports:
+        - ${spacing-*}, ${font-size-*}, ${border-radius-*} from _variables.py
+        - ${color-*} from the active theme JSON
 
         Args:
             qss_content: QSS content with ${var} placeholders
+            mode: Theme key for color resolution
 
         Returns:
-            QSS content with variables replaced by values
+            QSS content with variables replaced
         """
+        instance = cls.get_instance()
+        if mode is None:
+            mode = instance._current_mode
+
+        # Combine layout variables with color variables
         variables = get_variable_dict()
+        theme_data = instance._themes.get(mode)
+        if theme_data:
+            variables.update(get_color_variables(theme_data))
 
         def replace_var(match: re.Match) -> str:
             var_name = match.group(1)
             return str(variables.get(var_name, match.group(0)))
 
         return re.sub(r"\$\{([a-z0-9-]+)\}", replace_var, qss_content)
-
-    @classmethod
-    def cycle_theme(cls) -> ThemeMode:
-        """Cycle to the next theme (light → dark → sakura → light).
-
-        Returns:
-            The new theme mode
-        """
-        current = cls.get_current_mode()
-
-        if current == "light":
-            new_mode: ThemeMode = "dark"
-        elif current == "dark":
-            new_mode = "sakura"
-        else:  # sakura
-            new_mode = "light"
-
-        cls.set_mode(new_mode)
-        return new_mode
