@@ -6,6 +6,8 @@ This module provides centralized theme management with support for three themes:
 - Sakura: Culturally-inspired aesthetic with cherry blossom motifs
 """
 
+import json
+import logging
 import re
 from pathlib import Path
 from typing import Literal
@@ -17,6 +19,138 @@ from PyQt6.QtWidgets import QApplication
 from anki_miner.gui.resources import get_resource_dir
 
 from ._variables import get_variable_dict
+
+logger = logging.getLogger(__name__)
+
+REQUIRED_COLOR_KEYS = frozenset(
+    [
+        "primary",
+        "primary-hover",
+        "primary-pressed",
+        "primary-light",
+        "primary-dark",
+        "secondary",
+        "background",
+        "surface",
+        "surface-hover",
+        "surface-alt",
+        "text",
+        "text-muted",
+        "text-disabled",
+        "text-on-primary",
+        "border",
+        "border-focus",
+        "border-subtle",
+        "disabled",
+        "input-bg",
+        "input-disabled-bg",
+        "error",
+        "error-hover",
+        "success",
+        "warning",
+        "info",
+        "scrollbar",
+        "scrollbar-hover",
+        "tooltip-bg",
+        "tooltip-text",
+        "tooltip-border",
+        "divider",
+        "update-banner-bg",
+        "update-banner-text",
+        "decorative",
+        "badge-success-bg",
+        "badge-success-text",
+        "badge-warning-bg",
+        "badge-warning-text",
+        "badge-error-bg",
+        "badge-error-text",
+        "badge-info-bg",
+        "badge-info-text",
+        "badge-pending-bg",
+        "badge-pending-text",
+        "table-selected-bg",
+        "table-selected-text",
+    ]
+)
+
+
+def validate_theme_data(data: dict) -> list[str]:
+    """Validate a theme data dict against the required schema.
+
+    Args:
+        data: Parsed JSON theme data
+
+    Returns:
+        List of validation error strings. Empty list = valid.
+    """
+    errors = []
+
+    if "name" not in data:
+        errors.append("Missing required field: 'name'")
+    elif not isinstance(data["name"], str):
+        errors.append("Field 'name' must be a string")
+
+    if "colors" not in data:
+        errors.append("Missing required field: 'colors'")
+    elif not isinstance(data["colors"], dict):
+        errors.append("Field 'colors' must be a dict")
+    else:
+        missing = REQUIRED_COLOR_KEYS - set(data["colors"].keys())
+        if missing:
+            errors.append(f"Missing color keys: {', '.join(sorted(missing))}")
+
+    return errors
+
+
+def discover_themes(themes_dir: Path) -> dict[str, dict]:
+    """Discover and load valid theme JSON files from a directory.
+
+    Scans for *.json files, validates each, skips invalid ones with a warning.
+
+    Args:
+        themes_dir: Path to the themes directory
+
+    Returns:
+        OrderedDict of theme_key -> theme_data, sorted alphabetically by filename.
+    """
+    themes: dict[str, dict] = {}
+
+    if not themes_dir.is_dir():
+        logger.warning("Themes directory not found: %s", themes_dir)
+        return themes
+
+    for path in sorted(themes_dir.glob("*.json")):
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("Skipping invalid theme file %s: %s", path.name, e)
+            continue
+
+        errors = validate_theme_data(data)
+        if errors:
+            logger.warning("Skipping theme %s: %s", path.name, "; ".join(errors))
+            continue
+
+        themes[path.stem] = data
+
+    return themes
+
+
+def get_color_variables(theme_data: dict) -> dict[str, str]:
+    """Extract color variables from theme data for QSS substitution.
+
+    Prefixes each color key with 'color-' to form the variable name
+    (e.g., 'primary' -> 'color-primary' for use as ${color-primary} in QSS).
+
+    Args:
+        theme_data: Validated theme data dict
+
+    Returns:
+        Dict mapping 'color-<key>' -> color value string
+    """
+    return {f"color-{key}": value for key, value in theme_data["colors"].items()}
+
 
 ThemeMode = Literal["light", "dark", "sakura"]
 
