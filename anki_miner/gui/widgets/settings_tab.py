@@ -57,8 +57,8 @@ class SettingsTab(QWidget):
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.md)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(SPACING.sm)
+        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
         # Category tabs
         self.tab_widget = QTabWidget()
@@ -71,19 +71,25 @@ class SettingsTab(QWidget):
         self.filtering_panel = FilteringSettingsPanel()
 
         # Add tabs with scroll areas for each panel
+        card_icon = IconProvider.get_icon("card")
+        video_icon = IconProvider.get_icon("video")
+        word_icon = IconProvider.get_icon("word")
+        filter_icon = IconProvider.get_icon("filter")
         self.tab_widget.addTab(
-            self._wrap_in_scroll_area(self.anki_panel), f"{IconProvider.get_icon('card')} Anki"
+            self._wrap_in_scroll_area(self.anki_panel),
+            f"{card_icon} Anki" if card_icon else "Anki",
         )
         self.tab_widget.addTab(
-            self._wrap_in_scroll_area(self.media_panel), f"{IconProvider.get_icon('video')} Media"
+            self._wrap_in_scroll_area(self.media_panel),
+            f"{video_icon} Media" if video_icon else "Media",
         )
         self.tab_widget.addTab(
             self._wrap_in_scroll_area(self.dictionary_panel),
-            f"{IconProvider.get_icon('word')} Dictionary",
+            f"{word_icon} Dictionary" if word_icon else "Dictionary",
         )
         self.tab_widget.addTab(
             self._wrap_in_scroll_area(self.filtering_panel),
-            f"{IconProvider.get_icon('filter')} Filtering",
+            f"{filter_icon} Filtering" if filter_icon else "Filtering",
         )
 
         layout.addWidget(self.tab_widget)
@@ -250,10 +256,12 @@ class SettingsTab(QWidget):
         # Emit signal to notify listeners of config change
         self.config = new_config
         self.config_changed.emit(new_config)
+        success_icon = IconProvider.get_icon("success")
+        prefix = f"{success_icon} " if success_icon else ""
         QMessageBox.information(
             self,
             "Settings Saved",
-            f"{IconProvider.get_icon('success')} Settings have been saved successfully",
+            f"{prefix}Settings have been saved successfully",
         )
 
     def _on_reset_clicked(self) -> None:
@@ -261,7 +269,7 @@ class SettingsTab(QWidget):
         reply = QMessageBox.question(
             self,
             "Reset Settings",
-            f"{IconProvider.get_icon('warning')} Are you sure you want to reset all settings to defaults?",
+            "Are you sure you want to reset all settings to defaults?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
@@ -274,7 +282,7 @@ class SettingsTab(QWidget):
             QMessageBox.information(
                 self,
                 "Settings Reset",
-                f"{IconProvider.get_icon('success')} Settings have been reset to defaults",
+                "Settings have been reset to defaults",
             )
 
     # === Status update methods (delegate to panels) ===

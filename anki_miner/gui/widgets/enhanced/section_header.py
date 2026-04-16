@@ -55,7 +55,8 @@ class SectionHeader(QWidget):
         title_text = self._title
         if self._icon:
             icon_char = IconProvider.get_icon(self._icon)
-            title_text = f"{icon_char} {title_text}"
+            if icon_char:
+                title_text = f"{icon_char} {title_text}"
 
         self.title_label = QLabel(title_text)
         self.title_label.setObjectName("section-header")
@@ -74,7 +75,8 @@ class SectionHeader(QWidget):
 
             if self._action_icon:
                 icon_char = IconProvider.get_icon(self._action_icon)
-                action_text = f"{icon_char} {action_text}" if action_text else icon_char
+                if icon_char:
+                    action_text = f"{icon_char} {action_text}" if action_text else icon_char
 
             self.action_button = QPushButton(action_text)
             self.action_button.setObjectName("secondary")
@@ -98,7 +100,8 @@ class SectionHeader(QWidget):
         title_text = title
         if self._icon:
             icon_char = IconProvider.get_icon(self._icon)
-            title_text = f"{icon_char} {title_text}"
+            if icon_char:
+                title_text = f"{icon_char} {title_text}"
 
         self.title_label.setText(title_text)
 

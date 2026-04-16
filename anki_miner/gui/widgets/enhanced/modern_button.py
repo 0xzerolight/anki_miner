@@ -32,7 +32,7 @@ class ModernButton(QPushButton):
         # Combine icon and text
         if icon:
             icon_char = IconProvider.get_icon(icon)
-            display_text = f"{icon_char} {text}" if text else icon_char
+            display_text = (f"{icon_char} {text}" if text else icon_char) if icon_char else text
         else:
             display_text = text
 

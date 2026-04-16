@@ -7,9 +7,19 @@
 
 QWidget {
     color: #111827;
+    background-color: #F9FAFB;
 }
 
 QMainWindow {
+    background-color: #F9FAFB;
+}
+
+/* Ensure scroll area viewports inherit theme background */
+QScrollArea {
+    background-color: #F9FAFB;
+}
+
+QScrollArea > QWidget {
     background-color: #F9FAFB;
 }
 
@@ -98,7 +108,7 @@ QGroupBox::title {
 /* ============== TABS ============== */
 
 QTabWidget::pane {
-    background-color: transparent;
+    background-color: #F9FAFB;
     border: none;
 }
 

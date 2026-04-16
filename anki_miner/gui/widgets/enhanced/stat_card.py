@@ -104,18 +104,9 @@ class StatCard(QFrame):
             icon: Icon name from IconProvider
         """
         self._icon = icon
+        icon_text = IconProvider.get_icon(icon) if icon else ""
         if hasattr(self, "icon_label"):
-            self.icon_label.setText(IconProvider.get_icon(icon))
-
-    def animate_value(self, start: int, end: int, duration: int = 1000) -> None:
-        """Animate the value from start to end (for numeric values).
-
-        Args:
-            start: Starting value
-            end: Ending value
-            duration: Animation duration in milliseconds
-        """
-        # This is a simplified version - for full implementation,
-        # we'd need QPropertyAnimation on a custom property
-        # For now, just set the end value
-        self.set_value(str(end))
+            if icon_text:
+                self.icon_label.setText(icon_text)
+            else:
+                self.icon_label.hide()
