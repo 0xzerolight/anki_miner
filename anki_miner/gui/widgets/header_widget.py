@@ -72,9 +72,12 @@ class HeaderWidget(QWidget):
 
         # Theme combo box
         self.theme_combo = QComboBox()
-        self.theme_combo.addItem(f"{IconProvider.get_icon('sun')} Light", "light")
-        self.theme_combo.addItem(f"{IconProvider.get_icon('moon')} Dark", "dark")
-        self.theme_combo.addItem(f"{IconProvider.get_icon('sakura')} Sakura", "sakura")
+        sun = IconProvider.get_icon("sun")
+        moon = IconProvider.get_icon("moon")
+        sakura = IconProvider.get_icon("sakura")
+        self.theme_combo.addItem(f"{sun} Light" if sun else "Light", "light")
+        self.theme_combo.addItem(f"{moon} Dark" if moon else "Dark", "dark")
+        self.theme_combo.addItem(f"{sakura} Sakura" if sakura else "Sakura", "sakura")
 
         # Set current theme
         current_theme = Theme.get_current_mode()

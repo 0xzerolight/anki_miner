@@ -188,7 +188,9 @@ class ProgressWidget(QWidget):
         time_icon = IconProvider.get_icon("time")
         rate_icon = IconProvider.get_icon("progress")
 
-        stats_parts = [f"{time_icon} {elapsed_str}", f"{rate_icon} {rate:.1f}/sec"]
+        time_prefix = f"{time_icon} " if time_icon else ""
+        rate_prefix = f"{rate_icon} " if rate_icon else ""
+        stats_parts = [f"{time_prefix}{elapsed_str}", f"{rate_prefix}{rate:.1f}/sec"]
 
         # Calculate ETA if we have total
         if self._total_items > 0 and rate > 0:

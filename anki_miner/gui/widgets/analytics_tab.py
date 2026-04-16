@@ -5,6 +5,7 @@ import logging
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -116,6 +117,14 @@ class AnalyticsTab(QWidget):
         header = SectionHeader("Recent Sessions", icon="time")
         layout.addWidget(header)
 
+        self.sessions_empty_label = QLabel(
+            "No sessions yet. Process an episode to see your history here."
+        )
+        self.sessions_empty_label.setObjectName("helper-text")
+        self.sessions_empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.sessions_empty_label.setMinimumHeight(80)
+        layout.addWidget(self.sessions_empty_label)
+
         self.sessions_table = QTableWidget()
         self.sessions_table.setColumnCount(6)
         self.sessions_table.setHorizontalHeaderLabels(
@@ -126,6 +135,7 @@ class AnalyticsTab(QWidget):
         self.sessions_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.sessions_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.sessions_table.setMinimumHeight(200)
+        self.sessions_table.hide()
 
         layout.addWidget(self.sessions_table)
         group.setLayout(layout)
@@ -146,10 +156,14 @@ class AnalyticsTab(QWidget):
             "Lower scores mean easier content for your current level."
         )
         explanation.setWordWrap(True)
-        explanation_font = QFont()
-        explanation_font.setPixelSize(FONT_SIZES.small)
-        explanation.setFont(explanation_font)
+        explanation.setObjectName("helper-text")
         layout.addWidget(explanation)
+
+        self.difficulty_empty_label = QLabel("Mine multiple series to see difficulty comparisons.")
+        self.difficulty_empty_label.setObjectName("helper-text")
+        self.difficulty_empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.difficulty_empty_label.setMinimumHeight(80)
+        layout.addWidget(self.difficulty_empty_label)
 
         self.difficulty_table = QTableWidget()
         self.difficulty_table.setColumnCount(5)
@@ -163,6 +177,7 @@ class AnalyticsTab(QWidget):
         self.difficulty_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.difficulty_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.difficulty_table.setMinimumHeight(200)
+        self.difficulty_table.hide()
 
         layout.addWidget(self.difficulty_table)
         group.setLayout(layout)
@@ -207,6 +222,9 @@ class AnalyticsTab(QWidget):
 
     def _update_recent_sessions(self) -> None:
         sessions = self.stats_service.get_recent_sessions(limit=20)
+        has_sessions = len(sessions) > 0
+        self.sessions_table.setVisible(has_sessions)
+        self.sessions_empty_label.setVisible(not has_sessions)
         self.sessions_table.setRowCount(len(sessions))
 
         for row_idx, session in enumerate(sessions):
@@ -225,6 +243,9 @@ class AnalyticsTab(QWidget):
 
     def _update_difficulty_ranking(self) -> None:
         difficulties = self.stats_service.get_series_difficulty()
+        has_difficulties = len(difficulties) > 0
+        self.difficulty_table.setVisible(has_difficulties)
+        self.difficulty_empty_label.setVisible(not has_difficulties)
         self.difficulty_table.setRowCount(len(difficulties))
 
         for row_idx, entry in enumerate(difficulties):
@@ -257,15 +278,11 @@ class AnalyticsTab(QWidget):
         layout.setContentsMargins(SPACING.xs, SPACING.xxs, SPACING.xs, SPACING.xxs)
         layout.setSpacing(SPACING.sm)
 
-        # Status indicator
-        status_text = "[Done]" if milestone.achieved else "[    ]"
-        status_label = QLabel(status_text)
-        status_font = QFont()
-        status_font.setFamily("monospace")
-        status_font.setPixelSize(FONT_SIZES.body)
-        status_label.setFont(status_font)
-        status_label.setMinimumWidth(50)
-        layout.addWidget(status_label)
+        # Status indicator using a disabled checkbox for visual consistency
+        status_checkbox = QCheckBox()
+        status_checkbox.setChecked(milestone.achieved)
+        status_checkbox.setEnabled(False)
+        layout.addWidget(status_checkbox)
 
         # Name and description
         info_layout = QVBoxLayout()

@@ -66,7 +66,8 @@ class FormPanel(QFrame):
         title_text = self._title
         if self._icon:
             icon_char = IconProvider.get_icon(self._icon)
-            title_text = f"{icon_char} {title_text}"
+            if icon_char:
+                title_text = f"{icon_char} {title_text}"
 
         self._title_label = QLabel(title_text)
         self._title_label.setObjectName("heading3")
