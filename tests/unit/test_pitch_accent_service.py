@@ -3,7 +3,63 @@
 import pytest
 
 from anki_miner.exceptions import SetupError
-from anki_miner.services.pitch_accent_service import PitchAccentService
+from anki_miner.services.pitch_accent_service import (
+    PitchAccentService,
+    classify_pitch,
+    count_mora,
+)
+
+
+class TestCountMora:
+    """Tests for mora counting."""
+
+    def test_simple_hiragana(self):
+        assert count_mora("たべる") == 3
+
+    def test_with_combining_kana(self):
+        # きょう = き + ょ + う = 2 mora (ょ combines with き)
+        assert count_mora("きょう") == 2
+
+    def test_with_small_tsu(self):
+        # がっこう = が + っ + こ + う = 4 mora (っ counts as 1)
+        assert count_mora("がっこう") == 4
+
+    def test_with_long_vowel(self):
+        # コーヒー = コ + ー + ヒ + ー = 4 mora
+        assert count_mora("コーヒー") == 4
+
+    def test_single_kana(self):
+        assert count_mora("あ") == 1
+
+    def test_katakana_combining(self):
+        # シャ = シ + ャ = 1 mora
+        assert count_mora("シャ") == 1
+
+    def test_empty_string(self):
+        assert count_mora("") == 0
+
+
+class TestClassifyPitch:
+    """Tests for pitch category classification."""
+
+    def test_heiban(self):
+        assert classify_pitch(0, 3) == "平板"
+
+    def test_atamadaka(self):
+        assert classify_pitch(1, 3) == "頭高"
+
+    def test_odaka(self):
+        # position == mora count → odaka
+        assert classify_pitch(3, 3) == "尾高"
+
+    def test_nakadaka(self):
+        assert classify_pitch(2, 3) == "中高"
+
+    def test_atamadaka_two_mora(self):
+        assert classify_pitch(1, 2) == "頭高"
+
+    def test_odaka_two_mora(self):
+        assert classify_pitch(2, 2) == "尾高"
 
 
 class TestLoad:
@@ -78,6 +134,22 @@ class TestLoad:
         service.load()
         assert service.lookup("食べる") == "0"
         assert service.lookup("kana") is None
+
+    def test_loads_kanjium_column_order(self, tmp_path):
+        """Test loading Kanjium format where columns are kanji, reading, pattern (swapped)."""
+        tsv_file = tmp_path / "accents.txt"
+        tsv_file.write_text(
+            "食べる\tたべる\t0\n" "飲む\tのむ\t1\n",
+            encoding="utf-8",
+        )
+
+        service = PitchAccentService(tsv_file)
+        service.load()
+        # Both kanji and reading stored as keys, so lookup works either way
+        assert service.lookup("食べる") == "0"
+        assert service.lookup("たべる") == "0"
+        assert service.lookup("飲む") == "1"
+        assert service.lookup("のむ") == "1"
 
     def test_entry_count_property(self, tmp_path):
         """Test that entry_count reflects number of loaded entries."""
@@ -196,6 +268,72 @@ class TestLookupBatch:
         service.load()
 
         assert service.lookup_batch([]) == []
+
+
+class TestLookupDetailed:
+    """Tests for detailed lookup returning position + category."""
+
+    @pytest.fixture
+    def loaded_service(self, tmp_path):
+        """Create a loaded PitchAccentService with known entries."""
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text(
+            "たべる,食べる,0\n"  # 3 mora, position 0 → 平板
+            "のむ,飲む,1\n"  # 2 mora, position 1 → 頭高
+            "はしる,走る,2\n"  # 3 mora, position 2 → 中高 (not 3)
+            "おとこ,男,3\n",  # 3 mora, position 3 → 尾高
+            encoding="utf-8",
+        )
+        service = PitchAccentService(csv_file)
+        service.load()
+        return service
+
+    def test_heiban(self, loaded_service):
+        pos, cat = loaded_service.lookup_detailed("食べる", "たべる")
+        assert pos == "0"
+        assert cat == "平板"
+
+    def test_atamadaka(self, loaded_service):
+        pos, cat = loaded_service.lookup_detailed("飲む", "のむ")
+        assert pos == "1"
+        assert cat == "頭高"
+
+    def test_nakadaka(self, loaded_service):
+        pos, cat = loaded_service.lookup_detailed("走る", "はしる")
+        assert pos == "2"
+        assert cat == "中高"
+
+    def test_odaka(self, loaded_service):
+        pos, cat = loaded_service.lookup_detailed("男", "おとこ")
+        assert pos == "3"
+        assert cat == "尾高"
+
+    def test_not_found(self, loaded_service):
+        pos, cat = loaded_service.lookup_detailed("不明", "ふめい")
+        assert pos is None
+        assert cat is None
+
+    def test_multi_pattern_uses_first(self, tmp_path):
+        # Use TSV to preserve comma in pattern (like real Kanjium file)
+        tsv_file = tmp_path / "pitch.tsv"
+        tsv_file.write_text("いちがつ\t１月\t4,0\n", encoding="utf-8")
+        service = PitchAccentService(tsv_file)
+        service.load()
+
+        pos, cat = service.lookup_detailed("１月", "いちがつ")
+        assert pos == "4,0"
+        # First pattern is 4, いちがつ = 4 mora → 尾高
+        assert cat == "尾高"
+
+    def test_batch_detailed(self, loaded_service):
+        results = loaded_service.lookup_batch_detailed(
+            [
+                ("食べる", "たべる"),
+                ("unknown", ""),
+                ("飲む", "のむ"),
+            ]
+        )
+        assert results == [("0", "平板"), (None, None), ("1", "頭高")]
 
 
 class TestIsAvailable:

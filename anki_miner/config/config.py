@@ -26,8 +26,9 @@ class AnkiMinerConfig:
             "audio": "SentenceAudio",
             "expression_furigana": "ExpressionFurigana",
             "sentence_furigana": "SentenceFurigana",
-            "pitch_accent": "",
-            "frequency_rank": "",
+            "pitch_position": "",
+            "pitch_category": "",
+            "frequency": "",
         }
     )
     ankiconnect_url: str = "http://127.0.0.1:8765"

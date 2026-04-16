@@ -65,6 +65,9 @@ class GUIConfigManager:
             # Convert string paths back to Path objects
             config_dict = cls._strings_to_paths(config_dict)
 
+            # Migrate old field names
+            config_dict = cls._migrate_field_names(config_dict)
+
             # Create config from dict
             return AnkiMinerConfig(**config_dict)
 
@@ -90,6 +93,27 @@ class GUIConfigManager:
         """
         if cls.CONFIG_FILE.exists():
             cls.CONFIG_FILE.unlink()
+
+    @staticmethod
+    def _migrate_field_names(data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate old anki_fields keys to current names.
+
+        Handles:
+        - pitch_accent → pitch_position (value copied) + pitch_category (empty)
+        - frequency_rank → frequency (value copied)
+        """
+        fields = data.get("anki_fields")
+        if not isinstance(fields, dict):
+            return data
+
+        if "pitch_accent" in fields:
+            fields["pitch_position"] = fields.pop("pitch_accent")
+            fields.setdefault("pitch_category", "")
+
+        if "frequency_rank" in fields:
+            fields["frequency"] = fields.pop("frequency_rank")
+
+        return data
 
     @staticmethod
     def _paths_to_strings(data: dict[str, Any]) -> dict[str, Any]:

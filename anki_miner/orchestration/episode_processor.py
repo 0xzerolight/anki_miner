@@ -348,12 +348,12 @@ class EpisodeProcessor:
                 )
 
             # Look up pitch accents if available
-            pitch_accents: list[str | None] = [None] * len(words_with_media)
+            pitch_data: list[tuple[str | None, str | None]] = [(None, None)] * len(words_with_media)
             if self.pitch_accent_service and self.pitch_accent_service.is_available():
-                pitch_accents = self.pitch_accent_service.lookup_batch(
+                pitch_data = self.pitch_accent_service.lookup_batch_detailed(
                     [(w.lemma, w.reading) for w in words_with_media]
                 )
-                found_count = sum(1 for p in pitch_accents if p)
+                found_count = sum(1 for pos, _ in pitch_data if pos)
                 self.presenter.show_info(
                     f"Pitch accent data: {found_count}/{len(words_with_media)} words"
                 )
@@ -362,17 +362,19 @@ class EpisodeProcessor:
             self.presenter.show_info("Step 5/5 \u2014 Creating Anki cards")
             # Combine words, media, definitions, and extra data
             card_data: list[tuple] = []
-            for (word, media), definition, pitch_accent in zip(
-                media_results, definitions, pitch_accents, strict=True
+            for (word, media), definition, (pitch_position, pitch_category) in zip(
+                media_results, definitions, pitch_data, strict=True
             ):
                 if definition is None:
                     continue
 
                 extra_fields: dict[str, str] = {}
-                if pitch_accent:
-                    extra_fields["pitch_accent"] = pitch_accent
+                if pitch_position:
+                    extra_fields["pitch_position"] = pitch_position
+                if pitch_category:
+                    extra_fields["pitch_category"] = pitch_category
                 if word.frequency_rank is not None:
-                    extra_fields["frequency_rank"] = str(word.frequency_rank)
+                    extra_fields["frequency"] = str(word.frequency_rank)
 
                 card_data.append((word, media, definition, extra_fields if extra_fields else None))
 

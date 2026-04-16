@@ -107,6 +107,23 @@ class TestLoad:
         assert service.lookup("の") == 1
         assert service.lookup("食べる") == 100
 
+    def test_loads_multi_column_tsv(self, tmp_path):
+        """Test loading TSV with more than 2 columns (e.g. JPDB format: term, reading, freq, kana_freq)."""
+        tsv_file = tmp_path / "freq.tsv"
+        tsv_file.write_text(
+            "term\treading\tfrequency\tkana_frequency\n"
+            "食べる\tたべる\t100\t200\n"
+            "飲む\tのむ\t50\t150\n"
+            "の\tの\t1\t1\n",
+            encoding="utf-8",
+        )
+
+        service = FrequencyService(tsv_file)
+        service.load()
+        assert service.lookup("食べる") == 100
+        assert service.lookup("飲む") == 50
+        assert service.lookup("の") == 1
+
     def test_entry_count_property(self, tmp_path):
         """Test that entry_count reflects number of loaded entries."""
         csv_file = tmp_path / "freq.csv"
