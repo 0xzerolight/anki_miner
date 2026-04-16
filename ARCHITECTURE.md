@@ -201,7 +201,7 @@ GUIPresenter does **not** explicitly inherit from `PresenterProtocol` — it sat
 
 ### Theme System
 
-Theme singleton with Light, Dark, and Sakura color palettes. QSS stylesheet files use `${variable}` substitution for theming. Theme preference is saved via `QSettings`.
+Theme singleton backed by JSON theme files in `gui/resources/styles/themes/`. Four built-in themes: Light, Dark, Sakura, and Tokyo Night. The `discover_themes()` function scans the themes directory at startup, validates each JSON file against a required color key schema (`REQUIRED_COLOR_KEYS`), and registers valid themes. A single `common.qss` stylesheet uses `${color-*}` variable substitution — the `Theme._substitute_variables()` method merges layout variables from `_variables.py` with color variables extracted from the active theme JSON. Custom themes can be added by dropping a valid JSON file into the themes directory. Theme preference is saved via `QSettings`.
 
 ### Dialogs
 
