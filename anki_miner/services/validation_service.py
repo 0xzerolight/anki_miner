@@ -80,6 +80,18 @@ class ValidationService:
                     )
                 )
 
+        # Check field names exist on note type (only if note type is valid)
+        if ankiconnect_ok and note_type_ok:
+            fields_ok, fields_msg = self._check_field_names_exist()
+            if not fields_ok:
+                issues.append(
+                    ValidationIssue(
+                        component="Field Mapping",
+                        severity="WARNING",
+                        message=fields_msg,
+                    )
+                )
+
         # Ensure temp folder exists
         try:
             ensure_directory(self.config.media_temp_folder)
@@ -217,3 +229,38 @@ class ValidationService:
 
         except Exception as e:
             return False, f"Error checking note type: {e}"
+
+    def _check_field_names_exist(self) -> tuple[bool, str]:
+        """Check that configured field names exist on the note type.
+
+        Returns:
+            Tuple of (success, message)
+        """
+        try:
+            response = requests.post(
+                self.config.ankiconnect_url,
+                json={
+                    "action": "modelFieldNames",
+                    "version": 6,
+                    "params": {"modelName": self.config.anki_note_type},
+                },
+                timeout=10,
+            )
+
+            result = response.json()
+            if result.get("error"):
+                return False, f"Error fetching fields: {result['error']}"
+
+            actual_fields = set(result.get("result", []))
+            configured_fields = {v for v in self.config.anki_fields.values() if v}
+            missing = configured_fields - actual_fields
+            if missing:
+                return False, (
+                    f"Field(s) {', '.join(sorted(missing))} not found on note type "
+                    f"'{self.config.anki_note_type}'. "
+                    f"Available: {', '.join(sorted(actual_fields))}"
+                )
+            return True, "All configured fields exist"
+
+        except Exception as e:
+            return False, f"Error checking fields: {e}"
