@@ -593,3 +593,561 @@ QTabWidget#settings-tabs QTabBar::tab:selected {
 QTabWidget#settings-tabs QTabBar::tab:hover {
     font-weight: 600;
 }
+
+/* ============== THEME COLOR RULES ============== */
+/* All colors use ${color-*} variables from the active JSON theme file. */
+
+/* --- Base Colors --- */
+
+QWidget {
+    color: ${color-text};
+}
+
+QMainWindow {
+    background-color: ${color-background};
+}
+
+QScrollArea {
+    background-color: ${color-background};
+}
+
+QScrollArea > QWidget {
+    background-color: ${color-background};
+}
+
+/* --- Buttons --- */
+
+QPushButton {
+    background-color: ${color-primary};
+    color: ${color-text-on-primary};
+}
+
+QPushButton:hover {
+    background-color: ${color-primary-hover};
+}
+
+QPushButton:pressed {
+    background-color: ${color-primary-pressed};
+}
+
+QPushButton:disabled {
+    background-color: ${color-disabled};
+    color: ${color-text-on-primary};
+}
+
+QPushButton#secondary {
+    background-color: transparent;
+    color: ${color-primary};
+    border-color: ${color-primary};
+}
+
+QPushButton#secondary:hover {
+    background-color: ${color-primary-light};
+    border-color: ${color-primary-hover};
+}
+
+QPushButton#ghost {
+    color: ${color-text};
+}
+
+QPushButton#ghost:hover {
+    background-color: ${color-surface-hover};
+}
+
+QPushButton#danger {
+    background-color: ${color-error};
+    color: ${color-text-on-primary};
+}
+
+QPushButton#danger:hover {
+    background-color: ${color-error-hover};
+}
+
+/* --- Input Fields --- */
+
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+    background-color: ${color-input-bg};
+    color: ${color-text};
+    border-color: ${color-border};
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+    border-color: ${color-border-focus};
+    background-color: ${color-input-bg};
+}
+
+QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled, QComboBox:disabled {
+    background-color: ${color-input-disabled-bg};
+    color: ${color-text-disabled};
+}
+
+QLineEdit::placeholder {
+    color: ${color-text-muted};
+}
+
+/* --- Group Boxes --- */
+
+QGroupBox {
+    color: ${color-text};
+    background-color: ${color-surface};
+    border-color: ${color-border};
+}
+
+QGroupBox::title {
+    color: ${color-text};
+}
+
+/* --- Tabs --- */
+
+QTabWidget::pane {
+    background-color: ${color-background};
+    border: none;
+}
+
+QTabBar::tab {
+    color: ${color-text-muted};
+    background-color: transparent;
+}
+
+QTabBar::tab:hover {
+    color: ${color-text};
+    background-color: ${color-surface-hover};
+}
+
+QTabBar::tab:selected {
+    color: ${color-primary};
+    background-color: transparent;
+    border-bottom: 3px solid ${color-primary};
+}
+
+/* --- Text Edit / Log --- */
+
+QTextEdit {
+    background-color: ${color-surface};
+    color: ${color-text};
+    border-color: ${color-border};
+}
+
+QTextEdit#log-widget {
+    background-color: ${color-surface};
+}
+
+/* --- Progress Bar --- */
+
+QProgressBar {
+    background-color: ${color-border};
+    color: ${color-text};
+}
+
+QProgressBar::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 ${color-primary}, stop:1 ${color-secondary});
+}
+
+/* --- Tables --- */
+
+QTableWidget {
+    background-color: ${color-surface};
+    color: ${color-text};
+    border-color: ${color-border};
+}
+
+QTableWidget::item:hover {
+    background-color: ${color-surface-hover};
+}
+
+QTableWidget::item:selected {
+    background-color: ${color-table-selected-bg};
+    color: ${color-table-selected-text};
+}
+
+QHeaderView::section {
+    background-color: ${color-background};
+    color: ${color-text};
+    border-color: ${color-border};
+}
+
+/* --- Scroll Bars --- */
+
+QScrollBar:vertical, QScrollBar:horizontal {
+    background-color: transparent;
+}
+
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+    background-color: ${color-scrollbar};
+}
+
+QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
+    background-color: ${color-scrollbar-hover};
+}
+
+/* --- Status Bar --- */
+
+QStatusBar {
+    background-color: ${color-surface};
+    color: ${color-text-muted};
+    border-color: ${color-border};
+}
+
+/* --- Tooltips --- */
+
+QToolTip {
+    background-color: ${color-tooltip-bg};
+    color: ${color-tooltip-text};
+    border-color: ${color-tooltip-border};
+}
+
+/* --- Menus --- */
+
+QMenu {
+    background-color: ${color-surface};
+    color: ${color-text};
+    border-color: ${color-border};
+}
+
+QMenu::item:selected {
+    background-color: ${color-surface-hover};
+    color: ${color-text};
+}
+
+QMenu::separator {
+    background-color: ${color-border};
+}
+
+/* --- Combo Box Dropdown --- */
+
+QComboBox QAbstractItemView {
+    background-color: ${color-surface};
+    color: ${color-text};
+    border-color: ${color-border};
+}
+
+QComboBox QAbstractItemView::item:hover {
+    background-color: ${color-surface-hover};
+}
+
+QComboBox QAbstractItemView::item:selected {
+    background-color: ${color-table-selected-bg};
+    color: ${color-table-selected-text};
+}
+
+/* --- Check Boxes & Radio Buttons --- */
+
+QCheckBox, QRadioButton {
+    color: ${color-text};
+}
+
+QCheckBox::indicator, QRadioButton::indicator {
+    background-color: ${color-input-bg};
+    border-color: ${color-border-subtle};
+}
+
+QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+    border-color: ${color-primary};
+}
+
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+    background-color: ${color-primary};
+    border-color: ${color-primary};
+}
+
+/* --- Dialogs --- */
+
+QDialog {
+    background-color: ${color-surface};
+    color: ${color-text};
+}
+
+QMessageBox {
+    background-color: ${color-surface};
+}
+
+/* --- Custom Widgets --- */
+
+/* Log header */
+QWidget#log-header {
+    background-color: ${color-surface-alt};
+    border-bottom: 1px solid ${color-border};
+}
+
+/* Status badges */
+QLabel#status-badge {
+    background-color: ${color-badge-pending-bg};
+    color: ${color-badge-pending-text};
+    border-color: ${color-border-subtle};
+}
+
+QLabel#status-badge[status="success"] {
+    background-color: ${color-badge-success-bg};
+    color: ${color-badge-success-text};
+    border-color: ${color-success};
+}
+
+QLabel#status-badge[status="warning"] {
+    background-color: ${color-badge-warning-bg};
+    color: ${color-badge-warning-text};
+}
+
+QLabel#status-badge[status="error"] {
+    background-color: ${color-badge-error-bg};
+    color: ${color-badge-error-text};
+    border-color: ${color-error};
+}
+
+QLabel#status-badge[status="info"],
+QLabel#status-badge[status="checking"] {
+    background-color: ${color-badge-info-bg};
+    color: ${color-badge-info-text};
+    border-color: ${color-info};
+}
+
+QLabel#status-badge[status="pending"] {
+    background-color: ${color-badge-pending-bg};
+    color: ${color-badge-pending-text};
+}
+
+/* Stat cards */
+QFrame#stat-card {
+    background-color: ${color-surface};
+    border-color: ${color-border};
+}
+
+QLabel#stat-value {
+    color: ${color-primary};
+}
+
+QLabel#stat-label {
+    color: ${color-text-muted};
+}
+
+/* Section headers */
+QLabel#section-header {
+    color: ${color-text};
+}
+
+/* Frames and cards */
+QFrame#card {
+    background-color: ${color-surface};
+    border-color: ${color-border};
+}
+
+QFrame#divider {
+    background-color: ${color-divider};
+}
+
+/* Progress stats */
+QLabel#progress-stats {
+    color: ${color-text-muted};
+}
+
+/* --- Special States --- */
+
+QLineEdit[error="true"] {
+    border-color: ${color-error};
+    border-width: 2px;
+}
+
+QLineEdit[success="true"] {
+    border-color: ${color-success};
+    border-width: 2px;
+}
+
+QLineEdit[warning="true"] {
+    border-color: ${color-warning};
+    border-width: 2px;
+}
+
+/* --- Validation Badges --- */
+
+QLabel#validation-badge {
+    border: 1px solid ${color-border};
+}
+
+QLabel#validation-badge[status="checking"] {
+    background-color: ${color-badge-pending-bg};
+    color: ${color-badge-pending-text};
+    border-color: ${color-border};
+}
+
+QLabel#validation-badge[status="success"] {
+    background-color: ${color-badge-success-bg};
+    color: ${color-badge-success-text};
+    border-color: ${color-success};
+}
+
+QLabel#validation-badge[status="error"] {
+    background-color: ${color-badge-error-bg};
+    color: ${color-badge-error-text};
+    border-color: ${color-error};
+}
+
+QLabel#validation-badge[status="warning"] {
+    background-color: ${color-badge-warning-bg};
+    color: ${color-badge-warning-text};
+    border-color: ${color-warning};
+}
+
+/* --- Header Widget --- */
+
+QWidget#header-widget {
+    background-color: ${color-surface};
+    border-color: ${color-border};
+}
+
+/* --- Update Banner --- */
+
+QFrame#update-banner {
+    background-color: ${color-update-banner-bg};
+}
+
+QFrame#update-banner QLabel {
+    color: ${color-update-banner-text};
+}
+
+QFrame#update-banner QPushButton {
+    color: ${color-update-banner-text};
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+QFrame#update-banner QPushButton:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* --- Status Bar Widget --- */
+
+QWidget#status-bar {
+    background-color: ${color-surface};
+    border-top: 1px solid ${color-border};
+}
+
+QLabel#status-operation[level="info"] {
+    color: ${color-info};
+}
+
+QLabel#status-operation[level="success"] {
+    color: ${color-success};
+}
+
+QLabel#status-operation[level="warning"] {
+    color: ${color-warning};
+}
+
+QLabel#status-operation[level="error"] {
+    color: ${color-error};
+}
+
+QLabel#status-stats {
+    color: ${color-text-muted};
+}
+
+QLabel#status-indicator[status="success"] {
+    background-color: ${color-badge-success-bg};
+    color: ${color-badge-success-text};
+}
+
+QLabel#status-indicator[status="error"] {
+    background-color: ${color-badge-error-bg};
+    color: ${color-badge-error-text};
+}
+
+QFrame#status-separator {
+    background-color: ${color-border};
+}
+
+/* --- Queue Item Card --- */
+
+QFrame#queue-item-card {
+    background-color: ${color-surface};
+    border-color: ${color-border};
+}
+
+QFrame#queue-item-card:hover {
+    border-color: ${color-primary};
+    background-color: ${color-surface-hover};
+}
+
+QLabel#queue-item-title {
+    color: ${color-text};
+}
+
+QLabel#queue-item-path {
+    color: ${color-text-muted};
+}
+
+QLabel#queue-item-stats {
+    color: ${color-primary};
+}
+
+QLabel#queue-stats {
+    background-color: ${color-primary-light};
+    color: ${color-primary-dark};
+}
+
+QLabel#queue-status-badge[status="pending"] {
+    background-color: ${color-badge-pending-bg};
+    color: ${color-badge-pending-text};
+}
+
+QLabel#queue-status-badge[status="processing"] {
+    background-color: ${color-badge-info-bg};
+    color: ${color-badge-info-text};
+}
+
+QLabel#queue-status-badge[status="complete"] {
+    background-color: ${color-badge-success-bg};
+    color: ${color-badge-success-text};
+}
+
+QProgressBar#queue-progress {
+    background-color: ${color-border};
+}
+
+QProgressBar#queue-progress::chunk {
+    background-color: ${color-primary};
+}
+
+/* --- Settings Tab --- */
+
+QLabel#validation-status[status="success"] {
+    color: ${color-success};
+}
+
+QLabel#validation-status[status="error"] {
+    color: ${color-error};
+}
+
+QLabel#validation-status[status="checking"] {
+    color: ${color-info};
+}
+
+QLabel#helper-text {
+    color: ${color-text-muted};
+}
+
+QTabWidget#settings-tabs QTabBar::tab {
+    background-color: transparent;
+    color: ${color-text-muted};
+    border-bottom: 2px solid transparent;
+}
+
+QTabWidget#settings-tabs QTabBar::tab:selected {
+    background-color: ${color-background};
+    color: ${color-text};
+    border-bottom: 2px solid ${color-primary};
+}
+
+QTabWidget#settings-tabs QTabBar::tab:hover {
+    background-color: ${color-surface-hover};
+    color: ${color-text};
+}
+
+/* --- Sakura-specific: Decorative elements --- */
+
+QLabel#decorative {
+    color: ${color-decorative};
+}
+
+QGroupBox#accent {
+    border: 2px solid;
+    border-color: ${color-primary};
+}
