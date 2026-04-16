@@ -219,23 +219,33 @@ class AnkiSettingsPanel(FormPanel):
         optional_helper.setWordWrap(True)
         self.add_widget(optional_helper)
 
-        # Pitch Accent field
-        self.pitch_accent_field_input = QLineEdit()
-        self.pitch_accent_field_input.setPlaceholderText("PitchAccent (optional)")
-        self.pitch_accent_field_input.setToolTip("Anki field for pitch accent data")
+        # Pitch Position field
+        self.pitch_position_field_input = QLineEdit()
+        self.pitch_position_field_input.setPlaceholderText("PitchPosition (optional)")
+        self.pitch_position_field_input.setToolTip("Anki field for pitch accent position number")
         self._add_simple_field(
-            "Pitch Accent Field",
-            self.pitch_accent_field_input,
-            "Anki field that stores pitch accent pattern (leave blank to skip)",
+            "Pitch Position Field",
+            self.pitch_position_field_input,
+            "Anki field that stores the numeric pitch drop position (leave blank to skip)",
         )
 
-        # Frequency Rank field
-        self.frequency_rank_field_input = QLineEdit()
-        self.frequency_rank_field_input.setPlaceholderText("FrequencyRank (optional)")
-        self.frequency_rank_field_input.setToolTip("Anki field for word frequency rank")
+        # Pitch Category field
+        self.pitch_category_field_input = QLineEdit()
+        self.pitch_category_field_input.setPlaceholderText("PitchCategory (optional)")
+        self.pitch_category_field_input.setToolTip("Anki field for pitch accent category")
         self._add_simple_field(
-            "Frequency Rank Field",
-            self.frequency_rank_field_input,
+            "Pitch Category Field",
+            self.pitch_category_field_input,
+            "Anki field that stores the pitch category (平板/頭高/中高/尾高)",
+        )
+
+        # Frequency field
+        self.frequency_field_input = QLineEdit()
+        self.frequency_field_input.setPlaceholderText("Frequency (optional)")
+        self.frequency_field_input.setToolTip("Anki field for word frequency rank")
+        self._add_simple_field(
+            "Frequency Field",
+            self.frequency_field_input,
             "Anki field that stores word frequency rank (leave blank to skip)",
         )
 
@@ -432,9 +442,16 @@ class AnkiSettingsPanel(FormPanel):
                 self.sentence_furigana_field_input,
                 ["sentencefurigana", "contextfurigana"],
             ),
-            "pitch_accent": (self.pitch_accent_field_input, ["pitch", "accent", "pitchaccent"]),
-            "frequency_rank": (
-                self.frequency_rank_field_input,
+            "pitch_position": (
+                self.pitch_position_field_input,
+                ["pitchposition", "pitchaccent", "pitch"],
+            ),
+            "pitch_category": (
+                self.pitch_category_field_input,
+                ["pitchcategory", "accenttype", "accentcategory"],
+            ),
+            "frequency": (
+                self.frequency_field_input,
                 ["frequency", "freq", "rank", "frequencyrank"],
             ),
         }
@@ -463,8 +480,9 @@ class AnkiSettingsPanel(FormPanel):
             "audio": self.audio_field_input.text().strip(),
             "expression_furigana": self.expression_furigana_field_input.text().strip(),
             "sentence_furigana": self.sentence_furigana_field_input.text().strip(),
-            "pitch_accent": self.pitch_accent_field_input.text().strip(),
-            "frequency_rank": self.frequency_rank_field_input.text().strip(),
+            "pitch_position": self.pitch_position_field_input.text().strip(),
+            "pitch_category": self.pitch_category_field_input.text().strip(),
+            "frequency": self.frequency_field_input.text().strip(),
         }
 
     def set_card_fields(self, fields: dict) -> None:
@@ -484,5 +502,6 @@ class AnkiSettingsPanel(FormPanel):
         self.sentence_furigana_field_input.setText(
             fields.get("sentence_furigana", "SentenceFurigana")
         )
-        self.pitch_accent_field_input.setText(fields.get("pitch_accent", ""))
-        self.frequency_rank_field_input.setText(fields.get("frequency_rank", ""))
+        self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
+        self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
+        self.frequency_field_input.setText(fields.get("frequency", ""))

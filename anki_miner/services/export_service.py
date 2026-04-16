@@ -102,8 +102,9 @@ class ExportService:
             "Definition",
             "Expression Furigana",
             "Sentence Furigana",
-            "Pitch Accent",
-            "Frequency Rank",
+            "Pitch Position",
+            "Pitch Category",
+            "Frequency",
         ]
         if include_media_refs:
             header.extend(["Screenshot", "Audio"])
@@ -122,7 +123,8 @@ class ExportService:
                     w.definition or "",
                     w.word.expression_furigana,
                     w.word.sentence_furigana,
-                    w.pitch_accent or "",
+                    w.pitch_position or "",
+                    w.pitch_category or "",
                     str(w.frequency_rank) if w.frequency_rank is not None else "",
                 ]
                 if include_media_refs:

@@ -28,7 +28,8 @@ def make_word_data(make_tokenized_word):
         definition="to eat",
         expression_furigana="食[た]べる",
         sentence_furigana="日本語[にほんご]を食[た]べる。",
-        pitch_accent="[0]",
+        pitch_position="[0]",
+        pitch_category="平板",
         frequency_rank=500,
         screenshot_filename=None,
         audio_filename=None,
@@ -49,7 +50,8 @@ def make_word_data(make_tokenized_word):
         return WordData(
             word=word,
             definition=definition,
-            pitch_accent=pitch_accent,
+            pitch_position=pitch_position,
+            pitch_category=pitch_category,
             frequency_rank=frequency_rank,
             screenshot_filename=screenshot_filename,
             audio_filename=audio_filename,
@@ -72,7 +74,8 @@ def sample_words(make_word_data):
             start_time=1.0,
             end_time=3.0,
             definition="to eat",
-            pitch_accent="[0]",
+            pitch_position="[0]",
+            pitch_category="平板",
             frequency_rank=500,
         ),
         make_word_data(
@@ -83,7 +86,8 @@ def sample_words(make_word_data):
             start_time=5.0,
             end_time=7.0,
             definition="to drink",
-            pitch_accent="[1]",
+            pitch_position="[1]",
+            pitch_category="頭高",
             frequency_rank=800,
         ),
         make_word_data(
@@ -94,7 +98,8 @@ def sample_words(make_word_data):
             start_time=10.0,
             end_time=12.0,
             definition="to run",
-            pitch_accent=None,
+            pitch_position=None,
+            pitch_category=None,
             frequency_rank=None,
         ),
     ]
@@ -115,8 +120,9 @@ class TestExportCsv:
         assert "Lemma" in header
         assert "Surface" in header
         assert "Definition" in header
-        assert "Pitch Accent" in header
-        assert "Frequency Rank" in header
+        assert "Pitch Position" in header
+        assert "Pitch Category" in header
+        assert "Frequency" in header
         assert "Start Time" in header
         assert "End Time" in header
 
@@ -133,8 +139,9 @@ class TestExportCsv:
         assert first_row[header.index("Surface")] == "食べる"
         assert first_row[header.index("Reading")] == "タベル"
         assert first_row[header.index("Definition")] == "to eat"
-        assert first_row[header.index("Pitch Accent")] == "[0]"
-        assert first_row[header.index("Frequency Rank")] == "500"
+        assert first_row[header.index("Pitch Position")] == "[0]"
+        assert first_row[header.index("Pitch Category")] == "平板"
+        assert first_row[header.index("Frequency")] == "500"
         assert first_row[header.index("Start Time")] == "1.00"
         assert first_row[header.index("End Time")] == "3.00"
 
@@ -159,7 +166,8 @@ class TestExportCsv:
     def test_handles_none_fields_gracefully(self, export_service, make_word_data, tmp_path):
         word = make_word_data(
             definition=None,
-            pitch_accent=None,
+            pitch_position=None,
+            pitch_category=None,
             frequency_rank=None,
         )
         out = tmp_path / "nones.csv"
@@ -171,8 +179,9 @@ class TestExportCsv:
             row = next(reader)
 
         assert row[header.index("Definition")] == ""
-        assert row[header.index("Pitch Accent")] == ""
-        assert row[header.index("Frequency Rank")] == ""
+        assert row[header.index("Pitch Position")] == ""
+        assert row[header.index("Pitch Category")] == ""
+        assert row[header.index("Frequency")] == ""
 
     def test_media_refs_excluded_by_default(self, export_service, sample_words, tmp_path):
         out = tmp_path / "words.csv"
@@ -258,8 +267,9 @@ class TestExportTsv:
             "Definition",
             "Expression Furigana",
             "Sentence Furigana",
-            "Pitch Accent",
-            "Frequency Rank",
+            "Pitch Position",
+            "Pitch Category",
+            "Frequency",
             "Screenshot",
             "Audio",
             "Start Time",
