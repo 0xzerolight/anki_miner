@@ -4,7 +4,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 
 
@@ -122,14 +121,11 @@ class EnhancedDialog(QDialog):
         """Set the dialog header.
 
         Args:
-            icon: Icon name from IconProvider
+            icon: Icon name (unused, kept for API compatibility)
             title: Main title text
             subtitle: Optional subtitle/description
         """
-        # Set icon
-        icon_char = IconProvider.get_icon(icon)
-        self._icon_label.setText(icon_char)
-        self._icon_label.show()
+        # Icon label kept hidden (no icon provider)
 
         # Set title
         self._title_label.setText(title)

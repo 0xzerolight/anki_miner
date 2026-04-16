@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base.sizing import make_label_fit_text
 
@@ -34,17 +33,15 @@ class FormPanel(QFrame):
         panel.add_field("Port", port_input)
     """
 
-    def __init__(self, title: str, icon: str = "", parent=None):
+    def __init__(self, title: str, parent=None):
         """Initialize the form panel.
 
         Args:
             title: Panel title
-            icon: Optional icon name from IconProvider
             parent: Parent widget
         """
         super().__init__(parent)
         self._title = title
-        self._icon = icon
 
         self._setup_ui()
 
@@ -62,14 +59,7 @@ class FormPanel(QFrame):
         header_layout = QHBoxLayout()
         header_layout.setSpacing(SPACING.xs)
 
-        # Title with optional icon
-        title_text = self._title
-        if self._icon:
-            icon_char = IconProvider.get_icon(self._icon)
-            if icon_char:
-                title_text = f"{icon_char} {title_text}"
-
-        self._title_label = QLabel(title_text)
+        self._title_label = QLabel(self._title)
         self._title_label.setObjectName("heading3")
         title_font = QFont()
         title_font.setPixelSize(FONT_SIZES.h3)
@@ -183,23 +173,16 @@ class FormPanel(QFrame):
         """
         self._main_layout.addLayout(layout)
 
-    def add_section(self, title: str, icon: str = "") -> None:
+    def add_section(self, title: str) -> None:
         """Add a section divider with title.
 
         Args:
             title: Section title
-            icon: Optional icon name
         """
         # Add spacing before section
         self._main_layout.addSpacing(8)
 
-        # Section header
-        section_text = title
-        if icon:
-            icon_char = IconProvider.get_icon(icon)
-            section_text = f"{icon_char} {section_text}"
-
-        section_label = QLabel(section_text)
+        section_label = QLabel(title)
         section_font = QFont()
         section_font.setPixelSize(FONT_SIZES.body)
         section_font.setWeight(QFont.Weight.DemiBold)
@@ -230,11 +213,7 @@ class FormPanel(QFrame):
             title: New title text
         """
         self._title = title
-        title_text = title
-        if self._icon:
-            icon_char = IconProvider.get_icon(self._icon)
-            title_text = f"{icon_char} {title_text}"
-        self._title_label.setText(title_text)
+        self._title_label.setText(title)
 
     @property
     def form_layout(self) -> QFormLayout:

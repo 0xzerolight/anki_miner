@@ -17,7 +17,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
@@ -62,7 +61,7 @@ class QueueManagerDialog(QDialog):
 
         # Header
         header = SectionHeader(
-            f"{IconProvider.get_icon('library')} Batch Queue Manager",
+            "Batch Queue Manager",
         )
         main_layout.addWidget(header)
 
@@ -102,11 +101,11 @@ class QueueManagerDialog(QDialog):
         actions_layout = QHBoxLayout()
         actions_layout.setSpacing(SPACING.sm)
 
-        add_button = ModernButton("Add Series", icon="add", variant="primary")
+        add_button = ModernButton("Add Series", variant="primary")
         add_button.clicked.connect(self._add_pair)
         actions_layout.addWidget(add_button)
 
-        clear_button = ModernButton("Clear All", icon="delete", variant="danger")
+        clear_button = ModernButton("Clear All", variant="danger")
         clear_button.clicked.connect(self._clear_queue)
         actions_layout.addWidget(clear_button)
 
@@ -115,7 +114,7 @@ class QueueManagerDialog(QDialog):
         main_layout.addLayout(actions_layout)
 
         # Queue items section
-        queue_label = QLabel(f"{IconProvider.get_icon('list')} Queue Items")
+        queue_label = QLabel("Queue Items")
         queue_label.setObjectName("heading3")
         queue_label.setFont(self._create_font(16, QFont.Weight.Bold))
         main_layout.addWidget(queue_label)
@@ -136,9 +135,7 @@ class QueueManagerDialog(QDialog):
         main_layout.addWidget(scroll_area)
 
         # Empty state label (shown when queue is empty)
-        self.empty_label = QLabel(
-            f"{IconProvider.get_icon('info')} Queue is empty. Click 'Add Series' to begin."
-        )
+        self.empty_label = QLabel("Queue is empty. Click 'Add Series' to begin.")
         self.empty_label.setObjectName("helper-text")
         self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.empty_label.setFont(self._create_font(14))
@@ -152,7 +149,7 @@ class QueueManagerDialog(QDialog):
         footer_layout = QHBoxLayout()
         footer_layout.addStretch()
 
-        close_button = ModernButton("Close", icon="close", variant="primary")
+        close_button = ModernButton("Close", variant="primary")
         close_button.clicked.connect(self.accept)
         close_button.setMinimumWidth(120)
         footer_layout.addWidget(close_button)
@@ -374,13 +371,13 @@ class QueueManagerDialog(QDialog):
         completed = self.batch_queue.completed_count
         cards = self.batch_queue.total_cards_created
 
-        self.total_label.setText(f"{IconProvider.get_icon('library')} {total} total series")
+        self.total_label.setText(f"{total} total series")
 
-        self.pending_label.setText(f"{IconProvider.get_icon('progress')} {pending} pending")
+        self.pending_label.setText(f"{pending} pending")
 
-        self.completed_label.setText(f"{IconProvider.get_icon('complete')} {completed} completed")
+        self.completed_label.setText(f"{completed} completed")
 
-        self.cards_label.setText(f"{IconProvider.get_icon('card')} {cards} cards created")
+        self.cards_label.setText(f"{cards} cards created")
 
     def _update_empty_state(self):
         """Update the empty state label visibility."""

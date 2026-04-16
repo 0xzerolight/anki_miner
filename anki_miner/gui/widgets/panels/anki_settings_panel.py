@@ -4,7 +4,6 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import FormPanel, StatusBadge, make_label_fit_text
 from anki_miner.gui.widgets.enhanced import ModernButton
@@ -40,7 +39,7 @@ class AnkiSettingsPanel(FormPanel):
 
     def __init__(self, parent=None):
         """Initialize the Anki settings panel."""
-        super().__init__("Anki Configuration", icon="card", parent=parent)
+        super().__init__("Anki Configuration", parent=parent)
         self._setup_fields()
 
     def _setup_fields(self) -> None:
@@ -65,9 +64,7 @@ class AnkiSettingsPanel(FormPanel):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        self.test_connection_button = ModernButton(
-            "Test Connection", icon="success", variant="secondary"
-        )
+        self.test_connection_button = ModernButton("Test Connection", variant="secondary")
         self.test_connection_button.clicked.connect(self._on_test_connection)
         self.test_connection_button.setToolTip("Test connection to AnkiConnect")
         button_layout.addWidget(self.test_connection_button)
@@ -135,9 +132,7 @@ class AnkiSettingsPanel(FormPanel):
         # Fetch fields from note type button
         fetch_layout = QHBoxLayout()
         fetch_layout.addStretch()
-        self.fetch_fields_button = ModernButton(
-            "Fetch Fields from Note Type", icon="refresh", variant="secondary"
-        )
+        self.fetch_fields_button = ModernButton("Fetch Fields from Note Type", variant="secondary")
         self.fetch_fields_button.setToolTip(
             "Query AnkiConnect for the note type's field names and auto-map them"
         )
@@ -285,7 +280,7 @@ class AnkiSettingsPanel(FormPanel):
         setattr(self, input_widget_name, input_widget)
 
         # Sync button
-        sync_button = ModernButton("", icon="refresh", variant="ghost")
+        sync_button = ModernButton("", variant="ghost")
         sync_button.clicked.connect(button_callback)
         sync_button.setToolTip(button_tooltip)
         sync_button.setMaximumWidth(40)
@@ -372,16 +367,13 @@ class AnkiSettingsPanel(FormPanel):
             message: Status message
         """
         if exists is None:
-            icon = IconProvider.get_icon("progress")
-            self.deck_status.setText(f"{icon} {message or 'Checking...'}")
+            self.deck_status.setText(message or "Checking...")
             self.deck_status.setProperty("status", "checking")
         elif exists:
-            icon = IconProvider.get_icon("success")
-            self.deck_status.setText(f"{icon} {message or 'Deck exists'}")
+            self.deck_status.setText(message or "Deck exists")
             self.deck_status.setProperty("status", "success")
         else:
-            icon = IconProvider.get_icon("error")
-            self.deck_status.setText(f"{icon} {message or 'Deck not found'}")
+            self.deck_status.setText(message or "Deck not found")
             self.deck_status.setProperty("status", "error")
 
         if style := self.deck_status.style():
@@ -396,16 +388,13 @@ class AnkiSettingsPanel(FormPanel):
             message: Status message
         """
         if exists is None:
-            icon = IconProvider.get_icon("progress")
-            self.notetype_status.setText(f"{icon} {message or 'Checking...'}")
+            self.notetype_status.setText(message or "Checking...")
             self.notetype_status.setProperty("status", "checking")
         elif exists:
-            icon = IconProvider.get_icon("success")
-            self.notetype_status.setText(f"{icon} {message or 'Note type exists'}")
+            self.notetype_status.setText(message or "Note type exists")
             self.notetype_status.setProperty("status", "success")
         else:
-            icon = IconProvider.get_icon("error")
-            self.notetype_status.setText(f"{icon} {message or 'Note type not found'}")
+            self.notetype_status.setText(message or "Note type not found")
             self.notetype_status.setProperty("status", "error")
 
         if style := self.notetype_status.style():

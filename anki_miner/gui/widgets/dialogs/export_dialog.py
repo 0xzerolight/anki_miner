@@ -150,7 +150,7 @@ class ExportDialog(QDialog):
         self._path_input.setReadOnly(True)
         path_layout.addWidget(self._path_input)
 
-        browse_btn = ModernButton("Browse...", icon="save", variant="secondary")
+        browse_btn = ModernButton("Browse...", variant="secondary")
         browse_btn.clicked.connect(self._on_browse)
         path_layout.addWidget(browse_btn)
 
@@ -166,7 +166,7 @@ class ExportDialog(QDialog):
         cancel_btn.clicked.connect(self.reject)
         footer.addWidget(cancel_btn)
 
-        self._export_btn = ModernButton("Export", icon="save", variant="primary")
+        self._export_btn = ModernButton("Export", variant="primary")
         self._export_btn.clicked.connect(self._on_export)
         self._export_btn.setEnabled(False)
         footer.addWidget(self._export_btn)
