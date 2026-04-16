@@ -3,6 +3,7 @@
 import base64
 import html
 import logging
+import re
 from pathlib import Path
 
 import requests
@@ -13,6 +14,9 @@ from anki_miner.interfaces import ProgressCallback
 from anki_miner.models import MediaData, TokenizedWord
 
 logger = logging.getLogger(__name__)
+
+# Matches any hiragana, katakana, or CJK ideograph (kanji)
+_JAPANESE_RE = re.compile(r"[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]")
 
 
 class AnkiService:
@@ -80,7 +84,11 @@ class AnkiService:
             return []
 
     def get_existing_vocabulary(self) -> set[str]:
-        """Get all vocabulary words already in Anki across ALL decks.
+        """Get all Japanese vocabulary words already in Anki across ALL decks.
+
+        Queries the entire collection and extracts the first field from each note,
+        which by Anki convention is always the expression/word being studied.
+        Only words containing Japanese characters are included.
 
         Returns:
             Set of words (lemmas) already in the collection
@@ -89,13 +97,13 @@ class AnkiService:
             AnkiConnectionError: If cannot connect to AnkiConnect
         """
         try:
-            # Find all notes with the word field
+            # Find ALL notes in the collection
             response = requests.post(
                 self.config.ankiconnect_url,
                 json={
                     "action": "findNotes",
                     "version": 6,
-                    "params": {"query": f"{self.config.anki_word_field}:*"},
+                    "params": {"query": "deck:*"},
                 },
                 timeout=30,
             )
@@ -109,44 +117,50 @@ class AnkiService:
             note_ids = result.get("result", [])
 
             if not note_ids:
+                logger.warning(
+                    "No notes found in Anki collection. "
+                    "If you have cards in Anki, check that AnkiConnect can access them.",
+                )
                 return set()
 
-            # Get note info for all notes
-            response = requests.post(
-                self.config.ankiconnect_url,
-                json={
-                    "action": "notesInfo",
-                    "version": 6,
-                    "params": {"notes": note_ids},
-                },
-                timeout=60,
-            )
+            # Get note info in batches to avoid timeouts on large collections
+            existing_words: set[str] = set()
+            batch_size = 1000
 
-            result = response.json()
-            if result.get("error"):
-                raise AnkiConnectionError(
-                    f"AnkiConnect error while getting notes info: {result['error']}"
+            for i in range(0, len(note_ids), batch_size):
+                batch = note_ids[i : i + batch_size]
+                response = requests.post(
+                    self.config.ankiconnect_url,
+                    json={
+                        "action": "notesInfo",
+                        "version": 6,
+                        "params": {"notes": batch},
+                    },
+                    timeout=30,
                 )
 
-            notes = result.get("result", [])
+                result = response.json()
+                if result.get("error"):
+                    raise AnkiConnectionError(
+                        f"AnkiConnect error while getting notes info: {result['error']}"
+                    )
 
-            # Extract words from the word field
-            existing_words = set()
-            word_field = self.config.anki_word_field
-
-            for note in notes:
-                fields = note.get("fields", {})
-                if word_field in fields:
-                    word = fields[word_field].get("value", "").strip()
-                    if word:
+                for note in result.get("result", []):
+                    fields = note.get("fields", {})
+                    if not fields:
+                        continue
+                    # First field is always the expression/word in Anki convention
+                    first_field = next(iter(fields))
+                    word = fields[first_field].get("value", "").strip()
+                    if word and _JAPANESE_RE.search(word):
                         existing_words.add(word)
 
             return existing_words
 
         except requests.exceptions.ConnectionError as e:
             raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
-        except (requests.RequestException, ValueError):
-            # Return empty set on error (non-fatal)
+        except (requests.RequestException, ValueError) as e:
+            logger.warning("Failed to fetch existing vocabulary (filtering disabled): %s", e)
             return set()
 
     def store_media_file(self, filename: str, filepath: Path) -> bool:

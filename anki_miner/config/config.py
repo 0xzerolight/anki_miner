@@ -136,3 +136,8 @@ class AnkiMinerConfig:
             object.__setattr__(self, "stats_db_path", Path(self.stats_db_path))
         if isinstance(self.history_db_path, str):
             object.__setattr__(self, "history_db_path", Path(self.history_db_path))
+
+        # Keep anki_word_field in sync with anki_fields["word"]
+        word_field_from_mapping = self.anki_fields.get("word", "")
+        if word_field_from_mapping and word_field_from_mapping != self.anki_word_field:
+            object.__setattr__(self, "anki_word_field", word_field_from_mapping)
