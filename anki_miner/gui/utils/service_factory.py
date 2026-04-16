@@ -1,6 +1,7 @@
 """Factory for creating service instances used in episode processing."""
 
 import logging
+from dataclasses import dataclass, field
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.presenter import PresenterProtocol
@@ -20,6 +21,14 @@ from anki_miner.services.word_list_service import WordListService
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class ServiceLoadResult:
+    """Result of loading optional services, including any warnings."""
+
+    warnings: list[str] = field(default_factory=list)
+    info: list[str] = field(default_factory=list)
+
+
 def create_services(config: AnkiMinerConfig) -> tuple:
     """Create all services needed for episode processing.
 
@@ -29,8 +38,11 @@ def create_services(config: AnkiMinerConfig) -> tuple:
     Returns:
         Tuple of (subtitle_parser, word_filter, media_extractor,
                   definition_service, anki_service,
-                  pitch_accent_service, frequency_service)
+                  pitch_accent_service, frequency_service,
+                  known_word_db, word_list_service, load_result)
     """
+    load_result = ServiceLoadResult()
+
     subtitle_parser = SubtitleParserService(config)
     word_filter = WordFilterService(config)
     media_extractor = MediaExtractorService(config)
@@ -43,8 +55,18 @@ def create_services(config: AnkiMinerConfig) -> tuple:
         try:
             pitch_accent_service = PitchAccentService(config.pitch_accent_path)
             pitch_accent_service.load()
+            count = pitch_accent_service.entry_count
+            if count > 0:
+                load_result.info.append(f"Pitch accent data loaded: {count:,} entries")
+            else:
+                load_result.warnings.append(
+                    "Pitch accent file loaded but contained 0 valid entries. "
+                    "Expected CSV/TSV format: reading, kanji, pattern (3 columns)."
+                )
+                pitch_accent_service = None
         except Exception as e:
             logger.warning(f"Could not load pitch accent data: {e}")
+            load_result.warnings.append(f"Could not load pitch accent data: {e}")
             pitch_accent_service = None
 
     frequency_service = None
@@ -52,8 +74,18 @@ def create_services(config: AnkiMinerConfig) -> tuple:
         try:
             frequency_service = FrequencyService(config.frequency_list_path)
             frequency_service.load()
+            count = frequency_service.entry_count
+            if count > 0:
+                load_result.info.append(f"Frequency data loaded: {count:,} entries")
+            else:
+                load_result.warnings.append(
+                    "Frequency file loaded but contained 0 valid entries. "
+                    "Expected CSV/TSV format: rank, word OR word, rank (2 columns)."
+                )
+                frequency_service = None
         except Exception as e:
             logger.warning(f"Could not load frequency data: {e}")
+            load_result.warnings.append(f"Could not load frequency data: {e}")
             frequency_service = None
 
     known_word_db = None
@@ -63,6 +95,7 @@ def create_services(config: AnkiMinerConfig) -> tuple:
             known_word_db.initialize()
         except Exception as e:
             logger.warning(f"Could not initialize known word database: {e}")
+            load_result.warnings.append(f"Could not initialize known word database: {e}")
             known_word_db = None
 
     word_list_service = None
@@ -75,6 +108,7 @@ def create_services(config: AnkiMinerConfig) -> tuple:
             word_list_service.load()
         except Exception as e:
             logger.warning(f"Could not load word lists: {e}")
+            load_result.warnings.append(f"Could not load word lists: {e}")
             word_list_service = None
 
     return (
@@ -87,6 +121,7 @@ def create_services(config: AnkiMinerConfig) -> tuple:
         frequency_service,
         known_word_db,
         word_list_service,
+        load_result,
     )
 
 
@@ -115,7 +150,14 @@ def create_episode_processor(
         frequency_service,
         known_word_db,
         word_list_service,
+        load_result,
     ) = create_services(config)
+
+    # Surface service load feedback to the user
+    for msg in load_result.info:
+        presenter.show_info(msg)
+    for msg in load_result.warnings:
+        presenter.show_warning(msg)
 
     return EpisodeProcessor(
         config=config,

@@ -8,26 +8,57 @@ from anki_miner.exceptions import SetupError
 
 logger = logging.getLogger(__name__)
 
+# Common header keywords that indicate a header row (case-insensitive)
+_HEADER_KEYWORDS = {"word", "rank", "frequency", "freq", "lemma", "reading", "kana", "kanji"}
+
+
+def _detect_delimiter(sample: str) -> str:
+    """Detect whether a file uses tab or comma as delimiter.
+
+    Args:
+        sample: First few lines of the file.
+
+    Returns:
+        Detected delimiter character.
+    """
+    tab_count = sample.count("\t")
+    comma_count = sample.count(",")
+    return "\t" if tab_count > comma_count else ","
+
+
+def _is_header_row(row: list[str]) -> bool:
+    """Check if a row looks like a header based on common keywords."""
+    return any(cell.strip().lower() in _HEADER_KEYWORDS for cell in row)
+
 
 class FrequencyService:
-    """Load and look up word frequency rankings from CSV.
+    """Load and look up word frequency rankings from CSV/TSV.
 
-    Supports two CSV formats (auto-detected):
+    Supports two column formats (auto-detected):
     - rank, word (first column is numeric)
     - word, rank (first column is non-numeric)
+
+    Supports both comma-separated and tab-separated files.
+    Header rows are automatically skipped.
     """
 
     def __init__(self, frequency_list_path: Path):
-        """Initialize with path to frequency list CSV.
+        """Initialize with path to frequency list file.
 
         Args:
             frequency_list_path: Path to the frequency list file.
         """
         self._path = frequency_list_path
         self._data: dict[str, int] | None = None
+        self._entry_count: int = 0
+
+    @property
+    def entry_count(self) -> int:
+        """Number of entries loaded."""
+        return self._entry_count
 
     def load(self) -> bool:
-        """Load frequency data from CSV.
+        """Load frequency data from file.
 
         Returns:
             True if loaded successfully.
@@ -44,10 +75,19 @@ class FrequencyService:
         data: dict[str, int] = {}
         try:
             with open(self._path, encoding="utf-8") as f:
-                reader = csv.reader(f)
+                sample = f.read(4096)
+                f.seek(0)
+                delimiter = _detect_delimiter(sample)
+
+                reader = csv.reader(f, delimiter=delimiter)
+                first_row = True
                 for row in reader:
                     if len(row) < 2:
                         continue
+                    if first_row:
+                        first_row = False
+                        if _is_header_row(row):
+                            continue
                     # Auto-detect format
                     try:
                         # Format: rank, word
@@ -65,7 +105,8 @@ class FrequencyService:
                         data[word] = rank
 
             self._data = data
-            logger.info(f"Loaded {len(data)} frequency entries")
+            self._entry_count = len(data)
+            logger.info(f"Loaded {len(data)} frequency entries from {self._path.name}")
             return True
 
         except Exception as e:
