@@ -21,7 +21,6 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
@@ -60,9 +59,7 @@ class QueuePanel(QFrame):
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
         # Section header with Add button
-        header = SectionHeader(
-            title="Multi-Anime Queue", icon="library", action_text="Add Series", action_icon="add"
-        )
+        header = SectionHeader(title="Multi-Anime Queue", action_text="Add Series")
         header.action_clicked.connect(self._add_series)
         layout.addWidget(header)
 
@@ -96,12 +93,12 @@ class QueuePanel(QFrame):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
 
-        self.process_queue_button = ModernButton("Process Queue", icon="play", variant="primary")
+        self.process_queue_button = ModernButton("Process Queue", variant="primary")
         self.process_queue_button.clicked.connect(self.process_requested.emit)
         self.process_queue_button.setToolTip("Process all anime series in queue")
         button_layout.addWidget(self.process_queue_button)
 
-        clear_button = ModernButton("Clear All", icon="delete", variant="ghost")
+        clear_button = ModernButton("Clear All", variant="ghost")
         clear_button.clicked.connect(self._clear_queue)
         clear_button.setToolTip("Remove all items from queue")
         button_layout.addWidget(clear_button)
@@ -250,7 +247,6 @@ class QueuePanel(QFrame):
 
     def _update_stats(self) -> None:
         """Update the queue statistics display."""
-        icon = IconProvider.get_icon("info")
         series_count = len(self.queue_item_widgets)
 
         # Count total episodes and cards
@@ -261,11 +257,13 @@ class QueuePanel(QFrame):
             total_cards += widget.get_cards_created()
 
         if series_count == 0:
-            text = f"{icon} Queue is empty"
+            text = "Queue is empty"
         elif total_cards > 0:
-            text = f"{icon} {series_count} series - {total_episodes} episodes - {total_cards} cards created"
+            text = (
+                f"{series_count} series - {total_episodes} episodes - {total_cards} cards created"
+            )
         else:
-            text = f"{icon} {series_count} series - {total_episodes} episodes - Ready to process"
+            text = f"{series_count} series - {total_episodes} episodes - Ready to process"
 
         self.queue_stats_label.setText(text)
 

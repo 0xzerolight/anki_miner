@@ -7,7 +7,6 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.resources.styles.theme import Theme
 
@@ -72,12 +71,9 @@ class HeaderWidget(QWidget):
 
         # Theme combo box
         self.theme_combo = QComboBox()
-        sun = IconProvider.get_icon("sun")
-        moon = IconProvider.get_icon("moon")
-        sakura = IconProvider.get_icon("sakura")
-        self.theme_combo.addItem(f"{sun} Light" if sun else "Light", "light")
-        self.theme_combo.addItem(f"{moon} Dark" if moon else "Dark", "dark")
-        self.theme_combo.addItem(f"{sakura} Sakura" if sakura else "Sakura", "sakura")
+        self.theme_combo.addItem("Light", "light")
+        self.theme_combo.addItem("Dark", "dark")
+        self.theme_combo.addItem("Sakura", "sakura")
 
         # Set current theme
         current_theme = Theme.get_current_mode()

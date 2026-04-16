@@ -16,7 +16,6 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.dialogs.export_dialog import ExportDialog
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
@@ -65,7 +64,7 @@ class WordPreviewDialog(QDialog):
 
         # Header with title
         header = SectionHeader(
-            f"{IconProvider.get_icon('word')} Word Preview — {len(self.all_words)} words found",
+            f"Word Preview — {len(self.all_words)} words found",
         )
         main_layout.addWidget(header)
 
@@ -77,7 +76,7 @@ class WordPreviewDialog(QDialog):
         controls_layout.setSpacing(SPACING.sm)
 
         # Search bar
-        search_label = QLabel(f"{IconProvider.get_icon('search')} Search:")
+        search_label = QLabel("Search:")
         search_label.setFont(self._create_font(12, QFont.Weight.Medium))
         controls_layout.addWidget(search_label)
 
@@ -90,7 +89,7 @@ class WordPreviewDialog(QDialog):
         controls_layout.addSpacing(16)
 
         # Group by dropdown
-        group_label = QLabel(f"{IconProvider.get_icon('filter')} Group by:")
+        group_label = QLabel("Group by:")
         group_label.setFont(self._create_font(12, QFont.Weight.Medium))
         controls_layout.addWidget(group_label)
 
@@ -103,7 +102,7 @@ class WordPreviewDialog(QDialog):
         controls_layout.addStretch()
 
         # Export button
-        export_button = ModernButton("Export...", icon="save", variant="secondary")
+        export_button = ModernButton("Export...", variant="secondary")
         export_button.clicked.connect(self._on_export)
         controls_layout.addWidget(export_button)
 
@@ -140,7 +139,7 @@ class WordPreviewDialog(QDialog):
         main_layout.addWidget(self.stats_frame)
 
         # Table section
-        table_label = QLabel(f"{IconProvider.get_icon('list')} Discovered Words")
+        table_label = QLabel("Discovered Words")
         table_label.setObjectName("heading3")
         table_label.setFont(self._create_font(16, QFont.Weight.Bold))
         main_layout.addWidget(table_label)
@@ -181,7 +180,7 @@ class WordPreviewDialog(QDialog):
 
         footer_layout.addStretch()
 
-        close_button = ModernButton("Close", icon="close", variant="primary")
+        close_button = ModernButton("Close", variant="primary")
         close_button.clicked.connect(self.accept)
         close_button.setMinimumWidth(120)
         footer_layout.addWidget(close_button)
@@ -233,8 +232,7 @@ class WordPreviewDialog(QDialog):
 
         # Update result count
         self.result_count_label.setText(
-            f"{IconProvider.get_icon('info')} Showing {len(self.filtered_words)} of "
-            f"{len(self.all_words)} words"
+            f"Showing {len(self.filtered_words)} of {len(self.all_words)} words"
         )
 
     def _add_words_to_table(
@@ -367,32 +365,30 @@ class WordPreviewDialog(QDialog):
     def _update_statistics(self) -> None:
         """Update the statistics panel."""
         if not self.filtered_words:
-            self.total_words_label.setText(f"{IconProvider.get_icon('word')} 0 words")
-            self.unique_lemmas_label.setText(f"{IconProvider.get_icon('card')} 0 unique")
-            self.avg_length_label.setText(f"{IconProvider.get_icon('info')} Avg: 0 chars")
-            self.time_span_label.setText(f"{IconProvider.get_icon('time')} Span: 00:00")
+            self.total_words_label.setText("0 words")
+            self.unique_lemmas_label.setText("0 unique")
+            self.avg_length_label.setText("Avg: 0 chars")
+            self.time_span_label.setText("Span: 00:00")
             return
 
         # Total words
         total = len(self.filtered_words)
-        self.total_words_label.setText(f"{IconProvider.get_icon('word')} {total} words")
+        self.total_words_label.setText(f"{total} words")
 
         # Unique lemmas
         unique_lemmas = len({w.lemma for w in self.filtered_words})
-        self.unique_lemmas_label.setText(f"{IconProvider.get_icon('card')} {unique_lemmas} unique")
+        self.unique_lemmas_label.setText(f"{unique_lemmas} unique")
 
         # Average word length
         avg_length = sum(len(w.lemma) for w in self.filtered_words) / len(self.filtered_words)
-        self.avg_length_label.setText(
-            f"{IconProvider.get_icon('info')} Avg: {avg_length:.1f} chars"
-        )
+        self.avg_length_label.setText(f"Avg: {avg_length:.1f} chars")
 
         # Time span
         min_time = min(w.start_time for w in self.filtered_words)
         max_time = max(w.end_time for w in self.filtered_words)
         span = max_time - min_time
         span_str = self._format_time(span)
-        self.time_span_label.setText(f"{IconProvider.get_icon('time')} Span: {span_str}")
+        self.time_span_label.setText(f"Span: {span_str}")
 
     def _on_search_changed(self, text: str) -> None:
         """Handle search text change.

@@ -131,7 +131,7 @@ class BatchProcessingTab(QWidget):
         layout.addWidget(self.current_progress_widget)
 
         # Retry Failed button (hidden by default)
-        self.retry_button = ModernButton("Retry Failed", icon="play", variant="secondary")
+        self.retry_button = ModernButton("Retry Failed", variant="secondary")
         self.retry_button.setVisible(False)
         self.retry_button.clicked.connect(self._retry_failed_items)
         layout.addWidget(self.retry_button)
@@ -197,9 +197,7 @@ class BatchProcessingTab(QWidget):
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
         # Section header
-        header = SectionHeader(
-            title="Quick Processing", icon="video", action_text="", action_icon=""
-        )
+        header = SectionHeader(title="Quick Processing")
         layout.addWidget(header)
 
         # Anime folder selector
@@ -218,19 +216,17 @@ class BatchProcessingTab(QWidget):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
 
-        self.preview_pairs_button = ModernButton("Preview", icon="preview", variant="secondary")
+        self.preview_pairs_button = ModernButton("Preview", variant="secondary")
         self.preview_pairs_button.clicked.connect(self._preview_pairs)
         self.preview_pairs_button.setToolTip("Preview video/subtitle pairs before processing")
         button_layout.addWidget(self.preview_pairs_button)
 
-        self.process_pairs_button = ModernButton(
-            "Process All Pairs", icon="play", variant="primary"
-        )
+        self.process_pairs_button = ModernButton("Process All Pairs", variant="primary")
         self.process_pairs_button.clicked.connect(self._process_pairs)
         self.process_pairs_button.setToolTip("Process all discovered episode pairs")
         button_layout.addWidget(self.process_pairs_button)
 
-        self.cancel_button = ModernButton("Cancel", icon="stop", variant="danger")
+        self.cancel_button = ModernButton("Cancel", variant="danger")
         self.cancel_button.setToolTip("Cancel processing")
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.cancel_button.hide()

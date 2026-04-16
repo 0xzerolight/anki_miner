@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import make_label_fit_text
 
@@ -100,7 +99,7 @@ class FileSelector(QWidget):
         main_layout.addWidget(self.input)
 
         # Browse button
-        self.browse_button = QPushButton(f"{IconProvider.get_icon('browse')} Browse...")
+        self.browse_button = QPushButton("Browse...")
         self.browse_button.clicked.connect(self._on_browse_clicked)
         main_layout.addWidget(self.browse_button)
 
@@ -215,27 +214,23 @@ class FileSelector(QWidget):
         if not path_str:
             # No file/folder selected
             if self._file_mode:
-                icon = IconProvider.get_icon("video_file")
-                self.status_label.setText(f"{icon} No file selected")
+                self.status_label.setText("No file selected")
             else:
-                icon = IconProvider.get_icon("folder")
-                self.status_label.setText(f"{icon} No folder selected")
+                self.status_label.setText("No folder selected")
             return
 
         path = Path(path_str)
 
         if self._is_valid:
-            # Show file/folder name with success icon
-            icon = IconProvider.get_icon("success")
+            # Show file/folder name
             name = path.name
-            self.status_label.setText(f"{icon} {name}")
+            self.status_label.setText(name)
         else:
             # Show error message
-            icon = IconProvider.get_icon("error")
             if self._file_mode:
-                self.status_label.setText(f"{icon} File not found")
+                self.status_label.setText("File not found")
             else:
-                self.status_label.setText(f"{icon} Folder not found")
+                self.status_label.setText("Folder not found")
 
     def get_path(self) -> str:
         """Get the current path.

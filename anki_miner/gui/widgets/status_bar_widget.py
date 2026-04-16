@@ -4,7 +4,6 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCursor, QFont
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QStatusBar, QWidget
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import StatusBadge
 
@@ -44,7 +43,7 @@ class StatusBarWidget(QStatusBar):
         self.setContentsMargins(SPACING.sm, 6, SPACING.sm, 6)
 
         # Left section: Current operation
-        self.operation_label = QLabel(f"{IconProvider.get_icon('info')} Ready")
+        self.operation_label = QLabel("Ready")
         self.operation_label.setObjectName("status-operation")
         operation_font = QFont()
         operation_font.setWeight(QFont.Weight.Medium)
@@ -59,7 +58,7 @@ class StatusBarWidget(QStatusBar):
         self.addWidget(separator1)
 
         # Center section: Statistics
-        self.stats_label = QLabel(f"{IconProvider.get_icon('card')} 0 cards this session")
+        self.stats_label = QLabel("0 cards this session")
         self.stats_label.setObjectName("status-stats")
         stats_font = QFont()
         stats_font.setPixelSize(FONT_SIZES.caption)
@@ -105,10 +104,7 @@ class StatusBarWidget(QStatusBar):
             message: Operation message
             level: Message level ('info', 'success', 'warning', 'error')
         """
-        icon_map = {"info": "info", "success": "success", "warning": "warning", "error": "error"}
-
-        icon = IconProvider.get_icon(icon_map.get(level, "info"))
-        self.operation_label.setText(f"{icon} {message}")
+        self.operation_label.setText(message)
 
         # Set appropriate property for styling and refresh
         self.operation_label.setProperty("level", level)
@@ -143,12 +139,10 @@ class StatusBarWidget(QStatusBar):
 
     def _update_stats(self) -> None:
         """Update the statistics display."""
-        card_icon = IconProvider.get_icon("card")
-
         if self._cards_created_session == 1:
-            text = f"{card_icon} 1 card this session"
+            text = "1 card this session"
         else:
-            text = f"{card_icon} {self._cards_created_session} cards this session"
+            text = f"{self._cards_created_session} cards this session"
 
         self.stats_label.setText(text)
 

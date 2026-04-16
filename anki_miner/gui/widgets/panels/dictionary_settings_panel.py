@@ -5,7 +5,6 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import QCheckBox
 
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
 
@@ -24,7 +23,7 @@ class DictionarySettingsPanel(FormPanel):
 
     def __init__(self, parent=None):
         """Initialize the dictionary settings panel."""
-        super().__init__("Dictionary Settings", icon="word", parent=parent)
+        super().__init__("Dictionary Settings", parent=parent)
         self._setup_fields()
         self._connect_validation()
 
@@ -90,16 +89,13 @@ class DictionarySettingsPanel(FormPanel):
             service = PitchAccentService(Path(path_str))
             service.load()
             count = service.entry_count
-            icon = IconProvider.get_icon("success")
             if count > 0:
                 self.pitch_accent_selector.status_label.setText(
-                    f"{icon} {Path(path_str).name} ({count:,} entries)"
+                    f"{Path(path_str).name} ({count:,} entries)"
                 )
             else:
-                icon = IconProvider.get_icon("warning")
                 self.pitch_accent_selector.status_label.setText(
-                    f"{icon} {Path(path_str).name} (0 entries - check file format)"
+                    f"{Path(path_str).name} (0 entries - check file format)"
                 )
         except Exception as e:
-            icon = IconProvider.get_icon("error")
-            self.pitch_accent_selector.status_label.setText(f"{icon} Could not parse file: {e}")
+            self.pitch_accent_selector.status_label.setText(f"Could not parse file: {e}")

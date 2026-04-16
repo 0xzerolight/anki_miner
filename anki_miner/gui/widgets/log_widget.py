@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.constants import LOG_MAX_LINES, LOG_ROTATION_THRESHOLD, MIN_HEIGHT_LOG_WIDGET
-from anki_miner.gui.resources.icons.icon_provider import IconProvider
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 
 
@@ -69,14 +68,14 @@ class LogWidget(QWidget):
         header_layout.addStretch()
 
         # Copy button
-        self.copy_button = QPushButton(f"{IconProvider.get_icon('export')} Copy")
+        self.copy_button = QPushButton("Copy")
         self.copy_button.setObjectName("ghost")
         self.copy_button.clicked.connect(self._on_copy_clicked)
         self.copy_button.setToolTip("Copy all log content to clipboard")
         header_layout.addWidget(self.copy_button)
 
         # Clear button
-        self.clear_button = QPushButton(f"{IconProvider.get_icon('delete')} Clear")
+        self.clear_button = QPushButton("Clear")
         self.clear_button.setObjectName("ghost")
         self.clear_button.clicked.connect(self._on_clear_clicked)
         self.clear_button.setToolTip("Clear all log messages")
@@ -113,9 +112,7 @@ class LogWidget(QWidget):
         Args:
             message: Message to append
         """
-        icon = IconProvider.get_icon("info")
-        formatted_message = f"{icon} {message}"
-        self._append_message(formatted_message, "info")
+        self._append_message(message, "info")
 
     def append_success(self, message: str) -> None:
         """Append a success message in green.
@@ -123,9 +120,7 @@ class LogWidget(QWidget):
         Args:
             message: Message to append
         """
-        icon = IconProvider.get_icon("success")
-        formatted_message = f"{icon} {message}"
-        self._append_message(formatted_message, "success")
+        self._append_message(message, "success")
 
     def append_warning(self, message: str) -> None:
         """Append a warning message in orange.
@@ -133,9 +128,7 @@ class LogWidget(QWidget):
         Args:
             message: Message to append
         """
-        icon = IconProvider.get_icon("warning")
-        formatted_message = f"{icon} {message}"
-        self._append_message(formatted_message, "warning")
+        self._append_message(message, "warning")
 
     def append_error(self, message: str) -> None:
         """Append an error message in red.
@@ -143,9 +136,7 @@ class LogWidget(QWidget):
         Args:
             message: Message to append
         """
-        icon = IconProvider.get_icon("error")
-        formatted_message = f"{icon} {message}"
-        self._append_message(formatted_message, "error")
+        self._append_message(message, "error")
 
     def _append_message(self, text: str, level: str) -> None:
         """Append a message with timestamp and color.
@@ -225,14 +216,12 @@ class LogWidget(QWidget):
         clipboard.setText(self.text_edit.toPlainText())
 
         # Provide feedback (could show a temporary "Copied!" message)
-        self.copy_button.setText(f"{IconProvider.get_icon('success')} Copied!")
+        self.copy_button.setText("Copied!")
 
         # Reset button text after a delay
         from PyQt6.QtCore import QTimer
 
-        QTimer.singleShot(
-            2000, lambda: self.copy_button.setText(f"{IconProvider.get_icon('export')} Copy")
-        )
+        QTimer.singleShot(2000, lambda: self.copy_button.setText("Copy"))
 
     def _on_clear_clicked(self) -> None:
         """Handle clear button click."""
