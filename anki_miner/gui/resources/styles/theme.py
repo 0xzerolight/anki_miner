@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Literal
 
 from PyQt6.QtCore import QSettings
+from PyQt6.QtGui import QColor, QPalette
+from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.resources import get_resource_dir
 
@@ -205,6 +207,34 @@ class Theme:
 
         # Combine stylesheets
         return common_qss + "\n\n" + theme_qss
+
+    @classmethod
+    def apply_to_app(cls, app: QApplication, mode: ThemeMode | None = None) -> None:
+        """Apply theme stylesheet and palette to the application.
+
+        Sets both QSS stylesheet and QPalette to ensure the theme background
+        overrides the system theme (e.g. KDE dark) on all unstyled containers.
+
+        Args:
+            app: QApplication instance
+            mode: Theme mode, or None to use current mode
+        """
+        if mode is None:
+            mode = cls.get_current_mode()
+
+        # Clear stylesheet first to force Qt to reset all widget styles,
+        # preventing stale colors from the previous theme bleeding through.
+        app.setStyleSheet("")
+
+        # Build fresh palette with theme background to override KDE/system palette.
+        colors = cls.get_colors(mode)
+        palette = QPalette()
+        palette.setColor(QPalette.ColorRole.Window, QColor(colors["background"]))
+        palette.setColor(QPalette.ColorRole.WindowText, QColor(colors["text_primary"]))
+        app.setPalette(palette)
+
+        # Apply stylesheet after palette so QSS takes precedence for styled widgets.
+        app.setStyleSheet(cls.get_stylesheet(mode))
 
     @classmethod
     def _load_qss_file(cls, file_path: Path) -> str:
