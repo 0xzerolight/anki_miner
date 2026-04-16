@@ -71,19 +71,21 @@ class HeaderWidget(QWidget):
 
         # Theme combo box
         self.theme_combo = QComboBox()
-        self.theme_combo.addItem("Light", "light")
-        self.theme_combo.addItem("Dark", "dark")
-        self.theme_combo.addItem("Sakura", "sakura")
+
+        # Populate from discovered themes
+        available = Theme.get_available_themes()
+        for key, display_name in available.items():
+            self.theme_combo.addItem(display_name, key)
 
         # Set current theme
         current_theme = Theme.get_current_mode()
-        theme_index = {"light": 0, "dark": 1, "sakura": 2}.get(current_theme, 0)
+        keys = list(available.keys())
+        theme_index = keys.index(current_theme) if current_theme in keys else 0
         self.theme_combo.setCurrentIndex(theme_index)
 
         self.theme_combo.currentIndexChanged.connect(self._on_theme_changed)
-        self.theme_combo.setToolTip(
-            "Select application theme: Light, Dark, or Sakura (Ctrl+T to cycle)"
-        )
+        theme_names = ", ".join(Theme.get_available_themes().values())
+        self.theme_combo.setToolTip(f"Select application theme: {theme_names} (Ctrl+T to cycle)")
         theme_layout.addWidget(self.theme_combo)
 
         layout.addLayout(theme_layout)
@@ -115,9 +117,11 @@ class HeaderWidget(QWidget):
     def update_theme_selector(self) -> None:
         """Update theme selector to match current theme."""
         current_theme = Theme.get_current_mode()
-        theme_index = {"light": 0, "dark": 1, "sakura": 2}.get(current_theme, 0)
 
-        # Block signals to avoid triggering theme change
-        self.theme_combo.blockSignals(True)
-        self.theme_combo.setCurrentIndex(theme_index)
-        self.theme_combo.blockSignals(False)
+        # Find index by item data
+        for i in range(self.theme_combo.count()):
+            if self.theme_combo.itemData(i) == current_theme:
+                self.theme_combo.blockSignals(True)
+                self.theme_combo.setCurrentIndex(i)
+                self.theme_combo.blockSignals(False)
+                return

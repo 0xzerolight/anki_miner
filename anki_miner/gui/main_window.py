@@ -7,7 +7,6 @@ from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import (
     TAB_SETTINGS,
-    THEME_ORDER,
     WINDOW_DEFAULT_HEIGHT,
     WINDOW_DEFAULT_WIDTH,
     WINDOW_MIN_HEIGHT,
@@ -182,16 +181,16 @@ class MainWindow(QMainWindow):
             self.tabs.setCurrentIndex(index)
 
     def _cycle_theme(self) -> None:
-        """Cycle through available themes: Light → Dark → Sakura → Light."""
-        current_theme = self.header.theme_combo.currentData()
+        """Cycle through available themes."""
+        new_mode = Theme.cycle_theme()
 
-        try:
-            current_index = THEME_ORDER.index(current_theme)
-            next_index = (current_index + 1) % len(THEME_ORDER)
-        except ValueError:
-            next_index = 0  # Default to first theme if current not found
+        # Update combo box to reflect the new theme
+        self.header.update_theme_selector()
 
-        self.header.theme_combo.setCurrentIndex(next_index)
+        # Apply theme
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            Theme.apply_to_app(app, new_mode)
 
     def _open_settings(self) -> None:
         """Open the Settings tab."""
