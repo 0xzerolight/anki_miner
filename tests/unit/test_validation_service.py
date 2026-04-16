@@ -403,10 +403,18 @@ class TestValidationService:
                 "error": None,
             }
 
+            # Field names check
+            field_names_resp = MagicMock()
+            field_names_resp.json.return_value = {
+                "result": list({v for v in test_config.anki_fields.values() if v}),
+                "error": None,
+            }
+
             dispatch = {
                 "version": anki_version_resp,
                 "deckNames": deck_resp,
                 "modelNames": model_resp,
+                "modelFieldNames": field_names_resp,
             }
 
             def mock_post(url, **kwargs):
@@ -504,3 +512,82 @@ class TestValidationService:
             assert result.ffmpeg_ok is False
             assert result.ankiconnect_ok is True
             assert any(i.component == "ffmpeg" for i in result.issues)
+
+    class TestCheckFieldNamesExist:
+        """Tests for _check_field_names_exist method."""
+
+        def test_all_fields_exist(self, test_config):
+            service = ValidationService(test_config)
+
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "result": [
+                    "word",
+                    "sentence",
+                    "definition",
+                    "picture",
+                    "audio",
+                    "expression_furigana",
+                    "sentence_furigana",
+                    "PitchPosition",
+                    "PitchCategory",
+                    "Frequency",
+                ],
+                "error": None,
+            }
+
+            with patch(
+                "anki_miner.services.validation_service.requests.post", return_value=mock_response
+            ):
+                success, message = service._check_field_names_exist()
+
+            assert success is True
+            assert "All configured fields exist" in message
+
+        def test_missing_fields_returns_failure(self, test_config):
+            service = ValidationService(test_config)
+
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "result": ["word", "sentence"],
+                "error": None,
+            }
+
+            with patch(
+                "anki_miner.services.validation_service.requests.post", return_value=mock_response
+            ):
+                success, message = service._check_field_names_exist()
+
+            assert success is False
+            assert "not found on note type" in message
+
+        def test_error_response_returns_failure(self, test_config):
+            service = ValidationService(test_config)
+
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "result": None,
+                "error": "model not found",
+            }
+
+            with patch(
+                "anki_miner.services.validation_service.requests.post", return_value=mock_response
+            ):
+                success, message = service._check_field_names_exist()
+
+            assert success is False
+            assert "Error fetching fields" in message
+
+        def test_exception_returns_failure(self, test_config):
+            service = ValidationService(test_config)
+
+            import requests
+
+            with patch(
+                "anki_miner.services.validation_service.requests.post",
+                side_effect=requests.exceptions.ConnectionError(),
+            ):
+                success, message = service._check_field_names_exist()
+
+            assert success is False
+            assert "Error checking fields" in message

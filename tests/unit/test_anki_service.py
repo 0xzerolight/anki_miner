@@ -1,6 +1,7 @@
 """Tests for anki_service module."""
 
 import base64
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -162,41 +163,124 @@ class TestGetExistingVocabulary:
 
         assert result == {"飲む"}
 
-    def test_uses_configured_word_field_name(self, temp_dir):
-        """Should query and extract using the configured word field name."""
-        from anki_miner.config import AnkiMinerConfig
-
-        config = AnkiMinerConfig(
-            anki_word_field="Expression",
-            anki_fields={
-                "word": "Expression",
-                "sentence": "Sentence",
-                "definition": "Definition",
-                "picture": "Picture",
-                "audio": "Audio",
-                "expression_furigana": "ExpressionFurigana",
-                "sentence_furigana": "SentenceFurigana",
-            },
-            media_temp_folder=temp_dir / "temp",
-            jmdict_path=temp_dir / "dict",
-        )
-        service = AnkiService(config)
+    def test_queries_all_decks(self, test_config):
+        """Should query deck:* to find notes across all decks."""
+        service = AnkiService(test_config)
 
         find_resp = _mock_response(result=[1])
-        notes_resp = _mock_response(
-            result=[
-                {"fields": {"Expression": {"value": "見る"}}},
-            ]
-        )
+        notes_resp = _mock_response(result=[{"fields": {"Expression": {"value": "見る"}}}])
 
         with patch("requests.post", side_effect=[find_resp, notes_resp]) as mock_post:
             result = service.get_existing_vocabulary()
 
-        # Verify the findNotes query used the configured field name
         find_call_payload = mock_post.call_args_list[0][1]["json"]
-        assert find_call_payload["params"]["query"] == "Expression:*"
-
+        assert find_call_payload["params"]["query"] == "deck:*"
         assert result == {"見る"}
+
+    def test_extracts_first_field_from_any_note_type(self, test_config):
+        """Should extract the first field regardless of field name."""
+        service = AnkiService(test_config)
+
+        find_resp = _mock_response(result=[1, 2, 3])
+        notes_resp = _mock_response(
+            result=[
+                # Lapis note type
+                {"fields": {"Expression": {"value": "食べる"}, "Sentence": {"value": "..."}}},
+                # Core 2k note type
+                {"fields": {"Vocabulary-Kanji": {"value": "飲む"}, "Reading": {"value": "..."}}},
+                # Custom note type
+                {"fields": {"Front": {"value": "走る"}, "Back": {"value": "..."}}},
+            ]
+        )
+
+        with patch("requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"食べる", "飲む", "走る"}
+
+    def test_filters_non_japanese_words(self, test_config):
+        """Should exclude words that contain no Japanese characters."""
+        service = AnkiService(test_config)
+
+        find_resp = _mock_response(result=[1, 2, 3, 4])
+        notes_resp = _mock_response(
+            result=[
+                {"fields": {"Word": {"value": "食べる"}}},
+                {"fields": {"Front": {"value": "hello"}}},  # English
+                {"fields": {"Vocab": {"value": "카페"}}},  # Korean
+                {"fields": {"Expression": {"value": "日本語"}}},
+            ]
+        )
+
+        with patch("requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"食べる", "日本語"}
+
+    def test_logs_warning_when_no_notes_found(self, test_config, caplog):
+        """Should log a warning when findNotes returns empty result."""
+        service = AnkiService(test_config)
+
+        find_resp = _mock_response(result=[])
+
+        with (
+            patch("requests.post", return_value=find_resp),
+            caplog.at_level(logging.WARNING),
+        ):
+            result = service.get_existing_vocabulary()
+
+        assert result == set()
+        assert "No notes found in Anki collection" in caplog.text
+
+    def test_logs_warning_on_request_exception(self, test_config, caplog):
+        """Should log a warning when a RequestException is caught."""
+        service = AnkiService(test_config)
+
+        with (
+            patch("requests.post", side_effect=requests.exceptions.Timeout("timed out")),
+            caplog.at_level(logging.WARNING),
+        ):
+            result = service.get_existing_vocabulary()
+
+        assert result == set()
+        assert "Failed to fetch existing vocabulary" in caplog.text
+
+    def test_batches_large_note_collections(self, test_config):
+        """Should batch notesInfo requests for large collections."""
+        service = AnkiService(test_config)
+
+        # 2500 note IDs → 3 batches (1000 + 1000 + 500)
+        note_ids = list(range(1, 2501))
+        find_resp = _mock_response(result=note_ids)
+
+        batch1_resp = _mock_response(
+            result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(1000)]
+        )
+        batch2_resp = _mock_response(
+            result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(1000, 2000)]
+        )
+        batch3_resp = _mock_response(
+            result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(2000, 2500)]
+        )
+
+        with patch(
+            "requests.post", side_effect=[find_resp, batch1_resp, batch2_resp, batch3_resp]
+        ) as mock_post:
+            result = service.get_existing_vocabulary()
+
+        # 1 findNotes + 3 notesInfo batches = 4 calls
+        assert mock_post.call_count == 4
+        assert len(result) == 2500
+
+        # Verify batch sizes
+        for call_idx in [1, 2, 3]:
+            payload = mock_post.call_args_list[call_idx][1]["json"]
+            assert payload["action"] == "notesInfo"
+
+        # First batch: 1000 notes
+        assert len(mock_post.call_args_list[1][1]["json"]["params"]["notes"]) == 1000
+        # Last batch: 500 notes
+        assert len(mock_post.call_args_list[3][1]["json"]["params"]["notes"]) == 500
 
 
 # ---------------------------------------------------------------------------

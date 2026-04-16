@@ -189,6 +189,7 @@ class SettingsTab(QWidget):
             anki_note_type=self.anki_panel.note_type_input.text(),
             ankiconnect_url=self.anki_panel.ankiconnect_url_input.text(),
             anki_fields=self.anki_panel.get_card_fields(),
+            anki_word_field=self.anki_panel.get_card_fields().get("word", "Expression"),
             # Media settings
             audio_padding=self.media_panel.audio_padding_spinbox.value(),
             screenshot_offset=self.media_panel.screenshot_offset_spinbox.value(),
