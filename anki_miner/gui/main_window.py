@@ -512,7 +512,7 @@ class MainWindow(QMainWindow):
         # Apply new stylesheet and palette
         app = QApplication.instance()
         if isinstance(app, QApplication):
-            Theme.apply_to_app(app, theme_name)  # type: ignore[arg-type]
+            Theme.apply_to_app(app, theme_name)
 
         # Update header to reflect current theme
         self.header.update_theme_selector()
