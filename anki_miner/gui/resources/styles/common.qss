@@ -16,6 +16,7 @@ QWidget {
     font-weight: 400;
 }
 
+
 QMainWindow {
     font-size: ${font-size-body}px;
 }
