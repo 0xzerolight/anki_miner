@@ -8,8 +8,8 @@ Automated Japanese vocabulary mining from anime subtitles. Extracts unknown word
 
 ## Showcase
 
-### App Showcase
-![Anki Miner Showcase](gifs/anki_miner_showcase.gif)
+### App Showcase (latest v2.2.0 release)
+![Anki Miner Showcase](gifs/anki_miner_showcase.png)
 
 ### Cards Created with Anki Miner
 | | | |
