@@ -70,22 +70,22 @@ Leaf packages (`config`, `models`, `exceptions`, `utils`) have no internal depen
 
 Three protocols in `interfaces/` define the system's extension points:
 
-**PresenterProtocol** (`interfaces/presenter.py`) — Output abstraction with 7 methods:
-- `show_info`, `show_success`, `show_warning`, `show_error` — message display
-- `show_validation_result(ValidationResult)` — system check results
-- `show_processing_result(ProcessingResult)` — episode processing summary
-- `show_word_preview(list[TokenizedWord])` — discovered word listing
+**PresenterProtocol** (`interfaces/presenter.py`): output abstraction with 7 methods.
+- `show_info`, `show_success`, `show_warning`, `show_error`: message display.
+- `show_validation_result(ValidationResult)`: system check results.
+- `show_processing_result(ProcessingResult)`: episode processing summary.
+- `show_word_preview(list[TokenizedWord])`: discovered word listing.
 
 Implementations: `ConsolePresenter` (CLI), `GUIPresenter` (Qt signals), `NullPresenter` (tests).
 
-**ProgressCallback** (`interfaces/progress.py`) — Progress reporting with 4 methods:
+**ProgressCallback** (`interfaces/progress.py`): progress reporting with 4 methods.
 - `on_start(total, description)`, `on_progress(current, item_description)`
 - `on_complete()`, `on_error(item_description, error_message)`
 
-**DictionaryProvider** (`interfaces/dictionary_provider.py`) — Pluggable dictionary backend:
+**DictionaryProvider** (`interfaces/dictionary_provider.py`): pluggable dictionary backend.
 - `name` property, `is_available()`, `load()`, `lookup(word) -> str | None`
 
-All use `typing.Protocol` for structural subtyping — implementations satisfy the protocol via duck typing without explicit inheritance.
+All use `typing.Protocol` for structural subtyping. Implementations satisfy the protocol via duck typing, without explicit inheritance.
 
 ## Models
 
@@ -111,28 +111,28 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 
 **Core services (always created):**
 
-- **SubtitleParserService** — Parses ASS/SRT/SSA files via `pysubs2`, tokenizes Japanese text with `fugashi` (MeCab wrapper), generates furigana annotations, deduplicates by lemma+surface.
-- **WordFilterService** — Multi-layer filtering: `filter_unknown` (against known vocabulary), `filter_by_length`, `filter_by_frequency`, `filter_by_word_lists`, `deduplicate_by_sentence`, `filter_by_episode_count`.
-- **MediaExtractorService** — Extracts screenshots (`ffmpeg -frames:v 1`) and audio clips (`ffmpeg libmp3lame`) at subtitle timestamps. Parallel via `ThreadPoolExecutor` with `max_parallel_workers` threads. Auto-detects Japanese audio stream via `ffprobe` with thread-safe caching.
-- **DefinitionService** — Orchestrates the provider chain. Default mode: JMdict first, Jisho only if JMdict unavailable. Returns HTML-formatted definition strings.
-- **AnkiService** — AnkiConnect HTTP API wrapper (localhost:8765). Key operations: `get_existing_vocabulary`, `store_media_file`, `create_cards_batch` (batch size 50), `delete_notes`. Stores `last_created_note_ids` for undo support.
-- **ValidationService** — Checks AnkiConnect connectivity, ffmpeg presence, deck existence, note type existence. Returns `ValidationResult` (never raises).
+- **SubtitleParserService**: parses ASS/SRT/SSA files via `pysubs2`, tokenizes Japanese text with `fugashi` (MeCab wrapper), generates furigana annotations, deduplicates by lemma+surface.
+- **WordFilterService**: multi-layer filtering via `filter_unknown` (against known vocabulary), `filter_by_length`, `filter_by_frequency`, `filter_by_word_lists`, `deduplicate_by_sentence`, and `filter_by_episode_count`.
+- **MediaExtractorService**: extracts screenshots (`ffmpeg -frames:v 1`) and audio clips (`ffmpeg libmp3lame`) at subtitle timestamps. Runs in parallel via `ThreadPoolExecutor` with `max_parallel_workers` threads. Auto-detects the Japanese audio stream via `ffprobe` with thread-safe caching.
+- **DefinitionService**: orchestrates the provider chain. Default mode: JMdict first, Jisho only if JMdict is unavailable. Returns HTML-formatted definition strings.
+- **AnkiService**: AnkiConnect HTTP API wrapper (localhost:8765). Key operations: `get_existing_vocabulary`, `store_media_file`, `create_cards_batch` (batch size 50), `delete_notes`. Stores `last_created_note_ids` for undo support.
+- **ValidationService**: checks AnkiConnect connectivity, ffmpeg presence, deck existence, and note type existence. Returns `ValidationResult` (never raises).
 
 **Optional services (created based on config flags):**
 
-- **FrequencyService** — Loads word frequency CSV, provides `lookup(word) -> rank`.
-- **PitchAccentService** — Loads pitch accent CSV, provides `lookup_batch`.
-- **KnownWordDB** — SQLite-backed persistent known word cache. Supports differential sync with Anki vocabulary.
-- **WordListService** — Loads blacklist/whitelist text files for word filtering.
-- **HistoryService** — SQLite-backed mining history (`mining_history` table). Records what was mined, supports undo via stored card IDs.
-- **StatsService** — SQLite-backed analytics (`mining_sessions`, `difficulty_entries` tables). Provides aggregated stats and milestones.
-- **UpdateChecker** — Checks GitHub Releases API for newer versions.
-- **ExportService** — Exports results to CSV/TSV/vocabulary list formats.
+- **FrequencyService**: loads word frequency CSV, exposes `lookup(word) -> rank`.
+- **PitchAccentService**: loads pitch accent CSV, exposes `lookup_batch`.
+- **KnownWordDB**: SQLite-backed persistent known word cache. Supports differential sync with Anki vocabulary.
+- **WordListService**: loads blacklist/whitelist text files for word filtering.
+- **HistoryService**: SQLite-backed mining history (`mining_history` table). Records what was mined, supports undo via stored card IDs.
+- **StatsService**: SQLite-backed analytics (`mining_sessions`, `difficulty_entries` tables). Provides aggregated stats and milestones.
+- **UpdateChecker**: queries the GitHub Releases API for newer versions.
+- **ExportService**: exports results to CSV, TSV, or vocabulary list formats.
 
 **Dictionary providers** (`services/providers/`):
 
-- **JMdictProvider** — Parses JMdict XML (~60MB) into an in-memory dict on `load()`. Lookup returns HTML-formatted numbered definitions (max 5 per word).
-- **JishoProvider** — REST client for jisho.org API. Always available. Rate-limited with configurable delay (`jisho_delay`).
+- **JMdictProvider**: parses JMdict XML (~60MB) into an in-memory dict on `load()`. Lookup returns HTML-formatted numbered definitions (max 5 per word).
+- **JishoProvider**: REST client for the jisho.org API. Always available. Rate-limited with a configurable delay (`jisho_delay`).
 
 ## Orchestration
 
@@ -175,10 +175,10 @@ The `__post_init__` method uses `object.__setattr__` to convert string paths to 
 ### Window Structure
 
 `MainWindow` contains a `QTabWidget` with four tabs:
-1. **SingleEpisodeTab** — File selectors (drag-and-drop), subtitle offset control, process/preview buttons, log widget, progress widget
-2. **BatchProcessingTab** — Folder selection, `BatchQueue` management via queue panel, dual progress bars
-3. **AnalyticsTab** — Mining statistics dashboard (queries `StatsService`)
-4. **SettingsTab** — Config editing with sub-panels (Anki, media, dictionary, filtering). Emits `config_changed` signal
+1. **SingleEpisodeTab**: file selectors (drag-and-drop), subtitle offset control, process/preview buttons, log widget, progress widget.
+2. **BatchProcessingTab**: folder selection, `BatchQueue` management via queue panel, dual progress bars.
+3. **AnalyticsTab**: mining statistics dashboard (queries `StatsService`).
+4. **SettingsTab**: config editing with sub-panels (Anki, media, dictionary, filtering). Emits `config_changed` signal.
 
 ### Worker Threads
 
@@ -187,41 +187,41 @@ The `__post_init__` method uses `object.__setattr__` to convert string paths to 
 - Qt signals for results, errors, and progress
 
 Worker implementations:
-- `EpisodeWorkerThread` — runs `EpisodeProcessor.process_episode()` in background
-- `BatchQueueWorkerThread` — processes batch queue items sequentially
-- `ManualPairWorkerThread` — processes manually paired files
-- `ValidationWorkerThread` — runs system validation checks
-- `UpdateWorkerThread` — checks for updates
+- `EpisodeWorkerThread`: runs `EpisodeProcessor.process_episode()` in the background.
+- `BatchQueueWorkerThread`: processes batch queue items sequentially.
+- `ManualPairWorkerThread`: processes manually paired files.
+- `ValidationWorkerThread`: runs system validation checks.
+- `UpdateWorkerThread`: checks for updates.
 
 ### Signal Architecture
 
 `GUIPresenter` emits Qt signals from worker threads. Main window slots receive them on the GUI thread. Per-tab presenters avoid cross-tab signal pollution. `GUIProgressCallback` bridges the `ProgressCallback` protocol to Qt signals.
 
-GUIPresenter does **not** explicitly inherit from `PresenterProtocol` — it satisfies the protocol via structural subtyping. This avoids a metaclass conflict between `QObject` and `Protocol`.
+GUIPresenter does **not** explicitly inherit from `PresenterProtocol`. It satisfies the protocol via structural subtyping, which avoids a metaclass conflict between `QObject` and `Protocol`.
 
 ### Theme System
 
-Theme singleton backed by JSON theme files in `gui/resources/styles/themes/`. Four built-in themes: Light, Dark, Sakura, and Tokyo Night. The `discover_themes()` function scans the themes directory at startup, validates each JSON file against a required color key schema (`REQUIRED_COLOR_KEYS`), and registers valid themes. A single `common.qss` stylesheet uses `${color-*}` variable substitution — the `Theme._substitute_variables()` method merges layout variables from `_variables.py` with color variables extracted from the active theme JSON. Custom themes can be added by dropping a valid JSON file into the themes directory. Theme preference is saved via `QSettings`.
+Theme singleton backed by JSON theme files in `gui/resources/styles/themes/`. Four built-in themes: Light, Dark, Sakura, and Tokyo Night. The `discover_themes()` function scans the themes directory at startup, validates each JSON file against a required color key schema (`REQUIRED_COLOR_KEYS`), and registers valid themes. A single `common.qss` stylesheet uses `${color-*}` variable substitution. The `Theme._substitute_variables()` method merges layout variables from `_variables.py` with color variables extracted from the active theme JSON. Custom themes can be added by dropping a valid JSON file into the themes directory. Theme preference is saved via `QSettings`.
 
 ### Dialogs
 
-- `WordCurationDialog` — User selects which discovered words to mine (cross-thread via `threading.Event` bridge)
-- `WordPreviewDialog` — Preview discovered words
-- `PairPreviewDialog` — Preview video/subtitle file pairing
-- `ResultsDialog` — Summary of mining session with undo option
-- `ExportDialog` — Export results to file
-- `QueueManagerDialog` — Manage batch processing queue
+- `WordCurationDialog`: user selects which discovered words to mine (cross-thread via a `threading.Event` bridge).
+- `WordPreviewDialog`: preview discovered words.
+- `PairPreviewDialog`: preview video/subtitle file pairing.
+- `ResultsDialog`: summary of a mining session with undo option.
+- `ExportDialog`: export results to file.
+- `QueueManagerDialog`: manage the batch processing queue.
 
 ## External Integrations
 
 ### AnkiConnect
 
 HTTP POST to `localhost:8765` (configurable). Protocol version 6. Key actions:
-- `version`, `deckNames`, `modelNames`, `modelFieldNames` — validation
-- `findNotes`, `notesInfo` — vocabulary lookup
-- `storeMediaFile` — upload screenshots/audio
-- `addNote`, `addNotes` — card creation (batch size 50)
-- `deleteNotes` — undo support
+- `version`, `deckNames`, `modelNames`, `modelFieldNames`: validation.
+- `findNotes`, `notesInfo`: vocabulary lookup.
+- `storeMediaFile`: upload screenshots/audio.
+- `addNote`, `addNotes`: card creation (batch size 50).
+- `deleteNotes`: undo support.
 
 ### Jisho API
 
