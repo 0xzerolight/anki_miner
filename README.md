@@ -18,43 +18,43 @@ Automated Japanese vocabulary mining from anime subtitles. Extracts unknown word
 
 ## How It Works
 
-1. **Parse subtitles** — Tokenizes Japanese text using MeCab morphological analysis
-2. **Filter words** — Keeps content words (nouns, verbs, adjectives, adverbs) and removes words already in your Anki collection
-3. **Extract media** — Captures screenshots and audio clips from the video at each subtitle's timestamp using ffmpeg
-4. **Fetch definitions** — Looks up English definitions from JMdict (offline) or the Jisho API
-5. **Create cards** — Batch uploads everything to Anki via AnkiConnect
+1. **Parse subtitles**: tokenize Japanese text with MeCab morphological analysis.
+2. **Filter words**: keep content words (nouns, verbs, adjectives, adverbs) and drop words already in your Anki collection.
+3. **Extract media**: capture screenshots and audio clips from the video at each subtitle's timestamp via ffmpeg.
+4. **Fetch definitions**: look up English definitions from JMdict (offline) or the Jisho API.
+5. **Create cards**: batch upload to Anki via AnkiConnect.
 
 ## Features
 
-- **CLI and GUI** — Use from the terminal or through a desktop application
-- **Batch processing** — Process entire anime series at once with automatic video/subtitle file pairing
-- **Offline dictionary** — Fast JMdict lookups with Jisho API fallback
-- **Parallel media extraction** — Concurrent ffmpeg processes for speed
-- **Preview mode** — See what words would be mined without creating any cards
-- **Smart filtering** — Skips particles, pronouns, onomatopoeia, sound effects, and words you already know
-- **Theming** — Four GUI themes (Light, Dark, Sakura, Tokyo Night) with a JSON-based theme system supporting custom themes
-- **Analytics dashboard** — Track mining statistics, series difficulty rankings, and milestone achievements
-- **Word curation** — Select which discovered words to mine via an interactive dialog
-- **Export** — Export results to CSV, TSV, or vocabulary list formats
-- **Pitch accent data** — Optional pitch accent position and category fields on cards
-- **Word frequency rankings** — Filter or annotate words by frequency rank
-- **Known words database** — Persistent SQLite cache of known vocabulary, synced with Anki
-- **Update checker** — Automatic check for new versions via GitHub Releases
-- **Blacklist/whitelist** — Custom word lists to always include or exclude specific words
-- **Cross-episode frequency analysis** — Prioritize words appearing across multiple episodes
+- **CLI and GUI**: use from the terminal or through a desktop application.
+- **Batch processing**: process a full anime series at once with automatic video/subtitle pairing.
+- **Offline dictionary**: fast JMdict lookups with Jisho API fallback.
+- **Parallel media extraction**: concurrent ffmpeg processes for speed.
+- **Preview mode**: see which words would be mined without creating cards.
+- **Smart filtering**: skips particles, pronouns, onomatopoeia, sound effects, and words you already know.
+- **Theming**: four GUI themes (Light, Dark, Sakura, Tokyo Night) on a JSON-based system that supports custom themes.
+- **Analytics dashboard**: track mining statistics, series difficulty rankings, and milestone achievements.
+- **Word curation**: pick which discovered words to mine via an interactive dialog.
+- **Export**: write results to CSV, TSV, or vocabulary list formats.
+- **Pitch accent data**: optional pitch accent position and category fields on cards.
+- **Word frequency rankings**: filter or annotate words by frequency rank.
+- **Known words database**: persistent SQLite cache of known vocabulary, synced with Anki.
+- **Update checker**: automatic check for new versions via GitHub Releases.
+- **Blacklist/whitelist**: custom word lists to always include or exclude specific words.
+- **Cross-episode frequency analysis**: prioritize words that appear across multiple episodes.
 
 ## Installation
 
 ### Requirements
 
-- **Python 3.10+** — [download](https://www.python.org/downloads/)
-- **ffmpeg** — must be on your PATH
+- **Python 3.10+**: [download](https://www.python.org/downloads/).
+- **ffmpeg**: must be on your PATH.
   - macOS: `brew install ffmpeg`
   - Ubuntu/Debian: `sudo apt install ffmpeg`
-  - Windows: [download from ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH
-- **Anki** with [AnkiConnect](https://ankiweb.net/shared/info/2055492159) installed
-  - In Anki, go to **Tools > Add-ons > Get Add-ons** and paste code `2055492159`
-  - Restart Anki — AnkiConnect runs in the background while Anki is open
+  - Windows: [download from ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH.
+- **Anki** with [AnkiConnect](https://ankiweb.net/shared/info/2055492159) installed.
+  - In Anki, go to **Tools > Add-ons > Get Add-ons** and paste code `2055492159`.
+  - Restart Anki. AnkiConnect runs in the background while Anki is open.
 
 ### Install Anki Miner
 
@@ -111,8 +111,8 @@ Create a clickable shortcut to launch Anki Miner from your desktop or app menu:
 anki_miner create-shortcut
 ```
 
-- **Linux**: Adds "Anki Miner" to your application menu
-- **Windows**: Creates an "Anki Miner" shortcut on your Desktop and Start Menu
+- **Linux**: adds "Anki Miner" to your application menu.
+- **Windows**: creates an "Anki Miner" shortcut on your Desktop and Start Menu.
 
 ### Recommended Setup
 
@@ -185,10 +185,10 @@ anki_miner_gui
 ```
 
 The GUI provides four tabs:
-- **Single Episode** — Mine one video/subtitle pair with file selectors and progress tracking
-- **Batch Processing** — Queue multiple series for sequential processing
-- **Analytics** — Mining statistics dashboard with overview cards, recent sessions, series difficulty rankings, and milestone achievements
-- **Settings** — Configure Anki connection, media extraction, dictionary, and word filtering options
+- **Single Episode**: mine one video/subtitle pair with file selectors and progress tracking.
+- **Batch Processing**: queue multiple series for sequential processing.
+- **Analytics**: mining statistics dashboard with overview cards, recent sessions, series difficulty rankings, and milestone achievements.
+- **Settings**: configure Anki connection, media extraction, dictionary, and word filtering options.
 
 ## Configuration
 
@@ -230,10 +230,10 @@ GUI settings are saved to `~/.anki_miner/gui_config.json`. CLI commands use the 
 
 ## Issues and Contributing
 
-Found a bug or have an idea for a feature? [Open an issue](https://github.com/0xzerolight/anki_miner/issues) — all bug reports and suggestions are welcome.
+Found a bug or have an idea for a feature? [Open an issue](https://github.com/0xzerolight/anki_miner/issues). Bug reports and suggestions are welcome.
 
 Pull requests are also welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
