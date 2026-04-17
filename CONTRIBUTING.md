@@ -42,9 +42,9 @@ pre-commit install
 
 This project uses the following tools, configured in `pyproject.toml`:
 
-- **[black](https://black.readthedocs.io/)** — Code formatting (100 character line length)
-- **[ruff](https://docs.astral.sh/ruff/)** — Linting
-- **[mypy](https://mypy.readthedocs.io/)** — Type checking
+- **[black](https://black.readthedocs.io/)**: code formatting (100 character line length).
+- **[ruff](https://docs.astral.sh/ruff/)**: linting.
+- **[mypy](https://mypy.readthedocs.io/)**: type checking.
 
 Before submitting a PR, ensure your code passes:
 
