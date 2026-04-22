@@ -50,7 +50,7 @@ a = Analysis(
         "fugashi",
         "PyQt6.sip",
     ],
-    hookspath=[],
+    hookspath=[os.path.join(project_root, "PyInstaller-Hooks")],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
