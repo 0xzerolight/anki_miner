@@ -1,6 +1,6 @@
 # Architecture
 
-Anki Miner is a Python desktop application with both CLI and PyQt6 GUI interfaces. It processes anime video/subtitle files through a 5-stage pipeline to create Japanese vocabulary flashcards in Anki.
+Anki Miner is a PyQt6 desktop application. It processes anime video/subtitle files through a 5-stage pipeline to create Japanese vocabulary flashcards in Anki.
 
 ## Processing Pipeline
 
@@ -44,18 +44,18 @@ Cancellation is checked between each phase. Preview mode exits after stage 2 (sh
 ## Package Dependencies
 
 ```
-cli/  ──────────┐
-gui/  ──────────┤
-                ▼
-         orchestration/
-                │
-                ▼
-           services/
-           services/providers/
-                │
-        ┌───────┼───────┐
-        ▼       ▼       ▼
-   interfaces/ models/ utils/
+gui/
+  │
+  ▼
+orchestration/
+  │
+  ▼
+services/
+services/providers/
+  │
+┌───────┼───────┐
+▼       ▼       ▼
+interfaces/ models/ utils/
         │
         ▼
      models/
@@ -64,7 +64,7 @@ config/      ← used by all packages
 exceptions/  ← used by all packages
 ```
 
-Leaf packages (`config`, `models`, `exceptions`, `utils`) have no internal dependencies. `interfaces` depends only on `models` for type signatures. `services` depends on `interfaces`, `models`, `config`, `exceptions`, and `utils`. `orchestration` composes services. `cli` and `gui` are top-level entry points.
+Leaf packages (`config`, `models`, `exceptions`, `utils`) have no internal dependencies. `interfaces` depends only on `models` for type signatures. `services` depends on `interfaces`, `models`, `config`, `exceptions`, and `utils`. `orchestration` composes services. `gui` is the sole top-level entry point.
 
 ## Core Abstractions
 
@@ -76,7 +76,7 @@ Three protocols in `interfaces/` define the system's extension points:
 - `show_processing_result(ProcessingResult)`: episode processing summary.
 - `show_word_preview(list[TokenizedWord])`: discovered word listing.
 
-Implementations: `ConsolePresenter` (CLI), `GUIPresenter` (Qt signals), `NullPresenter` (tests).
+Implementations: `GUIPresenter` (Qt signals) and `NullPresenter` (tests). The protocol is preserved even without a CLI so that workers, orchestration, and services stay UI-agnostic and fully testable.
 
 **ProgressCallback** (`interfaces/progress.py`): progress reporting with 4 methods.
 - `on_start(total, description)`, `on_progress(current, item_description)`
@@ -166,9 +166,8 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 
 The `__post_init__` method uses `object.__setattr__` to convert string paths to `Path` objects (required because the dataclass is frozen). New config instances are created with `dataclasses.replace()`.
 
-**Config sources:**
-- CLI: `create_default_config()` from `config/defaults.py` with optional overrides
-- GUI: `GUIConfigManager` (`gui/utils/config_manager.py`) persists to `~/.anki_miner/gui_config.json`
+**Config source:**
+- GUI: `GUIConfigManager` (`gui/utils/config_manager.py`) persists to `~/.anki_miner/gui_config.json`. Defaults come from the `AnkiMinerConfig` dataclass field defaults.
 
 ## GUI Architecture
 
