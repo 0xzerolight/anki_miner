@@ -23,6 +23,7 @@ from anki_miner.gui.widgets.panels import (
     DictionarySettingsPanel,
     FilteringSettingsPanel,
     MediaSettingsPanel,
+    YouTubeSettingsPanel,
 )
 
 
@@ -68,12 +69,14 @@ class SettingsTab(QWidget):
         self.media_panel = MediaSettingsPanel()
         self.dictionary_panel = DictionarySettingsPanel()
         self.filtering_panel = FilteringSettingsPanel()
+        self.youtube_panel = YouTubeSettingsPanel()
 
         # Add tabs with scroll areas for each panel
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.anki_panel), "Anki")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.media_panel), "Media")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.dictionary_panel), "Dictionary")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), "Filtering")
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), "YouTube")
 
         layout.addWidget(self.tab_widget)
 
@@ -179,6 +182,10 @@ class SettingsTab(QWidget):
             self.config.deduplicate_sentences
         )
 
+        # YouTube settings
+        self.youtube_panel.set_cookies_from_browser(self.config.youtube_cookies_from_browser)
+        self.youtube_panel.set_max_duration_seconds(self.config.youtube_max_duration_s)
+
     def _on_save_clicked(self) -> None:
         """Handle save button click."""
         # Create updated config from all panels
@@ -235,6 +242,9 @@ class SettingsTab(QWidget):
             use_whitelist=self.filtering_panel.use_whitelist_checkbox.isChecked(),
             # Deduplication settings
             deduplicate_sentences=self.filtering_panel.deduplicate_sentences_checkbox.isChecked(),
+            # YouTube settings
+            youtube_cookies_from_browser=self.youtube_panel.get_cookies_from_browser(),
+            youtube_max_duration_s=self.youtube_panel.get_max_duration_seconds(),
         )
 
         # Emit signal to notify listeners of config change

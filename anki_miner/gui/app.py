@@ -11,10 +11,15 @@ from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.service_factory import (
+    create_episode_processor,
+    create_youtube_fetcher,
+)
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
+from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.services.stats_service import StatsService
 
 
@@ -101,6 +106,30 @@ def main():
         presenter.error_signal.connect(window._on_error_message)
         presenter.processing_result_signal.connect(window._on_processing_result)
         presenter.word_preview_signal.connect(window._on_word_preview)
+
+    # YouTube tab (uses its own presenter + shared stats service via processor)
+    youtube_presenter = GUIPresenter(window)
+    youtube_fetcher = create_youtube_fetcher(window.get_config())
+    youtube_processor = create_episode_processor(
+        window.get_config(),
+        youtube_presenter,
+        stats_service=stats_service,
+    )
+    youtube_tab = YouTubeTab(
+        config=window.get_config(),
+        processor=youtube_processor,
+        fetcher=youtube_fetcher,
+        presenter=youtube_presenter,
+    )
+    window.tabs.addTab(youtube_tab, "YouTube")
+
+    # Route YouTube tab presenter through the main window status bar handlers
+    youtube_presenter.info_signal.connect(window._on_info_message)
+    youtube_presenter.success_signal.connect(window._on_success_message)
+    youtube_presenter.warning_signal.connect(window._on_warning_message)
+    youtube_presenter.error_signal.connect(window._on_error_message)
+    youtube_presenter.processing_result_signal.connect(window._on_processing_result)
+    youtube_presenter.word_preview_signal.connect(window._on_word_preview)
 
     # Analytics tab
     analytics_tab = AnalyticsTab(stats_service)
