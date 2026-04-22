@@ -446,7 +446,7 @@ class TestExtractMediaBatch:
             make_tokenized_word(lemma="飲む", start_time=3.0),
         ]
 
-        def fake_extract(vf, word):
+        def fake_extract(vf, word, temp_folder=None):
             # Create real files so has_any_media returns True
             ss = tmp_path / f"{word.lemma}.jpg"
             ss.write_bytes(b"\xff\xd8fake")
@@ -472,7 +472,7 @@ class TestExtractMediaBatch:
 
         call_count = 0
 
-        def fake_extract(vf, word):
+        def fake_extract(vf, word, temp_folder=None):
             nonlocal call_count
             call_count += 1
             from anki_miner.models import MediaData
@@ -501,7 +501,7 @@ class TestExtractMediaBatch:
             make_tokenized_word(lemma="音声のみ", start_time=1.0),
         ]
 
-        def fake_extract(vf, word):
+        def fake_extract(vf, word, temp_folder=None):
             from anki_miner.models import MediaData
 
             audio = service.config.media_temp_folder / "audio.mp3"
@@ -523,7 +523,7 @@ class TestExtractMediaBatch:
             make_tokenized_word(lemma="飲む", start_time=3.0),
         ]
 
-        def fake_extract(vf, word):
+        def fake_extract(vf, word, temp_folder=None):
             from anki_miner.models import MediaData
 
             ss = tmp_path / f"{word.lemma}_prog.jpg"
@@ -547,7 +547,7 @@ class TestExtractMediaBatch:
             make_tokenized_word(lemma="悪い", start_time=3.0),
         ]
 
-        def fake_extract(vf, word):
+        def fake_extract(vf, word, temp_folder=None):
             if word.lemma == "悪い":
                 raise RuntimeError("ffmpeg exploded")
             from anki_miner.models import MediaData
