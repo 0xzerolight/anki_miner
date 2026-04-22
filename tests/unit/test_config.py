@@ -1,5 +1,7 @@
 """Tests for config module."""
 
+from pathlib import Path
+
 from anki_miner.config import AnkiMinerConfig
 
 
@@ -76,3 +78,36 @@ class TestAnkiWordFieldSync:
             jmdict_path=temp_dir / "dict",
         )
         assert config.anki_word_field == "Expression"
+
+
+class TestYouTubeConfig:
+    """Tests for the YouTube-related config fields."""
+
+    def test_defaults(self):
+        """New YouTube fields should default to the documented values."""
+        config = AnkiMinerConfig()
+        assert config.youtube_prefer_manual_subs is True
+        assert config.youtube_warn_on_auto_captions is True
+        assert config.youtube_max_duration_s == 7200
+        assert config.youtube_max_height == 720
+        assert config.youtube_cookies_from_browser is None
+        assert config.youtube_ffmpeg_location is None
+
+    def test_ffmpeg_location_coerced_from_string(self, temp_dir):
+        """youtube_ffmpeg_location should be coerced to Path when passed as str."""
+        ffmpeg_path = str(temp_dir / "ffmpeg")
+        config = AnkiMinerConfig(youtube_ffmpeg_location=ffmpeg_path)
+        assert isinstance(config.youtube_ffmpeg_location, Path)
+        assert config.youtube_ffmpeg_location == Path(ffmpeg_path)
+
+    def test_ffmpeg_location_stays_none_when_unset(self):
+        """youtube_ffmpeg_location should remain None when not provided."""
+        config = AnkiMinerConfig()
+        assert config.youtube_ffmpeg_location is None
+
+    def test_ffmpeg_location_accepts_path(self, temp_dir):
+        """youtube_ffmpeg_location should accept a Path object directly."""
+        ffmpeg_path = temp_dir / "ffmpeg"
+        config = AnkiMinerConfig(youtube_ffmpeg_location=ffmpeg_path)
+        assert isinstance(config.youtube_ffmpeg_location, Path)
+        assert config.youtube_ffmpeg_location == ffmpeg_path
