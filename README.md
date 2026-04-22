@@ -26,7 +26,7 @@ Automated Japanese vocabulary mining from anime subtitles. Extracts unknown word
 
 ## Features
 
-- **CLI and GUI**: use from the terminal or through a desktop application.
+- **Desktop GUI**: cross-platform PyQt6 application.
 - **Batch processing**: process a full anime series at once with automatic video/subtitle pairing.
 - **Offline dictionary**: fast JMdict lookups with Jisho API fallback.
 - **Parallel media extraction**: concurrent ffmpeg processes for speed.
@@ -103,13 +103,9 @@ pip install .
 
 </details>
 
-### Create Desktop Shortcut (Optional)
+### Desktop Shortcut
 
-Create a clickable shortcut to launch Anki Miner from your desktop or app menu:
-
-```bash
-anki_miner create-shortcut
-```
+A desktop shortcut is created automatically on first launch. Re-run it anytime from **Tools → Create Desktop Shortcut...** inside the app.
 
 - **Linux**: adds "Anki Miner" to your application menu.
 - **Windows**: creates an "Anki Miner" shortcut on your Desktop and Start Menu.
@@ -159,26 +155,7 @@ Without JMdict, Anki Miner falls back to the Jisho API (slower, requires interne
 
 ## Quick Start
 
-### CLI
-
-```bash
-# Mine a single episode
-anki_miner mine video.mkv subs.ass
-
-# Preview words without creating cards
-anki_miner mine video.mkv subs.ass --preview
-
-# Adjust subtitle timing (negative = earlier, positive = later)
-anki_miner mine video.mkv subs.ass --offset -2.5
-
-# Batch process a folder of episodes
-anki_miner mine-folder ./episodes/
-
-# Batch preview
-anki_miner mine-folder ./episodes/ --preview
-```
-
-### GUI
+Launch the desktop application:
 
 ```bash
 anki_miner_gui
@@ -214,7 +191,7 @@ All settings can be adjusted in the GUI Settings tab. Here are the key options:
 | `use_blacklist`        | `false`        | Enable blacklist word filtering             |
 | `use_whitelist`        | `false`        | Enable whitelist word filtering             |
 
-GUI settings are saved to `~/.anki_miner/gui_config.json`. CLI commands use the default values shown above.
+GUI settings are saved to `~/.anki_miner/gui_config.json`.
 
 ## Troubleshooting
 
@@ -226,7 +203,7 @@ GUI settings are saved to `~/.anki_miner/gui_config.json`. CLI commands use the 
 | "ffmpeg not found"       | Install ffmpeg and add to PATH                                                   |
 | "JMdict file not found"  | Download to `~/.anki_miner/` (see Installation above) or disable offline dictionary |
 | Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default track |
-| Subtitles out of sync    | Use `--offset` (CLI) or the subtitle offset control (GUI) to adjust timing       |
+| Subtitles out of sync    | Use the subtitle offset control in the GUI to adjust timing                      |
 
 ## Issues and Contributing
 

@@ -1,5 +1,8 @@
 """Main window for Anki Miner GUI."""
 
+from dataclasses import replace
+
+from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QTabWidget, QVBoxLayout, QWidget
 
@@ -21,7 +24,7 @@ from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
 from anki_miner.models import ProcessingResult, ValidationResult
-from anki_miner.services import ValidationService
+from anki_miner.services import ShortcutService, ValidationService
 
 
 class MainWindow(QMainWindow):
@@ -64,6 +67,10 @@ class MainWindow(QMainWindow):
         # Auto-check for updates on startup
         if self.config.check_for_updates:
             self._check_for_updates()
+
+        # First-run desktop shortcut (deferred so the window paints first)
+        if not self.config.first_run_shortcut_done:
+            QTimer.singleShot(0, self._maybe_create_shortcut_on_first_run)
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -132,6 +139,13 @@ class MainWindow(QMainWindow):
         """Set up the application menu bar."""
         menu_bar = self.menuBar()
         assert menu_bar is not None
+
+        # Tools menu
+        tools_menu = menu_bar.addMenu("&Tools")
+        assert tools_menu is not None
+        shortcut_action = tools_menu.addAction("Create Desktop Shortcut...")
+        assert shortcut_action is not None
+        shortcut_action.triggered.connect(self._create_desktop_shortcut)
 
         # Help menu
         help_menu = menu_bar.addMenu("&Help")
@@ -202,6 +216,25 @@ class MainWindow(QMainWindow):
         from PyQt6.QtGui import QDesktopServices
 
         QDesktopServices.openUrl(QUrl("https://github.com/0xzerolight/anki_miner/issues"))
+
+    def _create_desktop_shortcut(self) -> None:
+        """Create a desktop shortcut via ShortcutService and report the result."""
+        result = ShortcutService.create_shortcut()
+        body = "\n".join(result.messages) if result.messages else ""
+        if result.success:
+            QMessageBox.information(self, "Desktop Shortcut", body or "Shortcut created.")
+        else:
+            QMessageBox.warning(
+                self,
+                "Desktop Shortcut",
+                result.error or "Failed to create desktop shortcut.",
+            )
+
+    def _maybe_create_shortcut_on_first_run(self) -> None:
+        """Auto-create a desktop shortcut on first launch; persist the flag."""
+        if not ShortcutService.shortcut_exists():
+            ShortcutService.create_shortcut()
+        self.update_config(replace(self.config, first_run_shortcut_done=True))
 
     def _show_about(self) -> None:
         """Show the About dialog."""

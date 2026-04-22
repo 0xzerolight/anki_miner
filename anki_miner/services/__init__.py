@@ -8,6 +8,7 @@ from .history_service import HistoryService
 from .media_extractor import MediaExtractorService
 from .pitch_accent_service import PitchAccentService
 from .providers import JishoProvider, JMdictProvider
+from .shortcut_service import ShortcutResult, ShortcutService
 from .stats_service import StatsService
 from .subtitle_parser import SubtitleParserService
 from .validation_service import ValidationService
@@ -27,4 +28,6 @@ __all__ = [
     "HistoryService",
     "JMdictProvider",
     "JishoProvider",
+    "ShortcutService",
+    "ShortcutResult",
 ]
