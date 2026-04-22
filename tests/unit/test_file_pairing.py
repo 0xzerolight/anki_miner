@@ -229,3 +229,104 @@ class TestFilePairMatcher:
             pairs = FilePairMatcher.find_pairs_by_episode_number(anime_dir, sub_dir)
 
             assert len(pairs) == 1
+
+    class TestFindPairsSameFolder:
+        """Tests for find_pairs_same_folder method."""
+
+        def test_matching_pairs(self, tmp_path):
+            """Should pair video and subtitle files with same base name."""
+            (tmp_path / "ep01.mkv").write_bytes(b"")
+            (tmp_path / "ep01.ass").write_text("", encoding="utf-8")
+            (tmp_path / "ep02.mp4").write_bytes(b"")
+            (tmp_path / "ep02.srt").write_text("", encoding="utf-8")
+
+            pairs = FilePairMatcher.find_pairs_same_folder(tmp_path)
+
+            assert len(pairs) == 2
+            assert all(p.video.is_file() and p.subtitle.is_file() for p in pairs)
+
+        def test_all_video_extensions(self, tmp_path):
+            """Should recognize all supported video extensions."""
+            for ext in [".mp4", ".mkv", ".avi", ".m4v", ".mov"]:
+                (tmp_path / f"video{ext}").write_bytes(b"")
+                (tmp_path / f"video{ext}").with_suffix(".ass").write_text("", encoding="utf-8")
+
+            pairs = FilePairMatcher.find_pairs_same_folder(tmp_path)
+
+            assert len(pairs) == 5
+
+        def test_ass_wins_over_srt_by_default(self, tmp_path):
+            """Default priority picks .ass when both .ass and .srt exist."""
+            (tmp_path / "ep01.mkv").write_bytes(b"")
+            (tmp_path / "ep01.ass").write_text("", encoding="utf-8")
+            (tmp_path / "ep01.srt").write_text("", encoding="utf-8")
+
+            pairs = FilePairMatcher.find_pairs_same_folder(tmp_path)
+
+            assert len(pairs) == 1
+            assert pairs[0].subtitle.suffix == ".ass"
+
+        def test_ssa_wins_over_srt(self, tmp_path):
+            """Default priority picks .ssa over .srt when .ass is absent."""
+            (tmp_path / "ep01.mkv").write_bytes(b"")
+            (tmp_path / "ep01.ssa").write_text("", encoding="utf-8")
+            (tmp_path / "ep01.srt").write_text("", encoding="utf-8")
+
+            pairs = FilePairMatcher.find_pairs_same_folder(tmp_path)
+
+            assert len(pairs) == 1
+            assert pairs[0].subtitle.suffix == ".ssa"
+
+        def test_custom_priority_overrides_default(self, tmp_path):
+            """Custom priority tuple selects a different extension."""
+            (tmp_path / "ep01.mkv").write_bytes(b"")
+            (tmp_path / "ep01.ass").write_text("", encoding="utf-8")
+            (tmp_path / "ep01.srt").write_text("", encoding="utf-8")
+
+            pairs = FilePairMatcher.find_pairs_same_folder(
+                tmp_path, priority=(".srt", ".ass", ".ssa")
+            )
+
+            assert len(pairs) == 1
+            assert pairs[0].subtitle.suffix == ".srt"
+
+        def test_naturally_sorted(self, tmp_path):
+            """Pairs sort by natural order (ep2 before ep10)."""
+            for name in ["ep10", "ep2", "ep1"]:
+                (tmp_path / f"{name}.mkv").write_bytes(b"")
+                (tmp_path / f"{name}.ass").write_text("", encoding="utf-8")
+
+            pairs = FilePairMatcher.find_pairs_same_folder(tmp_path)
+
+            assert [p.video.stem for p in pairs] == ["ep1", "ep2", "ep10"]
+
+        def test_video_without_subtitle_skipped(self, tmp_path):
+            """Videos with no matching subtitle are dropped."""
+            (tmp_path / "video.mkv").write_bytes(b"")
+            (tmp_path / "other.ass").write_text("", encoding="utf-8")
+
+            pairs = FilePairMatcher.find_pairs_same_folder(tmp_path)
+
+            assert pairs == []
+
+        def test_ignores_non_video_files(self, tmp_path):
+            """Files with non-video extensions are ignored."""
+            (tmp_path / "readme.txt").write_text("", encoding="utf-8")
+            (tmp_path / "readme.ass").write_text("", encoding="utf-8")
+            (tmp_path / "image.png").write_bytes(b"")
+            (tmp_path / "image.ass").write_text("", encoding="utf-8")
+
+            pairs = FilePairMatcher.find_pairs_same_folder(tmp_path)
+
+            assert pairs == []
+
+        def test_does_not_descend_subdirs(self, tmp_path):
+            """Pairs inside subdirectories are not picked up."""
+            sub = tmp_path / "subdir"
+            sub.mkdir()
+            (sub / "ep01.mkv").write_bytes(b"")
+            (sub / "ep01.ass").write_text("", encoding="utf-8")
+
+            pairs = FilePairMatcher.find_pairs_same_folder(tmp_path)
+
+            assert pairs == []

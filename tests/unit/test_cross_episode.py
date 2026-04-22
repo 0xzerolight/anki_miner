@@ -9,6 +9,7 @@ from anki_miner.models import ProcessingResult, TokenizedWord
 from anki_miner.orchestration.folder_processor import FolderProcessor
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.word_filter import WordFilterService
+from anki_miner.utils.file_pairing import FilePair
 
 
 def _make_word(lemma="食べる", surface=None, start_time=1.0):
@@ -112,8 +113,8 @@ class TestCollectCrossEpisodeFrequencies:
     def test_counts_across_episodes(self, processor, mock_episode_processor, tmp_path):
         """Word appearing in 2 episodes gets count 2."""
         pairs = [
-            (tmp_path / "ep01.mkv", tmp_path / "ep01.ass"),
-            (tmp_path / "ep02.mkv", tmp_path / "ep02.ass"),
+            FilePair(tmp_path / "ep01.mkv", tmp_path / "ep01.ass"),
+            FilePair(tmp_path / "ep02.mkv", tmp_path / "ep02.ass"),
         ]
 
         # Episode 1 has 食べる and 走る, Episode 2 has 食べる and 泳ぐ
@@ -135,8 +136,8 @@ class TestCollectCrossEpisodeFrequencies:
     def test_handles_parse_error_gracefully(self, processor, mock_episode_processor, tmp_path):
         """Should skip episodes that fail to parse."""
         pairs = [
-            (tmp_path / "ep01.mkv", tmp_path / "ep01.ass"),
-            (tmp_path / "ep02.mkv", tmp_path / "ep02.ass"),
+            FilePair(tmp_path / "ep01.mkv", tmp_path / "ep01.ass"),
+            FilePair(tmp_path / "ep02.mkv", tmp_path / "ep02.ass"),
         ]
 
         mock_episode_processor.subtitle_parser.parse_subtitle_file.side_effect = [
@@ -152,7 +153,7 @@ class TestCollectCrossEpisodeFrequencies:
         self, processor, mock_episode_processor, tmp_path
     ):
         """Same word appearing multiple times in one episode counts as 1."""
-        pairs = [(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")]
+        pairs = [FilePair(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")]
 
         mock_episode_processor.subtitle_parser.parse_subtitle_file.return_value = [
             _make_word("食べる", start_time=1.0),
