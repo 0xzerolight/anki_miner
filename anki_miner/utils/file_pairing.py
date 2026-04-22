@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+DEFAULT_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt")
+
 
 @dataclass
 class FilePair:
@@ -23,13 +25,57 @@ class FilePair:
 
 
 class FilePairMatcher:
-    """Matches video and subtitle files across folders by base name."""
+    """Matches video and subtitle files by base name, with deterministic
+    format priority when multiple subtitle variants exist for one video.
+    """
 
-    VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".m4v", ".mov"}
-    SUBTITLE_EXTENSIONS = {".ass", ".srt", ".ssa"}
+    VIDEO_EXTENSIONS: frozenset[str] = frozenset({".mp4", ".mkv", ".avi", ".m4v", ".mov"})
+    SUBTITLE_EXTENSIONS: frozenset[str] = frozenset(DEFAULT_SUBTITLE_PRIORITY)
 
     @staticmethod
-    def find_pairs_across_folders(anime_folder: Path, subtitle_folder: Path) -> list[FilePair]:
+    def find_pairs_same_folder(
+        folder: Path,
+        priority: tuple[str, ...] = DEFAULT_SUBTITLE_PRIORITY,
+    ) -> list[FilePair]:
+        """Find matching video/subtitle pairs inside a single folder.
+
+        For each video, picks the subtitle whose extension appears earliest
+        in ``priority``. This replaces the previous set-iteration behavior
+        that was nondeterministic when multiple subtitle formats coexisted.
+
+        Args:
+            folder: Folder containing both videos and subtitles.
+            priority: Subtitle extension preference order (highest first).
+
+        Returns:
+            List of FilePair objects, naturally sorted by video filename.
+        """
+        videos = [
+            f
+            for f in folder.iterdir()
+            if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
+        ]
+
+        pairs: list[FilePair] = []
+        for video in videos:
+            for sub_ext in priority:
+                subtitle = video.with_suffix(sub_ext)
+                if subtitle.exists():
+                    pairs.append(FilePair(video, subtitle))
+                    break
+
+        from anki_miner.utils.sort_utils import natural_sort_key
+
+        pairs.sort(key=lambda p: natural_sort_key(p.video.name))
+
+        return pairs
+
+    @staticmethod
+    def find_pairs_across_folders(
+        anime_folder: Path,
+        subtitle_folder: Path,
+        priority: tuple[str, ...] = DEFAULT_SUBTITLE_PRIORITY,
+    ) -> list[FilePair]:
         """Find matching video/subtitle pairs across two folders.
 
         Matches by base filename:
@@ -37,31 +83,29 @@ class FilePairMatcher:
         - anime_folder/ep02.mkv <-> subtitle_folder/ep02.srt
 
         Args:
-            anime_folder: Folder containing video files
-            subtitle_folder: Folder containing subtitle files
+            anime_folder: Folder containing video files.
+            subtitle_folder: Folder containing subtitle files.
+            priority: Subtitle extension preference order (highest first).
 
         Returns:
-            List of FilePair objects, naturally sorted by video filename
+            List of FilePair objects, naturally sorted by video filename.
         """
-        # Get all videos from anime folder
         videos = [
             f
             for f in anime_folder.iterdir()
             if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
         ]
 
-        pairs = []
+        pairs: list[FilePair] = []
         for video in videos:
-            base_name = video.stem  # "episode_01.mp4" -> "episode_01"
+            base_name = video.stem
 
-            # Look for subtitle with same base name in subtitle folder
-            for sub_ext in FilePairMatcher.SUBTITLE_EXTENSIONS:
+            for sub_ext in priority:
                 subtitle = subtitle_folder / f"{base_name}{sub_ext}"
                 if subtitle.exists():
                     pairs.append(FilePair(video, subtitle))
                     break
 
-        # Natural sort by video filename
         from anki_miner.utils.sort_utils import natural_sort_key
 
         pairs.sort(key=lambda p: natural_sort_key(p.video.name))

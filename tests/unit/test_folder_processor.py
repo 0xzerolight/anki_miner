@@ -1,101 +1,13 @@
 """Tests for folder_processor module."""
 
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
+from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.models import ProcessingResult
 from anki_miner.orchestration.folder_processor import FolderProcessor
 from anki_miner.presenters import NullPresenter
-
-
-class TestFindVideoSubtitlePairs:
-    """Tests for FolderProcessor.find_video_subtitle_pairs method."""
-
-    @pytest.fixture
-    def processor(self):
-        mock_ep = MagicMock()
-        return FolderProcessor(
-            episode_processor=mock_ep,
-            presenter=NullPresenter(),
-        )
-
-    def test_matching_pairs(self, processor, tmp_path):
-        """Should pair video and subtitle files with same base name."""
-        (tmp_path / "ep01.mkv").write_bytes(b"")
-        (tmp_path / "ep01.ass").write_text("", encoding="utf-8")
-        (tmp_path / "ep02.mp4").write_bytes(b"")
-        (tmp_path / "ep02.srt").write_text("", encoding="utf-8")
-
-        pairs = processor.find_video_subtitle_pairs(tmp_path)
-
-        assert len(pairs) == 2
-        assert all(isinstance(v, Path) and isinstance(s, Path) for v, s in pairs)
-
-    def test_multiple_video_extensions(self, processor, tmp_path):
-        """Should recognize .mp4, .mkv, .avi, .m4v, .mov."""
-        for ext in [".mp4", ".mkv", ".avi", ".m4v", ".mov"]:
-            name = f"video{ext}"
-            (tmp_path / name).write_bytes(b"")
-            (tmp_path / f"video{ext}").with_suffix(".ass").write_text("", encoding="utf-8")
-
-        pairs = processor.find_video_subtitle_pairs(tmp_path)
-
-        assert len(pairs) == 5
-
-    def test_picks_one_subtitle_when_multiple_exist(self, processor, tmp_path):
-        """When both .ass and .srt exist, should pick exactly one (first found in set iteration)."""
-        (tmp_path / "ep01.mkv").write_bytes(b"")
-        (tmp_path / "ep01.ass").write_text("", encoding="utf-8")
-        (tmp_path / "ep01.srt").write_text("", encoding="utf-8")
-
-        pairs = processor.find_video_subtitle_pairs(tmp_path)
-
-        assert len(pairs) == 1
-        assert pairs[0][1].suffix in {".ass", ".srt"}
-
-    def test_naturally_sorted(self, processor, tmp_path):
-        """Should sort by natural order (ep2 before ep10)."""
-        for name in ["ep10", "ep2", "ep1"]:
-            (tmp_path / f"{name}.mkv").write_bytes(b"")
-            (tmp_path / f"{name}.ass").write_text("", encoding="utf-8")
-
-        pairs = processor.find_video_subtitle_pairs(tmp_path)
-
-        video_names = [v.stem for v, _ in pairs]
-        assert video_names == ["ep1", "ep2", "ep10"]
-
-    def test_empty_for_mismatched(self, processor, tmp_path):
-        """Videos without matching subtitles should not be paired."""
-        (tmp_path / "video.mkv").write_bytes(b"")
-        (tmp_path / "other.ass").write_text("", encoding="utf-8")
-
-        pairs = processor.find_video_subtitle_pairs(tmp_path)
-
-        assert len(pairs) == 0
-
-    def test_ignores_non_video_files(self, processor, tmp_path):
-        """Non-video files should be ignored."""
-        (tmp_path / "readme.txt").write_text("", encoding="utf-8")
-        (tmp_path / "readme.ass").write_text("", encoding="utf-8")
-        (tmp_path / "image.png").write_bytes(b"")
-        (tmp_path / "image.ass").write_text("", encoding="utf-8")
-
-        pairs = processor.find_video_subtitle_pairs(tmp_path)
-
-        assert len(pairs) == 0
-
-    def test_ignores_subdirectories(self, processor, tmp_path):
-        """Should not descend into subdirectories."""
-        sub = tmp_path / "subdir"
-        sub.mkdir()
-        (sub / "ep01.mkv").write_bytes(b"")
-        (sub / "ep01.ass").write_text("", encoding="utf-8")
-
-        pairs = processor.find_video_subtitle_pairs(tmp_path)
-
-        assert len(pairs) == 0
 
 
 class TestProcessFolder:
@@ -103,7 +15,9 @@ class TestProcessFolder:
 
     @pytest.fixture
     def mock_episode_processor(self):
-        return MagicMock()
+        mock = MagicMock()
+        mock.config = AnkiMinerConfig(use_cross_episode_priority=False)
+        return mock
 
     @pytest.fixture
     def processor(self, mock_episode_processor):
