@@ -104,6 +104,46 @@ class ValidationService:
                 )
             )
 
+        # Optional resource files: warn (not fail) when the user enabled a
+        # feature but the underlying file is missing, so the GUI can surface
+        # an "enabled but unavailable" state up front instead of silently
+        # falling back at lookup time.
+        if self.config.use_offline_dict and not self.config.jmdict_path.is_file():
+            issues.append(
+                ValidationIssue(
+                    component="Offline Dictionary",
+                    severity="WARNING",
+                    message=(
+                        f"JMdict file not found at {self.config.jmdict_path}. "
+                        "Offline mode is enabled; the Jisho API will be used instead."
+                    ),
+                )
+            )
+
+        if self.config.use_pitch_accent and not self.config.pitch_accent_path.is_file():
+            issues.append(
+                ValidationIssue(
+                    component="Pitch Accent",
+                    severity="WARNING",
+                    message=(
+                        f"Pitch accent data not found at {self.config.pitch_accent_path}. "
+                        "Pitch accent annotations will be skipped."
+                    ),
+                )
+            )
+
+        if self.config.use_frequency_data and not self.config.frequency_list_path.is_file():
+            issues.append(
+                ValidationIssue(
+                    component="Frequency Data",
+                    severity="WARNING",
+                    message=(
+                        f"Frequency list not found at {self.config.frequency_list_path}. "
+                        "Frequency-based filtering and annotations will be skipped."
+                    ),
+                )
+            )
+
         return ValidationResult(
             ankiconnect_ok=ankiconnect_ok,
             ffmpeg_ok=ffmpeg_ok,
