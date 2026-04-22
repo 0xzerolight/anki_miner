@@ -117,6 +117,14 @@ class AnkiMinerConfig:
     # Analytics settings
     stats_db_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "stats.db")
 
+    # --- YouTube ---
+    youtube_prefer_manual_subs: bool = True
+    youtube_warn_on_auto_captions: bool = True
+    youtube_max_duration_s: int = 7200
+    youtube_max_height: int = 720
+    youtube_cookies_from_browser: str | None = None
+    youtube_ffmpeg_location: Path | None = None
+
     def __post_init__(self):
         """Convert string paths to Path objects if needed."""
         # Convert paths to Path objects (handles both str and Path inputs)
@@ -142,6 +150,12 @@ class AnkiMinerConfig:
             object.__setattr__(self, "stats_db_path", Path(self.stats_db_path))
         if isinstance(self.history_db_path, str):
             object.__setattr__(self, "history_db_path", Path(self.history_db_path))
+        if isinstance(self.youtube_ffmpeg_location, str):
+            object.__setattr__(
+                self,
+                "youtube_ffmpeg_location",
+                Path(self.youtube_ffmpeg_location) if self.youtube_ffmpeg_location else None,
+            )
 
         # Keep anki_word_field in sync with anki_fields["word"]
         word_field_from_mapping = self.anki_fields.get("word", "")
