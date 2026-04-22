@@ -40,6 +40,9 @@ class AnkiMinerConfig:
         default_factory=lambda: Path(tempfile.gettempdir()) / "anki_miner_temp"
     )
     subtitle_offset: float = 0.0  # Seconds to shift subtitles (+ later, - earlier)
+    # Preference order when multiple subtitle formats coexist for one video.
+    # Earliest extension wins; .ass ships richer styling/timing than .srt.
+    subtitle_format_priority: tuple[str, ...] = (".ass", ".ssa", ".srt")
 
     # Word filtering settings
     min_word_length: int = 2
