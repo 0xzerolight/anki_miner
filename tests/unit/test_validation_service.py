@@ -382,6 +382,16 @@ class TestValidationService:
 
         def test_all_pass(self, test_config):
             """All checks pass when external services respond correctly."""
+            from dataclasses import replace
+
+            # Disable optional feature flags so missing optional resource files
+            # don't add warnings; the test focuses on the core ANki/ffmpeg path.
+            test_config = replace(
+                test_config,
+                use_offline_dict=False,
+                use_pitch_accent=False,
+                use_frequency_data=False,
+            )
             service = ValidationService(test_config)
 
             # AnkiConnect version check
@@ -591,3 +601,113 @@ class TestValidationService:
 
             assert success is False
             assert "Error checking fields" in message
+
+
+class TestOptionalResourceWarnings:
+    """Warnings when an optional feature is enabled but its file is missing."""
+
+    @staticmethod
+    def _has_warning(result, component_substring):
+        return any(
+            issue.severity == "WARNING" and component_substring in issue.component
+            for issue in result.issues
+        )
+
+    @staticmethod
+    def _patch_external_checks(monkeypatch):
+        """Stub network/binary checks so validate_setup focuses on file checks."""
+        from anki_miner.services import validation_service
+
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_ankiconnect",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_ffmpeg",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_deck_exists",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_note_type_exists",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_field_names_exist",
+            lambda self: (True, "ok"),
+        )
+
+    def test_warns_when_offline_dict_enabled_but_jmdict_missing(self, test_config, monkeypatch):
+        from dataclasses import replace
+
+        self._patch_external_checks(monkeypatch)
+        config = replace(test_config, use_offline_dict=True)
+        # test_config's jmdict_path points at a non-existent tmp file
+        result = ValidationService(config).validate_setup()
+
+        assert self._has_warning(result, "Offline Dictionary")
+        assert result.all_passed  # warnings must not fail validation
+
+    def test_no_warning_when_jmdict_present(self, test_config, monkeypatch, tmp_path):
+        from dataclasses import replace
+
+        self._patch_external_checks(monkeypatch)
+        jmdict = tmp_path / "JMdict_e_present"
+        jmdict.write_text("placeholder", encoding="utf-8")
+        config = replace(test_config, use_offline_dict=True, jmdict_path=jmdict)
+        result = ValidationService(config).validate_setup()
+
+        assert not self._has_warning(result, "Offline Dictionary")
+
+    def test_warns_when_pitch_accent_enabled_but_file_missing(
+        self, test_config, monkeypatch, tmp_path
+    ):
+        from dataclasses import replace
+
+        self._patch_external_checks(monkeypatch)
+        config = replace(
+            test_config,
+            use_pitch_accent=True,
+            pitch_accent_path=tmp_path / "missing_pitch.csv",
+        )
+        result = ValidationService(config).validate_setup()
+
+        assert self._has_warning(result, "Pitch Accent")
+
+    def test_warns_when_frequency_enabled_but_file_missing(
+        self, test_config, monkeypatch, tmp_path
+    ):
+        from dataclasses import replace
+
+        self._patch_external_checks(monkeypatch)
+        config = replace(
+            test_config,
+            use_frequency_data=True,
+            frequency_list_path=tmp_path / "missing_freq.csv",
+        )
+        result = ValidationService(config).validate_setup()
+
+        assert self._has_warning(result, "Frequency Data")
+
+    def test_no_warning_when_features_disabled(self, test_config, monkeypatch):
+        from dataclasses import replace
+
+        self._patch_external_checks(monkeypatch)
+        config = replace(
+            test_config,
+            use_offline_dict=False,
+            use_pitch_accent=False,
+            use_frequency_data=False,
+        )
+        result = ValidationService(config).validate_setup()
+
+        assert not self._has_warning(result, "Offline Dictionary")
+        assert not self._has_warning(result, "Pitch Accent")
+        assert not self._has_warning(result, "Frequency Data")
