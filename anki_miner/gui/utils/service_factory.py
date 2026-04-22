@@ -49,6 +49,18 @@ def create_services(config: AnkiMinerConfig) -> tuple:
     definition_service = DefinitionService(config)
     anki_service = AnkiService(config)
 
+    if config.use_offline_dict:
+        try:
+            if definition_service.ensure_loaded():
+                load_result.info.append("Offline dictionary loaded")
+            else:
+                load_result.warnings.append(
+                    "Offline dictionary requested but unavailable; falling back to Jisho API"
+                )
+        except Exception as e:
+            logger.warning(f"Could not load offline dictionary: {e}")
+            load_result.warnings.append(f"Could not load offline dictionary: {e}")
+
     # Optional services
     pitch_accent_service = None
     if config.use_pitch_accent:

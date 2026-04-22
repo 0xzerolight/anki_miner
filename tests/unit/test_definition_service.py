@@ -578,3 +578,57 @@ class TestLoadProviders:
         results = service.load_providers()
 
         assert results == {"Good": True, "Bad": False}
+
+
+class TestEnsureLoaded:
+    """Tests for ensure_loaded idempotence and safety-net behavior."""
+
+    def test_loads_once_when_called_repeatedly(self, test_config, tmp_path):
+        """Second call must not re-parse the dictionary file."""
+        _write_xml(tmp_path, MINI_JMDICT_XML)
+        service = DefinitionService(test_config)
+
+        first = service.ensure_loaded()
+        # Mutate the on-disk file; if we reloaded we'd see the change
+        (tmp_path / "JMdict_e").write_text("<<< broken >>>", encoding="utf-8")
+        second = service.ensure_loaded()
+
+        assert first is True
+        assert second is True
+        assert "食べる" in service._jmdict
+
+    def test_returns_false_when_offline_unavailable(self, test_config):
+        """Returns False when JMdict file is missing so callers can warn."""
+        service = DefinitionService(test_config)
+
+        assert service.ensure_loaded() is False
+        assert service._loaded is True  # still marked as initialized
+
+    def test_get_definition_triggers_load(self, test_config, tmp_path):
+        """First get_definition call lazily initializes providers."""
+        _write_xml(tmp_path, MINI_JMDICT_XML)
+        service = DefinitionService(test_config)
+
+        # Did not call ensure_loaded explicitly
+        result = service.get_definition("食べる")
+
+        assert service._loaded is True
+        assert result is not None
+
+    def test_load_offline_dictionary_delegates_to_ensure_loaded(self, test_config, tmp_path):
+        """Backwards-compatible wrapper still returns True when offline succeeds."""
+        _write_xml(tmp_path, MINI_JMDICT_XML)
+        service = DefinitionService(test_config)
+
+        assert service.load_offline_dictionary() is True
+        assert service._loaded is True
+
+    def test_load_offline_dictionary_skips_when_disabled(self, test_config):
+        """Disabling offline mode short-circuits without marking loaded."""
+        from dataclasses import replace
+
+        config = replace(test_config, use_offline_dict=False)
+        service = DefinitionService(config)
+
+        assert service.load_offline_dictionary() is False
+        assert service._loaded is False
