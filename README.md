@@ -56,6 +56,8 @@ Automated Japanese vocabulary mining from anime subtitles. Extracts unknown word
   - In Anki, go to **Tools > Add-ons > Get Add-ons** and paste code `2055492159`.
   - Restart Anki. AnkiConnect runs in the background while Anki is open.
 
+YouTube mining requires yt-dlp and psutil (installed automatically with the package). Both piggyback on the same ffmpeg you already have on PATH.
+
 ### Install Anki Miner
 
 Install with [pipx](https://pipx.pypa.io/) (recommended, creates an isolated environment):
@@ -161,11 +163,22 @@ Launch the desktop application:
 anki_miner_gui
 ```
 
-The GUI provides four tabs:
+The GUI provides five tabs:
 - **Single Episode**: mine one video/subtitle pair with file selectors and progress tracking.
 - **Batch Processing**: queue multiple series for sequential processing.
+- **YouTube**: paste a URL, fetch metadata, then mine (see below).
 - **Analytics**: mining statistics dashboard with overview cards, recent sessions, series difficulty rankings, and milestone achievements.
 - **Settings**: configure Anki connection, media extraction, dictionary, and word filtering options.
+
+## YouTube mining
+
+Paste a YouTube URL, click **Fetch Info** to probe metadata (title, duration, sub availability), then click **Mine**. The fetch downloads the video plus its Japanese subtitle track into a per-run temp directory, then hands both files to the same pipeline used for file-based mining. Cards land in Anki the same way.
+
+Auto-captions are accepted only when they are native Japanese. Tracks that YouTube generates by machine-translating from English (or another language) are filtered out — mining those produces garbage. Cards derived from native auto-captions may still be lower quality than cards from manual subtitles, since auto-captions have no sentence boundaries.
+
+- **Bot-detection prompts**: if YouTube asks "Sign in to confirm you're not a bot", open **Settings → Cookies → Browser** and pick Firefox or Chrome. yt-dlp pulls cookies from that browser's profile on every fetch.
+- **Age-restricted videos**: same fix — set the cookies-from-browser option to the browser you use to watch YouTube.
+- **Max duration**: defaults to 120 minutes. The probe aborts before any download if the video is longer. Adjust in Settings.
 
 ## Configuration
 
