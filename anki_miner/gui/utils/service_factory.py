@@ -17,6 +17,7 @@ from anki_miner.services.stats_service import StatsService
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
+from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,8 @@ def create_services(config: AnkiMinerConfig) -> tuple:
         Tuple of (subtitle_parser, word_filter, media_extractor,
                   definition_service, anki_service,
                   pitch_accent_service, frequency_service,
-                  known_word_db, word_list_service, load_result)
+                  known_word_db, word_list_service, youtube_fetcher,
+                  load_result)
     """
     load_result = ServiceLoadResult()
 
@@ -48,6 +50,7 @@ def create_services(config: AnkiMinerConfig) -> tuple:
     media_extractor = MediaExtractorService(config)
     definition_service = DefinitionService(config)
     anki_service = AnkiService(config)
+    youtube_fetcher = YouTubeFetcherService(config=config)
 
     if config.use_offline_dict:
         try:
@@ -133,6 +136,7 @@ def create_services(config: AnkiMinerConfig) -> tuple:
         frequency_service,
         known_word_db,
         word_list_service,
+        youtube_fetcher,
         load_result,
     )
 
@@ -162,6 +166,7 @@ def create_episode_processor(
         frequency_service,
         known_word_db,
         word_list_service,
+        youtube_fetcher,
         load_result,
     ) = create_services(config)
 
@@ -184,7 +189,20 @@ def create_episode_processor(
         known_word_db=known_word_db,
         word_list_service=word_list_service,
         stats_service=stats_service,
+        youtube_fetcher=youtube_fetcher,
     )
+
+
+def create_youtube_fetcher(config: AnkiMinerConfig) -> YouTubeFetcherService:
+    """Create a standalone YouTubeFetcherService for the YouTube tab.
+
+    Args:
+        config: Mining configuration
+
+    Returns:
+        Configured YouTubeFetcherService instance
+    """
+    return YouTubeFetcherService(config=config)
 
 
 def create_folder_processor(
