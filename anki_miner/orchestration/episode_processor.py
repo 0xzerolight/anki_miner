@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 import tempfile
+import threading
 import time
 import uuid
 from collections.abc import Callable
@@ -16,6 +17,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.models import ProcessingResult
+from anki_miner.models.youtube import SubMode
 from anki_miner.services import (
     AnkiService,
     DefinitionService,
@@ -33,6 +35,7 @@ if TYPE_CHECKING:
     from anki_miner.services.pitch_accent_service import PitchAccentService
     from anki_miner.services.stats_service import StatsService
     from anki_miner.services.word_list_service import WordListService
+    from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 
 
 class EpisodeProcessor:
@@ -52,6 +55,7 @@ class EpisodeProcessor:
         known_word_db: KnownWordDB | None = None,
         word_list_service: WordListService | None = None,
         stats_service: StatsService | None = None,
+        youtube_fetcher: YouTubeFetcherService | None = None,
     ):
         """Initialize the episode processor.
 
@@ -68,6 +72,8 @@ class EpisodeProcessor:
             known_word_db: Optional local known word database
             word_list_service: Optional word blacklist/whitelist service
             stats_service: Optional statistics recording service
+            youtube_fetcher: Optional YouTube fetcher service. Required for
+                ``process_youtube_url``; unused by ``process_episode``.
         """
         self.config = config
         self.subtitle_parser = subtitle_parser
@@ -81,6 +87,7 @@ class EpisodeProcessor:
         self.known_word_db = known_word_db
         self.word_list_service = word_list_service
         self.stats_service = stats_service
+        self._youtube_fetcher = youtube_fetcher
         self._cancelled = False
 
     def cancel(self) -> None:
@@ -133,6 +140,8 @@ class EpisodeProcessor:
         progress_callback: ProgressCallback | None = None,
         curation_callback: Callable[[list], list] | None = None,
         cross_episode_counts: dict[str, int] | None = None,
+        episode_name_override: str | None = None,
+        series_name_override: str | None = None,
     ) -> ProcessingResult:
         """Process a single episode and create Anki cards.
 
@@ -151,11 +160,24 @@ class EpisodeProcessor:
             curation_callback: Optional callback for word curation. Receives
                 filtered words, returns user-selected subset. Empty list cancels.
             cross_episode_counts: Optional cross-episode word frequency counts
+            episode_name_override: Optional override for the episode identity
+                passed to stats_service. When ``None`` (default) the identity is
+                derived from ``video_file.stem`` (preserves current anime flow).
+                Used by ``process_youtube_url`` to record ``YT:<video_id>``.
+            series_name_override: Optional override for the series identity
+                passed to stats_service. When ``None`` the identity is derived
+                from ``video_file.parent.name``.
 
         Returns:
             ProcessingResult with statistics
         """
         start_time = time.time()
+        episode_name = (
+            episode_name_override if episode_name_override is not None else video_file.stem
+        )
+        series_name = (
+            series_name_override if series_name_override is not None else video_file.parent.name
+        )
         errors: list[str] = []
         vf = str(video_file)
         sf = str(subtitle_file)
@@ -271,8 +293,8 @@ class EpisodeProcessor:
             # Record difficulty data if stats service available
             if self.stats_service and self.stats_service.is_available():
                 self.stats_service.record_difficulty(
-                    series_name=video_file.parent.name,
-                    episode_name=video_file.stem,
+                    series_name=series_name,
+                    episode_name=episode_name,
                     total_words=len(all_words),
                     unknown_words=len(unknown_words),
                     unique_words=len(all_words),
@@ -441,8 +463,8 @@ class EpisodeProcessor:
 
                 self.stats_service.record_session(
                     MiningSession(
-                        series_name=video_file.parent.name,
-                        episode_name=video_file.stem,
+                        series_name=series_name,
+                        episode_name=episode_name,
                         total_words=result.total_words_found,
                         unknown_words=result.new_words_found,
                         cards_created=result.cards_created,
@@ -484,3 +506,70 @@ class EpisodeProcessor:
                 )
             else:
                 shutil.rmtree(run_temp_folder, ignore_errors=True)
+
+    def process_youtube_url(
+        self,
+        url: str,
+        video_id: str,
+        workspace: Path,
+        sub_mode: SubMode,
+        *,
+        cancel_event: threading.Event,
+        progress_callback: ProgressCallback | None = None,
+    ) -> ProcessingResult:
+        """Fetch a YouTube video + subs then run the standard mining pipeline.
+
+        The ``workspace`` directory is owned by the caller (the worker) — this
+        method only writes into it via the fetcher; cleanup (``rmtree``) is the
+        caller's responsibility, typically in a ``try/finally``.
+
+        Episode identity recorded to stats_service is ``YT:<video_id>`` with
+        series ``YouTube`` so that YouTube mining rows never collide with
+        anime folders that happen to share a stem.
+
+        Args:
+            url: YouTube video URL (or anything yt-dlp accepts).
+            video_id: Pre-extracted video_id; must match the ID yt-dlp will
+                write file names with (the worker takes it from probe_metadata).
+            workspace: Pre-created, caller-owned directory that yt-dlp writes
+                the video and subtitle files into.
+            sub_mode: "manual_only" or "auto_only" — chosen by the user based
+                on what probe_metadata reported as available.
+            cancel_event: Threading event set by the worker on cancellation;
+                forwarded to the fetcher so in-flight yt-dlp can be killed.
+            progress_callback: Optional progress callback, forwarded both to
+                the fetcher (download phase) and to ``process_episode`` (mining
+                phases). The worker is responsible for constructing a callable
+                compatible with both interfaces.
+
+        Returns:
+            ProcessingResult from the mining pipeline, with episode identity
+            overridden to ``YT:<video_id>``.
+
+        Raises:
+            RuntimeError: if no YouTubeFetcherService was injected.
+            Any fetcher exception propagates unchanged (no workspace cleanup
+            happens here — the worker handles it).
+        """
+        if self._youtube_fetcher is None:
+            raise RuntimeError("YouTubeFetcherService not injected — check service_factory")
+
+        if cancel_event.is_set():
+            return self._make_cancelled_result(time.time())
+
+        fetched = self._youtube_fetcher.fetch_video(
+            url,
+            video_id,
+            workspace,
+            sub_mode,
+            progress_cb=progress_callback,  # type: ignore[arg-type]
+            cancel_event=cancel_event,
+        )
+
+        return self.process_episode(
+            fetched.video_file,
+            fetched.subtitle_file,
+            progress_callback=progress_callback,
+            episode_name_override=f"YT:{video_id}",
+            series_name_override="YouTube",
+        )
