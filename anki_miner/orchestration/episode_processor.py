@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import logging
+import os
+import shutil
+import tempfile
 import time
+import uuid
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -18,7 +23,9 @@ from anki_miner.services import (
     SubtitleParserService,
     WordFilterService,
 )
-from anki_miner.utils.file_utils import cleanup_temp_files
+from anki_miner.utils import ensure_directory
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from anki_miner.services.frequency_service import FrequencyService
@@ -85,6 +92,23 @@ class EpisodeProcessor:
         """Check if cancellation has been requested."""
         return self._cancelled
 
+    def _allocate_run_temp_folder(self) -> Path:
+        """Create an isolated temp directory for a single episode run.
+
+        Each call returns a fresh, uniquely-named directory under the
+        system temp root (or under ANKI_MINER_KEEP_TEMP_DIR if the
+        user has pinned it for debugging). Cleanup happens in
+        process_episode's finally block unless ANKI_MINER_KEEP_TEMP is set.
+        """
+        if os.environ.get("ANKI_MINER_KEEP_TEMP"):
+            base = self.config.media_temp_folder
+            ensure_directory(base)
+            run_dir = base / f"run_{uuid.uuid4().hex[:8]}"
+            run_dir.mkdir(parents=True, exist_ok=True)
+            return run_dir
+
+        return Path(tempfile.mkdtemp(prefix="anki_miner_"))
+
     def _make_cancelled_result(
         self,
         start_time: float,
@@ -135,6 +159,9 @@ class EpisodeProcessor:
         errors: list[str] = []
         vf = str(video_file)
         sf = str(subtitle_file)
+
+        run_temp_folder = self._allocate_run_temp_folder()
+        keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
         try:
             # Phase 1: Parse subtitles
@@ -306,6 +333,7 @@ class EpisodeProcessor:
                 unknown_words,
                 progress_callback,
                 cancelled_check=lambda: self._cancelled,
+                temp_folder=run_temp_folder,
             )
 
             if self._cancelled:
@@ -449,6 +477,10 @@ class EpisodeProcessor:
                 subtitle_file=sf,
             )
         finally:
-            # Clean up temporary media files
-            if self.config.media_temp_folder.exists():
-                cleanup_temp_files(self.config.media_temp_folder)
+            if keep_temp:
+                logger.info(
+                    "ANKI_MINER_KEEP_TEMP set; leaving run temp folder at %s",
+                    run_temp_folder,
+                )
+            else:
+                shutil.rmtree(run_temp_folder, ignore_errors=True)

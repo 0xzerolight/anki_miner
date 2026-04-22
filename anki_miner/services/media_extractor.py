@@ -34,12 +34,15 @@ class MediaExtractorService:
         self,
         video_file: Path,
         word: TokenizedWord,
+        temp_folder: Path | None = None,
     ) -> MediaData:
         """Extract screenshot and audio for a single word.
 
         Args:
             video_file: Path to video file
             word: TokenizedWord with timing information
+            temp_folder: Per-run temp directory to write output into; when
+                omitted, falls back to the config-level media_temp_folder.
 
         Returns:
             MediaData with paths to extracted files
@@ -51,8 +54,9 @@ class MediaExtractorService:
         screenshot_file = f"{safe_word}_{timestamp}.jpg"
         audio_file = f"{safe_word}_{timestamp}.mp3"
 
-        screenshot_path = self.config.media_temp_folder / screenshot_file
-        audio_path = self.config.media_temp_folder / audio_file
+        output_dir = temp_folder if temp_folder is not None else self.config.media_temp_folder
+        screenshot_path = output_dir / screenshot_file
+        audio_path = output_dir / audio_file
 
         # Extract screenshot
         screenshot_success = self._extract_screenshot(
@@ -75,6 +79,7 @@ class MediaExtractorService:
         words: list[TokenizedWord],
         progress_callback: ProgressCallback | None = None,
         cancelled_check: Callable[[], bool] | None = None,
+        temp_folder: Path | None = None,
     ) -> list[tuple[TokenizedWord, MediaData]]:
         """Extract media for multiple words in parallel.
 
@@ -82,6 +87,9 @@ class MediaExtractorService:
             video_file: Path to video file
             words: List of words to extract media for
             progress_callback: Optional callback for progress reporting
+            cancelled_check: Optional callable returning True when the caller
+                wants in-flight work cancelled.
+            temp_folder: Per-run temp directory forwarded to extract_media.
 
         Returns:
             List of (word, media_data) tuples (only includes words with successful extraction)
@@ -96,7 +104,8 @@ class MediaExtractorService:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all extraction jobs
             future_to_word = {
-                executor.submit(self.extract_media, video_file, word): word for word in words
+                executor.submit(self.extract_media, video_file, word, temp_folder): word
+                for word in words
             }
 
             # Collect results as they complete
