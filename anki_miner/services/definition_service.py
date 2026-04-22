@@ -41,6 +41,7 @@ class DefinitionService:
 
         # Backwards-compatibility: track JMdict state for load_offline_dictionary()
         self._jmdict: dict[str, list[str]] | None = None
+        self._loaded = False
 
     def _build_default_providers(self) -> list[DictionaryProvider]:
         """Build the default provider chain from config settings."""
@@ -53,6 +54,25 @@ class DefinitionService:
         providers.append(JishoProvider(self.config.jisho_api_url, self.config.jisho_delay))
 
         return providers
+
+    def ensure_loaded(self) -> bool:
+        """Initialize all providers exactly once. Idempotent and safe to call
+        from any code path. Returns True iff the offline dictionary loaded
+        successfully (so callers can surface an "online fallback" warning
+        when offline mode was requested).
+        """
+        if self._loaded:
+            return self._jmdict is not None
+
+        self._loaded = True
+        self.load_providers()
+
+        for provider in self._providers:
+            if isinstance(provider, JMdictProvider) and provider.is_available():
+                self._jmdict = provider._dictionary
+                return True
+
+        return False
 
     def load_providers(self) -> dict[str, bool]:
         """Load all providers that require initialization.
@@ -71,23 +91,14 @@ class DefinitionService:
         return results
 
     def load_offline_dictionary(self) -> bool:
-        """Load offline dictionary (backwards-compatible wrapper).
-
-        Returns:
-            True if the offline dictionary loaded successfully.
+        """Backwards-compatible alias for ``ensure_loaded`` that respects the
+        offline-dict config flag. Returns False without loading when the user
+        has disabled offline lookups; otherwise returns whether the offline
+        dictionary became available.
         """
         if not self.config.use_offline_dict:
             return False
-
-        self.load_providers()
-
-        # Maintain backwards compat: update _jmdict reference
-        for provider in self._providers:
-            if isinstance(provider, JMdictProvider) and provider.is_available():
-                self._jmdict = provider._dictionary
-                return True
-
-        return False
+        return self.ensure_loaded()
 
     def get_definition(self, word: str) -> str | None:
         """Get definition for a word.
@@ -102,6 +113,9 @@ class DefinitionService:
         Returns:
             HTML-formatted definition string, or None if not found.
         """
+        if not self._custom_providers:
+            self.ensure_loaded()
+
         if self._custom_providers:
             # Pluggable mode: simple chain - try each in order
             for provider in self._providers:

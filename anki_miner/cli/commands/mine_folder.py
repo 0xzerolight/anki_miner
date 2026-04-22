@@ -68,8 +68,10 @@ def mine_folder_command(args) -> int:
     if config.use_offline_dict:
         try:
             presenter.show_info("\nLoading offline dictionary...")
-            if definition_service.load_offline_dictionary():
+            if definition_service.ensure_loaded():
                 presenter.show_success("Offline dictionary loaded")
+            else:
+                presenter.show_info("Using Jisho API for definitions")
         except Exception as e:
             presenter.show_warning(f"Could not load offline dictionary: {e}")
 
