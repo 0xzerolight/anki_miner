@@ -752,3 +752,87 @@ class TestStatsServiceIntegration:
         assert result.success is False
         mock_stats.record_session.assert_not_called()
         mock_stats.record_difficulty.assert_not_called()
+
+
+class TestPerRunTempFolder:
+    """Isolate temp media per run instead of sharing one folder across calls."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_extract_media_batch_receives_unique_temp_folder_per_run(
+        self, test_config, mock_services, tmp_path
+    ):
+        words = [_make_word("食べる")]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [
+            (words[0], _make_media("a"))
+        ]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["def"]
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        calls = mock_services["media_extractor"].extract_media_batch.call_args_list
+        assert len(calls) == 2
+        first_folder = calls[0].kwargs["temp_folder"]
+        second_folder = calls[1].kwargs["temp_folder"]
+        assert first_folder is not None
+        assert second_folder is not None
+        assert first_folder != second_folder
+        # Both folders removed on cleanup.
+        assert not first_folder.exists()
+        assert not second_folder.exists()
+
+    def test_keep_temp_env_var_preserves_folder(
+        self, test_config, mock_services, tmp_path, monkeypatch
+    ):
+        monkeypatch.setenv("ANKI_MINER_KEEP_TEMP", "1")
+
+        from dataclasses import replace
+
+        config = replace(test_config, media_temp_folder=tmp_path / "persisted")
+        words = [_make_word("食べる")]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [
+            (words[0], _make_media("a"))
+        ]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["def"]
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        folder = mock_services["media_extractor"].extract_media_batch.call_args.kwargs[
+            "temp_folder"
+        ]
+        assert folder is not None
+        assert folder.exists()
+        # Lives under the configured base, not a random system temp dir.
+        assert config.media_temp_folder in folder.parents
