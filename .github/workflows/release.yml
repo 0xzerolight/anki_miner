@@ -55,7 +55,31 @@ jobs:
           echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build with PyInstaller
-        run: pyinstaller anki_miner.spec
+        run: pyinstaller --additional-hooks-dir=PyInstaller-Hooks anki_miner.spec
+
+      - name: YouTube bundled smoke (Linux/macOS)
+        if: runner.os != 'Windows'
+        env:
+          ANKI_MINER_SMOKE: youtube
+          QT_QPA_PLATFORM: offscreen
+        continue-on-error: true
+        run: |
+          ./dist/AnkiMiner/AnkiMiner 2>&1 | tee smoke.log
+          grep -q "BUNDLED_SMOKE_PASS" smoke.log
+
+      - name: YouTube bundled smoke (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ANKI_MINER_SMOKE: youtube
+          QT_QPA_PLATFORM: offscreen
+        continue-on-error: true
+        run: |
+          .\dist\AnkiMiner\AnkiMiner.exe 2>&1 | Tee-Object -FilePath smoke.log
+          if (-not (Select-String -Path smoke.log -Pattern "BUNDLED_SMOKE_PASS" -Quiet)) {
+            Write-Error "BUNDLED_SMOKE_PASS not found"
+            exit 1
+          }
 
       - name: Build Windows installer
         if: runner.os == 'Windows'
