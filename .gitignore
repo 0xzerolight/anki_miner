@@ -49,6 +49,7 @@ rename_log.txt
 .ruff_cache/
 docs/
 .claude-runner/
+.codex
 resources/
 
 # OS
