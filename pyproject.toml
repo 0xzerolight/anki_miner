@@ -51,7 +51,6 @@ colorama = [
 ]
 
 [project.scripts]
-anki_miner = "anki_miner.cli.main:main"
 anki_miner_gui = "anki_miner.gui.app:main"
 
 [project.urls]
