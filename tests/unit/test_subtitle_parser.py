@@ -1,5 +1,6 @@
 """Tests for subtitle_parser module."""
 
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
@@ -281,7 +282,32 @@ class TestShouldIncludeWord:
         assert service._should_include_word(token) is False
 
     def test_excludes_single_kanji(self, service):
+        """Single kanji excluded at the default min_word_length=2 floor."""
         token = _make_token("日", "名詞", lemma="日")
+        assert service._should_include_word(token) is False
+
+    def test_includes_single_kanji_when_min_length_one(self, test_config):
+        """Single kanji pass when user explicitly lowers the floor to 1."""
+        config = replace(test_config, min_word_length=1)
+        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+            service = SubtitleParserService(config)
+        token = _make_token("皿", "名詞", lemma="皿")
+        assert service._should_include_word(token) is True
+
+    def test_still_excludes_single_katakana_when_min_length_one(self, test_config):
+        """Single katakana remain rejected even at the lowest floor — they are noise."""
+        config = replace(test_config, min_word_length=1)
+        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+            service = SubtitleParserService(config)
+        token = _make_token("ア", "名詞", lemma="ア")
+        assert service._should_include_word(token) is False
+
+    def test_still_excludes_single_hiragana_when_min_length_one(self, test_config):
+        """Single hiragana remain rejected even at the lowest floor — they are noise."""
+        config = replace(test_config, min_word_length=1)
+        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+            service = SubtitleParserService(config)
+        token = _make_token("あ", "名詞", lemma="あ")
         assert service._should_include_word(token) is False
 
     def test_includes_kanji_compound(self, service):
