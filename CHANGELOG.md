@@ -4,7 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [2.1.0] - 2026-04-16
+## [2.3.0] - 2026-04-22
+
+### Changed
+- **DefinitionService**: now self-initializing via `ensure_loaded`; callers no longer need to invoke setup explicitly.
+- **Folder pairing**: consolidated into `FilePairMatcher` for consistent logic across batch entry points.
+
+### Removed
+- **BREAKING — CLI removed**: `mine` and `mine-folder` subcommands deleted. `anki_miner_gui` is now the sole entrypoint.
+
+### Fixed
+- **Temp media isolation**: each run gets its own temp directory so cross-run cleanup can't delete in-flight files.
+- **Optional resource files**: warn on missing frequency/pitch accent files instead of failing silently.
+- **Wheel packaging**: all GUI resources now bundled via `MANIFEST.in`.
+
+## [2.2.0] - 2026-04-16
 
 ### Added
 - **JSON-based theme system**: themes defined as JSON files with dynamic discovery, validation, and color variable extraction. Replaces per-theme QSS files with a single `common.qss` using `${color-*}` substitution.
@@ -16,16 +30,64 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Pitch accent fields**: updated to match Lapis card type field names.
 - **Frequency/pitch accent errors**: clear error messages instead of silent failures.
 - **UI element consistency**: improved visual consistency across all themes.
-- **Theme backgrounds**: fixed all themes incorrectly showing dark background.
+- **Theme backgrounds**: fixed all themes incorrectly showing a dark background.
+- **Known-word filtering**: fixed known words not being filtered due to differing card field names.
 
 ### Removed
-- **Per-theme QSS files**: `light_theme.qss`, `dark_theme.qss`, `sakura_theme.qss` replaced by JSON theme system.
+- **Per-theme QSS files**: `light_theme.qss`, `dark_theme.qss`, `sakura_theme.qss` replaced by the JSON theme system.
 - **IconProvider dead code**: unused icon provider module and references removed.
 
 ### Fixed
-- **CI workflow**: fixed PyQt6 compatibility in GitHub Actions.
+- **CI workflow**: PyQt6 compatibility in GitHub Actions.
+- **mypy**: resolved type error in `Theme.get_colors` return type; removed a stale `type: ignore`.
 
-## [2.0.0] - 2026-02-06
+## [2.1.0] - 2026-04-01
+
+### Added
+- **Analytics dashboard**: series difficulty ratings and progress tracking.
+- **Export system**: deck export plus enhanced CSV/TSV and vocab list export.
+- **Known-word database**: SQLite-backed known-word cache with blacklist/whitelist and sentence deduplication.
+- **History and undo**: mining history with undo support.
+- **Subtitle viewer** with configurable card fields.
+- **Auto-update** check and in-app issue reporting.
+- **Comprehension %** and cross-episode frequency metrics.
+- **Workflow improvements**: retry, drag-and-drop, recent files list.
+- **Cancel button**, word curation dialog, and keyboard shortcuts.
+- **Pitch accent and frequency** card fields with support for additional dictionaries.
+- **Download methods**: improved install/download flow.
+- **ARCHITECTURE.md**: design and architecture documentation.
+
+### Changed
+- **Text backgrounds**: redesigned for readability.
+
+### Fixed
+- Twelve post-merge test failures (mock passthrough and parameter rename).
+- CI workflow adjustments for the executables build.
+
+## [2.0.4] - 2026-02-13
+
+### Changed
+- Version bump to ship the icon files added in 2.0.3.
+
+## [2.0.3] - 2026-02-13
+
+### Added
+- Windows (`.ico`) and macOS (`.icns`) icon files for PyInstaller builds.
+
+## [2.0.2] - 2026-02-13
+
+### Fixed
+- Windows PyInstaller build no longer fails when no `.ico` file is available — falls back gracefully.
+
+## [2.0.1] - 2026-02-13
+
+### Added
+- **PyPI publishing** workflow and **PyInstaller builds** for one-click installation.
+
+### Changed
+- Improved GIF descriptions in `README.md`.
+
+## [2.0.0] - 2026-02-12
 
 Initial public release.
 
