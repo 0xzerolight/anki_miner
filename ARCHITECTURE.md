@@ -259,7 +259,7 @@ Subprocess invoked by `YouTubeFetcherService`. Probe uses `--skip-download --dum
 
 ### PyInstaller hook for yt-dlp
 
-yt-dlp lazy-loads ~1600 extractor modules plus optional deps (`websockets`, `mutagen`, `brotli`) that PyInstaller's static analysis misses. `PyInstaller-Hooks/hook-yt_dlp.py` calls `collect_all("yt_dlp")` and the release workflow passes `--additional-hooks-dir=PyInstaller-Hooks`. `scripts/smoke_youtube_probe.py` exercises `probe_metadata` against a short public URL in CI to validate the bundle.
+yt-dlp lazy-loads ~1600 extractor modules plus optional deps (`websockets`, `mutagen`, `brotli`) that PyInstaller's static analysis misses. `PyInstaller-Hooks/hook-yt_dlp.py` calls `collect_all("yt_dlp")` and the release workflow passes `--additional-hooks-dir=PyInstaller-Hooks`. The release workflow's bundled smoke step (`ANKI_MINER_SMOKE=youtube` env var in `anki_miner/gui/app.py`) walks `yt_dlp.extractor.gen_extractors()` offline to verify the registry survived `collect_all`.
 
 ## Exception Hierarchy
 
