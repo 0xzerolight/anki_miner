@@ -1,5 +1,6 @@
 """Tests for episode_processor module."""
 
+import threading
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -7,6 +8,7 @@ import pytest
 
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import MediaData, TokenizedWord
+from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.presenters import NullPresenter
 
@@ -836,3 +838,317 @@ class TestPerRunTempFolder:
         assert folder.exists()
         # Lives under the configured base, not a random system temp dir.
         assert config.media_temp_folder in folder.parents
+
+
+class TestProcessYoutubeUrl:
+    """Tests for EpisodeProcessor.process_youtube_url."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _happy_pipeline(self, mock_services, word, media):
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+    def test_missing_fetcher_raises_runtime_error(self, test_config, mock_services, tmp_path):
+        """process_youtube_url on a processor without a fetcher raises RuntimeError."""
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        with pytest.raises(RuntimeError, match="YouTubeFetcherService not injected"):
+            processor.process_youtube_url(
+                url="https://youtu.be/abc",
+                video_id="abc",
+                workspace=tmp_path,
+                sub_mode="manual_only",
+                cancel_event=threading.Event(),
+            )
+
+    def test_happy_path_calls_fetch_then_process_episode(
+        self, test_config, mock_services, tmp_path
+    ):
+        """process_youtube_url should call fetch_video then run the mining pipeline."""
+        video_file = tmp_path / "abc123.mp4"
+        subtitle_file = tmp_path / "abc123.ja.srt"
+        video_file.touch()
+        subtitle_file.touch()
+
+        word = _make_word("食べる")
+        media = _make_media()
+        self._happy_pipeline(mock_services, word, media)
+
+        mock_fetcher = MagicMock()
+        mock_fetcher.fetch_video.return_value = FetchedMedia(
+            video_file=video_file,
+            subtitle_file=subtitle_file,
+            sub_source="manual",
+        )
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=mock_fetcher,
+            **mock_services,
+        )
+
+        cancel_event = threading.Event()
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=cancel_event,
+        )
+
+        # Fetcher was called with expected args
+        mock_fetcher.fetch_video.assert_called_once()
+        call = mock_fetcher.fetch_video.call_args
+        assert call.args[0] == "https://youtu.be/abc123"
+        assert call.args[1] == "abc123"
+        assert call.args[2] == tmp_path
+        assert call.args[3] == "manual_only"
+        assert call.kwargs["cancel_event"] is cancel_event
+
+        # Mining pipeline ran and produced a card
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(subtitle_file)
+        assert result.cards_created == 1
+        assert result.total_words_found == 1
+
+    def test_cancel_at_entry_does_not_invoke_fetcher(self, test_config, mock_services, tmp_path):
+        """Cancellation set before entry should short-circuit without calling fetch_video."""
+        mock_fetcher = MagicMock()
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=mock_fetcher,
+            **mock_services,
+        )
+
+        cancel_event = threading.Event()
+        cancel_event.set()
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc",
+            video_id="abc",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=cancel_event,
+        )
+
+        mock_fetcher.fetch_video.assert_not_called()
+        assert result.success is False
+        assert any("cancel" in e.lower() for e in result.errors)
+
+    def test_fetcher_exception_propagates(self, test_config, mock_services, tmp_path):
+        """Exceptions from the fetcher propagate; orchestrator does not swallow or cleanup."""
+        mock_fetcher = MagicMock()
+        mock_fetcher.fetch_video.side_effect = RuntimeError("boom")
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=mock_fetcher,
+            **mock_services,
+        )
+
+        with pytest.raises(RuntimeError, match="boom"):
+            processor.process_youtube_url(
+                url="https://youtu.be/abc",
+                video_id="abc",
+                workspace=tmp_path,
+                sub_mode="manual_only",
+                cancel_event=threading.Event(),
+            )
+
+        # Mining pipeline must not have run after the fetch failed.
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
+
+    def test_episode_identity_overridden_to_yt_video_id(self, test_config, mock_services, tmp_path):
+        """Stats service should receive YT:<video_id> as episode name, not video_file.stem."""
+        video_file = tmp_path / "abc123.mp4"
+        subtitle_file = tmp_path / "abc123.ja.srt"
+        video_file.touch()
+        subtitle_file.touch()
+
+        word = _make_word("食べる")
+        media = _make_media()
+        self._happy_pipeline(mock_services, word, media)
+
+        mock_fetcher = MagicMock()
+        mock_fetcher.fetch_video.return_value = FetchedMedia(
+            video_file=video_file,
+            subtitle_file=subtitle_file,
+            sub_source="manual",
+        )
+
+        mock_stats = MagicMock()
+        mock_stats.is_available.return_value = True
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=mock_fetcher,
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+        )
+
+        # Difficulty recorded with YT identity
+        diff_kwargs = mock_stats.record_difficulty.call_args.kwargs
+        assert diff_kwargs["episode_name"] == "YT:abc123"
+        assert diff_kwargs["series_name"] == "YouTube"
+
+        # Session recorded with YT identity
+        mock_stats.record_session.assert_called_once()
+        session = mock_stats.record_session.call_args.args[0]
+        assert session.episode_name == "YT:abc123"
+        assert session.series_name == "YouTube"
+
+    def test_episode_name_override_preserves_default_when_none(
+        self, test_config, mock_services, tmp_path
+    ):
+        """process_episode with no override still derives identity from video_file paths."""
+        mock_stats = MagicMock()
+        mock_stats.is_available.return_value = True
+
+        word = _make_word("食べる")
+        media = _make_media()
+        self._happy_pipeline(mock_services, word, media)
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        series_dir = tmp_path / "MySeries"
+        series_dir.mkdir()
+        video_file = series_dir / "ep01.mkv"
+        subtitle_file = series_dir / "ep01.ass"
+
+        processor.process_episode(video_file, subtitle_file)
+
+        diff_kwargs = mock_stats.record_difficulty.call_args.kwargs
+        assert diff_kwargs["series_name"] == "MySeries"
+        assert diff_kwargs["episode_name"] == "ep01"
+
+    def _make_processor_with_fetcher(self, test_config, mock_services, tmp_path):
+        """Build a processor wired to a fetcher that returns test media."""
+        video_file = tmp_path / "abc123.mp4"
+        subtitle_file = tmp_path / "abc123.ja.srt"
+        video_file.touch()
+        subtitle_file.touch()
+
+        word = _make_word("食べる")
+        media = _make_media()
+        self._happy_pipeline(mock_services, word, media)
+
+        mock_fetcher = MagicMock()
+        mock_fetcher.fetch_video.return_value = FetchedMedia(
+            video_file=video_file,
+            subtitle_file=subtitle_file,
+            sub_source="manual",
+        )
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=mock_fetcher,
+            **mock_services,
+        )
+        return processor
+
+    def test_curation_callback_forwarded_to_process_episode(
+        self, test_config, mock_services, tmp_path
+    ):
+        """Supplied curation_callback reaches process_episode and gets invoked."""
+        processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
+
+        seen: list = []
+
+        def _curate(words):
+            seen.append(list(words))
+            # Returning the same list keeps the rest of the pipeline running.
+            return words
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+            curation_callback=_curate,
+        )
+
+        # Callback was invoked exactly once with the post-filter word list.
+        assert len(seen) == 1
+        assert [w.lemma for w in seen[0]] == ["食べる"]
+
+    def test_preview_mode_true_forwarded_to_process_episode(
+        self, test_config, mock_services, tmp_path
+    ):
+        """preview_mode=True short-circuits before card creation."""
+        processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+            preview_mode=True,
+        )
+
+        # Preview mode never hits anki_service.create_cards_batch.
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
+        # And no media extraction is done either.
+        mock_services["media_extractor"].extract_media_batch.assert_not_called()
+        assert result.cards_created == 0
+
+    def test_curation_and_preview_default_to_none_and_false(
+        self, test_config, mock_services, tmp_path
+    ):
+        """Omitting the new kwargs preserves pre-C3 behaviour: curation off, cards created."""
+        processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+        )
+
+        # Default behaviour: cards are created (no preview), and the pipeline
+        # did not attempt to run a curation callback (we didn't pass one).
+        mock_services["anki_service"].create_cards_batch.assert_called_once()
+        assert result.cards_created == 1
