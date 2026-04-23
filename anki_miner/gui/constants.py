@@ -18,8 +18,9 @@ APP_NAME = "Anki Miner"
 # =============================================================================
 TAB_SINGLE_EPISODE = 0
 TAB_BATCH_PROCESSING = 1
-TAB_ANALYTICS = 2
-TAB_SETTINGS = 3
+TAB_YOUTUBE = 2
+TAB_ANALYTICS = 3
+TAB_SETTINGS = 4
 
 # =============================================================================
 # WIDGET MINIMUM HEIGHTS

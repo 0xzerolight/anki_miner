@@ -168,8 +168,8 @@ class MainWindow(QMainWindow):
 
     def _setup_shortcuts(self) -> None:
         """Set up global keyboard shortcuts."""
-        # Tab switching shortcuts (Ctrl+1/2/3/4)
-        for i in range(1, 5):
+        # Tab switching shortcuts (Ctrl+1..Ctrl+5)
+        for i in range(1, 6):
             shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
             shortcut.activated.connect(lambda idx=i - 1: self._switch_to_tab(idx))
 
@@ -441,14 +441,19 @@ class MainWindow(QMainWindow):
         # Cancel and wait for any processing workers in tabs
         from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
         from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
+        from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
         for i in range(self.tabs.count()):
             tab = self.tabs.widget(i)
-            if isinstance(tab, SingleEpisodeTab | BatchProcessingTab):
+            if isinstance(tab, SingleEpisodeTab | BatchProcessingTab | YouTubeTab):
                 worker = getattr(tab, "worker_thread", None)
                 if worker and worker.isRunning():
                     worker.cancel()
                     worker.wait(2000)
+                # YouTube tab owns an additional probe worker; shutdown() tears
+                # both threads down cleanly.
+                if isinstance(tab, YouTubeTab) and hasattr(tab, "shutdown"):
+                    tab.shutdown()
 
         # Save configuration before closing
         GUIConfigManager.save_config(self.config)
