@@ -139,8 +139,15 @@ class ProgressWidget(QWidget):
         return self._total_items
 
     def reset(self) -> None:
-        """Reset progress to initial state."""
+        """Reset progress to initial state.
+
+        Restores maximum and text format too — otherwise calling ``reset``
+        after ``set_indeterminate`` would leave ``setMaximum(0)`` in place,
+        which Qt renders as a looping busy indicator.
+        """
+        self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
+        self.progress_bar.setFormat("%p%")
         self.status_label.setText("Ready")
         self.stats_label.setText("")
         self._start_time = None

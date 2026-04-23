@@ -48,7 +48,11 @@ class _MiningProgressAdapter:
         self._emit(self._desc or "Complete", 100)
 
     def on_error(self, item_description: str, error_message: str) -> None:
-        self._emit(f"Error: {item_description}", -1)
+        # No-op. Per-item mining failures surface as exceptions that the
+        # worker's except clause routes to the `error` signal. Emitting a
+        # progress update here would re-trigger the widget's indeterminate
+        # animation after mining has already failed.
+        return
 
 
 class YouTubeWorkerThread(CancellableWorker):
