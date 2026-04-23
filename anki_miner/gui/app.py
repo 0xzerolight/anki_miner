@@ -26,20 +26,35 @@ from anki_miner.services.stats_service import StatsService
 def _run_bundled_smoke() -> int:
     """Env-var-gated smoke path for PyInstaller bundle validation.
 
-    Triggered by ANKI_MINER_SMOKE=youtube. Verifies yt-dlp extractors were
-    correctly bundled by probing a public short video. Not a CLI surface —
-    the flag is hidden, env-var-only, and exits before any Qt init.
+    Triggered by ANKI_MINER_SMOKE=youtube. Verifies yt-dlp and its extractor
+    registry survived PyInstaller's collect_all by walking the registry
+    offline and resolving the Youtube extractor. No network, no YoutubeDL,
+    no bot challenge. Not a CLI surface — the flag is hidden, env-var-only,
+    and exits before any Qt init.
     """
-    from anki_miner.config.config import AnkiMinerConfig
-    from anki_miner.services.youtube_fetcher import YouTubeFetcherService
-
-    fetcher = YouTubeFetcherService(AnkiMinerConfig())
     try:
-        info = fetcher.probe_metadata("https://www.youtube.com/watch?v=9bZkp7q19f0")
+        from yt_dlp.extractor import (  # type: ignore[import-untyped]
+            gen_extractors,
+            get_info_extractor,
+        )
+
+        extractor_count = sum(1 for _ in gen_extractors())
+        if extractor_count < 1000:
+            raise RuntimeError(
+                f"extractor registry shrunk: {extractor_count} < 1000 "
+                "(expected ~1600; PyInstaller collect_all may have dropped extractors)"
+            )
+
+        youtube_ie = get_info_extractor("Youtube")
+        if youtube_ie is None:
+            raise RuntimeError("Youtube extractor not resolvable from bundle")
+
+        if not youtube_ie.suitable("https://www.youtube.com/watch?v=9bZkp7q19f0"):
+            raise RuntimeError("YoutubeIE.suitable() rejected a canonical YouTube URL")
     except Exception as exc:
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
-    print(f"BUNDLED_SMOKE_PASS: id={info.video_id}")
+    print(f"BUNDLED_SMOKE_PASS: yt_dlp extractors={extractor_count}")
     return 0
 
 
