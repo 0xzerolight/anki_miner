@@ -139,6 +139,7 @@ def main():
     settings_tab.config_changed.connect(window.update_config)
     settings_tab.config_changed.connect(episode_tab.update_config)
     settings_tab.config_changed.connect(batch_tab.update_config)
+    settings_tab.config_changed.connect(youtube_tab.update_config)
     window.tabs.addTab(settings_tab, "Settings")
 
     # Show window
