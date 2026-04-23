@@ -47,22 +47,6 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
 
-  youtube-smoke:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install Qt system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libegl1 libpulse0 libxkbcommon0
-      - run: pip install -e ".[dev]"
-      - name: Probe YouTube (wheel install)
-        run: python scripts/smoke_youtube_probe.py
-
   wheel-assets:
     runs-on: ubuntu-latest
     steps:
