@@ -54,7 +54,7 @@ class PairPreviewDialog(QDialog):
 
         # Header
         header = SectionHeader(
-            f"File Pair Preview — {len(self.pairs)} pairs",
+            f"File Pair Preview: {len(self.pairs)} pairs",
         )
         main_layout.addWidget(header)
 
@@ -159,7 +159,7 @@ class PairPreviewDialog(QDialog):
         footer_layout.setSpacing(SPACING.sm)
 
         # Info label
-        info_label = QLabel("All pairs will be processed sequentially")
+        info_label = QLabel("Pairs process in order.")
         info_label.setFont(self._create_font(12))
         footer_layout.addWidget(info_label)
 

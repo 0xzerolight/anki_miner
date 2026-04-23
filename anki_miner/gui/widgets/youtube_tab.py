@@ -60,7 +60,6 @@ class _UIState(Enum):
     AGE_LOCKED = auto()
     NO_SUBS = auto()
     MANUAL_READY = auto()
-    AUTO_PENDING = auto()
     AUTO_READY = auto()
     MINING = auto()
     MINED = auto()
@@ -198,11 +197,6 @@ class YouTubeTab(QWidget):
         self.status_label.setTextFormat(Qt.TextFormat.PlainText)
         self.status_label.setObjectName("helper-text")
         source_layout.addWidget(self.status_label)
-
-        self.accept_button = ModernButton("Accept auto-captions and mine", variant="secondary")
-        self.accept_button.clicked.connect(self._on_accept_auto_clicked)
-        self.accept_button.hide()
-        source_layout.addWidget(self.accept_button)
 
         source_card.setLayout(source_layout)
         layout.addWidget(source_card)
@@ -342,12 +336,6 @@ class YouTubeTab(QWidget):
         """Clear the probe worker handle once the QThread signals finished."""
         self._probe_worker = None
 
-    def _on_accept_auto_clicked(self) -> None:
-        """User accepted the auto-caption warning — arm the Mine button."""
-        if self._state != _UIState.AUTO_PENDING:
-            return
-        self._transition(_UIState.AUTO_READY)
-
     def _on_preview_clicked(self) -> None:
         """Preview Words button: run pipeline with ``preview_mode=True``."""
         self._start_mining(preview_mode=True)
@@ -454,7 +442,7 @@ class YouTubeTab(QWidget):
         if info.has_manual_ja_subs:
             return _UIState.MANUAL_READY
         if info.has_auto_ja_subs:
-            return _UIState.AUTO_PENDING
+            return _UIState.AUTO_READY
         return _UIState.NO_SUBS
 
     def _transition(
@@ -477,7 +465,6 @@ class YouTubeTab(QWidget):
         # Defaults; per-state code overrides these below.
         mine_enabled = False
         cancel_visible = False
-        accept_visible = False
         fetch_enabled = True
         status_text = ""
 
@@ -507,20 +494,12 @@ class YouTubeTab(QWidget):
         elif new_state == _UIState.MANUAL_READY:
             self._resolved_sub_mode = "manual_only"
             mine_enabled = True
-            status_text = "Manual Japanese subtitles detected — ready to mine."
-
-        elif new_state == _UIState.AUTO_PENDING:
-            self._resolved_sub_mode = None
-            accept_visible = True
-            status_text = (
-                "Japanese auto-captions detected (no manual subs). " "Quality may be lower."
-            )
+            status_text = "Manual Japanese subtitles. Ready to mine."
 
         elif new_state == _UIState.AUTO_READY:
             self._resolved_sub_mode = "auto_only"
             mine_enabled = True
-            accept_visible = False
-            status_text = "Auto-captions accepted — ready to mine."
+            status_text = "Japanese auto-captions only. Ready to mine."
 
         elif new_state == _UIState.MINING:
             mine_enabled = False
@@ -540,11 +519,6 @@ class YouTubeTab(QWidget):
         self.preview_button.setEnabled(mine_enabled)
         self.process_button.setEnabled(mine_enabled)
         self.fetch_button.setEnabled(fetch_enabled)
-
-        if accept_visible:
-            self.accept_button.show()
-        else:
-            self.accept_button.hide()
 
         if cancel_visible:
             self.preview_button.hide()

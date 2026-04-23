@@ -78,7 +78,6 @@ class TestInitialState:
         assert tab._state == _UIState.IDLE_NO_URL
         assert not tab.process_button.isEnabled()
         assert tab.status_label.text() == "Enter a YouTube URL and click Fetch Info."
-        assert tab.accept_button.isHidden()
 
 
 class TestProbeOutcomes:
@@ -134,7 +133,8 @@ class TestProbeOutcomes:
         try:
             info = _make_video_info(is_age_restricted=True, has_auto_ja_subs=True)
             widget._on_probe_done(info)
-            assert widget._state == _UIState.AUTO_PENDING
+            assert widget._state == _UIState.AUTO_READY
+            assert widget.process_button.isEnabled()
         finally:
             widget.deleteLater()
 
@@ -148,21 +148,13 @@ class TestProbeOutcomes:
         assert not tab.process_button.isEnabled()
         assert "max duration" in tab.status_label.text().lower()
 
-    def test_auto_only_pending(self, tab):
+    def test_auto_only_ready_directly(self, tab):
         info = _make_video_info(has_auto_ja_subs=True)
         tab._on_probe_done(info)
-        assert tab._state == _UIState.AUTO_PENDING
-        assert not tab.process_button.isEnabled()
-        assert not tab.accept_button.isHidden()
-
-    def test_auto_only_accept_arms_mine(self, tab):
-        info = _make_video_info(has_auto_ja_subs=True)
-        tab._on_probe_done(info)
-        tab._on_accept_auto_clicked()
         assert tab._state == _UIState.AUTO_READY
         assert tab.process_button.isEnabled()
+        assert tab.preview_button.isEnabled()
         assert tab._resolved_sub_mode == "auto_only"
-        assert tab.accept_button.isHidden()
 
     def test_no_subs(self, tab):
         info = _make_video_info()
