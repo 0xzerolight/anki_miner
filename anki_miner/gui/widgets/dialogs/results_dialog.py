@@ -170,4 +170,4 @@ class ResultsDialog(EnhancedDialog):
         except Exception as e:
             self._undo_button.setEnabled(True)
             logger.error(f"Undo failed: {e}")
-            QMessageBox.critical(self, "Undo Failed", f"Could not delete cards:\n{e}")
+            QMessageBox.critical(self, "Undo Failed", f"Failed to delete cards:\n{e}")
