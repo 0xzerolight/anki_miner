@@ -64,7 +64,7 @@ class WordPreviewDialog(QDialog):
 
         # Header with title
         header = SectionHeader(
-            f"Word Preview — {len(self.all_words)} words found",
+            f"Word Preview: {len(self.all_words)} words found",
         )
         main_layout.addWidget(header)
 
