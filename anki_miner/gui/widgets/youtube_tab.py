@@ -10,7 +10,8 @@ The tab runs two kinds of background work:
 * :class:`~anki_miner.gui.workers.youtube_probe_worker.YouTubeProbeWorker` —
   a one-shot metadata probe spawned when the user clicks *Fetch Info*.
 * :class:`~anki_miner.gui.workers.youtube_worker.YouTubeWorkerThread` —
-  the full fetch + mining pipeline spawned when the user clicks *Mine*.
+  the full fetch + mining pipeline spawned when the user clicks
+  *Preview Words* or *Process Video*.
 
 Button enable/disable, the status banner, and the *Accept auto-captions*
 button are all driven by a single :class:`_UIState` enum so the behaviour is
@@ -25,11 +26,11 @@ from enum import Enum, auto
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -146,17 +147,33 @@ class YouTubeTab(QWidget):
     # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
-        """Build the tab layout."""
+        """Build the tab layout.
+
+        Structure mirrors SingleEpisodeTab: a QScrollArea wraps a container
+        of card-style QFrame groups (Source / Actions / Progress) plus a
+        standalone LogWidget.
+        """
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        container = QWidget()
         layout = QVBoxLayout()
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        # URL section -----------------------------------------------------
-        layout.addWidget(SectionHeader("YouTube URL"))
+        # --- Source card: URL + metadata + status + accept-auto-captions
+        source_card = QFrame()
+        source_card.setObjectName("card")
+        source_layout = QVBoxLayout()
+        source_layout.setSpacing(SPACING.sm)
+        source_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+
+        source_layout.addWidget(SectionHeader("YouTube URL"))
 
         url_row = QHBoxLayout()
         url_row.setSpacing(SPACING.xs)
-
         self.url_edit = QLineEdit()
         self.url_edit.setPlaceholderText("https://www.youtube.com/watch?v=…")
         self.url_edit.textChanged.connect(self._on_url_changed)
@@ -165,76 +182,91 @@ class YouTubeTab(QWidget):
         self.fetch_button = ModernButton("Fetch Info", variant="secondary")
         self.fetch_button.clicked.connect(self._on_fetch_clicked)
         url_row.addWidget(self.fetch_button)
-        layout.addLayout(url_row)
+        source_layout.addLayout(url_row)
 
-        # Metadata preview -----------------------------------------------
         self.metadata_label = QLabel("")
         self.metadata_label.setWordWrap(True)
         self.metadata_label.setTextFormat(Qt.TextFormat.PlainText)
         self.metadata_label.setObjectName("youtube-metadata")
-        layout.addWidget(self.metadata_label)
+        source_layout.addWidget(self.metadata_label)
 
-        # Status banner --------------------------------------------------
+        # Status banner: uses the "helper-text" QSS rule (small, italic,
+        # muted). One label serves both the idle hint and status/error
+        # strings.
         self.status_label = QLabel("")
         self.status_label.setWordWrap(True)
-        self.status_label.setObjectName("youtube-status")
         self.status_label.setTextFormat(Qt.TextFormat.PlainText)
-        layout.addWidget(self.status_label)
+        self.status_label.setObjectName("helper-text")
+        source_layout.addWidget(self.status_label)
 
-        # Accept auto-captions button ------------------------------------
         self.accept_button = ModernButton("Accept auto-captions and mine", variant="secondary")
         self.accept_button.clicked.connect(self._on_accept_auto_clicked)
         self.accept_button.hide()
-        layout.addWidget(self.accept_button)
+        source_layout.addWidget(self.accept_button)
 
-        # Mine button ----------------------------------------------------
-        layout.addWidget(SectionHeader("Mine"))
+        source_card.setLayout(source_layout)
+        layout.addWidget(source_card)
 
-        # Curation + preview mode toggles. Mirrors the behaviour exposed on
-        # SingleEpisodeTab (where Preview has its own button and curation is
-        # always on); here both are checkboxes adjacent to the Mine button.
-        options_row = QHBoxLayout()
-        options_row.setSpacing(SPACING.sm)
-        self.curation_checkbox = QCheckBox("Curate words before carding")
-        self.curation_checkbox.setToolTip(
-            "Review and edit the candidate-words list before Anki cards are created."
-        )
-        self.preview_checkbox = QCheckBox("Preview mode")
-        self.preview_checkbox.setToolTip("Show discovered words without creating Anki cards.")
-        options_row.addWidget(self.curation_checkbox)
-        options_row.addWidget(self.preview_checkbox)
-        options_row.addStretch()
-        layout.addLayout(options_row)
+        # --- Actions card: Preview + Process + Cancel
+        actions_card = QFrame()
+        actions_card.setObjectName("card")
+        actions_layout = QVBoxLayout()
+        actions_layout.setSpacing(SPACING.sm)
+        actions_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        mine_row = QHBoxLayout()
-        mine_row.setSpacing(SPACING.xs)
+        actions_layout.addWidget(SectionHeader("Actions"))
 
-        self.mine_button = ModernButton("Mine", variant="primary")
-        self.mine_button.clicked.connect(self._on_mine_clicked)
-        self.mine_button.setEnabled(False)
-        mine_row.addWidget(self.mine_button)
+        button_row = QHBoxLayout()
+        button_row.setSpacing(SPACING.xs)
+
+        self.preview_button = ModernButton("Preview Words", variant="secondary")
+        self.preview_button.setToolTip("Show discovered words without creating Anki cards.")
+        self.preview_button.clicked.connect(self._on_preview_clicked)
+        self.preview_button.setEnabled(False)
+
+        self.process_button = ModernButton("Process Video", variant="primary")
+        self.process_button.setToolTip("Curate words, then create Anki cards from the video.")
+        self.process_button.clicked.connect(self._on_process_clicked)
+        self.process_button.setEnabled(False)
 
         self.cancel_button = ModernButton("Cancel", variant="danger")
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.cancel_button.hide()
-        mine_row.addWidget(self.cancel_button)
-        mine_row.addStretch()
-        layout.addLayout(mine_row)
 
-        # Progress + log -------------------------------------------------
+        button_row.addWidget(self.preview_button)
+        button_row.addWidget(self.process_button)
+        button_row.addWidget(self.cancel_button)
+        button_row.addStretch()
+        actions_layout.addLayout(button_row)
+
+        actions_card.setLayout(actions_layout)
+        layout.addWidget(actions_card)
+
+        # --- Progress card
+        progress_card = QFrame()
+        progress_card.setObjectName("card")
+        progress_layout = QVBoxLayout()
+        progress_layout.setSpacing(SPACING.sm)
+        progress_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+
+        progress_layout.addWidget(SectionHeader("Progress"))
         self.progress_widget = ProgressWidget()
-        layout.addWidget(self.progress_widget)
+        progress_layout.addWidget(self.progress_widget)
 
+        progress_card.setLayout(progress_layout)
+        layout.addWidget(progress_card)
+
+        # --- LogWidget (carries its own header + Copy/Clear actions)
         self.log_widget = LogWidget()
         layout.addWidget(self.log_widget)
 
-        # Divider (purely cosmetic; keeps tab content from hugging buttons)
-        divider = QFrame()
-        divider.setFrameShape(QFrame.Shape.HLine)
-        divider.setFrameShadow(QFrame.Shadow.Sunken)
-        layout.addWidget(divider)
+        container.setLayout(layout)
+        scroll_area.setWidget(container)
 
-        self.setLayout(layout)
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(scroll_area)
+        self.setLayout(main_layout)
 
     # ------------------------------------------------------------------
     # Event handlers
@@ -316,8 +348,21 @@ class YouTubeTab(QWidget):
             return
         self._transition(_UIState.AUTO_READY)
 
-    def _on_mine_clicked(self) -> None:
-        """Kick off the fetch+mine pipeline."""
+    def _on_preview_clicked(self) -> None:
+        """Preview Words button: run pipeline with ``preview_mode=True``."""
+        self._start_mining(preview_mode=True)
+
+    def _on_process_clicked(self) -> None:
+        """Process Video button: run pipeline with ``preview_mode=False``."""
+        self._start_mining(preview_mode=False)
+
+    def _start_mining(self, *, preview_mode: bool) -> None:
+        """Kick off the fetch+mine pipeline.
+
+        Curation callback is wired only on Process, never on Preview. The
+        processor also gates curation on ``not preview_mode`` so this is
+        belt-and-braces rather than load-bearing.
+        """
         if self._state not in (_UIState.MANUAL_READY, _UIState.AUTO_READY, _UIState.MINED):
             return
         if self._video_info is None or self._resolved_sub_mode is None:
@@ -331,15 +376,7 @@ class YouTubeTab(QWidget):
         self.progress_widget.reset()
         self._transition(_UIState.MINING)
 
-        preview_mode = self.preview_checkbox.isChecked()
-        # Curation and preview are mutually exclusive — preview short-circuits
-        # before curation would run inside process_episode anyway, but mirror
-        # SingleEpisodeTab's explicit None-on-preview for clarity.
-        curation_cb = (
-            self._curation_bridge
-            if self.curation_checkbox.isChecked() and not preview_mode
-            else None
-        )
+        curation_cb = self._curation_bridge if not preview_mode else None
 
         worker = YouTubeWorkerThread(
             processor=self._processor,
@@ -500,7 +537,8 @@ class YouTubeTab(QWidget):
             status_text = error or "Mining failed."
 
         self.status_label.setText(status_text)
-        self.mine_button.setEnabled(mine_enabled)
+        self.preview_button.setEnabled(mine_enabled)
+        self.process_button.setEnabled(mine_enabled)
         self.fetch_button.setEnabled(fetch_enabled)
 
         if accept_visible:
@@ -509,11 +547,15 @@ class YouTubeTab(QWidget):
             self.accept_button.hide()
 
         if cancel_visible:
+            self.preview_button.hide()
+            self.process_button.hide()
             self.cancel_button.setText("Cancel")
             self.cancel_button.setEnabled(True)
             self.cancel_button.show()
         else:
             self.cancel_button.hide()
+            self.preview_button.show()
+            self.process_button.show()
 
     # ------------------------------------------------------------------
     # Curation bridge
