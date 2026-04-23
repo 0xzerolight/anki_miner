@@ -261,6 +261,40 @@ def test_progress_callback_is_wired_into_processor(make_worker, mock_processor):
 
 
 # ---------------------------------------------------------------------------
+# Curation callback and preview mode flow through to the processor
+# ---------------------------------------------------------------------------
+
+
+def test_curation_and_preview_mode_forwarded(mock_processor, youtube_config):
+    """ctor kwargs for curation/preview reach process_youtube_url unchanged."""
+    curation_cb = lambda words: words  # noqa: E731 - identity fn for call capture
+    worker = YouTubeWorkerThread(
+        processor=mock_processor,
+        config=youtube_config,
+        url="https://www.youtube.com/watch?v=abc123",
+        video_id="abc123",
+        sub_mode="manual_only",  # type: ignore[arg-type]
+        curation_callback=curation_cb,
+        preview_mode=True,
+    )
+    worker.run()
+
+    kwargs = mock_processor.process_youtube_url.call_args.kwargs
+    assert kwargs["curation_callback"] is curation_cb
+    assert kwargs["preview_mode"] is True
+
+
+def test_curation_and_preview_default_when_omitted(make_worker, mock_processor):
+    """When ctor args are omitted, None/False are forwarded."""
+    worker = make_worker()
+    worker.run()
+
+    kwargs = mock_processor.process_youtube_url.call_args.kwargs
+    assert kwargs["curation_callback"] is None
+    assert kwargs["preview_mode"] is False
+
+
+# ---------------------------------------------------------------------------
 # Workspace directory name format
 # ---------------------------------------------------------------------------
 

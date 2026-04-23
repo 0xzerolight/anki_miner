@@ -9,6 +9,7 @@ exit path (success, error, cancellation).
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 from uuid import uuid4
 
@@ -45,6 +46,9 @@ class YouTubeWorkerThread(CancellableWorker):
         url: str,
         video_id: str,
         sub_mode: SubMode,
+        *,
+        curation_callback: Callable[[list], list] | None = None,
+        preview_mode: bool = False,
         parent=None,
     ) -> None:
         """Initialize the YouTube worker thread.
@@ -55,6 +59,10 @@ class YouTubeWorkerThread(CancellableWorker):
             url: Full YouTube URL passed through to the fetcher.
             video_id: Canonical video id; used by the fetcher to glob outputs.
             sub_mode: ``"manual_only"`` or ``"auto_only"``.
+            curation_callback: Optional word-curation callback forwarded to
+                ``process_youtube_url`` (and in turn to ``process_episode``).
+            preview_mode: If True, the mining pipeline will not create Anki
+                cards; preview output is emitted via the presenter instead.
             parent: Optional parent QObject.
         """
         super().__init__(parent)
@@ -63,6 +71,8 @@ class YouTubeWorkerThread(CancellableWorker):
         self._url = url
         self._video_id = video_id
         self._sub_mode = sub_mode
+        self._curation_callback = curation_callback
+        self._preview_mode = preview_mode
 
     def run(self) -> None:
         """Execute the YouTube fetch + mining pipeline in the background."""
@@ -72,7 +82,10 @@ class YouTubeWorkerThread(CancellableWorker):
                 return
 
             workspace = self._config.media_temp_folder / "youtube" / f"run-{uuid4().hex}"
-            workspace.mkdir(parents=True, exist_ok=True)
+            # exist_ok=False is intentional: UUID collision is astronomically unlikely,
+            # and silently reusing a stale directory would leak prior-run files into
+            # this run. A collision should crash loudly, not be papered over.
+            workspace.mkdir(parents=True, exist_ok=False)
 
             result = self._processor.process_youtube_url(
                 url=self._url,
@@ -87,6 +100,8 @@ class YouTubeWorkerThread(CancellableWorker):
                 # type-ignore in episode_processor.process_youtube_url). We
                 # pass the (label, frac) callable intentionally.
                 progress_callback=self._emit_progress,  # type: ignore[arg-type]
+                curation_callback=self._curation_callback,
+                preview_mode=self._preview_mode,
             )
 
             if not self.is_cancelled:
