@@ -99,7 +99,7 @@ Tabs:
 
 ### Lapis Note Type
 
-Anki Miner uses the [Lapis](https://github.com/donkuri/lapis) note type fields by default.
+Anki Miner uses the [Lapis](https://github.com/donkuri/lapis) note type fields by default. For custom note types, rename the fields in Settings/Anki.
 
 1. Download the latest `.apkg` from [Lapis releases](https://github.com/donkuri/lapis/releases).
 2. In Anki: **File → Import** and select the `.apkg`.
@@ -157,9 +157,13 @@ Gotchas:
 | Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.     |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI.                                      |
 
-## Issues and Contributing
+## Issues, Feature Ideas, Contributing
 
-Bug reports and feature ideas go in [Issues](https://github.com/0xzerolight/anki_miner/issues). See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
+Report bugs in [Issues](https://github.com/0xzerolight/anki_miner/issues).
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
+
+New feature ideas in [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
 
 ## License
 
