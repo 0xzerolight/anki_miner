@@ -14,7 +14,10 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt6.QtCore import QCoreApplication
 
-from anki_miner.gui.workers.youtube_worker import YouTubeWorkerThread
+from anki_miner.gui.workers.youtube_worker import (
+    YouTubeWorkerThread,
+    _MiningProgressAdapter,
+)
 
 # Qt needs a core application for signals. Created once per process.
 _app = QCoreApplication.instance() or QCoreApplication([])
@@ -251,13 +254,58 @@ def test_progress_emit_clamps_out_of_range(make_worker):
     assert capture.calls == [("Downloading", 100), ("Downloading", 0)]
 
 
-def test_progress_callback_is_wired_into_processor(make_worker, mock_processor):
+def test_progress_callbacks_wired_into_processor(make_worker, mock_processor):
     worker = make_worker()
     worker.run()
     kwargs = mock_processor.process_youtube_url.call_args.kwargs
-    # The callback must be the worker's bound method so the fetcher can
-    # invoke it with (label, frac) and get a Qt signal emission back.
-    assert kwargs["progress_callback"] == worker._emit_progress
+
+    # Fetch phase gets the raw (label, frac) callable so yt-dlp progress
+    # hooks can push directly into the Qt progress signal.
+    assert kwargs["fetch_progress_cb"] == worker._emit_progress
+
+    # Mining phase gets a ProgressCallback-protocol object. Services call
+    # on_start/on_progress/on_complete/on_error; bare callable would raise
+    # AttributeError. Verify all four methods are present.
+    mining_cb = kwargs["progress_callback"]
+    assert mining_cb is not worker._emit_progress
+    for attr in ("on_start", "on_progress", "on_complete", "on_error"):
+        assert callable(getattr(mining_cb, attr)), f"missing {attr}"
+
+
+# ---------------------------------------------------------------------------
+# _MiningProgressAdapter translates ProgressCallback into (label, pct) tuples
+# ---------------------------------------------------------------------------
+
+
+def test_mining_progress_adapter_translates_all_four_methods():
+    emitted: list[tuple[str, int]] = []
+    adapter = _MiningProgressAdapter(lambda label, pct: emitted.append((label, pct)))
+
+    adapter.on_start(10, "Extracting media")
+    adapter.on_progress(5, "word-05")
+    adapter.on_progress(10, "word-10")
+    adapter.on_complete()
+    adapter.on_error("word-11", "boom")
+
+    assert emitted == [
+        ("Extracting media", 0),
+        ("Extracting media: word-05", 50),
+        ("Extracting media: word-10", 100),
+        ("Extracting media", 100),
+        ("Error: word-11", -1),
+    ]
+
+
+def test_mining_progress_adapter_handles_zero_total():
+    """``total=0`` must not divide-by-zero when on_progress fires."""
+    emitted: list[tuple[str, int]] = []
+    adapter = _MiningProgressAdapter(lambda label, pct: emitted.append((label, pct)))
+
+    adapter.on_start(0, "Edge case")
+    adapter.on_progress(1, "item")
+
+    # total clamped to 1 internally, so 1/1 = 100%
+    assert emitted[-1] == ("Edge case: item", 100)
 
 
 # ---------------------------------------------------------------------------

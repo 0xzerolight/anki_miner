@@ -21,6 +21,36 @@ from anki_miner.models.youtube import SubMode
 from anki_miner.orchestration import EpisodeProcessor
 
 
+class _MiningProgressAdapter:
+    """``ProgressCallback`` shim that routes into a ``(label, pct)`` emit.
+
+    Plain Python, not a ``QObject``. The worker's ``progress`` signal already
+    queues cross-thread on emit, so wrapping emission in a ``QObject`` would
+    add a second signal hop without benefit.
+    """
+
+    def __init__(self, emit: Callable[[str, int], None]) -> None:
+        self._emit = emit
+        self._total = 1
+        self._desc = ""
+
+    def on_start(self, total: int, description: str) -> None:
+        self._total = max(1, total)
+        self._desc = description
+        self._emit(description, 0)
+
+    def on_progress(self, current: int, item_description: str) -> None:
+        pct = int(round(100 * current / self._total))
+        label = f"{self._desc}: {item_description}" if self._desc else item_description
+        self._emit(label, pct)
+
+    def on_complete(self) -> None:
+        self._emit(self._desc or "Complete", 100)
+
+    def on_error(self, item_description: str, error_message: str) -> None:
+        self._emit(f"Error: {item_description}", -1)
+
+
 class YouTubeWorkerThread(CancellableWorker):
     """Worker thread that fetches a YouTube video and mines it into Anki cards.
 
@@ -87,19 +117,16 @@ class YouTubeWorkerThread(CancellableWorker):
             # this run. A collision should crash loudly, not be papered over.
             workspace.mkdir(parents=True, exist_ok=False)
 
+            mining_cb = _MiningProgressAdapter(self.progress.emit)
+
             result = self._processor.process_youtube_url(
                 url=self._url,
                 video_id=self._video_id,
                 workspace=workspace,
                 sub_mode=self._sub_mode,
                 cancel_event=self._cancel_event,
-                # ``process_youtube_url`` annotates the callback as
-                # ``ProgressCallback``, but internally forwards it to
-                # ``YouTubeFetcherService.fetch_video`` which requires a
-                # ``Callable[[str, float | None], None]`` (see the matching
-                # type-ignore in episode_processor.process_youtube_url). We
-                # pass the (label, frac) callable intentionally.
-                progress_callback=self._emit_progress,  # type: ignore[arg-type]
+                progress_callback=mining_cb,
+                fetch_progress_cb=self._emit_progress,
                 curation_callback=self._curation_callback,
                 preview_mode=self._preview_mode,
             )
