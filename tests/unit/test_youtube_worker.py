@@ -277,7 +277,7 @@ def test_progress_callbacks_wired_into_processor(make_worker, mock_processor):
 # ---------------------------------------------------------------------------
 
 
-def test_mining_progress_adapter_translates_all_four_methods():
+def test_mining_progress_adapter_translates_start_progress_complete():
     emitted: list[tuple[str, int]] = []
     adapter = _MiningProgressAdapter(lambda label, pct: emitted.append((label, pct)))
 
@@ -285,15 +285,29 @@ def test_mining_progress_adapter_translates_all_four_methods():
     adapter.on_progress(5, "word-05")
     adapter.on_progress(10, "word-10")
     adapter.on_complete()
-    adapter.on_error("word-11", "boom")
 
     assert emitted == [
         ("Extracting media", 0),
         ("Extracting media: word-05", 50),
         ("Extracting media: word-10", 100),
         ("Extracting media", 100),
-        ("Error: word-11", -1),
     ]
+
+
+def test_mining_progress_adapter_on_error_emits_nothing():
+    """on_error must not emit progress.
+
+    Per-item mining failures surface as exceptions that the worker's except
+    clause routes to the `error` signal. An indeterminate progress emit here
+    would re-trigger the widget's busy animation after mining failed — the
+    exact bug this no-op prevents.
+    """
+    emitted: list[tuple[str, int]] = []
+    adapter = _MiningProgressAdapter(lambda label, pct: emitted.append((label, pct)))
+
+    adapter.on_error("word-11", "boom")
+
+    assert emitted == []
 
 
 def test_mining_progress_adapter_handles_zero_total():

@@ -220,6 +220,70 @@ class TestMineLifecycleSlots:
         tab._on_mine_progress("Merging", -1)
         assert "Merging" in tab.progress_widget.status_label.text()
 
+    def test_mine_finished_pins_progress_at_100_with_complete_status(self, tab):
+        """Success path leaves bar at 100% with 'Complete' — clears any
+        indeterminate animation the last progress emit left behind.
+        """
+        info = _make_video_info(has_manual_ja_subs=True)
+        tab._on_probe_done(info)
+        tab._transition(_UIState.MINING)
+        tab.worker_thread = object()  # type: ignore[assignment]
+
+        # Simulate worker's last emission landing the bar in indeterminate.
+        tab._on_mine_progress("Merging", -1)
+        assert tab.progress_widget.progress_bar.maximum() == 0  # indeterminate
+
+        class _Result:
+            cards_created = 3
+
+        tab._on_mine_finished(_Result())
+
+        # Bar back to determinate, pinned at 100%, status 'Complete'.
+        assert tab.progress_widget.progress_bar.maximum() == 100
+        assert tab.progress_widget.progress_bar.value() == 100
+        assert tab.progress_widget.status_label.text() == "Complete"
+
+    def test_mine_error_resets_progress_widget(self, tab):
+        """Error path resets bar — prevents the 'Merging' loop bug."""
+        info = _make_video_info(has_manual_ja_subs=True)
+        tab._on_probe_done(info)
+        tab._transition(_UIState.MINING)
+        tab.worker_thread = object()  # type: ignore[assignment]
+
+        tab._on_mine_progress("Merging", -1)
+        assert tab.progress_widget.progress_bar.maximum() == 0
+
+        tab._on_mine_error("ffmpeg merge failed")
+
+        assert tab.progress_widget.progress_bar.maximum() == 100  # not indeterminate
+        assert tab.progress_widget.progress_bar.value() == 0
+        assert tab.progress_widget.status_label.text() == "Ready"
+
+    def test_pure_cancel_resets_progress_and_marks_cancelled(self, tab):
+        """Worker exits on cancel without emitting result or error.
+
+        ``_on_worker_finished`` must detect the still-MINING state and land
+        the tab in MINE_CANCELLED so the bar doesn't stay stuck.
+        """
+        info = _make_video_info(has_manual_ja_subs=True)
+        tab._on_probe_done(info)
+        tab._transition(_UIState.MINING)
+        tab.worker_thread = object()  # type: ignore[assignment]
+
+        tab._on_mine_progress("Merging", -1)
+
+        tab._on_worker_finished()
+
+        assert tab._state == _UIState.MINE_CANCELLED
+        assert tab.worker_thread is None
+        assert tab.progress_widget.progress_bar.maximum() == 100
+        assert tab.progress_widget.progress_bar.value() == 0
+        assert tab.progress_widget.status_label.text() == "Cancelled"
+        assert tab.status_label.text() == "Cancelled."
+        assert tab.process_button.isEnabled()
+        assert tab.preview_button.isEnabled()
+        assert tab.cancel_button.isHidden()
+
 
 class TestUrlEditingResetsState:
     """Editing the URL invalidates a prior probe result."""

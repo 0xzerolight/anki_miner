@@ -64,6 +64,7 @@ class _UIState(Enum):
     MINING = auto()
     MINED = auto()
     MINE_ERROR = auto()
+    MINE_CANCELLED = auto()
 
 
 def _format_duration(seconds: int) -> str:
@@ -419,8 +420,17 @@ class YouTubeTab(QWidget):
         self._transition(_UIState.MINE_ERROR, error=error_message)
 
     def _on_worker_finished(self) -> None:
-        """Clear the worker handle whenever the QThread finishes."""
+        """Clear the worker handle; recover UI on pure-cancel exit.
+
+        On cancel the worker suppresses both ``result_ready`` and ``error``
+        (see :meth:`YouTubeWorkerThread.run`), so the state machine would
+        otherwise stay pinned at ``MINING`` with the progress widget stuck
+        on whatever the last emit left behind. Detect that path here and
+        land the tab in ``MINE_CANCELLED``.
+        """
         self.worker_thread = None
+        if self._state == _UIState.MINING:
+            self._transition(_UIState.MINE_CANCELLED, message="Cancelled.")
 
     # ------------------------------------------------------------------
     # State machine
@@ -515,6 +525,10 @@ class YouTubeTab(QWidget):
             mine_enabled = True
             status_text = error or "Mining failed."
 
+        elif new_state == _UIState.MINE_CANCELLED:
+            mine_enabled = True
+            status_text = message or "Cancelled."
+
         self.status_label.setText(status_text)
         self.preview_button.setEnabled(mine_enabled)
         self.process_button.setEnabled(mine_enabled)
@@ -530,6 +544,19 @@ class YouTubeTab(QWidget):
             self.cancel_button.hide()
             self.preview_button.show()
             self.process_button.show()
+
+        # Progress widget terminal state — centralized so every transition
+        # fully specifies UI. Entering a non-mining terminal state clears any
+        # indeterminate animation the worker's last progress emit left behind.
+        if new_state == _UIState.MINED:
+            self.progress_widget.set_determinate(100)
+            self.progress_widget.set_value(100)
+            self.progress_widget.set_status("Complete")
+        elif new_state == _UIState.MINE_ERROR:
+            self.progress_widget.reset()
+        elif new_state == _UIState.MINE_CANCELLED:
+            self.progress_widget.reset()
+            self.progress_widget.set_status("Cancelled")
 
     # ------------------------------------------------------------------
     # Curation bridge
