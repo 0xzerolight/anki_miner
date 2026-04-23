@@ -20,10 +20,12 @@ deterministic and unit-testable. Transitions happen in :meth:`_transition`.
 from __future__ import annotations
 
 import contextlib
+import threading
 from enum import Enum, auto
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -34,6 +36,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -86,6 +89,10 @@ def _subs_label(info: VideoInfo) -> str:
 class YouTubeTab(QWidget):
     """Tab widget for mining Japanese vocabulary from a YouTube video."""
 
+    # Cross-thread curation bridge: emitted from the worker thread, handled on
+    # the GUI thread. Mirrors the pattern in SingleEpisodeTab.
+    _curation_requested = pyqtSignal(list)
+
     def __init__(
         self,
         config: AnkiMinerConfig,
@@ -124,6 +131,12 @@ class YouTubeTab(QWidget):
 
         # State machine; transitions go through _transition.
         self._state: _UIState = _UIState.IDLE_NO_URL
+
+        # Curation bridge: the worker thread blocks on this event while the
+        # GUI thread shows the curation dialog. Mirrors SingleEpisodeTab.
+        self._curation_event = threading.Event()
+        self._curation_result: list = []
+        self._curation_requested.connect(self._on_curation_requested)
 
         self._setup_ui()
         self._transition(_UIState.IDLE_NO_URL)
@@ -165,6 +178,7 @@ class YouTubeTab(QWidget):
         self.status_label = QLabel("")
         self.status_label.setWordWrap(True)
         self.status_label.setObjectName("youtube-status")
+        self.status_label.setTextFormat(Qt.TextFormat.PlainText)
         layout.addWidget(self.status_label)
 
         # Accept auto-captions button ------------------------------------
@@ -175,6 +189,23 @@ class YouTubeTab(QWidget):
 
         # Mine button ----------------------------------------------------
         layout.addWidget(SectionHeader("Mine"))
+
+        # Curation + preview mode toggles. Mirrors the behaviour exposed on
+        # SingleEpisodeTab (where Preview has its own button and curation is
+        # always on); here both are checkboxes adjacent to the Mine button.
+        options_row = QHBoxLayout()
+        options_row.setSpacing(SPACING.sm)
+        self.curation_checkbox = QCheckBox("Curate words before carding")
+        self.curation_checkbox.setToolTip(
+            "Review and edit the candidate-words list before Anki cards are created."
+        )
+        self.preview_checkbox = QCheckBox("Preview mode")
+        self.preview_checkbox.setToolTip("Show discovered words without creating Anki cards.")
+        options_row.addWidget(self.curation_checkbox)
+        options_row.addWidget(self.preview_checkbox)
+        options_row.addStretch()
+        layout.addLayout(options_row)
+
         mine_row = QHBoxLayout()
         mine_row.setSpacing(SPACING.xs)
 
@@ -240,6 +271,18 @@ class YouTubeTab(QWidget):
         if self._probe_worker is not None and self._probe_worker.isRunning():
             return
 
+        # Defensively detach signal slots from any retired worker still pending
+        # GC so a late ``finished`` emission cannot clobber a fresh probe's
+        # ``_probe_worker`` handle via ``_on_probe_finished``.
+        if self._probe_worker is not None:
+            try:
+                self._probe_worker.probe_done.disconnect(self._on_probe_done)
+                self._probe_worker.probe_error.disconnect(self._on_probe_error)
+                self._probe_worker.finished.disconnect(self._on_probe_finished)
+            except TypeError:
+                # Already disconnected (e.g. _on_probe_finished ran cleanly).
+                pass
+
         self._transition(_UIState.PROBING)
         worker = YouTubeProbeWorker(self._fetcher, url)
         worker.probe_done.connect(self._on_probe_done)
@@ -288,12 +331,24 @@ class YouTubeTab(QWidget):
         self.progress_widget.reset()
         self._transition(_UIState.MINING)
 
+        preview_mode = self.preview_checkbox.isChecked()
+        # Curation and preview are mutually exclusive — preview short-circuits
+        # before curation would run inside process_episode anyway, but mirror
+        # SingleEpisodeTab's explicit None-on-preview for clarity.
+        curation_cb = (
+            self._curation_bridge
+            if self.curation_checkbox.isChecked() and not preview_mode
+            else None
+        )
+
         worker = YouTubeWorkerThread(
             processor=self._processor,
             config=self._config,
             url=url,
             video_id=self._video_info.video_id,
             sub_mode=self._resolved_sub_mode,
+            curation_callback=curation_cb,
+            preview_mode=preview_mode,
         )
         worker.progress.connect(self._on_mine_progress)
         worker.result_ready.connect(self._on_mine_finished)
@@ -461,6 +516,34 @@ class YouTubeTab(QWidget):
             self.cancel_button.hide()
 
     # ------------------------------------------------------------------
+    # Curation bridge
+    # ------------------------------------------------------------------
+
+    def _curation_bridge(self, words: list) -> list:
+        """Thread-safe curation bridge: blocks the worker until the dialog closes.
+
+        Called from the worker thread. Emits a signal to the GUI thread so the
+        dialog runs on the correct thread, then blocks on ``_curation_event``
+        until the GUI slot completes. Returns the user's selected words.
+        """
+        self._curation_event.clear()
+        self._curation_result = []
+        self._curation_requested.emit(words)
+        self._curation_event.wait()
+        return self._curation_result
+
+    def _on_curation_requested(self, words: list) -> None:
+        """Slot on the GUI thread that runs the curation dialog."""
+        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+
+        dialog = WordCurationDialog(words, self)
+        if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
+            self._curation_result = dialog.get_selected_words()
+        else:
+            self._curation_result = []
+        self._curation_event.set()
+
+    # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
@@ -473,6 +556,34 @@ class YouTubeTab(QWidget):
             f"Subtitles: {_subs_label(info)}",
         ]
         self.metadata_label.setText("\n".join(lines))
+
+    def update_config(self, config: AnkiMinerConfig) -> None:
+        """Adopt a new frozen config and refresh any config-dependent UI.
+
+        Called when the Settings tab emits ``config_changed``. Updates the
+        cached fetcher (which snapshots config on construction) so that
+        subsequent probes and mining runs honour the latest values, and
+        re-classifies the already-probed video if the new duration limit
+        changes the verdict.
+
+        Args:
+            config: New frozen configuration.
+        """
+        self._config = config
+
+        # Fetcher snapshots config on construction (see YouTubeFetcherService
+        # __init__) and is used for both probe_metadata and, through the
+        # worker thread, the full fetch pipeline. Recreate via the factory
+        # to keep construction routed through a single code path.
+        self._fetcher = create_youtube_fetcher(config)
+
+        # If we're not in the middle of a run, re-classify any already-probed
+        # video against the new config so the TOO_LONG gate reflects the
+        # freshly-saved duration limit and the status label is refreshed.
+        if self._state == _UIState.MINING:
+            return
+        if self._video_info is not None:
+            self._transition(self._classify_video(self._video_info))
 
     def shutdown(self) -> None:
         """Stop any running worker threads.

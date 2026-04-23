@@ -1060,3 +1060,95 @@ class TestProcessYoutubeUrl:
         diff_kwargs = mock_stats.record_difficulty.call_args.kwargs
         assert diff_kwargs["series_name"] == "MySeries"
         assert diff_kwargs["episode_name"] == "ep01"
+
+    def _make_processor_with_fetcher(self, test_config, mock_services, tmp_path):
+        """Build a processor wired to a fetcher that returns test media."""
+        video_file = tmp_path / "abc123.mp4"
+        subtitle_file = tmp_path / "abc123.ja.srt"
+        video_file.touch()
+        subtitle_file.touch()
+
+        word = _make_word("食べる")
+        media = _make_media()
+        self._happy_pipeline(mock_services, word, media)
+
+        mock_fetcher = MagicMock()
+        mock_fetcher.fetch_video.return_value = FetchedMedia(
+            video_file=video_file,
+            subtitle_file=subtitle_file,
+            sub_source="manual",
+        )
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=mock_fetcher,
+            **mock_services,
+        )
+        return processor
+
+    def test_curation_callback_forwarded_to_process_episode(
+        self, test_config, mock_services, tmp_path
+    ):
+        """Supplied curation_callback reaches process_episode and gets invoked."""
+        processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
+
+        seen: list = []
+
+        def _curate(words):
+            seen.append(list(words))
+            # Returning the same list keeps the rest of the pipeline running.
+            return words
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+            curation_callback=_curate,
+        )
+
+        # Callback was invoked exactly once with the post-filter word list.
+        assert len(seen) == 1
+        assert [w.lemma for w in seen[0]] == ["食べる"]
+
+    def test_preview_mode_true_forwarded_to_process_episode(
+        self, test_config, mock_services, tmp_path
+    ):
+        """preview_mode=True short-circuits before card creation."""
+        processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+            preview_mode=True,
+        )
+
+        # Preview mode never hits anki_service.create_cards_batch.
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
+        # And no media extraction is done either.
+        mock_services["media_extractor"].extract_media_batch.assert_not_called()
+        assert result.cards_created == 0
+
+    def test_curation_and_preview_default_to_none_and_false(
+        self, test_config, mock_services, tmp_path
+    ):
+        """Omitting the new kwargs preserves pre-C3 behaviour: curation off, cards created."""
+        processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+        )
+
+        # Default behaviour: cards are created (no preview), and the pipeline
+        # did not attempt to run a curation callback (we didn't pass one).
+        mock_services["anki_service"].create_cards_batch.assert_called_once()
+        assert result.cards_created == 1

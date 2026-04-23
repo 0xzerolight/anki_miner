@@ -13,6 +13,7 @@ import sys
 import threading
 from collections.abc import Callable
 from pathlib import Path
+from typing import Literal
 
 import psutil  # type: ignore[import-untyped]
 
@@ -57,6 +58,7 @@ class VideoTooLongError(YouTubeFetchError):
 # ---------------------------------------------------------------------------
 
 _VIDEO_EXTS = {".mp4", ".webm", ".mkv"}
+_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 _PROGRESS_RE = re.compile(r"\[ankimine_dl\] (\S+) (\S+)")
 _POSTPROCESS_MARKERS = ("[Merger]", "[FixupM3u8]", "[SubtitleConvertor]", "[ExtractAudio]")
 
@@ -88,14 +90,20 @@ class YouTubeFetcherService:
     # probe_metadata
     # ------------------------------------------------------------------
 
-    def probe_metadata(self, url: str) -> VideoInfo:
+    def probe_metadata(self, url: str, timeout_s: float = 60.0) -> VideoInfo:
         """Run yt-dlp --dump-single-json and return a VideoInfo.
+
+        Args:
+            url: YouTube URL to probe.
+            timeout_s: subprocess timeout in seconds. On timeout, yt-dlp is
+                killed and YouTubeFetchError is raised.
 
         Raises:
             YouTubeFetchError: yt-dlp crashed, returned non-JSON, or omitted
                 required keys.
             VideoTooLongError: video duration exceeds configured maximum.
         """
+        logger.info("youtube probe starting: %s", url)
         cmd: list[str] = [
             "yt-dlp",
             "--skip-download",
@@ -111,7 +119,7 @@ class YouTubeFetcherService:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=timeout_s,
             )
         except subprocess.TimeoutExpired as e:
             raise YouTubeFetchError(f"yt-dlp metadata probe timed out after {e.timeout}s") from e
@@ -147,6 +155,9 @@ class YouTubeFetcherService:
                 f"have broken. stderr: {chr(10).join(stderr_tail)}"
             ) from e
 
+        if not isinstance(video_id, str) or not _VIDEO_ID_RE.match(video_id):
+            raise YouTubeFetchError(f"Unexpected video id format: {video_id!r}")
+
         duration_s = int(duration)
         if duration_s > self._config.youtube_max_duration_s:
             raise VideoTooLongError(
@@ -158,8 +169,9 @@ class YouTubeFetcherService:
         has_manual_ja = bool(subs.get("ja"))
         has_auto_ja = self._has_native_auto_ja(data)
 
+        logger.info("youtube probe ok: id=%s duration=%s", video_id, duration_s)
         return VideoInfo(
-            video_id=str(video_id),
+            video_id=video_id,
             title=str(title),
             duration_s=duration_s,
             has_manual_ja_subs=has_manual_ja,
@@ -207,6 +219,7 @@ class YouTubeFetcherService:
             YouTubeFetchError: any other non-zero exit, cancellation, or
                 missing/zero-byte output file.
         """
+        logger.info("youtube fetch starting: id=%s workspace=%s", video_id, workspace)
         self._preflight_ffmpeg()
 
         cmd = self._build_fetch_cmd(url, workspace, sub_mode)
@@ -264,17 +277,22 @@ class YouTubeFetcherService:
                         logger.debug("presenter.show_info raised; ignoring")
         finally:
             returncode = self._popen.wait()
-            popen_handle = self._popen
             self._popen = None
 
         if cancelled:
             raise YouTubeFetchError("Cancelled by user")
 
         if returncode != 0:
-            self._raise_for_error(tail, popen_handle)
+            self._raise_for_error(tail)
 
         # Success: locate output files by globbing on video_id.
-        return self._resolve_outputs(workspace, video_id, sub_mode)
+        result = self._resolve_outputs(workspace, video_id, sub_mode)
+        logger.info(
+            "youtube fetch complete: video=%s subs=%s",
+            result.video_file.name,
+            result.subtitle_file.name,
+        )
+        return result
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -343,11 +361,7 @@ class YouTubeFetcherService:
             return True
         return "[download] 100%" in line and "Deleting original file" in line
 
-    def _raise_for_error(
-        self,
-        tail: collections.deque[str],
-        _popen: subprocess.Popen[str] | None,
-    ) -> None:
+    def _raise_for_error(self, tail: collections.deque[str]) -> None:
         joined_lower = "\n".join(tail).lower()
 
         if ("sign in" in joined_lower and "confirm" in joined_lower) or (
@@ -377,16 +391,25 @@ class YouTubeFetcherService:
 
     def _resolve_outputs(self, workspace: Path, video_id: str, sub_mode: SubMode) -> FetchedMedia:
         candidates = list(workspace.glob(f"{video_id}*"))
-        video_file: Path | None = None
-        subtitle_file: Path | None = None
+        video_candidates: list[Path] = []
+        subtitle_candidates: list[Path] = []
         for c in candidates:
-            name = c.name
             # Subtitle after --convert-subs srt -> "<id>.ja.srt"
-            if name.endswith(".ja.srt"):
-                subtitle_file = c
+            if c.name.endswith(".ja.srt"):
+                subtitle_candidates.append(c)
                 continue
             if c.suffix.lower() in _VIDEO_EXTS:
-                video_file = c
+                video_candidates.append(c)
+
+        if len(video_candidates) > 1:
+            names = sorted(p.name for p in video_candidates)
+            raise YouTubeFetchError(f"Multiple video outputs found in workspace: {names}")
+        if len(subtitle_candidates) > 1:
+            names = sorted(p.name for p in subtitle_candidates)
+            raise YouTubeFetchError(f"Multiple subtitle outputs found in workspace: {names}")
+
+        video_file = video_candidates[0] if video_candidates else None
+        subtitle_file = subtitle_candidates[0] if subtitle_candidates else None
 
         if video_file is None or subtitle_file is None:
             raise YouTubeFetchError(
@@ -400,11 +423,11 @@ class YouTubeFetcherService:
         if sub_size <= 0:
             raise YouTubeFetchError(f"yt-dlp produced a zero-byte subtitle file: {subtitle_file}")
 
-        sub_source: str = "manual" if sub_mode == "manual_only" else "auto"
+        sub_source: Literal["manual", "auto"] = "manual" if sub_mode == "manual_only" else "auto"
         return FetchedMedia(
             video_file=video_file,
             subtitle_file=subtitle_file,
-            sub_source=sub_source,  # type: ignore[arg-type]
+            sub_source=sub_source,
         )
 
     def _kill_tree(self) -> None:
@@ -423,6 +446,7 @@ class YouTubeFetcherService:
         for c in children:
             with contextlib.suppress(psutil.NoSuchProcess):
                 c.terminate()
+        logger.info("killing yt-dlp process tree: pid=%s", parent.pid)
         with contextlib.suppress(psutil.NoSuchProcess):
             parent.terminate()
 

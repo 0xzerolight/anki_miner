@@ -242,3 +242,13 @@ class TestUrlEditingResetsState:
         # explicit call to mirror the signal flow.
         assert tab._video_info is None
         assert not tab.mine_button.isEnabled()
+
+
+class TestCurationAndPreviewCheckboxes:
+    """Checkbox parity with SingleEpisodeTab (curation + preview)."""
+
+    def test_checkboxes_exist_and_default_off(self, tab):
+        assert tab.curation_checkbox is not None
+        assert tab.preview_checkbox is not None
+        assert tab.curation_checkbox.isChecked() is False
+        assert tab.preview_checkbox.isChecked() is False

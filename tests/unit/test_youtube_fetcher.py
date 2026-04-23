@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 import threading
 from dataclasses import replace
@@ -10,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import psutil  # type: ignore[import-untyped]
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
@@ -30,7 +32,7 @@ from anki_miner.services.youtube_fetcher import (
 def _make_metadata(**overrides: Any) -> dict[str, Any]:
     """Build a plausible yt-dlp --dump-single-json payload."""
     base: dict[str, Any] = {
-        "id": "abc123",
+        "id": "dQw4w9WgXcQ",
         "title": "Test Video",
         "duration": 120,
         "uploader": "TestChannel",
@@ -96,7 +98,7 @@ class TestProbeMetadata:
         payload = _make_metadata(subtitles={"ja": [{"ext": "vtt"}]})
         with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
             info = service.probe_metadata("https://youtu.be/abc123")
-        assert info.video_id == "abc123"
+        assert info.video_id == "dQw4w9WgXcQ"
         assert info.title == "Test Video"
         assert info.duration_s == 120
         assert info.has_manual_ja_subs is True
@@ -624,3 +626,256 @@ def test_probe_metadata_missing_yt_dlp(service: YouTubeFetcherService) -> None:
         pytest.raises(YouTubeFetchError, match="yt-dlp executable not found"),
     ):
         service.probe_metadata("https://youtu.be/abc123")
+
+
+# ---------------------------------------------------------------------------
+# H4 — Flatpak/Snap Firefox cookie guidance (platform-specific)
+# ---------------------------------------------------------------------------
+
+
+class TestFlatpakSnapCookieGuidance:
+    """The cookie-locked error message gains Flatpak/Snap guidance only on Linux
+    when stderr also mentions a missing profile."""
+
+    _PROFILE_NOT_FOUND_LINES = [
+        "ERROR: could not decrypt cookies: database is locked",
+        "ERROR: Profile default-release not found",
+    ]
+    _GUIDANCE_SUBSTR = "Flatpak or Snap"
+
+    def test_linux_profile_not_found_adds_guidance(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
+            ),
+            patch("subprocess.Popen", return_value=_FakePopen(self._PROFILE_NOT_FOUND_LINES, 1)),
+            patch("anki_miner.services.youtube_fetcher.sys.platform", "linux"),
+            pytest.raises(CookieDatabaseLockedError) as exc,
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        assert self._GUIDANCE_SUBSTR in str(exc.value)
+
+    @pytest.mark.parametrize("platform", ["darwin", "win32"])
+    def test_non_linux_omits_guidance(
+        self,
+        service: YouTubeFetcherService,
+        tmp_path: Path,
+        platform: str,
+    ) -> None:
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
+            ),
+            patch("subprocess.Popen", return_value=_FakePopen(self._PROFILE_NOT_FOUND_LINES, 1)),
+            patch("anki_miner.services.youtube_fetcher.sys.platform", platform),
+            pytest.raises(CookieDatabaseLockedError) as exc,
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        assert self._GUIDANCE_SUBSTR not in str(exc.value)
+
+
+# ---------------------------------------------------------------------------
+# H5 — _kill_tree psutil edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestKillTreeEdgeCases:
+    """Cancel path resilience against races between terminate() and process exit."""
+
+    def _run_cancel(
+        self,
+        service: YouTubeFetcherService,
+        tmp_path: Path,
+        process_side_effect: Any = None,
+        process_return: Any = None,
+        wait_procs_return: Any = ([], []),
+    ) -> None:
+        """Run fetch_video with a pre-set cancel_event and the given psutil mocks."""
+        cancel = threading.Event()
+        cancel.set()
+        lines = ["[ankimine_dl] 100 1000"]
+
+        process_patch_kwargs: dict[str, Any] = {}
+        if process_side_effect is not None:
+            process_patch_kwargs["side_effect"] = process_side_effect
+        else:
+            process_patch_kwargs["return_value"] = process_return
+
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
+            ),
+            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
+            patch(
+                "anki_miner.services.youtube_fetcher.psutil.Process",
+                **process_patch_kwargs,
+            ),
+            patch(
+                "anki_miner.services.youtube_fetcher.psutil.wait_procs",
+                return_value=wait_procs_return,
+            ),
+            pytest.raises(YouTubeFetchError, match="Cancelled by user"),
+        ):
+            service.fetch_video(
+                "https://youtu.be/abc123",
+                "abc123",
+                tmp_path,
+                "manual_only",
+                cancel_event=cancel,
+            )
+
+    def test_parent_vanished_before_children(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        # psutil.Process(pid) raises NoSuchProcess -> cancel path must exit cleanly.
+        self._run_cancel(
+            service,
+            tmp_path,
+            process_side_effect=psutil.NoSuchProcess(4242),
+        )
+
+    def test_child_vanished_mid_iteration(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        # One child whose terminate() raises NoSuchProcess. Parent survives.
+        dead_child = MagicMock()
+        dead_child.terminate.side_effect = psutil.NoSuchProcess(9999)
+
+        parent = MagicMock()
+        parent.children.return_value = [dead_child]
+        parent.terminate = MagicMock()
+
+        self._run_cancel(
+            service,
+            tmp_path,
+            process_return=parent,
+            wait_procs_return=([parent, dead_child], []),
+        )
+
+        # Parent still got terminated even though the child went away first.
+        parent.terminate.assert_called_once()
+        dead_child.terminate.assert_called_once()
+
+    def test_sigkill_escalation_when_wait_procs_times_out(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        # wait_procs reports the parent still alive after SIGTERM -> .kill() fires.
+        parent = MagicMock()
+        parent.children.return_value = []
+        parent.terminate = MagicMock()
+        parent.kill = MagicMock()
+
+        self._run_cancel(
+            service,
+            tmp_path,
+            process_return=parent,
+            wait_procs_return=([], [parent]),
+        )
+
+        parent.terminate.assert_called_once()
+        parent.kill.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# M2 — Presenter exception suppression
+# ---------------------------------------------------------------------------
+
+
+def test_presenter_show_info_exception_is_swallowed(
+    yt_config: AnkiMinerConfig,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A raising presenter must not abort the fetch loop; we log and continue."""
+    _make_happy_outputs(tmp_path)
+    presenter = MagicMock()
+    presenter.show_info.side_effect = RuntimeError("boom")
+    svc = YouTubeFetcherService(yt_config, presenter=presenter)
+
+    # A line that is not progress and not post-process -> forwarded to presenter.
+    lines = ["[youtube] abc123: Downloading webpage"]
+
+    with (
+        patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+        patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
+        caplog.at_level(logging.DEBUG, logger="anki_miner.services.youtube_fetcher"),
+    ):
+        out = svc.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    # Presenter was attempted and raised.
+    presenter.show_info.assert_called()
+    # Error was logged at debug, not propagated.
+    assert any("presenter.show_info raised" in rec.message for rec in caplog.records)
+    # Fetch still completed normally.
+    assert out.sub_source == "manual"
+
+
+# ---------------------------------------------------------------------------
+# M3 — Progress regex miss
+# ---------------------------------------------------------------------------
+
+
+class TestProgressRegexMiss:
+    """Lines that do not match _PROGRESS_RE must not call progress_cb and must
+    not crash the loop."""
+
+    def test_non_matching_lines_do_not_invoke_cb(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        _make_happy_outputs(tmp_path)
+        # None of these carry the ankimine_dl sentinel -> _PROGRESS_RE.search misses.
+        lines = [
+            "[download] 50% of 10MiB at 1.23MiB/s ETA 00:05",
+            "random noise line",
+            "[info] abc123: some metadata",
+        ]
+        calls: list[tuple[str, float | None]] = []
+
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
+            ),
+            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
+        ):
+            out = service.fetch_video(
+                "https://youtu.be/abc123",
+                "abc123",
+                tmp_path,
+                "manual_only",
+                progress_cb=lambda label, frac: calls.append((label, frac)),
+            )
+
+        # No Downloading-video progress entries from non-matching lines.
+        assert [c for c in calls if c[0] == "Downloading video"] == []
+        assert out.sub_source == "manual"
+
+    def test_mixed_miss_then_match_still_reports_match(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        _make_happy_outputs(tmp_path)
+        lines = [
+            "random noise",
+            "[download] 10% of 10MiB",
+            "[ankimine_dl] 512 1024",  # this one matches
+            "[download] Destination: abc123.mp4",
+        ]
+        calls: list[tuple[str, float | None]] = []
+
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
+            ),
+            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
+        ):
+            service.fetch_video(
+                "https://youtu.be/abc123",
+                "abc123",
+                tmp_path,
+                "manual_only",
+                progress_cb=lambda label, frac: calls.append((label, frac)),
+            )
+
+        # Exactly one progress entry despite three non-matching lines around it.
+        assert calls == [("Downloading video", 0.5)]

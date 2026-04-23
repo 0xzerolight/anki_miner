@@ -516,6 +516,8 @@ class EpisodeProcessor:
         *,
         cancel_event: threading.Event,
         progress_callback: ProgressCallback | None = None,
+        curation_callback: Callable[[list], list] | None = None,
+        preview_mode: bool = False,
     ) -> ProcessingResult:
         """Fetch a YouTube video + subs then run the standard mining pipeline.
 
@@ -541,6 +543,10 @@ class EpisodeProcessor:
                 the fetcher (download phase) and to ``process_episode`` (mining
                 phases). The worker is responsible for constructing a callable
                 compatible with both interfaces.
+            curation_callback: Optional callback for word curation. Forwarded
+                unchanged to ``process_episode``; see its docstring for semantics.
+            preview_mode: If True, skip card creation and show previews only.
+                Forwarded unchanged to ``process_episode``.
 
         Returns:
             ProcessingResult from the mining pipeline, with episode identity
@@ -569,7 +575,9 @@ class EpisodeProcessor:
         return self.process_episode(
             fetched.video_file,
             fetched.subtitle_file,
+            preview_mode=preview_mode,
             progress_callback=progress_callback,
+            curation_callback=curation_callback,
             episode_name_override=f"YT:{video_id}",
             series_name_override="YouTube",
         )
