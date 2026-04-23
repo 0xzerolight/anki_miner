@@ -516,6 +516,7 @@ class EpisodeProcessor:
         *,
         cancel_event: threading.Event,
         progress_callback: ProgressCallback | None = None,
+        fetch_progress_cb: Callable[[str, float | None], None] | None = None,
         curation_callback: Callable[[list], list] | None = None,
         preview_mode: bool = False,
     ) -> ProcessingResult:
@@ -539,10 +540,13 @@ class EpisodeProcessor:
                 on what probe_metadata reported as available.
             cancel_event: Threading event set by the worker on cancellation;
                 forwarded to the fetcher so in-flight yt-dlp can be killed.
-            progress_callback: Optional progress callback, forwarded both to
-                the fetcher (download phase) and to ``process_episode`` (mining
-                phases). The worker is responsible for constructing a callable
-                compatible with both interfaces.
+            progress_callback: Optional ``ProgressCallback`` forwarded to
+                ``process_episode`` for mining-phase reporting (media extract,
+                definitions, card creation).
+            fetch_progress_cb: Optional ``(label, frac)`` callable forwarded
+                to ``YouTubeFetcherService.fetch_video`` for download-phase
+                reporting. ``frac`` is in [0.0, 1.0] or ``None`` for
+                indeterminate stages (merging, post-processing).
             curation_callback: Optional callback for word curation. Forwarded
                 unchanged to ``process_episode``; see its docstring for semantics.
             preview_mode: If True, skip card creation and show previews only.
@@ -568,7 +572,7 @@ class EpisodeProcessor:
             video_id,
             workspace,
             sub_mode,
-            progress_cb=progress_callback,  # type: ignore[arg-type]
+            progress_cb=fetch_progress_cb,
             cancel_event=cancel_event,
         )
 
