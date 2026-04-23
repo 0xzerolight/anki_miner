@@ -233,8 +233,9 @@ class SubtitleParserService:
 
         # For words with kanji
         if has_kanji:
-            # Single kanji alone is often a fragment
             kanji_count = sum(1 for c in surface if "\u4e00" <= c <= "\u9fff")
-            return not (kanji_count == 1 and len(surface) == 1)
+            if kanji_count == 1 and len(surface) == 1:
+                return self.config.min_word_length <= 1
+            return True
 
         return False
