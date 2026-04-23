@@ -55,7 +55,7 @@ jobs:
           echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build with PyInstaller
-        run: pyinstaller --additional-hooks-dir=PyInstaller-Hooks anki_miner.spec
+        run: pyinstaller anki_miner.spec
 
       - name: YouTube bundled smoke (Linux/macOS)
         if: runner.os != 'Windows'
