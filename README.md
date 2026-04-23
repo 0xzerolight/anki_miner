@@ -4,9 +4,9 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-Batch-mine Japanese vocabulary from anime and YouTube into Anki cards. Point it at a season folder or a YouTube URL, walk away, come back to pre-tagged cards with screenshots, audio, furigana, pitch accent, and frequency.
+Batch-mines Japanese vocabulary from anime and YouTube into Anki cards. Given a season folder or a YouTube URL, it produces cards containing screenshots, sentence audio, furigana, pitch accent, and frequency data.
 
-Built for the "I already watched it, now give me the deck" workflow — a complement to interactive readers like asbplayer + Yomitan, not a replacement.
+Suited to batch processing after viewing, rather than real-time lookup during playback (the asbplayer and Yomitan workflow).
 
 ## Showcase
 
@@ -18,7 +18,7 @@ Built for the "I already watched it, now give me the deck" workflow — a comple
 |---|---|---|
 | ![Cowboy Bebop](gifs/cowboy_bebop.gif) | ![Frieren](gifs/frieren.gif) | ![Steins;Gate](gifs/steins;gate.gif) |
 
-*Produced end-to-end from video + subtitle files: screenshot, sentence audio, furigana, definition. No manual editing.*
+*Generated from video and subtitle files. Each card contains a screenshot, sentence audio, furigana, and definition.*
 
 ## How It Works
 
@@ -32,7 +32,7 @@ Built for the "I already watched it, now give me the deck" workflow — a comple
 
 - Lapis-compatible cards with furigana, pitch accent, and word frequency fields.
 - YouTube support: paste a URL, mine the video.
-- Queue a folder of episode/subtitle pairs and let it run.
+- Queue a folder of episode/subtitle pairs for sequential processing.
 - Offline JMdict dictionary with Jisho API fallback.
 - Preview and curate the word list before any cards are created.
 - Parallel ffmpeg extraction for screenshots and sentence audio.
@@ -60,7 +60,7 @@ Grab the installer for your platform from the [latest release](https://github.co
 | Linux (other) | — | `AnkiMiner-Linux-x86_64.tar.gz` |
 | macOS (Apple Silicon) | — | `AnkiMiner-macOS-arm64.tar.gz` |
 
-No Python required — the installers and portable archives bundle everything.
+No Python required. Installers and portable archives bundle all dependencies.
 
 <details>
 <summary><strong>Install from PyPI (Python 3.10+)</strong></summary>
@@ -86,7 +86,7 @@ pip install .
 
 After installing, launch **Anki Miner** from your Start Menu, Applications folder, or app menu. If you installed from PyPI or source, run `anki_miner_gui` from a terminal. A desktop shortcut is created on first launch; re-run it from **Tools → Create Desktop Shortcut...** inside the app.
 
-Make sure Anki is running with AnkiConnect installed before you hit Mine.
+Anki must be running with AnkiConnect installed before mining starts.
 
 Tabs:
 - **Single Episode**: mine one video/subtitle pair with file selectors and progress tracking.
@@ -119,7 +119,7 @@ Default field mapping:
 | pitch_category         | *(unmapped)*        | Pitch accent category         |
 | frequency              | *(unmapped)*        | Word frequency rank           |
 
-Fields marked *(unmapped)* have no default Lapis mapping — map them in Settings if your note type has equivalents. Any note type works.
+Fields marked *(unmapped)* have no default Lapis mapping. Map them in Settings if your note type has equivalents. Any note type with the required fields works.
 
 ### JMdict Offline Dictionary
 
@@ -135,9 +135,9 @@ Without JMdict, lookups fall back to the Jisho API (slower, online, rate-limited
 
 ## YouTube Mining
 
-Paste a URL, click **Fetch Info** to probe metadata (title, duration, sub availability), then click **Mine**. The fetch pulls the video and its Japanese subtitle track into a per-run temp directory, then hands both files to the same pipeline used for file-based mining.
+Paste a URL, click **Fetch Info** to probe metadata (title, duration, subtitle availability), then click **Mine**. The fetch downloads the video and its Japanese subtitle track into a per-run temporary directory, then passes both files to the same pipeline used for file-based mining.
 
-Auto-captions are accepted only when they are native Japanese. Tracks that YouTube generates by machine-translating from English are filtered out — mining those produces garbage. Native auto-captions may still be lower quality than manual subtitles since they have no sentence boundaries.
+Auto-captions are accepted only when native Japanese. Tracks that YouTube generates by machine-translating from English are rejected, since mining them yields unusable results. Native auto-captions remain lower quality than manual subtitles because they lack sentence boundaries.
 
 Gotchas:
 
@@ -163,4 +163,4 @@ Bug reports and feature ideas go in [Issues](https://github.com/0xzerolight/anki
 
 ## License
 
-GNU General Public License v3.0 — see [LICENSE](LICENSE).
+GNU General Public License v3.0. See [LICENSE](LICENSE).
