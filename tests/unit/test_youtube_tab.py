@@ -76,7 +76,7 @@ class TestInitialState:
 
     def test_initial_state(self, tab):
         assert tab._state == _UIState.IDLE_NO_URL
-        assert not tab.mine_button.isEnabled()
+        assert not tab.process_button.isEnabled()
         assert tab.status_label.text() == "Enter a YouTube URL and click Fetch Info."
         assert tab.accept_button.isHidden()
 
@@ -88,7 +88,7 @@ class TestProbeOutcomes:
         info = _make_video_info(has_manual_ja_subs=True)
         tab._on_probe_done(info)
         assert tab._state == _UIState.MANUAL_READY
-        assert tab.mine_button.isEnabled()
+        assert tab.process_button.isEnabled()
         assert tab._resolved_sub_mode == "manual_only"
         assert "ready to mine" in tab.status_label.text().lower()
         assert "Sample Video" in tab.metadata_label.text()
@@ -97,14 +97,14 @@ class TestProbeOutcomes:
         info = _make_video_info(is_live=True, has_manual_ja_subs=True)
         tab._on_probe_done(info)
         assert tab._state == _UIState.LIVE
-        assert not tab.mine_button.isEnabled()
+        assert not tab.process_button.isEnabled()
         assert "live" in tab.status_label.text().lower()
 
     def test_age_restricted_without_cookies(self, tab):
         info = _make_video_info(is_age_restricted=True, has_manual_ja_subs=True)
         tab._on_probe_done(info)
         assert tab._state == _UIState.AGE_LOCKED
-        assert not tab.mine_button.isEnabled()
+        assert not tab.process_button.isEnabled()
         assert "age" in tab.status_label.text().lower()
 
     def test_age_restricted_with_cookies_proceeds(self, test_config):
@@ -119,7 +119,7 @@ class TestProbeOutcomes:
             info = _make_video_info(is_age_restricted=True, has_manual_ja_subs=True)
             widget._on_probe_done(info)
             assert widget._state == _UIState.MANUAL_READY
-            assert widget.mine_button.isEnabled()
+            assert widget.process_button.isEnabled()
         finally:
             widget.deleteLater()
 
@@ -145,14 +145,14 @@ class TestProbeOutcomes:
         )
         tab._on_probe_done(info)
         assert tab._state == _UIState.TOO_LONG
-        assert not tab.mine_button.isEnabled()
+        assert not tab.process_button.isEnabled()
         assert "max duration" in tab.status_label.text().lower()
 
     def test_auto_only_pending(self, tab):
         info = _make_video_info(has_auto_ja_subs=True)
         tab._on_probe_done(info)
         assert tab._state == _UIState.AUTO_PENDING
-        assert not tab.mine_button.isEnabled()
+        assert not tab.process_button.isEnabled()
         assert not tab.accept_button.isHidden()
 
     def test_auto_only_accept_arms_mine(self, tab):
@@ -160,7 +160,7 @@ class TestProbeOutcomes:
         tab._on_probe_done(info)
         tab._on_accept_auto_clicked()
         assert tab._state == _UIState.AUTO_READY
-        assert tab.mine_button.isEnabled()
+        assert tab.process_button.isEnabled()
         assert tab._resolved_sub_mode == "auto_only"
         assert tab.accept_button.isHidden()
 
@@ -168,13 +168,13 @@ class TestProbeOutcomes:
         info = _make_video_info()
         tab._on_probe_done(info)
         assert tab._state == _UIState.NO_SUBS
-        assert not tab.mine_button.isEnabled()
+        assert not tab.process_button.isEnabled()
         assert "no japanese subtitles" in tab.status_label.text().lower()
 
     def test_probe_error(self, tab):
         tab._on_probe_error("yt-dlp exploded")
         assert tab._state == _UIState.PROBE_ERROR
-        assert not tab.mine_button.isEnabled()
+        assert not tab.process_button.isEnabled()
         assert "yt-dlp exploded" in tab.status_label.text()
         # Previous metadata must be cleared.
         assert tab.metadata_label.text() == ""
@@ -192,7 +192,7 @@ class TestMineLifecycleSlots:
 
         tab._on_mine_error("Bot detection triggered.")
         assert tab._state == _UIState.MINE_ERROR
-        assert tab.mine_button.isEnabled()
+        assert tab.process_button.isEnabled()
         assert "Bot detection triggered." in tab.status_label.text()
 
         # worker_thread handle clears when the QThread emits finished.
@@ -210,7 +210,7 @@ class TestMineLifecycleSlots:
 
         tab._on_mine_finished(_Result())
         assert tab._state == _UIState.MINED
-        assert tab.mine_button.isEnabled()
+        assert tab.process_button.isEnabled()
         assert "7 cards added" in tab.status_label.text()
 
         tab._on_worker_finished()
@@ -241,14 +241,38 @@ class TestUrlEditingResetsState:
         # textChanged fires synchronously in Qt's event loop; force via
         # explicit call to mirror the signal flow.
         assert tab._video_info is None
-        assert not tab.mine_button.isEnabled()
+        assert not tab.process_button.isEnabled()
 
 
-class TestCurationAndPreviewCheckboxes:
-    """Checkbox parity with SingleEpisodeTab (curation + preview)."""
+class TestActionButtons:
+    """Preview Words + Process Video + Cancel — UX parity with anime tabs."""
 
-    def test_checkboxes_exist_and_default_off(self, tab):
-        assert tab.curation_checkbox is not None
-        assert tab.preview_checkbox is not None
-        assert tab.curation_checkbox.isChecked() is False
-        assert tab.preview_checkbox.isChecked() is False
+    def test_buttons_present_and_disabled_at_startup(self, tab):
+        assert tab.preview_button is not None
+        assert tab.process_button is not None
+        assert tab.cancel_button is not None
+        assert not tab.preview_button.isEnabled()
+        assert not tab.process_button.isEnabled()
+        assert tab.cancel_button.isHidden()
+
+    def test_manual_ready_enables_both_action_buttons(self, tab):
+        info = _make_video_info(has_manual_ja_subs=True)
+        tab._on_probe_done(info)
+        assert tab._state == _UIState.MANUAL_READY
+        assert tab.preview_button.isEnabled()
+        assert tab.process_button.isEnabled()
+        assert tab.cancel_button.isHidden()
+
+    def test_mining_hides_actions_shows_cancel(self, tab):
+        tab._transition(_UIState.MINING)
+        assert not tab.cancel_button.isHidden()
+        assert tab.preview_button.isHidden()
+        assert tab.process_button.isHidden()
+
+    def test_mined_restores_actions_hides_cancel(self, tab):
+        tab._transition(_UIState.MINED, message="done")
+        assert not tab.preview_button.isHidden()
+        assert not tab.process_button.isHidden()
+        assert tab.preview_button.isEnabled()
+        assert tab.process_button.isEnabled()
+        assert tab.cancel_button.isHidden()
