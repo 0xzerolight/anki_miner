@@ -135,6 +135,10 @@ class AnalyticsTab(QWidget):
         self.sessions_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.sessions_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.sessions_table.setMinimumHeight(200)
+
+        v_header = self.sessions_table.verticalHeader()
+        if v_header:
+            v_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.sessions_table.hide()
 
         layout.addWidget(self.sessions_table)
@@ -177,6 +181,10 @@ class AnalyticsTab(QWidget):
         self.difficulty_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.difficulty_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.difficulty_table.setMinimumHeight(200)
+
+        v_header = self.difficulty_table.verticalHeader()
+        if v_header:
+            v_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.difficulty_table.hide()
 
         layout.addWidget(self.difficulty_table)

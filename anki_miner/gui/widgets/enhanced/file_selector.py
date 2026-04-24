@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -60,6 +60,7 @@ class FileSelector(QWidget):
         self._file_filter = file_filter
         self._placeholder = placeholder
         self._is_valid = False
+        self._full_status_text = ""
 
         self._label_text = label
         self._setup_ui()
@@ -108,11 +109,10 @@ class FileSelector(QWidget):
         # Status label (shows current file/folder name or validation message)
         self.status_label = QLabel("")
         self.status_label.setObjectName("caption")
-        self.status_label.setWordWrap(True)  # Allow wrapping for long paths
+        self.status_label.setWordWrap(False)
         status_font = QFont()
         status_font.setPixelSize(FONT_SIZES.caption)
         self.status_label.setFont(status_font)
-        make_label_fit_text(self.status_label)  # Background fits text width
         layout.addWidget(self.status_label)
 
         self.setLayout(layout)
@@ -169,11 +169,15 @@ class FileSelector(QWidget):
             )
             if file_path:
                 self.input.setText(file_path)
+                self.input.setCursorPosition(0)
+                self.input.setToolTip(file_path)
         else:
             # Folder selection
             folder_path = QFileDialog.getExistingDirectory(self, f"Select {self._label_text}", "")
             if folder_path:
                 self.input.setText(folder_path)
+                self.input.setCursorPosition(0)
+                self.input.setToolTip(folder_path)
 
     def _validate_path(self, path_str: str) -> None:
         """Validate the provided path.
@@ -212,25 +216,30 @@ class FileSelector(QWidget):
         path_str = self.input.text()
 
         if not path_str:
-            # No file/folder selected
-            if self._file_mode:
-                self.status_label.setText("No file selected")
-            else:
-                self.status_label.setText("No folder selected")
+            empty_msg = "No file selected" if self._file_mode else "No folder selected"
+            self._full_status_text = empty_msg
+            self.status_label.setToolTip("")
+            self._render_status_text()
             return
 
-        path = Path(path_str)
-
         if self._is_valid:
-            # Show file/folder name
-            name = path.name
-            self.status_label.setText(name)
+            self._full_status_text = Path(path_str).name
+            self.status_label.setToolTip(self._full_status_text)
         else:
-            # Show error message
-            if self._file_mode:
-                self.status_label.setText("File not found")
-            else:
-                self.status_label.setText("Folder not found")
+            self._full_status_text = "File not found" if self._file_mode else "Folder not found"
+            self.status_label.setToolTip("")
+        self._render_status_text()
+
+    def _render_status_text(self) -> None:
+        available = max(self.status_label.width(), 1)
+        metrics = QFontMetrics(self.status_label.font())
+        elided = metrics.elidedText(self._full_status_text, Qt.TextElideMode.ElideMiddle, available)
+        self.status_label.setText(elided)
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        if hasattr(self, "_full_status_text"):
+            self._render_status_text()
 
     def get_path(self) -> str:
         """Get the current path.
@@ -247,6 +256,8 @@ class FileSelector(QWidget):
             path: Path to set
         """
         self.input.setText(path)
+        self.input.setCursorPosition(0)
+        self.input.setToolTip(path)
 
     def is_valid(self) -> bool:
         """Check if current path is valid.
@@ -273,4 +284,6 @@ class FileSelector(QWidget):
             # Get first file/folder
             file_path = urls[0].toLocalFile()
             self.input.setText(file_path)
+            self.input.setCursorPosition(0)
+            self.input.setToolTip(file_path)
             event.acceptProposedAction()
