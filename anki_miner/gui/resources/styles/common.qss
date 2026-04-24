@@ -761,6 +761,20 @@ QTableWidget::item:selected {
     color: ${color-table-selected-text};
 }
 
+QTableWidget::item:alternate {
+    background-color: ${color-surface-alt};
+    color: ${color-text};
+}
+
+QTableWidget::item:alternate:hover {
+    background-color: ${color-surface-hover};
+}
+
+QTableWidget::item:alternate:selected {
+    background-color: ${color-table-selected-bg};
+    color: ${color-table-selected-text};
+}
+
 QHeaderView::section {
     background-color: ${color-background};
     color: ${color-text};
