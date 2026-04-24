@@ -271,6 +271,9 @@ class Theme:
         palette = QPalette()
         palette.setColor(QPalette.ColorRole.Window, QColor(colors["background"]))
         palette.setColor(QPalette.ColorRole.WindowText, QColor(colors["text"]))
+        palette.setColor(QPalette.ColorRole.Base, QColor(colors["surface"]))
+        palette.setColor(QPalette.ColorRole.AlternateBase, QColor(colors["surface-alt"]))
+        palette.setColor(QPalette.ColorRole.Text, QColor(colors["text"]))
         app.setPalette(palette)
 
         app.setStyleSheet(cls.get_stylesheet(mode))
