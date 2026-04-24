@@ -122,6 +122,10 @@ class PairPreviewDialog(QDialog):
             h_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
             h_header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
 
+        v_header = self.table.verticalHeader()
+        if v_header:
+            v_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+
         # Populate table
         for row, pair in enumerate(self.pairs):
             # Video file name with icon

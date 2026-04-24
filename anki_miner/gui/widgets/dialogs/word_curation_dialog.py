@@ -104,6 +104,10 @@ class WordCurationDialog(QDialog):
             header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
             header_view.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
 
+        v_header = self.table.verticalHeader()
+        if v_header:
+            v_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+
         self.table.itemChanged.connect(self._on_item_changed)
 
         layout.addWidget(self.table)
