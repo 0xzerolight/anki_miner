@@ -55,14 +55,14 @@ class WordFilterService:
 
         Args:
             words: List of words to filter
-            min_length: Minimum word length (defaults to config)
+            min_length: Minimum word length (defaults to 1)
             max_length: Maximum word length (optional)
 
         Returns:
             List of words within length bounds
         """
         if min_length is None:
-            min_length = self.config.min_word_length
+            min_length = 1
 
         filtered = []
         for word in words:

@@ -15,7 +15,6 @@ class FilteringSettingsPanel(FormPanel):
     """Panel for word filtering settings.
 
     Provides:
-    - Minimum word length configuration
     - Word frequency filtering options
     """
 
@@ -27,16 +26,6 @@ class FilteringSettingsPanel(FormPanel):
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
-        # Minimum word length
-        self.min_length_spinbox = QSpinBox()
-        self.min_length_spinbox.setRange(1, 10)
-        self.min_length_spinbox.setToolTip("Minimum character length for words to be processed")
-        self.add_field(
-            "Minimum Word Length",
-            self.min_length_spinbox,
-            helper="Words shorter than this will be ignored during processing",
-        )
-
         # Word Frequency section
         self.add_section("Word Frequency")
 

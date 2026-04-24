@@ -175,10 +175,6 @@ class SubtitleParserService:
         if not surface or not surface.strip():
             return False
 
-        # Skip words that are too short
-        if len(surface) < self.config.min_word_length:
-            return False
-
         # Get part-of-speech tags
         try:
             pos1 = word_token.feature.pos1  # Main POS
@@ -231,11 +227,6 @@ class SubtitleParserService:
             # Must be at least 2 chars to be valid katakana word
             return len(surface) >= 2
 
-        # For words with kanji
-        if has_kanji:
-            kanji_count = sum(1 for c in surface if "\u4e00" <= c <= "\u9fff")
-            if kanji_count == 1 and len(surface) == 1:
-                return self.config.min_word_length <= 1
-            return True
-
-        return False
+        # For words with kanji, always include (POS/subtype gates above apply).
+        # Pure hiragana words (no kanji, not katakana) fall through and are rejected.
+        return bool(has_kanji)

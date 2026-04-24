@@ -1,6 +1,5 @@
 """Tests for subtitle_parser module."""
 
-from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
@@ -244,11 +243,6 @@ class TestShouldIncludeWord:
         token = _make_token("  ", "名詞")
         assert service._should_include_word(token) is False
 
-    def test_excludes_short_words(self, service):
-        """Words shorter than min_word_length (2) should be excluded."""
-        token = _make_token("あ", "名詞", lemma="あ")
-        assert service._should_include_word(token) is False
-
     @pytest.mark.parametrize("pos1", ["助詞", "助動詞", "記号", "補助記号"])
     def test_excludes_non_content_pos(self, service, pos1):
         token = _make_token("から", pos1, lemma="から")
@@ -266,11 +260,17 @@ class TestShouldIncludeWord:
 
     @pytest.mark.parametrize(
         "pos2",
-        ["非自立", "代名詞", "数詞", "接尾", "助動詞", "接頭", "固有名詞"],
+        ["非自立", "数詞", "接尾", "助動詞", "接頭", "固有名詞"],
     )
     def test_excludes_filtered_subtypes(self, service, pos2):
-        token = _make_token("もの", "名詞", pos2=pos2, lemma="もの")
+        token = _make_token("物事", "名詞", pos2=pos2, lemma="物事")
         assert service._should_include_word(token) is False
+
+    @pytest.mark.parametrize("surface", ["彼", "君"])
+    def test_includes_pronouns_by_default(self, service, surface):
+        """Pronouns (代名詞) like 彼 and 君 must be mined under default config."""
+        token = _make_token(surface, "名詞", pos2="代名詞", lemma=surface)
+        assert service._should_include_word(token) is True
 
     def test_excludes_no_lemma(self, service):
         token = _make_token("何か", "名詞")
@@ -281,32 +281,18 @@ class TestShouldIncludeWord:
         token = _make_token_no_feature("何か")
         assert service._should_include_word(token) is False
 
-    def test_excludes_single_kanji(self, service):
-        """Single kanji excluded at the default min_word_length=2 floor."""
-        token = _make_token("日", "名詞", lemma="日")
-        assert service._should_include_word(token) is False
-
-    def test_includes_single_kanji_when_min_length_one(self, test_config):
-        """Single kanji pass when user explicitly lowers the floor to 1."""
-        config = replace(test_config, min_word_length=1)
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
-            service = SubtitleParserService(config)
+    def test_includes_single_kanji_by_default(self, service):
+        """Single kanji content words are always admitted."""
         token = _make_token("皿", "名詞", lemma="皿")
         assert service._should_include_word(token) is True
 
-    def test_still_excludes_single_katakana_when_min_length_one(self, test_config):
-        """Single katakana remain rejected even at the lowest floor — they are noise."""
-        config = replace(test_config, min_word_length=1)
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
-            service = SubtitleParserService(config)
+    def test_excludes_single_katakana(self, service):
+        """Single katakana characters are filtered as noise."""
         token = _make_token("ア", "名詞", lemma="ア")
         assert service._should_include_word(token) is False
 
-    def test_still_excludes_single_hiragana_when_min_length_one(self, test_config):
-        """Single hiragana remain rejected even at the lowest floor — they are noise."""
-        config = replace(test_config, min_word_length=1)
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
-            service = SubtitleParserService(config)
+    def test_excludes_single_hiragana(self, service):
+        """Single hiragana characters are filtered as noise."""
         token = _make_token("あ", "名詞", lemma="あ")
         assert service._should_include_word(token) is False
 
@@ -330,9 +316,8 @@ class TestShouldIncludeWord:
         assert service._should_include_word(token) is False
 
     def test_excludes_single_char_katakana(self, service):
-        """Single katakana character is too short."""
+        """Single katakana character is rejected by the katakana <2 floor."""
         token = _make_token("ア", "名詞", lemma="ア")
-        # Already excluded by min_word_length=2, but also by katakana <2 check
         assert service._should_include_word(token) is False
 
     def test_includes_long_katakana(self, service):
