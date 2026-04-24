@@ -2,7 +2,7 @@
 
 import json
 import logging
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Any
 
@@ -67,6 +67,16 @@ class GUIConfigManager:
 
             # Migrate old field names
             config_dict = cls._migrate_field_names(config_dict)
+
+            # Drop keys not in the current dataclass (e.g., removed fields from old
+            # versions). Without this filter, AnkiMinerConfig(**config_dict) raises
+            # TypeError and the except below would silently reset the entire user
+            # config to defaults.
+            valid_keys = {f.name for f in fields(AnkiMinerConfig)}
+            dropped = set(config_dict) - valid_keys
+            if dropped:
+                logger.debug("Dropping unknown config keys: %s", sorted(dropped))
+            config_dict = {k: v for k, v in config_dict.items() if k in valid_keys}
 
             # Create config from dict
             return AnkiMinerConfig(**config_dict)

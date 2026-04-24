@@ -45,14 +45,12 @@ class AnkiMinerConfig:
     subtitle_format_priority: tuple[str, ...] = (".ass", ".ssa", ".srt")
 
     # Word filtering settings
-    min_word_length: int = 2
     allowed_pos: list[str] = field(
         default_factory=lambda: ["名詞", "動詞", "形容詞", "副詞", "形状詞"]
     )
     excluded_subtypes: list[str] = field(
         default_factory=lambda: [
             "非自立",
-            "代名詞",
             "数詞",
             "接尾",
             "助動詞",

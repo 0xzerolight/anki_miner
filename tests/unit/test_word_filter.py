@@ -123,21 +123,6 @@ class TestWordFilterService:
 
             assert len(result) == 2
 
-        def test_uses_config_min_length(self, test_config):
-            """Should use config min_length when not specified."""
-            # Assuming test_config has some min_word_length set
-            service = WordFilterService(test_config)
-            words = [
-                create_word("あ"),
-                create_word("あいうえお"),
-            ]
-
-            # Call without explicit min_length
-            result = service.filter_by_length(words)
-
-            # Should use config's min_word_length
-            assert isinstance(result, list)
-
         def test_empty_words_list(self, test_config):
             """Should return empty list when no words provided."""
             service = WordFilterService(test_config)
