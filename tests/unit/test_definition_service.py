@@ -173,21 +173,17 @@ class TestGetDefinition:
         assert result is not None
         assert "to eat" in result
 
-    def test_returns_none_when_offline_loaded_but_word_missing(self, test_config, tmp_path):
-        """Should return None when offline dict is loaded but word is not found.
-
-        When use_offline_dict=True and _jmdict is loaded, the service does NOT
-        fall back to Jisho -- it trusts the offline dictionary and returns None.
-        """
+    def test_offline_miss_falls_back_to_jisho(self, test_config, tmp_path):
+        """When JMdict is loaded but misses, the service must query Jisho."""
         _write_xml(tmp_path, MINI_JMDICT_XML)
         service = DefinitionService(test_config)
         service.load_offline_dictionary()
 
-        with patch.object(JishoProvider, "lookup") as mock_jisho:
+        with patch.object(JishoProvider, "lookup", return_value="1. to run") as mock_jisho:
             result = service.get_definition("走る")
 
-        mock_jisho.assert_not_called()
-        assert result is None
+        mock_jisho.assert_called_once_with("走る")
+        assert result == "1. to run"
 
     def test_falls_back_to_jisho_when_jmdict_none(self, test_config):
         """Should query Jisho when use_offline_dict=True but dict failed to load."""
@@ -240,14 +236,56 @@ class TestGetDefinitionOffline:
         assert result == "1. to eat<br>2. to consume; to devour"
 
     def test_unknown_word_returns_none(self, test_config, tmp_path):
-        """Should return None when the word is not in the dictionary."""
+        """Should return None when the word is not in JMdict and Jisho also misses."""
         _write_xml(tmp_path, MINI_JMDICT_XML)
         service = DefinitionService(test_config)
         service.load_offline_dictionary()
 
-        result = service.get_definition("走る")
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"data": []}
+        with (
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                return_value=mock_resp,
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
+        ):
+            result = service.get_definition("走る")
 
         assert result is None
+
+    def test_jmdict_miss_falls_back_to_jisho(self, test_config, tmp_path):
+        """Words absent from JMdict must fall through to the Jisho API."""
+        _write_xml(tmp_path, MINI_JMDICT_XML)
+        service = DefinitionService(test_config)
+        service.load_offline_dictionary()
+
+        jisho_resp = _jisho_response([{"english_definitions": ["to run"]}])
+        with (
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                return_value=jisho_resp,
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
+        ):
+            result = service.get_definition("走る")
+
+        assert result is not None
+        assert "to run" in result
+
+    def test_jmdict_hit_does_not_call_jisho(self, test_config, tmp_path):
+        """Words found in JMdict must not trigger a Jisho API call."""
+        _write_xml(tmp_path, MINI_JMDICT_XML)
+        service = DefinitionService(test_config)
+        service.load_offline_dictionary()
+
+        with patch("anki_miner.services.providers.jisho_provider.requests.get") as mock_get:
+            result = service.get_definition("食べる")
+
+        assert result is not None
+        assert "to eat" in result
+        mock_get.assert_not_called()
 
     def test_limits_to_five_definitions(self, test_config, tmp_path):
         """Should truncate to at most 5 definitions."""
@@ -431,10 +469,20 @@ class TestGetDefinitionsBatch:
         service = DefinitionService(test_config)
         service.load_offline_dictionary()
 
-        results = service.get_definitions_batch(["食べる", "走る", "飲む"])
+        empty_resp = MagicMock()
+        empty_resp.status_code = 200
+        empty_resp.json.return_value = {"data": []}
+        with (
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                return_value=empty_resp,
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
+        ):
+            results = service.get_definitions_batch(["食べる", "走る", "飲む"])
 
         assert len(results) == 3
-        # "食べる" and "飲む" are in the dictionary; "走る" is not
+        # "食べる" and "飲む" are in JMdict; "走る" falls through to Jisho, which we stub to empty
         assert results[0] is not None
         assert "to eat" in results[0]
         assert results[1] is None
@@ -447,8 +495,18 @@ class TestGetDefinitionsBatch:
         service = DefinitionService(test_config)
         service.load_offline_dictionary()
 
+        empty_resp = MagicMock()
+        empty_resp.status_code = 200
+        empty_resp.json.return_value = {"data": []}
         words = ["食べる", "走る"]
-        service.get_definitions_batch(words, progress_callback=recording_progress)
+        with (
+            patch(
+                "anki_miner.services.providers.jisho_provider.requests.get",
+                return_value=empty_resp,
+            ),
+            patch("anki_miner.services.providers.jisho_provider.time.sleep"),
+        ):
+            service.get_definitions_batch(words, progress_callback=recording_progress)
 
         # on_start called once with total count and description
         assert len(recording_progress.starts) == 1

@@ -103,9 +103,9 @@ class DefinitionService:
     def get_definition(self, word: str) -> str | None:
         """Get definition for a word.
 
-        When using custom providers: tries each provider in order, returns first hit.
-        When using default providers: preserves original fallback behavior where
-        JMdict (when loaded) does not fall through to Jisho for missing words.
+        Tries each configured provider in order and returns the first hit. In the
+        default provider chain that means JMdict (offline) first, then Jisho
+        (online) as a fallback for words JMdict doesn't know about.
 
         Args:
             word: Japanese word to look up.
@@ -116,34 +116,11 @@ class DefinitionService:
         if not self._custom_providers:
             self.ensure_loaded()
 
-        if self._custom_providers:
-            # Pluggable mode: simple chain - try each in order
-            for provider in self._providers:
-                if provider.is_available():
-                    result = provider.lookup(word)
-                    if result:
-                        return result
-            return None
-
-        # Default mode: preserve original fallback semantics
-        jmdict = None
-        jisho = None
         for provider in self._providers:
-            if isinstance(provider, JMdictProvider):
-                jmdict = provider
-            elif isinstance(provider, JishoProvider):
-                jisho = provider
-
-        # Try offline dictionary first
-        if jmdict and jmdict.is_available():
-            result = jmdict.lookup(word)
-            if result:
-                return result
-
-        # Fallback to Jisho API only if offline dict is disabled or failed to load
-        if (not self.config.use_offline_dict or not (jmdict and jmdict.is_available())) and jisho:
-            return jisho.lookup(word)
-
+            if provider.is_available():
+                result = provider.lookup(word)
+                if result:
+                    return result
         return None
 
     def get_definitions_batch(

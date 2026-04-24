@@ -428,9 +428,18 @@ class EpisodeProcessor:
 
                 card_data.append((word, media, definition, extra_fields if extra_fields else None))
 
-            skipped = len(media_results) - len(card_data)
-            if skipped:
-                self.presenter.show_warning(f"Skipped {skipped} words with no definition found")
+            skipped_words = [
+                word.lemma
+                for (word, _), definition in zip(media_results, definitions, strict=True)
+                if definition is None
+            ]
+            if skipped_words:
+                preview = ", ".join(skipped_words[:10])
+                more = f" (+{len(skipped_words) - 10} more)" if len(skipped_words) > 10 else ""
+                self.presenter.show_warning(
+                    f"Skipped {len(skipped_words)} words with no definition found: "
+                    f"{preview}{more}"
+                )
 
             cards_created = self.anki_service.create_cards_batch(
                 card_data,

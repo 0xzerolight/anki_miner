@@ -158,9 +158,6 @@ class SettingsTab(QWidget):
         self.dictionary_panel.pitch_accent_selector.set_path(str(self.config.pitch_accent_path))
         self.dictionary_panel.use_pitch_accent_checkbox.setChecked(self.config.use_pitch_accent)
 
-        # Filtering settings
-        self.filtering_panel.min_length_spinbox.setValue(self.config.min_word_length)
-
         # Frequency settings
         self.filtering_panel.frequency_selector.set_path(str(self.config.frequency_list_path))
         self.filtering_panel.use_frequency_checkbox.setChecked(self.config.use_frequency_data)
@@ -215,8 +212,6 @@ class SettingsTab(QWidget):
                 else Path("")
             ),
             use_pitch_accent=self.dictionary_panel.use_pitch_accent_checkbox.isChecked(),
-            # Filtering settings
-            min_word_length=self.filtering_panel.min_length_spinbox.value(),
             # Frequency settings
             frequency_list_path=(
                 Path(self.filtering_panel.frequency_selector.get_path())
@@ -356,8 +351,3 @@ class SettingsTab(QWidget):
     def use_offline_checkbox(self):
         """Get use offline checkbox widget."""
         return self.dictionary_panel.use_offline_checkbox
-
-    @property
-    def min_length_spinbox(self):
-        """Get min length spinbox widget."""
-        return self.filtering_panel.min_length_spinbox
