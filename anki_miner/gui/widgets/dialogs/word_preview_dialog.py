@@ -168,6 +168,12 @@ class WordPreviewDialog(QDialog):
             table_header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
             table_header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
 
+        v_header = self.table.verticalHeader()
+        if v_header:
+            v_header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+            v_header.setDefaultSectionSize(32)
+            v_header.setMinimumSectionSize(28)
+
         main_layout.addWidget(self.table)
 
         # Footer with result count and close button

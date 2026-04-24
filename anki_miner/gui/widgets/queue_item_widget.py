@@ -106,7 +106,7 @@ class QueueItemWidget(QFrame):
         path_font.setPixelSize(FONT_SIZES.caption)
         self.anime_path_label.setFont(path_font)
         self.anime_path_label.setWordWrap(False)
-        self.anime_path_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        self.anime_path_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum)
         body_layout.addWidget(self.anime_path_label)
 
         # Subtitle folder path
@@ -114,7 +114,9 @@ class QueueItemWidget(QFrame):
         self.subtitle_path_label.setObjectName("queue-item-path")
         self.subtitle_path_label.setFont(path_font)
         self.subtitle_path_label.setWordWrap(False)
-        self.subtitle_path_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        self.subtitle_path_label.setSizePolicy(
+            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum
+        )
         body_layout.addWidget(self.subtitle_path_label)
 
         # Statistics
@@ -124,7 +126,7 @@ class QueueItemWidget(QFrame):
         stats_font.setPixelSize(FONT_SIZES.caption)
         stats_font.setWeight(QFont.Weight.Medium)
         self.stats_label.setFont(stats_font)
-        self.stats_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        self.stats_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum)
         body_layout.addWidget(self.stats_label)
 
         self.body_widget.setLayout(body_layout)

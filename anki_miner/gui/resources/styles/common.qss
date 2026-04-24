@@ -40,16 +40,20 @@ QLabel#heading3 {
 
 QLabel#caption {
     font-size: ${font-size-caption}px;
-    padding: 2px ${spacing-xs}px;
+    padding: 4px ${spacing-xs}px;
+    min-height: 20px;
     border-radius: ${border-radius-small}px;
 }
 
 QLabel#small {
     font-size: ${font-size-small}px;
+    padding: 2px 0;
+    min-height: 16px;
 }
 
 QLabel#field-label {
-    padding: 2px ${spacing-xs}px;
+    padding: 4px ${spacing-xs}px;
+    min-height: 22px;
     border-radius: ${border-radius-small}px;
 }
 
@@ -108,7 +112,7 @@ QPushButton#iconButton {
 
 QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
     min-height: 28px;
-    padding: ${spacing-xxs}px 10px;
+    padding: ${spacing-xxs}px ${spacing-sm}px;
     border-radius: ${border-radius-default}px;
     border: 1px solid;
 }
@@ -209,6 +213,7 @@ QTableWidget {
 
 QTableWidget::item {
     padding: ${spacing-xs}px;
+    min-height: 24px;
     border: none;
 }
 
@@ -221,6 +226,12 @@ QHeaderView::section {
     font-weight: 600;
     border: none;
     border-bottom: 1px solid;
+}
+
+QHeaderView::section:vertical {
+    padding: 2px 6px;
+    font-weight: 500;
+    min-width: 30px;
 }
 
 QHeaderView::section:horizontal {
@@ -397,6 +408,8 @@ QWidget#log-header {
 /* Progress stats */
 QLabel#progress-stats {
     font-size: ${font-size-body-sm}px;
+    padding: 2px 0;
+    min-height: 20px;
     font-family: 'JetBrains Mono', 'Consolas', monospace;
 }
 
@@ -521,14 +534,16 @@ QLabel#queue-item-title {
 
 QLabel#queue-item-path {
     font-size: ${font-size-caption}px;
-    padding: 2px ${spacing-xxs}px;
+    padding: 4px ${spacing-xxs}px;
+    min-height: 20px;
     border-radius: ${border-radius-small}px;
 }
 
 QLabel#queue-item-stats {
     font-size: ${font-size-caption}px;
     font-weight: 500;
-    padding: 2px ${spacing-xxs}px;
+    padding: 4px ${spacing-xxs}px;
+    min-height: 20px;
     border-radius: ${border-radius-small}px;
 }
 
@@ -567,7 +582,8 @@ QLabel#helper-text {
     font-size: ${font-size-small}px;
     opacity: 0.7;
     font-style: italic;
-    padding: 2px ${spacing-xs}px;
+    padding: 4px ${spacing-xs}px;
+    min-height: 20px;
     border-radius: ${border-radius-small}px;
     margin-top: ${spacing-xxs}px;
 }

@@ -202,6 +202,8 @@ class ExportDialog(QDialog):
         if path:
             self._output_path = Path(path)
             self._path_input.setText(path)
+            self._path_input.setCursorPosition(0)
+            self._path_input.setToolTip(path)
             self._export_btn.setEnabled(True)
 
     def _on_export(self) -> None:

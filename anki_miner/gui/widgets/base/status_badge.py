@@ -62,7 +62,7 @@ class StatusBadge(QLabel):
         self.setFont(font)
 
         # Auto-size to content
-        self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum)
 
         # Clickable cursor
         if self._clickable:
