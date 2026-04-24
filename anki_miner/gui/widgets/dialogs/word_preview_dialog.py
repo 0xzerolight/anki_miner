@@ -1,7 +1,6 @@
 """Enhanced dialog for previewing discovered words with search, grouping, and export."""
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QKeySequence, QShortcut
+from PyQt6.QtGui import QBrush, QColor, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -16,7 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.resources.styles import SPACING, Theme
 from anki_miner.gui.widgets.dialogs.export_dialog import ExportDialog
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.models import TokenizedWord
@@ -47,6 +46,7 @@ class WordPreviewDialog(QDialog):
         self._config = config
         self.all_words = words  # All words (never filtered)
         self.filtered_words = words.copy()  # Currently displayed words
+        self._theme_colors: dict[str, str] = {}
         self._setup_ui()
         self._populate_table()
         self._update_statistics()
@@ -216,6 +216,10 @@ class WordPreviewDialog(QDialog):
         # Clear existing rows
         self.table.setRowCount(0)
 
+        # Snapshot theme colors once so subsequent calls to _add_words_to_table
+        # stay consistent even if the theme changes mid-populate.
+        self._theme_colors = Theme.get_colors()
+
         # Group words if needed
         grouping_mode = self.group_combo.currentIndex()
         if grouping_mode == 0:  # No grouping
@@ -252,7 +256,7 @@ class WordPreviewDialog(QDialog):
             # Create group header spanning all columns
             group_item = QTableWidgetItem(f"{group_name}")
             group_item.setFont(self._create_font(13, QFont.Weight.Bold))
-            group_item.setBackground(Qt.GlobalColor.lightGray)
+            group_item.setBackground(QBrush(QColor(self._theme_colors["surface-alt"])))
             self.table.setItem(row, 0, group_item)
             self.table.setSpan(row, 0, 1, 6)
 
@@ -284,15 +288,17 @@ class WordPreviewDialog(QDialog):
                 f"Start: {word.start_time:.2f}s, End: {word.end_time:.2f}s, Duration: {word.duration:.2f}s"
             )
 
-            # Color-code by time range
+            # Color-code by time range using theme-aware semantic tokens so the
+            # cue stays legible across light, dark, and custom themes.
             if word.start_time < 300:  # 0-5 minutes
-                time_item.setForeground(Qt.GlobalColor.blue)
+                bucket_color = self._theme_colors["info"]
             elif word.start_time < 600:  # 5-10 minutes
-                time_item.setForeground(Qt.GlobalColor.darkCyan)
+                bucket_color = self._theme_colors["success"]
             elif word.start_time < 1200:  # 10-20 minutes
-                time_item.setForeground(Qt.GlobalColor.darkGreen)
+                bucket_color = self._theme_colors["warning"]
             else:  # 20+ minutes
-                time_item.setForeground(Qt.GlobalColor.darkMagenta)
+                bucket_color = self._theme_colors["error"]
+            time_item.setForeground(QBrush(QColor(bucket_color)))
 
             self.table.setItem(row, 4, time_item)
 
