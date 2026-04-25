@@ -6,6 +6,7 @@ from pathlib import Path
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QHBoxLayout,
     QMessageBox,
@@ -79,6 +80,13 @@ class SettingsTab(QWidget):
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), "YouTube")
 
         layout.addWidget(self.tab_widget)
+
+        # Updates row — single top-level toggle, no panel needed for one checkbox.
+        self.check_for_updates_checkbox = QCheckBox("Check for updates on startup")
+        self.check_for_updates_checkbox.setToolTip(
+            "When enabled, Anki Miner queries GitHub for new releases on launch."
+        )
+        layout.addWidget(self.check_for_updates_checkbox)
 
         # Action buttons at bottom
         button_layout = QHBoxLayout()
@@ -183,8 +191,19 @@ class SettingsTab(QWidget):
         self.youtube_panel.set_cookies_from_browser(self.config.youtube_cookies_from_browser)
         self.youtube_panel.set_max_duration_seconds(self.config.youtube_max_duration_s)
 
+        # Update settings
+        self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
+
     def _on_save_clicked(self) -> None:
         """Handle save button click."""
+        # If the user just re-enabled startup checks (False -> True), clear any
+        # previously skipped version so a fresh check runs next launch.
+        was_enabled = self.config.check_for_updates
+        now_enabled = self.check_for_updates_checkbox.isChecked()
+        skipped_update_version = self.config.skipped_update_version
+        if now_enabled and not was_enabled:
+            skipped_update_version = ""
+
         # Create updated config from all panels
         new_config = replace(
             self.config,
@@ -240,6 +259,9 @@ class SettingsTab(QWidget):
             # YouTube settings
             youtube_cookies_from_browser=self.youtube_panel.get_cookies_from_browser(),
             youtube_max_duration_s=self.youtube_panel.get_max_duration_seconds(),
+            # Update settings
+            check_for_updates=now_enabled,
+            skipped_update_version=skipped_update_version,
         )
 
         # Emit signal to notify listeners of config change

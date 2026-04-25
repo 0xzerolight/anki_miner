@@ -9,11 +9,15 @@ from anki_miner.services.update_checker import UpdateChecker
 class UpdateWorkerThread(CancellableWorker):
     """Worker thread for checking updates in the background.
 
-    Emits result_ready with (update_available, latest_version, release_url)
-    or emits nothing if the check fails or is cancelled.
+    Emits ``result_ready`` with an :class:`~anki_miner.services.update_checker.UpdateInfo`
+    when a newer release is available, or with ``None`` when there is no update or
+    the check failed (network error, etc.). The signal is typed as ``object`` so
+    Qt can carry either payload across the thread boundary.
     """
 
-    result_ready = pyqtSignal(bool, str, str)  # update_available, version, url
+    # Carries UpdateInfo | None — typed as object so Qt's metatype system
+    # accepts both the dataclass and None without registering a custom type.
+    result_ready = pyqtSignal(object)
 
     def __init__(self, checker: UpdateChecker, parent=None):
         """Initialize the update worker thread.
@@ -31,11 +35,12 @@ class UpdateWorkerThread(CancellableWorker):
             if self.check_cancelled():
                 return
 
-            result = self.checker.check_for_update()
+            info = self.checker.check_for_update()
 
-            if not self.check_cancelled() and result is not None:
-                update_available, latest_version, release_url = result
-                self.result_ready.emit(update_available, latest_version, release_url)
+            if not self.check_cancelled():
+                # Always emit (info may be None) so the main-thread slot can
+                # take the single config-write code path either way.
+                self.result_ready.emit(info)
         except Exception as e:
             if not self.check_cancelled():
                 self.error.emit(f"Error checking for updates: {e}")

@@ -60,6 +60,13 @@ class MainWindow(QMainWindow):
         # Track update worker
         self.update_worker = None
 
+        # Singleton update banner — None until the first check yields a result.
+        # Reused across update checks via UpdateBanner.update_info() to avoid
+        # racing in-flight Qt callbacks against a destroyed C++ object.
+        from anki_miner.gui.widgets.update_banner import UpdateBanner
+
+        self._update_banner: UpdateBanner | None = None
+
         # Auto-check system status on startup (silently, no popup)
         self._validation_silent = True
         self._run_validation()
@@ -67,6 +74,26 @@ class MainWindow(QMainWindow):
         # Auto-check for updates on startup
         if self.config.check_for_updates:
             self._check_for_updates()
+
+        # Post-update confirmation: if last_known_version differs from the
+        # currently running __version__, show a one-shot info dialog. Save the
+        # new version BEFORE showing the dialog so a crash mid-dialog doesn't
+        # cause it to re-fire on the next launch. First launch (empty string)
+        # writes silently.
+        previous = self.config.last_known_version
+        if previous != __version__:
+            self.update_config(replace(self.config, last_known_version=__version__))
+            if previous:
+                QMessageBox.information(
+                    self,
+                    "Anki Miner updated",
+                    (
+                        f"Updated to v{__version__}.<br><br>"
+                        "See what's new: "
+                        '<a href="https://github.com/0xzerolight/anki_miner/releases/latest">'
+                        "release notes</a>"
+                    ),
+                )
 
         # First-run desktop shortcut (deferred so the window paints first)
         if not self.config.first_run_shortcut_done:
@@ -516,30 +543,43 @@ class MainWindow(QMainWindow):
         self.update_worker.result_ready.connect(self._on_update_check_result)
         self.update_worker.start()
 
-    def _on_update_check_result(
-        self, update_available: bool, latest_version: str, release_url: str
-    ) -> None:
+    def _on_update_check_result(self, info: object) -> None:
         """Handle update check result.
 
         Args:
-            update_available: Whether a newer version exists
-            latest_version: The latest version string
-            release_url: URL to the release page
+            info: An :class:`~anki_miner.services.update_checker.UpdateInfo`
+                when a newer release is available, or ``None`` when there is
+                no update / the check failed.
         """
-        if update_available:
-            from anki_miner.gui.widgets.update_banner import UpdateBanner
+        from anki_miner.gui.widgets.update_banner import UpdateBanner
+        from anki_miner.services.update_checker import UpdateInfo
 
-            # Remove existing banner if present
-            for i in range(self.central_layout.count()):
-                item = self.central_layout.itemAt(i)
-                widget = item.widget() if item else None
-                if isinstance(widget, UpdateBanner):
-                    widget.deleteLater()
-                    break
+        if not isinstance(info, UpdateInfo):
+            return
 
-            banner = UpdateBanner(latest_version, release_url, self)
-            # Insert banner after header (index 1)
+        # Honor the user's "skip this version" choice.
+        if info.version == self.config.skipped_update_version:
+            return
+
+        if self._update_banner is None:
+            banner = UpdateBanner(info, self)
+            banner.skip_requested.connect(self._on_skip_update_requested)
+            # Insert banner after header (index 1).
             self.central_layout.insertWidget(1, banner)
+            self._update_banner = banner
+        else:
+            self._update_banner.update_info(info)
+            self._update_banner.setVisible(True)
+
+    def _on_skip_update_requested(self, version: str) -> None:
+        """Persist the skipped version and hide the banner.
+
+        Args:
+            version: Version string the user chose to skip.
+        """
+        self.update_config(replace(self.config, skipped_update_version=version))
+        if self._update_banner is not None:
+            self._update_banner.setVisible(False)
 
     def _on_theme_changed(self, theme_name: str) -> None:
         """Handle theme change from header widget.
