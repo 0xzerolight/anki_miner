@@ -84,7 +84,7 @@ pip install .
 
 ## Quick Start
 
-After installing, launch **Anki Miner** from your Start Menu, Applications folder, or app menu. If you installed from PyPI or source, run `anki_miner_gui` from a terminal. A desktop shortcut is created on first launch; re-run it from **Tools → Create Desktop Shortcut...** inside the app.
+After installing, launch **Anki Miner** from your Start Menu, Applications folder, or app menu. If you installed from PyPI or source, run `anki_miner_gui` from a terminal. A desktop shortcut is created on first launch; re-run it from **Tools -> Create Desktop Shortcut...** inside the app.
 
 Anki must be running with AnkiConnect installed before mining starts.
 
@@ -141,9 +141,13 @@ Auto-captions are accepted only when native Japanese. Tracks that YouTube genera
 
 Gotchas:
 
-- **Bot-detection prompts**: if YouTube asks "Sign in to confirm you're not a bot", open **Settings → Cookies → Browser** and pick Firefox or Chrome. yt-dlp pulls cookies from that browser's profile on every fetch.
+- **Bot-detection prompts**: if YouTube asks "Sign in to confirm you're not a bot", open **Settings -> Cookies -> Browser** and pick Firefox or Chrome. yt-dlp pulls cookies from that browser's profile on every fetch.
 - **Age-restricted videos**: same fix.
 - **Max duration**: defaults to 120 minutes. The probe aborts before downloading if the video is longer. Adjust in Settings.
+
+## Updates
+
+Anki Miner checks GitHub for new releases on startup (toggle in Settings). When an update is available, a banner offers a one-click download of the asset that matches your install: `.deb` for Debian/Ubuntu, `.AppImage` for AppImage, the Inno installer on Windows, the macOS arm64 archive, or the release page for pip/source installs. "Skip this version" suppresses the prompt for that release; the next release prompts again.
 
 ## Troubleshooting
 
