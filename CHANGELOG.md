@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.3.3] - 2026-04-25
+
+### Fixed
+- **Pronouns mined**: 代名詞 like 彼, 誰, 何, 我々, 貴様 now appear in vocabulary output. Hiragana-only pronouns (これ/それ/ここ/...) remain filtered as noise via the existing kanji-required floor.
+- **Compound nouns reassembled**: 刑務所, 爆発的, 芸術的, 死傷者, 入院中, and similar 名詞+接尾辞 forms now mine as a single word. Previously fugashi split them into base noun + suffix and the suffix was filtered out, leaving meaningless bases (e.g. 刑務 alone).
+- **Prefix compounds mined**: 不可能, 無関心, 非常識, 反社会, 超能力, etc. now mine as one word. Whitelisted prefix surfaces (`無 不 非 反 超 未 新 旧 全 半 副 元 再 最`) merge with following 名詞/形状詞.
+- **Verb-stem nominalizations mined**: 言い方, 読み方, 生き方, やり方 etc. now mine as one word. 動詞 + 接尾辞(名詞的) where suffix surface is `方`, `手`, or `様` is merged into a single 名詞.
+- **Anki "Expression" field uses the subtitle's surface form**: when the dictionary lemma differs from what appeared on screen (e.g. 豪腕 vs lemma 剛腕), cards now show the variant the user actually saw. Edge case: orthographic variants encountered in different episodes may produce duplicate cards; uncommon enough to accept.
+- **Expression furigana now matches the surface form**: previously `ExpressionFurigana` was generated from the lemma, so for words like 豪腕/剛腕 the card front would render the lemma reading even though the Expression text was the surface. Now both fields agree.
+- **Existing-user migration for `allowed_pos`**: users upgrading from 2.3.2 with the legacy default `allowed_pos` saved in `gui_config.json` will be auto-migrated to the new default that includes 代名詞, so the pronoun fix actually reaches them. Custom user-edited POS lists are preserved untouched.
+
+### Internal
+- Fixed an incorrect test fixture in `test_includes_pronouns_by_default` that mocked the wrong unidic POS layout (real unidic-lite emits `pos1=代名詞, pos2=*`, not `pos1=名詞, pos2=代名詞`). The test now reflects production tokenizer behavior.
+- Test count: 935 → 962 (+27 new tests covering compound merging, prefix merging, verb nominalization, real-fugashi integration, config migration, and Expression-furigana surface usage).
+
+### Known limitations
+- Cards mined before this release with the wrong-kanji Expression (e.g. 剛腕 instead of 豪腕) are not auto-repaired. Re-running mining on the same content will skip them as "already known" via the lemma match. Manual deletion + re-mine is required to refresh those cards.
+
 ## [2.3.2] - 2026-04-24
 
 ### Breaking

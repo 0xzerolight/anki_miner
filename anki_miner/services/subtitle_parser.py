@@ -1,6 +1,7 @@
 """Service for parsing subtitles and extracting vocabulary."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import fugashi
 import pysubs2
@@ -9,6 +10,35 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import TokenizedWord
 from anki_miner.utils import clean_subtitle_text, generate_furigana
+
+_NOMINAL_SUFFIX_POS2 = {"名詞的", "形状詞的", "副詞的"}
+
+# Whitelist of 接頭辞 surfaces that productively form compounds with
+# 名詞/形状詞 roots. Used by _merge_prefix_compounds to avoid false positives
+# from rare/unproductive 接頭辞 entries in unidic.
+_PREFIX_WHITELIST = frozenset(
+    {"無", "不", "非", "反", "超", "未", "新", "旧", "全", "半", "副", "元", "再", "最"}
+)
+
+# 接尾辞(名詞的) surfaces that nominalize a preceding 動詞 連用形 stem
+# (e.g. 言い+方 → 言い方). Restricted to a small productive set; 者/事/物
+# etc. are not included because they tokenize differently and would
+# over-merge.
+_VERB_NOMINALIZER_SUFFIXES = frozenset({"方", "手", "様"})
+
+
+class _SyntheticToken:
+    """Duck-typed token replacement for merged compounds.
+
+    Mimics fugashi token attribute access (.surface,
+    .feature.{pos1,pos2,lemma,kana}).
+    """
+
+    __slots__ = ("surface", "feature")
+
+    def __init__(self, surface: str, pos1: str, pos2: str, lemma: str, kana: str):
+        self.surface = surface
+        self.feature = SimpleNamespace(pos1=pos1, pos2=pos2, lemma=lemma, kana=kana)
 
 
 class SubtitleParserService:
@@ -88,7 +118,8 @@ class SubtitleParserService:
             duration = end_time - start_time
 
             # Tokenize with MeCab
-            for word_token in self.tagger(text):
+            raw_tokens = list(self.tagger(text))
+            for word_token in self._merge_compound_suffixes(raw_tokens):
                 if not self._should_include_word(word_token):
                     continue
 
@@ -106,7 +137,7 @@ class SubtitleParserService:
                 reading = self._extract_reading(word_token)
 
                 # Generate furigana annotations
-                expression_furigana = generate_furigana(lemma, self.tagger)
+                expression_furigana = generate_furigana(surface, self.tagger)
                 sentence_furigana = generate_furigana(text, self.tagger)
 
                 all_words.append(
@@ -124,6 +155,208 @@ class SubtitleParserService:
                 )
 
         return all_words
+
+    def _merge_compound_suffixes(self, tokens: list) -> list:
+        """Run all compound-merge passes in dependency order.
+
+        Order matters:
+        1. _merge_prefix_compounds  — 接頭辞 + 名詞/形状詞 (e.g. 不+可能 → 不可能).
+           Must run first so that downstream 名詞-suffix merge sees the
+           synthetic 不可能 (pos1=名詞) as a valid head and chains correctly
+           into 不可能性, 不可能的, etc.
+        2. _merge_noun_suffixes     — 名詞 + 接尾辞(名詞的/形状詞的/副詞的)
+           chains (e.g. 刑務+所 → 刑務所, 入院+中+的 → 入院中的).
+        3. _merge_verb_nominalizers — 動詞(連用形) + 接尾辞(名詞的) where the
+           suffix is a verb-stem nominalizer (方/手/様). Independent of (1)
+           and (2) so order is irrelevant.
+        """
+        tokens = self._merge_prefix_compounds(tokens)
+        tokens = self._merge_noun_suffixes(tokens)
+        tokens = self._merge_verb_nominalizers(tokens)
+        return tokens
+
+    def _merge_noun_suffixes(self, tokens: list) -> list:
+        """Merge 名詞 + 接尾辞(名詞的/形状詞的/副詞的) chains into a single token.
+
+        Walks tokens left-to-right. When a 名詞 head is followed by one or
+        more nominal-suffix tokens, both base and suffixes are consumed and
+        replaced by a single _SyntheticToken whose surface == lemma == the
+        concatenated form (e.g. 刑務所, 爆発的, 入院中的). Avoids unidic
+        English-translation contamination in lemmas by setting lemma to the
+        merged surface.
+        """
+        merged: list = []
+        i, n = 0, len(tokens)
+        while i < n:
+            head = tokens[i]
+            try:
+                head_pos1 = head.feature.pos1
+            except AttributeError:
+                merged.append(head)
+                i += 1
+                continue
+            if head_pos1 == "名詞":
+                j = i + 1
+                chain: list = []
+                while j < n:
+                    try:
+                        p1 = tokens[j].feature.pos1
+                        p2 = tokens[j].feature.pos2
+                    except AttributeError:
+                        break
+                    if p1 == "接尾辞" and p2 in _NOMINAL_SUFFIX_POS2:
+                        chain.append(tokens[j])
+                        j += 1
+                    else:
+                        break
+                if chain:
+                    surf = head.surface + "".join(t.surface for t in chain)
+                    try:
+                        head_kana = head.feature.kana or head.surface
+                    except AttributeError:
+                        head_kana = head.surface
+                    suffix_kanas = []
+                    for t in chain:
+                        try:
+                            suffix_kanas.append(t.feature.kana or t.surface)
+                        except AttributeError:
+                            suffix_kanas.append(t.surface)
+                    kana = head_kana + "".join(suffix_kanas)
+                    try:
+                        head_pos2 = head.feature.pos2 or "普通名詞"
+                    except AttributeError:
+                        head_pos2 = "普通名詞"
+                    merged.append(
+                        _SyntheticToken(
+                            surface=surf,
+                            pos1="名詞",
+                            pos2=head_pos2,
+                            lemma=surf,
+                            kana=kana,
+                        )
+                    )
+                    i = j
+                    continue
+            merged.append(head)
+            i += 1
+        return merged
+
+    def _merge_prefix_compounds(self, tokens: list) -> list:
+        """Merge 接頭辞 + 名詞/形状詞 pairs into a single token.
+
+        Only fires when the 接頭辞 surface is in _PREFIX_WHITELIST — this
+        avoids over-merging on rare/unproductive prefixes (e.g. お+金).
+        Empirically: 不+可能 → root is 形状詞, 無+関心 → root is 名詞, so
+        both pos1 values are accepted as merge heads. The synthetic is
+        emitted as pos1=名詞 (the compound is treated as a vocabulary unit,
+        and 名詞 is what _merge_noun_suffixes expects as a head — this
+        enables chaining like 不+可能+性 → 不可能 → 不可能性). pos2 inherits
+        from the root, defaulting to 普通名詞 when unidic emits "*".
+        """
+        merged: list = []
+        i, n = 0, len(tokens)
+        while i < n:
+            head = tokens[i]
+            try:
+                head_pos1 = head.feature.pos1
+            except AttributeError:
+                merged.append(head)
+                i += 1
+                continue
+            if head_pos1 == "接頭辞" and head.surface in _PREFIX_WHITELIST and i + 1 < n:
+                root = tokens[i + 1]
+                try:
+                    root_pos1 = root.feature.pos1
+                    raw_root_pos2 = root.feature.pos2
+                except AttributeError:
+                    merged.append(head)
+                    i += 1
+                    continue
+                if root_pos1 in {"名詞", "形状詞"}:
+                    # Treat unidic's "*" placeholder as missing pos2.
+                    root_pos2 = (
+                        raw_root_pos2 if raw_root_pos2 and raw_root_pos2 != "*" else "普通名詞"
+                    )
+                    surf = head.surface + root.surface
+                    try:
+                        head_kana = head.feature.kana or head.surface
+                    except AttributeError:
+                        head_kana = head.surface
+                    try:
+                        root_kana = root.feature.kana or root.surface
+                    except AttributeError:
+                        root_kana = root.surface
+                    merged.append(
+                        _SyntheticToken(
+                            surface=surf,
+                            pos1="名詞",
+                            pos2=root_pos2,
+                            lemma=surf,
+                            kana=head_kana + root_kana,
+                        )
+                    )
+                    i += 2
+                    continue
+            merged.append(head)
+            i += 1
+        return merged
+
+    def _merge_verb_nominalizers(self, tokens: list) -> list:
+        """Merge 動詞(連用形) + 接尾辞(名詞的) verb-stem nominalizers.
+
+        Only fires when the suffix surface is in _VERB_NOMINALIZER_SUFFIXES
+        ({方, 手, 様}). Crucially uses the verb's CONJUGATED surface
+        (連用形, e.g. 言い/読み/生き) — NOT its lemma — so the merged form
+        is 言い方 not 言う方. The synthetic is emitted as pos1=名詞,
+        pos2=普通名詞 (the compound is nominalized).
+        """
+        merged: list = []
+        i, n = 0, len(tokens)
+        while i < n:
+            head = tokens[i]
+            try:
+                head_pos1 = head.feature.pos1
+            except AttributeError:
+                merged.append(head)
+                i += 1
+                continue
+            if head_pos1 == "動詞" and i + 1 < n:
+                suffix = tokens[i + 1]
+                try:
+                    suf_pos1 = suffix.feature.pos1
+                    suf_pos2 = suffix.feature.pos2
+                except AttributeError:
+                    merged.append(head)
+                    i += 1
+                    continue
+                if (
+                    suf_pos1 == "接尾辞"
+                    and suf_pos2 == "名詞的"
+                    and suffix.surface in _VERB_NOMINALIZER_SUFFIXES
+                ):
+                    surf = head.surface + suffix.surface
+                    try:
+                        head_kana = head.feature.kana or head.surface
+                    except AttributeError:
+                        head_kana = head.surface
+                    try:
+                        suf_kana = suffix.feature.kana or suffix.surface
+                    except AttributeError:
+                        suf_kana = suffix.surface
+                    merged.append(
+                        _SyntheticToken(
+                            surface=surf,
+                            pos1="名詞",
+                            pos2="普通名詞",
+                            lemma=surf,
+                            kana=head_kana + suf_kana,
+                        )
+                    )
+                    i += 2
+                    continue
+            merged.append(head)
+            i += 1
+        return merged
 
     def _extract_lemma(self, word_token) -> str:
         """Extract lemma (dictionary form) from word token.
