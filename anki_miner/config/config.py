@@ -105,6 +105,8 @@ class AnkiMinerConfig:
 
     # Update settings
     check_for_updates: bool = True
+    skipped_update_version: str = ""
+    last_known_version: str = ""
 
     # First-run flags (GUI-persisted; used to auto-create desktop shortcut once)
     first_run_shortcut_done: bool = False
