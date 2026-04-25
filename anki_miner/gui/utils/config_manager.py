@@ -68,6 +68,9 @@ class GUIConfigManager:
             # Migrate old field names
             config_dict = cls._migrate_field_names(config_dict)
 
+            # Migrate stale allowed_pos defaults (pre-v2.3.2 missing 代名詞)
+            config_dict = cls._migrate_allowed_pos(config_dict)
+
             # Drop keys not in the current dataclass (e.g., removed fields from old
             # versions). Without this filter, AnkiMinerConfig(**config_dict) raises
             # TypeError and the except below would silently reset the entire user
@@ -103,6 +106,30 @@ class GUIConfigManager:
         """
         if cls.CONFIG_FILE.exists():
             cls.CONFIG_FILE.unlink()
+
+    # Pre-v2.3.2 default for allowed_pos (lacked 代名詞). Used to detect untouched
+    # legacy configs we can safely migrate to the current default.
+    _LEGACY_ALLOWED_POS: frozenset[str] = frozenset({"名詞", "動詞", "形容詞", "副詞", "形状詞"})
+
+    @classmethod
+    def _migrate_allowed_pos(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Replace stale pre-v2.3.2 allowed_pos default with the current default.
+
+        Only fires when the saved list matches the legacy default exactly (set
+        comparison so JSON ordering doesn't matter) AND 代名詞 is absent. User-
+        edited lists are left untouched. The migration is in-memory only; the
+        new value will persist the next time the user saves their config.
+        """
+        saved = data.get("allowed_pos")
+        if not isinstance(saved, list):
+            return data
+
+        saved_set = set(saved)
+        if saved_set == cls._LEGACY_ALLOWED_POS and "代名詞" not in saved_set:
+            logger.info("Migrating allowed_pos: adding 代名詞 to enable pronoun mining")
+            data["allowed_pos"] = list(create_default_config().allowed_pos)
+
+        return data
 
     @staticmethod
     def _migrate_field_names(data: dict[str, Any]) -> dict[str, Any]:

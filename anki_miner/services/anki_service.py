@@ -233,7 +233,7 @@ class AnkiService:
 
         # Build fields, skipping any with empty config mapping
         field_data = {
-            "word": html.escape(word.lemma),
+            "word": html.escape(word.surface),
             "sentence": html.escape(word.sentence),
             "definition": definition or "",
             "picture": picture_html,
@@ -335,7 +335,7 @@ class AnkiService:
 
                 # Build fields, skipping any with empty config mapping
                 field_data = {
-                    "word": html.escape(word.lemma),
+                    "word": html.escape(word.surface),
                     "sentence": html.escape(word.sentence),
                     "definition": definition or "",
                     "picture": picture_html,
