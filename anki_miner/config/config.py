@@ -46,7 +46,7 @@ class AnkiMinerConfig:
 
     # Word filtering settings
     allowed_pos: list[str] = field(
-        default_factory=lambda: ["名詞", "動詞", "形容詞", "副詞", "形状詞"]
+        default_factory=lambda: ["名詞", "動詞", "形容詞", "副詞", "形状詞", "代名詞"]
     )
     excluded_subtypes: list[str] = field(
         default_factory=lambda: [
