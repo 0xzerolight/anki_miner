@@ -22,12 +22,10 @@ logger = logging.getLogger(__name__)
 class IndexedDictProvider:
     """SQLite-backed implementation of the DictionaryProvider Protocol.
 
-    Threading model: a Connection is owned by a single thread. Construct
-    one IndexedDictProvider per consumer thread — do not share an
-    instance across threads (Python's sqlite3 connections enforce
-    same-thread access by default and will raise ProgrammingError).
-    The DictionaryRegistry follows this rule by constructing fresh
-    providers in each worker.
+    Threading: the underlying read-only SQLite connection is opened with
+    check_same_thread=False, so a single provider instance is safe to share
+    across threads for lookups. sqlite3 serializes concurrent reads
+    internally via the GIL + sqlite library mutex.
     """
 
     def __init__(self, dict_id: str, db_path: Path, display_name: str | None = None):
