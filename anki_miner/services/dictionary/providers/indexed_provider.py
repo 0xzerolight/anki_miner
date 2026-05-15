@@ -20,7 +20,15 @@ logger = logging.getLogger(__name__)
 
 
 class IndexedDictProvider:
-    """Implements the DictionaryProvider Protocol against a SQLite index."""
+    """SQLite-backed implementation of the DictionaryProvider Protocol.
+
+    Threading model: a Connection is owned by a single thread. Construct
+    one IndexedDictProvider per consumer thread — do not share an
+    instance across threads (Python's sqlite3 connections enforce
+    same-thread access by default and will raise ProgrammingError).
+    The DictionaryRegistry follows this rule by constructing fresh
+    providers in each worker.
+    """
 
     def __init__(self, dict_id: str, db_path: Path, display_name: str | None = None):
         self.dict_id = dict_id
@@ -80,6 +88,6 @@ class IndexedDictProvider:
             self._conn.close()
             self._conn = None
 
-    def __del__(self):
+    def __del__(self) -> None:
         with contextlib.suppress(Exception):
             self.close()
