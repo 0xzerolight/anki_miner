@@ -43,6 +43,9 @@ logger = logging.getLogger(__name__)
 
 JMDICT_DICT_ID = "jmdict-english"
 
+# Cap senses per entry on the card back; keeps cards scannable.
+MAX_SENSES = 5
+
 ProgressFn = Callable[[int, int, str], None]
 
 
@@ -81,10 +84,7 @@ def import_jmdict_xml(
         db_path = staging / "index.sqlite"
         create_index(db_path)
 
-        row_count = 0
-
         def rows() -> Iterator[DictRow]:
-            nonlocal row_count
             for i, entry in enumerate(entries, 1):
                 if cancel_check and cancel_check():
                     raise SetupError("Import cancelled")
@@ -117,7 +117,6 @@ def import_jmdict_xml(
 
                 # One row per kanji term, keyed by that term.
                 for term in terms:
-                    row_count += 1
                     yield DictRow(
                         term=term,
                         reading=primary_reading,
@@ -127,7 +126,6 @@ def import_jmdict_xml(
 
                 # One row per reading, keyed by the reading (term and reading equal).
                 for reading in readings:
-                    row_count += 1
                     yield DictRow(
                         term=reading,
                         reading=reading,
@@ -138,7 +136,7 @@ def import_jmdict_xml(
                 if progress and i % 1000 == 0:
                     progress(i, total_entries, f"Processed {i}/{total_entries} entries")
 
-        bulk_insert(db_path, rows())
+        row_count = bulk_insert(db_path, rows())
 
         write_meta(
             db_path,
@@ -154,9 +152,21 @@ def import_jmdict_xml(
 
         dest_root.mkdir(parents=True, exist_ok=True)
         final = dest_root / JMDICT_DICT_ID
+
         if final.exists():
-            shutil.rmtree(final)
-        shutil.move(str(staging), str(final))
+            backup = final.with_name(
+                final.name + ".bak-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+            )
+            final.rename(backup)
+            try:
+                shutil.move(str(staging), str(final))
+            except Exception:
+                if not final.exists():
+                    backup.rename(final)
+                raise
+            shutil.rmtree(backup, ignore_errors=True)
+        else:
+            shutil.move(str(staging), str(final))
 
         if progress:
             progress(total_entries, total_entries, "Done")
@@ -165,5 +175,5 @@ def import_jmdict_xml(
 
 
 def _format_senses_html(senses: list[list[str]]) -> str:
-    items = "".join(f"<li>{escape('; '.join(glosses))}</li>" for glosses in senses[:5])
+    items = "".join(f"<li>{escape('; '.join(glosses))}</li>" for glosses in senses[:MAX_SENSES])
     return f"<ol>{items}</ol>"
