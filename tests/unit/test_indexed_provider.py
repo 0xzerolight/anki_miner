@@ -108,3 +108,35 @@ class TestIndexedDictProvider:
         provider = IndexedDictProvider("test-dict", db, display_name="Test")
         assert provider.load() is False
         assert provider.is_available() is False
+
+    def test_load_on_one_thread_lookup_on_another(self, tmp_path: Path):
+        """Provider must support load() on GUI thread + lookup() on worker thread.
+
+        Regression test: service_factory builds providers on the GUI thread,
+        but EpisodeWorkerThread runs lookups on a worker thread.
+        """
+        import threading
+
+        db = tmp_path / "test.sqlite"
+        _seed_db(
+            db, [DictRow(term="食べる", reading="たべる", content="<div>eat</div>", sequence=1)]
+        )
+
+        provider = IndexedDictProvider("test-dict", db, display_name="Test")
+        assert provider.load() is True  # loaded on main thread
+
+        result: list[str | None] = []
+        error: list[Exception] = []
+
+        def worker():
+            try:
+                result.append(provider.lookup("食べる"))
+            except Exception as e:
+                error.append(e)
+
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join()
+
+        assert not error, f"Cross-thread lookup raised: {error}"
+        assert result == ["<div>eat</div>"]

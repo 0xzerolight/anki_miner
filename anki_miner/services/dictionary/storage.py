@@ -105,9 +105,15 @@ def read_meta(db_path: Path) -> dict[str, str]:
 
 
 def open_readonly(db_path: Path) -> sqlite3.Connection:
-    """Open a read-only connection. Raises sqlite3.DatabaseError on corruption."""
+    """Open a read-only connection. Safe to share across threads.
+
+    `check_same_thread=False` is required because providers are constructed
+    on the GUI thread (by service_factory) but consumed by worker threads.
+    The connection is read-only (`PRAGMA query_only=ON`) so concurrent reads
+    are safe under sqlite3's serialized access mode.
+    """
     uri = f"file:{db_path}?mode=ro"
-    conn = sqlite3.connect(uri, uri=True)
+    conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
     conn.execute("PRAGMA query_only=ON")
     return conn
 
