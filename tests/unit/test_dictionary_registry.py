@@ -1,5 +1,7 @@
 """Tests for DictionaryRegistry."""
 
+import logging
+from dataclasses import replace
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
@@ -47,18 +49,18 @@ class TestDictionaryRegistry:
         bad.mkdir()
         (bad / "index.sqlite").write_bytes(b"not a sqlite file")
 
+        caplog.set_level(logging.WARNING)
         registry = DictionaryRegistry(tmp_path)
         ids = {meta.dict_id for meta in registry.list_dicts()}
         assert "good" in ids
         assert "bad" not in ids
+        assert "corrupt" in caplog.text.lower() or "skipping" in caplog.text.lower()
 
     def test_build_chain_respects_config_order(self, tmp_path: Path):
         _seed_dict(tmp_path, "daijirin-v1", "大辞林")
         _seed_dict(tmp_path, "jmdict-english", "JMdict")
 
         config = AnkiMinerConfig()
-        from dataclasses import replace
-
         config = replace(
             config,
             dictionary_chain=(
@@ -81,8 +83,6 @@ class TestDictionaryRegistry:
     def test_build_chain_skips_disabled_entries(self, tmp_path: Path):
         _seed_dict(tmp_path, "jmdict-english", "JMdict")
         config = AnkiMinerConfig()
-        from dataclasses import replace
-
         config = replace(
             config,
             dictionary_chain=(
@@ -99,8 +99,6 @@ class TestDictionaryRegistry:
     def test_build_chain_drops_missing_dict_with_warning(self, tmp_path: Path, caplog):
         # No dicts on disk; config references one
         config = AnkiMinerConfig()
-        from dataclasses import replace
-
         config = replace(
             config,
             dictionary_chain=(
@@ -110,9 +108,11 @@ class TestDictionaryRegistry:
         )
 
         registry = DictionaryRegistry(tmp_path)
+        caplog.set_level(logging.WARNING)
         chain = registry.build_provider_chain(config)
         assert len(chain) == 1
         assert isinstance(chain[0], JishoProvider)
+        assert "ghost" in caplog.text or "not found" in caplog.text
 
     def test_disk_only_dict_returned_by_list_dicts(self, tmp_path: Path):
         """Dictionaries on disk that aren't in the config should still appear
@@ -122,3 +122,65 @@ class TestDictionaryRegistry:
         registry = DictionaryRegistry(tmp_path)
         ids = {meta.dict_id for meta in registry.list_dicts()}
         assert "new-on-disk" in ids
+
+    def test_dicts_root_is_file_returns_empty(self, tmp_path: Path):
+        """If dicts_root points at a regular file, registry stays empty (no crash)."""
+        bad_root = tmp_path / "not-a-dir"
+        bad_root.write_text("oops")
+
+        registry = DictionaryRegistry(bad_root)
+        assert registry.list_dicts() == []
+
+    def test_dicts_root_missing_returns_empty(self, tmp_path: Path):
+        """If dicts_root doesn't exist, registry stays empty."""
+        registry = DictionaryRegistry(tmp_path / "ghost")
+        assert registry.list_dicts() == []
+
+    def test_folder_without_index_sqlite_skipped(self, tmp_path: Path):
+        """A child folder with no index.sqlite is silently skipped."""
+        (tmp_path / "no-db").mkdir()
+        _seed_dict(tmp_path, "real-dict", "Real")
+
+        registry = DictionaryRegistry(tmp_path)
+        ids = {meta.dict_id for meta in registry.list_dicts()}
+        assert ids == {"real-dict"}
+
+    def test_schema_mismatch_dict_excluded_from_chain(self, tmp_path: Path, caplog):
+        """A dict on disk with the wrong schema_version must not appear in the chain."""
+        import logging
+
+        folder = tmp_path / "stale-dict"
+        folder.mkdir(parents=True, exist_ok=True)
+        db = folder / "index.sqlite"
+        create_index(db)
+        write_meta(
+            db,
+            {
+                "schema_version": "999",  # wrong version
+                "source_name": "Stale",
+                "format": "yomitan",
+                "entry_count": "0",
+            },
+        )
+
+        config = AnkiMinerConfig()
+        config = replace(
+            config,
+            dictionary_chain=(
+                ChainEntry(kind="indexed", dict_id="stale-dict", enabled=True),
+                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ),
+        )
+
+        registry = DictionaryRegistry(tmp_path)
+        # list_dicts still shows it (with schema_ok=False)
+        meta = registry.get("stale-dict")
+        assert meta is not None
+        assert meta.schema_ok is False
+
+        # build_provider_chain excludes it with a warning
+        caplog.set_level(logging.WARNING)
+        chain = registry.build_provider_chain(config)
+        assert len(chain) == 1
+        assert isinstance(chain[0], JishoProvider)
+        assert "stale-dict" in caplog.text or "schema" in caplog.text.lower()
