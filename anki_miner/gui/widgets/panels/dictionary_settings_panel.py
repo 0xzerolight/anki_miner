@@ -1,58 +1,114 @@
 """Dictionary settings panel."""
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 
-from PyQt6.QtWidgets import QCheckBox
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
+from anki_miner.config import ChainEntry
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
+from anki_miner.services.dictionary.registry import DictionaryRegistry
 
 logger = logging.getLogger(__name__)
 
+# Patchable in tests
+DICTS_ROOT = Path.home() / ".anki_miner" / "dicts"
+
+
+class _ChainRow(QWidget):
+    """One row in the chain list: checkbox + label + format badge + count."""
+
+    toggled = pyqtSignal()
+
+    def __init__(self, entry: ChainEntry, display_name: str, format_label: str, count: int):
+        super().__init__()
+        self.entry = entry
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(4, 2, 4, 2)
+
+        self.checkbox = QCheckBox()
+        self.checkbox.setChecked(entry.enabled)
+        self.checkbox.stateChanged.connect(lambda _s: self.toggled.emit())
+        layout.addWidget(self.checkbox)
+
+        name_label = QLabel(display_name)
+        layout.addWidget(name_label, 1)
+
+        if format_label:
+            badge = QLabel(format_label)
+            badge.setStyleSheet("color: gray; font-size: 10px;")
+            layout.addWidget(badge)
+        if count:
+            count_label = QLabel(f"{count:,} entries")
+            count_label.setStyleSheet("color: gray; font-size: 10px;")
+            layout.addWidget(count_label)
+
+    def get_enabled(self) -> bool:
+        return self.checkbox.isChecked()
+
 
 class DictionarySettingsPanel(FormPanel):
-    """Panel for dictionary configuration settings.
+    """Reorderable chain of dictionary providers."""
 
-    Provides:
-    - JMdict file path selection
-    - Offline dictionary toggle
-    - Pitch accent file path selection
-    - Pitch accent toggle
-    """
+    add_dict_requested = pyqtSignal()
+    reimport_jmdict_requested = pyqtSignal()
+    chain_changed = pyqtSignal()
 
     def __init__(self, parent=None):
-        """Initialize the dictionary settings panel."""
         super().__init__("Dictionary Settings", parent=parent)
+        self._chain: list[ChainEntry] = []
         self._setup_fields()
-        self._connect_validation()
 
     def _setup_fields(self) -> None:
-        """Set up the panel fields."""
-        # JMdict path
-        self.jmdict_selector = FileSelector(
-            label="", file_mode=True, placeholder="Select JMdict file..."
-        )
-        self.jmdict_selector.setToolTip("Path to JMdict dictionary file")
-        self.add_field(
-            "JMdict Path",
-            self.jmdict_selector,
-            helper="Path to JMdict XML file for offline dictionary lookups",
-        )
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        # Use offline dictionary checkbox
-        self.use_offline_checkbox = QCheckBox("Use Offline Dictionary")
-        self.use_offline_checkbox.setToolTip("Use local JMdict instead of online API")
-        self.add_field(
-            "",
-            self.use_offline_checkbox,
-            helper="Enable to use local JMdict file instead of online dictionary API",
-        )
+        layout.addWidget(QLabel("Active Dictionaries (top = highest priority)"))
 
-        # Pitch Accent section
+        self._list = QListWidget()
+        self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        layout.addWidget(self._list)
+
+        buttons = QHBoxLayout()
+        self._add_btn = QPushButton("+ Add Dictionary…")
+        self._add_btn.clicked.connect(self.add_dict_requested.emit)
+        buttons.addWidget(self._add_btn)
+
+        self._reimport_btn = QPushButton("Reimport JMdict")
+        self._reimport_btn.clicked.connect(self.reimport_jmdict_requested.emit)
+        buttons.addWidget(self._reimport_btn)
+
+        self._up_btn = QPushButton("↑")
+        self._up_btn.clicked.connect(lambda: self.move_up(self._list.currentRow()))
+        buttons.addWidget(self._up_btn)
+
+        self._down_btn = QPushButton("↓")
+        self._down_btn.clicked.connect(lambda: self.move_down(self._list.currentRow()))
+        buttons.addWidget(self._down_btn)
+
+        self._remove_btn = QPushButton("Remove")
+        self._remove_btn.clicked.connect(lambda: self.remove(self._list.currentRow()))
+        buttons.addWidget(self._remove_btn)
+
+        layout.addLayout(buttons)
+        self.add_field("", container)
+
+        # Pitch accent section unchanged
         self.add_section("Pitch Accent")
-
-        # Pitch accent file path
         self.pitch_accent_selector = FileSelector(
             label="", file_mode=True, placeholder="Select pitch accent file (CSV/TSV)..."
         )
@@ -60,10 +116,8 @@ class DictionarySettingsPanel(FormPanel):
         self.add_field(
             "Pitch Accent File",
             self.pitch_accent_selector,
-            helper="CSV/TSV file with columns: reading, kanji, pattern (e.g. Kanjium format)",
+            helper="CSV/TSV file with columns: reading, kanji, pattern",
         )
-
-        # Use pitch accent checkbox
         self.use_pitch_accent_checkbox = QCheckBox("Enable Pitch Accent")
         self.use_pitch_accent_checkbox.setToolTip("Add pitch accent data to Anki cards")
         self.add_field(
@@ -71,31 +125,73 @@ class DictionarySettingsPanel(FormPanel):
             self.use_pitch_accent_checkbox,
             helper="Enable to look up and add pitch accent patterns to cards",
         )
-
         self.add_stretch()
 
-    def _connect_validation(self) -> None:
-        """Connect file selector signals to validation handlers."""
-        self.pitch_accent_selector.path_validated.connect(self._validate_pitch_accent_file)
+    def set_chain(self, chain: tuple[ChainEntry, ...]) -> None:
+        self._chain = list(chain)
+        self._rebuild_list()
 
-    def _validate_pitch_accent_file(self, is_valid: bool, path_str: str) -> None:
-        """Validate pitch accent file and show entry count."""
-        if not is_valid or not path_str:
+    def get_chain(self) -> tuple[ChainEntry, ...]:
+        # Sync enabled flags from row widgets
+        out: list[ChainEntry] = []
+        for i, entry in enumerate(self._chain):
+            row = self._row_widget(i)
+            enabled = row.get_enabled() if row is not None else entry.enabled
+            out.append(ChainEntry(kind=entry.kind, dict_id=entry.dict_id, enabled=enabled))
+        return tuple(out)
+
+    def move_up(self, index: int) -> None:
+        if index <= 0 or index >= len(self._chain):
             return
+        # Capture current enabled state before rebuild
+        self._chain = list(self.get_chain())
+        self._chain[index - 1], self._chain[index] = self._chain[index], self._chain[index - 1]
+        self._rebuild_list()
+        self._list.setCurrentRow(index - 1)
+        self.chain_changed.emit()
 
-        try:
-            from anki_miner.services.pitch_accent_service import PitchAccentService
+    def move_down(self, index: int) -> None:
+        if index < 0 or index >= len(self._chain) - 1:
+            return
+        self._chain = list(self.get_chain())
+        self._chain[index + 1], self._chain[index] = self._chain[index], self._chain[index + 1]
+        self._rebuild_list()
+        self._list.setCurrentRow(index + 1)
+        self.chain_changed.emit()
 
-            service = PitchAccentService(Path(path_str))
-            service.load()
-            count = service.entry_count
-            if count > 0:
-                self.pitch_accent_selector.status_label.setText(
-                    f"{Path(path_str).name} ({count:,} entries)"
-                )
+    def remove(self, index: int) -> None:
+        if index < 0 or index >= len(self._chain):
+            return
+        if self._chain[index].kind == "jisho":
+            return  # Jisho can be disabled but not removed
+        self._chain = list(self.get_chain())
+        del self._chain[index]
+        self._rebuild_list()
+        self.chain_changed.emit()
+
+    def _row_widget(self, index: int) -> _ChainRow | None:
+        item = self._list.item(index)
+        if item is None:
+            return None
+        widget = self._list.itemWidget(item)
+        return widget if isinstance(widget, _ChainRow) else None
+
+    def _rebuild_list(self) -> None:
+        self._list.clear()
+        registry = DictionaryRegistry(DICTS_ROOT)
+        for entry in self._chain:
+            if entry.kind == "indexed":
+                meta = registry.get(entry.dict_id) if entry.dict_id else None
+                display = meta.source_name if meta else (entry.dict_id or "(missing)")
+                fmt = meta.format if meta else "missing"
+                count = meta.entry_count if meta else 0
             else:
-                self.pitch_accent_selector.status_label.setText(
-                    f"{Path(path_str).name} (0 entries - check file format)"
-                )
-        except Exception as e:
-            self.pitch_accent_selector.status_label.setText(f"Could not parse file: {e}")
+                display = "Jisho (online fallback)"
+                fmt = "online"
+                count = 0
+            row = _ChainRow(entry, display, fmt, count)
+            row.toggled.connect(self.chain_changed.emit)
+            item = QListWidgetItem()
+            item.setSizeHint(row.sizeHint())
+            self._list.addItem(item)
+            self._list.setItemWidget(item, row)
