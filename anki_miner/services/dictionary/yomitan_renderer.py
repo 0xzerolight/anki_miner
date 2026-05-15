@@ -7,6 +7,7 @@ runtime path is a literal SELECT.
 
 from __future__ import annotations
 
+import re
 from html import escape
 from typing import Any
 
@@ -31,6 +32,30 @@ _ALLOWED_TAGS = frozenset(
     }
 )
 _VOID_TAGS = frozenset({"br", "img"})
+
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def _is_safe_url(url: str) -> bool:
+    """Return True if url uses an allowed scheme or is a relative path.
+
+    Blocks javascript:, data:, vbscript:, file:, protocol-relative (//host),
+    and any other scheme. Relative paths and same-page anchors pass.
+    """
+    if not isinstance(url, str):
+        return False
+    url = url.strip()
+    if not url:
+        return False
+    if url.startswith("//"):
+        return False
+    # If there's a colon before any slash, it's a scheme — restrict the list
+    colon = url.find(":")
+    slash = url.find("/")
+    if colon != -1 and (slash == -1 or colon < slash):
+        scheme = url[:colon].lower()
+        return scheme in ("http", "https", "mailto")
+    return True  # relative path, fragment, query — all safe
 
 
 def structured_content_to_html(node: Any) -> str:
@@ -75,16 +100,20 @@ def _render_attrs(node: dict[str, Any]) -> str:
     data = node.get("data")
     if isinstance(data, dict):
         for key, value in data.items():
-            classes.append(f"data-{key}-{value}")
+            if not isinstance(key, str) or not isinstance(value, str):
+                continue
+            safe_key = _WHITESPACE_RE.sub("-", key)
+            safe_value = _WHITESPACE_RE.sub("-", value)
+            classes.append(f"data-{safe_key}-{safe_value}")
     if classes:
         parts.append(f'class="{escape(" ".join(classes))}"')
 
     href = node.get("href")
-    if isinstance(href, str) and node.get("tag") == "a":
+    if isinstance(href, str) and node.get("tag") == "a" and _is_safe_url(href):
         parts.append(f'href="{escape(href, quote=True)}"')
 
     path = node.get("path")
-    if isinstance(path, str) and node.get("tag") == "img":
+    if isinstance(path, str) and node.get("tag") == "img" and _is_safe_url(path):
         parts.append(f'src="{escape(path, quote=True)}"')
 
     return (" " + " ".join(parts)) if parts else ""
@@ -113,8 +142,14 @@ def render_glossary_entry(
     if term_tags:
         for tag_name in term_tags:
             meta = (tag_bank or {}).get(tag_name) or {}
+            if not isinstance(meta, dict):
+                meta = {}
             category = meta.get("category", "")
-            css_class = f"tag tag-{category}" if category else "tag"
+            if isinstance(category, str) and category:
+                safe_category = _WHITESPACE_RE.sub("-", category)
+                css_class = f"tag tag-{safe_category}"
+            else:
+                css_class = "tag"
             parts.append(f'<span class="{escape(css_class, quote=True)}">{escape(tag_name)}</span>')
 
     for item in glossary:
