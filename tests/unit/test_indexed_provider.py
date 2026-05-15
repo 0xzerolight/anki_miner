@@ -77,3 +77,34 @@ class TestIndexedDictProvider:
         )
         assert provider.load() is False
         assert provider.is_available() is False
+
+    def test_double_load_is_idempotent(self, tmp_path: Path):
+        db = tmp_path / "test.sqlite"
+        _seed_db(db, [DictRow(term="x", reading=None, content="<div>x</div>", sequence=1)])
+
+        provider = IndexedDictProvider("test-dict", db, display_name="Test")
+        assert provider.load() is True
+        conn_before = provider._conn
+        assert provider.load() is True
+        assert provider._conn is conn_before  # connection not reopened
+
+    def test_close_then_lookup_returns_none(self, tmp_path: Path):
+        db = tmp_path / "test.sqlite"
+        _seed_db(db, [DictRow(term="x", reading=None, content="<div>x</div>", sequence=1)])
+
+        provider = IndexedDictProvider("test-dict", db, display_name="Test")
+        provider.load()
+        assert provider.lookup("x") == "<div>x</div>"
+        provider.close()
+        assert provider.is_available() is False
+        assert provider.lookup("x") is None
+        # close() is idempotent
+        provider.close()
+
+    def test_corrupt_sqlite_marks_unavailable(self, tmp_path: Path):
+        db = tmp_path / "corrupt.sqlite"
+        db.write_bytes(b"this is not a sqlite database")
+
+        provider = IndexedDictProvider("test-dict", db, display_name="Test")
+        assert provider.load() is False
+        assert provider.is_available() is False
