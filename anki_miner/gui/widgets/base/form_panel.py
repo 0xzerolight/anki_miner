@@ -71,11 +71,11 @@ class FormPanel(QFrame):
 
         self._main_layout.addLayout(header_layout)
 
-        # Form layout for fields
-        self._form_layout = QFormLayout()
-        self._form_layout.setSpacing(SPACING.sm)
-        self._form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
-        self._form_layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        # Initial form layout for fields added before any section.
+        # add_section() opens a new form layout so subsequent fields render
+        # under their section heading instead of all stacking in one form.
+        self._form_layout = self._new_form_layout()
+        self._active_form_layout: QFormLayout = self._form_layout
 
         self._main_layout.addLayout(self._form_layout)
 
@@ -83,6 +83,14 @@ class FormPanel(QFrame):
 
         # Size policy - expand width, fit content height
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+    def _new_form_layout(self) -> QFormLayout:
+        """Build a QFormLayout configured to match panel conventions."""
+        layout = QFormLayout()
+        layout.setSpacing(SPACING.sm)
+        layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        return layout
 
     def _create_field_label(self, text: str) -> QLabel | None:
         """Create a label for a form field with proper sizing.
@@ -140,15 +148,15 @@ class FormPanel(QFrame):
 
             if field_label is None:
                 # No label - widget spans full width
-                self._form_layout.addRow(container)
+                self._active_form_layout.addRow(container)
             else:
-                self._form_layout.addRow(field_label, container)
+                self._active_form_layout.addRow(field_label, container)
         else:
             if field_label is None:
                 # No label - widget spans full width
-                self._form_layout.addRow(widget)
+                self._active_form_layout.addRow(widget)
             else:
-                self._form_layout.addRow(field_label, widget)
+                self._active_form_layout.addRow(field_label, widget)
 
         return widget
 
@@ -189,6 +197,12 @@ class FormPanel(QFrame):
         section_label.setFont(section_font)
 
         self._main_layout.addWidget(section_label)
+
+        # Open a fresh form layout so fields added next render under this
+        # section heading. Without this, every field would land in the
+        # initial form layout and all section labels would stack below.
+        self._active_form_layout = self._new_form_layout()
+        self._main_layout.addLayout(self._active_form_layout)
 
     def add_spacing(self, size: int = 8) -> None:
         """Add vertical spacing.
