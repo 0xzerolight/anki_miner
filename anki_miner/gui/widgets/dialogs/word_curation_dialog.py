@@ -20,6 +20,27 @@ from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.models import TokenizedWord
 
 
+class _NumericTableWidgetItem(QTableWidgetItem):
+    """QTableWidgetItem that sorts by a numeric key instead of display text.
+
+    Avoids the default lexicographic sort that places "100" before "20".
+    Missing values use ``inf`` so unranked rows cluster at one end.
+    """
+
+    _SORT_ROLE = Qt.ItemDataRole.UserRole + 1
+
+    def __init__(self, text: str, sort_key: float) -> None:
+        super().__init__(text)
+        self.setData(self._SORT_ROLE, sort_key)
+
+    def __lt__(self, other: QTableWidgetItem) -> bool:
+        own = self.data(self._SORT_ROLE)
+        theirs = other.data(self._SORT_ROLE)
+        if own is None or theirs is None:
+            return super().__lt__(other)
+        return float(own) < float(theirs)
+
+
 class WordCurationDialog(QDialog):
     """Dialog for selecting which words to include in card creation.
 
@@ -191,9 +212,15 @@ class WordCurationDialog(QDialog):
             item.setToolTip(sentence)
             self.table.setItem(row, 4, item)
 
-            # Frequency Rank
-            rank_str = str(word.frequency_rank) if word.frequency_rank is not None else "-"
-            self.table.setItem(row, 5, self._make_readonly_item(rank_str))
+            # Frequency Rank — sort numerically, not lexically (issue #6)
+            if word.frequency_rank is not None:
+                rank_item = _NumericTableWidgetItem(
+                    str(word.frequency_rank), float(word.frequency_rank)
+                )
+            else:
+                rank_item = _NumericTableWidgetItem("-", float("inf"))
+            rank_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self.table.setItem(row, 5, rank_item)
 
         self.table.blockSignals(False)
         self.table.setSortingEnabled(True)
