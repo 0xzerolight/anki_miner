@@ -1,4 +1,4 @@
-"""Service for fetching word definitions using pluggable providers."""
+"""Walk a configured list of DictionaryProvider implementations until one hits."""
 
 from __future__ import annotations
 
@@ -7,8 +7,6 @@ from typing import TYPE_CHECKING
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces import ProgressCallback
-from anki_miner.services.providers.jisho_provider import JishoProvider
-from anki_miner.services.providers.jmdict_provider import JMdictProvider
 
 if TYPE_CHECKING:
     from anki_miner.interfaces import DictionaryProvider
@@ -17,105 +15,36 @@ logger = logging.getLogger(__name__)
 
 
 class DefinitionService:
-    """Fetch word definitions using a chain of dictionary providers."""
+    """Look up definitions through an ordered provider chain.
+
+    The chain is constructed externally (typically by DictionaryRegistry) and
+    passed in. The service only walks it.
+    """
 
     def __init__(
         self,
         config: AnkiMinerConfig,
-        providers: list[DictionaryProvider] | None = None,
+        providers: list[DictionaryProvider],
     ):
-        """Initialize the definition service.
-
-        Args:
-            config: Configuration for definition lookup.
-            providers: Ordered list of dictionary providers. If None,
-                       default providers are built from config.
-        """
         self.config = config
-        self._custom_providers = providers is not None
-
-        if providers is not None:
-            self._providers: list[DictionaryProvider] = providers
-        else:
-            self._providers = self._build_default_providers()
-
-        # Backwards-compatibility: track JMdict state for load_offline_dictionary()
-        self._jmdict: dict[str, list[str]] | None = None
+        self._providers = providers
         self._loaded = False
 
-    def _build_default_providers(self) -> list[DictionaryProvider]:
-        """Build the default provider chain from config settings."""
-        providers: list[DictionaryProvider] = []
-
-        if self.config.use_offline_dict:
-            providers.append(JMdictProvider(self.config.jmdict_path))
-
-        # Jisho is always available as potential fallback
-        providers.append(JishoProvider(self.config.jisho_api_url, self.config.jisho_delay))
-
-        return providers
-
     def ensure_loaded(self) -> bool:
-        """Initialize all providers exactly once. Idempotent and safe to call
-        from any code path. Returns True iff the offline dictionary loaded
-        successfully (so callers can surface an "online fallback" warning
-        when offline mode was requested).
-        """
+        """Call load() on every provider exactly once. Returns True if at
+        least one provider became available."""
         if self._loaded:
-            return self._jmdict is not None
-
+            return any(p.is_available() for p in self._providers)
         self._loaded = True
-        self.load_providers()
-
-        for provider in self._providers:
-            if isinstance(provider, JMdictProvider) and provider.is_available():
-                self._jmdict = provider._dictionary
-                return True
-
-        return False
-
-    def load_providers(self) -> dict[str, bool]:
-        """Load all providers that require initialization.
-
-        Returns:
-            Dict mapping provider name to load success status.
-        """
-        results = {}
         for provider in self._providers:
             try:
-                success = provider.load()
-                results[provider.name] = success
-            except Exception as e:
-                logger.warning(f"Failed to load provider '{provider.name}': {e}")
-                results[provider.name] = False
-        return results
-
-    def load_offline_dictionary(self) -> bool:
-        """Backwards-compatible alias for ``ensure_loaded`` that respects the
-        offline-dict config flag. Returns False without loading when the user
-        has disabled offline lookups; otherwise returns whether the offline
-        dictionary became available.
-        """
-        if not self.config.use_offline_dict:
-            return False
-        return self.ensure_loaded()
+                provider.load()
+            except Exception as e:  # pragma: no cover - defensive
+                logger.warning("Failed to load provider '%s': %s", provider.name, e)
+        return any(p.is_available() for p in self._providers)
 
     def get_definition(self, word: str) -> str | None:
-        """Get definition for a word.
-
-        Tries each configured provider in order and returns the first hit. In the
-        default provider chain that means JMdict (offline) first, then Jisho
-        (online) as a fallback for words JMdict doesn't know about.
-
-        Args:
-            word: Japanese word to look up.
-
-        Returns:
-            HTML-formatted definition string, or None if not found.
-        """
-        if not self._custom_providers:
-            self.ensure_loaded()
-
+        self.ensure_loaded()
         for provider in self._providers:
             if provider.is_available():
                 result = provider.lookup(word)
@@ -128,23 +57,13 @@ class DefinitionService:
         words: list[str],
         progress_callback: ProgressCallback | None = None,
     ) -> list[str | None]:
-        """Get definitions for multiple words.
-
-        Args:
-            words: List of words to look up.
-            progress_callback: Optional callback for progress reporting.
-
-        Returns:
-            List of definitions matching input order.
-        """
         if progress_callback:
             progress_callback.on_start(len(words), "Fetching definitions")
 
-        definitions = []
+        results: list[str | None] = []
         for i, word in enumerate(words, 1):
             definition = self.get_definition(word)
-            definitions.append(definition)
-
+            results.append(definition)
             if progress_callback:
                 if definition:
                     progress_callback.on_progress(i, f"Definition found: {word}")
@@ -153,5 +72,4 @@ class DefinitionService:
 
         if progress_callback:
             progress_callback.on_complete()
-
-        return definitions
+        return results

@@ -1,6 +1,7 @@
 """Service for validating system setup and dependencies."""
 
 import subprocess
+from pathlib import Path
 
 import requests
 
@@ -108,17 +109,31 @@ class ValidationService:
         # feature but the underlying file is missing, so the GUI can surface
         # an "enabled but unavailable" state up front instead of silently
         # falling back at lookup time.
-        if self.config.use_offline_dict and not self.config.jmdict_path.is_file():
-            issues.append(
-                ValidationIssue(
-                    component="Offline Dictionary",
-                    severity="WARNING",
-                    message=(
-                        f"JMdict file not found at {self.config.jmdict_path}. "
-                        "Offline mode is enabled; the Jisho API will be used instead."
-                    ),
+
+        # Dictionary chain validation — warn if every enabled indexed entry is
+        # missing on disk. The chain falls back to other providers (Jisho), so
+        # this is only a warning, not an error.
+        dicts_root = Path.home() / ".anki_miner" / "dicts"
+        indexed_entries = [
+            e for e in self.config.dictionary_chain if e.kind == "indexed" and e.enabled
+        ]
+        if indexed_entries:
+            missing = [
+                e.dict_id
+                for e in indexed_entries
+                if e.dict_id is None or not (dicts_root / e.dict_id / "index.sqlite").exists()
+            ]
+            if missing:
+                issues.append(
+                    ValidationIssue(
+                        component="Offline Dictionary",
+                        severity="WARNING",
+                        message=(
+                            f"Dictionary index(es) not found on disk: {', '.join(m for m in missing if m)}. "
+                            "Lookups will fall back to other providers in the chain."
+                        ),
+                    )
                 )
-            )
 
         if self.config.use_pitch_accent and not self.config.pitch_accent_path.is_file():
             issues.append(

@@ -384,10 +384,13 @@ class TestValidationService:
             """All checks pass when external services respond correctly."""
             from dataclasses import replace
 
+            from anki_miner.config import ChainEntry
+
             # Disable optional feature flags so missing optional resource files
-            # don't add warnings; the test focuses on the core ANki/ffmpeg path.
+            # don't add warnings; the test focuses on the core Anki/ffmpeg path.
             test_config = replace(
                 test_config,
+                dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
                 use_offline_dict=False,
                 use_pitch_accent=False,
                 use_frequency_data=False,
@@ -644,24 +647,57 @@ class TestOptionalResourceWarnings:
             lambda self: (True, "ok"),
         )
 
-    def test_warns_when_offline_dict_enabled_but_jmdict_missing(self, test_config, monkeypatch):
+    def test_warns_when_indexed_dict_enabled_but_missing(self, test_config, monkeypatch):
         from dataclasses import replace
 
         self._patch_external_checks(monkeypatch)
-        config = replace(test_config, use_offline_dict=True)
-        # test_config's jmdict_path points at a non-existent tmp file
+        # Default dictionary_chain enables an indexed entry that won't be
+        # present in the test environment's ~/.anki_miner/dicts/.
+        config = replace(test_config)
         result = ValidationService(config).validate_setup()
 
         assert self._has_warning(result, "Offline Dictionary")
         assert result.all_passed  # warnings must not fail validation
 
-    def test_no_warning_when_jmdict_present(self, test_config, monkeypatch, tmp_path):
+    def test_no_warning_when_indexed_dict_present(self, test_config, monkeypatch, tmp_path):
         from dataclasses import replace
 
+        from anki_miner.config import ChainEntry
+
         self._patch_external_checks(monkeypatch)
-        jmdict = tmp_path / "JMdict_e_present"
-        jmdict.write_text("placeholder", encoding="utf-8")
-        config = replace(test_config, use_offline_dict=True, jmdict_path=jmdict)
+
+        # Redirect Path.home() inside validation_service to point at tmp_path,
+        # then stage tmp_path/.anki_miner/dicts/<dict_id>/index.sqlite so the
+        # validator finds it.
+        monkeypatch.setattr(
+            "anki_miner.services.validation_service.Path.home",
+            classmethod(lambda cls: tmp_path),
+        )
+        dict_id = "test-dict"
+        target = tmp_path / ".anki_miner" / "dicts" / dict_id
+        target.mkdir(parents=True)
+        (target / "index.sqlite").write_bytes(b"placeholder")
+
+        chain = (
+            ChainEntry(kind="indexed", dict_id=dict_id, enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+        config = replace(test_config, dictionary_chain=chain)
+        result = ValidationService(config).validate_setup()
+
+        assert not self._has_warning(result, "Offline Dictionary")
+
+    def test_no_warning_when_indexed_chain_entries_all_disabled(self, test_config, monkeypatch):
+        from dataclasses import replace
+
+        from anki_miner.config import ChainEntry
+
+        self._patch_external_checks(monkeypatch)
+        chain = (
+            ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=False),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+        config = replace(test_config, dictionary_chain=chain)
         result = ValidationService(config).validate_setup()
 
         assert not self._has_warning(result, "Offline Dictionary")
@@ -699,9 +735,14 @@ class TestOptionalResourceWarnings:
     def test_no_warning_when_features_disabled(self, test_config, monkeypatch):
         from dataclasses import replace
 
+        from anki_miner.config import ChainEntry
+
         self._patch_external_checks(monkeypatch)
+        # Disable every indexed entry so the chain validation skips itself.
+        chain = (ChainEntry(kind="jisho", dict_id=None, enabled=True),)
         config = replace(
             test_config,
+            dictionary_chain=chain,
             use_offline_dict=False,
             use_pitch_accent=False,
             use_frequency_data=False,

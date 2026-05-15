@@ -2,6 +2,7 @@
 
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.presenter import PresenterProtocol
@@ -9,6 +10,7 @@ from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.orchestration.folder_processor import FolderProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.definition_service import DefinitionService
+from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.frequency_service import FrequencyService
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.media_extractor import MediaExtractorService
@@ -48,21 +50,27 @@ def create_services(config: AnkiMinerConfig) -> tuple:
     subtitle_parser = SubtitleParserService(config)
     word_filter = WordFilterService(config)
     media_extractor = MediaExtractorService(config)
-    definition_service = DefinitionService(config)
+
+    # Build the provider chain via the registry, then hand it to DefinitionService.
+    dicts_root = Path.home() / ".anki_miner" / "dicts"
+    registry = DictionaryRegistry(dicts_root)
+    providers = registry.build_provider_chain(config)
+    definition_service = DefinitionService(config, providers=providers)
     anki_service = AnkiService(config)
     youtube_fetcher = YouTubeFetcherService(config=config)
 
-    if config.use_offline_dict:
+    has_indexed_entry = any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain)
+    if has_indexed_entry:
         try:
             if definition_service.ensure_loaded():
-                load_result.info.append("Offline dictionary loaded")
+                load_result.info.append("Dictionary chain loaded")
             else:
                 load_result.warnings.append(
-                    "Offline dictionary requested but unavailable; falling back to Jisho API"
+                    "No dictionary provider is available; lookups will return None"
                 )
         except Exception as e:
-            logger.warning(f"Could not load offline dictionary: {e}")
-            load_result.warnings.append(f"Could not load offline dictionary: {e}")
+            logger.warning(f"Could not load dictionary providers: {e}")
+            load_result.warnings.append(f"Could not load dictionary providers: {e}")
 
     # Optional services
     pitch_accent_service = None
