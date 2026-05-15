@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Multi-dictionary support**: load Yomitan-format dictionaries via Settings → Add Dictionary…. Installed dictionaries live under `~/.anki_miner/dicts/<dict_id>/index.sqlite` and are discovered on startup by `DictionaryRegistry`.
+- **Reorderable provider chain** (first-hit-wins) replacing the fixed JMdict→Jisho fallback. The chain is persisted as `dictionary_chain` in `gui_config.json` and can mix any number of indexed dictionaries with the Jisho online fallback in any order.
+- **Structured-content HTML rendering**: Yomitan structured-content entries are rendered to HTML on import so card definitions preserve Yomitan's formatting (definition lists, examples, tags) instead of falling back to plain text.
+
+### Changed
+- **JMdict storage**: now uses a SQLite index at `~/.anki_miner/dicts/jmdict-english/index.sqlite` instead of parsing the XML on every startup. Legacy `~/.anki_miner/JMdict_e` is auto-migrated on first launch.
+- **`DefinitionService` API**: now requires an explicit provider list at construction. `DictionaryRegistry.build_provider_chain(config)` is the canonical builder.
+
+### Removed
+- **In-memory `JMdictProvider`**: replaced by the SQLite-backed `IndexedDictProvider`. Existing users are auto-migrated on first launch; the legacy XML can be deleted after migration.
+
 ## [2.3.4] - 2026-05-15
 
 ### Added
