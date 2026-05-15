@@ -3,12 +3,29 @@
 import logging
 from pathlib import Path
 
-from PyQt6.QtWidgets import QCheckBox, QSpinBox
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
+    QWidget,
+)
 
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
 
 logger = logging.getLogger(__name__)
+
+# Built-in regex presets for common subtitle noise. Buttons append these to the
+# user's pattern with `|` so multiple presets can be stacked. Patterns target
+# both half-width and full-width punctuation common in JP subtitle files.
+SUBTITLE_REGEX_PRESETS: tuple[tuple[str, str], ...] = (
+    ("Parens (Tanaka)", r"\([^)]*\)|（[^）]*）"),
+    ("Brackets [SFX]", r"\[[^\]]*\]|［[^］]*］"),
+    ("Music ♪♬", r"[♪♬♫#～〜]+"),
+    ("Speaker: prefix", r"^[^「『:：]+[:：]\s*"),
+)
 
 
 class FilteringSettingsPanel(FormPanel):
@@ -108,6 +125,60 @@ class FilteringSettingsPanel(FormPanel):
             helper="Always include words found in the whitelist file",
         )
 
+        # Subtitle Text Filtering section (Issue #8)
+        self.add_section("Subtitle Text Filtering")
+
+        self.subtitle_regex_edit = QLineEdit()
+        self.subtitle_regex_edit.setPlaceholderText(r"e.g. \([^)]*\)|\[[^\]]*\]")
+        self.subtitle_regex_edit.setToolTip(
+            "Python regex applied to each subtitle line before tokenization. "
+            "Combine alternatives with |. Test patterns at https://regex101.com."
+        )
+        self.add_field(
+            "Regex Filter",
+            self.subtitle_regex_edit,
+            helper="Patterns matched in subtitle text are removed (or replaced) before mining. "
+            "Useful for stripping speaker names like (Tanaka) or sound descriptions like [door].",
+        )
+
+        self.subtitle_replacement_edit = QLineEdit()
+        self.subtitle_replacement_edit.setPlaceholderText("(empty = delete match)")
+        self.subtitle_replacement_edit.setToolTip(
+            "Text inserted in place of each match. Empty deletes the match."
+        )
+        self.add_field(
+            "Replacement",
+            self.subtitle_replacement_edit,
+            helper="Use Python backreferences (\\1 \\2) for capture groups. "
+            "Note: NOT $1 $2 syntax like asbplayer; translate when copying patterns.",
+        )
+
+        self.use_subtitle_regex_checkbox = QCheckBox("Enable Subtitle Regex Filter")
+        self.add_field(
+            "",
+            self.use_subtitle_regex_checkbox,
+            helper="Apply the filter to all parsed subtitle lines (mining and preview).",
+        )
+
+        # Preset buttons row: each click appends its pattern to the regex field
+        # joined with `|`. Lets a GUI-only user discover useful patterns without
+        # learning regex syntax up front.
+        preset_container = QWidget()
+        preset_layout = QHBoxLayout()
+        preset_layout.setContentsMargins(0, 0, 0, 0)
+        for label, pattern in SUBTITLE_REGEX_PRESETS:
+            btn = QPushButton(label)
+            btn.setToolTip(pattern)
+            btn.clicked.connect(lambda _checked=False, p=pattern: self._append_preset(p))
+            preset_layout.addWidget(btn)
+        preset_layout.addStretch()
+        preset_container.setLayout(preset_layout)
+        self.add_field(
+            "Presets",
+            preset_container,
+            helper="Click to append a built-in pattern to the regex field above.",
+        )
+
         # Deduplication section
         self.add_section("Deduplication")
 
@@ -122,6 +193,17 @@ class FilteringSettingsPanel(FormPanel):
         )
 
         self.add_stretch()
+
+    def _append_preset(self, pattern: str) -> None:
+        """Append a preset regex pattern to the filter field with `|` join."""
+        current = self.subtitle_regex_edit.text().strip()
+        if not current:
+            self.subtitle_regex_edit.setText(pattern)
+        elif pattern in current:
+            # Avoid duplicate alternations from double-clicking a preset.
+            return
+        else:
+            self.subtitle_regex_edit.setText(f"{current}|{pattern}")
 
     def _connect_validation(self) -> None:
         """Connect file selector signals to validation handlers."""

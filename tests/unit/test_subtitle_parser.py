@@ -867,3 +867,179 @@ def test_real_fugashi_mines_verb_nominalizer(tmp_path):
     # Lemma must be the merged surface, NOT 生きる方.
     by_surface = {w.surface: w for w in words}
     assert by_surface["生き方"].lemma == "生き方"
+
+
+# ---------------------------------------------------------------------------
+# Subtitle regex filter (Issue #8)
+# ---------------------------------------------------------------------------
+
+
+class TestSubtitleRegexFilter:
+    """Tests for the optional regex filter applied before tokenization."""
+
+    def _build_raw_service(self, config):
+        """Construct a service with a stub tagger (raw-entries tests don't tokenize)."""
+        return SubtitleParserService(config)
+
+    def _patch_subs(self, tmp_path, lines):
+        """Return a (sub_file, mock_subs) pair for the given iterable of lines."""
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+        mock_line_objs = []
+        for text, start_ms, end_ms in lines:
+            ml = MagicMock()
+            ml.text = text
+            ml.start = start_ms
+            ml.end = end_ms
+            mock_line_objs.append(ml)
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter(mock_line_objs))
+        return sub_file, mock_subs
+
+    def test_disabled_filter_passes_text_through(self, tmp_path):
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            subtitle_regex_filter=r"\([^)]*\)",
+            subtitle_regex_replacement="",
+            use_subtitle_regex_filter=False,
+        )
+        sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) 今日はいい天気", 0, 2000)])
+        with (
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+        ):
+            service = self._build_raw_service(config)
+            entries = service.parse_raw_entries(sub_file)
+
+        # Filter disabled: full text survives.
+        assert entries[0][2] == "(田中) 今日はいい天気"
+
+    def test_strips_parens_from_raw_entries(self, tmp_path):
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            subtitle_regex_filter=r"\([^)]*\)",
+            subtitle_regex_replacement="",
+            use_subtitle_regex_filter=True,
+        )
+        sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) 今日はいい天気", 0, 2000)])
+        with (
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+        ):
+            service = self._build_raw_service(config)
+            entries = service.parse_raw_entries(sub_file)
+
+        # Speaker tag stripped; whitespace renormalized.
+        assert entries[0][2] == "今日はいい天気"
+
+    def test_strips_brackets_and_drops_line_when_empty(self, tmp_path):
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            subtitle_regex_filter=r"\[[^\]]*\]",
+            subtitle_regex_replacement="",
+            use_subtitle_regex_filter=True,
+        )
+        sub_file, mock_subs = self._patch_subs(
+            tmp_path,
+            [
+                ("[ドアが閉まる音]", 0, 1000),  # filter empties this line — dropped
+                ("[足音] お疲れ様", 2000, 4000),  # filter strips brackets; remainder survives
+            ],
+        )
+        with (
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+        ):
+            service = self._build_raw_service(config)
+            entries = service.parse_raw_entries(sub_file)
+
+        # Only the partially-stripped line survives; whitespace-only result is dropped.
+        assert len(entries) == 1
+        assert entries[0][2] == "お疲れ様"
+
+    def test_replacement_with_backreference(self, tmp_path):
+        # Capture group + Python-style \1 backref: prove the substitution path
+        # accepts capture references, distinct from asbplayer's $1 syntax.
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            subtitle_regex_filter=r"\((.*?)\)",
+            subtitle_regex_replacement=r"\1",
+            use_subtitle_regex_filter=True,
+        )
+        sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) こんにちは", 0, 2000)])
+        with (
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+        ):
+            service = self._build_raw_service(config)
+            entries = service.parse_raw_entries(sub_file)
+
+        # Parens dropped, inner content kept.
+        assert entries[0][2] == "田中 こんにちは"
+
+    def test_invalid_regex_disables_filter_without_crashing(self, tmp_path, caplog):
+        # Unbalanced paren is a re.error. Parser must construct cleanly and the
+        # filter must no-op so a mining run is not lost to bad config.
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            subtitle_regex_filter="(unclosed",
+            subtitle_regex_replacement="",
+            use_subtitle_regex_filter=True,
+        )
+        sub_file, mock_subs = self._patch_subs(tmp_path, [("テスト", 0, 1000)])
+        with (
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            caplog.at_level("WARNING"),
+        ):
+            service = self._build_raw_service(config)
+            entries = service.parse_raw_entries(sub_file)
+
+        assert service._filter_pattern is None
+        assert entries[0][2] == "テスト"
+        assert any("Invalid subtitle_regex_filter" in rec.message for rec in caplog.records)
+
+    def test_mining_path_applies_same_filter(self, tmp_path):
+        # parse_subtitle_file must honor the filter identically to parse_raw_entries:
+        # if we strip the only content character, MeCab sees an empty line and
+        # produces no words.
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            subtitle_regex_filter=r"\([^)]*\)",
+            subtitle_regex_replacement="",
+            use_subtitle_regex_filter=True,
+        )
+        sub_file, mock_subs = self._patch_subs(tmp_path, [("(全部消える)", 0, 2000)])
+        mock_tagger = MagicMock(return_value=[])
+        with (
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+        ):
+            service = SubtitleParserService(config)
+            words = service.parse_subtitle_file(sub_file)
+
+        # Stripped-to-empty line is dropped before tokenization → no words and
+        # tagger is never called on the post-filter empty string.
+        assert words == []
+        assert mock_tagger.call_count == 0
+
+    def test_alternation_strips_multiple_pattern_types(self, tmp_path):
+        # Verify the `|`-combined preset model: one pattern with multiple
+        # alternations handles parens AND brackets AND music notes in one pass.
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            subtitle_regex_filter=r"\([^)]*\)|\[[^\]]*\]|[♪♬]+",
+            subtitle_regex_replacement="",
+            use_subtitle_regex_filter=True,
+        )
+        sub_file, mock_subs = self._patch_subs(
+            tmp_path, [("(田中) [足音] ♪歌う♪ こんにちは", 0, 2000)]
+        )
+        with (
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+        ):
+            service = self._build_raw_service(config)
+            entries = service.parse_raw_entries(sub_file)
+
+        assert entries[0][2] == "歌う こんにちは"
