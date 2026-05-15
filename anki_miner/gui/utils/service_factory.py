@@ -23,6 +23,8 @@ from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 
 logger = logging.getLogger(__name__)
 
+DICTS_ROOT = Path.home() / ".anki_miner" / "dicts"
+
 
 @dataclass
 class ServiceLoadResult:
@@ -52,25 +54,31 @@ def create_services(config: AnkiMinerConfig) -> tuple:
     media_extractor = MediaExtractorService(config)
 
     # Build the provider chain via the registry, then hand it to DefinitionService.
-    dicts_root = Path.home() / ".anki_miner" / "dicts"
-    registry = DictionaryRegistry(dicts_root)
+    registry = DictionaryRegistry(DICTS_ROOT)
     providers = registry.build_provider_chain(config)
     definition_service = DefinitionService(config, providers=providers)
     anki_service = AnkiService(config)
     youtube_fetcher = YouTubeFetcherService(config=config)
 
-    has_indexed_entry = any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain)
-    if has_indexed_entry:
+    if any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain):
         try:
-            if definition_service.ensure_loaded():
-                load_result.info.append("Dictionary chain loaded")
-            else:
-                load_result.warnings.append(
-                    "No dictionary provider is available; lookups will return None"
-                )
+            definition_service.ensure_loaded()
         except Exception as e:
-            logger.warning(f"Could not load dictionary providers: {e}")
-            load_result.warnings.append(f"Could not load dictionary providers: {e}")
+            logger.warning("Could not load dictionary chain: %s", e)
+            load_result.warnings.append(f"Could not load dictionary chain: {e}")
+        else:
+            available = [p.name for p in providers if p.is_available()]
+            failed = [p.name for p in providers if not p.is_available()]
+            if available:
+                load_result.info.append(f"Dictionary chain loaded: {', '.join(available)}")
+            if failed:
+                load_result.warnings.append(
+                    f"Provider(s) unavailable, will be skipped: {', '.join(failed)}"
+                )
+            if not available and not failed:
+                load_result.warnings.append(
+                    "No offline dictionary index available; lookups will use Jisho only"
+                )
 
     # Optional services
     pitch_accent_service = None
