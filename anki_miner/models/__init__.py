@@ -4,10 +4,11 @@ from .history import HistoryEntry
 from .media import MediaData
 from .processing import ProcessingResult, ValidationIssue, ValidationResult
 from .stats import DifficultyEntry, Milestone, MiningSession, OverallStats, SeriesStats
-from .word import TokenizedWord, WordData
+from .word import LineLemmas, TokenizedWord, WordData
 
 __all__ = [
     "TokenizedWord",
+    "LineLemmas",
     "WordData",
     "MediaData",
     "ProcessingResult",

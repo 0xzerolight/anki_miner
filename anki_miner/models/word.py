@@ -29,6 +29,24 @@ class TokenizedWord:
         return f"TokenizedWord(lemma='{self.lemma}', reading='{self.reading}', surface='{self.surface}')"
 
 
+@dataclass(frozen=True)
+class LineLemmas:
+    """All content-word lemmas on a single subtitle line.
+
+    Used by the i+1 sentence filter to count unknown lemmas per line
+    without re-tokenizing. Frozen so instances can be hashed and shared
+    safely across the worker thread boundary.
+    """
+
+    line_text: str  # Cleaned (post-regex-filter) subtitle text
+    lemmas: frozenset[str]  # Content-word lemmas after compound-merge + _should_include_word
+    start_time: float  # Start time in seconds (post-offset)
+    end_time: float  # End time in seconds (post-offset)
+    duration: float  # end_time - start_time
+    sentence_furigana: str = ""  # Furigana annotation for the whole line
+    sentence_reading: str = ""  # Plain-kana reading for the whole line
+
+
 @dataclass
 class WordData:
     """Complete data for a vocabulary word including definition and media."""

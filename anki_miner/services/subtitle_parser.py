@@ -2,6 +2,7 @@
 
 import logging
 import re
+from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -10,7 +11,7 @@ import pysubs2
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
-from anki_miner.models import TokenizedWord
+from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.utils import clean_subtitle_text, generate_furigana, generate_reading
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,44 @@ class SubtitleParserService:
         filtered = self._filter_pattern.sub(self.config.subtitle_regex_replacement, text)
         return " ".join(filtered.split())
 
+    def _load_subs(self, subtitle_file: Path):
+        """Load a subtitle file via pysubs2 with normalized error wrapping.
+
+        Shared by every public parse_* method so error wrapping stays
+        consistent regardless of entry point.
+        """
+        try:
+            return pysubs2.load(str(subtitle_file))
+        except FileNotFoundError as e:
+            raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e
+        except Exception as e:
+            raise SubtitleParseError(f"Failed to parse subtitle file: {e}") from e
+
+    def _iter_parsed_lines(self, subs) -> Iterator[tuple[str, list, float, float, float]]:
+        """Yield post-tokenize per-line state for every non-empty subtitle line.
+
+        Yields ``(text, merged_tokens, start_time, end_time, duration)``.
+        ``text`` is the cleaned + regex-filtered line; ``merged_tokens`` is the
+        full output of ``_merge_compound_suffixes`` (callers apply
+        ``_should_include_word`` themselves so the index path and mining path
+        share identical token selection logic).
+        """
+        for line in subs:
+            text = self._apply_text_filter(clean_subtitle_text(line.text))
+            if not text:
+                continue
+
+            # Convert timing from milliseconds to seconds and apply offset
+            start_time = max(0.0, (line.start / 1000.0) + self.config.subtitle_offset)
+            end_time = max(start_time, (line.end / 1000.0) + self.config.subtitle_offset)
+            duration = end_time - start_time
+
+            # Tokenize with MeCab and run compound-merge passes
+            raw_tokens = list(self.tagger(text))
+            merged_tokens = self._merge_compound_suffixes(raw_tokens)
+
+            yield text, merged_tokens, start_time, end_time, duration
+
     def parse_raw_entries(self, subtitle_file: Path) -> list[tuple[float, float, str]]:
         """Parse subtitle file and return raw timing entries without tokenization.
 
@@ -94,12 +133,7 @@ class SubtitleParserService:
         Raises:
             SubtitleParseError: If subtitle file cannot be parsed
         """
-        try:
-            subs = pysubs2.load(str(subtitle_file))
-        except FileNotFoundError as e:
-            raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e
-        except Exception as e:
-            raise SubtitleParseError(f"Failed to parse subtitle file: {e}") from e
+        subs = self._load_subs(subtitle_file)
 
         entries = []
         for line in subs:
@@ -125,30 +159,13 @@ class SubtitleParserService:
         Raises:
             SubtitleParseError: If subtitle file cannot be parsed
         """
-        try:
-            subs = pysubs2.load(str(subtitle_file))
-        except FileNotFoundError as e:
-            raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e
-        except Exception as e:
-            raise SubtitleParseError(f"Failed to parse subtitle file: {e}") from e
+        subs = self._load_subs(subtitle_file)
 
-        all_words = []
+        all_words: list[TokenizedWord] = []
         seen_words: set[str] = set()  # Track unique words by lemma AND surface
 
-        for line in subs:
-            text = self._apply_text_filter(clean_subtitle_text(line.text))
-
-            if not text:
-                continue
-
-            # Convert timing from milliseconds to seconds and apply offset
-            start_time = max(0.0, (line.start / 1000.0) + self.config.subtitle_offset)
-            end_time = max(start_time, (line.end / 1000.0) + self.config.subtitle_offset)
-            duration = end_time - start_time
-
-            # Tokenize with MeCab
-            raw_tokens = list(self.tagger(text))
-            for word_token in self._merge_compound_suffixes(raw_tokens):
+        for text, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
+            for word_token in merged_tokens:
                 if not self._should_include_word(word_token):
                     continue
 
@@ -188,6 +205,106 @@ class SubtitleParserService:
                 )
 
         return all_words
+
+    def parse_subtitle_file_with_index(
+        self, subtitle_file: Path
+    ) -> tuple[list[TokenizedWord], list[LineLemmas]]:
+        """Parse a subtitle file and produce both the deduped mining list and a per-line lemma index.
+
+        ``all_words`` is identical to ``parse_subtitle_file(subtitle_file)`` —
+        same dedup-by-(lemma|surface) semantics, same first-wins ordering.
+
+        ``line_index`` is a parallel structure keyed by line: each entry holds
+        every content lemma that appeared on that line (NO dedup against
+        previously-seen words — the i+1 filter needs to count actual unknown
+        lemmas per line). Lines with zero content lemmas are skipped since
+        they can never qualify as i+1.
+
+        Performance: ``sentence_furigana`` and ``sentence_reading`` are
+        computed ONCE per line and shared by both ``TokenizedWord`` entries
+        emitted from that line and the matching ``LineLemmas`` entry.
+
+        Args:
+            subtitle_file: Path to subtitle file (.ass, .srt, .ssa)
+
+        Returns:
+            Tuple of (deduped word list, per-line lemma index).
+
+        Raises:
+            SubtitleParseError: If subtitle file cannot be parsed
+        """
+        subs = self._load_subs(subtitle_file)
+
+        all_words: list[TokenizedWord] = []
+        line_index: list[LineLemmas] = []
+        seen_words: set[str] = set()
+
+        for text, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
+            # First pass: collect every content-word lemma on this line.
+            # _should_include_word handles particle/aux/proper-noun filtering.
+            line_lemmas: set[str] = set()
+            included_tokens: list = []
+            for word_token in merged_tokens:
+                if not self._should_include_word(word_token):
+                    continue
+                line_lemmas.add(self._extract_lemma(word_token))
+                included_tokens.append(word_token)
+
+            # A line with zero content words can never be i+1 — skip it from
+            # the index entirely. (Word emission is also skipped trivially.)
+            if not line_lemmas:
+                continue
+
+            # Compute sentence-level furigana/reading ONCE for this line.
+            sentence_furigana = generate_furigana(text, self.tagger)
+            sentence_reading = generate_reading(text, self.tagger)
+
+            line_index.append(
+                LineLemmas(
+                    line_text=text,
+                    lemmas=frozenset(line_lemmas),
+                    start_time=start_time,
+                    end_time=end_time,
+                    duration=duration,
+                    sentence_furigana=sentence_furigana,
+                    sentence_reading=sentence_reading,
+                )
+            )
+
+            # Second pass: emit deduped TokenizedWord entries (legacy semantics).
+            for word_token in included_tokens:
+                lemma = self._extract_lemma(word_token)
+                surface = word_token.surface
+
+                if lemma in seen_words or surface in seen_words:
+                    continue
+                seen_words.add(lemma)
+                seen_words.add(surface)
+
+                reading = self._extract_reading(word_token)
+
+                # Per-word fields are still tokenized individually so the
+                # ExpressionFurigana matches the surface, not the lemma.
+                expression_furigana = generate_furigana(surface, self.tagger)
+                expression_reading = generate_reading(surface, self.tagger)
+
+                all_words.append(
+                    TokenizedWord(
+                        surface=surface,
+                        lemma=lemma,
+                        reading=reading,
+                        sentence=text,
+                        start_time=start_time,
+                        end_time=end_time,
+                        duration=duration,
+                        expression_furigana=expression_furigana,
+                        expression_reading=expression_reading,
+                        sentence_furigana=sentence_furigana,
+                        sentence_reading=sentence_reading,
+                    )
+                )
+
+        return all_words, line_index
 
     def _merge_compound_suffixes(self, tokens: list) -> list:
         """Run all compound-merge passes in dependency order.

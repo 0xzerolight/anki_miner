@@ -80,6 +80,15 @@ class TestAnkiWordFieldSync:
         assert config.anki_word_field == "Expression"
 
 
+class TestIPlusOneFilter:
+    """Tests for the i+1 sentence filter flag."""
+
+    def test_use_i_plus_one_filter_defaults_false(self):
+        """The i+1 filter must be off by default — zero overhead for the default path."""
+        config = AnkiMinerConfig()
+        assert config.use_i_plus_one_filter is False
+
+
 class TestYouTubeConfig:
     """Tests for the YouTube-related config fields."""
 

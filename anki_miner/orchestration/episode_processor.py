@@ -30,6 +30,7 @@ from anki_miner.utils import ensure_directory
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from anki_miner.models import LineLemmas
     from anki_miner.services.frequency_service import FrequencyService
     from anki_miner.services.known_word_db import KnownWordDB
     from anki_miner.services.pitch_accent_service import PitchAccentService
@@ -188,7 +189,13 @@ class EpisodeProcessor:
         try:
             # Phase 1: Parse subtitles
             self.presenter.show_info(f"Step 1/5 \u2014 Parsing subtitles: {subtitle_file.name}")
-            all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file)
+            line_index: list[LineLemmas] | None = None
+            if self.config.use_i_plus_one_filter:
+                all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(
+                    subtitle_file
+                )
+            else:
+                all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file)
             self.presenter.show_success(f"Found {len(all_words)} unique words")
 
             if not all_words:
@@ -265,8 +272,10 @@ class EpisodeProcessor:
                 if filtered_out > 0:
                     self.presenter.show_info(f"Word list filter: removed {filtered_out} words")
 
-            # Apply sentence deduplication if configured
-            if self.config.deduplicate_sentences:
+            # Apply sentence deduplication if configured.
+            # i+1 filter does its own sentence picking; dedup would be a no-op
+            # (post-i+1 sentences are unique by construction).
+            if self.config.deduplicate_sentences and not self.config.use_i_plus_one_filter:
                 before = len(unknown_words)
                 unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
                 deduped = before - len(unknown_words)
@@ -289,6 +298,16 @@ class EpisodeProcessor:
                         f"Cross-episode filter: removed {filtered_out} words "
                         f"appearing in fewer than {self.config.min_episode_appearances} episodes"
                     )
+
+            # i+1 sentence filtering. Restricts mining to words with an i+1 example
+            # sentence (exactly one mineable unknown). Rescans lines and may swap
+            # the chosen sentence per word. Drops words with no i+1 coverage.
+            if self.config.use_i_plus_one_filter:
+                before = len(unknown_words)
+                unknown_words = self.word_filter.filter_i_plus_one(unknown_words, line_index or [])
+                kept = len(unknown_words)
+                pct = (kept / before * 100.0) if before else 0.0
+                self.presenter.show_info(f"i+1 filter: kept {kept}/{before} words ({pct:.0f}%)")
 
             # Record difficulty data if stats service available
             if self.stats_service and self.stats_service.is_available():
