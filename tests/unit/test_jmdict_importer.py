@@ -68,3 +68,117 @@ class TestImportJmdictXml:
         xml.write_text("<not-valid", encoding="utf-8")
         with pytest.raises(SetupError):
             import_jmdict_xml(xml, tmp_path / "dicts")
+
+
+KANA_ONLY_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<JMdict>
+<entry>
+<ent_seq>2000001</ent_seq>
+<r_ele><reb>すごい</reb></r_ele>
+<sense><gloss>amazing</gloss></sense>
+</entry>
+</JMdict>"""
+
+
+HTML_GLOSS_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<JMdict>
+<entry>
+<ent_seq>2000002</ent_seq>
+<k_ele><keb>例</keb></k_ele>
+<r_ele><reb>れい</reb></r_ele>
+<sense><gloss>example &lt;text&gt;</gloss></sense>
+</entry>
+</JMdict>"""
+
+
+def _make_xml_with_n_senses(n: int) -> str:
+    senses = "".join(f"<sense><gloss>def{i}</gloss></sense>" for i in range(1, n + 1))
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        "<JMdict><entry><ent_seq>3000001</ent_seq>"
+        "<k_ele><keb>多義</keb></k_ele>"
+        "<r_ele><reb>たぎ</reb></r_ele>"
+        f"{senses}"
+        "</entry></JMdict>"
+    )
+
+
+class TestImportJmdictXmlEdgeCases:
+    def test_kana_only_entry_produces_single_row(self, tmp_path: Path):
+        xml = tmp_path / "JMdict_e"
+        xml.write_text(KANA_ONLY_XML, encoding="utf-8")
+
+        import_jmdict_xml(xml, tmp_path / "dicts")
+
+        db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
+        conn = open_readonly(db)
+        try:
+            count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
+            assert count == 1
+            row = conn.execute("SELECT term, reading, content FROM entries").fetchone()
+            assert row[0] == "すごい"
+            assert row[1] == "すごい"
+            assert "amazing" in row[2]
+        finally:
+            conn.close()
+
+    def test_gloss_html_is_escaped(self, tmp_path: Path):
+        xml = tmp_path / "JMdict_e"
+        xml.write_text(HTML_GLOSS_XML, encoding="utf-8")
+
+        import_jmdict_xml(xml, tmp_path / "dicts")
+
+        db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
+        conn = open_readonly(db)
+        try:
+            content = conn.execute(
+                "SELECT content FROM entries WHERE term = ?", ("例",)
+            ).fetchone()[0]
+            # Original raw text should be entity-escaped; '<text>' must not appear as a tag
+            assert "&lt;text&gt;" in content
+            assert "<text>" not in content
+        finally:
+            conn.close()
+
+    def test_senses_capped_at_max(self, tmp_path: Path):
+        from anki_miner.services.dictionary.importers.jmdict_importer import MAX_SENSES
+
+        xml = tmp_path / "JMdict_e"
+        xml.write_text(_make_xml_with_n_senses(MAX_SENSES + 3), encoding="utf-8")
+
+        import_jmdict_xml(xml, tmp_path / "dicts")
+
+        db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
+        conn = open_readonly(db)
+        try:
+            content = conn.execute(
+                "SELECT content FROM entries WHERE term = ?", ("多義",)
+            ).fetchone()[0]
+            # Exactly MAX_SENSES <li> tags
+            assert content.count("<li>") == MAX_SENSES
+            assert f"def{MAX_SENSES}" in content
+            assert f"def{MAX_SENSES + 1}" not in content
+        finally:
+            conn.close()
+
+    def test_always_overwrites_existing_index(self, tmp_path: Path):
+        """Second import replaces the first; only the latest content is queryable."""
+        xml1 = tmp_path / "first.xml"
+        xml1.write_text(MINI_JMDICT_XML, encoding="utf-8")
+        xml2 = tmp_path / "second.xml"
+        xml2.write_text(KANA_ONLY_XML, encoding="utf-8")
+
+        dest = tmp_path / "dicts"
+        import_jmdict_xml(xml1, dest)
+        import_jmdict_xml(xml2, dest)
+
+        db = dest / JMDICT_DICT_ID / "index.sqlite"
+        conn = open_readonly(db)
+        try:
+            # Only the second import's row should be present (1 kana-only entry)
+            count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
+            assert count == 1
+            row = conn.execute("SELECT term FROM entries").fetchone()
+            assert row[0] == "すごい"
+        finally:
+            conn.close()
