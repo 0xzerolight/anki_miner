@@ -1,5 +1,6 @@
 """Settings tab with category organization using extracted panels."""
 
+import re
 from dataclasses import replace
 from pathlib import Path
 
@@ -182,6 +183,15 @@ class SettingsTab(QWidget):
             self.filtering_panel.whitelist_selector.set_path(str(self.config.whitelist_path))
         self.filtering_panel.use_whitelist_checkbox.setChecked(self.config.use_whitelist)
 
+        # Subtitle text filtering settings (Issue #8)
+        self.filtering_panel.subtitle_regex_edit.setText(self.config.subtitle_regex_filter)
+        self.filtering_panel.subtitle_replacement_edit.setText(
+            self.config.subtitle_regex_replacement
+        )
+        self.filtering_panel.use_subtitle_regex_checkbox.setChecked(
+            self.config.use_subtitle_regex_filter
+        )
+
         # Deduplication settings
         self.filtering_panel.deduplicate_sentences_checkbox.setChecked(
             self.config.deduplicate_sentences
@@ -203,6 +213,23 @@ class SettingsTab(QWidget):
         skipped_update_version = self.config.skipped_update_version
         if now_enabled and not was_enabled:
             skipped_update_version = ""
+
+        # Validate subtitle regex filter before saving so we never persist a
+        # pattern that crashes the parser. Only validate when the user has
+        # enabled the filter; an unchecked invalid pattern is harmless.
+        subtitle_regex = self.filtering_panel.subtitle_regex_edit.text()
+        use_subtitle_regex = self.filtering_panel.use_subtitle_regex_checkbox.isChecked()
+        if use_subtitle_regex and subtitle_regex:
+            try:
+                re.compile(subtitle_regex)
+            except re.error as e:
+                QMessageBox.warning(
+                    self,
+                    "Invalid Subtitle Regex",
+                    f"The subtitle regex filter is not a valid pattern:\n\n{e}\n\n"
+                    f"Fix the pattern or disable the filter before saving.",
+                )
+                return
 
         # Create updated config from all panels
         new_config = replace(
@@ -254,6 +281,10 @@ class SettingsTab(QWidget):
                 else None
             ),
             use_whitelist=self.filtering_panel.use_whitelist_checkbox.isChecked(),
+            # Subtitle text filtering settings (Issue #8)
+            subtitle_regex_filter=subtitle_regex,
+            subtitle_regex_replacement=self.filtering_panel.subtitle_replacement_edit.text(),
+            use_subtitle_regex_filter=use_subtitle_regex,
             # Deduplication settings
             deduplicate_sentences=self.filtering_panel.deduplicate_sentences_checkbox.isChecked(),
             # YouTube settings
