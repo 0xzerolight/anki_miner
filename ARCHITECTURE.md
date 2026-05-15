@@ -38,8 +38,9 @@ Subtitle file (ASS/SRT/SSA)
 │    → list[(TokenizedWord, MediaData)]               │
 ├─────────────────────────────────────────────────────┤
 │ 4. Fetch Definitions                                │
-│    DefinitionService → DictionaryProviders          │
-│    (JMdictProvider offline → JishoProvider fallback) │
+│    DefinitionService → DictionaryRegistry chain     │
+│    (IndexedDictProvider offline dicts, first-hit-   │
+│     wins; JishoProvider online fallback)            │
 │    → list[str | None]                               │
 ├─────────────────────────────────────────────────────┤
 │ 5. Create Anki Cards                                │
@@ -129,7 +130,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 - **SubtitleParserService**: parses ASS/SRT/SSA files via `pysubs2`, tokenizes Japanese text with `fugashi` (MeCab wrapper), generates furigana annotations, deduplicates by lemma+surface.
 - **WordFilterService**: multi-layer filtering via `filter_unknown` (against known vocabulary), `filter_by_length`, `filter_by_frequency`, `filter_by_word_lists`, `deduplicate_by_sentence`, and `filter_by_episode_count`.
 - **MediaExtractorService**: extracts screenshots (`ffmpeg -frames:v 1`) and audio clips (`ffmpeg libmp3lame`) at subtitle timestamps. Runs in parallel via `ThreadPoolExecutor` with `max_parallel_workers` threads. Auto-detects the Japanese audio stream via `ffprobe` with thread-safe caching.
-- **DefinitionService**: orchestrates the provider chain. Default mode: JMdict first, Jisho only if JMdict is unavailable. Returns HTML-formatted definition strings.
+- **DefinitionService**: orchestrates the provider chain built by `DictionaryRegistry` from `config.dictionary_chain`. First-hit-wins across offline `IndexedDictProvider` instances, with `JishoProvider` as the online fallback. Returns HTML-formatted definition strings.
 - **AnkiService**: AnkiConnect HTTP API wrapper (localhost:8765). Key operations: `get_existing_vocabulary`, `store_media_file`, `create_cards_batch` (batch size 50), `delete_notes`. Stores `last_created_note_ids` for undo support.
 - **ValidationService**: checks AnkiConnect connectivity, ffmpeg presence, deck existence, and note type existence. Returns `ValidationResult` (never raises).
 - **YouTubeFetcherService** (`services/youtube_fetcher.py`): wraps the `yt-dlp` subprocess. Two entry points: `probe_metadata(url) → VideoInfo` (fast, `--skip-download --dump-single-json`) and `fetch_video(url, workspace, sub_mode, progress_cb, cancel_event) → FetchedMedia`. Detects native vs translated auto-captions via `_has_native_auto_ja()`. Tracks the `Popen` handle so cancellation can kill the full process tree (yt-dlp → ffmpeg child) via `psutil`. Writes the (video, subtitle) pair into a caller-owned workspace directory.
@@ -145,9 +146,10 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 - **UpdateChecker**: queries the GitHub Releases API for newer versions.
 - **ExportService**: exports results to CSV, TSV, or vocabulary list formats.
 
-**Dictionary providers** (`services/providers/`):
+**Dictionary providers** (`services/dictionary/providers/`):
 
-- **JMdictProvider**: parses JMdict XML (~60MB) into an in-memory dict on `load()`. Lookup returns HTML-formatted numbered definitions (max 5 per word).
+- **IndexedDictProvider**: SQLite-backed offline provider used by every on-disk dictionary (JMdict and user-loaded Yomitan dicts). On first launch, JMdict XML is migrated to a SQLite index at `~/.anki_miner/dicts/jmdict-english/index.sqlite`; lookups run against that index. The read-only connection is opened with `check_same_thread=False` so a single instance is safe to share across worker threads.
+- **DictionaryRegistry**: discovers indexed dicts on disk and builds the provider chain from `config.dictionary_chain`. The chain is first-hit-wins, with `JishoProvider` appended as the online fallback.
 - **JishoProvider**: REST client for the jisho.org API. Always available. Rate-limited with a configurable delay (`jisho_delay`).
 
 ## Orchestration
@@ -283,7 +285,8 @@ All persistent user data under `~/.anki_miner/`:
 | File | Format | Purpose |
 |------|--------|---------|
 | `gui_config.json` | JSON | GUI configuration persistence |
-| `JMdict_e` | XML | Offline Japanese-English dictionary (~60MB) |
+| `JMdict_e` | XML | Source JMdict XML (~60MB); migrated to SQLite on first launch |
+| `dicts/<dict-id>/index.sqlite` | SQLite | Indexed offline dictionaries (e.g. `jmdict-english/`); queried by `IndexedDictProvider` |
 | `known_words.db` | SQLite | Known word cache with Anki sync |
 | `history.db` | SQLite | Mining history with undo support |
 | `stats.db` | SQLite | Analytics (sessions, difficulty, milestones) |
