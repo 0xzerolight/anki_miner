@@ -125,3 +125,42 @@ class TestSettingsTabRoundTrip:
             assert widget.youtube_panel.max_duration_spinbox.value() == 30
         finally:
             widget.deleteLater()
+
+
+class TestIPlusOneFilterRoundTrip:
+    """Load/save round-trip for the i+1 sentence filter checkbox."""
+
+    def test_loads_use_i_plus_one_filter_from_config(self, test_config: AnkiMinerConfig):
+        cfg_on = replace(test_config, use_i_plus_one_filter=True)
+        widget = SettingsTab(cfg_on)
+        try:
+            assert widget.filtering_panel.use_i_plus_one_checkbox.isChecked() is True
+        finally:
+            widget.deleteLater()
+
+        cfg_off = replace(test_config, use_i_plus_one_filter=False)
+        widget = SettingsTab(cfg_off)
+        try:
+            assert widget.filtering_panel.use_i_plus_one_checkbox.isChecked() is False
+        finally:
+            widget.deleteLater()
+
+    def test_saves_use_i_plus_one_filter_to_config(self, tab, monkeypatch):
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+
+        tab.filtering_panel.use_i_plus_one_checkbox.setChecked(True)
+        tab._on_save_clicked()
+
+        assert len(received) == 1
+        assert received[0].use_i_plus_one_filter is True
+
+        tab.filtering_panel.use_i_plus_one_checkbox.setChecked(False)
+        tab._on_save_clicked()
+
+        assert len(received) == 2
+        assert received[1].use_i_plus_one_filter is False

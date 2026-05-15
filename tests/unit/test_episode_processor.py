@@ -1,5 +1,6 @@
 """Tests for episode_processor module."""
 
+import re
 import threading
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -7,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.exceptions import SubtitleParseError
-from anki_miner.models import MediaData, TokenizedWord
+from anki_miner.models import LineLemmas, MediaData, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.presenters import NullPresenter
@@ -1152,3 +1153,186 @@ class TestProcessYoutubeUrl:
         # did not attempt to run a curation callback (we didn't pass one).
         mock_services["anki_service"].create_cards_batch.assert_called_once()
         assert result.cards_created == 1
+
+
+def _make_line_lemmas(text="新しい単語", lemmas=("新しい",), start=1.0, end=3.0):
+    return LineLemmas(
+        line_text=text,
+        lemmas=frozenset(lemmas),
+        start_time=start,
+        end_time=end,
+        duration=end - start,
+    )
+
+
+class TestIPlusOneFilter:
+    """Tests for the use_i_plus_one_filter wiring in EpisodeProcessor."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        word_filter.filter_i_plus_one.side_effect = lambda words, idx: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _config_with_flag(self, test_config, *, flag: bool, dedup: bool = True):
+        from dataclasses import replace
+
+        return replace(
+            test_config,
+            use_i_plus_one_filter=flag,
+            deduplicate_sentences=dedup,
+        )
+
+    def _wire_happy_pipeline(self, mock_services, word, media):
+        """Set up media/definitions/cards so the pipeline reaches the end."""
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+    def test_calls_parse_with_index_when_flag_on(self, test_config, mock_services, tmp_path):
+        """Flag on routes Phase 1 through parse_subtitle_file_with_index."""
+        config = self._config_with_flag(test_config, flag=True)
+        word = _make_word("食べる")
+        line = _make_line_lemmas(lemmas=("食べる",))
+
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = (
+            [word],
+            [line],
+        )
+        self._wire_happy_pipeline(mock_services, word, _make_media())
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.assert_called_once_with(
+            tmp_path / "s.ass"
+        )
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
+
+    def test_calls_legacy_parse_when_flag_off(self, test_config, mock_services, tmp_path):
+        """Flag off preserves the legacy parse_subtitle_file call."""
+        config = self._config_with_flag(test_config, flag=False)
+        word = _make_word("食べる")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        self._wire_happy_pipeline(mock_services, word, _make_media())
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(
+            tmp_path / "s.ass"
+        )
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.assert_not_called()
+
+    def test_skips_dedup_when_flag_on(self, test_config, mock_services, tmp_path):
+        """With flag on, dedup is bypassed even if deduplicate_sentences=True."""
+        config = self._config_with_flag(test_config, flag=True, dedup=True)
+        word = _make_word("食べる")
+        line = _make_line_lemmas(lemmas=("食べる",))
+
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = (
+            [word],
+            [line],
+        )
+        self._wire_happy_pipeline(mock_services, word, _make_media())
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].deduplicate_by_sentence.assert_not_called()
+        mock_services["word_filter"].filter_i_plus_one.assert_called_once()
+        # Filter receives the unknown words and the line_index from the parser.
+        call_args = mock_services["word_filter"].filter_i_plus_one.call_args
+        assert call_args[0][0] == [word]
+        assert call_args[0][1] == [line]
+
+    def test_runs_dedup_when_flag_off(self, test_config, mock_services, tmp_path):
+        """With flag off, dedup runs and filter_i_plus_one does not."""
+        config = self._config_with_flag(test_config, flag=False, dedup=True)
+        word = _make_word("食べる")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        self._wire_happy_pipeline(mock_services, word, _make_media())
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].deduplicate_by_sentence.assert_called_once()
+        mock_services["word_filter"].filter_i_plus_one.assert_not_called()
+
+    def test_presenter_message_when_filter_runs(self, test_config, mock_services, tmp_path):
+        """Filter run emits 'i+1 filter: kept N/M words (P%)' via show_info."""
+        config = self._config_with_flag(test_config, flag=True)
+        word1 = _make_word("食べる")
+        word2 = _make_word("走る", start_time=5.0)
+        line1 = _make_line_lemmas(text="食べる", lemmas=("食べる",))
+        line2 = _make_line_lemmas(text="走る", lemmas=("走る", "速い"), start=5.0, end=7.0)
+
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = (
+            [word1, word2],
+            [line1, line2],
+        )
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
+        # Pretend i+1 keeps only word1.
+        mock_services["word_filter"].filter_i_plus_one.side_effect = lambda words, idx: [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        spy_presenter = MagicMock(spec=NullPresenter())
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=spy_presenter,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        pattern = re.compile(r"i\+1 filter: kept \d+/\d+ words \(\d+%\)")
+        matched = [
+            call.args[0]
+            for call in spy_presenter.show_info.call_args_list
+            if call.args and isinstance(call.args[0], str) and pattern.search(call.args[0])
+        ]
+        assert matched, (
+            "Expected an i+1 filter show_info message; got: "
+            f"{[c.args for c in spy_presenter.show_info.call_args_list]}"
+        )
+        # Specifically: kept 1/2 (50%).
+        assert "kept 1/2 words (50%)" in matched[0]

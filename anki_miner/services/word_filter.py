@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.models import TokenizedWord
+from anki_miner.models import LineLemmas, TokenizedWord
 
 if TYPE_CHECKING:
     from anki_miner.services.word_list_service import WordListService
@@ -141,6 +142,65 @@ class WordFilterService:
             if word.sentence not in seen_sentences:
                 seen_sentences.add(word.sentence)
                 result.append(word)
+        return result
+
+    def filter_i_plus_one(
+        self,
+        mineable_unknowns: list[TokenizedWord],
+        line_index: list[LineLemmas],
+    ) -> list[TokenizedWord]:
+        """Restrict mining to words covered by at least one i+1 example sentence.
+
+        An "i+1" line is a subtitle line whose intersection with the target
+        unknown-lemma set has exactly one element — i.e. the line contains
+        exactly one of the words being considered for mining. For each
+        candidate word, the earliest such line in ``line_index`` order wins
+        the tie-break; words with no i+1 line are dropped.
+
+        The returned words have their sentence/timing/sentence_furigana/
+        sentence_reading swapped to those of the selected line. Per-word
+        fields (``surface``, ``lemma``, ``reading``, ``expression_furigana``,
+        ``expression_reading``, ``frequency_rank``, ``video_file``) are
+        preserved unchanged.
+
+        Args:
+            mineable_unknowns: Words remaining after blacklist, frequency,
+                and word-list filters (the count basis for "unknown").
+            line_index: Per-line lemma index for the episode, in original
+                subtitle order.
+
+        Returns:
+            Filtered list of words with i+1 sentence/timing swapped in,
+            preserving the input order of ``mineable_unknowns``.
+        """
+        if not mineable_unknowns or not line_index:
+            return []
+
+        target_lemmas = {w.lemma for w in mineable_unknowns}
+
+        earliest: dict[str, LineLemmas] = {}
+        for line in line_index:
+            intersect = line.lemmas & target_lemmas
+            if len(intersect) == 1:
+                (only,) = intersect
+                earliest.setdefault(only, line)
+
+        result: list[TokenizedWord] = []
+        for word in mineable_unknowns:
+            match = earliest.get(word.lemma)
+            if match is None:
+                continue
+            result.append(
+                dataclasses.replace(
+                    word,
+                    sentence=match.line_text,
+                    start_time=match.start_time,
+                    end_time=match.end_time,
+                    duration=match.duration,
+                    sentence_furigana=match.sentence_furigana,
+                    sentence_reading=match.sentence_reading,
+                )
+            )
         return result
 
     def filter_by_episode_count(
