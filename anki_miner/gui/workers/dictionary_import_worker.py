@@ -8,7 +8,6 @@ class's thread-safe ``is_cancelled`` flag.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
@@ -19,38 +18,33 @@ from anki_miner.services.dictionary.importers.jmdict_importer import import_jmdi
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 
 
-@dataclass(frozen=True)
-class _Job:
-    """Closure-bound importer call. ``runner`` receives ``(progress_fn, cancel_fn)``."""
-
-    runner: Callable[[Callable[[int, int, str], None], Callable[[], bool]], Any]
-
-
 class DictionaryImportWorker(CancellableWorker):
     """Imports a dictionary in the background.
 
     Signals:
         progress(int, int, str): ``(current, total, message)`` — importer step.
-        finished(str, dict): ``(dict_id, meta)`` — emitted once on success.
+        import_finished(str, dict): ``(dict_id, meta)`` — emitted once on success.
             ``meta`` carries ``entry_count`` and ``source_name``.
         failed(str): error message, including cancellation.
 
-    Note: ``finished`` and ``failed`` shadow QThread's built-in ``finished``
-    signal with explicit signatures expected by the GUI. PyQt's signal
-    machinery resolves the override correctly; do not rename to "match" the
-    base class.
+    The completion signal is named ``import_finished`` to avoid collision with
+    ``QThread.finished``, which the codebase uses for cleanup wiring.
     """
 
     # current, total, message
     progress = pyqtSignal(int, int, str)
     # dict_id, meta dict (entry_count, source_name)
-    finished = pyqtSignal(str, dict)
+    import_finished = pyqtSignal(str, dict)
     # error message
     failed = pyqtSignal(str)
 
-    def __init__(self, job: _Job, parent: Any = None) -> None:
+    def __init__(
+        self,
+        runner: Callable[[Callable[[int, int, str], None], Callable[[], bool]], Any],
+        parent: Any = None,
+    ) -> None:
         super().__init__(parent)
-        self._job = job
+        self._runner = runner
 
     @classmethod
     def for_yomitan(
@@ -73,7 +67,7 @@ class DictionaryImportWorker(CancellableWorker):
                 overwrite=overwrite,
             )
 
-        return cls(_Job(runner=runner))
+        return cls(runner)
 
     @classmethod
     def for_jmdict(cls, xml_path: Path, dest_root: Path) -> DictionaryImportWorker:
@@ -90,12 +84,12 @@ class DictionaryImportWorker(CancellableWorker):
                 cancel_check=cancel_fn,
             )
 
-        return cls(_Job(runner=runner))
+        return cls(runner)
 
     def run(self) -> None:
-        """Run the importer and emit progress/finished/failed accordingly."""
+        """Run the importer and emit progress/import_finished/failed accordingly."""
         try:
-            result = self._job.runner(
+            result = self._runner(
                 lambda cur, total, msg: self.progress.emit(cur, total, msg),
                 # is_cancelled is a property on the base class; wrap to a callable
                 lambda: self.is_cancelled,
@@ -104,6 +98,6 @@ class DictionaryImportWorker(CancellableWorker):
                 "entry_count": getattr(result, "entry_count", 0),
                 "source_name": getattr(result, "source_name", getattr(result, "dict_id", "")),
             }
-            self.finished.emit(result.dict_id, meta)
+            self.import_finished.emit(result.dict_id, meta)
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
             self.failed.emit(str(exc))
