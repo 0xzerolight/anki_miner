@@ -83,6 +83,35 @@ def generate_furigana(text: str, tagger) -> str:
     return "".join(result)
 
 
+def generate_reading(text: str, tagger) -> str:
+    """Generate plain-kana reading of text (Yomitan ``{reading}`` style).
+
+    Walks MeCab tokens and concatenates each token's kana feature (converted
+    to hiragana) without bracket annotations or kanji surface forms. Tokens
+    without a usable kana feature fall back to the surface form so punctuation
+    and unknown tokens pass through unchanged.
+
+    Args:
+        text: Japanese text to read.
+        tagger: A fugashi.Tagger instance.
+
+    Returns:
+        Plain hiragana reading, e.g. ``"おうこくです。"`` for ``"王国です。"``.
+    """
+    result = []
+    for token in tagger(text):
+        surface = token.surface
+        try:
+            kana = token.feature.kana
+        except AttributeError:
+            kana = None
+        if kana:
+            result.append(katakana_to_hiragana(kana))
+        else:
+            result.append(surface)
+    return "".join(result)
+
+
 def extract_japanese_text(text: str) -> str:
     """Extract only Japanese characters from text.
 

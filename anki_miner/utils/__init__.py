@@ -6,6 +6,7 @@ from .text_utils import (
     clean_subtitle_text,
     extract_japanese_text,
     generate_furigana,
+    generate_reading,
     katakana_to_hiragana,
 )
 
@@ -16,6 +17,7 @@ __all__ = [
     "clean_subtitle_text",
     "extract_japanese_text",
     "generate_furigana",
+    "generate_reading",
     "katakana_to_hiragana",
     "natural_sort_key",
 ]

@@ -27,7 +27,9 @@ def test_config(temp_dir):
             "picture": "picture",
             "audio": "audio",
             "expression_furigana": "expression_furigana",
+            "expression_reading": "",
             "sentence_furigana": "sentence_furigana",
+            "sentence_reading": "",
             "pitch_position": "PitchPosition",
             "pitch_category": "PitchCategory",
             "frequency": "Frequency",
@@ -66,7 +68,9 @@ def make_tokenized_word():
         duration=2.0,
         video_file=None,
         expression_furigana="",
+        expression_reading="",
         sentence_furigana="",
+        sentence_reading="",
         frequency_rank=None,
     ):
         return TokenizedWord(
@@ -79,7 +83,9 @@ def make_tokenized_word():
             duration=duration,
             video_file=video_file,
             expression_furigana=expression_furigana,
+            expression_reading=expression_reading,
             sentence_furigana=sentence_furigana,
+            sentence_reading=sentence_reading,
             frequency_rank=frequency_rank,
         )
 
