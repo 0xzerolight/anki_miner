@@ -6,6 +6,7 @@ logic invoked by keyboard shortcuts.
 """
 
 import pytest
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.models import TokenizedWord
@@ -145,3 +146,71 @@ class TestWordCurationDialogSearch:
         selected = dialog.get_selected_words()
         assert len(selected) == 1
         assert selected[0].lemma == "食べる"
+
+
+class TestFrequencyColumnSort:
+    """Issue #6 regression — frequency column must sort numerically, not lexically."""
+
+    def test_frequency_sorts_numerically(self):
+        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+
+        # Ranks chosen to expose the bug: lexical sort gives 1,10,100,2,20,3.
+        ranks = [3, 100, 1, 20, 10, 2]
+        words = []
+        for i, rank in enumerate(ranks):
+            words.append(
+                TokenizedWord(
+                    surface=f"w{i}",
+                    lemma=f"w{i}",
+                    reading="タベル",
+                    sentence="x",
+                    start_time=float(i),
+                    end_time=float(i + 1),
+                    duration=1.0,
+                    frequency_rank=rank,
+                )
+            )
+        dlg = WordCurationDialog(words)
+        dlg.table.sortItems(5, Qt.SortOrder.AscendingOrder)
+        sorted_ranks = [int(dlg.table.item(r, 5).text()) for r in range(dlg.table.rowCount())]
+        assert sorted_ranks == sorted(ranks)
+
+    def test_frequency_none_sorts_last_ascending(self):
+        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+
+        words = [
+            TokenizedWord(
+                surface="a",
+                lemma="a",
+                reading="ア",
+                sentence="x",
+                start_time=0.0,
+                end_time=1.0,
+                duration=1.0,
+                frequency_rank=50,
+            ),
+            TokenizedWord(
+                surface="b",
+                lemma="b",
+                reading="イ",
+                sentence="x",
+                start_time=1.0,
+                end_time=2.0,
+                duration=1.0,
+                frequency_rank=None,
+            ),
+            TokenizedWord(
+                surface="c",
+                lemma="c",
+                reading="ウ",
+                sentence="x",
+                start_time=2.0,
+                end_time=3.0,
+                duration=1.0,
+                frequency_rank=5,
+            ),
+        ]
+        dlg = WordCurationDialog(words)
+        dlg.table.sortItems(5, Qt.SortOrder.AscendingOrder)
+        texts = [dlg.table.item(r, 5).text() for r in range(dlg.table.rowCount())]
+        assert texts == ["5", "50", "-"]
