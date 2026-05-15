@@ -8,16 +8,18 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QMessageBox,
+    QProgressDialog,
     QScrollArea,
     QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
@@ -27,6 +29,7 @@ from anki_miner.gui.widgets.panels import (
     MediaSettingsPanel,
     YouTubeSettingsPanel,
 )
+from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 
 
 class SettingsTab(QWidget):
@@ -118,6 +121,10 @@ class SettingsTab(QWidget):
         self.anki_panel.notetype_sync_requested.connect(self.validation_requested.emit)
         self.anki_panel.test_connection_requested.connect(self.validation_requested.emit)
 
+        # Dictionary panel signals — wire Add/Reimport to import worker dialogs.
+        self.dictionary_panel.add_dict_requested.connect(self._on_add_dict_clicked)
+        self.dictionary_panel.reimport_jmdict_requested.connect(self._on_reimport_jmdict_clicked)
+
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts."""
         # Ctrl+S: Save settings
@@ -159,9 +166,8 @@ class SettingsTab(QWidget):
         self.media_panel.screenshot_offset_spinbox.setValue(self.config.screenshot_offset)
         self.media_panel.max_workers_spinbox.setValue(self.config.max_parallel_workers)
 
-        # Dictionary settings
-        self.dictionary_panel.jmdict_selector.set_path(str(self.config.jmdict_path))
-        self.dictionary_panel.use_offline_checkbox.setChecked(self.config.use_offline_dict)
+        # Dictionary chain
+        self.dictionary_panel.set_chain(self.config.dictionary_chain)
 
         # Pitch accent settings
         self.dictionary_panel.pitch_accent_selector.set_path(str(self.config.pitch_accent_path))
@@ -247,13 +253,8 @@ class SettingsTab(QWidget):
             audio_padding=self.media_panel.audio_padding_spinbox.value(),
             screenshot_offset=self.media_panel.screenshot_offset_spinbox.value(),
             max_parallel_workers=self.media_panel.max_workers_spinbox.value(),
-            # Dictionary settings
-            jmdict_path=(
-                Path(self.dictionary_panel.jmdict_selector.get_path())
-                if self.dictionary_panel.jmdict_selector.get_path()
-                else Path("")
-            ),
-            use_offline_dict=self.dictionary_panel.use_offline_checkbox.isChecked(),
+            # Dictionary chain — chain is the single source of truth now
+            dictionary_chain=self.dictionary_panel.get_chain(),
             # Pitch accent settings
             pitch_accent_path=(
                 Path(self.dictionary_panel.pitch_accent_selector.get_path())
@@ -400,12 +401,90 @@ class SettingsTab(QWidget):
         """Get max workers spinbox widget."""
         return self.media_panel.max_workers_spinbox
 
-    @property
-    def jmdict_selector(self):
-        """Get JMdict file selector widget."""
-        return self.dictionary_panel.jmdict_selector
+    # === Dictionary import handlers ===
 
-    @property
-    def use_offline_checkbox(self):
-        """Get use offline checkbox widget."""
-        return self.dictionary_panel.use_offline_checkbox
+    def _on_add_dict_clicked(self) -> None:
+        """Prompt for a Yomitan zip and run the import worker."""
+        zip_path_str, _ = QFileDialog.getOpenFileName(
+            self, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)"
+        )
+        if not zip_path_str:
+            return
+
+        dest_root = Path.home() / ".anki_miner" / "dicts"
+        dlg = QProgressDialog("Importing dictionary…", "Cancel", 0, 100, self)
+        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+        dlg.show()
+
+        worker = DictionaryImportWorker.for_yomitan(Path(zip_path_str), dest_root)
+        self._active_import_worker = worker  # keep alive across QThread lifetime
+
+        def on_progress(cur: int, total: int, msg: str) -> None:
+            dlg.setMaximum(total)
+            dlg.setValue(cur)
+            dlg.setLabelText(msg)
+
+        def on_import_finished(dict_id: str, meta: dict) -> None:
+            dlg.close()
+            QMessageBox.information(
+                self,
+                "Dictionary added",
+                f"Imported {dict_id} ({meta.get('entry_count', 0):,} entries)",
+            )
+            self.dictionary_panel.set_chain(self._with_dict_at_top(dict_id))
+
+        def on_failed(err: str) -> None:
+            dlg.close()
+            QMessageBox.warning(self, "Import failed", err)
+
+        worker.progress.connect(on_progress)
+        worker.import_finished.connect(on_import_finished)
+        worker.failed.connect(on_failed)
+        dlg.canceled.connect(worker.cancel)
+        worker.start()
+
+    def _with_dict_at_top(self, dict_id: str) -> tuple[ChainEntry, ...]:
+        """Return the current chain with ``dict_id`` placed (or moved) to the top."""
+        chain = list(self.dictionary_panel.get_chain())
+        chain = [e for e in chain if not (e.kind == "indexed" and e.dict_id == dict_id)]
+        chain.insert(0, ChainEntry(kind="indexed", dict_id=dict_id, enabled=True))
+        return tuple(chain)
+
+    def _on_reimport_jmdict_clicked(self) -> None:
+        """Reimport JMdict from the configured XML path."""
+        xml = self.config.jmdict_path
+        if not xml.exists():
+            QMessageBox.warning(
+                self,
+                "JMdict not found",
+                f"No JMdict XML at {xml}. Download from EDRDG and place it there.",
+            )
+            return
+
+        dest_root = Path.home() / ".anki_miner" / "dicts"
+        dlg = QProgressDialog("Reimporting JMdict…", "Cancel", 0, 100, self)
+        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+        dlg.show()
+
+        worker = DictionaryImportWorker.for_jmdict(xml, dest_root)
+        self._active_import_worker = worker
+
+        def on_progress(cur: int, total: int, msg: str) -> None:
+            dlg.setMaximum(total)
+            dlg.setValue(cur)
+            dlg.setLabelText(msg)
+
+        def on_done(dict_id: str, meta: dict) -> None:
+            dlg.close()
+            # Re-render chain so the (refreshed) entry count is reflected.
+            self.dictionary_panel.set_chain(self.dictionary_panel.get_chain())
+
+        def on_failed(err: str) -> None:
+            dlg.close()
+            QMessageBox.warning(self, "Reimport failed", err)
+
+        worker.progress.connect(on_progress)
+        worker.import_finished.connect(on_done)
+        worker.failed.connect(on_failed)
+        dlg.canceled.connect(worker.cancel)
+        worker.start()
