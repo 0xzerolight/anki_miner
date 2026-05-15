@@ -71,6 +71,9 @@ class GUIConfigManager:
             # Migrate stale allowed_pos defaults (pre-v2.3.2 missing 代名詞)
             config_dict = cls._migrate_allowed_pos(config_dict)
 
+            # Migrate legacy dictionary fields → dictionary_chain
+            config_dict = cls._migrate_dictionary_chain(config_dict)
+
             # Drop keys not in the current dataclass (e.g., removed fields from old
             # versions). Without this filter, AnkiMinerConfig(**config_dict) raises
             # TypeError and the except below would silently reset the entire user
@@ -129,6 +132,46 @@ class GUIConfigManager:
             logger.info("Migrating allowed_pos: adding 代名詞 to enable pronoun mining")
             data["allowed_pos"] = list(create_default_config().allowed_pos)
 
+        return data
+
+    @staticmethod
+    def _migrate_dictionary_chain(data: dict[str, Any]) -> dict[str, Any]:
+        """Synthesize dictionary_chain when an older config lacks it.
+
+        Legacy state mapped to chain entries:
+          use_offline_dict=True  → jmdict-english enabled
+          use_offline_dict=False → jmdict-english disabled (kept for re-enable)
+        Jisho is always enabled in synthesized chains; users disable via UI.
+        Existing dictionary_chain (loaded as list[dict]) is rebuilt into the
+        ChainEntry dataclasses.
+        """
+        from anki_miner.config import ChainEntry
+
+        raw_chain = data.get("dictionary_chain")
+        if raw_chain is None:
+            use_offline = bool(data.get("use_offline_dict", True))
+            data["dictionary_chain"] = (
+                ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=use_offline),
+                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            )
+            return data
+
+        # Rebuild ChainEntry instances from JSON dicts
+        chain: list[ChainEntry] = []
+        for item in raw_chain:
+            if isinstance(item, dict):
+                kind = item.get("kind")
+                if kind in ("indexed", "jisho"):
+                    chain.append(
+                        ChainEntry(
+                            kind=kind,
+                            dict_id=item.get("dict_id"),
+                            enabled=bool(item.get("enabled", True)),
+                        )
+                    )
+            elif isinstance(item, ChainEntry):
+                chain.append(item)
+        data["dictionary_chain"] = tuple(chain)
         return data
 
     @staticmethod
