@@ -232,30 +232,31 @@ class AnkiSettingsPanel(FormPanel):
             "Anki field that stores the sentence as plain kana reading",
         )
 
-        # Optional Card Fields section
-        self.add_section("Optional Card Fields")
+        # Auxiliary Data Fields section
+        self.add_section("Auxiliary Data Fields")
 
-        optional_helper = QLabel(
-            "These fields are only populated if the corresponding data source is enabled "
-            "and your Anki note type has a matching field. Leave blank to skip."
+        auxiliary_helper = QLabel(
+            "These fields require auxiliary data files (pitch_accent.csv, frequency.csv) "
+            "in ~/.anki_miner/. Map them to your Anki note type's matching fields, "
+            "or leave blank to skip."
         )
-        optional_helper.setObjectName("helper-text")
-        optional_helper.setWordWrap(True)
-        self.add_widget(optional_helper)
+        auxiliary_helper.setObjectName("helper-text")
+        auxiliary_helper.setWordWrap(True)
+        self.add_widget(auxiliary_helper)
 
         # Pitch Position field
         self.pitch_position_field_input = QLineEdit()
-        self.pitch_position_field_input.setPlaceholderText("PitchPosition (optional)")
+        self.pitch_position_field_input.setPlaceholderText("PitchPosition")
         self.pitch_position_field_input.setToolTip("Anki field for pitch accent position number")
         self._add_simple_field(
             "Pitch Position Field",
             self.pitch_position_field_input,
-            "Anki field that stores the numeric pitch drop position (leave blank to skip)",
+            "Anki field that stores the numeric pitch drop position",
         )
 
         # Pitch Category field
         self.pitch_category_field_input = QLineEdit()
-        self.pitch_category_field_input.setPlaceholderText("PitchCategory (optional)")
+        self.pitch_category_field_input.setPlaceholderText("PitchCategory")
         self.pitch_category_field_input.setToolTip("Anki field for pitch accent category")
         self._add_simple_field(
             "Pitch Category Field",
@@ -265,12 +266,12 @@ class AnkiSettingsPanel(FormPanel):
 
         # Frequency field
         self.frequency_field_input = QLineEdit()
-        self.frequency_field_input.setPlaceholderText("Frequency (optional)")
+        self.frequency_field_input.setPlaceholderText("Frequency")
         self.frequency_field_input.setToolTip("Anki field for word frequency rank")
         self._add_simple_field(
             "Frequency Field",
             self.frequency_field_input,
-            "Anki field that stores word frequency rank (leave blank to skip)",
+            "Anki field that stores word frequency rank",
         )
 
     def _add_labeled_field_with_button(
