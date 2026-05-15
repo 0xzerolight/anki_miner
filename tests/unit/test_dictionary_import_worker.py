@@ -25,7 +25,7 @@ def test_yomitan_import_emits_finished(tmp_path: Path, qapp):
 
     finished_dict_ids: list[str] = []
     failed_errors: list[str] = []
-    worker.finished.connect(lambda dict_id, meta: finished_dict_ids.append(dict_id))
+    worker.import_finished.connect(lambda dict_id, meta: finished_dict_ids.append(dict_id))
     worker.failed.connect(lambda err: failed_errors.append(err))
 
     worker.run()  # run synchronously in test (skip QThread.start)
@@ -54,7 +54,7 @@ def test_cancel_aborts_import(tmp_path: Path, qapp):
     failed_errors: list[str] = []
     finished_dict_ids: list[str] = []
     worker.failed.connect(lambda err: failed_errors.append(err))
-    worker.finished.connect(lambda dict_id, meta: finished_dict_ids.append(dict_id))
+    worker.import_finished.connect(lambda dict_id, meta: finished_dict_ids.append(dict_id))
 
     # Pre-cancel before running so the importer aborts on the very first cancel_check
     worker.cancel()
