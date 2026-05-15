@@ -120,3 +120,40 @@ class TestYouTubeConfig:
         config = AnkiMinerConfig(youtube_ffmpeg_location=ffmpeg_path)
         assert isinstance(config.youtube_ffmpeg_location, Path)
         assert config.youtube_ffmpeg_location == ffmpeg_path
+
+
+def test_dictionary_chain_default():
+    from anki_miner.config import AnkiMinerConfig, ChainEntry
+
+    config = AnkiMinerConfig()
+    chain = config.dictionary_chain
+    assert isinstance(chain, tuple)
+    assert chain == (
+        ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
+        ChainEntry(kind="jisho", dict_id=None, enabled=True),
+    )
+
+
+def test_chain_entry_is_frozen():
+    from dataclasses import FrozenInstanceError
+
+    import pytest
+
+    from anki_miner.config import ChainEntry
+
+    entry = ChainEntry(kind="indexed", dict_id="jmdict-english")
+    with pytest.raises(FrozenInstanceError):
+        entry.dict_id = "other"  # type: ignore[misc]
+
+
+def test_dictionary_chain_replace():
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig, ChainEntry
+
+    config = AnkiMinerConfig()
+    new_chain = (ChainEntry(kind="jisho", dict_id=None, enabled=False),)
+    updated = replace(config, dictionary_chain=new_chain)
+    assert updated.dictionary_chain == new_chain
+    # Original is unchanged
+    assert len(config.dictionary_chain) == 2
