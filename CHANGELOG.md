@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.3.4] - 2026-05-15
+
+### Added
+- **Subtitle regex filter** (Issue #8): a new "Subtitle Text Filtering" section in Word Filtering settings strips noise from subtitle lines before they reach the tokenizer. Use it to drop speaker tags like `(Tanaka)`, sound descriptions like `[door slams]`, music markers `♪♬`, or `Speaker:` prefixes. Four one-click presets seed common patterns; click multiple to stack them with `|`. Pattern, replacement string, and an enable toggle persist in `gui_config.json` (`subtitle_regex_filter`, `subtitle_regex_replacement`, `use_subtitle_regex_filter`). Replacement uses Python backreferences (`\1 \2`), not asbplayer's `$1 $2` — translate when copying patterns. Both the mining path and the subtitle viewer honor the filter.
+- **`ExpressionReading` and `SentenceReading` Anki fields** (Issue #7): plain hiragana readings of the surface form and the full sentence, generated alongside the existing furigana fields. Matches Yomitan's `{reading}` style for users whose card template wants kana without the bracketed kanji[reading] markup. Two new Anki field mappings are exposed in Anki Settings.
+
+### Fixed
+- **Frequency column sorts numerically in Word Curator** (Issue #6): the Frequency Rank column now sorts as numbers instead of lexicographic text, so 100 no longer comes before 20. Unranked rows (`-`) cluster at the bottom regardless of sort direction. Implemented via a `QTableWidgetItem` subclass that stores the rank in a sort role and overrides `__lt__`.
+
+### Changed
+- **Card field mapping helper text**: the "Optional Card Fields" section in Anki Settings was renamed to "Auxiliary Data Fields" and the helper text now says exactly which files (`pitch_accent.csv`, `frequency.csv`) need to live in `~/.anki_miner/` for these fields to populate. Per-field placeholders dropped the redundant "(optional)" suffix.
+
 ## [2.3.3] - 2026-04-25
 
 ### Added
