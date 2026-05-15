@@ -3,6 +3,20 @@
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
+
+
+@dataclass(frozen=True)
+class ChainEntry:
+    """One entry in the dictionary lookup chain.
+
+    Indexed entries reference a folder under ~/.anki_miner/dicts/<dict_id>/.
+    Jisho entries are the always-available online fallback; dict_id is None.
+    """
+
+    kind: Literal["indexed", "jisho"]
+    dict_id: str | None = None
+    enabled: bool = True
 
 
 @dataclass(frozen=True)
@@ -62,6 +76,16 @@ class AnkiMinerConfig:
     )
 
     # Dictionary settings
+    #
+    # `dictionary_chain` is the runtime-authoritative list of providers in
+    # priority order. Legacy fields (jmdict_path, use_offline_dict) are kept
+    # for one release so first-launch migration can synthesize the chain.
+    dictionary_chain: tuple["ChainEntry", ...] = field(
+        default_factory=lambda: (
+            ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
     jmdict_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "JMdict_e")
     use_offline_dict: bool = True
     jisho_api_url: str = "https://jisho.org/api/v1/search/words"
