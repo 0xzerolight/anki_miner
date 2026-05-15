@@ -9,7 +9,7 @@ import pysubs2
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import TokenizedWord
-from anki_miner.utils import clean_subtitle_text, generate_furigana
+from anki_miner.utils import clean_subtitle_text, generate_furigana, generate_reading
 
 _NOMINAL_SUFFIX_POS2 = {"名詞的", "形状詞的", "副詞的"}
 
@@ -136,9 +136,11 @@ class SubtitleParserService:
                 # Get reading if available
                 reading = self._extract_reading(word_token)
 
-                # Generate furigana annotations
+                # Generate furigana annotations and plain-kana readings
                 expression_furigana = generate_furigana(surface, self.tagger)
                 sentence_furigana = generate_furigana(text, self.tagger)
+                expression_reading = generate_reading(surface, self.tagger)
+                sentence_reading = generate_reading(text, self.tagger)
 
                 all_words.append(
                     TokenizedWord(
@@ -150,7 +152,9 @@ class SubtitleParserService:
                         end_time=end_time,
                         duration=duration,
                         expression_furigana=expression_furigana,
+                        expression_reading=expression_reading,
                         sentence_furigana=sentence_furigana,
+                        sentence_reading=sentence_reading,
                     )
                 )
 

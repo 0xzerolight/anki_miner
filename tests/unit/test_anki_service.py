@@ -794,7 +794,9 @@ class TestOptionalFields:
                 "picture": "picture",
                 "audio": "audio",
                 "expression_furigana": "expression_furigana",
+                "expression_reading": "",
                 "sentence_furigana": "sentence_furigana",
+                "sentence_reading": "",
                 "pitch_position": "",  # Not mapped
                 "pitch_category": "",  # Not mapped
                 "frequency": "",  # Not mapped
@@ -896,6 +898,119 @@ def make_word_helper():
         end_time=3.0,
         duration=2.0,
     )
+
+
+# ---------------------------------------------------------------------------
+# TestReadingFields (Issue #7: plain-kana reading fields)
+# ---------------------------------------------------------------------------
+
+
+class TestReadingFields:
+    """Tests for expression_reading / sentence_reading field handling (Issue #7)."""
+
+    def _config_with_reading_fields(self, temp_dir):
+        """Build a config that maps both new reading keys to real Anki field names."""
+        from anki_miner.config import AnkiMinerConfig
+
+        return AnkiMinerConfig(
+            anki_fields={
+                "word": "Expression",
+                "sentence": "Sentence",
+                "definition": "Definition",
+                "picture": "Picture",
+                "audio": "Audio",
+                "expression_furigana": "ExpressionFurigana",
+                "expression_reading": "ExpressionReading",
+                "sentence_furigana": "SentenceFurigana",
+                "sentence_reading": "SentenceReading",
+                "pitch_position": "",
+                "pitch_category": "",
+                "frequency": "",
+            },
+            media_temp_folder=temp_dir / "temp",
+            jmdict_path=temp_dir / "dict",
+        )
+
+    def test_create_card_includes_expression_reading_when_mapped(
+        self, temp_dir, make_tokenized_word
+    ):
+        """When expression_reading is mapped, the payload should include plain kana."""
+        config = self._config_with_reading_fields(temp_dir)
+        service = AnkiService(config)
+        word = make_tokenized_word(
+            surface="真竹",
+            expression_furigana="真竹[まだけ]",
+            expression_reading="まだけ",
+        )
+        media = MediaData()
+
+        resp = _mock_response(result=12345)
+        with patch("requests.post", return_value=resp) as mock_post:
+            service.create_card(word, media, "definition")
+
+        payload = mock_post.call_args[1]["json"]
+        note_fields = payload["params"]["note"]["fields"]
+        assert note_fields["ExpressionReading"] == "まだけ"
+
+    def test_create_card_includes_sentence_reading_when_mapped(self, temp_dir, make_tokenized_word):
+        """When sentence_reading is mapped, the payload should include plain kana sentence."""
+        config = self._config_with_reading_fields(temp_dir)
+        service = AnkiService(config)
+        word = make_tokenized_word(
+            sentence="私は猫です。",
+            sentence_reading="わたしはねこです。",
+        )
+        media = MediaData()
+
+        resp = _mock_response(result=12345)
+        with patch("requests.post", return_value=resp) as mock_post:
+            service.create_card(word, media, "definition")
+
+        payload = mock_post.call_args[1]["json"]
+        note_fields = payload["params"]["note"]["fields"]
+        assert note_fields["SentenceReading"] == "わたしはねこです。"
+
+    def test_create_card_skips_reading_fields_when_unmapped(self, test_config, make_tokenized_word):
+        """With the default test_config (empty reading mappings), reading fields are skipped."""
+        service = AnkiService(test_config)
+        word = make_tokenized_word(
+            expression_reading="まだけ",
+            sentence_reading="わたしはねこです。",
+        )
+        media = MediaData()
+
+        resp = _mock_response(result=12345)
+        with patch("requests.post", return_value=resp) as mock_post:
+            service.create_card(word, media, "definition")
+
+        payload = mock_post.call_args[1]["json"]
+        note_fields = payload["params"]["note"]["fields"]
+        # Plain-kana values must not be smuggled in under any field name
+        assert "まだけ" not in note_fields.values()
+        assert "わたしはねこです。" not in note_fields.values()
+
+    def test_create_cards_batch_includes_reading_fields_when_mapped(
+        self, temp_dir, make_tokenized_word
+    ):
+        """Batch path should mirror single-card behavior for reading fields."""
+        config = self._config_with_reading_fields(temp_dir)
+        service = AnkiService(config)
+        word = make_tokenized_word(
+            surface="真竹",
+            sentence="真竹を見た。",
+            expression_reading="まだけ",
+            sentence_reading="まだけをみた。",
+        )
+        media = MediaData()
+
+        resp = _mock_response(result=[55555])
+        with patch("requests.post", return_value=resp) as mock_post:
+            service.create_cards_batch([(word, media, "definition")])
+
+        payload = mock_post.call_args[1]["json"]
+        note_fields = payload["params"]["notes"][0]["fields"]
+        assert note_fields["ExpressionReading"] == "まだけ"
+        assert note_fields["SentenceReading"] == "まだけをみた。"
 
 
 # ---------------------------------------------------------------------------
@@ -1096,7 +1211,9 @@ class TestConfigurableFields:
             "picture": "picture",
             "audio": "audio",
             "expression_furigana": "expression_furigana",
+            "expression_reading": "",
             "sentence_furigana": "sentence_furigana",
+            "sentence_reading": "",
             "pitch_position": "",
             "pitch_category": "",
             "frequency": "",

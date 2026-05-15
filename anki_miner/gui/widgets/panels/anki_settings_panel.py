@@ -198,6 +198,18 @@ class AnkiSettingsPanel(FormPanel):
             "Anki field that stores the expression with furigana reading",
         )
 
+        # Expression Reading field (plain kana)
+        self.expression_reading_field_input = QLineEdit()
+        self.expression_reading_field_input.setPlaceholderText("ExpressionReading")
+        self.expression_reading_field_input.setToolTip(
+            "Anki field for expression with plain kana reading"
+        )
+        self._add_simple_field(
+            "Expression Reading Field",
+            self.expression_reading_field_input,
+            "Anki field that stores the expression as plain kana reading",
+        )
+
         # Sentence Furigana field
         self.sentence_furigana_field_input = QLineEdit()
         self.sentence_furigana_field_input.setPlaceholderText("SentenceFurigana")
@@ -206,6 +218,18 @@ class AnkiSettingsPanel(FormPanel):
             "Sentence Furigana Field",
             self.sentence_furigana_field_input,
             "Anki field that stores the sentence with furigana readings",
+        )
+
+        # Sentence Reading field (plain kana)
+        self.sentence_reading_field_input = QLineEdit()
+        self.sentence_reading_field_input.setPlaceholderText("SentenceReading")
+        self.sentence_reading_field_input.setToolTip(
+            "Anki field for sentence with plain kana reading"
+        )
+        self._add_simple_field(
+            "Sentence Reading Field",
+            self.sentence_reading_field_input,
+            "Anki field that stores the sentence as plain kana reading",
         )
 
         # Optional Card Fields section
@@ -438,9 +462,17 @@ class AnkiSettingsPanel(FormPanel):
                 self.expression_furigana_field_input,
                 ["expressionfurigana", "wordfurigana"],
             ),
+            "expression_reading": (
+                self.expression_reading_field_input,
+                ["expressionreading", "wordreading", "reading"],
+            ),
             "sentence_furigana": (
                 self.sentence_furigana_field_input,
                 ["sentencefurigana", "contextfurigana"],
+            ),
+            "sentence_reading": (
+                self.sentence_reading_field_input,
+                ["sentencereading", "contextreading"],
             ),
             "pitch_position": (
                 self.pitch_position_field_input,
@@ -479,7 +511,9 @@ class AnkiSettingsPanel(FormPanel):
             "picture": self.picture_field_input.text().strip(),
             "audio": self.audio_field_input.text().strip(),
             "expression_furigana": self.expression_furigana_field_input.text().strip(),
+            "expression_reading": self.expression_reading_field_input.text().strip(),
             "sentence_furigana": self.sentence_furigana_field_input.text().strip(),
+            "sentence_reading": self.sentence_reading_field_input.text().strip(),
             "pitch_position": self.pitch_position_field_input.text().strip(),
             "pitch_category": self.pitch_category_field_input.text().strip(),
             "frequency": self.frequency_field_input.text().strip(),
@@ -499,9 +533,11 @@ class AnkiSettingsPanel(FormPanel):
         self.expression_furigana_field_input.setText(
             fields.get("expression_furigana", "ExpressionFurigana")
         )
+        self.expression_reading_field_input.setText(fields.get("expression_reading", ""))
         self.sentence_furigana_field_input.setText(
             fields.get("sentence_furigana", "SentenceFurigana")
         )
+        self.sentence_reading_field_input.setText(fields.get("sentence_reading", ""))
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.frequency_field_input.setText(fields.get("frequency", ""))
