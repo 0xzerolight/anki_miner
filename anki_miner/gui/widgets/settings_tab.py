@@ -197,6 +197,9 @@ class SettingsTab(QWidget):
             self.config.deduplicate_sentences
         )
 
+        # i+1 sentence filter setting
+        self.filtering_panel.use_i_plus_one_checkbox.setChecked(self.config.use_i_plus_one_filter)
+
         # YouTube settings
         self.youtube_panel.set_cookies_from_browser(self.config.youtube_cookies_from_browser)
         self.youtube_panel.set_max_duration_seconds(self.config.youtube_max_duration_s)
@@ -287,6 +290,8 @@ class SettingsTab(QWidget):
             use_subtitle_regex_filter=use_subtitle_regex,
             # Deduplication settings
             deduplicate_sentences=self.filtering_panel.deduplicate_sentences_checkbox.isChecked(),
+            # i+1 sentence filter setting
+            use_i_plus_one_filter=self.filtering_panel.use_i_plus_one_checkbox.isChecked(),
             # YouTube settings
             youtube_cookies_from_browser=self.youtube_panel.get_cookies_from_browser(),
             youtube_max_duration_s=self.youtube_panel.get_max_duration_seconds(),

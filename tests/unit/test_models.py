@@ -1,8 +1,12 @@
 """Tests for data model classes."""
 
+from dataclasses import FrozenInstanceError
+
+import pytest
+
 from anki_miner.models.media import MediaData
 from anki_miner.models.processing import ProcessingResult, ValidationIssue, ValidationResult
-from anki_miner.models.word import TokenizedWord, WordData
+from anki_miner.models.word import LineLemmas, TokenizedWord, WordData
 
 
 class TestTokenizedWord:
@@ -90,6 +94,56 @@ class TestTokenizedWord:
         )
         assert word.expression_furigana == " 食べる[たべる]"
         assert word.sentence_furigana == " 日本語[にほんご]を 食べる[たべる]。"
+
+
+class TestLineLemmas:
+    """Tests for LineLemmas dataclass."""
+
+    def test_basic_creation_with_defaults(self):
+        line = LineLemmas(
+            line_text="日本語を食べる",
+            lemmas=frozenset({"日本語", "食べる"}),
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+        )
+        assert line.line_text == "日本語を食べる"
+        assert line.lemmas == frozenset({"日本語", "食べる"})
+        assert line.start_time == 1.0
+        assert line.end_time == 3.0
+        assert line.duration == 2.0
+        # Furigana / reading default to empty string when not provided.
+        assert line.sentence_furigana == ""
+        assert line.sentence_reading == ""
+
+    def test_furigana_and_reading_set(self):
+        line = LineLemmas(
+            line_text="食べる",
+            lemmas=frozenset({"食べる"}),
+            start_time=0.0,
+            end_time=1.0,
+            duration=1.0,
+            sentence_furigana=" 食べる[たべる]",
+            sentence_reading="たべる",
+        )
+        assert line.sentence_furigana == " 食べる[たべる]"
+        assert line.sentence_reading == "たべる"
+
+    def test_is_frozen(self):
+        """Mutating any field must raise FrozenInstanceError."""
+        line = LineLemmas(
+            line_text="テスト",
+            lemmas=frozenset({"テスト"}),
+            start_time=0.0,
+            end_time=1.0,
+            duration=1.0,
+        )
+        with pytest.raises(FrozenInstanceError):
+            line.line_text = "changed"  # type: ignore[misc]
+        with pytest.raises(FrozenInstanceError):
+            line.lemmas = frozenset()  # type: ignore[misc]
+        with pytest.raises(FrozenInstanceError):
+            line.start_time = 99.0  # type: ignore[misc]
 
 
 class TestWordData:

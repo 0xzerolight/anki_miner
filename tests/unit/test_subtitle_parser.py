@@ -7,6 +7,7 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
+from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 # --- Helpers for building mock MeCab tokens ---
@@ -867,6 +868,311 @@ def test_real_fugashi_mines_verb_nominalizer(tmp_path):
     # Lemma must be the merged surface, NOT 生きる方.
     by_surface = {w.surface: w for w in words}
     assert by_surface["生き方"].lemma == "生き方"
+
+
+# ---------------------------------------------------------------------------
+# parse_subtitle_file_with_index — i+1 filter foundation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestParseSubtitleFileWithIndex:
+    """Tests for parse_subtitle_file_with_index — the i+1 filter's line-index path.
+
+    Uses the real fugashi pipeline (same approach as the existing
+    test_real_fugashi_* end-to-end tests) because the line-index method emits
+    sentence_furigana / sentence_reading that depend on real tokenization, and
+    we want to verify post-compound-merge lemmas with real unidic output.
+    """
+
+    def _write_srt(self, path: Path, lines: list[tuple[str, str, str]]) -> Path:
+        """Write a minimal .srt file. Each line tuple is (start, end, text)."""
+        chunks = []
+        for i, (start, end, text) in enumerate(lines, start=1):
+            chunks.append(f"{i}\n{start} --> {end}\n{text}\n")
+        path.write_text("\n".join(chunks), encoding="utf-8")
+        return path
+
+    def test_returns_tuple_of_words_and_index(self, tmp_path):
+        srt = self._write_srt(
+            tmp_path / "ep.srt",
+            [("00:00:01,000", "00:00:03,000", "学校で勉強する")],
+        )
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        result = service.parse_subtitle_file_with_index(srt)
+
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        words, index = result
+        assert isinstance(words, list)
+        assert isinstance(index, list)
+        assert all(isinstance(w, TokenizedWord) for w in words)
+        assert all(isinstance(line, LineLemmas) for line in index)
+
+    def test_words_match_legacy_parse(self, tmp_path):
+        """Regression guard: both methods must produce identical TokenizedWord lists.
+
+        Same input → identical dedup-by-(lemma|surface), first-wins ordering.
+        """
+        srt = self._write_srt(
+            tmp_path / "ep.srt",
+            [
+                ("00:00:01,000", "00:00:03,000", "彼は刑務所で爆発的な事件を起こした"),
+                ("00:00:04,000", "00:00:06,000", "学校で勉強する"),
+                ("00:00:07,000", "00:00:09,000", "また勉強した"),  # 勉強 dup
+            ],
+        )
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+
+        legacy = service.parse_subtitle_file(srt)
+        new_words, _ = service.parse_subtitle_file_with_index(srt)
+
+        # Same length, same lemma sequence (ordering matters — first-wins).
+        assert [w.lemma for w in legacy] == [w.lemma for w in new_words]
+        assert [w.surface for w in legacy] == [w.surface for w in new_words]
+        assert [w.sentence for w in legacy] == [w.sentence for w in new_words]
+        assert [w.start_time for w in legacy] == [w.start_time for w in new_words]
+        # Per-line sentence furigana/reading should match (same generator,
+        # same input text — just computed once per line in the new path).
+        assert [w.sentence_furigana for w in legacy] == [w.sentence_furigana for w in new_words]
+        assert [w.sentence_reading for w in legacy] == [w.sentence_reading for w in new_words]
+
+    def test_line_index_includes_all_occurrences(self, tmp_path):
+        """A lemma appearing on two lines must show up in both LineLemmas entries.
+
+        The line index intentionally does NOT dedup against seen_words — the
+        i+1 filter needs per-line lemma sets to count unknowns.
+        """
+        srt = self._write_srt(
+            tmp_path / "ep.srt",
+            [
+                ("00:00:01,000", "00:00:03,000", "勉強する"),
+                ("00:00:04,000", "00:00:06,000", "また勉強する"),
+            ],
+        )
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        _, index = service.parse_subtitle_file_with_index(srt)
+
+        # 勉強 appears in both line entries — no dedup across lines.
+        assert len(index) == 2
+        assert "勉強" in index[0].lemmas
+        assert "勉強" in index[1].lemmas
+
+    def test_line_index_excludes_non_content_words(self, tmp_path):
+        """A line made only of particles + punctuation must not appear in the index."""
+        srt = self._write_srt(
+            tmp_path / "ep.srt",
+            [
+                ("00:00:01,000", "00:00:03,000", "は、を。"),  # particles + punctuation
+                ("00:00:04,000", "00:00:06,000", "勉強する"),
+            ],
+        )
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        _, index = service.parse_subtitle_file_with_index(srt)
+
+        # Particle-only line is skipped from the index entirely.
+        assert len(index) == 1
+        assert "勉強" in index[0].lemmas
+
+    def test_line_index_respects_should_include_word(self, tmp_path):
+        """Tokens excluded by _should_include_word (e.g. 固有名詞) must not appear in lemmas.
+
+        Uses mocked tokenization to deterministically inject a 固有名詞 (proper
+        noun) — excluded_subtypes includes 固有名詞 by default.
+        """
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_line = MagicMock()
+        mock_line.text = "田中は勉強する"
+        mock_line.start = 1000
+        mock_line.end = 3000
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+
+        proper = _make_token("田中", "名詞", pos2="固有名詞", lemma="田中")
+        content = _make_token("勉強", "名詞", pos2="普通名詞", lemma="勉強")
+
+        mock_tagger = MagicMock()
+        # First call tokenizes the line; subsequent calls feed generate_furigana /
+        # generate_reading (sentence-level once, then per-word twice for 勉強).
+        # Returning [proper, content] for the sentence-level calls is fine
+        # because those generators just walk tokens; the assertion below only
+        # cares about the lemma set in the index.
+        mock_tagger.side_effect = [
+            [proper, content],  # tokenize
+            [proper, content],  # generate_furigana(text)
+            [proper, content],  # generate_reading(text)
+            [content],  # generate_furigana(surface='勉強')
+            [content],  # generate_reading(surface='勉強')
+        ]
+
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(config)
+            _, index = service.parse_subtitle_file_with_index(sub_file)
+
+        assert len(index) == 1
+        # 固有名詞 田中 must be filtered out by _should_include_word.
+        assert "田中" not in index[0].lemmas
+        assert "勉強" in index[0].lemmas
+
+    def test_line_index_lemmas_match_post_compound_merge(self, tmp_path):
+        """Compound merge runs BEFORE lemma collection — 刑務所 not 刑務+所."""
+        srt = self._write_srt(
+            tmp_path / "ep.srt",
+            [("00:00:01,000", "00:00:03,000", "彼は刑務所にいる")],
+        )
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        _, index = service.parse_subtitle_file_with_index(srt)
+
+        assert len(index) == 1
+        assert "刑務所" in index[0].lemmas
+        # The individual constituents must NOT appear — they were consumed by
+        # the merge pass.
+        assert "刑務" not in index[0].lemmas
+        assert "所" not in index[0].lemmas
+
+    def test_line_index_skips_empty_lines(self, tmp_path):
+        """Lines that clean to empty text must produce no index entry."""
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        empty_line = MagicMock()
+        empty_line.text = "{\\an8}  "  # All formatting — clean strips to ""
+        empty_line.start = 1000
+        empty_line.end = 3000
+
+        good_line = MagicMock()
+        good_line.text = "勉強する"
+        good_line.start = 4000
+        good_line.end = 6000
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([empty_line, good_line]))
+
+        content = _make_token("勉強", "名詞", pos2="普通名詞", lemma="勉強")
+        mock_tagger = MagicMock()
+        mock_tagger.side_effect = [
+            [content],  # tokenize good_line
+            [content],  # generate_furigana(text)
+            [content],  # generate_reading(text)
+            [content],  # generate_furigana(surface)
+            [content],  # generate_reading(surface)
+        ]
+
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(config)
+            _, index = service.parse_subtitle_file_with_index(sub_file)
+
+        # Empty-text line skipped; only the 勉強 line is indexed.
+        assert len(index) == 1
+        assert index[0].line_text == "勉強する"
+
+    def test_line_index_sentence_furigana_computed_once_per_line(self, tmp_path):
+        """Perf invariant: generate_furigana for the sentence is called once per line.
+
+        Legacy parse_subtitle_file calls generate_furigana(text) once per
+        emitted word. The new method must collapse that to ONE call per line —
+        otherwise the per-line index path is no cheaper than the legacy one.
+        """
+        srt = self._write_srt(
+            tmp_path / "ep.srt",
+            [
+                ("00:00:01,000", "00:00:03,000", "学校で勉強する事件"),  # 3 content words
+                ("00:00:04,000", "00:00:06,000", "また勉強する"),  # 1 content word (勉強 dup)
+            ],
+        )
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+
+        # Wrap the real generators so call counts are recorded but real text
+        # comes out — the test asserts on call patterns, not return values.
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.generate_furigana",
+                wraps=__import__(
+                    "anki_miner.utils", fromlist=["generate_furigana"]
+                ).generate_furigana,
+            ) as mock_furi,
+            patch(
+                "anki_miner.services.subtitle_parser.generate_reading",
+                wraps=__import__(
+                    "anki_miner.utils", fromlist=["generate_reading"]
+                ).generate_reading,
+            ) as mock_read,
+        ):
+            service.parse_subtitle_file_with_index(srt)
+
+        # Count calls where the first positional arg is the FULL line text
+        # (i.e. sentence-level calls, not per-word surface calls).
+        line_texts = {"学校で勉強する事件", "また勉強する"}
+        sentence_furi_calls = [
+            c for c in mock_furi.call_args_list if c.args and c.args[0] in line_texts
+        ]
+        sentence_read_calls = [
+            c for c in mock_read.call_args_list if c.args and c.args[0] in line_texts
+        ]
+        # One sentence-level call per line, period.
+        assert len(sentence_furi_calls) == 2
+        assert len(sentence_read_calls) == 2
+
+    def test_line_index_with_subtitle_regex_filter(self, tmp_path):
+        """Issue #8 interaction: line_text and lemmas must reflect POST-filter text."""
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_line = MagicMock()
+        mock_line.text = "(田中) 勉強する"
+        mock_line.start = 1000
+        mock_line.end = 3000
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+
+        # After regex strip "(田中) " is removed; only "勉強する" reaches tokenize.
+        content = _make_token("勉強", "名詞", pos2="普通名詞", lemma="勉強")
+        mock_tagger = MagicMock()
+        mock_tagger.side_effect = [
+            [content],  # tokenize post-filter "勉強する"
+            [content],  # generate_furigana(text)
+            [content],  # generate_reading(text)
+            [content],  # generate_furigana(surface)
+            [content],  # generate_reading(surface)
+        ]
+
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            subtitle_regex_filter=r"\([^)]*\)",
+            subtitle_regex_replacement="",
+            use_subtitle_regex_filter=True,
+        )
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(config)
+            _, index = service.parse_subtitle_file_with_index(sub_file)
+
+        assert len(index) == 1
+        # line_text reflects post-filter (no "(田中)" speaker tag).
+        assert index[0].line_text == "勉強する"
+        # 田中 never enters lemmas (filtered out before tokenization).
+        assert "田中" not in index[0].lemmas
+        assert "勉強" in index[0].lemmas
 
 
 # ---------------------------------------------------------------------------

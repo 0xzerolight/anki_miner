@@ -192,6 +192,24 @@ class FilteringSettingsPanel(FormPanel):
             helper="Skip words that share an identical sentence with an already-selected word",
         )
 
+        # i+1 Sentence Filter section
+        self.add_section("i+1 Sentence Filter")
+
+        self.use_i_plus_one_checkbox = QCheckBox("Only Mine i+1 Sentences")
+        self.use_i_plus_one_checkbox.setToolTip(
+            "Only create cards for words that appear in a sentence with exactly ONE "
+            "unknown word (the i+1 / immersion learning concept). Drops words whose "
+            "only examples contain multiple unknowns, so expect significantly fewer "
+            "cards per episode."
+        )
+        self.add_field(
+            "",
+            self.use_i_plus_one_checkbox,
+            helper="Keep only words with at least one example sentence where they are "
+            "the sole unknown. Trades card volume for sentence comprehensibility. "
+            "Overrides sentence deduplication when enabled.",
+        )
+
         self.add_stretch()
 
     def _append_preset(self, pattern: str) -> None:

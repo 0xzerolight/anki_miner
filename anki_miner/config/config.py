@@ -104,6 +104,11 @@ class AnkiMinerConfig:
     # Deduplication settings
     deduplicate_sentences: bool = True
 
+    # i+1 sentence filtering. When True, only mine words that have at least
+    # one example sentence containing exactly one unknown lemma.
+    # Supersedes deduplicate_sentences when enabled.
+    use_i_plus_one_filter: bool = False
+
     # Cross-episode frequency settings
     use_cross_episode_priority: bool = False
     min_episode_appearances: int = 2  # Only mine words appearing in at least N episodes
