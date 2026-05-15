@@ -36,7 +36,7 @@ class DictionaryRegistry:
 
     def _rescan(self) -> None:
         self._dicts.clear()
-        if not self._root.exists():
+        if not self._root.is_dir():
             return
         for child in sorted(self._root.iterdir()):
             if not child.is_dir():
