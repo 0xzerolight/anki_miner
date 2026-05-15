@@ -133,7 +133,7 @@ class TestEpisodePipeline:
             subtitle_parser = SubtitleParserService(config)
             word_filter = WordFilterService(config)
             media_extractor = MediaExtractorService(config)
-            definition_service = DefinitionService(config)
+            definition_service = DefinitionService(config, providers=[])
             anki_service = AnkiService(config)
 
             processor = EpisodeProcessor(
@@ -188,7 +188,7 @@ class TestEpisodePipeline:
             subtitle_parser = SubtitleParserService(config)
             word_filter = WordFilterService(config)
             media_extractor = MediaExtractorService(config)
-            definition_service = DefinitionService(config)
+            definition_service = DefinitionService(config, providers=[])
             anki_service = AnkiService(config)
 
             processor = EpisodeProcessor(
@@ -254,7 +254,7 @@ class TestEpisodePipeline:
             subtitle_parser = SubtitleParserService(config)
             word_filter = WordFilterService(config)
             media_extractor = MediaExtractorService(config)
-            definition_service = DefinitionService(config)
+            definition_service = DefinitionService(config, providers=[])
             anki_service = AnkiService(config)
 
             processor = EpisodeProcessor(
@@ -373,7 +373,7 @@ class TestIPlusOneFilterIntegration:
             subtitle_parser = SubtitleParserService(config)
             word_filter = WordFilterService(config)
             media_extractor = MediaExtractorService(config)
-            definition_service = DefinitionService(config)
+            definition_service = DefinitionService(config, providers=[])
             anki_service = AnkiService(config)
 
             processor = EpisodeProcessor(
