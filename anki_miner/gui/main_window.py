@@ -1,6 +1,8 @@
 """Main window for Anki Miner GUI."""
 
+import logging
 from dataclasses import replace
+from pathlib import Path
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut
@@ -25,6 +27,13 @@ from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutService, ValidationService
+
+logger = logging.getLogger(__name__)
+
+
+def _needs_jmdict_migration(xml_path: Path, dicts_root: Path) -> bool:
+    """Return True iff we should auto-trigger the JMdict → SQLite migration."""
+    return xml_path.exists() and not (dicts_root / "jmdict-english" / "index.sqlite").exists()
 
 
 class MainWindow(QMainWindow):
@@ -74,6 +83,10 @@ class MainWindow(QMainWindow):
         # Auto-check for updates on startup
         if self.config.check_for_updates:
             self._check_for_updates()
+
+        # One-time JMdict XML → SQLite migration (background)
+        self._jmdict_migration_worker = None
+        self._maybe_migrate_jmdict()
 
         # Post-update confirmation: if last_known_version differs from the
         # currently running __version__, show a one-shot info dialog. Save the
@@ -465,6 +478,11 @@ class MainWindow(QMainWindow):
             self.update_worker.cancel()
             self.update_worker.wait(2000)
 
+        # Cancel and wait for JMdict migration worker if running
+        if self._jmdict_migration_worker and self._jmdict_migration_worker.isRunning():
+            self._jmdict_migration_worker.cancel()
+            self._jmdict_migration_worker.wait(2000)
+
         # Cancel and wait for any processing workers in tabs
         from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
         from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
@@ -528,6 +546,27 @@ class MainWindow(QMainWindow):
         self.status_bar.set_operation(f"Validation error: {error_message}", "error")
         if not silent:
             QMessageBox.critical(self, "Validation Error", error_message)
+
+    def _maybe_migrate_jmdict(self) -> None:
+        """One-time: migrate legacy JMdict XML into a SQLite index in the background."""
+        from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
+
+        dicts_root = Path.home() / ".anki_miner" / "dicts"
+        if not _needs_jmdict_migration(self.config.jmdict_path, dicts_root):
+            return
+
+        self._jmdict_migration_worker = DictionaryImportWorker.for_jmdict(
+            self.config.jmdict_path, dicts_root
+        )
+        self._jmdict_migration_worker.import_finished.connect(
+            lambda dict_id, meta: logger.info("JMdict migration complete: %s", dict_id)
+        )
+        self._jmdict_migration_worker.failed.connect(
+            lambda err: logger.warning("JMdict migration failed: %s", err)
+        )
+        logger.info("Starting one-time JMdict SQLite migration")
+        self.status_bar.set_operation("Migrating JMdict to SQLite in background…", "info")
+        self._jmdict_migration_worker.start()
 
     def _check_for_updates(self) -> None:
         """Check for application updates in background thread."""
