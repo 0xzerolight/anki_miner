@@ -6,6 +6,7 @@ from anki_miner.utils.text_utils import (
     clean_subtitle_text,
     extract_japanese_text,
     generate_furigana,
+    generate_reading,
     katakana_to_hiragana,
 )
 
@@ -210,3 +211,66 @@ class TestGenerateFurigana:
         tagger = MagicMock(return_value=[])
         result = generate_furigana("", tagger)
         assert result == ""
+
+
+class TestGenerateReading:
+    """Tests for generate_reading function (Yomitan {reading} style)."""
+
+    def test_kanji_word_returns_hiragana(self):
+        """Pure kanji token should emit hiragana from the kana feature."""
+        token = _make_mock_token("王国", kana="オウコク")
+        tagger = MagicMock(return_value=[token])
+        assert generate_reading("王国", tagger) == "おうこく"
+
+    def test_kanji_with_okurigana(self):
+        """Mixed kanji+kana token should emit full hiragana reading, no brackets."""
+        token = _make_mock_token("食べる", kana="タベル")
+        tagger = MagicMock(return_value=[token])
+        assert generate_reading("食べる", tagger) == "たべる"
+
+    def test_hiragana_passes_through(self):
+        """Hiragana input should be preserved (kana feature is katakana → hiragana)."""
+        token = _make_mock_token("です", kana="デス")
+        tagger = MagicMock(return_value=[token])
+        assert generate_reading("です", tagger) == "です"
+
+    def test_katakana_converted_to_hiragana(self):
+        """Katakana input should be converted to hiragana to match {reading} semantics."""
+        token = _make_mock_token("コーヒー", kana="コーヒー")
+        tagger = MagicMock(return_value=[token])
+        assert generate_reading("コーヒー", tagger) == "こーひー"
+
+    def test_mixed_sentence(self):
+        """Full sentence reading should concatenate hiragana for every token."""
+        tokens = [
+            _make_mock_token("私", kana="ワタシ"),
+            _make_mock_token("は", kana="ハ"),
+            _make_mock_token("猫", kana="ネコ"),
+            _make_mock_token("です", kana="デス"),
+            _make_mock_token("。", kana=None),
+        ]
+        tagger = MagicMock(return_value=tokens)
+        assert generate_reading("私は猫です。", tagger) == "わたしはねこです。"
+
+    def test_token_missing_kana_feature_falls_back_to_surface(self):
+        """Token whose feature lacks 'kana' should fall back to surface unchanged."""
+        token = _make_mock_token("謎", has_feature=False)
+        tagger = MagicMock(return_value=[token])
+        assert generate_reading("謎", tagger) == "謎"
+
+    def test_token_with_none_kana_falls_back_to_surface(self):
+        """Token with kana=None (e.g. punctuation) should fall back to surface."""
+        token = _make_mock_token("！", kana=None)
+        tagger = MagicMock(return_value=[token])
+        assert generate_reading("！", tagger) == "！"
+
+    def test_empty_string(self):
+        """Empty input should return empty string."""
+        tagger = MagicMock(return_value=[])
+        assert generate_reading("", tagger) == ""
+
+    def test_issue_7_example(self):
+        """Issue #7 example: 真竹 should yield まだけ (not the 真竹[まだけ] furigana form)."""
+        token = _make_mock_token("真竹", kana="マダケ")
+        tagger = MagicMock(return_value=[token])
+        assert generate_reading("真竹", tagger) == "まだけ"

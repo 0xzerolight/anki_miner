@@ -239,7 +239,9 @@ class AnkiService:
             "picture": picture_html,
             "audio": audio_ref,
             "expression_furigana": html.escape(word.expression_furigana),
+            "expression_reading": html.escape(word.expression_reading),
             "sentence_furigana": html.escape(word.sentence_furigana),
+            "sentence_reading": html.escape(word.sentence_reading),
         }
         fields = {}
         for key, value in field_data.items():
@@ -341,7 +343,9 @@ class AnkiService:
                     "picture": picture_html,
                     "audio": audio_ref,
                     "expression_furigana": html.escape(word.expression_furigana),
+                    "expression_reading": html.escape(word.expression_reading),
                     "sentence_furigana": html.escape(word.sentence_furigana),
+                    "sentence_reading": html.escape(word.sentence_reading),
                 }
                 fields = {}
                 for key, value in field_data.items():

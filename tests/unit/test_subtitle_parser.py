@@ -154,8 +154,16 @@ class TestParseSubtitleFile:
         token2 = _make_token("食べた", "動詞", lemma="食べる", kana="タベタ")
 
         mock_tagger = MagicMock()
-        # Extra entries for generate_furigana calls (expression + sentence) after token1
-        mock_tagger.side_effect = [[token1], [token1], [token1], [token2]]
+        # Extra entries for generate_furigana + generate_reading calls
+        # (expression + sentence, each twice) after token1's initial tokenize call
+        mock_tagger.side_effect = [
+            [token1],
+            [token1],
+            [token1],
+            [token1],
+            [token1],
+            [token2],
+        ]
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
@@ -188,8 +196,16 @@ class TestParseSubtitleFile:
         token2 = _make_token("学生", "名詞", lemma="学生X", kana="ガクセイ")
 
         mock_tagger = MagicMock()
-        # Extra entries for generate_furigana calls (expression + sentence) after token1
-        mock_tagger.side_effect = [[token1], [token1], [token1], [token2]]
+        # Extra entries for generate_furigana + generate_reading calls
+        # (expression + sentence, each twice) after token1's initial tokenize call
+        mock_tagger.side_effect = [
+            [token1],
+            [token1],
+            [token1],
+            [token1],
+            [token1],
+            [token2],
+        ]
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),

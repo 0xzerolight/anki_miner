@@ -17,7 +17,9 @@ class TokenizedWord:
     duration: float  # Duration in seconds
     video_file: Path | None = None  # Source video (for batch processing)
     expression_furigana: str = ""  # Furigana for expression, e.g. "食べる[たべる]"
+    expression_reading: str = ""  # Plain kana reading of expression, e.g. "たべる"
     sentence_furigana: str = ""  # Furigana for sentence, e.g. "日本語[にほんご]を食べる[たべる]。"
+    sentence_reading: str = ""  # Plain kana reading of sentence, e.g. "にほんごをたべる。"
     frequency_rank: int | None = None  # Word frequency rank (1 = most common)
 
     def __str__(self) -> str:
