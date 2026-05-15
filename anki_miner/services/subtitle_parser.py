@@ -1,5 +1,7 @@
 """Service for parsing subtitles and extracting vocabulary."""
 
+import logging
+import re
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -10,6 +12,8 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import TokenizedWord
 from anki_miner.utils import clean_subtitle_text, generate_furigana, generate_reading
+
+logger = logging.getLogger(__name__)
 
 _NOMINAL_SUFFIX_POS2 = {"名詞的", "形状詞的", "副詞的"}
 
@@ -52,6 +56,31 @@ class SubtitleParserService:
         """
         self.config = config
         self.tagger = fugashi.Tagger()
+        self._filter_pattern: re.Pattern[str] | None = None
+        if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
+            try:
+                self._filter_pattern = re.compile(config.subtitle_regex_filter)
+            except re.error as e:
+                # Bad pattern at the boundary should not crash mining. Disable
+                # and surface in the log; GUI validation should catch this on save.
+                logger.warning(
+                    "Invalid subtitle_regex_filter %r: %s; filter disabled for this run",
+                    config.subtitle_regex_filter,
+                    e,
+                )
+                self._filter_pattern = None
+
+    def _apply_text_filter(self, text: str) -> str:
+        """Apply the configured regex filter to a subtitle line.
+
+        Runs after ``clean_subtitle_text`` strips tags/HTML so the pattern
+        operates on human-readable text. Whitespace is renormalized because
+        a stripped span can leave double spaces behind.
+        """
+        if self._filter_pattern is None:
+            return text
+        filtered = self._filter_pattern.sub(self.config.subtitle_regex_replacement, text)
+        return " ".join(filtered.split())
 
     def parse_raw_entries(self, subtitle_file: Path) -> list[tuple[float, float, str]]:
         """Parse subtitle file and return raw timing entries without tokenization.
@@ -74,7 +103,7 @@ class SubtitleParserService:
 
         entries = []
         for line in subs:
-            text = clean_subtitle_text(line.text)
+            text = self._apply_text_filter(clean_subtitle_text(line.text))
             if not text:
                 continue
 
@@ -107,7 +136,7 @@ class SubtitleParserService:
         seen_words: set[str] = set()  # Track unique words by lemma AND surface
 
         for line in subs:
-            text = clean_subtitle_text(line.text)
+            text = self._apply_text_filter(clean_subtitle_text(line.text))
 
             if not text:
                 continue

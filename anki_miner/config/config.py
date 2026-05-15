@@ -92,6 +92,15 @@ class AnkiMinerConfig:
     use_blacklist: bool = False
     use_whitelist: bool = False
 
+    # Subtitle text filtering (Issue #8)
+    # Python regex applied to each subtitle line after tag/HTML cleanup and
+    # before tokenization. Matched text is replaced with subtitle_regex_replacement
+    # (empty string = deletion). Both parse paths (raw entries for the viewer
+    # and the mining path) honor the filter.
+    subtitle_regex_filter: str = ""
+    subtitle_regex_replacement: str = ""
+    use_subtitle_regex_filter: bool = False
+
     # Deduplication settings
     deduplicate_sentences: bool = True
 
