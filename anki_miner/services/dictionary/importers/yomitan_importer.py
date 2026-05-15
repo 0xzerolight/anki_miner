@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import re
 import shutil
 import tempfile
@@ -23,9 +22,9 @@ from anki_miner.services.dictionary.storage import (
 )
 from anki_miner.services.dictionary.yomitan_renderer import render_glossary_entry
 
-logger = logging.getLogger(__name__)
-
 ProgressFn = Callable[[int, int, str], None]
+
+MAX_UNCOMPRESSED_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB
 
 
 @dataclass(frozen=True)
@@ -69,10 +68,32 @@ def import_yomitan_zip(
         try:
             with zipfile.ZipFile(zip_path, "r") as zf:
                 # Path traversal guard
+                tmp_root_resolved = tmp_path.resolve()
                 for name in zf.namelist():
-                    norm = Path(name).as_posix()
-                    if norm.startswith("/") or ".." in Path(name).parts:
-                        raise SetupError(f"Zip contains unsafe path: {name}")
+                    # Reject Windows backslashes (bypass current guard on Linux)
+                    if "\\" in name:
+                        raise SetupError(f"Zip contains unsafe path (backslash): {name}")
+                    # Reject absolute paths and Windows-style drive letters
+                    if name.startswith("/") or (len(name) > 1 and name[1] == ":"):
+                        raise SetupError(f"Zip contains unsafe path (absolute): {name}")
+                    # Reject explicit parent-dir traversal
+                    if ".." in Path(name).parts:
+                        raise SetupError(f"Zip contains unsafe path (traversal): {name}")
+                    # Belt-and-suspenders: verify the resolved path stays inside tmp_path
+                    resolved = (tmp_path / name).resolve()
+                    try:
+                        resolved.relative_to(tmp_root_resolved)
+                    except ValueError:
+                        raise SetupError(f"Zip contains escaping path: {name}") from None
+
+                # Basic zip-bomb mitigation: cap uncompressed size
+                total = sum(info.file_size for info in zf.infolist())
+                if total > MAX_UNCOMPRESSED_BYTES:
+                    raise SetupError(
+                        f"Zip uncompressed size exceeds limit "
+                        f"({total:,} > {MAX_UNCOMPRESSED_BYTES:,} bytes)"
+                    )
+
                 zf.extractall(tmp_path)
         except zipfile.BadZipFile as e:
             raise SetupError(f"Corrupt zip file: {e}") from e
@@ -89,7 +110,11 @@ def import_yomitan_zip(
         title = str(index.get("title", "")).strip()
         revision = str(index.get("revision", "")).strip()
         format_version = index.get("format")
-        if not isinstance(format_version, int) or format_version < 3:
+        if (
+            not isinstance(format_version, int)
+            or isinstance(format_version, bool)
+            or format_version < 3
+        ):
             raise SetupError(
                 f"Unsupported Yomitan format version {format_version!r}; need format >= 3"
             )
@@ -140,7 +165,9 @@ def import_yomitan_zip(
                 for entry in entries:
                     if not isinstance(entry, list) or len(entry) < 6:
                         continue
-                    term = str(entry[0])
+                    term = str(entry[0]).strip() if entry[0] is not None else ""
+                    if not term:
+                        continue  # silently skip malformed entries
                     reading = str(entry[1]) if entry[1] else None
                     score = int(entry[4]) if len(entry) > 4 and entry[4] is not None else 0
                     glossary = entry[5] if isinstance(entry[5], list) else [entry[5]]
@@ -182,10 +209,16 @@ def import_yomitan_zip(
             if not overwrite:
                 raise SetupError(f"Dictionary '{dict_id}' already exists")
             backup = final_path.with_name(
-                final_path.name + ".bak-" + datetime.now().strftime("%Y%m%d%H%M%S")
+                final_path.name + ".bak-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
             )
             final_path.rename(backup)
-            shutil.move(str(staging), str(final_path))
+            try:
+                shutil.move(str(staging), str(final_path))
+            except Exception:
+                # Restore the backup so the user is not left with an empty slot
+                if not final_path.exists():
+                    backup.rename(final_path)
+                raise
             shutil.rmtree(backup, ignore_errors=True)
         else:
             shutil.move(str(staging), str(final_path))

@@ -63,7 +63,7 @@ class TestImportYomitanZip:
 
     def test_rejects_old_format_version(self, tmp_path: Path):
         zip_path = build_yomitan_zip(tmp_path / "src" / "old.zip", format_version=2)
-        with pytest.raises(SetupError, match="format"):
+        with pytest.raises(SetupError, match="Unsupported Yomitan format"):
             import_yomitan_zip(zip_path, tmp_path / "dicts")
 
     def test_rejects_missing_index_json(self, tmp_path: Path):
@@ -73,7 +73,7 @@ class TestImportYomitanZip:
         zip_path.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(zip_path, "w") as zf:
             zf.writestr("term_bank_1.json", "[]")
-        with pytest.raises(SetupError, match="index.json"):
+        with pytest.raises(SetupError, match="missing required index.json"):
             import_yomitan_zip(zip_path, tmp_path / "dicts")
 
     def test_overwrite_disabled_raises_when_dir_exists(self, tmp_path: Path):
@@ -93,14 +93,70 @@ class TestImportYomitanZip:
         assert second.dict_id == first.dict_id
         assert (dest_root / first.dict_id / "index.sqlite").exists()
 
-    def test_rejects_zip_with_path_traversal(self, tmp_path: Path):
+    @pytest.mark.parametrize(
+        "evil_name",
+        [
+            "../../../escape.json",  # POSIX traversal
+            "..\\..\\escape.json",  # Windows backslash traversal
+            "/absolute/escape.json",  # Absolute path
+            "C:\\Windows\\escape.json",  # Windows drive letter
+            "subdir/../../escape.json",  # Indirect traversal
+        ],
+    )
+    def test_rejects_zip_with_unsafe_paths(self, tmp_path: Path, evil_name: str):
         import zipfile
 
         bad = tmp_path / "evil.zip"
         bad.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(bad, "w") as zf:
-            zf.writestr("../../../escape.json", "{}")
+            zf.writestr(evil_name, "{}")
             zf.writestr("index.json", '{"title": "x", "revision": "v1", "format": 3}')
 
-        with pytest.raises(SetupError, match="unsafe"):
+        with pytest.raises(SetupError, match="unsafe|escaping"):
             import_yomitan_zip(bad, tmp_path / "dicts")
+
+    def test_cancel_check_aborts_import(self, tmp_path: Path):
+        """cancel_check returning True must raise SetupError and leave dest_root untouched."""
+        zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip")
+        dest_root = tmp_path / "dicts"
+        calls = [0]
+
+        def cancel_check() -> bool:
+            calls[0] += 1
+            return calls[0] >= 1  # cancel on the very first check
+
+        with pytest.raises(SetupError, match="cancelled"):
+            import_yomitan_zip(zip_path, dest_root, cancel_check=cancel_check)
+
+        # dest_root must not contain a partial dict folder
+        assert not any(dest_root.iterdir()) if dest_root.exists() else True
+
+    def test_merges_definition_tags_and_term_tags(self, tmp_path: Path):
+        """Yomitan term-bank entries have tags at both entry[2] and entry[7]; both must render."""
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "test.zip",
+            term_banks=[
+                [
+                    ["走る", "はしる", "v5r", "v5r", 0, ["to run"], 1, "common"],
+                ]
+            ],
+            tag_banks=[
+                [
+                    ["v5r", "expression", -3, "Godan verb -ru", 0],
+                    ["common", "frequency", 0, "Common word", 0],
+                ]
+            ],
+        )
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+        db_path = tmp_path / "dicts" / result.dict_id / "index.sqlite"
+        conn = open_readonly(db_path)
+        try:
+            content = conn.execute(
+                "SELECT content FROM entries WHERE term = ?", ("走る",)
+            ).fetchone()[0]
+            # Both tag sources must appear with their categories
+            assert '<span class="tag tag-expression">v5r</span>' in content
+            assert '<span class="tag tag-frequency">common</span>' in content
+        finally:
+            conn.close()
