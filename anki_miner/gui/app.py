@@ -23,6 +23,24 @@ from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.services.stats_service import StatsService
 
 
+def _scrub_pyinstaller_env() -> None:
+    # PyInstaller's bootloader prepends _internal/ to LD_LIBRARY_PATH so
+    # bundled libs load at startup. That value leaks into every subprocess
+    # we spawn (yt-dlp, ffmpeg), where it shadows the host's newer OpenSSL
+    # with our older bundled libcrypto and breaks system binaries linked
+    # against OpenSSL >= 3.1. Restore the pre-launch value before anything
+    # else runs.
+    # https://pyinstaller.org/en/stable/runtime-information.html
+    if not getattr(sys, "frozen", False):
+        return
+    for var in ("LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"):
+        orig = os.environ.pop(f"{var}_ORIG", None)
+        if orig is not None:
+            os.environ[var] = orig
+        else:
+            os.environ.pop(var, None)
+
+
 def _run_bundled_smoke() -> int:
     """Env-var-gated smoke path for PyInstaller bundle validation.
 
@@ -60,6 +78,8 @@ def _run_bundled_smoke() -> int:
 
 def main():
     """Launch the Anki Miner GUI application."""
+    _scrub_pyinstaller_env()
+
     # Env-var-gated smoke path (PyInstaller bundled-binary validation).
     # Runs before Qt init so headless CI can verify yt-dlp extractor
     # bundling without spinning up a display.
