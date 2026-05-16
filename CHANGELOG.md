@@ -6,10 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Removed
+- Dead-code cleanup: removed `FolderProcessor` and its same-folder pairing path, unused `HistoryService` query methods, `StatsService.get_series_stats`/`get_series_progress`, the orphan `queue_changed` signal, ~20 unused widget setters/properties, single-card `AnkiService.create_card` (batch path is canonical), service `lookup_batch` test-only methods, `DictionaryRegistry.list_dicts`, `WordListService.get_blacklist`/`get_whitelist`, `WordFilterService.filter_by_length`, orphan `config_exists`/`delete_config`/`reset_cancellation` methods, the never-raised `NoJapaneseSubsError`, and the obsolete `use_offline_dict` config field (legacy values are silently stripped on load).
+
+## [2.4.0] - 2026-05-16
+
 ### Added
 - **Multi-dictionary support**: load Yomitan-format dictionaries via Settings → Add Dictionary…. Installed dictionaries live under `~/.anki_miner/dicts/<dict_id>/index.sqlite` and are discovered on startup by `DictionaryRegistry`.
 - **Reorderable provider chain** (first-hit-wins) replacing the fixed JMdict→Jisho fallback. The chain is persisted as `dictionary_chain` in `gui_config.json` and can mix any number of indexed dictionaries with the Jisho online fallback in any order.
 - **Structured-content HTML rendering**: Yomitan structured-content entries are rendered to HTML on import so card definitions preserve Yomitan's formatting (definition lists, examples, tags) instead of falling back to plain text.
+- **Custom Anki tags** (Issue #14): a new "Custom Tags" field in Anki Settings applies whitespace-separated tags to every mined card. Defaults to `auto-mined`; empty string disables tagging. Persists as `anki_tags` in `gui_config.json`.
+- **Animated screenshots** (Issue #13): opt-in AVIF or WebP animated clips replace the static JPEG screenshot when enabled in Media Settings. Configurable clip duration, fps, height, and quality; capped by the subtitle line's duration. Requires ffmpeg built with `libsvtav1` (AVIF) or `libwebp_anim` (WebP) — missing encoder logs a clear error rather than producing broken files. New config fields: `screenshot_animated`, `screenshot_animated_format`, `screenshot_animated_clip_duration`, `screenshot_animated_fps`, `screenshot_animated_height`, `screenshot_animated_quality`.
+- **Pitch category romaji toggle**: a new Anki Settings toggle switches the `pitch_category` field between Japanese labels (平板/頭高/中高/尾高/起伏, default) and Yomitan/Lapis-compatible romaji (heiban/atamadaka/nakadaka/odaka/kifuku). Persists as `pitch_category_format` in `gui_config.json`.
+- **Multi-select in Word Curator** (Issue #12): the Word Curation dialog now supports `Ctrl+Click`, `Shift+Click`, and `Ctrl+A` for selecting multiple rows, plus bulk Accept/Reject/Blacklist shortcuts on the selection.
+- **Full-text tooltips in Analytics page** (Issue #11): hovering a truncated cell in the Analytics tables now reveals the full value via tooltip.
 
 ### Changed
 - **JMdict storage**: now uses a SQLite index at `~/.anki_miner/dicts/jmdict-english/index.sqlite` instead of parsing the XML on every startup. Legacy `~/.anki_miner/JMdict_e` is auto-migrated on first launch.
@@ -29,6 +39,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
   **Existing Yomitan dictionaries must be re-imported** to pick up the new HTML — content is rendered at import time and lives in the dictionary's `index.sqlite`.
 - **About dialog and update banner showed stale version after upgrade on Windows** (Issue #10): frozen `__version__` resolved through `importlib.metadata.version("anki-miner")`, which reads `*.dist-info/METADATA` off disk. Inno Setup overlay installs left `anki_miner-OLD.dist-info` next to the new one and filesystem enumeration picked the older entry, so 2.3.4 reported itself as 2.3.3 and re-offered its own update. `__version__` is now a hardcoded literal in `anki_miner/__init__.py` (pyproject reads it via `[tool.setuptools.dynamic]`); the Windows installer now wipes every `*.dist-info` dir before copying new files, so the same trap cannot reappear for any dependency. AppImage, `.deb`, and pip installs were never affected.
+- **`ModuleNotFoundError: No module named 'packaging'` on pipx install** (Issue #15): `packaging` was previously assumed available via setuptools, but pipx-isolated venvs strip setuptools after install, so `update_checker`'s version comparison crashed on first launch. `packaging>=21.0` is now declared as an explicit runtime dependency in `pyproject.toml`.
+- **AppImage subprocesses failed with `OpenSSL_3.3.0 not found`** (Issue #16): PyInstaller's bootloader prepended its bundled `_internal/` directory to `LD_LIBRARY_PATH`, and that value leaked into every spawned subprocess (yt-dlp, ffmpeg) where it shadowed the host's newer OpenSSL with our older bundled `libcrypto`, breaking system binaries linked against OpenSSL ≥ 3.1. `gui/app.py` now restores `LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH` from their `*_ORIG` snapshots before any subprocess can spawn.
 
 ## [2.3.4] - 2026-05-15
 

@@ -38,7 +38,7 @@ class BatchQueueWorkerThread(CancellableWorker):
 
         Args:
             batch_queue: BatchQueue containing items to process
-            config: Application configuration (will be modified per-item for offset)
+            config: Application configuration (a per-item copy with adjusted subtitle_offset is created via dataclasses.replace; the original is not mutated)
             presenter: GUI presenter for output
             progress_callback: Optional progress callback for updates
             stats_service: Optional statistics recording service

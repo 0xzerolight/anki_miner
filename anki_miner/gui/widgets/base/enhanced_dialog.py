@@ -153,14 +153,6 @@ class EnhancedDialog(QDialog):
         self._content_layout.addWidget(widget, stretch)
         return widget
 
-    def add_content_layout(self, layout) -> None:
-        """Add a layout to the content area.
-
-        Args:
-            layout: Layout to add
-        """
-        self._content_layout.addLayout(layout)
-
     def add_button(self, text: str, variant: str = "secondary", callback=None) -> QPushButton:
         """Add a button to the footer.
 
@@ -194,36 +186,12 @@ class EnhancedDialog(QDialog):
         """
         return self.add_button(text, "primary", self.accept)
 
-    def add_cancel_button(self, text: str = "Cancel") -> QPushButton:
-        """Add a cancel button that rejects the dialog.
-
-        Args:
-            text: Button text
-
-        Returns:
-            The created button
-        """
-        return self.add_button(text, "secondary", self.reject)
-
-    def set_content_spacing(self, spacing: int) -> None:
-        """Set spacing between content items.
-
-        Args:
-            spacing: Spacing in pixels
-        """
-        self._content_layout.setSpacing(spacing)
-
     def keyPressEvent(self, event) -> None:
         """Handle key press events."""
         if event.key() == Qt.Key.Key_Escape:
             self.reject()
         else:
             super().keyPressEvent(event)
-
-    @property
-    def content_layout(self) -> QVBoxLayout:
-        """Get the content layout for direct manipulation."""
-        return self._content_layout
 
     @property
     def footer_layout(self) -> QHBoxLayout:

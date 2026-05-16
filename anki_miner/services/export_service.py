@@ -54,7 +54,7 @@ class ExportService:
         Args:
             words: List of WordData to export
             output_path: Path for the output text file
-            format: One of "plain", "takoboto", or "jpdb"
+            fmt: One of "plain", "takoboto", or "jpdb"
 
         Returns:
             Number of unique words written
@@ -128,10 +128,12 @@ class ExportService:
                     str(w.frequency_rank) if w.frequency_rank is not None else "",
                 ]
                 if include_media_refs:
+                    screenshot_name = w.media.screenshot_filename if w.media else None
+                    audio_name = w.media.audio_filename if w.media else None
                     row.extend(
                         [
-                            w.screenshot_filename or "",
-                            w.audio_filename or "",
+                            screenshot_name or "",
+                            audio_name or "",
                         ]
                     )
                 row.extend(

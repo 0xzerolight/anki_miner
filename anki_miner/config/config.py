@@ -66,9 +66,6 @@ class AnkiMinerConfig:
     screenshot_animated_height: int = 720  # scale-to-height, aspect preserved
     screenshot_animated_quality: int = 30  # 0-100 user scale, mapped per codec
     subtitle_offset: float = 0.0  # Seconds to shift subtitles (+ later, - earlier)
-    # Preference order when multiple subtitle formats coexist for one video.
-    # Earliest extension wins; .ass ships richer styling/timing than .srt.
-    subtitle_format_priority: tuple[str, ...] = (".ass", ".ssa", ".srt")
 
     # Word filtering settings
     allowed_pos: list[str] = field(
@@ -88,8 +85,10 @@ class AnkiMinerConfig:
     # Dictionary settings
     #
     # `dictionary_chain` is the runtime-authoritative list of providers in
-    # priority order. Legacy fields (jmdict_path, use_offline_dict) are kept
-    # for one release so first-launch migration can synthesize the chain.
+    # priority order. `jmdict_path` is a still-live legacy field read by the
+    # JMdict XML→SQLite setup flow (settings_tab.py and main_window.py) so
+    # the UI knows where to find the user's XML and where to write the
+    # indexed DB.
     dictionary_chain: tuple["ChainEntry", ...] = field(
         default_factory=lambda: (
             ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
@@ -98,7 +97,6 @@ class AnkiMinerConfig:
     )
     jmdict_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "JMdict_e")
     dicts_root: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "dicts")
-    use_offline_dict: bool = True
     jisho_api_url: str = "https://jisho.org/api/v1/search/words"
     jisho_delay: float = 0.5  # Seconds between API calls
 
@@ -173,8 +171,6 @@ class AnkiMinerConfig:
     stats_db_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "stats.db")
 
     # --- YouTube ---
-    youtube_prefer_manual_subs: bool = True
-    youtube_warn_on_auto_captions: bool = True
     youtube_max_duration_s: int = 7200
     youtube_max_height: int = 720
     youtube_cookies_from_browser: str | None = None

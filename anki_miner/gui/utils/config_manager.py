@@ -92,24 +92,6 @@ class GUIConfigManager:
             logger.warning(f"Invalid config file, using defaults: {e}")
             return create_default_config()
 
-    @classmethod
-    def config_exists(cls) -> bool:
-        """Check if configuration file exists.
-
-        Returns:
-            True if config file exists, False otherwise
-        """
-        return cls.CONFIG_FILE.exists()
-
-    @classmethod
-    def delete_config(cls) -> None:
-        """Delete the configuration file.
-
-        This forces the application to use default configuration on next load.
-        """
-        if cls.CONFIG_FILE.exists():
-            cls.CONFIG_FILE.unlink()
-
     # Pre-v2.3.2 default for allowed_pos (lacked 代名詞). Used to detect untouched
     # legacy configs we can safely migrate to the current default.
     _LEGACY_ALLOWED_POS: frozenset[str] = frozenset({"名詞", "動詞", "形容詞", "副詞", "形状詞"})
@@ -136,24 +118,21 @@ class GUIConfigManager:
 
     @staticmethod
     def _migrate_dictionary_chain(data: dict[str, Any]) -> dict[str, Any]:
-        """Synthesize dictionary_chain when an older config lacks it.
+        """Rebuild ChainEntry instances when an existing dictionary_chain is
+        loaded as list[dict] from JSON. Missing chains fall through to the
+        dataclass defaults (jmdict-english + jisho).
 
-        Legacy state mapped to chain entries:
-          use_offline_dict=True  → jmdict-english enabled
-          use_offline_dict=False → jmdict-english disabled (kept for re-enable)
-        Jisho is always enabled in synthesized chains; users disable via UI.
-        Existing dictionary_chain (loaded as list[dict]) is rebuilt into the
-        ChainEntry dataclasses.
+        Also strips the obsolete ``use_offline_dict`` key, which was the
+        pre-chain on/off toggle for the JMdict provider.
         """
         from anki_miner.config import ChainEntry
 
+        # use_offline_dict is no longer a config field; drop it so the
+        # AnkiMinerConfig constructor doesn't choke on unknown kwargs.
+        data.pop("use_offline_dict", None)
+
         raw_chain = data.get("dictionary_chain")
         if raw_chain is None:
-            use_offline = bool(data.get("use_offline_dict", True))
-            data["dictionary_chain"] = (
-                ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=use_offline),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
-            )
             return data
 
         # Rebuild ChainEntry instances from JSON dicts

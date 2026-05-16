@@ -302,7 +302,6 @@ class TestIPlusOneFilterIntegration:
             media_temp_folder=tmp_path / "media",
             jmdict_path=tmp_path / "JMdict_e",
             max_parallel_workers=1,
-            use_offline_dict=False,
             use_frequency_data=False,
             use_pitch_accent=False,
             use_blacklist=False,

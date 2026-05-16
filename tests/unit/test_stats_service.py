@@ -52,7 +52,6 @@ class TestInitialization:
         assert overall.total_sessions == 0
 
         assert service.get_recent_sessions() == []
-        assert service.get_series_stats() == []
 
 
 class TestRecordSession:
@@ -170,48 +169,6 @@ class TestOverallStats:
         assert stats.avg_cards_per_session == 25.0
 
 
-class TestSeriesStats:
-    """Tests for per-series statistics."""
-
-    @pytest.fixture
-    def service(self, tmp_path):
-        svc = StatsService(tmp_path / "stats.db")
-        svc.load()
-        return svc
-
-    def test_groups_by_series(self, service):
-        for i in range(3):
-            service.record_session(
-                MiningSession(
-                    series_name="Spy x Family",
-                    episode_name=f"ep_{i:02d}",
-                    total_words=500,
-                    unknown_words=50,
-                    cards_created=30,
-                    elapsed_time=10.0,
-                )
-            )
-        service.record_session(
-            MiningSession(
-                series_name="Jujutsu Kaisen",
-                episode_name="ep_01",
-                total_words=600,
-                unknown_words=80,
-                cards_created=40,
-                elapsed_time=12.0,
-            )
-        )
-
-        series_list = service.get_series_stats()
-        assert len(series_list) == 2
-        spy = next(s for s in series_list if s.series_name == "Spy x Family")
-        assert spy.episodes_mined == 3
-        assert spy.total_cards_created == 90
-
-    def test_empty_database(self, service):
-        assert service.get_series_stats() == []
-
-
 class TestDifficulty:
     """Tests for difficulty recording and ranking."""
 
@@ -326,62 +283,3 @@ class TestMilestones:
     def test_milestones_returns_empty_when_not_initialized(self, tmp_path):
         service = StatsService(tmp_path / "stats.db")
         assert service.get_milestones() == []
-
-
-class TestSeriesProgress:
-    """Tests for series progress tracking."""
-
-    @pytest.fixture
-    def service(self, tmp_path):
-        svc = StatsService(tmp_path / "stats.db")
-        svc.load()
-        return svc
-
-    def test_returns_chronological_sessions(self, service):
-        for i in range(3):
-            service.record_session(
-                MiningSession(
-                    series_name="Spy x Family",
-                    episode_name=f"ep_{i:02d}",
-                    total_words=500,
-                    unknown_words=50 - i * 5,
-                    cards_created=30,
-                    elapsed_time=10.0,
-                )
-            )
-
-        progress = service.get_series_progress("Spy x Family")
-        assert len(progress) == 3
-        assert progress[0].episode_name == "ep_00"
-        assert progress[2].episode_name == "ep_02"
-
-    def test_filters_by_series_name(self, service):
-        service.record_session(
-            MiningSession(
-                series_name="Show A",
-                episode_name="ep01",
-                total_words=100,
-                unknown_words=10,
-                cards_created=5,
-            )
-        )
-        service.record_session(
-            MiningSession(
-                series_name="Show B",
-                episode_name="ep01",
-                total_words=200,
-                unknown_words=20,
-                cards_created=10,
-            )
-        )
-
-        progress = service.get_series_progress("Show A")
-        assert len(progress) == 1
-        assert progress[0].series_name == "Show A"
-
-    def test_returns_empty_for_unknown_series(self, service):
-        assert service.get_series_progress("Nonexistent") == []
-
-    def test_returns_empty_when_not_initialized(self, tmp_path):
-        service = StatsService(tmp_path / "stats.db")
-        assert service.get_series_progress("Test") == []

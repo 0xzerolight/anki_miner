@@ -104,9 +104,11 @@ class EpisodeProcessor:
         """Create an isolated temp directory for a single episode run.
 
         Each call returns a fresh, uniquely-named directory under the
-        system temp root (or under ANKI_MINER_KEEP_TEMP_DIR if the
-        user has pinned it for debugging). Cleanup happens in
-        process_episode's finally block unless ANKI_MINER_KEEP_TEMP is set.
+        system temp root. If ANKI_MINER_KEEP_TEMP is set in the
+        environment, the directory is created under
+        self.config.media_temp_folder instead so the user can inspect
+        intermediate files; in that case cleanup is also skipped by
+        process_episode's finally block.
         """
         if os.environ.get("ANKI_MINER_KEEP_TEMP"):
             base = self.config.media_temp_folder

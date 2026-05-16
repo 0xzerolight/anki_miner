@@ -50,10 +50,3 @@ class CancellableWorker(QThread):
             True if cancellation was requested
         """
         return self._cancel_event.is_set()
-
-    def reset_cancellation(self) -> None:
-        """Reset the cancellation flag.
-
-        Call this if reusing a worker instance (not recommended).
-        """
-        self._cancel_event.clear()

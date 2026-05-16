@@ -108,16 +108,13 @@ class FormPanel(QFrame):
         make_label_fit_text(label)
         return label
 
-    def add_field(
-        self, label: str, widget: QWidget, helper: str = "", stretch: bool = False
-    ) -> QWidget:
+    def add_field(self, label: str, widget: QWidget, helper: str = "") -> QWidget:
         """Add a labeled field to the form.
 
         Args:
             label: Field label text
             widget: Input widget
             helper: Optional helper text below the field
-            stretch: Whether the field should expand vertically
 
         Returns:
             The widget that was added (for chaining)
@@ -219,20 +216,6 @@ class FormPanel(QFrame):
             factor: Stretch factor
         """
         self._main_layout.addStretch(factor)
-
-    def set_title(self, title: str) -> None:
-        """Update the panel title.
-
-        Args:
-            title: New title text
-        """
-        self._title = title
-        self._title_label.setText(title)
-
-    @property
-    def form_layout(self) -> QFormLayout:
-        """Get the form layout for direct manipulation."""
-        return self._form_layout
 
     @property
     def main_layout(self) -> QVBoxLayout:

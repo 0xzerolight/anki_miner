@@ -121,11 +121,6 @@ class StatusBarWidget(QStatusBar):
         self._cards_created_session += count
         self._update_stats()
 
-    def reset_session_stats(self) -> None:
-        """Reset session statistics."""
-        self._cards_created_session = 0
-        self._update_stats()
-
     def set_system_status(self, ankiconnect: bool, ffmpeg: bool) -> None:
         """Update system status indicators.
 
@@ -169,14 +164,3 @@ class StatusBarWidget(QStatusBar):
             event: Mouse event
         """
         self.system_status_clicked.emit()
-
-    # Backward compatibility properties
-    @property
-    def anki_status_label(self):
-        """Get anki status badge (backward compatibility)."""
-        return self.anki_status_badge
-
-    @property
-    def ffmpeg_status_label(self):
-        """Get ffmpeg status badge (backward compatibility)."""
-        return self.ffmpeg_status_badge

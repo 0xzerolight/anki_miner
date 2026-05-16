@@ -10,10 +10,12 @@ from anki_miner.models import (
 
 
 class PresenterProtocol(Protocol):
-    """Interface for presenting output to user (CLI, GUI, etc).
+    """Interface for presenting output to the user.
 
-    This protocol abstracts all output operations, allowing the same
-    business logic to work with different presentation layers (CLI, GUI, web, etc).
+    This protocol abstracts all output operations so the same business
+    logic can run against different presentation layers. Two concrete
+    implementations exist: ``GUIPresenter`` (emits Qt signals to the
+    PyQt6 main window) and ``NullPresenter`` (silent, used in tests).
     """
 
     def show_info(self, message: str) -> None:

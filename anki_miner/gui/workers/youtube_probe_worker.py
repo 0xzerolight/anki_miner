@@ -7,7 +7,7 @@ probes through this minimal ``QThread`` and listens for
 
 The probe is bounded by a hard timeout (``timeout_s``, default 60s) enforced by
 the fetcher's subprocess call. A hung network no longer blocks indefinitely:
-the fetcher kills the yt-dlp process tree and raises ``YouTubeFetchError``,
+the fetcher kills the yt-dlp subprocess and raises ``YouTubeFetchError``,
 which this worker surfaces via ``probe_error``.
 """
 
@@ -23,7 +23,7 @@ class YouTubeProbeWorker(QThread):
 
     Cancellation is not supported directly, but the underlying
     ``probe_metadata`` call is bounded by ``timeout_s`` (default 60s). If the
-    probe hangs on the network, the fetcher kills the subprocess tree and
+    probe hangs on the network, the fetcher kills the yt-dlp subprocess and
     raises ``YouTubeFetchError``, which is re-emitted as ``probe_error``. The
     main window's close handler can therefore safely call :meth:`quit` +
     :meth:`wait` knowing the worker will exit within the timeout window.
@@ -47,7 +47,7 @@ class YouTubeProbeWorker(QThread):
             parent: Optional parent QObject.
             timeout_s: Hard upper bound on the probe subprocess, in seconds.
                 Forwarded to ``YouTubeFetcherService.probe_metadata``. On
-                timeout, the fetcher kills the yt-dlp process tree and raises
+                timeout, the fetcher kills the yt-dlp subprocess and raises
                 ``YouTubeFetchError``.
         """
         super().__init__(parent)  # type: ignore[arg-type]
