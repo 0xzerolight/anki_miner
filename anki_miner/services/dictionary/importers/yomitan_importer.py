@@ -20,7 +20,10 @@ from anki_miner.services.dictionary.storage import (
     create_index,
     write_meta,
 )
-from anki_miner.services.dictionary.yomitan_renderer import render_glossary_entry
+from anki_miner.services.dictionary.yomitan_renderer import (
+    dict_media_safe_basename,
+    render_glossary_entry,
+)
 
 ProgressFn = Callable[[int, int, str], None]
 
@@ -152,6 +155,11 @@ def import_yomitan_zip(
         create_index(db_path)
 
         total_entries = 0
+        # Collects dict-internal asset paths (e.g. "sankoku8/svg-accent/X.svg")
+        # referenced by `<img>` nodes during structured-content rendering. After
+        # rows are inserted we copy each file out of the zip so AnkiService can
+        # later upload it via AnkiConnect storeMediaFile.
+        media_paths: set[str] = set()
 
         def rows() -> Any:
             nonlocal total_entries
@@ -175,7 +183,13 @@ def import_yomitan_zip(
                     definition_tags = str(entry[2]).split() if len(entry) > 2 and entry[2] else []
                     extra_term_tags = str(entry[7]).split() if len(entry) > 7 and entry[7] else []
                     all_tags = definition_tags + extra_term_tags
-                    content = render_glossary_entry(glossary, all_tags, tag_bank)
+                    content = render_glossary_entry(
+                        glossary,
+                        all_tags,
+                        tag_bank,
+                        dict_id=dict_id,
+                        media_collector=media_paths,
+                    )
                     total_entries += 1
                     yield DictRow(
                         term=term,
@@ -188,6 +202,8 @@ def import_yomitan_zip(
                     progress(file_idx, len(term_files), f"Imported {term_file.name}")
 
         bulk_insert(db_path, rows())
+
+        _copy_dict_media(tmp_path, staging / "media", media_paths)
 
         write_meta(
             db_path,
@@ -237,6 +253,36 @@ def import_yomitan_zip(
             source_revision=revision,
             entry_count=total_entries,
         )
+
+
+def _copy_dict_media(zip_root: Path, dest: Path, rel_paths: set[str]) -> None:
+    """Copy referenced asset files out of the unzipped Yomitan tree.
+
+    For each path encountered by the renderer (e.g. `sankoku8/svg-accent/X.svg`),
+    we copy the file to ``dest/<flattened-basename>`` so AnkiService can later
+    locate it via ``<DICTS_ROOT>/<dict_id>/media/<flattened-basename>``. The
+    flattened form matches what the renderer wrote into the Anki `<img src>`,
+    so this is a stable, reversible mapping.
+    """
+    if not rel_paths:
+        return
+    dest.mkdir(parents=True, exist_ok=True)
+    zip_root_resolved = zip_root.resolve()
+    for rel in rel_paths:
+        safe = dict_media_safe_basename(rel)
+        if safe is None:
+            continue
+        src = zip_root / rel
+        # Path traversal guard — the rel string came from inside structured
+        # content (dictionary-supplied data); never trust it implicitly.
+        try:
+            src_resolved = src.resolve()
+            src_resolved.relative_to(zip_root_resolved)
+        except (OSError, ValueError):
+            continue
+        if not src_resolved.is_file():
+            continue
+        shutil.copy2(src_resolved, dest / safe)
 
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")

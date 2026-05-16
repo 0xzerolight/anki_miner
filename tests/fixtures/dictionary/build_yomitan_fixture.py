@@ -16,8 +16,14 @@ def build_yomitan_zip(
     term_banks: list[list[Any]] | None = None,
     tag_banks: list[list[Any]] | None = None,
     format_version: int = 3,
+    media_files: dict[str, bytes] | None = None,
 ) -> Path:
-    """Create a minimal Yomitan zip at zip_path. Returns zip_path."""
+    """Create a minimal Yomitan zip at zip_path. Returns zip_path.
+
+    `media_files` maps zip-relative paths (e.g. ``svg-accent/x.svg``) to their
+    raw bytes. Useful for testing the asset-extraction path used by
+    monolingual dictionaries with bundled images.
+    """
     if term_banks is None:
         term_banks = [
             [
@@ -47,4 +53,7 @@ def build_yomitan_zip(
             zf.writestr(f"term_bank_{i}.json", json.dumps(bank))
         for i, bank in enumerate(tag_banks, 1):
             zf.writestr(f"tag_bank_{i}.json", json.dumps(bank))
+        if media_files:
+            for rel_path, data in media_files.items():
+                zf.writestr(rel_path, data)
     return zip_path
