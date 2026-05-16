@@ -87,12 +87,18 @@ class WordCurationDialog(QDialog):
         controls_layout.addSpacing(16)
 
         # Select All / Deselect All
+        _bulk_tooltip = (
+            "Acts on highlighted rows when 2 or more are selected "
+            "(Ctrl+Click or Shift+Click to select). Otherwise acts on all visible rows."
+        )
         self.select_all_button = ModernButton("Select All", variant="secondary")
         self.select_all_button.clicked.connect(self._select_all)
+        self.select_all_button.setToolTip(_bulk_tooltip)
         controls_layout.addWidget(self.select_all_button)
 
         self.deselect_all_button = ModernButton("Deselect All", variant="secondary")
         self.deselect_all_button.clicked.connect(self._deselect_all)
+        self.deselect_all_button.setToolTip(_bulk_tooltip)
         controls_layout.addWidget(self.deselect_all_button)
 
         controls_layout.addStretch()
@@ -112,7 +118,7 @@ class WordCurationDialog(QDialog):
         )
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.table.setSortingEnabled(True)
 
         header_view = self.table.horizontalHeader()
@@ -154,9 +160,9 @@ class WordCurationDialog(QDialog):
 
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts for word curation."""
-        # Space: Toggle selection of current row (scoped to table)
+        # Space: Toggle checkbox of selected rows (or current row if none selected)
         space_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Space), self.table)
-        space_shortcut.activated.connect(self._toggle_current_row)
+        space_shortcut.activated.connect(self._toggle_selected_rows)
 
         # Ctrl+A: Select all words (scoped to table so it doesn't override text selection in search)
         select_all_shortcut = QShortcut(QKeySequence("Ctrl+A"), self.table)
@@ -252,40 +258,82 @@ class WordCurationDialog(QDialog):
                     break
             self.table.setRowHidden(row, not visible)
 
+    def _target_rows(self) -> list[int]:
+        """Return rows for bulk actions: highlighted rows if 2+, else all visible.
+
+        Uses the QTableWidget multi-row selection (Ctrl/Shift+Click) when the
+        user has selected at least two rows. Falls back to every visible row so
+        legacy single-click + Select All behaviour is preserved.
+        """
+        selection_model = self.table.selectionModel()
+        if selection_model is not None:
+            selected = sorted(
+                {
+                    index.row()
+                    for index in selection_model.selectedRows()
+                    if not self.table.isRowHidden(index.row())
+                }
+            )
+            if len(selected) >= 2:
+                return selected
+        return [row for row in range(self.table.rowCount()) if not self.table.isRowHidden(row)]
+
     def _select_all(self) -> None:
-        """Check all visible rows."""
+        """Check rows in the current bulk-action target set."""
         self.table.blockSignals(True)
-        for row in range(self.table.rowCount()):
-            if not self.table.isRowHidden(row):
-                item = self.table.item(row, 0)
-                if item:
-                    item.setCheckState(Qt.CheckState.Checked)
+        for row in self._target_rows():
+            item = self.table.item(row, 0)
+            if item:
+                item.setCheckState(Qt.CheckState.Checked)
         self.table.blockSignals(False)
         self._update_word_count()
 
     def _deselect_all(self) -> None:
-        """Uncheck all visible rows."""
+        """Uncheck rows in the current bulk-action target set."""
         self.table.blockSignals(True)
-        for row in range(self.table.rowCount()):
-            if not self.table.isRowHidden(row):
-                item = self.table.item(row, 0)
-                if item:
-                    item.setCheckState(Qt.CheckState.Unchecked)
+        for row in self._target_rows():
+            item = self.table.item(row, 0)
+            if item:
+                item.setCheckState(Qt.CheckState.Unchecked)
         self.table.blockSignals(False)
         self._update_word_count()
 
-    def _toggle_current_row(self) -> None:
-        """Toggle checkbox of the currently selected row."""
-        row = self.table.currentRow()
-        if row < 0:
+    def _toggle_selected_rows(self) -> None:
+        """Toggle checkboxes for highlighted rows, or the current row when none.
+
+        If any target row is unchecked, all flip to Checked; otherwise all flip
+        to Unchecked. Falls back to the focused row when the selection is empty
+        so Space on a single-cursor view still toggles that one row.
+        """
+        selection_model = self.table.selectionModel()
+        rows: list[int] = []
+        if selection_model is not None:
+            rows = sorted(
+                {
+                    index.row()
+                    for index in selection_model.selectedRows()
+                    if not self.table.isRowHidden(index.row())
+                }
+            )
+        if not rows:
+            current = self.table.currentRow()
+            if current < 0 or self.table.isRowHidden(current):
+                return
+            rows = [current]
+
+        items = [item for row in rows if (item := self.table.item(row, 0)) is not None]
+        if not items:
             return
-        item = self.table.item(row, 0)
-        if item is None:
-            return
-        if item.checkState() == Qt.CheckState.Checked:
-            item.setCheckState(Qt.CheckState.Unchecked)
-        else:
-            item.setCheckState(Qt.CheckState.Checked)
+        any_unchecked = any(item.checkState() != Qt.CheckState.Checked for item in items)
+        new_state = Qt.CheckState.Checked if any_unchecked else Qt.CheckState.Unchecked
+
+        self.table.blockSignals(True)
+        for item in items:
+            item.setCheckState(new_state)
+        self.table.blockSignals(False)
+        self._update_word_count()
+
+    _toggle_current_row = _toggle_selected_rows
 
     def _update_word_count(self) -> None:
         """Update the word count label."""

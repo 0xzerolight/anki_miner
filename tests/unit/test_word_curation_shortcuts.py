@@ -6,8 +6,8 @@ logic invoked by keyboard shortcuts.
 """
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QItemSelection, QItemSelectionModel, Qt
+from PyQt6.QtWidgets import QApplication, QTableWidget
 
 from anki_miner.models import TokenizedWord
 
@@ -146,6 +146,100 @@ class TestWordCurationDialogSearch:
         selected = dialog.get_selected_words()
         assert len(selected) == 1
         assert selected[0].lemma == "食べる"
+
+
+def _select_rows(dialog, rows: list[int]) -> None:
+    """Highlight the given rows in the dialog's table (issue #12 multi-select)."""
+    selection_model = dialog.table.selectionModel()
+    assert selection_model is not None
+    selection_model.clearSelection()
+    if not rows:
+        return
+    model = dialog.table.model()
+    last_col = dialog.table.columnCount() - 1
+    selection = QItemSelection()
+    for row in rows:
+        top_left = model.index(row, 0)
+        bottom_right = model.index(row, last_col)
+        selection.select(top_left, bottom_right)
+    selection_model.select(selection, QItemSelectionModel.SelectionFlag.Select)
+
+
+class TestMultiRowSelection:
+    """Issue #12 — Ctrl+Click / Shift+Click multi-row selection in the curator."""
+
+    def test_extended_selection_mode_enabled(self, dialog):
+        """The table must allow Ctrl/Shift+Click multi-row selection."""
+        assert dialog.table.selectionMode() == QTableWidget.SelectionMode.ExtendedSelection
+
+    def test_select_all_acts_on_selection_when_2plus_selected(self, dialog):
+        """With 2+ rows highlighted, Select All checks only those rows."""
+        dialog._deselect_all()
+        _select_rows(dialog, [0, 2])
+        dialog._select_all()
+
+        states = [dialog.table.item(row, 0).checkState() for row in range(dialog.table.rowCount())]
+        assert states[0] == Qt.CheckState.Checked
+        assert states[1] == Qt.CheckState.Unchecked
+        assert states[2] == Qt.CheckState.Checked
+
+    def test_deselect_all_acts_on_selection_when_2plus_selected(self, dialog):
+        """With 2+ rows highlighted, Deselect All unchecks only those rows."""
+        # Start with all checked (default), then highlight rows 0 and 1.
+        _select_rows(dialog, [0, 1])
+        dialog._deselect_all()
+
+        states = [dialog.table.item(row, 0).checkState() for row in range(dialog.table.rowCount())]
+        assert states[0] == Qt.CheckState.Unchecked
+        assert states[1] == Qt.CheckState.Unchecked
+        assert states[2] == Qt.CheckState.Checked
+
+    def test_select_all_falls_back_to_visible_when_no_selection(self, dialog):
+        """No highlighted rows -> Select All affects every visible row."""
+        dialog._deselect_all()
+        _select_rows(dialog, [])
+        dialog._select_all()
+        assert len(dialog.get_selected_words()) == 3
+
+    def test_select_all_falls_back_to_visible_when_single_row_selected(self, dialog):
+        """One highlighted row is below the 2+ threshold -> all visible rows."""
+        dialog._deselect_all()
+        _select_rows(dialog, [1])
+        dialog._select_all()
+        # All three visible rows should be checked, not just the highlighted one.
+        assert len(dialog.get_selected_words()) == 3
+
+    def test_toggle_selected_rows_flips_all_to_checked_when_any_unchecked(self, dialog):
+        """Mixed states with 2+ selected rows flip together toward Checked first."""
+        # Start: all checked. Uncheck row 1 individually so selection is mixed.
+        dialog.table.item(1, 0).setCheckState(Qt.CheckState.Unchecked)
+        _select_rows(dialog, [0, 1, 2])
+        dialog._toggle_selected_rows()
+        for row in (0, 1, 2):
+            assert dialog.table.item(row, 0).checkState() == Qt.CheckState.Checked
+
+    def test_toggle_selected_rows_flips_all_to_unchecked_when_all_checked(self, dialog):
+        """All target rows already checked -> next toggle unchecks them."""
+        _select_rows(dialog, [0, 1, 2])
+        dialog._toggle_selected_rows()
+        for row in (0, 1, 2):
+            assert dialog.table.item(row, 0).checkState() == Qt.CheckState.Unchecked
+
+    def test_selection_respects_search_filter(self, dialog):
+        """Hidden rows in the selection must not be acted on by bulk handlers."""
+        dialog._deselect_all()
+        # Hide rows 1 and 2 by searching for the lemma in row 0.
+        dialog._on_search_changed("食べる")
+        # Highlight every row (incl. hidden) and run Select All.
+        _select_rows(dialog, [0, 1, 2])
+        dialog._select_all()
+        dialog._on_search_changed("")
+
+        states = [dialog.table.item(row, 0).checkState() for row in range(dialog.table.rowCount())]
+        # Only the visible row (0 -> "食べる") should have been checked.
+        assert states[0] == Qt.CheckState.Checked
+        assert states[1] == Qt.CheckState.Unchecked
+        assert states[2] == Qt.CheckState.Unchecked
 
 
 class TestFrequencyColumnSort:
