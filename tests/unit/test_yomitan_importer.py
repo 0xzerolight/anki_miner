@@ -35,8 +35,9 @@ class TestImportYomitanZip:
                 "SELECT content FROM entries WHERE term = ?", ("食べる",)
             ).fetchone()[0]
             assert "to eat" in content
-            assert 'class="tag tag-expression"' in content
-            assert ">v1</span>" in content
+            # Tag badges moved to provider-side composition (Task 4); content
+            # is now glossary-only items. Task 3 will populate DictRow.tags.
+            assert '<li class="gloss-item">' in content
         finally:
             conn.close()
 
@@ -193,9 +194,14 @@ class TestImportYomitanZip:
 
         expected_src = f'src="{result.dict_id}__svg_accent.svg"'
         assert expected_src in content
-        assert 'class="anki-miner-dict-media"' in content
-        # The dict-internal path must NOT leak into Anki.
-        assert "svg/accent.svg" not in content
+        # Renderer now emits the envelope; class is space-joined with the
+        # `gloss-image` marker but `anki-miner-dict-media` still rides along
+        # so AnkiService._DICT_MEDIA_IMG_RE picks it up.
+        assert "anki-miner-dict-media" in content
+        assert 'class="gloss-image anki-miner-dict-media"' in content
+        # The dict-internal path must NOT leak into Anki via src; it does
+        # however now appear in the envelope's `data-path` for round-tripping.
+        assert 'src="svg/accent.svg"' not in content
 
     def test_no_media_folder_when_no_assets_referenced(self, tmp_path: Path):
         zip_path = build_yomitan_zip(tmp_path / "src" / "plain.zip")
@@ -204,8 +210,14 @@ class TestImportYomitanZip:
         media_dir = dest_root / result.dict_id / "media"
         assert not media_dir.exists()
 
-    def test_merges_definition_tags_and_term_tags(self, tmp_path: Path):
-        """Yomitan term-bank entries have tags at both entry[2] and entry[7]; both must render."""
+    def test_glossary_rendered_into_content(self, tmp_path: Path):
+        """Importer must store the rendered glossary HTML for the term's senses.
+
+        Tag badges are now provider-side composition (Task 4) and no longer
+        appear in `content`. Task 3 will populate `DictRow.tags` with the
+        merged tag list; this test only guards that glossary text survives
+        the new renderer.
+        """
         zip_path = build_yomitan_zip(
             tmp_path / "src" / "test.zip",
             term_banks=[
@@ -228,10 +240,10 @@ class TestImportYomitanZip:
             content = conn.execute(
                 "SELECT content FROM entries WHERE term = ?", ("走る",)
             ).fetchone()[0]
-            # Both tag sources must appear with their categories
-            assert 'class="tag tag-expression"' in content
-            assert ">v5r</span>" in content
-            assert 'class="tag tag-frequency"' in content
-            assert ">common</span>" in content
+            assert '<li class="gloss-item">' in content
+            assert "to run" in content
+            # Renderer no longer emits tag badges or tag-list wrapper.
+            assert "tag-list" not in content
+            assert 'class="tag ' not in content
         finally:
             conn.close()

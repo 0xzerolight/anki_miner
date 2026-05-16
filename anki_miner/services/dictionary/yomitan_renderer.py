@@ -52,7 +52,6 @@ _ALLOWED_TAGS = frozenset(
 )
 _VOID_TAGS = frozenset({"br", "img"})
 
-_WHITESPACE_RE = re.compile(r"\s+")
 _CAMEL_RE = re.compile(r"([a-z0-9])([A-Z])")
 
 # Yomitan structured-content trees are user-supplied data. Cap recursion so a
@@ -218,6 +217,11 @@ def _is_safe_url(url: str) -> bool:
 # extracted at import time. AnkiService scans for this class to upload the file
 # via AnkiConnect storeMediaFile so the image resolves in the Anki webview.
 DICT_MEDIA_CLASS = "anki-miner-dict-media"
+
+# CSS class on every `<img>` we emit in the envelope. Card templates style this
+# to size/cap dictionary art; the marker class above lives alongside it for
+# dict-bundled assets.
+_GLOSS_IMAGE_CLASS = "gloss-image"
 
 
 def _resolve_img_src(
@@ -414,7 +418,14 @@ def structured_content_to_html(
     if tag not in _ALLOWED_TAGS:
         tag = "span"
 
-    attrs = _render_attrs(node, tag, dict_id=dict_id, media_collector=media_collector)
+    # `<img>` takes the envelope path: the resolved tag is wrapped in
+    # <a class="gloss-image-link"><span class="gloss-image-container">…</span></a>
+    # so downstream CSS can layer captions/links over the bitmap. The bare
+    # `<img>` (no src) shortcut still emits an empty tag for safety.
+    if tag == "img":
+        return _render_img(node, dict_id=dict_id, media_collector=media_collector)
+
+    attrs = _render_attrs(node, tag)
 
     if tag in _VOID_TAGS:
         return f"<{tag}{attrs}>"
@@ -428,14 +439,70 @@ def structured_content_to_html(
     return f"<{tag}{attrs}>{inner}</{tag}>"
 
 
-def _render_attrs(
+def _render_img(
     node: dict[str, Any],
-    tag: str,
     *,
-    dict_id: str | None = None,
-    media_collector: set[str] | None = None,
+    dict_id: str | None,
+    media_collector: set[str] | None,
 ) -> str:
+    """Render an `<img>` SC node, wrapped in the gloss-image envelope when
+    a src can be resolved.
+
+    Without a resolvable src (e.g. relative path with no dict_id, traversal
+    attempt, blocked scheme), we still emit a bare `<img>` so the upstream
+    contract — "img nodes always produce something" — is preserved. The
+    envelope only appears when there's actually an image to show.
+    """
+    img_src, dict_media = _resolve_img_src(
+        node.get("path"), dict_id=dict_id, media_collector=media_collector
+    )
+
+    # Per-tag passthroughs that belong on the inner <img>.
+    extras: list[str] = []
+    string_attrs = _TAG_STRING_ATTRS.get("img", frozenset())
+    int_attrs = _TAG_INT_ATTRS.get("img", frozenset())
+    for raw_key, value in node.items():
+        if not isinstance(raw_key, str):
+            continue
+        attr = _ATTR_KEY_ALIASES.get(raw_key, raw_key.lower())
+        if attr in string_attrs and isinstance(value, str):
+            stripped = value.strip()
+            if stripped and len(stripped) <= 256 and not any(ord(c) < 0x20 for c in stripped):
+                extras.append(f'{attr}="{escape(stripped, quote=True)}"')
+        elif attr in int_attrs:
+            try:
+                ival = int(value)
+            except (TypeError, ValueError):
+                continue
+            if 1 <= ival <= _INT_ATTR_MAX:
+                extras.append(f'{attr}="{ival}"')
+
+    if img_src is None:
+        # No envelope — nothing to point at. Emit a bare <img> with extras
+        # only (no src, no class).
+        tail = (" " + " ".join(extras)) if extras else ""
+        return f"<img{tail}>"
+
+    img_class = f"{_GLOSS_IMAGE_CLASS} {DICT_MEDIA_CLASS}" if dict_media else _GLOSS_IMAGE_CLASS
+    extras_str = (" " + " ".join(extras)) if extras else ""
+    raw_path = node.get("path")
+    data_path = escape(raw_path, quote=True) if isinstance(raw_path, str) else ""
+    return (
+        f'<a class="gloss-image-link" data-path="{data_path}">'
+        f'<span class="gloss-image-container">'
+        f'<img class="{img_class}" src="{escape(img_src, quote=True)}"{extras_str}>'
+        f"</span></a>"
+    )
+
+
+def _render_attrs(node: dict[str, Any], tag: str) -> str:
     parts: list[str] = []
+
+    # Every element carries a `gloss-sc-<tag>` hook so card templates can
+    # target Yomitan-sourced markup without a runtime walk. For unknown tags
+    # the node has already been folded to <span>, so the class lands as
+    # `gloss-sc-span` (matching the fallback).
+    parts.append(f'class="gloss-sc-{tag}"')
 
     # data: {key: value} → data-key="value" HTML attrs (matches Yomitan spec).
     data = node.get("data")
@@ -462,18 +529,10 @@ def _render_attrs(
     if isinstance(href, str) and tag == "a" and _is_safe_url(href):
         parts.append(f'href="{escape(href, quote=True)}"')
 
-    if tag == "img":
-        img_src, dict_media = _resolve_img_src(
-            node.get("path"), dict_id=dict_id, media_collector=media_collector
-        )
-        if img_src is not None:
-            parts.append(f'src="{escape(img_src, quote=True)}"')
-            if dict_media:
-                parts.append(f'class="{DICT_MEDIA_CLASS}"')
-
-    # Per-tag HTML attribute passthrough (title on most, alt/width/height on
-    # img, colspan/rowspan on td/th, open on details). Keys arrive in camelCase
-    # from Yomitan; aliases get normalized.
+    # Per-tag HTML attribute passthrough (title on most, colspan/rowspan on
+    # td/th, open on details). `<img>` takes a separate path entirely — see
+    # `_render_img` — so img attrs aren't handled here. Keys arrive in
+    # camelCase from Yomitan; aliases get normalized.
     string_attrs = _TAG_STRING_ATTRS.get(tag, frozenset())
     int_attrs = _TAG_INT_ATTRS.get(tag, frozenset())
     bool_attrs = _TAG_BOOL_ATTRS.get(tag, frozenset())
@@ -496,68 +555,42 @@ def _render_attrs(
         elif attr in bool_attrs and value:
             parts.append(attr)
 
-    return (" " + " ".join(parts)) if parts else ""
-
-
-# Inline style on tag badges so they read as separated chips even when the
-# Anki card template ships no CSS for `.tag`. Padding + inline-block prevent
-# the smushed-together "nouncolloquialpoliteabbr" rendering.
-_TAG_BADGE_STYLE = (
-    "display: inline-block; margin: 0 0.25em 0.15em 0; padding: 0 0.4em; "
-    "border: 1px solid currentColor; border-radius: 0.25em; "
-    "font-size: 0.85em; line-height: 1.4;"
-)
+    return " " + " ".join(parts)
 
 
 def render_glossary_entry(
     glossary: list[Any],
-    term_tags: list[str] | None = None,
-    tag_bank: dict[str, dict[str, Any]] | None = None,
     *,
     dict_id: str | None = None,
     media_collector: set[str] | None = None,
 ) -> str:
-    """Render a Yomitan term-bank entry's glossary array + tags to HTML.
+    """Render a Yomitan term-bank glossary array to `<li class="gloss-item">` items.
+
+    Pure SC-tree → HTML translator. Each glossary item becomes one
+    `<li class="gloss-item"><span class="gloss-content">…</span></li>`.
+    Plain strings are HTML-escaped and dropped into the inner span as text;
+    structured-content nodes go through `structured_content_to_html`. The
+    caller is responsible for wrapping the result in `<ul>`/`<ol>` or any
+    dictionary-level chrome — this function emits items only.
 
     Args:
         glossary: The 6th element of a term-bank tuple. Each item is a plain
                   string or a structured-content node.
-        term_tags: Tag names (space-separated string is split by Yomitan but
-                   we accept a pre-split list).
-        tag_bank: Mapping from tag name to tag metadata (category, notes).
-                  When omitted, tags render as bare badges.
+        dict_id: Forwarded to the SC renderer; rewrites dict-internal `<img>`
+                 paths to Anki-media filenames.
+        media_collector: Forwarded to the SC renderer; collects relative
+                         asset paths so the importer can extract them.
 
     Returns:
-        Concatenated HTML: tag badges followed by glossary entries.
+        Concatenated `<li>` HTML. Empty input → empty string.
     """
     parts: list[str] = []
-
-    if term_tags:
-        badges: list[str] = []
-        for tag_name in term_tags:
-            meta = (tag_bank or {}).get(tag_name) or {}
-            if not isinstance(meta, dict):
-                meta = {}
-            category = meta.get("category", "")
-            if isinstance(category, str) and category:
-                safe_category = _WHITESPACE_RE.sub("-", category)
-                css_class = f"tag tag-{safe_category}"
-            else:
-                css_class = "tag"
-            badges.append(
-                f'<span class="{escape(css_class, quote=True)}" '
-                f'style="{escape(_TAG_BADGE_STYLE, quote=True)}">'
-                f"{escape(tag_name)}</span>"
-            )
-        if badges:
-            parts.append('<div class="tag-list">' + "".join(badges) + "</div>")
-
     for item in glossary:
         if isinstance(item, str):
-            parts.append(f"<div>{escape(item)}</div>")
+            inner = escape(item)
         else:
-            parts.append(
-                structured_content_to_html(item, dict_id=dict_id, media_collector=media_collector)
+            inner = structured_content_to_html(
+                item, dict_id=dict_id, media_collector=media_collector
             )
-
+        parts.append(f'<li class="gloss-item"><span class="gloss-content">{inner}</span></li>')
     return "".join(parts)
