@@ -1,8 +1,10 @@
 """Anki configuration settings panel."""
 
+from typing import Literal, cast
+
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit
+from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QLineEdit, QWidget
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import FormPanel, StatusBadge, make_label_fit_text
@@ -261,7 +263,22 @@ class AnkiSettingsPanel(FormPanel):
         self._add_simple_field(
             "Pitch Category Field",
             self.pitch_category_field_input,
-            "Anki field that stores the pitch category (平板/頭高/中高/尾高)",
+            "Anki field that stores the pitch category label",
+        )
+
+        # Pitch Category format (jp vs romaji)
+        self.pitch_category_format_combo = QComboBox()
+        self.pitch_category_format_combo.addItem("Japanese (平板/頭高/中高/尾高/起伏)", "jp")
+        self.pitch_category_format_combo.addItem(
+            "Romaji (heiban/atamadaka/nakadaka/odaka/kifuku)", "romaji"
+        )
+        self.pitch_category_format_combo.setToolTip(
+            "Output style for the pitch category label. Romaji matches Yomitan/Lapis CSS classes."
+        )
+        self._add_simple_field(
+            "Pitch Category Format",
+            self.pitch_category_format_combo,
+            "Romaji for Yomitan/Lapis CSS, Japanese for legacy notes",
         )
 
         # Frequency field
@@ -335,7 +352,7 @@ class AnkiSettingsPanel(FormPanel):
             self.add_widget(helper)
 
     def _add_simple_field(
-        self, label_text: str, input_widget: QLineEdit, helper_text: str = ""
+        self, label_text: str, input_widget: QWidget, helper_text: str = ""
     ) -> None:
         """Add a simple labeled field to the main layout.
 
@@ -542,3 +559,17 @@ class AnkiSettingsPanel(FormPanel):
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.frequency_field_input.setText(fields.get("frequency", ""))
+
+    def get_pitch_category_format(self) -> Literal["jp", "romaji"]:
+        """Return the selected pitch category format ("jp" or "romaji")."""
+        value = self.pitch_category_format_combo.currentData()
+        if value == "romaji":
+            return "romaji"
+        return "jp"
+
+    def set_pitch_category_format(self, value: str) -> None:
+        """Select the pitch category format dropdown by value."""
+        target = cast(Literal["jp", "romaji"], value if value in ("jp", "romaji") else "jp")
+        index = self.pitch_category_format_combo.findData(target)
+        if index >= 0:
+            self.pitch_category_format_combo.setCurrentIndex(index)

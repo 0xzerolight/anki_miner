@@ -174,6 +174,7 @@ class SettingsTab(QWidget):
         # Pitch accent settings
         self.dictionary_panel.pitch_accent_selector.set_path(str(self.config.pitch_accent_path))
         self.dictionary_panel.use_pitch_accent_checkbox.setChecked(self.config.use_pitch_accent)
+        self.anki_panel.set_pitch_category_format(self.config.pitch_category_format)
 
         # Frequency settings
         self.filtering_panel.frequency_selector.set_path(str(self.config.frequency_list_path))
@@ -264,6 +265,7 @@ class SettingsTab(QWidget):
                 else Path("")
             ),
             use_pitch_accent=self.dictionary_panel.use_pitch_accent_checkbox.isChecked(),
+            pitch_category_format=self.anki_panel.get_pitch_category_format(),
             # Frequency settings
             frequency_list_path=(
                 Path(self.filtering_panel.frequency_selector.get_path())

@@ -21,6 +21,7 @@ class TokenizedWord:
     sentence_furigana: str = ""  # Furigana for sentence, e.g. "日本語[にほんご]を食べる[たべる]。"
     sentence_reading: str = ""  # Plain kana reading of sentence, e.g. "にほんごをたべる。"
     frequency_rank: int | None = None  # Word frequency rank (1 = most common)
+    pos: str | None = None  # MeCab pos1 (動詞/形容詞/名詞/...) — used for kifuku/odaka distinction
 
     def __str__(self) -> str:
         return f"{self.lemma} ({self.reading})"

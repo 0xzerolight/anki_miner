@@ -61,6 +61,24 @@ class TestClassifyPitch:
     def test_odaka_two_mora(self):
         assert classify_pitch(2, 2) == "尾高"
 
+    def test_kifuku_verb(self):
+        # 動詞 with drop on last mora → 起伏 (kifuku)
+        assert classify_pitch(3, 3, pos="動詞") == "起伏"
+
+    def test_kifuku_i_adjective(self):
+        # 形容詞 with drop on last mora → 起伏 (kifuku)
+        assert classify_pitch(2, 2, pos="形容詞") == "起伏"
+
+    def test_odaka_noun_explicit(self):
+        # 名詞 with drop on last mora → 尾高 (odaka)
+        assert classify_pitch(3, 3, pos="名詞") == "尾高"
+
+    def test_verbal_pos_only_affects_final_mora(self):
+        # Non-final drop position keeps the standard category regardless of POS
+        assert classify_pitch(1, 3, pos="動詞") == "頭高"
+        assert classify_pitch(2, 3, pos="動詞") == "中高"
+        assert classify_pitch(0, 3, pos="動詞") == "平板"
+
 
 class TestLoad:
     """Tests for loading pitch accent data."""
@@ -313,19 +331,58 @@ class TestLookupDetailed:
         assert pos is None
         assert cat is None
 
-    def test_multi_pattern_uses_first(self, tmp_path):
+    def test_multi_pattern_emits_all_categories(self, tmp_path):
         # Use TSV to preserve comma in pattern (like real Kanjium file)
         tsv_file = tmp_path / "pitch.tsv"
         tsv_file.write_text("いちがつ\t１月\t4,0\n", encoding="utf-8")
         service = PitchAccentService(tsv_file)
         service.load()
 
-        pos, cat = service.lookup_detailed("１月", "いちがつ")
-        assert pos == "4,0"
-        # First pattern is 4, いちがつ = 4 mora → 尾高
-        assert cat == "尾高"
+        position, cat = service.lookup_detailed("１月", "いちがつ")
+        assert position == "4,0"
+        # いちがつ = 4 mora → 4 = 尾高, 0 = 平板
+        assert cat == "尾高,平板"
 
-    def test_batch_detailed(self, loaded_service):
+    def test_multi_pattern_romaji(self, tmp_path):
+        tsv_file = tmp_path / "pitch.tsv"
+        tsv_file.write_text("いちがつ\t１月\t4,0\n", encoding="utf-8")
+        service = PitchAccentService(tsv_file)
+        service.load()
+
+        position, cat = service.lookup_detailed("１月", "いちがつ", fmt="romaji")
+        assert position == "4,0"
+        assert cat == "odaka,heiban"
+
+    def test_romaji_format_basic_categories(self, tmp_path):
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text(
+            "たべる,食べる,0\n"  # heiban
+            "おとこ,男,3\n"  # odaka (3 mora, pos=3, noun)
+            "のむ,飲む,1\n",  # atamadaka
+            encoding="utf-8",
+        )
+        service = PitchAccentService(csv_file)
+        service.load()
+
+        _, heiban = service.lookup_detailed("食べる", "たべる", fmt="romaji")
+        _, odaka = service.lookup_detailed("男", "おとこ", pos="名詞", fmt="romaji")
+        _, atamadaka = service.lookup_detailed("飲む", "のむ", fmt="romaji")
+        assert heiban == "heiban"
+        assert odaka == "odaka"
+        assert atamadaka == "atamadaka"
+
+    def test_kifuku_romaji_for_verb(self, tmp_path):
+        # 走る is a 動詞 with drop at mora_count (3) → kifuku in romaji
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text("はしる,走る,3\n", encoding="utf-8")
+        service = PitchAccentService(csv_file)
+        service.load()
+
+        _, cat = service.lookup_detailed("走る", "はしる", pos="動詞", fmt="romaji")
+        assert cat == "kifuku"
+
+    def test_batch_detailed_legacy_two_tuple(self, loaded_service):
+        # Legacy callers passing 2-tuples (no pos) still work.
         results = loaded_service.lookup_batch_detailed(
             [
                 ("食べる", "たべる"),
@@ -334,6 +391,25 @@ class TestLookupDetailed:
             ]
         )
         assert results == [("0", "平板"), (None, None), ("1", "頭高")]
+
+    def test_batch_detailed_with_pos_and_romaji(self, tmp_path):
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text(
+            "たべる,食べる,2\n"  # 動詞, 3 mora → 中高/nakadaka
+            "はしる,走る,3\n",  # 動詞, 3 mora → 起伏/kifuku
+            encoding="utf-8",
+        )
+        service = PitchAccentService(csv_file)
+        service.load()
+
+        results = service.lookup_batch_detailed(
+            [
+                ("食べる", "たべる", "動詞"),
+                ("走る", "はしる", "動詞"),
+            ],
+            fmt="romaji",
+        )
+        assert results == [("2", "nakadaka"), ("3", "kifuku")]
 
 
 class TestIsAvailable:

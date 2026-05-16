@@ -420,7 +420,8 @@ class EpisodeProcessor:
             pitch_data: list[tuple[str | None, str | None]] = [(None, None)] * len(words_with_media)
             if self.pitch_accent_service and self.pitch_accent_service.is_available():
                 pitch_data = self.pitch_accent_service.lookup_batch_detailed(
-                    [(w.lemma, w.reading) for w in words_with_media]
+                    [(w.lemma, w.reading, w.pos) for w in words_with_media],
+                    fmt=self.config.pitch_category_format,
                 )
                 found_count = sum(1 for pos, _ in pitch_data if pos)
                 self.presenter.show_info(
