@@ -1425,3 +1425,29 @@ class TestDictMediaUpload:
         assert len(store_calls) == 2
         names = {c[1]["json"]["params"]["filename"] for c in store_calls}
         assert names == {"d1__svg-accent_X.svg", "d1__second.svg"}
+
+
+class TestExtractDictMediaSrcsEnvelope:
+    """Regression guard for `_extract_dict_media_srcs` against the new image
+    envelope shape emitted by yomitan_renderer.
+
+    Task 2 wraps each dict-media `<img>` in `<a class="gloss-image-link">
+    <span class="gloss-image-container">...</span></a>` and gives the `<img>`
+    a space-joined class list (`gloss-image anki-miner-dict-media`). The
+    `_DICT_MEDIA_IMG_RE` pattern uses `\\b` boundaries so it still locates the
+    marker class inside that envelope. If a future renderer change reorders
+    or strips the marker, this test fails loudly.
+    """
+
+    def test_envelope_img_src_is_extracted(self):
+        from anki_miner.services.anki_service import _extract_dict_media_srcs
+
+        definition = (
+            '<a class="gloss-image-link" data-path="orig/path.svg">'
+            '<span class="gloss-image-container">'
+            '<img class="gloss-image anki-miner-dict-media" src="my-dict__path.svg">'
+            "</span>"
+            "</a>"
+        )
+
+        assert _extract_dict_media_srcs(definition) == ["my-dict__path.svg"]
