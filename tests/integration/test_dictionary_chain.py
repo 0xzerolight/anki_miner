@@ -62,7 +62,14 @@ def test_first_hit_wins_indexed_before_jisho(tmp_path: Path) -> None:
         # If Jisho is called, the test fails — high-priority should hit first
         mock_get.side_effect = AssertionError("Jisho should not be called when indexed dict hits")
         result = service.get_definition("食べる")
-        assert result == "<div>HIGH PRIORITY</div>"
+        # IndexedDictProvider wraps stored content in the Yomitan/Lapis envelope
+        # (see Task 4). The seeded content must appear inside that envelope,
+        # and the low-priority entry must not.
+        assert result is not None
+        assert "HIGH PRIORITY" in result
+        assert "LOW PRIORITY" not in result
+        assert 'data-dictionary="high-priority"' in result
+        assert 'class="yomitan-glossary"' in result
 
 
 def test_falls_through_to_jisho_when_no_indexed_hit(tmp_path: Path) -> None:
