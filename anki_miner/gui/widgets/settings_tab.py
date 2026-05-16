@@ -496,8 +496,8 @@ class SettingsTab(QWidget):
             QMessageBox.warning(
                 self,
                 "Zip does not match slot",
-                f"This zip is for `{derived_id}`, but you are re-importing "
-                f"`{slot_id}`. Pick the matching zip.",
+                f"This zip is for '{derived_id}', but you are re-importing "
+                f"'{slot_id}'. Pick the matching zip.",
             )
             return
 
