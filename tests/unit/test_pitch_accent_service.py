@@ -256,38 +256,6 @@ class TestLookup:
         assert service.lookup("食べる") is None
 
 
-class TestLookupBatch:
-    """Tests for batch lookup."""
-
-    def test_returns_results_in_order(self, tmp_path):
-        """Test batch lookup returns results in the same order as input."""
-        csv_file = tmp_path / "pitch.csv"
-        csv_file.write_text(
-            "たべる,食べる,0\n" "のむ,飲む,1\n",
-            encoding="utf-8",
-        )
-        service = PitchAccentService(csv_file)
-        service.load()
-
-        results = service.lookup_batch(
-            [
-                ("食べる", "たべる"),
-                ("unknown", ""),
-                ("飲む", "のむ"),
-            ]
-        )
-        assert results == ["0", None, "1"]
-
-    def test_empty_batch(self, tmp_path):
-        """Test batch lookup with empty list returns empty list."""
-        csv_file = tmp_path / "pitch.csv"
-        csv_file.write_text("たべる,食べる,0\n", encoding="utf-8")
-        service = PitchAccentService(csv_file)
-        service.load()
-
-        assert service.lookup_batch([]) == []
-
-
 class TestLookupDetailed:
     """Tests for detailed lookup returning position + category."""
 

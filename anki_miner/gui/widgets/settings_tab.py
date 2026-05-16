@@ -30,6 +30,8 @@ from anki_miner.gui.widgets.panels import (
     YouTubeSettingsPanel,
 )
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
+from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
+from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
 
 
@@ -121,11 +123,18 @@ class SettingsTab(QWidget):
         self.anki_panel.deck_sync_requested.connect(self.validation_requested.emit)
         self.anki_panel.notetype_sync_requested.connect(self.validation_requested.emit)
         self.anki_panel.test_connection_requested.connect(self.validation_requested.emit)
+        self.anki_panel.fetch_fields_requested.connect(self._on_fetch_fields_requested)
 
         # Dictionary panel signals — wire Add/Reimport to import worker dialogs.
         self.dictionary_panel.add_dict_requested.connect(self._on_add_dict_clicked)
         self.dictionary_panel.reimport_jmdict_requested.connect(self._on_reimport_jmdict_clicked)
         self.dictionary_panel.reimport_dict_requested.connect(self._on_reimport_dict_clicked)
+
+        # Hold a reference to the fetch-fields worker across its lifetime.
+        # Without this attribute, a freshly-spawned QThread can be garbage
+        # collected before run() completes — Qt logs "QThread: Destroyed
+        # while thread is still running" and the result signal never fires.
+        self._fetch_fields_worker: FetchFieldsWorker | None = None
 
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts."""
@@ -356,35 +365,6 @@ class SettingsTab(QWidget):
                 "Settings Reset",
                 "Settings have been reset to defaults",
             )
-
-    # === Status update methods (delegate to panels) ===
-
-    def set_ankiconnect_status(self, connected: bool) -> None:
-        """Set the AnkiConnect connection status.
-
-        Args:
-            connected: Whether AnkiConnect is connected
-        """
-        status = "connected" if connected else "disconnected"
-        self.anki_panel.set_connection_status(status)
-
-    def set_deck_status(self, exists: bool, message: str = "") -> None:
-        """Set the deck validation status.
-
-        Args:
-            exists: Whether the deck exists
-            message: Optional status message
-        """
-        self.anki_panel.set_deck_status(exists, message)
-
-    def set_notetype_status(self, exists: bool, message: str = "") -> None:
-        """Set the note type validation status.
-
-        Args:
-            exists: Whether the note type exists
-            message: Optional status message
-        """
-        self.anki_panel.set_notetype_status(exists, message)
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration from external source.
@@ -620,3 +600,73 @@ class SettingsTab(QWidget):
         worker.failed.connect(on_failed)
         dlg.canceled.connect(worker.cancel)
         worker.start()
+
+    # === Fetch fields handler ===
+
+    def _on_fetch_fields_requested(self) -> None:
+        """Fetch the note type's field list from AnkiConnect in a worker thread.
+
+        Reads the current note type and AnkiConnect URL straight from the panel
+        inputs (not ``self.config``) so the user can fetch without first hitting
+        Save. The button is disabled for the duration to prevent piling up
+        concurrent requests. Results land on the main thread via
+        :meth:`_on_fetch_fields_finished`.
+        """
+        # Don't stack worker threads — first request wins until it completes.
+        if self._fetch_fields_worker is not None and self._fetch_fields_worker.isRunning():
+            return
+
+        note_type = self.anki_panel.note_type_input.text().strip()
+        if not note_type:
+            self.anki_panel.set_notetype_status(
+                False, "Enter a note type name before fetching fields"
+            )
+            return
+
+        ankiconnect_url = self.anki_panel.ankiconnect_url_input.text().strip()
+        # Patch the live config with the user's in-flight input values so the
+        # service hits the URL/note type currently shown in the form, not
+        # whatever was last saved to disk.
+        probe_config = replace(
+            self.config,
+            anki_note_type=note_type,
+            ankiconnect_url=ankiconnect_url or self.config.ankiconnect_url,
+        )
+
+        try:
+            service = AnkiService(probe_config)
+        except ValueError as e:
+            # Misconfigured anki_fields keys — surface, don't crash.
+            self.anki_panel.set_notetype_status(False, f"Cannot build AnkiService: {e}")
+            return
+
+        self.anki_panel.set_notetype_status(None, "Fetching fields from note type...")
+        self.anki_panel.fetch_fields_button.setEnabled(False)
+
+        worker = FetchFieldsWorker(service, note_type, self)
+        self._fetch_fields_worker = worker
+        worker.result_ready.connect(self._on_fetch_fields_finished)
+        worker.error.connect(self._on_fetch_fields_error)
+        worker.start()
+
+    def _on_fetch_fields_finished(self, field_names: list[str]) -> None:
+        """Populate the panel with the fetched field list (main-thread slot)."""
+        self.anki_panel.fetch_fields_button.setEnabled(True)
+        if not field_names:
+            # Empty list means AnkiConnect rejected the request or returned
+            # nothing — most commonly the note type doesn't exist, or Anki
+            # isn't running. The status indicator is the existing affordance
+            # for note-type problems, so reuse it.
+            self.anki_panel.set_notetype_status(
+                False, "Could not fetch fields. Is Anki running and the note type spelled right?"
+            )
+            return
+        self.anki_panel.populate_from_field_list(field_names)
+        self.anki_panel.set_notetype_status(
+            True, f"Fetched {len(field_names)} fields and auto-mapped them"
+        )
+
+    def _on_fetch_fields_error(self, message: str) -> None:
+        """Surface an unexpected worker exception via the note-type status line."""
+        self.anki_panel.fetch_fields_button.setEnabled(True)
+        self.anki_panel.set_notetype_status(False, message)

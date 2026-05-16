@@ -11,7 +11,6 @@ import requests
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.interfaces import ProgressCallback
-from anki_miner.models import MediaData, TokenizedWord
 from anki_miner.services.dictionary.yomitan_renderer import DICT_MEDIA_CLASS
 
 logger = logging.getLogger(__name__)
@@ -142,10 +141,17 @@ class AnkiService:
         Only words containing Japanese characters are included.
 
         Returns:
-            Set of words (lemmas) already in the collection
+            Set of words (lemmas) already in the collection. Returns an
+            empty set as a graceful-degradation fallback if AnkiConnect
+            responds but the call fails for a recoverable reason (e.g.
+            non-connection ``requests.RequestException`` or a
+            ``ValueError`` from JSON decoding) — a warning is logged and
+            filtering is effectively disabled for the run.
 
         Raises:
-            AnkiConnectionError: If cannot connect to AnkiConnect
+            AnkiConnectionError: If a connection to AnkiConnect cannot be
+                established, or if AnkiConnect itself returns an error
+                payload for ``findNotes`` / ``notesInfo``.
         """
         try:
             # Find ALL notes in the collection
@@ -268,99 +274,6 @@ class AnkiService:
                 self._dict_media_uploaded.add(src)
             else:
                 logger.warning("Failed to store dict media file: %s", src)
-
-    def create_card(
-        self,
-        word: TokenizedWord,
-        media: MediaData,
-        definition: str | None,
-        extra_fields: dict[str, str] | None = None,
-    ) -> bool:
-        """Create a single Anki card.
-
-        Args:
-            word: TokenizedWord with word information
-            media: MediaData with media file paths
-            definition: HTML-formatted definition (optional)
-            extra_fields: Optional dict of extra field data (e.g. pitch_accent, frequency_rank)
-
-        Returns:
-            True if card created successfully, False otherwise
-        """
-        # Store media files in Anki
-        screenshot_stored = False
-        audio_stored = False
-        if media.screenshot_path and media.screenshot_filename:
-            screenshot_stored = self.store_media_file(
-                media.screenshot_filename, media.screenshot_path
-            )
-
-        if media.audio_path and media.audio_filename:
-            audio_stored = self.store_media_file(media.audio_filename, media.audio_path)
-
-        # Ship any dict-bundled assets (Yomitan SVG accent marks, monolingual
-        # dict images) referenced by the definition. Skipping this leaves a
-        # broken-image glyph mid-reading in the Anki card.
-        self._upload_dict_media(definition)
-
-        # Build field values (only reference successfully stored media)
-        picture_html = ""
-        if media.screenshot_filename and screenshot_stored:
-            picture_html = f'<img src="{html.escape(media.screenshot_filename)}">'
-
-        audio_ref = ""
-        if media.audio_filename and audio_stored:
-            audio_ref = f"[sound:{media.audio_filename}]"
-
-        # Build fields, skipping any with empty config mapping
-        field_data = {
-            "word": html.escape(word.surface),
-            "sentence": html.escape(word.sentence),
-            "definition": definition or "",
-            "picture": picture_html,
-            "audio": audio_ref,
-            "expression_furigana": html.escape(word.expression_furigana),
-            "expression_reading": html.escape(word.expression_reading),
-            "sentence_furigana": html.escape(word.sentence_furigana),
-            "sentence_reading": html.escape(word.sentence_reading),
-        }
-        fields = {}
-        for key, value in field_data.items():
-            anki_field_name = self.config.anki_fields.get(key, "")
-            if anki_field_name:
-                fields[anki_field_name] = value
-
-        # Add optional fields if configured and data available
-        if extra_fields:
-            for key, value in extra_fields.items():
-                anki_field_name = self.config.anki_fields.get(key, "")
-                if key in self.OPTIONAL_FIELD_KEYS and anki_field_name and value:
-                    fields[anki_field_name] = html.escape(str(value))
-
-        # Create note
-        try:
-            response = requests.post(
-                self.config.ankiconnect_url,
-                json={
-                    "action": "addNote",
-                    "version": 6,
-                    "params": {
-                        "note": {
-                            "deckName": self.config.anki_deck_name,
-                            "modelName": self.config.anki_note_type,
-                            "fields": fields,
-                            "tags": self.config.anki_tags.split(),
-                        }
-                    },
-                },
-                timeout=30,
-            )
-
-            result = response.json()
-            return not result.get("error")
-
-        except (requests.RequestException, OSError, ValueError):
-            return False
 
     def create_cards_batch(
         self,
@@ -587,7 +500,15 @@ class AnkiService:
             if no error was raised)
 
         Raises:
-            AnkiConnectionError: If cannot connect to AnkiConnect or deletion fails
+            AnkiConnectionError: If a connection to AnkiConnect cannot be
+                established, or if AnkiConnect returns an error payload
+                for the ``deleteNotes`` call.
+            requests.RequestException: Non-``ConnectionError`` HTTP failures
+                from the underlying ``requests.post`` (e.g. ``Timeout``,
+                ``HTTPError``) propagate uncaught — only
+                ``ConnectionError`` is translated to ``AnkiConnectionError``.
+            ValueError: Raised by ``response.json()`` if AnkiConnect's
+                response is not valid JSON; propagates uncaught.
         """
         if not note_ids:
             return 0

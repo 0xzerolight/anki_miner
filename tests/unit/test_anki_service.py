@@ -368,160 +368,6 @@ class TestStoreMediaFile:
 
 
 # ---------------------------------------------------------------------------
-# TestCreateCard
-# ---------------------------------------------------------------------------
-
-
-class TestCreateCard:
-    """Tests for AnkiService.create_card."""
-
-    def test_full_media_verifies_field_mapping(
-        self, test_config, make_tokenized_word, make_media_data
-    ):
-        """Should create a card with screenshot and audio fields populated."""
-        service = AnkiService(test_config)
-        # Expression field uses surface form (subtitle's actual kanji), not lemma.
-        word = make_tokenized_word(surface="飲む", lemma="飲む", sentence="水を飲む。")
-        media = make_media_data(screenshot=True, audio=True, create_files=True)
-
-        # store_media_file calls + addNote call
-        store_resp = _mock_response(result="ok")
-        add_resp = _mock_response(result=12345)
-
-        with patch("requests.post", return_value=store_resp) as mock_post:
-            # Override the last call to return addNote response
-            mock_post.side_effect = [store_resp, store_resp, add_resp]
-            result = service.create_card(word, media, "<b>to drink</b>")
-
-        assert result is True
-
-        # The third call should be the addNote
-        add_call = mock_post.call_args_list[2]
-        payload = add_call[1]["json"]
-        note = payload["params"]["note"]
-
-        assert note["deckName"] == "test_deck"
-        assert note["modelName"] == "test_note_type"
-        assert note["fields"]["word"] == "飲む"
-        assert note["fields"]["sentence"] == "水を飲む。"
-        assert note["fields"]["definition"] == "<b>to drink</b>"
-        assert "img src" in note["fields"]["picture"]
-        assert media.screenshot_filename in note["fields"]["picture"]
-        assert "[sound:" in note["fields"]["audio"]
-        assert media.audio_filename in note["fields"]["audio"]
-        assert note["tags"] == ["auto-mined"]
-
-    def test_no_media(self, test_config, make_tokenized_word):
-        """Should create a card with empty picture and audio fields when no media."""
-        service = AnkiService(test_config)
-        word = make_tokenized_word()
-        media = MediaData()  # no paths, no filenames
-
-        resp = _mock_response(result=99999)
-
-        with patch("requests.post", return_value=resp) as mock_post:
-            result = service.create_card(word, media, "a definition")
-
-        assert result is True
-
-        # Only one call (addNote), no store_media_file calls
-        assert mock_post.call_count == 1
-        payload = mock_post.call_args[1]["json"]
-        note = payload["params"]["note"]
-        assert note["fields"]["picture"] == ""
-        assert note["fields"]["audio"] == ""
-
-    def test_no_definition_defaults_to_empty_string(self, test_config, make_tokenized_word):
-        """Should use empty string when definition is None."""
-        service = AnkiService(test_config)
-        word = make_tokenized_word()
-        media = MediaData()
-
-        resp = _mock_response(result=11111)
-
-        with patch("requests.post", return_value=resp) as mock_post:
-            result = service.create_card(word, media, None)
-
-        assert result is True
-        payload = mock_post.call_args[1]["json"]
-        assert payload["params"]["note"]["fields"]["definition"] == ""
-
-    def test_anki_error_response_returns_false(self, test_config, make_tokenized_word):
-        """Should return False when addNote returns an error."""
-        service = AnkiService(test_config)
-        word = make_tokenized_word()
-        media = MediaData()
-
-        resp = _mock_response(error="duplicate note")
-
-        with patch("requests.post", return_value=resp):
-            result = service.create_card(word, media, "definition")
-
-        assert result is False
-
-    def test_request_exception_returns_false(self, test_config, make_tokenized_word):
-        """Should return False on RequestException during addNote."""
-        service = AnkiService(test_config)
-        word = make_tokenized_word()
-        media = MediaData()
-
-        with patch("requests.post", side_effect=requests.exceptions.Timeout()):
-            result = service.create_card(word, media, "definition")
-
-        assert result is False
-
-    def test_field_mapping_matches_config(self, test_config, make_tokenized_word):
-        """Should use field names from config.anki_fields for the note."""
-        service = AnkiService(test_config)
-        word = make_tokenized_word(lemma="走る", sentence="公園を走る。")
-        media = MediaData(
-            screenshot_filename="shot.jpg",
-            audio_filename="clip.mp3",
-        )
-
-        resp = _mock_response(result=55555)
-
-        with patch("requests.post", return_value=resp) as mock_post:
-            service.create_card(word, media, "to run")
-
-        payload = mock_post.call_args[1]["json"]
-        note_fields = payload["params"]["note"]["fields"]
-
-        # Keys should match the config field names exactly
-        assert set(note_fields.keys()) == {
-            test_config.anki_fields["word"],
-            test_config.anki_fields["sentence"],
-            test_config.anki_fields["definition"],
-            test_config.anki_fields["picture"],
-            test_config.anki_fields["audio"],
-            test_config.anki_fields["expression_furigana"],
-            test_config.anki_fields["sentence_furigana"],
-        }
-
-    def test_create_card_uses_surface_for_expression(self, test_config, make_tokenized_word):
-        """Expression field should use word.surface (subtitle form), not word.lemma.
-
-        Regression test for issue #5: 豪腕 (surface) was being rewritten to 剛腕
-        (unidic dictionary lemma) on the Anki card, so users searching their
-        collection for the form they actually saw on screen would not find it.
-        """
-        service = AnkiService(test_config)
-        word = make_tokenized_word(surface="豪腕", lemma="剛腕", sentence="豪腕の男だ。")
-        media = MediaData()
-
-        resp = _mock_response(result=12345)
-
-        with patch("requests.post", return_value=resp) as mock_post:
-            result = service.create_card(word, media, "definition")
-
-        assert result is True
-        payload = mock_post.call_args[1]["json"]
-        note_fields = payload["params"]["note"]["fields"]
-        word_field_name = test_config.anki_fields["word"]
-        assert note_fields[word_field_name] == "豪腕"
-
-
-# ---------------------------------------------------------------------------
 # TestCreateCardsBatch
 # ---------------------------------------------------------------------------
 
@@ -759,30 +605,7 @@ class TestStoreMediaFilesBatch:
 class TestOptionalFields:
     """Tests for optional field handling (pitch_position, pitch_category, frequency)."""
 
-    def test_create_card_with_extra_fields(self, test_config, make_tokenized_word):
-        """Should include mapped optional fields in the note payload."""
-        service = AnkiService(test_config)
-        word = make_tokenized_word()
-        media = MediaData()
-
-        resp = _mock_response(result=12345)
-
-        with patch("requests.post", return_value=resp) as mock_post:
-            result = service.create_card(
-                word,
-                media,
-                "definition",
-                extra_fields={"pitch_position": "0", "pitch_category": "平板", "frequency": "500"},
-            )
-
-        assert result is True
-        payload = mock_post.call_args[1]["json"]
-        note_fields = payload["params"]["note"]["fields"]
-        assert note_fields["PitchPosition"] == "0"
-        assert note_fields["PitchCategory"] == "平板"
-        assert note_fields["Frequency"] == "500"
-
-    def test_create_card_extra_fields_skipped_when_not_mapped(self, temp_dir):
+    def test_batch_extra_fields_skipped_when_not_mapped(self, temp_dir, make_tokenized_word):
         """Should not include optional fields when config maps them to empty string."""
         from anki_miner.config import AnkiMinerConfig
 
@@ -805,65 +628,44 @@ class TestOptionalFields:
             jmdict_path=temp_dir / "dict",
         )
         service = AnkiService(config)
-        word = make_word_helper()
+        word = make_tokenized_word()
         media = MediaData()
 
-        resp = _mock_response(result=12345)
+        resp = _mock_response(result=[12345])
 
         with patch("requests.post", return_value=resp) as mock_post:
-            service.create_card(
-                word,
-                media,
-                "definition",
-                extra_fields={"pitch_position": "0", "pitch_category": "平板", "frequency": "500"},
+            service.create_cards_batch(
+                [
+                    (
+                        word,
+                        media,
+                        "definition",
+                        {"pitch_position": "0", "pitch_category": "平板", "frequency": "500"},
+                    )
+                ]
             )
 
         payload = mock_post.call_args[1]["json"]
-        note_fields = payload["params"]["note"]["fields"]
-        # Empty-mapped fields should NOT appear
+        note_fields = payload["params"]["notes"][0]["fields"]
         assert "PitchPosition" not in note_fields
         assert "PitchCategory" not in note_fields
         assert "Frequency" not in note_fields
         assert "" not in note_fields
 
-    def test_create_card_ignores_unknown_extra_keys(self, test_config, make_tokenized_word):
+    def test_batch_ignores_unknown_extra_keys(self, test_config, make_tokenized_word):
         """Should silently ignore extra_fields keys not in OPTIONAL_FIELD_KEYS."""
         service = AnkiService(test_config)
         word = make_tokenized_word()
         media = MediaData()
 
-        resp = _mock_response(result=12345)
+        resp = _mock_response(result=[12345])
 
         with patch("requests.post", return_value=resp) as mock_post:
-            service.create_card(
-                word,
-                media,
-                "definition",
-                extra_fields={"unknown_key": "some_value"},
-            )
+            service.create_cards_batch([(word, media, "definition", {"unknown_key": "some_value"})])
 
         payload = mock_post.call_args[1]["json"]
-        note_fields = payload["params"]["note"]["fields"]
+        note_fields = payload["params"]["notes"][0]["fields"]
         assert "some_value" not in note_fields.values()
-
-    def test_create_card_no_extra_fields(self, test_config, make_tokenized_word):
-        """Should work normally when extra_fields is None."""
-        service = AnkiService(test_config)
-        word = make_tokenized_word()
-        media = MediaData()
-
-        resp = _mock_response(result=12345)
-
-        with patch("requests.post", return_value=resp) as mock_post:
-            result = service.create_card(word, media, "definition", extra_fields=None)
-
-        assert result is True
-        payload = mock_post.call_args[1]["json"]
-        note_fields = payload["params"]["note"]["fields"]
-        # Optional fields should not appear when extra_fields is None
-        assert "PitchPosition" not in note_fields
-        assert "PitchCategory" not in note_fields
-        assert "Frequency" not in note_fields
 
     def test_batch_with_4_tuples_and_extra_fields(self, test_config, make_tokenized_word):
         """Should include optional fields when batch items are 4-tuples."""
@@ -883,21 +685,6 @@ class TestOptionalFields:
         assert note["fields"]["PitchPosition"] == "1"
         assert note["fields"]["PitchCategory"] == "頭高"
         assert note["fields"]["Frequency"] == "200"
-
-
-def make_word_helper():
-    """Standalone helper to create a TokenizedWord without fixtures."""
-    from anki_miner.models import TokenizedWord
-
-    return TokenizedWord(
-        surface="食べる",
-        lemma="食べる",
-        reading="タベル",
-        sentence="日本語を食べる。",
-        start_time=1.0,
-        end_time=3.0,
-        duration=2.0,
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -931,46 +718,9 @@ class TestReadingFields:
             jmdict_path=temp_dir / "dict",
         )
 
-    def test_create_card_includes_expression_reading_when_mapped(
-        self, temp_dir, make_tokenized_word
+    def test_create_cards_batch_skips_reading_fields_when_unmapped(
+        self, test_config, make_tokenized_word
     ):
-        """When expression_reading is mapped, the payload should include plain kana."""
-        config = self._config_with_reading_fields(temp_dir)
-        service = AnkiService(config)
-        word = make_tokenized_word(
-            surface="真竹",
-            expression_furigana="真竹[まだけ]",
-            expression_reading="まだけ",
-        )
-        media = MediaData()
-
-        resp = _mock_response(result=12345)
-        with patch("requests.post", return_value=resp) as mock_post:
-            service.create_card(word, media, "definition")
-
-        payload = mock_post.call_args[1]["json"]
-        note_fields = payload["params"]["note"]["fields"]
-        assert note_fields["ExpressionReading"] == "まだけ"
-
-    def test_create_card_includes_sentence_reading_when_mapped(self, temp_dir, make_tokenized_word):
-        """When sentence_reading is mapped, the payload should include plain kana sentence."""
-        config = self._config_with_reading_fields(temp_dir)
-        service = AnkiService(config)
-        word = make_tokenized_word(
-            sentence="私は猫です。",
-            sentence_reading="わたしはねこです。",
-        )
-        media = MediaData()
-
-        resp = _mock_response(result=12345)
-        with patch("requests.post", return_value=resp) as mock_post:
-            service.create_card(word, media, "definition")
-
-        payload = mock_post.call_args[1]["json"]
-        note_fields = payload["params"]["note"]["fields"]
-        assert note_fields["SentenceReading"] == "わたしはねこです。"
-
-    def test_create_card_skips_reading_fields_when_unmapped(self, test_config, make_tokenized_word):
         """With the default test_config (empty reading mappings), reading fields are skipped."""
         service = AnkiService(test_config)
         word = make_tokenized_word(
@@ -979,12 +729,12 @@ class TestReadingFields:
         )
         media = MediaData()
 
-        resp = _mock_response(result=12345)
+        resp = _mock_response(result=[12345])
         with patch("requests.post", return_value=resp) as mock_post:
-            service.create_card(word, media, "definition")
+            service.create_cards_batch([(word, media, "definition")])
 
         payload = mock_post.call_args[1]["json"]
-        note_fields = payload["params"]["note"]["fields"]
+        note_fields = payload["params"]["notes"][0]["fields"]
         # Plain-kana values must not be smuggled in under any field name
         assert "まだけ" not in note_fields.values()
         assert "わたしはねこです。" not in note_fields.values()
@@ -1227,26 +977,6 @@ class TestConfigurableFields:
             jmdict_path=temp_dir / "dict",
         )
 
-    def test_create_card_skips_empty_field(self, temp_dir, make_tokenized_word):
-        """When a field mapping is empty, it should not appear in the note."""
-        config = self._config_with_empty_fields(temp_dir, ["picture", "audio"])
-        service = AnkiService(config)
-        word = make_tokenized_word()
-        media = MediaData()
-
-        resp = _mock_response(result=12345)
-
-        with patch("requests.post", return_value=resp) as mock_post:
-            service.create_card(word, media, "definition")
-
-        payload = mock_post.call_args[1]["json"]
-        note_fields = payload["params"]["note"]["fields"]
-        assert "picture" not in note_fields
-        assert "audio" not in note_fields
-        # Non-empty fields should still be present
-        assert "word" in note_fields
-        assert "sentence" in note_fields
-
     def test_create_cards_batch_skips_empty_field(self, temp_dir, make_tokenized_word):
         """Batch creation should also skip empty-mapped fields."""
         config = self._config_with_empty_fields(temp_dir, ["sentence_furigana"])
@@ -1301,10 +1031,10 @@ class TestDictMediaUpload:
         media = MediaData()
 
         store_resp = _mock_response(result=None)
-        create_resp = _mock_response(result=12345)
+        create_resp = _mock_response(result=[12345])
 
         with patch("requests.post", side_effect=[store_resp, create_resp]) as mock_post:
-            service.create_card(word, media, definition)
+            service.create_cards_batch([(word, media, definition)])
 
         # First call is storeMediaFile for the dict asset
         store_call = mock_post.call_args_list[0]
@@ -1314,7 +1044,7 @@ class TestDictMediaUpload:
         assert base64.b64decode(store_payload["params"]["data"]) == b"<svg/>"
 
     def test_uploaded_files_cached_across_calls(self, test_config, temp_dir, make_tokenized_word):
-        """Same SVG referenced by 5000 cards should upload once, not 5000 times."""
+        """Same SVG referenced by many cards should upload once, not many times."""
         config = self._make_config_with_dict_media(test_config, temp_dir / "dicts")
         service = AnkiService(config)
 
@@ -1323,15 +1053,15 @@ class TestDictMediaUpload:
         media = MediaData()
 
         store_resp = _mock_response(result=None)
-        create_resp = _mock_response(result=12345)
+        create_resp = _mock_response(result=[12345])
 
         with patch(
             "requests.post",
             side_effect=[store_resp, create_resp, create_resp, create_resp],
         ) as mock_post:
-            service.create_card(word, media, definition)
-            service.create_card(word, media, definition)
-            service.create_card(word, media, definition)
+            service.create_cards_batch([(word, media, definition)])
+            service.create_cards_batch([(word, media, definition)])
+            service.create_cards_batch([(word, media, definition)])
 
         # Three card creations + exactly one media upload.
         store_calls = [
@@ -1352,14 +1082,14 @@ class TestDictMediaUpload:
         definition = '<img class="anki-miner-dict-media" src="nope__missing.svg">'
         word = make_tokenized_word()
         media = MediaData()
-        create_resp = _mock_response(result=12345)
+        create_resp = _mock_response(result=[12345])
 
         with (
             caplog.at_level(logging.WARNING),
             patch("requests.post", return_value=create_resp) as mock_post,
         ):
-            service.create_card(word, media, definition)
-            service.create_card(word, media, definition)
+            service.create_cards_batch([(word, media, definition)])
+            service.create_cards_batch([(word, media, definition)])
 
         # No storeMediaFile attempted; warning logged once (cached after first).
         store_calls = [
@@ -1380,10 +1110,10 @@ class TestDictMediaUpload:
         definition = '<img class="anki-miner-dict-media" src="..__..__etc__passwd">'
         word = make_tokenized_word()
         media = MediaData()
-        create_resp = _mock_response(result=12345)
+        create_resp = _mock_response(result=[12345])
 
         with patch("requests.post", return_value=create_resp) as mock_post:
-            service.create_card(word, media, definition)
+            service.create_cards_batch([(word, media, definition)])
 
         store_calls = [
             c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"
@@ -1435,34 +1165,6 @@ class TestAnkiTagsConfig:
     of whitespace and discards empty strings, so the empty / whitespace-only
     cases must yield an empty list rather than ``[""]``.
     """
-
-    @pytest.mark.parametrize(
-        ("anki_tags", "expected"),
-        [
-            ("auto-mined", ["auto-mined"]),
-            ("naruto shounen", ["naruto", "shounen"]),
-            ("", []),
-            ("   ", []),
-            ("  spaced   words  ", ["spaced", "words"]),
-        ],
-    )
-    def test_create_card_tags_payload(self, test_config, make_tokenized_word, anki_tags, expected):
-        """Single-card path: payload tags reflect ``anki_tags.split()``."""
-        from dataclasses import replace
-
-        config = replace(test_config, anki_tags=anki_tags)
-        service = AnkiService(config)
-        word = make_tokenized_word()
-        media = MediaData()
-
-        resp = _mock_response(result=12345)
-
-        with patch("requests.post", return_value=resp) as mock_post:
-            result = service.create_card(word, media, "definition")
-
-        assert result is True
-        payload = mock_post.call_args[1]["json"]
-        assert payload["params"]["note"]["tags"] == expected
 
     @pytest.mark.parametrize(
         ("anki_tags", "expected"),

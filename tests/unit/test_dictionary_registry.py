@@ -40,8 +40,8 @@ class TestDictionaryRegistry:
         _seed_dict(tmp_path, "jmdict-english", "JMdict (English)")
 
         registry = DictionaryRegistry(tmp_path)
-        ids = {meta.dict_id for meta in registry.list_dicts()}
-        assert ids == {"daijirin-v1", "jmdict-english"}
+        assert registry.get("daijirin-v1") is not None
+        assert registry.get("jmdict-english") is not None
 
     def test_scan_skips_corrupt_folder_with_warning(self, tmp_path: Path, caplog):
         _seed_dict(tmp_path, "good", "Good")
@@ -51,9 +51,8 @@ class TestDictionaryRegistry:
 
         caplog.set_level(logging.WARNING)
         registry = DictionaryRegistry(tmp_path)
-        ids = {meta.dict_id for meta in registry.list_dicts()}
-        assert "good" in ids
-        assert "bad" not in ids
+        assert registry.get("good") is not None
+        assert registry.get("bad") is None
         assert "corrupt" in caplog.text.lower() or "skipping" in caplog.text.lower()
 
     def test_build_chain_respects_config_order(self, tmp_path: Path):
@@ -114,14 +113,13 @@ class TestDictionaryRegistry:
         assert isinstance(chain[0], JishoProvider)
         assert "ghost" in caplog.text or "not found" in caplog.text
 
-    def test_disk_only_dict_returned_by_list_dicts(self, tmp_path: Path):
-        """Dictionaries on disk that aren't in the config should still appear
-        in list_dicts so the UI can offer to enable them."""
+    def test_disk_only_dict_discovered(self, tmp_path: Path):
+        """Dictionaries on disk that aren't in the config should still be
+        discovered so the UI can offer to enable them."""
         _seed_dict(tmp_path, "new-on-disk", "Surprise Dict")
 
         registry = DictionaryRegistry(tmp_path)
-        ids = {meta.dict_id for meta in registry.list_dicts()}
-        assert "new-on-disk" in ids
+        assert registry.get("new-on-disk") is not None
 
     def test_dicts_root_is_file_returns_empty(self, tmp_path: Path):
         """If dicts_root points at a regular file, registry stays empty (no crash)."""
@@ -129,12 +127,12 @@ class TestDictionaryRegistry:
         bad_root.write_text("oops")
 
         registry = DictionaryRegistry(bad_root)
-        assert registry.list_dicts() == []
+        assert registry.get("anything") is None
 
     def test_dicts_root_missing_returns_empty(self, tmp_path: Path):
         """If dicts_root doesn't exist, registry stays empty."""
         registry = DictionaryRegistry(tmp_path / "ghost")
-        assert registry.list_dicts() == []
+        assert registry.get("anything") is None
 
     def test_folder_without_index_sqlite_skipped(self, tmp_path: Path):
         """A child folder with no index.sqlite is silently skipped."""
@@ -142,8 +140,8 @@ class TestDictionaryRegistry:
         _seed_dict(tmp_path, "real-dict", "Real")
 
         registry = DictionaryRegistry(tmp_path)
-        ids = {meta.dict_id for meta in registry.list_dicts()}
-        assert ids == {"real-dict"}
+        assert registry.get("real-dict") is not None
+        assert registry.get("no-db") is None
 
     def test_schema_mismatch_dict_excluded_from_chain(self, tmp_path: Path, caplog):
         """A dict on disk with the wrong schema_version must not appear in the chain."""

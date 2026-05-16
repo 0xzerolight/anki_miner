@@ -45,10 +45,6 @@ class CookieDatabaseLockedError(YouTubeFetchError):
     """Raised when yt-dlp cannot read a cookies-from-browser database."""
 
 
-class NoJapaneseSubsError(YouTubeFetchError):
-    """Raised when probe decided no usable Japanese subtitles are available."""
-
-
 class VideoTooLongError(YouTubeFetchError):
     """Raised when a video's duration exceeds the configured maximum."""
 

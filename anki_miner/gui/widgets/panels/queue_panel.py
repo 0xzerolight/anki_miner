@@ -35,11 +35,9 @@ class QueuePanel(QFrame):
 
     Signals:
         process_requested: Emitted when user wants to process queue
-        queue_changed: Emitted when queue items change (add/remove/edit)
     """
 
     process_requested = pyqtSignal()
-    queue_changed = pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialize the queue panel.
@@ -135,7 +133,6 @@ class QueuePanel(QFrame):
         self.queue_item_widgets.append(widget)
 
         self._update_stats()
-        self.queue_changed.emit()
 
     def _remove_item(self, widget: QueueItemWidget) -> None:
         """Remove a queue item widget.
@@ -147,7 +144,6 @@ class QueuePanel(QFrame):
             self.queue_item_widgets.remove(widget)
             widget.deleteLater()
             self._update_stats()
-            self.queue_changed.emit()
 
     def _edit_item(self, widget: QueueItemWidget) -> None:
         """Edit a queue item's folders and subtitle offset.
@@ -223,8 +219,6 @@ class QueuePanel(QFrame):
             # Update subtitle offset
             widget.subtitle_offset = offset_spinbox.value()
 
-            self.queue_changed.emit()
-
     def _clear_queue(self) -> None:
         """Clear all items from the queue."""
         if not self.queue_item_widgets:
@@ -243,7 +237,6 @@ class QueuePanel(QFrame):
                 widget.deleteLater()
             self.queue_item_widgets.clear()
             self._update_stats()
-            self.queue_changed.emit()
 
     def _update_stats(self) -> None:
         """Update the queue statistics display."""
@@ -323,19 +316,6 @@ class QueuePanel(QFrame):
             if widget.display_name == display_name:
                 widget.set_status(status)
                 break
-
-    def set_item_cards(self, display_name: str, cards_created: int) -> None:
-        """Set cards created count for an item.
-
-        Args:
-            display_name: Item display name
-            cards_created: Number of cards created
-        """
-        for widget in self.queue_item_widgets:
-            if widget.display_name == display_name:
-                widget.set_cards_created(cards_created)
-                break
-        self._update_stats()
 
     def set_processing_item_complete(self, cards_created: int) -> None:
         """Mark the currently processing item as complete.

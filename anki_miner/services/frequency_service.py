@@ -34,8 +34,11 @@ def _is_header_row(row: list[str]) -> bool:
 def _extract_word_rank(row: list[str]) -> tuple[str, int | None]:
     """Extract a word and numeric rank from a row with any number of columns.
 
-    Tries adjacent column pairs (0,1), (1,0), (0,2), (2,0), etc.
-    to find a non-numeric word and a numeric rank.
+    First tries the standard 2-column orderings ``(rank, word)`` then
+    ``(word, rank)`` using only columns 0 and 1. For rows with more than
+    two columns (e.g. ``term, reading, frequency, …``) falls back to a
+    column-position-agnostic scan: the first non-numeric cell becomes the
+    word and the first numeric cell becomes the rank.
 
     Args:
         row: CSV/TSV row as list of strings.
@@ -168,14 +171,3 @@ class FrequencyService:
         if not self._data:
             return None
         return self._data.get(word)
-
-    def lookup_batch(self, words: list[str]) -> list[int | None]:
-        """Look up frequency ranks for multiple words.
-
-        Args:
-            words: List of words.
-
-        Returns:
-            List of ranks (same order as input).
-        """
-        return [self.lookup(word) for word in words]

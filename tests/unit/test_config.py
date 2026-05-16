@@ -95,8 +95,6 @@ class TestYouTubeConfig:
     def test_defaults(self):
         """New YouTube fields should default to the documented values."""
         config = AnkiMinerConfig()
-        assert config.youtube_prefer_manual_subs is True
-        assert config.youtube_warn_on_auto_captions is True
         assert config.youtube_max_duration_s == 7200
         assert config.youtube_max_height == 720
         assert config.youtube_cookies_from_browser is None

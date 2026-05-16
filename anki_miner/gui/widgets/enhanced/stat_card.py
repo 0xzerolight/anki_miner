@@ -73,12 +73,3 @@ class StatCard(QFrame):
         """
         self._value = value
         self.value_label.setText(value)
-
-    def set_label(self, label: str) -> None:
-        """Update the label text.
-
-        Args:
-            label: New label text
-        """
-        self._label = label
-        self.label_widget.setText(label.upper())

@@ -61,9 +61,11 @@ class MainWindow(QMainWindow):
     """Main application window for Anki Miner.
 
     This window provides a tabbed interface for:
-    - Single episode mining
-    - Batch folder processing
-    - Settings/configuration
+    - Episode Mining (single video + subtitle pair)
+    - Batch Mining (folder of paired files)
+    - YouTube (URL probe + fetch + mine)
+    - Analytics (mining statistics dashboard)
+    - Settings (configuration)
 
     Signals:
         config_refreshed: emitted when a non-Settings code path mutates
@@ -191,7 +193,7 @@ class MainWindow(QMainWindow):
         # Set accessible names for main components
         self.tabs.setAccessibleName("Main Tabs")
         self.tabs.setAccessibleDescription(
-            "Navigate between Episode Mining, Batch Processing, Analytics, and Settings"
+            "Navigate between Episode Mining, Batch Mining, YouTube, Analytics, and Settings"
         )
 
         self.header.setAccessibleName("Application Header")
@@ -320,6 +322,7 @@ class MainWindow(QMainWindow):
         <ul>
             <li>Single episode mining with preview</li>
             <li>Batch processing for entire series</li>
+            <li>YouTube URL mining (yt-dlp powered)</li>
             <li>Automatic media extraction (screenshots & audio)</li>
             <li>Dictionary definitions from JMDict</li>
             <li>Frequency filtering to focus on common words</li>
@@ -329,7 +332,7 @@ class MainWindow(QMainWindow):
         <br>
         <p><b>Keyboard Shortcuts:</b></p>
         <ul>
-            <li><b>Ctrl+1/2/3/4:</b> Switch tabs</li>
+            <li><b>Ctrl+1..5:</b> Switch tabs</li>
             <li><b>Ctrl+T:</b> Cycle themes</li>
             <li><b>Ctrl+,:</b> Open Settings</li>
             <li><b>Ctrl+Shift+V:</b> Run system validation</li>

@@ -31,9 +31,11 @@ def test_save_then_load_preserves_chain(tmp_config: Path):
     assert loaded.dictionary_chain == chain
 
 
-def test_legacy_use_offline_true_synthesizes_default_chain(tmp_config: Path):
-    """An old gui_config.json with use_offline_dict=True but no dictionary_chain
-    should yield [jmdict-english(enabled), jisho(enabled)]."""
+def test_legacy_use_offline_dict_stripped_and_default_chain_used(tmp_config: Path):
+    """An old gui_config.json with use_offline_dict but no dictionary_chain
+    should fall through to the dataclass default chain. The obsolete
+    use_offline_dict key must be stripped so AnkiMinerConfig() doesn't see it.
+    """
     tmp_config.write_text(
         json.dumps(
             {
@@ -50,7 +52,12 @@ def test_legacy_use_offline_true_synthesizes_default_chain(tmp_config: Path):
     )
 
 
-def test_legacy_use_offline_false_disables_jmdict(tmp_config: Path):
+def test_legacy_use_offline_dict_false_is_stripped(tmp_config: Path):
+    """Legacy use_offline_dict=False is silently dropped; default chain is used.
+
+    Users that disabled the JMdict provider via the pre-chain UI will re-enable
+    it through the new chain UI; the legacy false flag is not propagated.
+    """
     tmp_config.write_text(
         json.dumps(
             {
@@ -60,7 +67,8 @@ def test_legacy_use_offline_false_disables_jmdict(tmp_config: Path):
     )
 
     loaded = GUIConfigManager.load_config()
+    # Default chain has jmdict-english enabled; the legacy false flag is dropped.
     assert loaded.dictionary_chain == (
-        ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=False),
+        ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
         ChainEntry(kind="jisho", dict_id=None, enabled=True),
     )

@@ -193,17 +193,6 @@ class PitchAccentService:
 
         return None
 
-    def lookup_batch(self, words: list[tuple[str, str]]) -> list[str | None]:
-        """Look up pitch accents for multiple (word, reading) pairs.
-
-        Args:
-            words: List of (word, reading) tuples.
-
-        Returns:
-            List of pitch accent patterns (same order as input).
-        """
-        return [self.lookup(word, reading) for word, reading in words]
-
     def lookup_detailed(
         self,
         word: str,

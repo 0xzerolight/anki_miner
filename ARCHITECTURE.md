@@ -179,7 +179,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 - **Anki:** deck name, note type, field mappings, AnkiConnect URL
 - **Media:** audio padding, screenshot offset, temp folder, subtitle offset
 - **Filtering:** min word length, allowed POS tags, excluded subtypes, deduplication
-- **Dictionary:** JMdict path, offline toggle, Jisho URL/delay
+- **Dictionary:** `dictionary_chain` (the runtime-authoritative ordered list of providers — indexed dicts and Jisho, each toggleable), `dicts_root` (where installed `.sqlite` indexes live), Jisho URL/delay. Legacy `jmdict_path` + `use_offline_dict` are retained one release for first-launch migration only.
 - **Optional data:** pitch accent, frequency, known words DB, blacklist/whitelist paths and toggles
 - **History/analytics:** DB paths, enable flags
 - **Performance:** max parallel workers (default 6)
@@ -247,7 +247,7 @@ HTTP POST to `localhost:8765` (configurable). Protocol version 6. Key actions:
 
 ### Jisho API
 
-GET `https://jisho.org/api/v1/search/words?keyword=<word>`. Rate-limited with configurable delay (default 0.5s). Used as fallback when JMdict is unavailable.
+GET `https://jisho.org/api/v1/search/words?keyword=<word>`. Rate-limited with configurable delay (default 0.5s). Surfaced as `JishoProvider` inside the configurable provider chain — its position is user-controlled via `config.dictionary_chain`. In the default chain it sits after `IndexedDictProvider(jmdict-english)` so it acts as the online fallback when no installed dictionary returns a hit, but users may move it ahead of any indexed dictionary or disable it entirely.
 
 ### ffmpeg / ffprobe
 

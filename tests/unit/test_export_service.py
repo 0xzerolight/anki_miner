@@ -4,6 +4,7 @@ import csv
 
 import pytest
 
+from anki_miner.models.media import MediaData
 from anki_miner.models.word import WordData
 from anki_miner.services.export_service import ExportService
 
@@ -47,14 +48,26 @@ def make_word_data(make_tokenized_word):
             expression_furigana=expression_furigana,
             sentence_furigana=sentence_furigana,
         )
+        media = None
+        if (
+            screenshot_filename is not None
+            or audio_filename is not None
+            or screenshot_path is not None
+            or audio_path is not None
+        ):
+            media = MediaData(
+                screenshot_path=screenshot_path,
+                audio_path=audio_path,
+                screenshot_filename=screenshot_filename,
+                audio_filename=audio_filename,
+            )
         return WordData(
             word=word,
             definition=definition,
             pitch_position=pitch_position,
             pitch_category=pitch_category,
             frequency_rank=frequency_rank,
-            screenshot_filename=screenshot_filename,
-            audio_filename=audio_filename,
+            media=media,
             screenshot_path=screenshot_path,
             audio_path=audio_path,
         )
