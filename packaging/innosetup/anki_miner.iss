@@ -32,6 +32,14 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"
 
+[InstallDelete]
+; Wipe orphan version-suffixed paths from prior installs before laying down new files.
+; Without this, dist-info dirs from older installs (anki_miner-2.3.3.dist-info)
+; coexist with the new ones and earlier-named entries can win filesystem-order
+; lookups by importlib.metadata. See Issue #10.
+Type: filesandordirs; Name: "{app}\_internal\anki_miner-*.dist-info"
+Type: filesandordirs; Name: "{app}\_internal\yt_dlp-*.dist-info"
+
 [Files]
 Source: "..\..\dist\AnkiMiner\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
