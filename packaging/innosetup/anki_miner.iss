@@ -33,12 +33,14 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"
 
 [InstallDelete]
-; Wipe orphan version-suffixed paths from prior installs before laying down new files.
-; Without this, dist-info dirs from older installs (anki_miner-2.3.3.dist-info)
-; coexist with the new ones and earlier-named entries can win filesystem-order
-; lookups by importlib.metadata. See Issue #10.
-Type: filesandordirs; Name: "{app}\_internal\anki_miner-*.dist-info"
-Type: filesandordirs; Name: "{app}\_internal\yt_dlp-*.dist-info"
+; Wipe all orphan dist-info dirs from prior installs before [Files] copies the
+; new ones. Inno overlay installs (Flags: ignoreversion) leave version-suffixed
+; dirs from older versions next to the new ones; importlib.metadata.version()
+; enumerates dist-info by filesystem order and can return the older entry.
+; Issue #10 hit anki_miner directly; the broader pattern protects every dep
+; (PyQt6, requests, fugashi, pysubs2, packaging, psutil, yt_dlp, ...) from the
+; same trap if any of them — or future app code — calls importlib.metadata.
+Type: filesandordirs; Name: "{app}\_internal\*.dist-info"
 
 [Files]
 Source: "..\..\dist\AnkiMiner\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
