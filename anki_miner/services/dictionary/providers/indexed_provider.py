@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import html
 import logging
 import sqlite3
 from pathlib import Path
@@ -79,8 +80,39 @@ class IndexedDictProvider:
         rows = storage_lookup(self._conn, word)
         if not rows:
             return None
-        # Task 4 will rewrite this composition; for now just join content strings.
-        return "<hr>".join(content for content, _tags in rows)
+
+        # Build tag union preserving first-seen order across all hits.
+        ordered_tags: list[str] = []
+        seen_tags: set[str] = set()
+        for _content, tags in rows:
+            if not tags:
+                continue
+            for tag in tags.split(" "):
+                if tag and tag not in seen_tags:
+                    seen_tags.add(tag)
+                    ordered_tags.append(tag)
+
+        # Merge gloss-item blobs by simple concatenation (renderer emits <li class="gloss-item">…</li>).
+        merged = "".join(content for content, _tags in rows)
+
+        # Count gloss-items. Use prefix without closing '>' so future class additions still match.
+        item_count = merged.count('<li class="gloss-item"')
+
+        dict_label = self._display_name
+        escaped_attr = html.escape(dict_label, quote=True)
+        italic_parts = ordered_tags + [dict_label]
+        escaped_italic = html.escape(", ".join(italic_parts), quote=True)
+
+        return (
+            '<div class="yomitan-glossary">'
+            '<ol data-count="1">'
+            f'<li data-dictionary="{escaped_attr}">'
+            f"<i>({escaped_italic})</i>"
+            f'<ul class="gloss-list" data-count="{item_count}">{merged}</ul>'
+            "</li>"
+            "</ol>"
+            "</div>"
+        )
 
     def close(self) -> None:
         if self._conn is not None:
