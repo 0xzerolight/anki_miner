@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import ChainEntry
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
-from anki_miner.services.dictionary.registry import DictionaryRegistry
+from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +35,19 @@ class _ChainRow(QWidget):
 
     toggled = pyqtSignal()
 
-    def __init__(self, entry: ChainEntry, display_name: str, format_label: str, count: int):
+    def __init__(
+        self,
+        entry: ChainEntry,
+        display_name: str,
+        format_label: str,
+        count: int,
+        *,
+        stale: bool = False,
+    ):
         super().__init__()
         self.entry = entry
+        self.stale = stale
+        self.reimport_button: QPushButton | None = None
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 2, 4, 2)
 
@@ -46,8 +56,14 @@ class _ChainRow(QWidget):
         self.checkbox.stateChanged.connect(lambda _s: self.toggled.emit())
         layout.addWidget(self.checkbox)
 
-        name_label = QLabel(display_name)
+        label_text = f"⚠ {display_name}" if stale else display_name
+        name_label = QLabel(label_text)
         layout.addWidget(name_label, 1)
+
+        if stale:
+            self.stale_label = QLabel("<i> — re-import for new formatting</i>")
+            self.stale_label.setStyleSheet("color: gray; font-size: 10px;")
+            layout.addWidget(self.stale_label)
 
         if format_label:
             badge = QLabel(format_label)
@@ -58,6 +74,10 @@ class _ChainRow(QWidget):
             count_label.setStyleSheet("color: gray; font-size: 10px;")
             layout.addWidget(count_label)
 
+        if stale:
+            self.reimport_button = QPushButton("Re-import")
+            layout.addWidget(self.reimport_button)
+
     def get_enabled(self) -> bool:
         return self.checkbox.isChecked()
 
@@ -67,6 +87,7 @@ class DictionarySettingsPanel(FormPanel):
 
     add_dict_requested = pyqtSignal()
     reimport_jmdict_requested = pyqtSignal()
+    reimport_dict_requested = pyqtSignal(str)
     chain_changed = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -231,6 +252,7 @@ class DictionarySettingsPanel(FormPanel):
             self._registry = DictionaryRegistry(DICTS_ROOT)
         registry = self._registry
         for entry in self._chain:
+            meta: DictMeta | None = None
             if entry.kind == "indexed":
                 meta = registry.get(entry.dict_id) if entry.dict_id else None
                 display = meta.source_name if meta else (entry.dict_id or "(missing)")
@@ -240,8 +262,20 @@ class DictionarySettingsPanel(FormPanel):
                 display = "Jisho (online fallback)"
                 fmt = "online"
                 count = 0
-            row = _ChainRow(entry, display, fmt, count)
+            stale = meta is not None and not meta.schema_ok
+            row = _ChainRow(entry, display, fmt, count, stale=stale)
             row.toggled.connect(self.chain_changed.emit)
+            if stale and row.reimport_button is not None and meta is not None:
+                # JMdict per-row Re-import fires the existing global signal so
+                # users land in the same import flow regardless of where they
+                # clicked. Other formats use the new per-dict signal.
+                if meta.format == "jmdict":
+                    row.reimport_button.clicked.connect(self.reimport_jmdict_requested.emit)
+                else:
+                    dict_id = meta.dict_id
+                    row.reimport_button.clicked.connect(
+                        lambda _checked=False, d=dict_id: self.reimport_dict_requested.emit(d)
+                    )
             item = QListWidgetItem()
             item.setSizeHint(row.sizeHint())
             self._list.addItem(item)
