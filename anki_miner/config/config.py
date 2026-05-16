@@ -97,6 +97,10 @@ class AnkiMinerConfig:
         default_factory=lambda: Path.home() / ".anki_miner" / "pitch_accent.csv"
     )
     use_pitch_accent: bool = False
+    # Output label format for the pitch_category Anki field.
+    # "jp": 平板/頭高/中高/尾高/起伏 (legacy)
+    # "romaji": heiban/atamadaka/nakadaka/odaka/kifuku (Yomitan/Lapis compatible)
+    pitch_category_format: Literal["jp", "romaji"] = "jp"
 
     # Frequency settings
     frequency_list_path: Path = field(
