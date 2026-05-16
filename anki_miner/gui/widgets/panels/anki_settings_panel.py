@@ -62,6 +62,14 @@ class AnkiSettingsPanel(FormPanel):
             helper="Default is http://localhost:8765. Change if AnkiConnect is on a different port",
         )
 
+        # Card tags
+        self.anki_tags_input = QLineEdit()
+        self.add_field(
+            "Card tags",
+            self.anki_tags_input,
+            helper="Space-separated tags applied to every mined card. Leave blank for no tags.",
+        )
+
         # Test connection button
         button_layout = QHBoxLayout()
         button_layout.addStretch()

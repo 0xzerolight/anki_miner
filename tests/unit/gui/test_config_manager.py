@@ -1,6 +1,7 @@
 """Tests for GUIConfigManager persistence and migration."""
 
 import json
+from dataclasses import replace
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.utils.config_manager import GUIConfigManager
@@ -103,3 +104,39 @@ class TestAllowedPosMigration:
         config = GUIConfigManager.load_config()
 
         assert config.allowed_pos == existing
+
+
+class TestAnkiTagsRoundTrip:
+    """Persistence of the anki_tags field through save/load."""
+
+    def test_save_and_load_preserves_anki_tags(self, tmp_path, monkeypatch):
+        """A custom anki_tags value must survive a save/load cycle verbatim."""
+        cfg_file = tmp_path / "gui_config.json"
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        config = replace(create_default_config(), anki_tags="foo bar")
+        GUIConfigManager.save_config(config)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.anki_tags == "foo bar"
+
+    def test_legacy_config_without_anki_tags_uses_default(self, tmp_path, monkeypatch):
+        """A pre-anki_tags JSON file must load and fall back to the dataclass default."""
+        cfg_file = tmp_path / "gui_config.json"
+        cfg_file.write_text(
+            json.dumps(
+                {
+                    "anki_deck_name": "Legacy Deck",
+                    "ankiconnect_url": "http://example:8765",
+                    # Note: anki_tags key intentionally absent.
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.anki_tags == "auto-mined"
+        assert loaded.anki_deck_name == "Legacy Deck"

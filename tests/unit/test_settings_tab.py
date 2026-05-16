@@ -164,3 +164,29 @@ class TestIPlusOneFilterRoundTrip:
 
         assert len(received) == 2
         assert received[1].use_i_plus_one_filter is False
+
+
+class TestAnkiTagsRoundTrip:
+    """Load/save round-trip for the anki_tags QLineEdit on the Anki settings panel."""
+
+    def test_loads_anki_tags_from_config(self, test_config: AnkiMinerConfig):
+        cfg = replace(test_config, anki_tags="custom tag")
+        widget = SettingsTab(cfg)
+        try:
+            assert widget.anki_panel.anki_tags_input.text() == "custom tag"
+        finally:
+            widget.deleteLater()
+
+    def test_saves_anki_tags_to_config(self, tab, monkeypatch):
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+
+        tab.anki_panel.anki_tags_input.setText("new-tag another")
+        tab._on_save_clicked()
+
+        assert len(received) == 1
+        assert received[0].anki_tags == "new-tag another"

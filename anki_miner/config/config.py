@@ -48,6 +48,9 @@ class AnkiMinerConfig:
         }
     )
     ankiconnect_url: str = "http://127.0.0.1:8765"
+    anki_tags: str = (
+        "auto-mined"  # Whitespace-separated tags applied to every mined card; empty string means no tags
+    )
 
     # Media extraction settings
     audio_padding: float = 0.3  # Seconds to add before/after subtitle timing
