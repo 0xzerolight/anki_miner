@@ -30,6 +30,7 @@ from anki_miner.gui.widgets.panels import (
     YouTubeSettingsPanel,
 )
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
+from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
 
 
 class SettingsTab(QWidget):
@@ -124,6 +125,7 @@ class SettingsTab(QWidget):
         # Dictionary panel signals — wire Add/Reimport to import worker dialogs.
         self.dictionary_panel.add_dict_requested.connect(self._on_add_dict_clicked)
         self.dictionary_panel.reimport_jmdict_requested.connect(self._on_reimport_jmdict_clicked)
+        self.dictionary_panel.reimport_dict_requested.connect(self._on_reimport_dict_clicked)
 
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts."""
@@ -465,6 +467,77 @@ class SettingsTab(QWidget):
 
         worker.progress.connect(on_progress)
         worker.import_finished.connect(on_import_finished)
+        worker.failed.connect(on_failed)
+        dlg.canceled.connect(worker.cancel)
+        worker.start()
+
+    def _on_reimport_dict_clicked(self, slot_id: str) -> None:
+        """Prompt for a matching Yomitan zip and re-import into an existing slot.
+
+        Slot identity is preserved by validating that the chosen zip's derived
+        `dict_id` equals ``slot_id`` before invoking the importer with
+        ``overwrite=True``. Picking a different zip would orphan the stale slot
+        and silently create a new one — we abort with a warning instead.
+        """
+        zip_path_str, _ = QFileDialog.getOpenFileName(
+            self, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)"
+        )
+        if not zip_path_str:
+            return
+
+        zip_path = Path(zip_path_str)
+        try:
+            derived_id = derive_dict_id_from_zip(zip_path)
+        except Exception as exc:  # noqa: BLE001 — surface every failure to GUI
+            QMessageBox.warning(self, "Invalid zip", str(exc))
+            return
+
+        if derived_id != slot_id:
+            QMessageBox.warning(
+                self,
+                "Zip does not match slot",
+                f"This zip is for `{derived_id}`, but you are re-importing "
+                f"`{slot_id}`. Pick the matching zip.",
+            )
+            return
+
+        dest_root = Path.home() / ".anki_miner" / "dicts"
+        dlg = QProgressDialog("Re-importing dictionary…", "Cancel", 0, 100, self)
+        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+        dlg.show()
+
+        worker = DictionaryImportWorker.for_yomitan(zip_path, dest_root, overwrite=True)
+        self._active_import_worker = worker  # keep alive across QThread lifetime
+        self._set_import_buttons_enabled(False)
+
+        def on_progress(cur: int, total: int, msg: str) -> None:
+            dlg.setMaximum(total)
+            dlg.setValue(cur)
+            dlg.setLabelText(msg)
+
+        def on_done(dict_id: str, meta: dict) -> None:
+            dlg.close()
+            QMessageBox.information(
+                self,
+                "Dictionary re-imported",
+                f"Re-imported {dict_id} ({meta.get('entry_count', 0):,} entries)",
+            )
+            # Refresh registry so the stale-flag warning clears on the row.
+            current_chain = self.dictionary_panel.get_chain()
+            self.dictionary_panel.refresh_registry()
+            self.dictionary_panel.set_chain(current_chain)
+            # Notify listeners so cached DefinitionService instances rebuild
+            # with the freshly-rebuilt SQLite index.
+            self.config_changed.emit(self.config)
+            self._set_import_buttons_enabled(True)
+
+        def on_failed(err: str) -> None:
+            dlg.close()
+            QMessageBox.warning(self, "Re-import failed", err)
+            self._set_import_buttons_enabled(True)
+
+        worker.progress.connect(on_progress)
+        worker.import_finished.connect(on_done)
         worker.failed.connect(on_failed)
         dlg.canceled.connect(worker.cancel)
         worker.start()

@@ -124,7 +124,7 @@ def import_yomitan_zip(
         if not title:
             raise SetupError("index.json missing required 'title'")
 
-        dict_id = _slug(title) + ("-" + _slug(revision) if revision else "")
+        dict_id = _derive_dict_id(title, revision)
 
         # Enumerate term bank files for progress totals
         term_files = sorted(tmp_path.glob("term_bank_*.json"))
@@ -270,6 +270,50 @@ def _copy_dict_media(zip_root: Path, dest: Path, rel_paths: set[str]) -> None:
         if not src_resolved.is_file():
             continue
         shutil.copy2(src_resolved, dest / safe)
+
+
+def _derive_dict_id(title: str, revision: str) -> str:
+    """Compute the canonical on-disk `dict_id` for a Yomitan dictionary.
+
+    The on-disk folder name is `<slug(title)>` optionally suffixed with
+    `-<slug(revision)>` when revision is non-empty. This mirrors the historical
+    rule used by :func:`import_yomitan_zip`.
+    """
+    return _slug(title) + ("-" + _slug(revision) if revision else "")
+
+
+def derive_dict_id_from_zip(zip_path: Path) -> str:
+    """Peek at a Yomitan zip's `index.json` and return its derived `dict_id`.
+
+    Used by the Settings UI to validate that a user-picked zip matches the
+    stale slot they're re-importing — without invoking the full importer.
+
+    Raises:
+        SetupError: zip is missing, corrupt, missing `index.json`, or
+                    `index.json` lacks a non-empty `title` field.
+    """
+    if not zip_path.exists():
+        raise SetupError(f"Yomitan zip not found: {zip_path}")
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            try:
+                with zf.open("index.json") as fp:
+                    raw = fp.read().decode("utf-8")
+            except KeyError as e:
+                raise SetupError("Zip missing required index.json") from e
+    except zipfile.BadZipFile as e:
+        raise SetupError(f"Corrupt zip file: {e}") from e
+
+    try:
+        index = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise SetupError(f"Invalid index.json: {e}") from e
+
+    title = str(index.get("title", "")).strip()
+    revision = str(index.get("revision", "")).strip()
+    if not title:
+        raise SetupError("index.json missing required 'title'")
+    return _derive_dict_id(title, revision)
 
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
