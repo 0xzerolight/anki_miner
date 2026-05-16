@@ -1427,6 +1427,75 @@ class TestDictMediaUpload:
         assert names == {"d1__svg-accent_X.svg", "d1__second.svg"}
 
 
+class TestAnkiTagsConfig:
+    """Tests for the configurable ``anki_tags`` field.
+
+    The note payload's ``tags`` array is derived from
+    ``config.anki_tags.split()``. ``str.split()`` with no args collapses runs
+    of whitespace and discards empty strings, so the empty / whitespace-only
+    cases must yield an empty list rather than ``[""]``.
+    """
+
+    @pytest.mark.parametrize(
+        ("anki_tags", "expected"),
+        [
+            ("auto-mined", ["auto-mined"]),
+            ("naruto shounen", ["naruto", "shounen"]),
+            ("", []),
+            ("   ", []),
+            ("  spaced   words  ", ["spaced", "words"]),
+        ],
+    )
+    def test_create_card_tags_payload(self, test_config, make_tokenized_word, anki_tags, expected):
+        """Single-card path: payload tags reflect ``anki_tags.split()``."""
+        from dataclasses import replace
+
+        config = replace(test_config, anki_tags=anki_tags)
+        service = AnkiService(config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=12345)
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            result = service.create_card(word, media, "definition")
+
+        assert result is True
+        payload = mock_post.call_args[1]["json"]
+        assert payload["params"]["note"]["tags"] == expected
+
+    @pytest.mark.parametrize(
+        ("anki_tags", "expected"),
+        [
+            ("auto-mined", ["auto-mined"]),
+            ("naruto shounen", ["naruto", "shounen"]),
+            ("", []),
+            ("   ", []),
+            ("  spaced   words  ", ["spaced", "words"]),
+        ],
+    )
+    def test_create_cards_batch_tags_payload(
+        self, test_config, make_tokenized_word, anki_tags, expected
+    ):
+        """Batch path: every note in the batch payload uses the split tags."""
+        from dataclasses import replace
+
+        config = replace(test_config, anki_tags=anki_tags)
+        service = AnkiService(config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=[12345])
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            count = service.create_cards_batch([(word, media, "definition")])
+
+        assert count == 1
+        payload = mock_post.call_args[1]["json"]
+        note = payload["params"]["notes"][0]
+        assert note["tags"] == expected
+
+
 class TestExtractDictMediaSrcsEnvelope:
     """Regression guard for `_extract_dict_media_srcs` against the new image
     envelope shape emitted by yomitan_renderer.
