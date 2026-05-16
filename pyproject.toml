@@ -35,6 +35,7 @@ dependencies = [
     "PyQt6>=6.6.0",
     "yt-dlp>=2026.3.0",
     "psutil>=5.9.0",
+    "packaging>=21.0",
 ]
 
 [project.optional-dependencies]
