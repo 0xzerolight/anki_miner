@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import shutil
 from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
@@ -12,6 +13,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -171,10 +173,46 @@ class DictionarySettingsPanel(FormPanel):
     def remove(self, index: int) -> None:
         if index < 0 or index >= len(self._chain):
             return
-        if self._chain[index].kind == "jisho":
+        entry = self._chain[index]
+        if entry.kind == "jisho":
             return  # Jisho can be disabled but not removed
+
+        # Resolve display name + on-disk folder for the confirm prompt and
+        # the actual rmtree. dict_id is the folder name under DICTS_ROOT.
+        dict_id = entry.dict_id
+        registry = self._registry
+        meta = registry.get(dict_id) if (registry is not None and dict_id) else None
+        display = meta.source_name if meta else (dict_id or "(missing)")
+        dict_dir = (DICTS_ROOT / dict_id) if dict_id else None
+
+        reply = QMessageBox.question(
+            self,
+            "Remove dictionary",
+            f"Remove '{display}' and delete its files from disk?\n\n"
+            "This cannot be undone. You would need to reimport from the source zip.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        if dict_dir is not None and dict_dir.exists():
+            try:
+                shutil.rmtree(dict_dir)
+            except OSError as e:
+                logger.error("Failed to delete dictionary folder %s: %s", dict_dir, e)
+                QMessageBox.warning(
+                    self,
+                    "Remove failed",
+                    f"Could not delete {dict_dir}:\n{e}\n\n" "The dictionary was not removed.",
+                )
+                return
+
         self._chain = list(self.get_chain())
         del self._chain[index]
+        # Disk state changed — drop cached scan so the next rebuild reflects
+        # the missing folder (and a re-add of the same id won't show stale meta).
+        self._registry = None
         self._rebuild_list()
         self.chain_changed.emit()
 

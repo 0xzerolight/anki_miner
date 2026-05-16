@@ -87,6 +87,7 @@ class AnkiMinerConfig:
         )
     )
     jmdict_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "JMdict_e")
+    dicts_root: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "dicts")
     use_offline_dict: bool = True
     jisho_api_url: str = "https://jisho.org/api/v1/search/words"
     jisho_delay: float = 0.5  # Seconds between API calls
@@ -172,6 +173,8 @@ class AnkiMinerConfig:
             object.__setattr__(self, "media_temp_folder", Path(self.media_temp_folder))
         if isinstance(self.jmdict_path, str):
             object.__setattr__(self, "jmdict_path", Path(self.jmdict_path))
+        if isinstance(self.dicts_root, str):
+            object.__setattr__(self, "dicts_root", Path(self.dicts_root))
         if isinstance(self.pitch_accent_path, str):
             object.__setattr__(self, "pitch_accent_path", Path(self.pitch_accent_path))
         if isinstance(self.frequency_list_path, str):

@@ -1,6 +1,9 @@
 """Tests for Yomitan structured-content HTML renderer."""
 
 from anki_miner.services.dictionary.yomitan_renderer import (
+    DICT_MEDIA_CLASS,
+    dict_media_filename,
+    dict_media_safe_basename,
     render_glossary_entry,
     structured_content_to_html,
 )
@@ -39,8 +42,14 @@ class TestStructuredContentToHtml:
         assert structured_content_to_html(node) == "<br>"
 
     def test_img_uses_path(self):
+        # Relative `path` only emits src when a dict_id is supplied (the
+        # asset-extraction path). Without one, the src would point nowhere in
+        # Anki — see TestDictMediaImgRewrite.
         node = {"tag": "img", "path": "img/diagram.png"}
-        assert structured_content_to_html(node) == '<img src="img/diagram.png">'
+        assert (
+            structured_content_to_html(node, dict_id="d1")
+            == '<img src="d1__img_diagram.png" class="anki-miner-dict-media">'
+        )
 
     def test_anchor_uses_href(self):
         node = {"tag": "a", "href": "https://example.com", "content": "link"}
@@ -429,6 +438,99 @@ class TestPerTagAttributes:
     def test_title_control_chars_dropped(self):
         node = {"tag": "div", "title": "a\x00b", "content": "x"}
         assert "title=" not in structured_content_to_html(node)
+
+
+class TestDictMediaImgRewrite:
+    """Yomitan monolingual dictionaries reference accent SVGs and other bundled
+    images with paths relative to the dictionary zip (e.g.
+    ``sankoku8/svg-accent/X.svg``). Without rewriting, those paths leak into
+    Anki where they resolve to nothing — the user sees a broken-image icon
+    mid-reading. With dict_id set, the renderer rewrites src to a flat
+    namespaced filename and tags the tag with the marker class so AnkiService
+    knows to ship the bytes via AnkiConnect."""
+
+    def test_relative_img_with_dict_id_rewrites_src(self):
+        node = {"tag": "img", "path": "sankoku8/svg-accent/X.svg"}
+        out = structured_content_to_html(node, dict_id="sankoku8-2023-07-19")
+        assert 'src="sankoku8-2023-07-19__sankoku8_svg-accent_X.svg"' in out
+        assert f'class="{DICT_MEDIA_CLASS}"' in out
+
+    def test_relative_img_populates_media_collector(self):
+        node = {"tag": "img", "path": "svg-accent/accent.svg"}
+        collected: set[str] = set()
+        structured_content_to_html(node, dict_id="sankoku8", media_collector=collected)
+        assert collected == {"svg-accent/accent.svg"}
+
+    def test_relative_img_without_dict_id_is_dropped(self):
+        # No dict_id means the importer was called in legacy mode; emitting the
+        # raw relative path would just produce a broken icon in Anki.
+        node = {"tag": "img", "path": "svg-accent/x.svg"}
+        out = structured_content_to_html(node)
+        assert out == "<img>"
+        assert "src=" not in out
+
+    def test_http_url_passes_through(self):
+        node = {"tag": "img", "path": "https://example.com/x.png"}
+        out = structured_content_to_html(node, dict_id="dict-1")
+        assert 'src="https://example.com/x.png"' in out
+        assert DICT_MEDIA_CLASS not in out
+
+    def test_traversal_path_dropped(self):
+        node = {"tag": "img", "path": "../etc/passwd"}
+        out = structured_content_to_html(node, dict_id="dict-1")
+        assert "src=" not in out
+
+    def test_absolute_path_dropped(self):
+        node = {"tag": "img", "path": "/etc/passwd"}
+        out = structured_content_to_html(node, dict_id="dict-1")
+        assert "src=" not in out
+
+    def test_protocol_relative_dropped(self):
+        node = {"tag": "img", "path": "//evil.example.com/x.png"}
+        out = structured_content_to_html(node, dict_id="dict-1")
+        assert "src=" not in out
+
+    def test_nested_render_propagates_dict_id_and_collector(self):
+        node = {
+            "tag": "span",
+            "content": [
+                {"tag": "img", "path": "a/x.svg"},
+                {"tag": "img", "path": "b/y.svg"},
+            ],
+        }
+        collected: set[str] = set()
+        out = structured_content_to_html(node, dict_id="d", media_collector=collected)
+        assert 'src="d__a_x.svg"' in out
+        assert 'src="d__b_y.svg"' in out
+        assert collected == {"a/x.svg", "b/y.svg"}
+
+    def test_render_glossary_entry_threads_media(self):
+        glossary = [{"tag": "img", "path": "x.svg"}]
+        collected: set[str] = set()
+        out = render_glossary_entry(glossary, dict_id="d", media_collector=collected)
+        assert 'src="d__x.svg"' in out
+        assert collected == {"x.svg"}
+
+
+class TestDictMediaHelpers:
+    def test_dict_media_filename_namespaces_and_flattens(self):
+        assert dict_media_filename("dict-1", "svg/x.svg") == "dict-1__svg_x.svg"
+
+    def test_dict_media_safe_basename_preserves_cjk(self):
+        assert (
+            dict_media_safe_basename("sankoku8/svg-accent/アクセント.svg")
+            == "sankoku8_svg-accent_アクセント.svg"
+        )
+
+    def test_dict_media_safe_basename_rejects_traversal(self):
+        assert dict_media_safe_basename("../x.svg") is None
+        assert dict_media_safe_basename("a/../b.svg") is None
+        assert dict_media_safe_basename("/abs.svg") is None
+        assert dict_media_safe_basename("") is None
+        assert dict_media_safe_basename("  ") is None
+
+    def test_dict_media_safe_basename_rejects_scheme(self):
+        assert dict_media_safe_basename("http://example.com/x.svg") is None
 
 
 class TestStyleCollisionDedup:

@@ -1263,3 +1263,165 @@ class TestConfigurableFields:
         note_fields = payload["params"]["notes"][0]["fields"]
         assert "sentence_furigana" not in note_fields
         assert "word" in note_fields
+
+
+# ---------------------------------------------------------------------------
+# TestDictMediaUpload
+# ---------------------------------------------------------------------------
+
+
+class TestDictMediaUpload:
+    """Yomitan monolingual dictionaries reference SVG/PNG assets relative to
+    the dictionary zip. The renderer rewrites those to flat namespaced
+    filenames and tags them with `class="anki-miner-dict-media"`. AnkiService
+    must scan definition HTML for those markers, locate the file under
+    ``config.dicts_root/<dict_id>/media/<flat>``, and ship the bytes to Anki
+    via storeMediaFile.
+    """
+
+    def _make_config_with_dict_media(self, test_config, dicts_root, dict_id="test-dict"):
+        from dataclasses import replace
+
+        media_dir = dicts_root / dict_id / "media"
+        media_dir.mkdir(parents=True)
+        (media_dir / "svg-accent_X.svg").write_bytes(b"<svg/>")
+        return replace(test_config, dicts_root=dicts_root)
+
+    def test_upload_dict_media_reads_file_and_calls_storemediafile(
+        self, test_config, temp_dir, make_tokenized_word
+    ):
+        config = self._make_config_with_dict_media(test_config, temp_dir / "dicts")
+        service = AnkiService(config)
+
+        definition = (
+            '<div>ふ<img class="anki-miner-dict-media" '
+            'src="test-dict__svg-accent_X.svg">そ</div>'
+        )
+        word = make_tokenized_word()
+        media = MediaData()
+
+        store_resp = _mock_response(result=None)
+        create_resp = _mock_response(result=12345)
+
+        with patch("requests.post", side_effect=[store_resp, create_resp]) as mock_post:
+            service.create_card(word, media, definition)
+
+        # First call is storeMediaFile for the dict asset
+        store_call = mock_post.call_args_list[0]
+        store_payload = store_call[1]["json"]
+        assert store_payload["action"] == "storeMediaFile"
+        assert store_payload["params"]["filename"] == "test-dict__svg-accent_X.svg"
+        assert base64.b64decode(store_payload["params"]["data"]) == b"<svg/>"
+
+    def test_uploaded_files_cached_across_calls(self, test_config, temp_dir, make_tokenized_word):
+        """Same SVG referenced by 5000 cards should upload once, not 5000 times."""
+        config = self._make_config_with_dict_media(test_config, temp_dir / "dicts")
+        service = AnkiService(config)
+
+        definition = '<img class="anki-miner-dict-media" src="test-dict__svg-accent_X.svg">'
+        word = make_tokenized_word()
+        media = MediaData()
+
+        store_resp = _mock_response(result=None)
+        create_resp = _mock_response(result=12345)
+
+        with patch(
+            "requests.post",
+            side_effect=[store_resp, create_resp, create_resp, create_resp],
+        ) as mock_post:
+            service.create_card(word, media, definition)
+            service.create_card(word, media, definition)
+            service.create_card(word, media, definition)
+
+        # Three card creations + exactly one media upload.
+        store_calls = [
+            c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"
+        ]
+        assert len(store_calls) == 1
+
+    def test_missing_file_on_disk_is_logged_and_cached(
+        self, test_config, temp_dir, make_tokenized_word, caplog
+    ):
+        from dataclasses import replace
+
+        # dicts_root exists but the referenced file does not.
+        (temp_dir / "dicts").mkdir()
+        config = replace(test_config, dicts_root=temp_dir / "dicts")
+        service = AnkiService(config)
+
+        definition = '<img class="anki-miner-dict-media" src="nope__missing.svg">'
+        word = make_tokenized_word()
+        media = MediaData()
+        create_resp = _mock_response(result=12345)
+
+        with (
+            caplog.at_level(logging.WARNING),
+            patch("requests.post", return_value=create_resp) as mock_post,
+        ):
+            service.create_card(word, media, definition)
+            service.create_card(word, media, definition)
+
+        # No storeMediaFile attempted; warning logged once (cached after first).
+        store_calls = [
+            c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"
+        ]
+        assert len(store_calls) == 0
+        assert sum("Dict media file missing" in r.message for r in caplog.records) == 1
+
+    def test_traversal_src_rejected(self, test_config, temp_dir, make_tokenized_word):
+        from dataclasses import replace
+
+        (temp_dir / "dicts").mkdir()
+        config = replace(test_config, dicts_root=temp_dir / "dicts")
+        service = AnkiService(config)
+
+        # Even if a malicious dict somehow emitted a traversal-style src, the
+        # resolver must refuse to follow it out of dicts_root.
+        definition = '<img class="anki-miner-dict-media" src="..__..__etc__passwd">'
+        word = make_tokenized_word()
+        media = MediaData()
+        create_resp = _mock_response(result=12345)
+
+        with patch("requests.post", return_value=create_resp) as mock_post:
+            service.create_card(word, media, definition)
+
+        store_calls = [
+            c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"
+        ]
+        assert len(store_calls) == 0
+
+    def test_batch_upload_collects_from_all_definitions(
+        self, test_config, temp_dir, make_tokenized_word
+    ):
+        config = self._make_config_with_dict_media(test_config, temp_dir / "dicts", dict_id="d1")
+        # Add a second file referenced by a different card in the batch.
+        (config.dicts_root / "d1" / "media" / "second.svg").write_bytes(b"<svg2/>")
+
+        service = AnkiService(config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        defs = [
+            '<img class="anki-miner-dict-media" src="d1__svg-accent_X.svg">',
+            '<img class="anki-miner-dict-media" src="d1__second.svg">',
+            # Duplicate of the first — must not re-upload.
+            '<img class="anki-miner-dict-media" src="d1__svg-accent_X.svg">',
+        ]
+        word_data_list = [(word, media, d) for d in defs]
+
+        store_resp = _mock_response(result=None)
+        create_resp = _mock_response(result=[1, 2, 3])
+
+        with patch(
+            "requests.post",
+            side_effect=[store_resp, store_resp, create_resp],
+        ) as mock_post:
+            service.create_cards_batch(word_data_list)
+
+        store_calls = [
+            c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"
+        ]
+        # Exactly the two unique files, despite three card-level references.
+        assert len(store_calls) == 2
+        names = {c[1]["json"]["params"]["filename"] for c in store_calls}
+        assert names == {"d1__svg-accent_X.svg", "d1__second.svg"}

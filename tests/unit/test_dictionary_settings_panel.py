@@ -4,7 +4,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
@@ -14,6 +14,15 @@ from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySe
 def qapp():
     app = QApplication.instance() or QApplication([])
     yield app
+
+
+@pytest.fixture
+def confirm_remove(monkeypatch):
+    """Auto-accept the 'Remove dictionary' QMessageBox confirmation."""
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
 
 
 def test_panel_renders_default_chain(qapp, monkeypatch, tmp_path):
@@ -48,7 +57,9 @@ def test_reorder_moves_entry_up(qapp, monkeypatch, tmp_path):
     assert chain[1].dict_id == "a"
 
 
-def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, monkeypatch, tmp_path):
+def test_chain_changed_emits_on_reorder_remove_and_toggle(
+    qapp, monkeypatch, tmp_path, confirm_remove
+):
     monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
         tmp_path,
@@ -133,7 +144,7 @@ def test_edge_reorder_calls_are_noops(qapp, monkeypatch, tmp_path):
     assert chain[1].kind == "jisho"
 
 
-def test_checkbox_toggle_preserved_on_reorder(qapp, monkeypatch, tmp_path):
+def test_checkbox_toggle_preserved_on_reorder(qapp, monkeypatch, tmp_path, confirm_remove):
     """The implementer's deviation: get_chain()-resync before mutation must
     preserve a user's checkbox toggle across move_up/move_down/remove."""
     monkeypatch.setattr(
@@ -182,3 +193,86 @@ def test_checkbox_toggle_preserved_on_reorder(qapp, monkeypatch, tmp_path):
     assert [e.dict_id for e in chain[:2]] == ["b", "c"]
     assert chain[0].enabled is False
     assert chain[1].enabled is False
+
+
+def test_remove_deletes_dict_folder_on_disk(qapp, monkeypatch, tmp_path, confirm_remove):
+    """Regression: remove() must delete DICTS_ROOT/<dict_id>/ so a re-add of the
+    same dict does not hit the importer's 'already exists' guard."""
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
+        tmp_path,
+    )
+    dict_dir = tmp_path / "a"
+    dict_dir.mkdir()
+    (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+
+    panel = DictionarySettingsPanel()
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="a", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    panel.remove(0)
+
+    assert not dict_dir.exists(), "remove() must rmtree the dict folder"
+    chain = panel.get_chain()
+    assert [e.kind for e in chain] == ["jisho"]
+
+
+def test_remove_cancelled_keeps_dict_and_chain(qapp, monkeypatch, tmp_path):
+    """Clicking 'No' on the confirm dialog must leave both disk + chain intact."""
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
+        tmp_path,
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.No,
+    )
+
+    dict_dir = tmp_path / "a"
+    dict_dir.mkdir()
+    (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+
+    panel = DictionarySettingsPanel()
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="a", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    events: list[str] = []
+    panel.chain_changed.connect(lambda: events.append("changed"))
+
+    panel.remove(0)
+
+    assert dict_dir.exists(), "cancel must not touch disk"
+    chain = panel.get_chain()
+    assert [e.dict_id for e in chain[:1]] == ["a"]
+    assert events == [], "cancel must not emit chain_changed"
+
+
+def test_remove_tolerates_missing_dict_folder(qapp, monkeypatch, tmp_path, confirm_remove):
+    """If the dict folder is already gone (e.g. user deleted it manually), remove()
+    should still drop the in-memory entry instead of erroring."""
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
+        tmp_path,
+    )
+    # No folder created on disk.
+
+    panel = DictionarySettingsPanel()
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="ghost", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    panel.remove(0)
+
+    chain = panel.get_chain()
+    assert [e.kind for e in chain] == ["jisho"]
