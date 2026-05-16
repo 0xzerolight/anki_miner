@@ -349,7 +349,7 @@ class AnkiService:
                             "deckName": self.config.anki_deck_name,
                             "modelName": self.config.anki_note_type,
                             "fields": fields,
-                            "tags": ["auto-mined"],
+                            "tags": self.config.anki_tags.split(),
                         }
                     },
                 },
@@ -453,7 +453,7 @@ class AnkiService:
                         "deckName": self.config.anki_deck_name,
                         "modelName": self.config.anki_note_type,
                         "fields": fields,
-                        "tags": ["auto-mined"],
+                        "tags": self.config.anki_tags.split(),
                     }
                 )
 

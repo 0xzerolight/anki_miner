@@ -159,6 +159,7 @@ class SettingsTab(QWidget):
         self.anki_panel.deck_input.setText(self.config.anki_deck_name)
         self.anki_panel.note_type_input.setText(self.config.anki_note_type)
         self.anki_panel.ankiconnect_url_input.setText(self.config.ankiconnect_url)
+        self.anki_panel.anki_tags_input.setText(self.config.anki_tags)
 
         # Anki card field mappings
         self.anki_panel.set_card_fields(self.config.anki_fields)
@@ -263,6 +264,7 @@ class SettingsTab(QWidget):
             anki_deck_name=self.anki_panel.deck_input.text(),
             anki_note_type=self.anki_panel.note_type_input.text(),
             ankiconnect_url=self.anki_panel.ankiconnect_url_input.text(),
+            anki_tags=self.anki_panel.anki_tags_input.text(),
             anki_fields=self.anki_panel.get_card_fields(),
             anki_word_field=self.anki_panel.get_card_fields().get("word", "Expression"),
             # Media settings
