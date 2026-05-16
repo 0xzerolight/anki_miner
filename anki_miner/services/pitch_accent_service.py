@@ -2,6 +2,7 @@
 
 import csv
 import logging
+from collections.abc import Sequence
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
@@ -11,6 +12,17 @@ logger = logging.getLogger(__name__)
 
 # Small kana that combine with the previous kana (not separate mora)
 _COMBINING_KANA = set("ゃゅょぁぃぅぇぉゎャュョァィゥェォヮ")
+
+# MeCab pos1 markers that trigger kifuku classification when drop == mora_count.
+VERBAL_POS = {"動詞", "形容詞"}
+
+ROMAJI_CATEGORY = {
+    "平板": "heiban",
+    "頭高": "atamadaka",
+    "中高": "nakadaka",
+    "尾高": "odaka",
+    "起伏": "kifuku",
+}
 
 
 def count_mora(reading: str) -> int:
@@ -29,23 +41,52 @@ def count_mora(reading: str) -> int:
     return sum(1 for ch in reading if ch not in _COMBINING_KANA)
 
 
-def classify_pitch(position: int, mora_count: int) -> str:
+def classify_pitch(position: int, mora_count: int, pos: str | None = None) -> str:
     """Classify pitch accent pattern into a category.
 
     Args:
         position: Pitch drop position (0 = heiban).
         mora_count: Number of mora in the word.
+        pos: Optional MeCab pos1 marker. When the drop sits on the final mora,
+            verbal POS (動詞/形容詞) yields 起伏; otherwise 尾高.
 
     Returns:
-        Category string: 平板, 頭高, 中高, or 尾高.
+        Category string: 平板, 頭高, 中高, 尾高, or 起伏.
     """
     if position == 0:
         return "平板"
     if position == 1:
         return "頭高"
     if position == mora_count:
-        return "尾高"
+        return "起伏" if pos in VERBAL_POS else "尾高"
     return "中高"
+
+
+def format_categories(pattern: str, reading: str, pos: str | None, fmt: str) -> str | None:
+    """Map a raw pattern string (e.g. "0,2") to a Yomitan-style category list.
+
+    Args:
+        pattern: Comma-separated drop positions from the pitch CSV.
+        reading: Kana reading used to derive mora count.
+        pos: Optional MeCab pos1 marker (for kifuku/odaka split).
+        fmt: "jp" for 平板/頭高/中高/尾高/起伏, "romaji" for heiban/atamadaka/...
+
+    Returns:
+        Comma-joined categories, or None if no parseable positions.
+    """
+    mora = count_mora(reading)
+    out: list[str] = []
+    for raw in pattern.split(","):
+        token = raw.strip()
+        if not token:
+            continue
+        try:
+            position = int(token)
+        except ValueError:
+            continue
+        jp = classify_pitch(position, mora, pos)
+        out.append(ROMAJI_CATEGORY[jp] if fmt == "romaji" else jp)
+    return ",".join(out) if out else None
 
 
 class PitchAccentService:
@@ -163,44 +204,54 @@ class PitchAccentService:
         """
         return [self.lookup(word, reading) for word, reading in words]
 
-    def lookup_detailed(self, word: str, reading: str = "") -> tuple[str | None, str | None]:
+    def lookup_detailed(
+        self,
+        word: str,
+        reading: str = "",
+        pos: str | None = None,
+        fmt: str = "jp",
+    ) -> tuple[str | None, str | None]:
         """Look up pitch position and derived category for a word.
 
         Args:
             word: Word to look up (kanji or kana form).
             reading: Kana reading (used for category derivation and fallback lookup).
+            pos: Optional MeCab pos1 marker for kifuku/odaka distinction.
+            fmt: "jp" (default) for 平板/頭高/... or "romaji" for heiban/atamadaka/...
 
         Returns:
             Tuple of (position_str, category) or (None, None) if not found.
-            For multi-pattern entries (e.g. "0,2"), uses the first value.
+            Multi-pattern entries (e.g. "0,2") emit comma-joined categories.
         """
         pattern = self.lookup(word, reading)
         if pattern is None:
             return None, None
 
-        # Use first pattern for category classification
-        first_pattern = pattern.split(",")[0].strip()
-        try:
-            position = int(first_pattern)
-        except ValueError:
-            return pattern, None
-
-        # Derive category from position + mora count
         lookup_reading = reading or word
-        mora = count_mora(lookup_reading)
-        category = classify_pitch(position, mora)
-
+        category = format_categories(pattern, lookup_reading, pos, fmt)
         return pattern, category
 
     def lookup_batch_detailed(
-        self, words: list[tuple[str, str]]
+        self,
+        words: Sequence[tuple[str, str] | tuple[str, str, str | None]],
+        fmt: str = "jp",
     ) -> list[tuple[str | None, str | None]]:
-        """Look up pitch position and category for multiple (word, reading) pairs.
+        """Look up pitch position and category for multiple word entries.
+
+        Accepts either ``(word, reading)`` tuples (legacy) or
+        ``(word, reading, pos)`` tuples. Missing pos defaults to None.
 
         Args:
-            words: List of (word, reading) tuples.
+            words: List of word entries; 2 or 3 element tuples.
+            fmt: "jp" or "romaji" — passed through to ``lookup_detailed``.
 
         Returns:
             List of (position_str, category) tuples (same order as input).
         """
-        return [self.lookup_detailed(word, reading) for word, reading in words]
+        results: list[tuple[str | None, str | None]] = []
+        for entry in words:
+            word = entry[0]
+            reading = entry[1] if len(entry) > 1 else ""
+            pos = entry[2] if len(entry) > 2 else None
+            results.append(self.lookup_detailed(word, reading, pos, fmt))
+        return results

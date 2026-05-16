@@ -201,6 +201,7 @@ class SubtitleParserService:
                         expression_reading=expression_reading,
                         sentence_furigana=sentence_furigana,
                         sentence_reading=sentence_reading,
+                        pos=word_token.feature.pos1,
                     )
                 )
 
@@ -301,6 +302,7 @@ class SubtitleParserService:
                         expression_reading=expression_reading,
                         sentence_furigana=sentence_furigana,
                         sentence_reading=sentence_reading,
+                        pos=word_token.feature.pos1,
                     )
                 )
 
