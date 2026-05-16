@@ -4,7 +4,7 @@ import logging
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QTabWidget, QVBoxLayout, QWidget
 
@@ -31,9 +31,30 @@ from anki_miner.services import ShortcutService, ValidationService
 logger = logging.getLogger(__name__)
 
 
-def _needs_jmdict_migration(xml_path: Path, dicts_root: Path) -> bool:
-    """Return True iff we should auto-trigger the JMdict → SQLite migration."""
-    return xml_path.exists() and not (dicts_root / "jmdict-english" / "index.sqlite").exists()
+def _needs_jmdict_migration(xml_path: Path, dicts_root: Path, chain: tuple | None = None) -> bool:
+    """Return True iff we should auto-trigger the JMdict → SQLite migration.
+
+    Triggers only when:
+      * legacy XML is on disk,
+      * no SQLite index exists yet, AND
+      * the user's chain has jmdict-english enabled (no point parsing 60MB
+        XML for someone who explicitly disabled offline lookups).
+
+    The chain check is skipped when chain is None to keep backward-compatible
+    behaviour with the unit tests that just probe file presence.
+    """
+    if not xml_path.exists():
+        return False
+    if (dicts_root / "jmdict-english" / "index.sqlite").exists():
+        return False
+    if chain is None:
+        return True
+    return any(
+        getattr(e, "kind", None) == "indexed"
+        and getattr(e, "dict_id", None) == "jmdict-english"
+        and getattr(e, "enabled", False)
+        for e in chain
+    )
 
 
 class MainWindow(QMainWindow):
@@ -43,7 +64,16 @@ class MainWindow(QMainWindow):
     - Single episode mining
     - Batch folder processing
     - Settings/configuration
+
+    Signals:
+        config_refreshed: emitted when a non-Settings code path mutates
+            self.config (e.g. background JMdict migration finishes). Tabs
+            that cache services should reconnect this to their update_config
+            so they pick up the new state without waiting for the user to
+            edit Settings.
     """
+
+    config_refreshed = pyqtSignal(object)  # AnkiMinerConfig
 
     def __init__(self):
         """Initialize the main window."""
@@ -552,21 +582,34 @@ class MainWindow(QMainWindow):
         from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 
         dicts_root = Path.home() / ".anki_miner" / "dicts"
-        if not _needs_jmdict_migration(self.config.jmdict_path, dicts_root):
+        if not _needs_jmdict_migration(
+            self.config.jmdict_path, dicts_root, self.config.dictionary_chain
+        ):
             return
 
         self._jmdict_migration_worker = DictionaryImportWorker.for_jmdict(
             self.config.jmdict_path, dicts_root
         )
-        self._jmdict_migration_worker.import_finished.connect(
-            lambda dict_id, meta: logger.info("JMdict migration complete: %s", dict_id)
-        )
+        self._jmdict_migration_worker.import_finished.connect(self._on_jmdict_migration_finished)
         self._jmdict_migration_worker.failed.connect(
             lambda err: logger.warning("JMdict migration failed: %s", err)
         )
         logger.info("Starting one-time JMdict SQLite migration")
         self.status_bar.set_operation("Migrating JMdict to SQLite in background…", "info")
         self._jmdict_migration_worker.start()
+
+    def _on_jmdict_migration_finished(self, dict_id: str, meta: dict) -> None:
+        """Notify tabs that they need to rebuild any cached DefinitionService.
+
+        We don't mutate config here — the chain entry is already correct (it
+        was the trigger). We re-emit so YouTubeTab (and any future caching
+        tab) rebuilds its processor and picks up the newly-available index.
+        """
+        logger.info("JMdict migration complete: %s (%s entries)", dict_id, meta.get("entry_count"))
+        self.status_bar.set_operation(
+            f"JMdict ready ({meta.get('entry_count', 0):,} entries)", "info"
+        )
+        self.config_refreshed.emit(self.config)
 
     def _check_for_updates(self) -> None:
         """Check for application updates in background thread."""

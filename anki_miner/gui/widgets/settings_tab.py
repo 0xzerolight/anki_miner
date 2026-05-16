@@ -403,6 +403,24 @@ class SettingsTab(QWidget):
 
     # === Dictionary import handlers ===
 
+    def _set_import_buttons_enabled(self, enabled: bool) -> None:
+        """Toggle import-trigger buttons. Prevents overlapping import workers."""
+        self.dictionary_panel._add_btn.setEnabled(enabled)
+        self.dictionary_panel._reimport_btn.setEnabled(enabled)
+
+    def _persist_chain_change(self, new_chain: tuple[ChainEntry, ...]) -> None:
+        """Save a chain mutation to disk and notify listeners.
+
+        Called after a successful import so the freshly-imported dictionary
+        is reachable on the very next lookup — without requiring the user
+        to manually click Save in Settings. Without this, the dict folder
+        exists on disk but is absent from dictionary_chain in gui_config,
+        i.e. invisible to DictionaryRegistry.build_provider_chain.
+        """
+        new_config = replace(self.config, dictionary_chain=new_chain)
+        self.config = new_config
+        self.config_changed.emit(new_config)
+
     def _on_add_dict_clicked(self) -> None:
         """Prompt for a Yomitan zip and run the import worker."""
         zip_path_str, _ = QFileDialog.getOpenFileName(
@@ -418,6 +436,7 @@ class SettingsTab(QWidget):
 
         worker = DictionaryImportWorker.for_yomitan(Path(zip_path_str), dest_root)
         self._active_import_worker = worker  # keep alive across QThread lifetime
+        self._set_import_buttons_enabled(False)
 
         def on_progress(cur: int, total: int, msg: str) -> None:
             dlg.setMaximum(total)
@@ -431,11 +450,18 @@ class SettingsTab(QWidget):
                 "Dictionary added",
                 f"Imported {dict_id} ({meta.get('entry_count', 0):,} entries)",
             )
-            self.dictionary_panel.set_chain(self._with_dict_at_top(dict_id))
+            new_chain = self._with_dict_at_top(dict_id)
+            # New dict folder on disk — invalidate the panel's cached registry
+            # scan so the row picks up the entry_count + source_name.
+            self.dictionary_panel.refresh_registry()
+            self.dictionary_panel.set_chain(new_chain)
+            self._persist_chain_change(new_chain)
+            self._set_import_buttons_enabled(True)
 
         def on_failed(err: str) -> None:
             dlg.close()
             QMessageBox.warning(self, "Import failed", err)
+            self._set_import_buttons_enabled(True)
 
         worker.progress.connect(on_progress)
         worker.import_finished.connect(on_import_finished)
@@ -468,6 +494,7 @@ class SettingsTab(QWidget):
 
         worker = DictionaryImportWorker.for_jmdict(xml, dest_root)
         self._active_import_worker = worker
+        self._set_import_buttons_enabled(False)
 
         def on_progress(cur: int, total: int, msg: str) -> None:
             dlg.setMaximum(total)
@@ -477,11 +504,18 @@ class SettingsTab(QWidget):
         def on_done(dict_id: str, meta: dict) -> None:
             dlg.close()
             # Re-render chain so the (refreshed) entry count is reflected.
-            self.dictionary_panel.set_chain(self.dictionary_panel.get_chain())
+            current_chain = self.dictionary_panel.get_chain()
+            self.dictionary_panel.refresh_registry()
+            self.dictionary_panel.set_chain(current_chain)
+            # Notify listeners so cached DefinitionService instances rebuild
+            # with the freshly-rebuilt SQLite index.
+            self.config_changed.emit(self.config)
+            self._set_import_buttons_enabled(True)
 
         def on_failed(err: str) -> None:
             dlg.close()
             QMessageBox.warning(self, "Reimport failed", err)
+            self._set_import_buttons_enabled(True)
 
         worker.progress.connect(on_progress)
         worker.import_finished.connect(on_done)

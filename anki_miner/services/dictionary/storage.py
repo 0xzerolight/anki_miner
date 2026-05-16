@@ -53,15 +53,24 @@ class DictRow:
 def create_index(db_path: Path) -> None:
     """Create a fresh dictionary index at db_path. Idempotent (uses IF NOT EXISTS)."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         conn.executescript(_SCHEMA_SQL)
         conn.commit()
+    finally:
+        conn.close()
 
 
 def bulk_insert(db_path: Path, rows: Iterable[DictRow], batch_size: int = 5000) -> int:
-    """Insert rows in batched transactions. Returns total inserted."""
+    """Insert rows in batched transactions. Returns total inserted.
+
+    The sqlite3 `with` context manager commits/rolls back but does NOT close
+    the connection — we close explicitly so the db file is not held open
+    across the importer's staging-dir cleanup (matters on Windows).
+    """
     total = 0
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         batch: list[tuple] = []
         for row in rows:
             batch.append((row.term, row.reading, row.content, row.score, row.sequence))
@@ -81,12 +90,15 @@ def bulk_insert(db_path: Path, rows: Iterable[DictRow], batch_size: int = 5000) 
             )
             total += len(batch)
         conn.commit()
+    finally:
+        conn.close()
     return total
 
 
 def write_meta(db_path: Path, items: dict[str, str]) -> None:
     """Upsert meta rows."""
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         for key, value in items.items():
             conn.execute(
                 "INSERT INTO meta (key, value) VALUES (?, ?) "
@@ -94,14 +106,19 @@ def write_meta(db_path: Path, items: dict[str, str]) -> None:
                 (key, value),
             )
         conn.commit()
+    finally:
+        conn.close()
 
 
 def read_meta(db_path: Path) -> dict[str, str]:
     """Read all meta rows. Returns empty dict if file missing."""
     if not db_path.exists():
         return {}
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         return {row[0]: row[1] for row in conn.execute("SELECT key, value FROM meta")}
+    finally:
+        conn.close()
 
 
 def open_readonly(db_path: Path) -> sqlite3.Connection:

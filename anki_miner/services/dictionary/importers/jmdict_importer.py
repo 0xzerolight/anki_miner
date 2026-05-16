@@ -161,6 +161,11 @@ def import_jmdict_xml(
             try:
                 shutil.move(str(staging), str(final))
             except Exception:
+                # If shutil.move partially populated final (cross-fs copy
+                # interrupted), wipe the partial dir before restoring the
+                # backup so the rename is unambiguous.
+                if final.exists():
+                    shutil.rmtree(final, ignore_errors=True)
                 if not final.exists():
                     backup.rename(final)
                 raise
