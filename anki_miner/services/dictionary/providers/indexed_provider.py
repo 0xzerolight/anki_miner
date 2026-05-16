@@ -76,10 +76,11 @@ class IndexedDictProvider:
     def lookup(self, word: str) -> str | None:
         if self._conn is None:
             return None
-        contents = storage_lookup(self._conn, word)
-        if not contents:
+        rows = storage_lookup(self._conn, word)
+        if not rows:
             return None
-        return "<hr>".join(contents)
+        # Task 4 will rewrite this composition; for now just join content strings.
+        return "<hr>".join(content for content, _tags in rows)
 
     def close(self) -> None:
         if self._conn is not None:
