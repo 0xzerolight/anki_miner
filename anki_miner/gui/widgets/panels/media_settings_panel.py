@@ -1,6 +1,6 @@
 """Media extraction settings panel."""
 
-from PyQt6.QtWidgets import QDoubleSpinBox, QSpinBox
+from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QSpinBox
 
 from anki_miner.gui.widgets.base import FormPanel
 
@@ -12,6 +12,7 @@ class MediaSettingsPanel(FormPanel):
     - Audio padding configuration
     - Screenshot offset configuration
     - Max parallel workers configuration
+    - Animated screenshot toggle and parameters
     """
 
     def __init__(self, parent=None):
@@ -55,4 +56,72 @@ class MediaSettingsPanel(FormPanel):
             helper="Higher values = faster processing but more CPU/memory usage",
         )
 
+        # Animated screenshot toggle
+        self.animated_checkbox = QCheckBox("Enable animated screenshots")
+        self.animated_checkbox.setToolTip(
+            "Capture a short video clip instead of a static frame. "
+            "Larger files, slower encode; not all Anki clients render animated AVIF/WebP."
+        )
+        self.add_field("Animated Screenshots", self.animated_checkbox)
+
+        # Format
+        self.animated_format_combo = QComboBox()
+        self.animated_format_combo.addItems(["avif", "webp"])
+        self.add_field(
+            "Animated Format",
+            self.animated_format_combo,
+            helper="AVIF: smaller files; WebP: broader Anki client support",
+        )
+
+        # Clip duration
+        self.animated_duration_spinbox = QDoubleSpinBox()
+        self.animated_duration_spinbox.setRange(0.5, 10.0)
+        self.animated_duration_spinbox.setSingleStep(0.5)
+        self.animated_duration_spinbox.setSuffix(" seconds")
+        self.animated_duration_spinbox.setToolTip(
+            "Maximum clip length. Capped automatically by the subtitle duration."
+        )
+        self.add_field("Clip Duration", self.animated_duration_spinbox)
+
+        # FPS
+        self.animated_fps_spinbox = QSpinBox()
+        self.animated_fps_spinbox.setRange(5, 30)
+        self.animated_fps_spinbox.setToolTip("Frames per second for animated clips")
+        self.add_field("FPS", self.animated_fps_spinbox)
+
+        # Height
+        self.animated_height_spinbox = QSpinBox()
+        self.animated_height_spinbox.setRange(240, 1080)
+        self.animated_height_spinbox.setSingleStep(120)
+        self.animated_height_spinbox.setSuffix(" px")
+        self.add_field(
+            "Height",
+            self.animated_height_spinbox,
+            helper="Output height; aspect ratio preserved",
+        )
+
+        # Quality
+        self.animated_quality_spinbox = QSpinBox()
+        self.animated_quality_spinbox.setRange(0, 100)
+        self.animated_quality_spinbox.setToolTip("0 = smallest file, 100 = best quality")
+        self.add_field(
+            "Quality",
+            self.animated_quality_spinbox,
+            helper="Mind your AnkiWeb media quota at high quality settings",
+        )
+
+        self.animated_checkbox.toggled.connect(self._set_animated_enabled)
+        self._set_animated_enabled(self.animated_checkbox.isChecked())
+
         self.add_stretch()
+
+    def _set_animated_enabled(self, enabled: bool) -> None:
+        """Enable or disable the animated screenshot sub-controls."""
+        for widget in (
+            self.animated_format_combo,
+            self.animated_duration_spinbox,
+            self.animated_fps_spinbox,
+            self.animated_height_spinbox,
+            self.animated_quality_spinbox,
+        ):
+            widget.setEnabled(enabled)

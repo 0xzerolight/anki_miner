@@ -55,6 +55,13 @@ class AnkiMinerConfig:
     media_temp_folder: Path = field(
         default_factory=lambda: Path(tempfile.gettempdir()) / "anki_miner_temp"
     )
+    # Animated screenshot settings (opt-in; static JPEG remains default)
+    screenshot_animated: bool = False
+    screenshot_animated_format: str = "avif"  # "avif" | "webp"
+    screenshot_animated_clip_duration: float = 2.0  # seconds; capped by word.duration
+    screenshot_animated_fps: int = 20
+    screenshot_animated_height: int = 720  # scale-to-height, aspect preserved
+    screenshot_animated_quality: int = 30  # 0-100 user scale, mapped per codec
     subtitle_offset: float = 0.0  # Seconds to shift subtitles (+ later, - earlier)
     # Preference order when multiple subtitle formats coexist for one video.
     # Earliest extension wins; .ass ships richer styling/timing than .srt.
