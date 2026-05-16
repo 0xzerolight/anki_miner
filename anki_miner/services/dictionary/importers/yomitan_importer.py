@@ -215,7 +215,12 @@ def import_yomitan_zip(
             try:
                 shutil.move(str(staging), str(final_path))
             except Exception:
-                # Restore the backup so the user is not left with an empty slot
+                # Restore the backup so the user is not left with an empty slot.
+                # If shutil.move partially populated final_path (cross-fs copy
+                # interrupted), wipe the partial dir before restoring so the
+                # rename is unambiguous.
+                if final_path.exists():
+                    shutil.rmtree(final_path, ignore_errors=True)
                 if not final_path.exists():
                     backup.rename(final_path)
                 raise

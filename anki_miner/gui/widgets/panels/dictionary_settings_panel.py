@@ -70,7 +70,16 @@ class DictionarySettingsPanel(FormPanel):
     def __init__(self, parent=None):
         super().__init__("Dictionary Settings", parent=parent)
         self._chain: list[ChainEntry] = []
+        # Cached registry; refreshed on demand instead of per UI tick. Each
+        # construction scans every dict's meta table — needlessly slow on
+        # network mounts when the user is just reordering rows.
+        self._registry: DictionaryRegistry | None = None
         self._setup_fields()
+
+    def refresh_registry(self) -> None:
+        """Force a registry rescan. Call after an import finishes."""
+        self._registry = DictionaryRegistry(DICTS_ROOT)
+        self._rebuild_list()
 
     def _setup_fields(self) -> None:
         container = QWidget()
@@ -178,7 +187,11 @@ class DictionarySettingsPanel(FormPanel):
 
     def _rebuild_list(self) -> None:
         self._list.clear()
-        registry = DictionaryRegistry(DICTS_ROOT)
+        # Lazy-construct + cache. refresh_registry() invalidates after an
+        # import. Repeated reorder/toggle ticks reuse the same scan.
+        if self._registry is None:
+            self._registry = DictionaryRegistry(DICTS_ROOT)
+        registry = self._registry
         for entry in self._chain:
             if entry.kind == "indexed":
                 meta = registry.get(entry.dict_id) if entry.dict_id else None

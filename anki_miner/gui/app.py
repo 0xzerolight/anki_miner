@@ -157,6 +157,15 @@ def main():
     settings_tab.config_changed.connect(youtube_tab.update_config)
     window.tabs.addTab(settings_tab, "Settings")
 
+    # Non-Settings config refreshes (e.g. JMdict migration finishing in the
+    # background) must propagate to tabs that cache services. Without this,
+    # the first-launch user who needs the legacy XML migrated would see all
+    # lookups go to Jisho until the next restart.
+    window.config_refreshed.connect(settings_tab.update_config)
+    window.config_refreshed.connect(episode_tab.update_config)
+    window.config_refreshed.connect(batch_tab.update_config)
+    window.config_refreshed.connect(youtube_tab.update_config)
+
     # Show window
     window.show()
 

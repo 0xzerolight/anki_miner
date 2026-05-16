@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.service_factory import create_youtube_fetcher
+from anki_miner.gui.utils.service_factory import create_episode_processor, create_youtube_fetcher
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -619,6 +619,25 @@ class YouTubeTab(QWidget):
         # worker thread, the full fetch pipeline. Recreate via the factory
         # to keep construction routed through a single code path.
         self._fetcher = create_youtube_fetcher(config)
+
+        # Processor caches the DefinitionService (and its provider chain) at
+        # construction. If we don't rebuild it on config refresh, chain edits
+        # in Settings — and background JMdict migration completion — are
+        # invisible to YouTube mining until app restart. SingleEpisodeTab /
+        # BatchProcessingTab construct their processor per-mine and don't
+        # need this; YouTubeTab caches one across mines, so rebuild here.
+        # Reuse the existing stats_service so analytics rows stay attributed
+        # to the same store.
+        worker_busy = self.worker_thread is not None and self.worker_thread.isRunning()
+        if not worker_busy and self._presenter is not None:
+            # Don't yank the processor out from under an in-flight worker —
+            # they share a DefinitionService whose providers may have an
+            # open SQLite connection currently being used.
+            self._processor = create_episode_processor(
+                config,
+                self._presenter,
+                stats_service=getattr(self._processor, "stats_service", None),
+            )
 
         # If we're not in the middle of a run, re-classify any already-probed
         # video against the new config so the TOO_LONG gate reflects the
