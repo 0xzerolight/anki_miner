@@ -247,6 +247,7 @@ class AnalyticsTab(QWidget):
             ]
             for col_idx, item in enumerate(items):
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                item.setToolTip(item.text())
                 self.sessions_table.setItem(row_idx, col_idx, item)
 
     def _update_difficulty_ranking(self) -> None:
@@ -267,6 +268,7 @@ class AnalyticsTab(QWidget):
             ]
             for col_idx, item in enumerate(items):
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                item.setToolTip(item.text())
                 self.difficulty_table.setItem(row_idx, col_idx, item)
 
     def _update_milestones(self, stats) -> None:
