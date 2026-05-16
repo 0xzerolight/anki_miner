@@ -127,7 +127,12 @@ Anki Miner looks up definitions through a **provider chain** you configure. Each
 
 Add a dictionary in **Settings → Add Dictionary…** by pointing at a Yomitan `.zip` archive. Drag entries to reorder the chain. Installed dictionaries are indexed once into `~/.anki_miner/dicts/<dict_id>/index.sqlite` and loaded on startup. Structured-content entries are rendered to HTML on import, so card definitions preserve the source dictionary's formatting (definition lists, examples, tags).
 
-**Recommended Japanese → English dictionary**: [Jitendex](https://github.com/Jitendex/Jitendex) — a modern JMdict successor with richer formatting, examples, and tags. Download the latest Yomitan archive from the [Jitendex releases page](https://github.com/Jitendex/Jitendex/releases) and add it via Settings.
+**Recommended Japanese → English dictionaries** — both are JMdict-derived; pick whichever fits your cards (or load both and order them as you like):
+
+- **[Jitendex](https://github.com/Jitendex/Jitendex)** — modern JMdict successor with structured-content formatting, example sentences, and richer tags. Best for visually rich cards. Grab the Yomitan archive from the [Jitendex releases page](https://github.com/Jitendex/Jitendex/releases).
+- **[JMdict](https://www.edrdg.org/jmdict/edict.html)** — the original community JMdict project. Plain-text glosses, smaller index, faster to add. Yomitan builds are available from the [Yomitan dictionary list](https://learnjapanese.moe/yomichan/#dictionaries) or you can rebuild from the EDRDG source.
+
+Install via **Settings → Add Dictionary…** in either case.
 
 Without any local dictionary, lookups fall back to the Jisho API (slower, online, rate-limited).
 
