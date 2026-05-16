@@ -409,6 +409,7 @@ class SettingsTab(QWidget):
         """Toggle import-trigger buttons. Prevents overlapping import workers."""
         self.dictionary_panel._add_btn.setEnabled(enabled)
         self.dictionary_panel._reimport_btn.setEnabled(enabled)
+        self.dictionary_panel.set_per_row_reimport_enabled(enabled)
 
     def _persist_chain_change(self, new_chain: tuple[ChainEntry, ...]) -> None:
         """Save a chain mutation to disk and notify listeners.
