@@ -132,6 +132,78 @@ class TestImportYomitanZip:
         # dest_root must not contain a partial dict folder
         assert not any(dest_root.iterdir()) if dest_root.exists() else True
 
+    def test_dict_media_extracted_and_referenced_by_namespaced_filename(self, tmp_path: Path):
+        """Yomitan zips for monolingual dicts ship SVG/PNG assets referenced
+        from structured content. The importer must copy those into the dict's
+        media folder and rewrite each `<img src>` to the flat namespaced
+        filename that AnkiConnect can later serve.
+        """
+        svg_bytes = b"<svg xmlns='http://www.w3.org/2000/svg'/>"
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "test.zip",
+            term_banks=[
+                [
+                    [
+                        "走る",
+                        "はしる",
+                        "v5r",
+                        "",
+                        0,
+                        [
+                            {
+                                "type": "structured-content",
+                                "content": {
+                                    "tag": "span",
+                                    "content": [
+                                        "はし",
+                                        {"tag": "img", "path": "svg/accent.svg"},
+                                        "る",
+                                    ],
+                                },
+                            }
+                        ],
+                        1,
+                        "",
+                    ],
+                ]
+            ],
+            media_files={"svg/accent.svg": svg_bytes},
+        )
+
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+
+        # Asset copied flat under the dict folder using the safe-basename form.
+        media_dir = dest_root / result.dict_id / "media"
+        assert media_dir.is_dir()
+        copied = media_dir / "svg_accent.svg"
+        assert copied.exists()
+        assert copied.read_bytes() == svg_bytes
+
+        # Stored HTML references the namespaced flat filename — not the
+        # original zip-relative path.
+        db_path = dest_root / result.dict_id / "index.sqlite"
+        conn = open_readonly(db_path)
+        try:
+            content = conn.execute(
+                "SELECT content FROM entries WHERE term = ?", ("走る",)
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+        expected_src = f'src="{result.dict_id}__svg_accent.svg"'
+        assert expected_src in content
+        assert 'class="anki-miner-dict-media"' in content
+        # The dict-internal path must NOT leak into Anki.
+        assert "svg/accent.svg" not in content
+
+    def test_no_media_folder_when_no_assets_referenced(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(tmp_path / "src" / "plain.zip")
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        media_dir = dest_root / result.dict_id / "media"
+        assert not media_dir.exists()
+
     def test_merges_definition_tags_and_term_tags(self, tmp_path: Path):
         """Yomitan term-bank entries have tags at both entry[2] and entry[7]; both must render."""
         zip_path = build_yomitan_zip(

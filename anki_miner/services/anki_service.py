@@ -12,11 +12,58 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.models import MediaData, TokenizedWord
+from anki_miner.services.dictionary.yomitan_renderer import DICT_MEDIA_CLASS
 
 logger = logging.getLogger(__name__)
 
 # Matches any hiragana, katakana, or CJK ideograph (kanji)
 _JAPANESE_RE = re.compile(r"[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]")
+
+# `<img>` tags emitted by yomitan_renderer for dictionary-bundled assets carry
+# `class="anki-miner-dict-media"`. Capture the whole tag, then pull `src` out \u2014
+# attribute order in the rendered HTML is fixed but a single regex makes the
+# scan tolerant of future renderer reshuffles.
+_DICT_MEDIA_IMG_RE = re.compile(
+    rf'<img\b[^>]*class="[^"]*\b{re.escape(DICT_MEDIA_CLASS)}\b[^"]*"[^>]*>',
+    re.IGNORECASE,
+)
+_IMG_SRC_RE = re.compile(r'src="([^"]+)"', re.IGNORECASE)
+
+
+def _extract_dict_media_srcs(definition_html: str) -> list[str]:
+    """Return every dict-media `src` referenced in a definition HTML blob."""
+    if not definition_html:
+        return []
+    out: list[str] = []
+    for tag in _DICT_MEDIA_IMG_RE.findall(definition_html):
+        m = _IMG_SRC_RE.search(tag)
+        if m:
+            out.append(m.group(1))
+    return out
+
+
+def _resolve_dict_media_path(src: str, dicts_root: Path) -> Path | None:
+    """Map an Anki-side dict-media filename back to the file on disk.
+
+    The renderer formats src as ``<dict_id>__<flattened-basename>``. dict_id is
+    a lowercase-ASCII slug with hyphens (importer guarantees no double-`__`),
+    so we split on the first ``__``. The resolved path must stay inside the
+    dicts_root tree.
+    """
+    if "__" not in src:
+        return None
+    dict_id, _, safe = src.partition("__")
+    if not dict_id or not safe or "/" in safe or "\\" in safe or ".." in safe:
+        return None
+    try:
+        root_resolved = dicts_root.resolve()
+        candidate = (dicts_root / dict_id / "media" / safe).resolve()
+        candidate.relative_to(root_resolved)
+    except (OSError, ValueError):
+        return None
+    if not candidate.is_file():
+        return None
+    return candidate
 
 
 class AnkiService:
@@ -49,6 +96,10 @@ class AnkiService:
         """
         self.config = config
         self.last_created_note_ids: list[int] = []
+        # Per-service-lifetime cache of dict-media filenames already shipped to
+        # AnkiConnect this run. Avoids re-uploading the same accent SVG once
+        # per card across a 5000-word batch.
+        self._dict_media_uploaded: set[str] = set()
 
         # Validate required field keys upfront
         missing = self.REQUIRED_FIELD_KEYS - set(config.anki_fields.keys())
@@ -193,6 +244,31 @@ class AnkiService:
         except (requests.RequestException, OSError, ValueError):
             return False
 
+    def _upload_dict_media(self, definition_html: str | None) -> None:
+        """Ship any dict-media files referenced in `definition_html` to Anki.
+
+        Walks `<img class="anki-miner-dict-media" src="X">` tags, resolves each
+        src back to a file under ``config.dicts_root/<dict_id>/media/``, and
+        uploads via storeMediaFile. Results are cached so the same SVG is sent
+        at most once per AnkiService lifetime.
+        """
+        if not definition_html:
+            return
+        srcs = _extract_dict_media_srcs(definition_html)
+        for src in srcs:
+            if src in self._dict_media_uploaded:
+                continue
+            file_path = _resolve_dict_media_path(src, self.config.dicts_root)
+            if file_path is None:
+                logger.warning("Dict media file missing on disk: %s", src)
+                # Cache anyway so we don't retry every card.
+                self._dict_media_uploaded.add(src)
+                continue
+            if self.store_media_file(src, file_path):
+                self._dict_media_uploaded.add(src)
+            else:
+                logger.warning("Failed to store dict media file: %s", src)
+
     def create_card(
         self,
         word: TokenizedWord,
@@ -221,6 +297,11 @@ class AnkiService:
 
         if media.audio_path and media.audio_filename:
             audio_stored = self.store_media_file(media.audio_filename, media.audio_path)
+
+        # Ship any dict-bundled assets (Yomitan SVG accent marks, monolingual
+        # dict images) referenced by the definition. Skipping this leaves a
+        # broken-image glyph mid-reading in the Anki card.
+        self._upload_dict_media(definition)
 
         # Build field values (only reference successfully stored media)
         picture_html = ""
@@ -308,6 +389,13 @@ class AnkiService:
 
         # First, store all media files and track which succeeded
         stored_files = self._store_media_files_batch(word_data_list)
+
+        # Ship dict-bundled assets referenced by any definition in the batch.
+        # Done up-front so storeMediaFile races finish before notes reference
+        # the filenames; AnkiConnect serializes per-connection so this is safe.
+        for item in word_data_list:
+            definition = item[2] if len(item) > 2 else None
+            self._upload_dict_media(definition if isinstance(definition, str) else None)
 
         # Then create notes in batches
         batch_size = 50

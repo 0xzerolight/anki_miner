@@ -647,12 +647,16 @@ class TestOptionalResourceWarnings:
             lambda self: (True, "ok"),
         )
 
-    def test_warns_when_indexed_dict_enabled_but_missing(self, test_config, monkeypatch):
+    def test_warns_when_indexed_dict_enabled_but_missing(self, test_config, monkeypatch, tmp_path):
         from dataclasses import replace
 
         self._patch_external_checks(monkeypatch)
-        # Default dictionary_chain enables an indexed entry that won't be
-        # present in the test environment's ~/.anki_miner/dicts/.
+        # Redirect Path.home() so the validator looks at an empty tmp_path
+        # instead of the developer's real ~/.anki_miner/dicts/.
+        monkeypatch.setattr(
+            "anki_miner.services.validation_service.Path.home",
+            classmethod(lambda cls: tmp_path),
+        )
         config = replace(test_config)
         result = ValidationService(config).validate_setup()
 

@@ -214,6 +214,83 @@ def _is_safe_url(url: str) -> bool:
     return True  # relative path, fragment, query — all safe
 
 
+# Marker class for `<img>` tags whose `src` refers to a dictionary-bundled asset
+# extracted at import time. AnkiService scans for this class to upload the file
+# via AnkiConnect storeMediaFile so the image resolves in the Anki webview.
+DICT_MEDIA_CLASS = "anki-miner-dict-media"
+
+
+def _resolve_img_src(
+    raw_path: Any,
+    *,
+    dict_id: str | None,
+    media_collector: set[str] | None,
+) -> tuple[str | None, bool]:
+    """Decide what `src` an `<img>` node should emit.
+
+    Returns (src, is_dict_media). is_dict_media=True means the caller should
+    also emit the ``class="anki-miner-dict-media"`` marker so AnkiService
+    knows to upload the corresponding file via AnkiConnect.
+
+    Three cases:
+      1. Relative path + dict_id provided → rewrite to namespaced flat filename
+         and record the original path in `media_collector` for asset extraction.
+      2. http/https URL → pass through unchanged (Anki webview can load it).
+      3. Anything else → drop (relative paths without dict_id resolve to
+         nothing inside Anki and render as broken-icon glyphs).
+    """
+    if not isinstance(raw_path, str):
+        return None, False
+    candidate = raw_path.strip()
+    if not candidate:
+        return None, False
+
+    if dict_id and dict_media_safe_basename(candidate) is not None:
+        if media_collector is not None:
+            media_collector.add(candidate)
+        return dict_media_filename(dict_id, candidate), True
+
+    if candidate.startswith(("http://", "https://")) and _is_safe_url(candidate):
+        return candidate, False
+
+    return None, False
+
+
+def dict_media_filename(dict_id: str, rel_path: str) -> str:
+    """Build the flat Anki-media filename for a dict-internal asset.
+
+    Anki's media collection is flat (no subfolders), so a Yomitan zip path like
+    `sankoku8/svg-accent/X.svg` must become a single filename. We namespace by
+    `dict_id` (already an ASCII slug from the importer) and flatten the inner
+    path by replacing separators with `_`. CJK chars in the basename survive.
+    """
+    safe = dict_media_safe_basename(rel_path)
+    return f"{dict_id}__{safe}"
+
+
+def dict_media_safe_basename(rel_path: str) -> str | None:
+    """Convert a dict-internal relative path to a flat safe filename.
+
+    Returns None for absolute paths, scheme-prefixed values, or anything with
+    parent traversal — those are not legitimate Yomitan media references.
+    """
+    if not isinstance(rel_path, str):
+        return None
+    p = rel_path.strip()
+    if not p:
+        return None
+    if p.startswith(("/", "\\")) or p.startswith("//"):
+        return None
+    colon = p.find(":")
+    slash = p.find("/")
+    if colon != -1 and (slash == -1 or colon < slash):
+        return None
+    parts = p.replace("\\", "/").split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return None
+    return "_".join(parts)
+
+
 def _camel_to_kebab(name: str) -> str:
     return _CAMEL_RE.sub(r"\1-\2", name).lower()
 
@@ -283,11 +360,25 @@ def _collect_style(node: dict[str, Any]) -> str:
     return f'style="{escape(body, quote=True)}"'
 
 
-def structured_content_to_html(node: Any, _depth: int = 0) -> str:
+def structured_content_to_html(
+    node: Any,
+    _depth: int = 0,
+    *,
+    dict_id: str | None = None,
+    media_collector: set[str] | None = None,
+) -> str:
     """Render a Yomitan structured-content node to HTML.
 
     Args:
         node: A string, list, or dict per Yomitan's term-bank schema.
+        dict_id: When set, `<img>` nodes whose `path` is a dict-internal
+            relative reference get rewritten to a namespaced flat filename
+            suitable for Anki's media collection and tagged with
+            ``class="anki-miner-dict-media"``. Without it, relative-path imgs
+            are dropped entirely (their src would be unresolvable in Anki).
+        media_collector: When set, every dict-internal asset path encountered
+            is added to this set so the importer can copy the bytes out of
+            the Yomitan zip.
 
     Returns:
         HTML string. Unknown tags become <span>; plain strings are escaped.
@@ -300,29 +391,50 @@ def structured_content_to_html(node: Any, _depth: int = 0) -> str:
         return escape(node)
 
     if isinstance(node, list):
-        return "".join(structured_content_to_html(child, _depth + 1) for child in node)
+        return "".join(
+            structured_content_to_html(
+                child, _depth + 1, dict_id=dict_id, media_collector=media_collector
+            )
+            for child in node
+        )
 
     if not isinstance(node, dict):
         return ""
 
     # Yomitan wraps top-level entries in {"type": "structured-content", "content": ...}
     if node.get("type") == "structured-content":
-        return structured_content_to_html(node.get("content", ""), _depth + 1)
+        return structured_content_to_html(
+            node.get("content", ""),
+            _depth + 1,
+            dict_id=dict_id,
+            media_collector=media_collector,
+        )
 
     tag = node.get("tag", "span")
     if tag not in _ALLOWED_TAGS:
         tag = "span"
 
-    attrs = _render_attrs(node, tag)
+    attrs = _render_attrs(node, tag, dict_id=dict_id, media_collector=media_collector)
 
     if tag in _VOID_TAGS:
         return f"<{tag}{attrs}>"
 
-    inner = structured_content_to_html(node.get("content", ""), _depth + 1)
+    inner = structured_content_to_html(
+        node.get("content", ""),
+        _depth + 1,
+        dict_id=dict_id,
+        media_collector=media_collector,
+    )
     return f"<{tag}{attrs}>{inner}</{tag}>"
 
 
-def _render_attrs(node: dict[str, Any], tag: str) -> str:
+def _render_attrs(
+    node: dict[str, Any],
+    tag: str,
+    *,
+    dict_id: str | None = None,
+    media_collector: set[str] | None = None,
+) -> str:
     parts: list[str] = []
 
     # data: {key: value} → data-key="value" HTML attrs (matches Yomitan spec).
@@ -350,9 +462,14 @@ def _render_attrs(node: dict[str, Any], tag: str) -> str:
     if isinstance(href, str) and tag == "a" and _is_safe_url(href):
         parts.append(f'href="{escape(href, quote=True)}"')
 
-    path = node.get("path")
-    if isinstance(path, str) and tag == "img" and _is_safe_url(path):
-        parts.append(f'src="{escape(path, quote=True)}"')
+    if tag == "img":
+        img_src, dict_media = _resolve_img_src(
+            node.get("path"), dict_id=dict_id, media_collector=media_collector
+        )
+        if img_src is not None:
+            parts.append(f'src="{escape(img_src, quote=True)}"')
+            if dict_media:
+                parts.append(f'class="{DICT_MEDIA_CLASS}"')
 
     # Per-tag HTML attribute passthrough (title on most, alt/width/height on
     # img, colspan/rowspan on td/th, open on details). Keys arrive in camelCase
@@ -396,6 +513,9 @@ def render_glossary_entry(
     glossary: list[Any],
     term_tags: list[str] | None = None,
     tag_bank: dict[str, dict[str, Any]] | None = None,
+    *,
+    dict_id: str | None = None,
+    media_collector: set[str] | None = None,
 ) -> str:
     """Render a Yomitan term-bank entry's glossary array + tags to HTML.
 
@@ -436,6 +556,8 @@ def render_glossary_entry(
         if isinstance(item, str):
             parts.append(f"<div>{escape(item)}</div>")
         else:
-            parts.append(structured_content_to_html(item))
+            parts.append(
+                structured_content_to_html(item, dict_id=dict_id, media_collector=media_collector)
+            )
 
     return "".join(parts)
