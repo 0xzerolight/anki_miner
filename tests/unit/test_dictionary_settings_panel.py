@@ -1,5 +1,7 @@
 """Smoke tests for DictionarySettingsPanel."""
 
+from pathlib import Path
+
 import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
@@ -8,6 +10,32 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
+from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
+
+
+def _make_dict_on_disk(
+    root: Path,
+    dict_id: str,
+    *,
+    fmt: str,
+    schema_version: int,
+    source_name: str | None = None,
+) -> Path:
+    """Materialize a minimal on-disk dictionary with chosen schema_version + format."""
+    dict_dir = root / dict_id
+    dict_dir.mkdir(parents=True, exist_ok=True)
+    db_path = dict_dir / "index.sqlite"
+    create_index(db_path)
+    write_meta(
+        db_path,
+        {
+            "schema_version": str(schema_version),
+            "format": fmt,
+            "source_name": source_name or dict_id,
+            "entry_count": "0",
+        },
+    )
+    return dict_dir
 
 
 @pytest.fixture
@@ -276,3 +304,120 @@ def test_remove_tolerates_missing_dict_folder(qapp, monkeypatch, tmp_path, confi
 
     chain = panel.get_chain()
     assert [e.kind for e in chain] == ["jisho"]
+
+
+def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, monkeypatch, tmp_path):
+    """A Yomitan dictionary with outdated schema_version renders the stale UI."""
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
+        tmp_path,
+    )
+    _make_dict_on_disk(
+        tmp_path,
+        "stale-yomi",
+        fmt="yomitan",
+        schema_version=SCHEMA_VERSION - 1,
+        source_name="Stale Yomi",
+    )
+    panel = DictionarySettingsPanel()
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="stale-yomi", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    row = panel._row_widget(0)
+    assert row is not None
+    assert row.stale is True
+    assert row.reimport_button is not None
+
+    # ⚠ prefix is on the name label
+    from PyQt6.QtWidgets import QLabel
+
+    labels = row.findChildren(QLabel)
+    label_texts = [lbl.text() for lbl in labels]
+    assert any(t.startswith("⚠ ") and "Stale Yomi" in t for t in label_texts)
+    # italic suffix exists as one of the label texts
+    assert any("re-import for new formatting" in t for t in label_texts)
+
+    emitted: list[str] = []
+    panel.reimport_dict_requested.connect(emitted.append)
+    jmdict_fired: list[None] = []
+    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
+
+    row.reimport_button.click()
+    assert emitted == ["stale-yomi"]
+    assert jmdict_fired == [], "Yomitan row must not fire the JMdict signal"
+
+
+def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, monkeypatch, tmp_path):
+    """A JMdict dictionary with outdated schema_version wires the per-row button
+    to the existing reimport_jmdict_requested signal, not the new generic one."""
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
+        tmp_path,
+    )
+    _make_dict_on_disk(
+        tmp_path,
+        "jmdict-english",
+        fmt="jmdict",
+        schema_version=SCHEMA_VERSION - 1,
+        source_name="JMdict (English)",
+    )
+    panel = DictionarySettingsPanel()
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    row = panel._row_widget(0)
+    assert row is not None
+    assert row.stale is True
+    assert row.reimport_button is not None
+
+    jmdict_fired: list[None] = []
+    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
+    generic_fired: list[str] = []
+    panel.reimport_dict_requested.connect(generic_fired.append)
+
+    row.reimport_button.click()
+    assert jmdict_fired == [None]
+    assert generic_fired == [], "JMdict row must not fire the generic signal"
+
+
+def test_current_schema_row_has_no_stale_ui(qapp, monkeypatch, tmp_path):
+    """A dictionary at the current schema_version renders clean: no ⚠, no italic
+    suffix, no Re-import button."""
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
+        tmp_path,
+    )
+    _make_dict_on_disk(
+        tmp_path,
+        "fresh-yomi",
+        fmt="yomitan",
+        schema_version=SCHEMA_VERSION,
+        source_name="Fresh Yomi",
+    )
+    panel = DictionarySettingsPanel()
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="fresh-yomi", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    row = panel._row_widget(0)
+    assert row is not None
+    assert row.stale is False
+    assert row.reimport_button is None
+
+    from PyQt6.QtWidgets import QLabel
+
+    labels = row.findChildren(QLabel)
+    label_texts = [lbl.text() for lbl in labels]
+    assert not any(t.startswith("⚠") for t in label_texts)
+    assert not any("re-import for new formatting" in t for t in label_texts)
