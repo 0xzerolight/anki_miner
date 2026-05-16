@@ -9,7 +9,7 @@ from anki_miner.services.dictionary.importers.yomitan_importer import (
     YomitanImportResult,
     import_yomitan_zip,
 )
-from anki_miner.services.dictionary.storage import open_readonly, read_meta
+from anki_miner.services.dictionary.storage import SCHEMA_VERSION, open_readonly, read_meta
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
 
 
@@ -41,7 +41,7 @@ class TestImportYomitanZip:
             conn.close()
 
         meta = read_meta(db_path)
-        assert meta["schema_version"] == "1"
+        assert meta["schema_version"] == str(SCHEMA_VERSION)
         assert meta["format"] == "yomitan"
         assert meta["source_name"] == "Test Dict"
         assert meta["source_revision"] == "v1"

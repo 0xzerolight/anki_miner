@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS entries (
@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS entries (
     term      TEXT NOT NULL,
     reading   TEXT,
     content   TEXT NOT NULL,
+    tags      TEXT NOT NULL DEFAULT '',
     score     INTEGER DEFAULT 0,
     sequence  INTEGER
 );
@@ -32,7 +33,7 @@ CREATE TABLE IF NOT EXISTS meta (
 """
 
 _LOOKUP_SQL = (
-    "SELECT content FROM entries "
+    "SELECT content, tags FROM entries "
     "WHERE term = ? OR reading = ? "
     "ORDER BY (term = ?) DESC, sequence "
     "LIMIT 5"
@@ -46,6 +47,7 @@ class DictRow:
     term: str
     reading: str | None
     content: str
+    tags: str = ""
     score: int = 0
     sequence: int | None = None
 
@@ -73,19 +75,19 @@ def bulk_insert(db_path: Path, rows: Iterable[DictRow], batch_size: int = 5000) 
     try:
         batch: list[tuple] = []
         for row in rows:
-            batch.append((row.term, row.reading, row.content, row.score, row.sequence))
+            batch.append((row.term, row.reading, row.content, row.tags, row.score, row.sequence))
             if len(batch) >= batch_size:
                 conn.executemany(
-                    "INSERT INTO entries (term, reading, content, score, sequence) "
-                    "VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO entries (term, reading, content, tags, score, sequence) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
                     batch,
                 )
                 total += len(batch)
                 batch.clear()
         if batch:
             conn.executemany(
-                "INSERT INTO entries (term, reading, content, score, sequence) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO entries (term, reading, content, tags, score, sequence) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
                 batch,
             )
             total += len(batch)
@@ -135,7 +137,7 @@ def open_readonly(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
-def lookup(conn: sqlite3.Connection, word: str) -> list[str]:
-    """Return up to 5 content strings matching word (term or reading)."""
+def lookup(conn: sqlite3.Connection, word: str) -> list[tuple[str, str]]:
+    """Return up to 5 (content, tags) pairs matching word (term or reading)."""
     rows = conn.execute(_LOOKUP_SQL, (word, word, word)).fetchall()
-    return [row[0] for row in rows]
+    return [(row[0], row[1]) for row in rows]
