@@ -7,6 +7,7 @@ import pytest
 from anki_miner.exceptions import SetupError
 from anki_miner.services.dictionary.importers.yomitan_importer import (
     YomitanImportResult,
+    derive_dict_id_from_zip,
     import_yomitan_zip,
 )
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, open_readonly, read_meta
@@ -319,3 +320,49 @@ class TestImportYomitanZip:
 
         result = import_yomitan_zip(zip_path, tmp_path / "dicts")
         assert result.entry_count == 1
+
+
+class TestDeriveDictIdFromZip:
+    """The shared `derive_dict_id_from_zip` helper used by the Settings UI."""
+
+    def test_matches_importer_dict_id(self, tmp_path: Path):
+        """Helper output must equal the importer's `dict_id` for the same zip."""
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "test.zip", title="My Dict", revision="2024-01"
+        )
+        derived = derive_dict_id_from_zip(zip_path)
+        imported = import_yomitan_zip(zip_path, tmp_path / "dicts").dict_id
+        assert derived == imported
+
+    def test_omits_revision_suffix_when_blank(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(tmp_path / "src" / "norev.zip", title="NoRev", revision="")
+        assert derive_dict_id_from_zip(zip_path) == "norev"
+
+    def test_raises_when_zip_missing(self, tmp_path: Path):
+        with pytest.raises(SetupError, match="not found"):
+            derive_dict_id_from_zip(tmp_path / "missing.zip")
+
+    def test_raises_on_missing_index_json(self, tmp_path: Path):
+        import zipfile
+
+        bad = tmp_path / "noindex.zip"
+        with zipfile.ZipFile(bad, "w") as zf:
+            zf.writestr("term_bank_1.json", "[]")
+        with pytest.raises(SetupError, match="missing required index.json"):
+            derive_dict_id_from_zip(bad)
+
+    def test_raises_on_blank_title(self, tmp_path: Path):
+        import json
+        import zipfile
+
+        bad = tmp_path / "blank.zip"
+        with zipfile.ZipFile(bad, "w") as zf:
+            zf.writestr("index.json", json.dumps({"title": "", "revision": "v1", "format": 3}))
+        with pytest.raises(SetupError, match="missing required 'title'"):
+            derive_dict_id_from_zip(bad)
+
+    def test_raises_on_corrupt_zip(self, tmp_path: Path):
+        bad = tmp_path / "corrupt.zip"
+        bad.write_bytes(b"this is not a zip file")
+        with pytest.raises(SetupError, match="Corrupt zip"):
+            derive_dict_id_from_zip(bad)
