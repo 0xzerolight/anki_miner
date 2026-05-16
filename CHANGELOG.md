@@ -19,6 +19,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **In-memory `JMdictProvider`**: replaced by the SQLite-backed `IndexedDictProvider`. Existing users are auto-migrated on first launch; the legacy XML can be deleted after migration.
 
 ### Fixed
+- **Yomitan structured-content rendering preserves more of the source formatting**. Cards generated from Yomitan dictionaries previously lost most of the original visual structure. Four bugs in `yomitan_renderer.py`:
+  - **Allowed-tag set was too narrow**: `ruby`/`rt`/`rp`/`rb`, `dl`/`dt`/`dd`, `thead`/`tbody`/`tfoot`, `details`/`summary`, and `h1`–`h6`/`p` collapsed to `<span>`, so furigana base+reading concatenated inline (`子こ供ども達たち`) and definition-list "forms" ran together.
+  - **Inline `style` was dropped entirely**, which gutted monolingual-JP dicts that depend on per-span font-size, color, vertical-align, and list-style-type for sense markers and headword styling. Now passed through a CSS-property whitelist with `url()`/`expression()`/`javascript:`/`vbscript:`/`data:`/quote/brace scrubbing and a 256-char value cap.
+  - **Yomitan's `data: {k: v}` was misrendered as concatenated CSS class fragments** (`class="data-content-definition"`) instead of HTML `data-*` attributes, so dictionary-supplied CSS hooks did nothing. Now emits proper `data-foo="bar"`.
+  - **Tag badges had no separation**, so a row of tags rendered as `nouncolloquialpoliteabbr.Kansai`. Now wrapped in a `.tag-list` container with a `display: inline-block` chip style so they read as separated chips even when the card template ships no `.tag` CSS.
+  - Also added: `lang` attribute, `colspan`/`rowspan` on `td`/`th`, `open` on `details`, `alt`/`width`/`height`/`title` on `img`, `title` on common containers.
+
+  **Existing Yomitan dictionaries must be re-imported** to pick up the new HTML — content is rendered at import time and lives in the dictionary's `index.sqlite`.
 - **About dialog and update banner showed stale version after upgrade on Windows** (Issue #10): frozen `__version__` resolved through `importlib.metadata.version("anki-miner")`, which reads `*.dist-info/METADATA` off disk. Inno Setup overlay installs left `anki_miner-OLD.dist-info` next to the new one and filesystem enumeration picked the older entry, so 2.3.4 reported itself as 2.3.3 and re-offered its own update. `__version__` is now a hardcoded literal in `anki_miner/__init__.py` (pyproject reads it via `[tool.setuptools.dynamic]`); the Windows installer now wipes every `*.dist-info` dir before copying new files, so the same trap cannot reappear for any dependency. AppImage, `.deb`, and pip installs were never affected.
 
 ## [2.3.4] - 2026-05-15

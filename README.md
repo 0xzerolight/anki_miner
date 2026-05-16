@@ -25,7 +25,7 @@ Suited to batch processing after viewing, rather than real-time lookup during pl
 1. **Parse subtitles**: tokenize Japanese text with MeCab morphological analysis.
 2. **Filter words**: keep content words (nouns, verbs, adjectives, adverbs); drop words already in your Anki collection or on your blacklist.
 3. **Extract media**: capture screenshots and audio clips from the video at each subtitle's timestamp via ffmpeg.
-4. **Fetch definitions**: look up English definitions from JMdict (offline) or the Jisho API.
+4. **Fetch definitions**: look up definitions through your configured dictionary chain (Yomitan-format dictionaries, with Jisho as optional online fallback).
 5. **Create cards**: batch upload to Anki via AnkiConnect.
 
 ## Features
@@ -33,7 +33,7 @@ Suited to batch processing after viewing, rather than real-time lookup during pl
 - Lapis-compatible cards with furigana, pitch accent, and word frequency fields.
 - YouTube support: paste a URL, mine the video.
 - Queue a folder of episode/subtitle pairs for sequential processing.
-- Offline JMdict dictionary with Jisho API fallback.
+- Pluggable dictionary chain: load any Yomitan-format dictionaries, reorder freely, with Jisho online as optional fallback.
 - Preview and curate the word list before any cards are created.
 - Parallel ffmpeg extraction for screenshots and sentence audio.
 - Analytics dashboard with history, undo, and series difficulty rankings.
@@ -121,17 +121,17 @@ Default field mapping:
 
 Fields marked *(unmapped)* have no default Lapis mapping. Map them in Settings if your note type has equivalents. Any note type with the required fields works.
 
-### JMdict Offline Dictionary
+### Dictionaries
 
-For fast offline lookups:
+Anki Miner looks up definitions through a **provider chain** you configure. Each lookup tries the providers in order; the first hit wins. Mix any number of offline Yomitan-format dictionaries with the Jisho online fallback, in any order.
 
-```bash
-mkdir -p ~/.anki_miner
-wget -O ~/.anki_miner/JMdict_e.gz http://ftp.edrdg.org/pub/Nihongo/JMdict_e.gz
-gunzip ~/.anki_miner/JMdict_e.gz
-```
+Add a dictionary in **Settings → Add Dictionary…** by pointing at a Yomitan `.zip` archive. Drag entries to reorder the chain. Installed dictionaries are indexed once into `~/.anki_miner/dicts/<dict_id>/index.sqlite` and loaded on startup. Structured-content entries are rendered to HTML on import, so card definitions preserve the source dictionary's formatting (definition lists, examples, tags).
 
-Without JMdict, lookups fall back to the Jisho API (slower, online, rate-limited).
+**Recommended Japanese → English dictionary**: [Jitendex](https://github.com/Jitendex/Jitendex) — a modern JMdict successor with richer formatting, examples, and tags. Download the latest Yomitan archive from the [Jitendex releases page](https://github.com/Jitendex/Jitendex/releases) and add it via Settings.
+
+Without any local dictionary, lookups fall back to the Jisho API (slower, online, rate-limited).
+
+> Upgrading from a pre-multi-dictionary release? A legacy `~/.anki_miner/JMdict_e` file is auto-migrated to the new SQLite index on first launch. The legacy XML can be deleted after migration.
 
 ## YouTube Mining
 
@@ -157,7 +157,7 @@ Anki Miner checks GitHub for new releases on startup (toggle in Settings). When 
 | "Deck not found"         | Create the deck in Anki or update the deck name in Settings.                     |
 | "Note type not found"    | Import Lapis (see above) or configure your own in Settings.                      |
 | "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
-| "JMdict file not found"  | Download to `~/.anki_miner/` (see above) or disable offline dictionary.          |
+| No definitions found     | Add a Yomitan dictionary in Settings → Add Dictionary…, or enable the Jisho fallback. |
 | Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.     |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI.                                      |
 
