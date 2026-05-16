@@ -214,9 +214,9 @@ class TestImportYomitanZip:
         """Importer must store the rendered glossary HTML for the term's senses.
 
         Tag badges are now provider-side composition (Task 4) and no longer
-        appear in `content`. Task 3 will populate `DictRow.tags` with the
-        merged tag list; this test only guards that glossary text survives
-        the new renderer.
+        appear in `content`. `DictRow.tags` (Task 3) carries the merged tag
+        list; this test only guards that glossary text survives the new
+        renderer.
         """
         zip_path = build_yomitan_zip(
             tmp_path / "src" / "test.zip",
@@ -247,3 +247,75 @@ class TestImportYomitanZip:
             assert 'class="tag ' not in content
         finally:
             conn.close()
+
+    def test_tags_column_populated_from_definition_and_term_tags(self, tmp_path: Path):
+        """`DictRow.tags` is the union of term-bank column 3 (definitionTags)
+        and column 8 (termTags), space-joined, preserving order.
+        """
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "test.zip",
+            term_banks=[
+                [
+                    # definitionTags="v5r vt", termTags="common P"
+                    ["走る", "はしる", "v5r vt", "v5r", 0, ["to run"], 1, "common P"],
+                ]
+            ],
+            tag_banks=[],  # no tag_bank_*.json files at all
+        )
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+        db_path = tmp_path / "dicts" / result.dict_id / "index.sqlite"
+        conn = open_readonly(db_path)
+        try:
+            tags = conn.execute("SELECT tags FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
+        finally:
+            conn.close()
+
+        # definitionTags first, then termTags, order preserved within each.
+        assert tags == "v5r vt common P"
+
+    def test_tags_column_empty_when_no_tag_columns(self, tmp_path: Path):
+        """When both definitionTags and termTags are empty strings, `tags=""`."""
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "test.zip",
+            term_banks=[
+                [
+                    ["走る", "はしる", "", "v5r", 0, ["to run"], 1, ""],
+                ]
+            ],
+            tag_banks=[],
+        )
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+        db_path = tmp_path / "dicts" / result.dict_id / "index.sqlite"
+        conn = open_readonly(db_path)
+        try:
+            tags = conn.execute("SELECT tags FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
+        finally:
+            conn.close()
+
+        assert tags == ""
+
+    def test_import_succeeds_without_tag_bank_files(self, tmp_path: Path):
+        """A zip with zero `tag_bank_*.json` files must still import cleanly.
+
+        Provider-side composition reads tags directly off `DictRow.tags`, so
+        the importer no longer requires the legacy tag-bank descriptor files.
+        """
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "test.zip",
+            term_banks=[
+                [
+                    ["食べる", "たべる", "v1", "v1", 0, ["to eat"], 1, ""],
+                ]
+            ],
+            tag_banks=[],  # importer must not require tag_bank_*.json
+        )
+        # Sanity: the fixture really does omit tag-bank files.
+        import zipfile
+
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            assert not any(n.startswith("tag_bank_") for n in zf.namelist())
+
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+        assert result.entry_count == 1

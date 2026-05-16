@@ -126,23 +126,6 @@ def import_yomitan_zip(
 
         dict_id = _slug(title) + ("-" + _slug(revision) if revision else "")
 
-        # Load tag banks
-        tag_bank: dict[str, dict[str, Any]] = {}
-        for tag_file in sorted(tmp_path.glob("tag_bank_*.json")):
-            try:
-                entries = json.loads(tag_file.read_text(encoding="utf-8"))
-            except json.JSONDecodeError as e:
-                raise SetupError(f"Invalid {tag_file.name}: {e}") from e
-            for entry in entries:
-                # Yomitan tag bank tuple: [name, category, order, notes, score]
-                if isinstance(entry, list) and entry:
-                    name = str(entry[0])
-                    tag_bank[name] = {
-                        "category": entry[1] if len(entry) > 1 else "",
-                        "order": entry[2] if len(entry) > 2 else 0,
-                        "notes": entry[3] if len(entry) > 3 else "",
-                    }
-
         # Enumerate term bank files for progress totals
         term_files = sorted(tmp_path.glob("term_bank_*.json"))
         if not term_files:
@@ -180,10 +163,14 @@ def import_yomitan_zip(
                     score = int(entry[4]) if len(entry) > 4 and entry[4] is not None else 0
                     glossary = entry[5] if isinstance(entry[5], list) else [entry[5]]
                     sequence = int(entry[6]) if len(entry) > 6 and entry[6] is not None else None
-                    # Tag composition is now provider-side (Task 4); the renderer
-                    # only handles the SC tree. Task 3 will rewire definition_tags
-                    # (entry[2]) + extra_term_tags (entry[7]) into `DictRow.tags`
-                    # using the loaded `tag_bank`.
+                    # Yomitan term-bank tag columns: column 3 (entry[2]) is
+                    # `definitionTags`; column 8 (entry[7]) is `termTags`. Both
+                    # are space-separated tag-name strings. We union them
+                    # (definitionTags first, preserving order) and store on
+                    # `DictRow.tags` for provider-side badge composition.
+                    definition_tags = str(entry[2]).split() if len(entry) > 2 and entry[2] else []
+                    extra_term_tags = str(entry[7]).split() if len(entry) > 7 and entry[7] else []
+                    all_tags = definition_tags + extra_term_tags
                     content = render_glossary_entry(
                         glossary,
                         dict_id=dict_id,
@@ -194,6 +181,7 @@ def import_yomitan_zip(
                         term=term,
                         reading=reading,
                         content=content,
+                        tags=" ".join(all_tags),
                         score=score,
                         sequence=sequence,
                     )
