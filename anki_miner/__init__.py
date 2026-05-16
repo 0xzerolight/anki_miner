@@ -5,7 +5,10 @@ A unified tool for extracting Japanese vocabulary from anime subtitles
 and creating Anki flashcards with audio, screenshots, and definitions.
 """
 
-from importlib.metadata import version
-
-__version__ = version("anki-miner")
+# Single source of truth. Bump this on release; pyproject.toml reads it via
+# `[tool.setuptools.dynamic] version = {attr = "anki_miner.__version__"}`.
+# Do NOT switch back to importlib.metadata.version() — frozen builds can pick
+# up orphan dist-info dirs from prior installs and report the wrong version
+# (Issue #10).
+__version__ = "2.3.4"
 __author__ = "Anki Miner Contributors"
