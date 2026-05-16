@@ -104,6 +104,19 @@ class DictionarySettingsPanel(FormPanel):
         self._registry = DictionaryRegistry(DICTS_ROOT)
         self._rebuild_list()
 
+    def set_per_row_reimport_enabled(self, enabled: bool) -> None:
+        """Toggle every stale-row Re-import button.
+
+        Prevents a user from launching a second per-row import while
+        another is in flight — clobbering ``_active_import_worker`` would
+        orphan the first worker.
+        """
+        for i in range(self._list.count()):
+            item = self._list.item(i)
+            widget = self._list.itemWidget(item)
+            if isinstance(widget, _ChainRow) and widget.reimport_button is not None:
+                widget.reimport_button.setEnabled(enabled)
+
     def _setup_fields(self) -> None:
         container = QWidget()
         layout = QVBoxLayout(container)
