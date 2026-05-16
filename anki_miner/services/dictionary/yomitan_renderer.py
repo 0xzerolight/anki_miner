@@ -35,6 +35,10 @@ _VOID_TAGS = frozenset({"br", "img"})
 
 _WHITESPACE_RE = re.compile(r"\s+")
 
+# Yomitan structured-content trees are user-supplied data. Cap recursion so a
+# pathological/malicious dict can't blow the Python stack mid-import.
+_MAX_DEPTH = 100
+
 
 def _is_safe_url(url: str) -> bool:
     """Return True if url uses an allowed scheme or is a relative path.
@@ -58,7 +62,7 @@ def _is_safe_url(url: str) -> bool:
     return True  # relative path, fragment, query — all safe
 
 
-def structured_content_to_html(node: Any) -> str:
+def structured_content_to_html(node: Any, _depth: int = 0) -> str:
     """Render a Yomitan structured-content node to HTML.
 
     Args:
@@ -66,19 +70,23 @@ def structured_content_to_html(node: Any) -> str:
 
     Returns:
         HTML string. Unknown tags become <span>; plain strings are escaped.
+        Nodes deeper than _MAX_DEPTH are truncated to "" to bound stack use.
     """
+    if _depth > _MAX_DEPTH:
+        return ""
+
     if isinstance(node, str):
         return escape(node)
 
     if isinstance(node, list):
-        return "".join(structured_content_to_html(child) for child in node)
+        return "".join(structured_content_to_html(child, _depth + 1) for child in node)
 
     if not isinstance(node, dict):
         return ""
 
     # Yomitan wraps top-level entries in {"type": "structured-content", "content": ...}
     if node.get("type") == "structured-content":
-        return structured_content_to_html(node.get("content", ""))
+        return structured_content_to_html(node.get("content", ""), _depth + 1)
 
     tag = node.get("tag", "span")
     if tag not in _ALLOWED_TAGS:
@@ -89,7 +97,7 @@ def structured_content_to_html(node: Any) -> str:
     if tag in _VOID_TAGS:
         return f"<{tag}{attrs}>"
 
-    inner = structured_content_to_html(node.get("content", ""))
+    inner = structured_content_to_html(node.get("content", ""), _depth + 1)
     return f"<{tag}{attrs}>{inner}</{tag}>"
 
 
