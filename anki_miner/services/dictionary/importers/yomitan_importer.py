@@ -180,13 +180,12 @@ def import_yomitan_zip(
                     score = int(entry[4]) if len(entry) > 4 and entry[4] is not None else 0
                     glossary = entry[5] if isinstance(entry[5], list) else [entry[5]]
                     sequence = int(entry[6]) if len(entry) > 6 and entry[6] is not None else None
-                    definition_tags = str(entry[2]).split() if len(entry) > 2 and entry[2] else []
-                    extra_term_tags = str(entry[7]).split() if len(entry) > 7 and entry[7] else []
-                    all_tags = definition_tags + extra_term_tags
+                    # Tag composition is now provider-side (Task 4); the renderer
+                    # only handles the SC tree. Task 3 will rewire definition_tags
+                    # (entry[2]) + extra_term_tags (entry[7]) into `DictRow.tags`
+                    # using the loaded `tag_bank`.
                     content = render_glossary_entry(
                         glossary,
-                        all_tags,
-                        tag_bank,
                         dict_id=dict_id,
                         media_collector=media_paths,
                     )
