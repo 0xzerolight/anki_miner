@@ -10,7 +10,6 @@ from anki_miner.models.stats import (
     Milestone,
     MiningSession,
     OverallStats,
-    SeriesStats,
 )
 
 logger = logging.getLogger(__name__)
@@ -189,38 +188,6 @@ class StatsService:
         finally:
             conn.close()
 
-    def get_series_stats(self) -> list[SeriesStats]:
-        """Get aggregated stats per series, ordered by total cards descending."""
-        if not self._initialized:
-            return []
-        conn = self._connect()
-        try:
-            rows = conn.execute("""
-                SELECT
-                    series_name,
-                    COUNT(*) as episodes_mined,
-                    SUM(total_words) as total_words,
-                    SUM(unknown_words) as total_unknown,
-                    SUM(cards_created) as total_cards,
-                    SUM(elapsed_time) as total_time
-                FROM mining_sessions
-                GROUP BY series_name
-                ORDER BY total_cards DESC
-            """).fetchall()
-            return [
-                SeriesStats(
-                    series_name=row["series_name"],
-                    episodes_mined=row["episodes_mined"],
-                    total_words=row["total_words"] or 0,
-                    total_unknown=row["total_unknown"] or 0,
-                    total_cards_created=row["total_cards"] or 0,
-                    total_time=row["total_time"] or 0.0,
-                )
-                for row in rows
-            ]
-        finally:
-            conn.close()
-
     # === Feature 2: Difficulty Ranking ===
 
     def record_difficulty(
@@ -332,21 +299,6 @@ class StatsService:
                 milestones.append(selected)
 
         return milestones
-
-    def get_series_progress(self, series_name: str) -> list[MiningSession]:
-        """Get chronological mining sessions for a specific series."""
-        if not self._initialized:
-            return []
-        conn = self._connect()
-        try:
-            rows = conn.execute(
-                """SELECT * FROM mining_sessions
-                   WHERE series_name = ? ORDER BY mined_at ASC""",
-                (series_name,),
-            ).fetchall()
-            return [self._row_to_session(row) for row in rows]
-        finally:
-            conn.close()
 
     @staticmethod
     def _row_to_session(row: sqlite3.Row) -> MiningSession:

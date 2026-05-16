@@ -66,21 +66,3 @@ class SectionHeader(QWidget):
         # Set size policy to allow growth when content needs more space
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.setMinimumHeight(40)
-
-    def set_title(self, title: str) -> None:
-        """Update the section title.
-
-        Args:
-            title: New title text
-        """
-        self._title = title
-        self.title_label.setText(title)
-
-    def set_action_enabled(self, enabled: bool) -> None:
-        """Enable or disable the action button.
-
-        Args:
-            enabled: Whether button should be enabled
-        """
-        if hasattr(self, "action_button"):
-            self.action_button.setEnabled(enabled)

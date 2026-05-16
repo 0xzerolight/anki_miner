@@ -391,7 +391,6 @@ class TestValidationService:
             test_config = replace(
                 test_config,
                 dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
-                use_offline_dict=False,
                 use_pitch_accent=False,
                 use_frequency_data=False,
             )
@@ -747,7 +746,6 @@ class TestOptionalResourceWarnings:
         config = replace(
             test_config,
             dictionary_chain=chain,
-            use_offline_dict=False,
             use_pitch_accent=False,
             use_frequency_data=False,
         )

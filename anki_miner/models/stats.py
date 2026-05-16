@@ -54,7 +54,6 @@ class DifficultyEntry:
     """Difficulty data for a series (averaged across episodes)."""
 
     series_name: str = ""
-    episode_name: str = ""
     total_words: int = 0
     unknown_words: int = 0
     unique_words: int = 0

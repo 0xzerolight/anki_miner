@@ -66,9 +66,6 @@ class DictionaryRegistry:
                 db_path=db,
             )
 
-    def list_dicts(self) -> list[DictMeta]:
-        return list(self._dicts.values())
-
     def get(self, dict_id: str) -> DictMeta | None:
         return self._dicts.get(dict_id)
 

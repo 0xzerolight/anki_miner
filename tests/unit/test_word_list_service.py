@@ -17,7 +17,10 @@ class TestLoad:
         service = WordListService(blacklist_path=bl)
         service.load()
 
-        assert service.get_blacklist() == {"食べる", "飲む", "走る"}
+        assert service.is_blacklisted("食べる") is True
+        assert service.is_blacklisted("飲む") is True
+        assert service.is_blacklisted("走る") is True
+        assert service.is_blacklisted("歩く") is False
 
     def test_loads_whitelist(self, tmp_path):
         """Should read words from a whitelist file."""
@@ -27,7 +30,9 @@ class TestLoad:
         service = WordListService(whitelist_path=wl)
         service.load()
 
-        assert service.get_whitelist() == {"新しい", "古い"}
+        assert service.is_whitelisted("新しい") is True
+        assert service.is_whitelisted("古い") is True
+        assert service.is_whitelisted("赤い") is False
 
     def test_ignores_blank_lines_and_comments(self, tmp_path):
         """Should skip blank lines and lines starting with #."""
@@ -40,7 +45,10 @@ class TestLoad:
         service = WordListService(blacklist_path=bl)
         service.load()
 
-        assert service.get_blacklist() == {"食べる", "飲む"}
+        assert service.is_blacklisted("食べる") is True
+        assert service.is_blacklisted("飲む") is True
+        assert service.is_blacklisted("# This is a comment") is False
+        assert service.is_blacklisted("") is False
 
     def test_missing_file_raises_setup_error(self, tmp_path):
         """Should raise SetupError for nonexistent file."""
@@ -50,22 +58,22 @@ class TestLoad:
             service.load()
 
     def test_empty_file(self, tmp_path):
-        """Should return empty set for empty file."""
+        """Should treat all lookups as not-blacklisted for an empty file."""
         bl = tmp_path / "empty.txt"
         bl.write_text("", encoding="utf-8")
 
         service = WordListService(blacklist_path=bl)
         service.load()
 
-        assert service.get_blacklist() == set()
+        assert service.is_blacklisted("anything") is False
 
     def test_none_paths_skip_loading(self):
         """Should succeed with no files when paths are None."""
         service = WordListService(blacklist_path=None, whitelist_path=None)
         service.load()
 
-        assert service.get_blacklist() == set()
-        assert service.get_whitelist() == set()
+        assert service.is_blacklisted("anything") is False
+        assert service.is_whitelisted("anything") is False
         assert service.is_available() is True
 
 
@@ -101,18 +109,6 @@ class TestBlacklist:
 
         assert service.is_blacklisted("食べる") is True
         assert service.is_blacklisted("走る") is False
-
-    def test_get_blacklist_returns_copy(self, tmp_path):
-        """get_blacklist should return a copy, not the internal set."""
-        bl = tmp_path / "bl.txt"
-        bl.write_text("食べる\n", encoding="utf-8")
-
-        service = WordListService(blacklist_path=bl)
-        service.load()
-
-        result = service.get_blacklist()
-        result.add("extra")
-        assert "extra" not in service.get_blacklist()
 
 
 class TestWhitelist:

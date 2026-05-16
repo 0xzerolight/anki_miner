@@ -13,16 +13,6 @@ class FilePair:
     video: Path
     subtitle: Path
 
-    @property
-    def video_name(self) -> str:
-        """Get video filename."""
-        return self.video.name
-
-    @property
-    def subtitle_name(self) -> str:
-        """Get subtitle filename."""
-        return self.subtitle.name
-
 
 class FilePairMatcher:
     """Matches video and subtitle files by base name, with deterministic
@@ -31,119 +21,6 @@ class FilePairMatcher:
 
     VIDEO_EXTENSIONS: frozenset[str] = frozenset({".mp4", ".mkv", ".avi", ".m4v", ".mov"})
     SUBTITLE_EXTENSIONS: frozenset[str] = frozenset(DEFAULT_SUBTITLE_PRIORITY)
-
-    @staticmethod
-    def find_pairs_same_folder(
-        folder: Path,
-        priority: tuple[str, ...] = DEFAULT_SUBTITLE_PRIORITY,
-    ) -> list[FilePair]:
-        """Find matching video/subtitle pairs inside a single folder.
-
-        For each video, picks the subtitle whose extension appears earliest
-        in ``priority``. This replaces the previous set-iteration behavior
-        that was nondeterministic when multiple subtitle formats coexisted.
-
-        Args:
-            folder: Folder containing both videos and subtitles.
-            priority: Subtitle extension preference order (highest first).
-
-        Returns:
-            List of FilePair objects, naturally sorted by video filename.
-        """
-        videos = [
-            f
-            for f in folder.iterdir()
-            if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
-        ]
-
-        pairs: list[FilePair] = []
-        for video in videos:
-            for sub_ext in priority:
-                subtitle = video.with_suffix(sub_ext)
-                if subtitle.exists():
-                    pairs.append(FilePair(video, subtitle))
-                    break
-
-        from anki_miner.utils.sort_utils import natural_sort_key
-
-        pairs.sort(key=lambda p: natural_sort_key(p.video.name))
-
-        return pairs
-
-    @staticmethod
-    def find_pairs_across_folders(
-        anime_folder: Path,
-        subtitle_folder: Path,
-        priority: tuple[str, ...] = DEFAULT_SUBTITLE_PRIORITY,
-    ) -> list[FilePair]:
-        """Find matching video/subtitle pairs across two folders.
-
-        Matches by base filename:
-        - anime_folder/episode_01.mp4 <-> subtitle_folder/episode_01.ass
-        - anime_folder/ep02.mkv <-> subtitle_folder/ep02.srt
-
-        Args:
-            anime_folder: Folder containing video files.
-            subtitle_folder: Folder containing subtitle files.
-            priority: Subtitle extension preference order (highest first).
-
-        Returns:
-            List of FilePair objects, naturally sorted by video filename.
-        """
-        videos = [
-            f
-            for f in anime_folder.iterdir()
-            if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
-        ]
-
-        pairs: list[FilePair] = []
-        for video in videos:
-            base_name = video.stem
-
-            for sub_ext in priority:
-                subtitle = subtitle_folder / f"{base_name}{sub_ext}"
-                if subtitle.exists():
-                    pairs.append(FilePair(video, subtitle))
-                    break
-
-        from anki_miner.utils.sort_utils import natural_sort_key
-
-        pairs.sort(key=lambda p: natural_sort_key(p.video.name))
-
-        return pairs
-
-    @staticmethod
-    def find_unpaired_files(
-        anime_folder: Path, subtitle_folder: Path
-    ) -> tuple[list[Path], list[Path]]:
-        """Find unpaired videos and subtitles for diagnostics.
-
-        Args:
-            anime_folder: Folder containing video files
-            subtitle_folder: Folder containing subtitle files
-
-        Returns:
-            Tuple of (unpaired_videos, unpaired_subtitles)
-        """
-        pairs = FilePairMatcher.find_pairs_across_folders(anime_folder, subtitle_folder)
-        paired_videos = {p.video for p in pairs}
-        paired_subtitles = {p.subtitle for p in pairs}
-
-        all_videos = [
-            f
-            for f in anime_folder.iterdir()
-            if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
-        ]
-        all_subtitles = [
-            f
-            for f in subtitle_folder.iterdir()
-            if f.is_file() and f.suffix.lower() in FilePairMatcher.SUBTITLE_EXTENSIONS
-        ]
-
-        unpaired_videos = [v for v in all_videos if v not in paired_videos]
-        unpaired_subtitles = [s for s in all_subtitles if s not in paired_subtitles]
-
-        return unpaired_videos, unpaired_subtitles
 
     @staticmethod
     def find_pairs_by_episode_number(anime_folder: Path, subtitle_folder: Path) -> list[FilePair]:

@@ -82,56 +82,6 @@ class TestWordFilterService:
 
             assert result == []
 
-    class TestFilterByLength:
-        """Tests for filter_by_length method."""
-
-        def test_filters_short_words(self, test_config):
-            """Should filter words shorter than min_length."""
-            service = WordFilterService(test_config)
-            words = [
-                create_word("あ"),  # 1 char
-                create_word("あい"),  # 2 chars
-                create_word("あいう"),  # 3 chars
-            ]
-
-            result = service.filter_by_length(words, min_length=2)
-
-            assert len(result) == 2
-            assert all(len(w.surface) >= 2 for w in result)
-
-        def test_filters_long_words(self, test_config):
-            """Should filter words longer than max_length."""
-            service = WordFilterService(test_config)
-            words = [
-                create_word("短い"),  # 2 chars
-                create_word("中くらい"),  # 4 chars
-                create_word("とても長い単語"),  # 7 chars
-            ]
-
-            result = service.filter_by_length(words, min_length=1, max_length=4)
-
-            assert len(result) == 2
-
-        def test_no_max_length(self, test_config):
-            """Should allow any length when max_length is None."""
-            service = WordFilterService(test_config)
-            words = [
-                create_word("短"),
-                create_word("非常に長い日本語の単語"),
-            ]
-
-            result = service.filter_by_length(words, min_length=1, max_length=None)
-
-            assert len(result) == 2
-
-        def test_empty_words_list(self, test_config):
-            """Should return empty list when no words provided."""
-            service = WordFilterService(test_config)
-
-            result = service.filter_by_length([], min_length=1)
-
-            assert result == []
-
     class TestFilterByFrequency:
         """Tests for filter_by_frequency method."""
 

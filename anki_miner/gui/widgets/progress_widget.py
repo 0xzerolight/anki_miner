@@ -114,15 +114,6 @@ class ProgressWidget(QWidget):
         """
         self.status_label.setText(message)
 
-    def set_maximum(self, maximum: int) -> None:
-        """Set the maximum progress value.
-
-        Args:
-            maximum: Maximum value for progress
-        """
-        self._total_items = maximum
-        self.progress_bar.setMaximum(maximum)
-
     def set_value(self, value: int) -> None:
         """Set the current progress value.
 

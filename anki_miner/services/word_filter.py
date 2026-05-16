@@ -46,33 +46,6 @@ class WordFilterService:
 
         return unknown_words
 
-    def filter_by_length(
-        self,
-        words: list[TokenizedWord],
-        min_length: int | None = None,
-        max_length: int | None = None,
-    ) -> list[TokenizedWord]:
-        """Filter words by length.
-
-        Args:
-            words: List of words to filter
-            min_length: Minimum word length (defaults to 1)
-            max_length: Maximum word length (optional)
-
-        Returns:
-            List of words within length bounds
-        """
-        if min_length is None:
-            min_length = 1
-
-        filtered = []
-        for word in words:
-            word_len = len(word.surface)
-            if word_len >= min_length and (max_length is None or word_len <= max_length):
-                filtered.append(word)
-
-        return filtered
-
     def filter_by_frequency(
         self,
         words: list[TokenizedWord],
@@ -160,8 +133,8 @@ class WordFilterService:
         The returned words have their sentence/timing/sentence_furigana/
         sentence_reading swapped to those of the selected line. Per-word
         fields (``surface``, ``lemma``, ``reading``, ``expression_furigana``,
-        ``expression_reading``, ``frequency_rank``, ``video_file``) are
-        preserved unchanged.
+        ``expression_reading``, ``frequency_rank``, ``pos``, ``video_file``)
+        are preserved unchanged.
 
         Args:
             mineable_unknowns: Words remaining after blacklist, frequency,

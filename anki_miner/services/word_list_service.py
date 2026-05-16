@@ -78,22 +78,6 @@ class WordListService:
         """
         return word in self._whitelist
 
-    def get_blacklist(self) -> set[str]:
-        """Return the full blacklist set.
-
-        Returns:
-            Set of blacklisted words.
-        """
-        return set(self._blacklist)
-
-    def get_whitelist(self) -> set[str]:
-        """Return the full whitelist set.
-
-        Returns:
-            Set of whitelisted words.
-        """
-        return set(self._whitelist)
-
     @staticmethod
     def _read_word_file(path: Path) -> set[str]:
         """Read a word list file.

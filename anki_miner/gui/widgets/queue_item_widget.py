@@ -277,17 +277,6 @@ class QueueItemWidget(QFrame):
         self._subtitle_offset = value
         self._update_stats()
 
-    def is_configured(self) -> bool:
-        """Check if this queue item has all required paths set.
-
-        Note: This checks configuration, not processing completion.
-
-        Returns:
-            True if both anime and subtitle folders are set
-        """
-        anime, subtitle = self.get_folders()
-        return anime is not None and subtitle is not None
-
     def toggle_expanded(self) -> None:
         """Toggle the expanded/collapsed state."""
         self._is_expanded = not self._is_expanded

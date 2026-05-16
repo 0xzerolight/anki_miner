@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from anki_miner.models.media import MediaData
+
 
 @dataclass
 class TokenizedWord:
@@ -56,8 +58,7 @@ class WordData:
     definition: str | None = None
     screenshot_path: Path | None = None
     audio_path: Path | None = None
-    screenshot_filename: str | None = None
-    audio_filename: str | None = None
+    media: MediaData | None = None
     pitch_position: str | None = None
     pitch_category: str | None = None
     frequency_rank: int | None = None

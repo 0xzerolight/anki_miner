@@ -7,7 +7,6 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
-from anki_miner.orchestration.folder_processor import FolderProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.registry import DictionaryRegistry
@@ -219,22 +218,3 @@ def create_youtube_fetcher(config: AnkiMinerConfig) -> YouTubeFetcherService:
         Configured YouTubeFetcherService instance
     """
     return YouTubeFetcherService(config=config)
-
-
-def create_folder_processor(
-    config: AnkiMinerConfig,
-    presenter: PresenterProtocol,
-    stats_service: StatsService | None = None,
-) -> FolderProcessor:
-    """Create a FolderProcessor with all required services.
-
-    Args:
-        config: Mining configuration
-        presenter: Output presenter for messages
-        stats_service: Optional statistics recording service
-
-    Returns:
-        Configured FolderProcessor instance
-    """
-    episode_processor = create_episode_processor(config, presenter, stats_service)
-    return FolderProcessor(episode_processor=episode_processor, presenter=presenter)
