@@ -1,5 +1,6 @@
 """Tests for media_extractor module."""
 
+import dataclasses
 import json
 import subprocess
 from pathlib import Path
@@ -17,6 +18,37 @@ def service(test_config):
     """Create a MediaExtractorService with ensure_directory patched out."""
     with patch(f"{MODULE}.ensure_directory"):
         return MediaExtractorService(test_config)
+
+
+@pytest.fixture
+def animated_avif_service(test_config):
+    """Create a MediaExtractorService with animated AVIF screenshots enabled."""
+    cfg = dataclasses.replace(
+        test_config,
+        screenshot_animated=True,
+        screenshot_animated_format="avif",
+    )
+    with patch(f"{MODULE}.ensure_directory"):
+        svc = MediaExtractorService(cfg)
+    # Skip encoder probe for unit tests.
+    svc._animated_encoder_ok["libsvtav1"] = True
+    svc._animated_encoder_ok["libwebp_anim"] = True
+    return svc
+
+
+@pytest.fixture
+def animated_webp_service(test_config):
+    """Create a MediaExtractorService with animated WebP screenshots enabled."""
+    cfg = dataclasses.replace(
+        test_config,
+        screenshot_animated=True,
+        screenshot_animated_format="webp",
+    )
+    with patch(f"{MODULE}.ensure_directory"):
+        svc = MediaExtractorService(cfg)
+    svc._animated_encoder_ok["libsvtav1"] = True
+    svc._animated_encoder_ok["libwebp_anim"] = True
+    return svc
 
 
 @pytest.fixture
@@ -219,6 +251,216 @@ class TestExtractScreenshot:
             result = service._extract_screenshot(video_file, 1.0, 2.0, output_path)
 
         # output_path does not exist on disk, so result should be False
+        assert result is False
+
+
+class TestAnimatedScreenshot:
+    """Tests for animated screenshot extraction (AVIF / WebP)."""
+
+    def test_filename_uses_avif_when_animated(
+        self, animated_avif_service, video_file, make_tokenized_word
+    ):
+        """Filename extension should be .avif when animated+avif is configured."""
+        word = make_tokenized_word(lemma="食べる", start_time=1.5, duration=2.0)
+        with (
+            patch.object(animated_avif_service, "_extract_screenshot", return_value=True),
+            patch.object(animated_avif_service, "_extract_audio", return_value=True),
+        ):
+            result = animated_avif_service.extract_media(video_file, word)
+
+        assert result.screenshot_filename == "食べる_1500.avif"
+        assert result.audio_filename == "食べる_1500.mp3"
+
+    def test_filename_uses_webp_when_format_webp(
+        self, animated_webp_service, video_file, make_tokenized_word
+    ):
+        """Filename extension should be .webp when animated+webp is configured."""
+        word = make_tokenized_word(lemma="飲む", start_time=2.0, duration=1.5)
+        with (
+            patch.object(animated_webp_service, "_extract_screenshot", return_value=True),
+            patch.object(animated_webp_service, "_extract_audio", return_value=True),
+        ):
+            result = animated_webp_service.extract_media(video_file, word)
+
+        assert result.screenshot_filename == "飲む_2000.webp"
+
+    def test_animated_config_dispatches_to_animated_path(
+        self, animated_avif_service, video_file, tmp_path
+    ):
+        """_extract_screenshot must call animated impl when toggle is on."""
+        output_path = tmp_path / "clip.avif"
+        with (
+            patch.object(
+                animated_avif_service, "_extract_animated_screenshot", return_value=True
+            ) as animated,
+            patch.object(
+                animated_avif_service, "_extract_static_screenshot", return_value=True
+            ) as static,
+        ):
+            animated_avif_service._extract_screenshot(video_file, 1.0, 2.0, output_path)
+
+        animated.assert_called_once()
+        static.assert_not_called()
+
+    def test_static_config_dispatches_to_static_path(self, service, video_file, tmp_path):
+        """_extract_screenshot must call static impl when toggle is off (default)."""
+        output_path = tmp_path / "frame.jpg"
+        with (
+            patch.object(service, "_extract_animated_screenshot", return_value=True) as animated,
+            patch.object(service, "_extract_static_screenshot", return_value=True) as static,
+        ):
+            service._extract_screenshot(video_file, 1.0, 2.0, output_path)
+
+        static.assert_called_once()
+        animated.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "quality,expected_crf",
+        [(0, 63), (100, 0), (30, 44), (50, 32), (75, 16)],
+    )
+    def test_quality_to_avif_crf_mapping(self, quality, expected_crf):
+        """0-100 user quality (higher better) should map to AVIF CRF 0-63 (lower better)."""
+        assert MediaExtractorService._quality_to_avif_crf(quality) == expected_crf
+
+    def test_clip_duration_capped_by_word_duration(
+        self, animated_avif_service, video_file, tmp_path
+    ):
+        """When configured clip duration exceeds word duration, ffmpeg -t should be word duration."""
+        output_path = tmp_path / "clip.avif"
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        # config clip = 2.0s, word duration = 1.0s → expect -t 1.0
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            animated_avif_service._extract_animated_screenshot(
+                video_file, start_time=5.0, duration=1.0, output_path=output_path
+            )
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("-t") + 1] == str(1.0)
+
+    def test_clip_duration_floor_for_very_short_subtitles(
+        self, animated_avif_service, video_file, tmp_path
+    ):
+        """Floor very-short subtitles to 0.5s to avoid 0-frame clips."""
+        output_path = tmp_path / "clip.avif"
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            animated_avif_service._extract_animated_screenshot(
+                video_file, start_time=5.0, duration=0.1, output_path=output_path
+            )
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("-t") + 1] == str(0.5)
+
+    def test_avif_command_shape(self, animated_avif_service, video_file, tmp_path):
+        """AVIF ffmpeg command must include libsvtav1, CRF, loop, scale filter."""
+        output_path = tmp_path / "clip.avif"
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            animated_avif_service._extract_animated_screenshot(
+                video_file, start_time=2.0, duration=3.0, output_path=output_path
+            )
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == "ffmpeg"
+        assert "-an" in cmd
+        assert "-sn" in cmd
+        assert cmd[cmd.index("-c:v") + 1] == "libsvtav1"
+        assert "-crf" in cmd
+        # default quality 30 → CRF 44
+        assert cmd[cmd.index("-crf") + 1] == "44"
+        assert cmd[cmd.index("-loop") + 1] == "0"
+        # default fps 20, height 720
+        vf = cmd[cmd.index("-vf") + 1]
+        assert "fps=20" in vf
+        assert "scale=-2:720" in vf
+        assert cmd[-1] == str(output_path)
+
+    def test_webp_command_shape(self, animated_webp_service, video_file, tmp_path):
+        """WebP ffmpeg command must include libwebp_anim and -quality."""
+        output_path = tmp_path / "clip.webp"
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            animated_webp_service._extract_animated_screenshot(
+                video_file, start_time=2.0, duration=3.0, output_path=output_path
+            )
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("-c:v") + 1] == "libwebp_anim"
+        assert "-quality" in cmd
+        # default quality 30 maps through as-is for webp
+        assert cmd[cmd.index("-quality") + 1] == "30"
+        assert cmd[cmd.index("-loop") + 1] == "0"
+
+    def test_returns_false_when_encoder_missing(self, animated_avif_service, video_file, tmp_path):
+        """Probe miss for required encoder → return False without calling ffmpeg."""
+        output_path = tmp_path / "clip.avif"
+        # Clear the test fixture priming so the probe runs.
+        animated_avif_service._animated_encoder_ok.clear()
+
+        encoder_probe = MagicMock()
+        encoder_probe.returncode = 0
+        encoder_probe.stdout = "V..... librav1e Some other encoder\n"  # no libsvtav1
+
+        with patch(f"{MODULE}.subprocess.run", return_value=encoder_probe) as mock_run:
+            result = animated_avif_service._extract_animated_screenshot(
+                video_file, start_time=1.0, duration=2.0, output_path=output_path
+            )
+
+        assert result is False
+        # subprocess.run called only for the probe, not for an encode pass
+        assert mock_run.call_count == 1
+        probe_cmd = mock_run.call_args_list[0][0][0]
+        assert probe_cmd[:2] == ["ffmpeg", "-hide_banner"]
+        assert "-encoders" in probe_cmd
+
+    def test_encoder_probe_result_cached(self, animated_avif_service, video_file, tmp_path):
+        """Encoder probe must run at most once across multiple calls."""
+        output_path = tmp_path / "clip.avif"
+        animated_avif_service._animated_encoder_ok.clear()
+
+        # First call sees probe stdout; subsequent encode calls use cached miss.
+        probe_result = MagicMock()
+        probe_result.returncode = 0
+        probe_result.stdout = "no relevant encoders here\n"
+
+        with patch(f"{MODULE}.subprocess.run", return_value=probe_result) as mock_run:
+            animated_avif_service._extract_animated_screenshot(video_file, 1.0, 2.0, output_path)
+            animated_avif_service._extract_animated_screenshot(video_file, 1.0, 2.0, output_path)
+            animated_avif_service._extract_animated_screenshot(video_file, 1.0, 2.0, output_path)
+
+        # Exactly one probe call across all three extract attempts.
+        assert mock_run.call_count == 1
+
+    def test_animated_returns_false_on_ffmpeg_failure(
+        self, animated_avif_service, video_file, tmp_path
+    ):
+        """Non-zero ffmpeg exit on encode → return False."""
+        output_path = tmp_path / "clip.avif"
+        mock_proc = MagicMock()
+        mock_proc.returncode = 1
+        mock_proc.stderr = b"encode failed"
+
+        with patch(f"{MODULE}.subprocess.run", return_value=mock_proc):
+            result = animated_avif_service._extract_animated_screenshot(
+                video_file, 1.0, 2.0, output_path
+            )
+
         assert result is False
 
 

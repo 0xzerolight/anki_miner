@@ -29,6 +29,10 @@ class MediaExtractorService:
         ensure_directory(config.media_temp_folder)
         self._audio_stream_cache: dict[Path, int | None] = {}
         self._cache_lock = threading.Lock()
+        # Lazy, cached encoder-availability probe for animated screenshots.
+        # Keyed by ffmpeg encoder name (e.g. "libsvtav1", "libwebp_anim").
+        self._animated_encoder_ok: dict[str, bool] = {}
+        self._encoder_probe_lock = threading.Lock()
 
     def extract_media(
         self,
@@ -51,7 +55,11 @@ class MediaExtractorService:
         safe_word = safe_filename(word.lemma)
         timestamp = int(word.start_time * 1000)
 
-        screenshot_file = f"{safe_word}_{timestamp}.jpg"
+        if self.config.screenshot_animated:
+            screenshot_ext = self.config.screenshot_animated_format
+        else:
+            screenshot_ext = "jpg"
+        screenshot_file = f"{safe_word}_{timestamp}.{screenshot_ext}"
         audio_file = f"{safe_word}_{timestamp}.mp3"
 
         output_dir = temp_folder if temp_folder is not None else self.config.media_temp_folder
@@ -147,17 +155,19 @@ class MediaExtractorService:
         duration: float,
         output_path: Path,
     ) -> bool:
-        """Extract a screenshot from video.
+        """Extract a screenshot from video, dispatching to static or animated path."""
+        if self.config.screenshot_animated:
+            return self._extract_animated_screenshot(video_file, start_time, duration, output_path)
+        return self._extract_static_screenshot(video_file, start_time, duration, output_path)
 
-        Args:
-            video_file: Path to video file
-            start_time: Start time in seconds
-            duration: Duration in seconds
-            output_path: Output path for screenshot
-
-        Returns:
-            True if successful, False otherwise
-        """
+    def _extract_static_screenshot(
+        self,
+        video_file: Path,
+        start_time: float,
+        duration: float,
+        output_path: Path,
+    ) -> bool:
+        """Extract a single still frame as JPEG."""
         # Calculate screenshot time (offset from start)
         screenshot_time = start_time + min(self.config.screenshot_offset, duration / 2)
 
@@ -193,6 +203,137 @@ class MediaExtractorService:
             return False
         except (subprocess.SubprocessError, OSError) as e:
             logger.warning(f"Screenshot extraction error for {output_path.name}: {e}")
+            return False
+
+    @staticmethod
+    def _quality_to_avif_crf(quality: int) -> int:
+        """Map user-facing 0-100 quality (higher = better) to AVIF CRF 0-63 (lower = better)."""
+        clamped = max(0, min(100, int(quality)))
+        return round(63 - (clamped / 100) * 63)
+
+    @staticmethod
+    def _encoder_for_format(fmt: str) -> str:
+        """Return the ffmpeg encoder name for an animated format."""
+        if fmt == "avif":
+            return "libsvtav1"
+        if fmt == "webp":
+            return "libwebp_anim"
+        raise ValueError(f"Unsupported animated screenshot format: {fmt}")
+
+    def _check_encoder_available(self, encoder: str) -> bool:
+        """Probe ffmpeg once for an encoder; cache result."""
+        with self._encoder_probe_lock:
+            cached = self._animated_encoder_ok.get(encoder)
+            if cached is not None:
+                return cached
+            try:
+                proc = subprocess.run(
+                    ["ffmpeg", "-hide_banner", "-encoders"],
+                    capture_output=True,
+                    timeout=15,
+                    text=True,
+                )
+                available = proc.returncode == 0 and encoder in proc.stdout
+            except (subprocess.SubprocessError, OSError) as e:
+                logger.warning(f"ffmpeg encoder probe failed: {e}")
+                available = False
+            self._animated_encoder_ok[encoder] = available
+            if not available:
+                logger.error(
+                    f"ffmpeg encoder '{encoder}' not available. "
+                    "Animated screenshots in this format will fail. "
+                    "Install ffmpeg with the required encoder, or switch format in Settings."
+                )
+            return available
+
+    def _extract_animated_screenshot(
+        self,
+        video_file: Path,
+        start_time: float,
+        duration: float,
+        output_path: Path,
+    ) -> bool:
+        """Extract a short animated clip (AVIF or WebP) instead of a static frame."""
+        fmt = self.config.screenshot_animated_format
+        try:
+            encoder = self._encoder_for_format(fmt)
+        except ValueError as e:
+            logger.error(str(e))
+            return False
+
+        if not self._check_encoder_available(encoder):
+            return False
+
+        # Clip duration: capped by word duration so we never run past subtitle end.
+        # Floor at 0.5s for very short subtitles to avoid 0-frame clips.
+        configured = float(self.config.screenshot_animated_clip_duration)
+        clip_duration = min(configured, max(duration, 0.5))
+
+        fps = int(self.config.screenshot_animated_fps)
+        height = int(self.config.screenshot_animated_height)
+        quality = int(self.config.screenshot_animated_quality)
+
+        cmd: list[str] = [
+            "ffmpeg",
+            "-y",
+            "-ss",
+            str(start_time),
+            "-t",
+            str(clip_duration),
+            "-i",
+            str(video_file),
+            "-an",
+            "-sn",
+            "-vf",
+            f"fps={fps},scale=-2:{height}",
+        ]
+
+        if fmt == "avif":
+            crf = self._quality_to_avif_crf(quality)
+            cmd.extend(
+                [
+                    "-c:v",
+                    "libsvtav1",
+                    "-crf",
+                    str(crf),
+                    "-pix_fmt",
+                    "yuv420p",
+                    "-loop",
+                    "0",
+                ]
+            )
+        else:  # webp
+            cmd.extend(
+                [
+                    "-c:v",
+                    "libwebp_anim",
+                    "-quality",
+                    str(max(0, min(100, quality))),
+                    "-loop",
+                    "0",
+                ]
+            )
+
+        cmd.append(str(output_path))
+
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                timeout=60,
+            )
+            if proc.returncode != 0:
+                logger.warning(
+                    f"Animated screenshot extraction failed for {output_path.name}: "
+                    f"ffmpeg exit code {proc.returncode}: {proc.stderr.decode(errors='replace').strip()}"
+                )
+                return False
+            return output_path.exists()
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Animated screenshot extraction timed out for {output_path.name}")
+            return False
+        except (subprocess.SubprocessError, OSError) as e:
+            logger.warning(f"Animated screenshot extraction error for {output_path.name}: {e}")
             return False
 
     def _get_japanese_audio_stream(self, video_file: Path) -> int | None:

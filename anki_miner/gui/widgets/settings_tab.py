@@ -168,6 +168,19 @@ class SettingsTab(QWidget):
         self.media_panel.screenshot_offset_spinbox.setValue(self.config.screenshot_offset)
         self.media_panel.max_workers_spinbox.setValue(self.config.max_parallel_workers)
 
+        # Animated screenshot settings
+        self.media_panel.animated_checkbox.setChecked(self.config.screenshot_animated)
+        self.media_panel.animated_format_combo.setCurrentText(
+            self.config.screenshot_animated_format
+        )
+        self.media_panel.animated_duration_spinbox.setValue(
+            self.config.screenshot_animated_clip_duration
+        )
+        self.media_panel.animated_fps_spinbox.setValue(self.config.screenshot_animated_fps)
+        self.media_panel.animated_height_spinbox.setValue(self.config.screenshot_animated_height)
+        self.media_panel.animated_quality_spinbox.setValue(self.config.screenshot_animated_quality)
+        self.media_panel._set_animated_enabled(self.config.screenshot_animated)
+
         # Dictionary chain
         self.dictionary_panel.set_chain(self.config.dictionary_chain)
 
@@ -256,6 +269,13 @@ class SettingsTab(QWidget):
             audio_padding=self.media_panel.audio_padding_spinbox.value(),
             screenshot_offset=self.media_panel.screenshot_offset_spinbox.value(),
             max_parallel_workers=self.media_panel.max_workers_spinbox.value(),
+            # Animated screenshot settings
+            screenshot_animated=self.media_panel.animated_checkbox.isChecked(),
+            screenshot_animated_format=self.media_panel.animated_format_combo.currentText(),
+            screenshot_animated_clip_duration=(self.media_panel.animated_duration_spinbox.value()),
+            screenshot_animated_fps=self.media_panel.animated_fps_spinbox.value(),
+            screenshot_animated_height=self.media_panel.animated_height_spinbox.value(),
+            screenshot_animated_quality=self.media_panel.animated_quality_spinbox.value(),
             # Dictionary chain — chain is the single source of truth now
             dictionary_chain=self.dictionary_panel.get_chain(),
             # Pitch accent settings
