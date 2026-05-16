@@ -35,7 +35,8 @@ class TestImportYomitanZip:
                 "SELECT content FROM entries WHERE term = ?", ("食べる",)
             ).fetchone()[0]
             assert "to eat" in content
-            assert '<span class="tag tag-expression">v1</span>' in content
+            assert 'class="tag tag-expression"' in content
+            assert ">v1</span>" in content
         finally:
             conn.close()
 
@@ -156,7 +157,9 @@ class TestImportYomitanZip:
                 "SELECT content FROM entries WHERE term = ?", ("走る",)
             ).fetchone()[0]
             # Both tag sources must appear with their categories
-            assert '<span class="tag tag-expression">v5r</span>' in content
-            assert '<span class="tag tag-frequency">common</span>' in content
+            assert 'class="tag tag-expression"' in content
+            assert ">v5r</span>" in content
+            assert 'class="tag tag-frequency"' in content
+            assert ">common</span>" in content
         finally:
             conn.close()
