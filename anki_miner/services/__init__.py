@@ -2,12 +2,12 @@
 
 from .anki_service import AnkiService
 from .definition_service import DefinitionService
+from .dictionary.providers import JishoProvider
 from .export_service import ExportService
 from .frequency_service import FrequencyService
 from .history_service import HistoryService
 from .media_extractor import MediaExtractorService
 from .pitch_accent_service import PitchAccentService
-from .providers import JishoProvider
 from .shortcut_service import ShortcutResult, ShortcutService
 from .stats_service import StatsService
 from .subtitle_parser import SubtitleParserService

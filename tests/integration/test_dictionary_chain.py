@@ -58,7 +58,7 @@ def test_first_hit_wins_indexed_before_jisho(tmp_path: Path) -> None:
     chain = registry.build_provider_chain(config)
     service = DefinitionService(config, providers=chain)
 
-    with patch("anki_miner.services.providers.jisho_provider.requests.get") as mock_get:
+    with patch("anki_miner.services.dictionary.providers.jisho_provider.requests.get") as mock_get:
         # If Jisho is called, the test fails — high-priority should hit first
         mock_get.side_effect = AssertionError("Jisho should not be called when indexed dict hits")
         result = service.get_definition("食べる")
@@ -92,7 +92,7 @@ def test_falls_through_to_jisho_when_no_indexed_hit(tmp_path: Path) -> None:
     chain = registry.build_provider_chain(config)
     service = DefinitionService(config, providers=chain)
 
-    with patch("anki_miner.services.providers.jisho_provider.requests.get") as mock_get:
+    with patch("anki_miner.services.dictionary.providers.jisho_provider.requests.get") as mock_get:
         mock_response = mock_get.return_value
         mock_response.status_code = 200
         mock_response.json.return_value = {"data": [{"senses": [{"english_definitions": ["jisho fallback"]}]}]}
@@ -145,7 +145,7 @@ def test_glossary_concatenates_two_offline_dicts(tmp_path: Path) -> None:
     # Jisho must not be called when offline dicts hit. Patch the HTTP call to
     # blow up if invoked, so any accidental online lookup fails loudly.
     with patch(
-        "anki_miner.services.providers.jisho_provider.requests.get",
+        "anki_miner.services.dictionary.providers.jisho_provider.requests.get",
         side_effect=AssertionError("Jisho should not be called when offline hits exist"),
     ):
         result = service.get_glossary("食べる")
@@ -193,7 +193,7 @@ def test_glossary_falls_back_to_jisho_when_no_offline_hit(tmp_path: Path) -> Non
     service = DefinitionService(config, providers)
 
     with patch(
-        "anki_miner.services.providers.jisho_provider.requests.get",
+        "anki_miner.services.dictionary.providers.jisho_provider.requests.get",
         return_value=_R(),
     ):
         result = service.get_glossary("食べる")

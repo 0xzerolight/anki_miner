@@ -6,6 +6,7 @@ from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
+from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
@@ -14,7 +15,6 @@ from anki_miner.services.dictionary.storage import (
     create_index,
     write_meta,
 )
-from anki_miner.services.providers.jisho_provider import JishoProvider
 
 
 def _seed_dict(root: Path, dict_id: str, source_name: str):
