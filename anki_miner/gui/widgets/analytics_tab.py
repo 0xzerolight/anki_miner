@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils.qt_helpers import configure_table_header
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCard
 from anki_miner.services.stats_service import StatsService
 
@@ -124,8 +125,7 @@ class AnalyticsTab(QWidget):
         self.sessions_table = QTableWidget()
         self.sessions_table.setColumnCount(6)
         self.sessions_table.setHorizontalHeaderLabels(["Date", "Series", "Episode", "Words", "New Words", "Cards"])
-        self.sessions_table.horizontalHeader().setStretchLastSection(True)  # type: ignore[union-attr]
-        self.sessions_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)  # type: ignore[union-attr]
+        configure_table_header(self.sessions_table)
         self.sessions_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.sessions_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.sessions_table.setMinimumHeight(200)
@@ -166,10 +166,7 @@ class AnalyticsTab(QWidget):
         self.difficulty_table = QTableWidget()
         self.difficulty_table.setColumnCount(5)
         self.difficulty_table.setHorizontalHeaderLabels(["Rank", "Series", "Avg Words", "Avg Unknown", "Difficulty"])
-        self.difficulty_table.horizontalHeader().setStretchLastSection(True)  # type: ignore[union-attr]
-        self.difficulty_table.horizontalHeader().setSectionResizeMode(  # type: ignore[union-attr]
-            QHeaderView.ResizeMode.Stretch
-        )
+        configure_table_header(self.difficulty_table)
         self.difficulty_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.difficulty_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.difficulty_table.setMinimumHeight(200)

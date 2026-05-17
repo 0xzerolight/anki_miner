@@ -27,6 +27,7 @@ from anki_miner.gui.constants import (
 )
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets.base import configure_expanding_container, make_label_fit_text
@@ -540,14 +541,13 @@ class SingleEpisodeTab(QWidget):
 
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept drag if files have video or subtitle extensions."""
-        if event is None or event.mimeData() is None:
+        if event is None:
             return
-        if event.mimeData().hasUrls():  # type: ignore[union-attr]
-            for url in event.mimeData().urls():  # type: ignore[union-attr]
-                suffix = Path(url.toLocalFile()).suffix.lower()
-                if suffix in VIDEO_EXTENSIONS or suffix in SUBTITLE_EXTENSIONS:
-                    event.acceptProposedAction()
-                    return
+        for url in urls_from_event(event):
+            suffix = Path(url.toLocalFile()).suffix.lower()
+            if suffix in VIDEO_EXTENSIONS or suffix in SUBTITLE_EXTENSIONS:
+                event.acceptProposedAction()
+                return
 
     def dragMoveEvent(self, event: QDragMoveEvent | None) -> None:
         """Accept drag move events."""
@@ -556,9 +556,9 @@ class SingleEpisodeTab(QWidget):
 
     def dropEvent(self, event: QDropEvent | None) -> None:
         """Route dropped files to the appropriate file selector."""
-        if event is None or event.mimeData() is None:
+        if event is None:
             return
-        for url in event.mimeData().urls():  # type: ignore[union-attr]
+        for url in urls_from_event(event):
             file_path = url.toLocalFile()
             suffix = Path(file_path).suffix.lower()
             if suffix in VIDEO_EXTENSIONS:
