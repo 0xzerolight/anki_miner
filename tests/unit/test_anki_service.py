@@ -253,19 +253,11 @@ class TestGetExistingVocabulary:
         note_ids = list(range(1, 2501))
         find_resp = _mock_response(result=note_ids)
 
-        batch1_resp = _mock_response(
-            result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(1000)]
-        )
-        batch2_resp = _mock_response(
-            result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(1000, 2000)]
-        )
-        batch3_resp = _mock_response(
-            result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(2000, 2500)]
-        )
+        batch1_resp = _mock_response(result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(1000)])
+        batch2_resp = _mock_response(result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(1000, 2000)])
+        batch3_resp = _mock_response(result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(2000, 2500)])
 
-        with patch(
-            "requests.post", side_effect=[find_resp, batch1_resp, batch2_resp, batch3_resp]
-        ) as mock_post:
+        with patch("requests.post", side_effect=[find_resp, batch1_resp, batch2_resp, batch3_resp]) as mock_post:
             result = service.get_existing_vocabulary()
 
         # 1 findNotes + 3 notesInfo batches = 4 calls
@@ -404,9 +396,7 @@ class TestCreateCardsBatch:
 
         assert result == 3
 
-    def test_multiple_batches_seventy_five_items(
-        self, test_config, make_tokenized_word, recording_progress
-    ):
+    def test_multiple_batches_seventy_five_items(self, test_config, make_tokenized_word, recording_progress):
         """Should split 75 items into two batches (50 + 25) and sum results."""
         service = AnkiService(test_config)
         items = self._make_word_data(make_tokenized_word, n=75)
@@ -436,9 +426,7 @@ class TestCreateCardsBatch:
 
         assert result == 3
 
-    def test_progress_callback_lifecycle(
-        self, test_config, make_tokenized_word, recording_progress
-    ):
+    def test_progress_callback_lifecycle(self, test_config, make_tokenized_word, recording_progress):
         """Should call on_start, on_progress, and on_complete in order."""
         service = AnkiService(test_config)
         items = self._make_word_data(make_tokenized_word, n=3)
@@ -549,9 +537,7 @@ class TestStoreMediaFilesBatch:
         # Two calls: one for screenshot, one for audio
         assert mock_post.call_count == 2
 
-        filenames_sent = [
-            call[1]["json"]["params"]["filename"] for call in mock_post.call_args_list
-        ]
+        filenames_sent = [call[1]["json"]["params"]["filename"] for call in mock_post.call_args_list]
         assert "shot.jpg" in filenames_sent
         assert "clip.mp3" in filenames_sent
 
@@ -718,9 +704,7 @@ class TestReadingFields:
             jmdict_path=temp_dir / "dict",
         )
 
-    def test_create_cards_batch_skips_reading_fields_when_unmapped(
-        self, test_config, make_tokenized_word
-    ):
+    def test_create_cards_batch_skips_reading_fields_when_unmapped(self, test_config, make_tokenized_word):
         """With the default test_config (empty reading mappings), reading fields are skipped."""
         service = AnkiService(test_config)
         word = make_tokenized_word(
@@ -739,9 +723,7 @@ class TestReadingFields:
         assert "まだけ" not in note_fields.values()
         assert "わたしはねこです。" not in note_fields.values()
 
-    def test_create_cards_batch_includes_reading_fields_when_mapped(
-        self, temp_dir, make_tokenized_word
-    ):
+    def test_create_cards_batch_includes_reading_fields_when_mapped(self, temp_dir, make_tokenized_word):
         """Batch path should mirror single-card behavior for reading fields."""
         config = self._config_with_reading_fields(temp_dir)
         service = AnkiService(config)
@@ -1017,16 +999,11 @@ class TestDictMediaUpload:
         (media_dir / "svg-accent_X.svg").write_bytes(b"<svg/>")
         return replace(test_config, dicts_root=dicts_root)
 
-    def test_upload_dict_media_reads_file_and_calls_storemediafile(
-        self, test_config, temp_dir, make_tokenized_word
-    ):
+    def test_upload_dict_media_reads_file_and_calls_storemediafile(self, test_config, temp_dir, make_tokenized_word):
         config = self._make_config_with_dict_media(test_config, temp_dir / "dicts")
         service = AnkiService(config)
 
-        definition = (
-            '<div>ふ<img class="anki-miner-dict-media" '
-            'src="test-dict__svg-accent_X.svg">そ</div>'
-        )
+        definition = '<div>ふ<img class="anki-miner-dict-media" ' 'src="test-dict__svg-accent_X.svg">そ</div>'
         word = make_tokenized_word()
         media = MediaData()
 
@@ -1064,14 +1041,10 @@ class TestDictMediaUpload:
             service.create_cards_batch([(word, media, definition)])
 
         # Three card creations + exactly one media upload.
-        store_calls = [
-            c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"
-        ]
+        store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
         assert len(store_calls) == 1
 
-    def test_missing_file_on_disk_is_logged_and_cached(
-        self, test_config, temp_dir, make_tokenized_word, caplog
-    ):
+    def test_missing_file_on_disk_is_logged_and_cached(self, test_config, temp_dir, make_tokenized_word, caplog):
         from dataclasses import replace
 
         # dicts_root exists but the referenced file does not.
@@ -1092,9 +1065,7 @@ class TestDictMediaUpload:
             service.create_cards_batch([(word, media, definition)])
 
         # No storeMediaFile attempted; warning logged once (cached after first).
-        store_calls = [
-            c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"
-        ]
+        store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
         assert len(store_calls) == 0
         assert sum("Dict media file missing" in r.message for r in caplog.records) == 1
 
@@ -1115,14 +1086,10 @@ class TestDictMediaUpload:
         with patch("requests.post", return_value=create_resp) as mock_post:
             service.create_cards_batch([(word, media, definition)])
 
-        store_calls = [
-            c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"
-        ]
+        store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
         assert len(store_calls) == 0
 
-    def test_batch_upload_collects_from_all_definitions(
-        self, test_config, temp_dir, make_tokenized_word
-    ):
+    def test_batch_upload_collects_from_all_definitions(self, test_config, temp_dir, make_tokenized_word):
         config = self._make_config_with_dict_media(test_config, temp_dir / "dicts", dict_id="d1")
         # Add a second file referenced by a different card in the batch.
         (config.dicts_root / "d1" / "media" / "second.svg").write_bytes(b"<svg2/>")
@@ -1148,9 +1115,7 @@ class TestDictMediaUpload:
         ) as mock_post:
             service.create_cards_batch(word_data_list)
 
-        store_calls = [
-            c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"
-        ]
+        store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
         # Exactly the two unique files, despite three card-level references.
         assert len(store_calls) == 2
         names = {c[1]["json"]["params"]["filename"] for c in store_calls}
@@ -1176,9 +1141,7 @@ class TestAnkiTagsConfig:
             ("  spaced   words  ", ["spaced", "words"]),
         ],
     )
-    def test_create_cards_batch_tags_payload(
-        self, test_config, make_tokenized_word, anki_tags, expected
-    ):
+    def test_create_cards_batch_tags_payload(self, test_config, make_tokenized_word, anki_tags, expected):
         """Batch path: every note in the batch payload uses the split tags."""
         from dataclasses import replace
 
@@ -1237,9 +1200,7 @@ class TestGlossaryFieldRouting:
     field_data verbatim.
     """
 
-    _GLOSSARY_HTML = (
-        '<div class="yomitan-glossary">' '<ol><li data-dictionary="X">X def</li></ol>' "</div>"
-    )
+    _GLOSSARY_HTML = '<div class="yomitan-glossary">' '<ol><li data-dictionary="X">X def</li></ol>' "</div>"
 
     def test_glossary_routed_to_mapped_anki_field(self, test_config, make_tokenized_word):
         """When anki_fields['glossary'] is set, AnkiService writes the raw HTML to that field."""
@@ -1256,9 +1217,7 @@ class TestGlossaryFieldRouting:
         resp = _mock_response(result=[123])
 
         with patch("requests.post", return_value=resp) as mock_post:
-            result = service.create_cards_batch(
-                [(word, media, "single-def", {"glossary": self._GLOSSARY_HTML})]
-            )
+            result = service.create_cards_batch([(word, media, "single-def", {"glossary": self._GLOSSARY_HTML})])
 
         assert result == 1
         payload = mock_post.call_args[1]["json"]
@@ -1277,9 +1236,7 @@ class TestGlossaryFieldRouting:
         resp = _mock_response(result=[123])
 
         with patch("requests.post", return_value=resp) as mock_post:
-            result = service.create_cards_batch(
-                [(word, media, "single-def", {"glossary": self._GLOSSARY_HTML})]
-            )
+            result = service.create_cards_batch([(word, media, "single-def", {"glossary": self._GLOSSARY_HTML})])
 
         assert result == 1
         payload = mock_post.call_args[1]["json"]
@@ -1371,14 +1328,10 @@ class TestGlossaryFieldRouting:
         create_resp = _mock_response(result=[123])
 
         with patch("requests.post", side_effect=[store_resp, create_resp]) as mock_post:
-            result = service.create_cards_batch(
-                [(word, media, "def", {"glossary": glossary_with_media})]
-            )
+            result = service.create_cards_batch([(word, media, "def", {"glossary": glossary_with_media})])
 
         assert result == 1
-        store_calls = [
-            c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"
-        ]
+        store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
         assert len(store_calls) == 1
         assert store_calls[0][1]["json"]["params"]["filename"] == "test-dict__svg-pitch_X.svg"
 

@@ -83,9 +83,7 @@ class PairPreviewDialog(QDialog):
         # File type distribution
         video_types = {pair.video.suffix.lower() for pair in self.pairs}
         subtitle_types = {pair.subtitle.suffix.lower() for pair in self.pairs}
-        types_label = QLabel(
-            f"Video: {', '.join(video_types)} • Subtitles: {', '.join(subtitle_types)}"
-        )
+        types_label = QLabel(f"Video: {', '.join(video_types)} • Subtitles: {', '.join(subtitle_types)}")
         types_label.setFont(self._create_font(13, QFont.Weight.Medium))
         stats_layout.addWidget(types_label)
 
@@ -103,9 +101,7 @@ class PairPreviewDialog(QDialog):
         # Table
         self.table = QTableWidget()
         self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(
-            ["Video File", "Video Size", "Subtitle File", "Subtitle Size"]
-        )
+        self.table.setHorizontalHeaderLabels(["Video File", "Video Size", "Subtitle File", "Subtitle Size"])
         self.table.setRowCount(len(self.pairs))
 
         # Configure table appearance

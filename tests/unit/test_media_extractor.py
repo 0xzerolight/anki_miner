@@ -64,9 +64,7 @@ def video_file(tmp_path):
 class TestExtractMedia:
     """Tests for extract_media method."""
 
-    def test_success_both_screenshot_and_audio(
-        self, service, video_file, make_tokenized_word, test_config
-    ):
+    def test_success_both_screenshot_and_audio(self, service, video_file, make_tokenized_word, test_config):
         """Should return MediaData with both paths when both extractions succeed."""
         word = make_tokenized_word(lemma="食べる", start_time=1.0, duration=2.0)
 
@@ -172,9 +170,7 @@ class TestExtractScreenshot:
         assert cmd[cmd.index("-q:v") + 1] == "2"
         assert cmd[-1] == str(output_path)
 
-    def test_screenshot_time_uses_half_duration_when_offset_larger(
-        self, service, video_file, tmp_path
-    ):
+    def test_screenshot_time_uses_half_duration_when_offset_larger(self, service, video_file, tmp_path):
         """When screenshot_offset > duration/2, should use duration/2."""
         output_path = tmp_path / "output.jpg"
         # config.screenshot_offset = 1.0, duration/2 = 0.5
@@ -261,9 +257,7 @@ class TestExtractScreenshot:
 class TestAnimatedScreenshot:
     """Tests for animated screenshot extraction (AVIF / WebP)."""
 
-    def test_filename_uses_avif_when_animated(
-        self, animated_avif_service, video_file, make_tokenized_word
-    ):
+    def test_filename_uses_avif_when_animated(self, animated_avif_service, video_file, make_tokenized_word):
         """Filename extension should be .avif when animated+avif is configured."""
         word = make_tokenized_word(lemma="食べる", start_time=1.5, duration=2.0)
         with (
@@ -275,9 +269,7 @@ class TestAnimatedScreenshot:
         assert result.screenshot_filename == "食べる_1500.avif"
         assert result.audio_filename == "食べる_1500.mp3"
 
-    def test_filename_uses_webp_when_format_webp(
-        self, animated_webp_service, video_file, make_tokenized_word
-    ):
+    def test_filename_uses_webp_when_format_webp(self, animated_webp_service, video_file, make_tokenized_word):
         """Filename extension should be .webp when animated+webp is configured."""
         word = make_tokenized_word(lemma="飲む", start_time=2.0, duration=1.5)
         with (
@@ -288,18 +280,12 @@ class TestAnimatedScreenshot:
 
         assert result.screenshot_filename == "飲む_2000.webp"
 
-    def test_animated_config_dispatches_to_animated_path(
-        self, animated_avif_service, video_file, tmp_path
-    ):
+    def test_animated_config_dispatches_to_animated_path(self, animated_avif_service, video_file, tmp_path):
         """_extract_screenshot must call animated impl when toggle is on."""
         output_path = tmp_path / "clip.avif"
         with (
-            patch.object(
-                animated_avif_service, "_extract_animated_screenshot", return_value=True
-            ) as animated,
-            patch.object(
-                animated_avif_service, "_extract_static_screenshot", return_value=True
-            ) as static,
+            patch.object(animated_avif_service, "_extract_animated_screenshot", return_value=True) as animated,
+            patch.object(animated_avif_service, "_extract_static_screenshot", return_value=True) as static,
         ):
             animated_avif_service._extract_screenshot(video_file, 1.0, 2.0, output_path)
 
@@ -326,9 +312,7 @@ class TestAnimatedScreenshot:
         """0-100 user quality (higher better) should map to AVIF CRF 0-63 (lower better)."""
         assert MediaExtractorService._quality_to_avif_crf(quality) == expected_crf
 
-    def test_clip_duration_capped_by_word_duration(
-        self, animated_avif_service, video_file, tmp_path
-    ):
+    def test_clip_duration_capped_by_word_duration(self, animated_avif_service, video_file, tmp_path):
         """When configured clip duration exceeds word duration, ffmpeg -t should be word duration."""
         output_path = tmp_path / "clip.avif"
         mock_proc = MagicMock()
@@ -345,9 +329,7 @@ class TestAnimatedScreenshot:
         cmd = mock_run.call_args[0][0]
         assert cmd[cmd.index("-t") + 1] == str(1.0)
 
-    def test_clip_duration_floor_for_very_short_subtitles(
-        self, animated_avif_service, video_file, tmp_path
-    ):
+    def test_clip_duration_floor_for_very_short_subtitles(self, animated_avif_service, video_file, tmp_path):
         """Floor very-short subtitles to 0.5s to avoid 0-frame clips."""
         output_path = tmp_path / "clip.avif"
         mock_proc = MagicMock()
@@ -363,9 +345,7 @@ class TestAnimatedScreenshot:
         cmd = mock_run.call_args[0][0]
         assert cmd[cmd.index("-t") + 1] == str(0.5)
 
-    def test_match_audio_uses_padded_range_when_enabled(
-        self, animated_avif_service, video_file, tmp_path
-    ):
+    def test_match_audio_uses_padded_range_when_enabled(self, animated_avif_service, video_file, tmp_path):
         """match_audio=True shifts -ss back by padding and extends -t by 2*padding."""
         cfg = dataclasses.replace(
             animated_avif_service.config,
@@ -410,9 +390,7 @@ class TestAnimatedScreenshot:
         cmd = mock_run.call_args[0][0]
         assert cmd[cmd.index("-ss") + 1] == str(0.0)
 
-    def test_match_audio_overrides_configured_duration(
-        self, animated_avif_service, video_file, tmp_path
-    ):
+    def test_match_audio_overrides_configured_duration(self, animated_avif_service, video_file, tmp_path):
         """match_audio=True bypasses the configured clip_duration cap."""
         cfg = dataclasses.replace(
             animated_avif_service.config,
@@ -523,9 +501,7 @@ class TestAnimatedScreenshot:
         # Exactly one probe call across all three extract attempts.
         assert mock_run.call_count == 1
 
-    def test_animated_returns_false_on_ffmpeg_failure(
-        self, animated_avif_service, video_file, tmp_path
-    ):
+    def test_animated_returns_false_on_ffmpeg_failure(self, animated_avif_service, video_file, tmp_path):
         """Non-zero ffmpeg exit on encode → return False."""
         output_path = tmp_path / "clip.avif"
         mock_proc = MagicMock()
@@ -533,9 +509,7 @@ class TestAnimatedScreenshot:
         mock_proc.stderr = b"encode failed"
 
         with patch(f"{MODULE}.subprocess.run", return_value=mock_proc):
-            result = animated_avif_service._extract_animated_screenshot(
-                video_file, 1.0, 2.0, output_path
-            )
+            result = animated_avif_service._extract_animated_screenshot(video_file, 1.0, 2.0, output_path)
 
         assert result is False
 
@@ -767,9 +741,7 @@ class TestExtractAudio:
         cmd = mock_run.call_args[0][0]
         assert "-ac" not in cmd
 
-    def test_filename_extension_matches_format(
-        self, test_config, video_file, make_tokenized_word, tmp_path
-    ):
+    def test_filename_extension_matches_format(self, test_config, video_file, make_tokenized_word, tmp_path):
         """extract_media should produce .opus filename when audio_format='opus' (Issue #18)."""
         cfg = dataclasses.replace(test_config, audio_format="opus", media_temp_folder=tmp_path)
         with patch(f"{MODULE}.ensure_directory"):

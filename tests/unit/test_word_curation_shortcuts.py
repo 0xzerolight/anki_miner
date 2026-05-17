@@ -118,18 +118,14 @@ class TestWordCurationDialogSearch:
     def test_search_filters_visible_rows(self, dialog):
         """Search should hide non-matching rows."""
         dialog._on_search_changed("食べる")
-        visible_count = sum(
-            1 for r in range(dialog.table.rowCount()) if not dialog.table.isRowHidden(r)
-        )
+        visible_count = sum(1 for r in range(dialog.table.rowCount()) if not dialog.table.isRowHidden(r))
         assert visible_count == 1
 
     def test_clear_search_shows_all_rows(self, dialog):
         """Clearing search should show all rows."""
         dialog._on_search_changed("食べる")
         dialog._on_search_changed("")
-        visible_count = sum(
-            1 for r in range(dialog.table.rowCount()) if not dialog.table.isRowHidden(r)
-        )
+        visible_count = sum(1 for r in range(dialog.table.rowCount()) if not dialog.table.isRowHidden(r))
         assert visible_count == 3
 
     def test_select_all_only_affects_visible_rows(self, dialog):

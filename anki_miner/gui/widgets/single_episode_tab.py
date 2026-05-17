@@ -194,9 +194,7 @@ class SingleEpisodeTab(QWidget):
     def _setup_accessibility(self) -> None:
         """Set up accessibility features for screen readers."""
         self.setAccessibleName("Episode Mining Tab")
-        self.setAccessibleDescription(
-            "Process a single anime episode to create vocabulary flashcards"
-        )
+        self.setAccessibleDescription("Process a single anime episode to create vocabulary flashcards")
 
         # Set proper tab order: video selector -> subtitle selector -> offset -> preview -> process
         self.setTabOrder(self.video_selector, self.subtitle_selector)
@@ -240,15 +238,11 @@ class SingleEpisodeTab(QWidget):
         self._refresh_recent_combo()
 
         # Video file selector
-        self.video_selector = FileSelector(
-            label="Video File:", file_mode=True, file_filter=VIDEO_FILE_FILTER
-        )
+        self.video_selector = FileSelector(label="Video File:", file_mode=True, file_filter=VIDEO_FILE_FILTER)
         layout.addWidget(self.video_selector)
 
         # Subtitle file selector
-        self.subtitle_selector = FileSelector(
-            label="Subtitle File:", file_mode=True, file_filter=SUBTITLE_FILE_FILTER
-        )
+        self.subtitle_selector = FileSelector(label="Subtitle File:", file_mode=True, file_filter=SUBTITLE_FILE_FILTER)
         layout.addWidget(self.subtitle_selector)
 
         # Subtitle offset with helper text
@@ -265,9 +259,7 @@ class SingleEpisodeTab(QWidget):
         self.offset_spinbox.setSingleStep(0.5)
         self.offset_spinbox.setValue(self.config.subtitle_offset)
         self.offset_spinbox.setSuffix(" seconds")
-        self.offset_spinbox.setToolTip(
-            "Adjust subtitle timing (positive = later, negative = earlier)"
-        )
+        self.offset_spinbox.setToolTip("Adjust subtitle timing (positive = later, negative = earlier)")
 
         offset_layout.addWidget(offset_label)
         offset_layout.addWidget(self.offset_spinbox)
@@ -311,9 +303,7 @@ class SingleEpisodeTab(QWidget):
         subtitle_path = self.subtitle_selector.get_path().strip()
 
         if not video_path or not subtitle_path:
-            QMessageBox.warning(
-                self, "Missing Files", "Please select both video and subtitle files"
-            )
+            QMessageBox.warning(self, "Missing Files", "Please select both video and subtitle files")
             return
 
         if not self.video_selector.is_valid():
@@ -365,9 +355,7 @@ class SingleEpisodeTab(QWidget):
         subtitle_path = self.subtitle_selector.get_path().strip()
 
         if not video_path or not subtitle_path:
-            QMessageBox.warning(
-                self, "Missing Files", "Please select both video and subtitle files"
-            )
+            QMessageBox.warning(self, "Missing Files", "Please select both video and subtitle files")
             return
 
         if not self.video_selector.is_valid():
@@ -438,9 +426,7 @@ class SingleEpisodeTab(QWidget):
 
     def _on_progress_complete(self) -> None:
         """Handle progress complete signal."""
-        self.progress_widget.set_status(
-            f"{self._current_phase} \u2014 done" if self._current_phase else "Complete"
-        )
+        self.progress_widget.set_status(f"{self._current_phase} \u2014 done" if self._current_phase else "Complete")
 
     def _on_progress_error(self, item: str, error: str) -> None:
         """Handle per-item error from progress callback.

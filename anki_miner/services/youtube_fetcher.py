@@ -120,15 +120,12 @@ class YouTubeFetcherService:
         except subprocess.TimeoutExpired as e:
             raise YouTubeFetchError(f"yt-dlp metadata probe timed out after {e.timeout}s") from e
         except FileNotFoundError as e:
-            raise YouTubeFetchError(
-                "yt-dlp executable not found on PATH. Install yt-dlp and retry."
-            ) from e
+            raise YouTubeFetchError("yt-dlp executable not found on PATH. Install yt-dlp and retry.") from e
 
         if proc.returncode != 0:
             stderr_tail = (proc.stderr or "").strip().splitlines()[-20:]
             raise YouTubeFetchError(
-                "yt-dlp metadata probe failed (exit "
-                f"{proc.returncode}): {chr(10).join(stderr_tail)}"
+                "yt-dlp metadata probe failed (exit " f"{proc.returncode}): {chr(10).join(stderr_tail)}"
             )
 
         try:
@@ -157,8 +154,7 @@ class YouTubeFetcherService:
         duration_s = int(duration)
         if duration_s > self._config.youtube_max_duration_s:
             raise VideoTooLongError(
-                f"Video duration {duration_s}s exceeds configured maximum "
-                f"{self._config.youtube_max_duration_s}s"
+                f"Video duration {duration_s}s exceeds configured maximum " f"{self._config.youtube_max_duration_s}s"
             )
 
         subs = data.get("subtitles") or {}
@@ -303,8 +299,7 @@ class YouTubeFetcherService:
             return
         if shutil.which("ffmpeg") is None:
             raise FfmpegNotFoundError(
-                "ffmpeg not found on PATH. Install ffmpeg or set the "
-                "'youtube_ffmpeg_location' config option."
+                "ffmpeg not found on PATH. Install ffmpeg or set the " "'youtube_ffmpeg_location' config option."
             )
 
     def _build_fetch_cmd(self, url: str, workspace: Path, sub_mode: SubMode) -> list[str]:
@@ -360,22 +355,13 @@ class YouTubeFetcherService:
     def _raise_for_error(self, tail: collections.deque[str]) -> None:
         joined_lower = "\n".join(tail).lower()
 
-        if ("sign in" in joined_lower and "confirm" in joined_lower) or (
-            "sign in to confirm" in joined_lower
-        ):
-            raise BotDetectionError(
-                "YouTube requires login. Set Cookies → Browser in Settings " "and retry."
-            )
+        if ("sign in" in joined_lower and "confirm" in joined_lower) or ("sign in to confirm" in joined_lower):
+            raise BotDetectionError("YouTube requires login. Set Cookies → Browser in Settings " "and retry.")
 
         if "database is locked" in joined_lower or "database locked" in joined_lower:
             browser = self._config.youtube_cookies_from_browser or "the browser"
-            msg = (
-                f"Cookie database is locked. Close {browser} and retry, or "
-                "set Cookies → Browser to None."
-            )
-            if sys.platform.startswith("linux") and (
-                "profile" in joined_lower and "not found" in joined_lower
-            ):
+            msg = f"Cookie database is locked. Close {browser} and retry, or " "set Cookies → Browser to None."
+            if sys.platform.startswith("linux") and ("profile" in joined_lower and "not found" in joined_lower):
                 msg += (
                     " If you installed Firefox via Flatpak or Snap, use the "
                     "system-package Firefox instead or pass a cookies file "

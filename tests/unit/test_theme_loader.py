@@ -227,14 +227,7 @@ class TestBuiltinThemeFiles:
     def test_builtin_theme_valid(self, theme_name: str):
         from anki_miner.gui.resources.styles.theme import validate_theme_data
 
-        themes_dir = (
-            Path(__file__).parent.parent.parent
-            / "anki_miner"
-            / "gui"
-            / "resources"
-            / "styles"
-            / "themes"
-        )
+        themes_dir = Path(__file__).parent.parent.parent / "anki_miner" / "gui" / "resources" / "styles" / "themes"
         theme_path = themes_dir / f"{theme_name}.json"
         assert theme_path.exists(), f"{theme_name}.json not found"
 
@@ -246,14 +239,7 @@ class TestBuiltinThemeFiles:
 
     @pytest.mark.parametrize("theme_name", ["light", "dark", "sakura"])
     def test_builtin_theme_has_45_colors(self, theme_name: str):
-        themes_dir = (
-            Path(__file__).parent.parent.parent
-            / "anki_miner"
-            / "gui"
-            / "resources"
-            / "styles"
-            / "themes"
-        )
+        themes_dir = Path(__file__).parent.parent.parent / "anki_miner" / "gui" / "resources" / "styles" / "themes"
         theme_path = themes_dir / f"{theme_name}.json"
 
         with open(theme_path) as f:

@@ -49,16 +49,12 @@ class AnkiMinerConfig:
         }
     )
     ankiconnect_url: str = "http://127.0.0.1:8765"
-    anki_tags: str = (
-        "auto-mined"  # Whitespace-separated tags applied to every mined card; empty string means no tags
-    )
+    anki_tags: str = "auto-mined"  # Whitespace-separated tags applied to every mined card; empty string means no tags
 
     # Media extraction settings
     audio_padding: float = 0.3  # Seconds to add before/after subtitle timing
     screenshot_offset: float = 1.0  # Seconds after subtitle start for screenshot
-    media_temp_folder: Path = field(
-        default_factory=lambda: Path(tempfile.gettempdir()) / "anki_miner_temp"
-    )
+    media_temp_folder: Path = field(default_factory=lambda: Path(tempfile.gettempdir()) / "anki_miner_temp")
     # Audio extraction settings (Issue #18)
     audio_format: str = "mp3"  # "mp3" | "opus"
     audio_bitrate: int = 192  # kbps; applies to both mp3 and opus
@@ -76,9 +72,7 @@ class AnkiMinerConfig:
     subtitle_offset: float = 0.0  # Seconds to shift subtitles (+ later, - earlier)
 
     # Word filtering settings
-    allowed_pos: list[str] = field(
-        default_factory=lambda: ["名詞", "動詞", "形容詞", "副詞", "形状詞", "代名詞"]
-    )
+    allowed_pos: list[str] = field(default_factory=lambda: ["名詞", "動詞", "形容詞", "副詞", "形状詞", "代名詞"])
     excluded_subtypes: list[str] = field(
         default_factory=lambda: [
             "非自立",
@@ -109,9 +103,7 @@ class AnkiMinerConfig:
     jisho_delay: float = 0.5  # Seconds between API calls
 
     # Pitch accent settings
-    pitch_accent_path: Path = field(
-        default_factory=lambda: Path.home() / ".anki_miner" / "pitch_accent.csv"
-    )
+    pitch_accent_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "pitch_accent.csv")
     use_pitch_accent: bool = False
     # Output label format for the pitch_category Anki field.
     # "jp": 平板/頭高/中高/尾高/起伏 (legacy)
@@ -119,16 +111,12 @@ class AnkiMinerConfig:
     pitch_category_format: Literal["jp", "romaji"] = "jp"
 
     # Frequency settings
-    frequency_list_path: Path = field(
-        default_factory=lambda: Path.home() / ".anki_miner" / "frequency.csv"
-    )
+    frequency_list_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "frequency.csv")
     use_frequency_data: bool = False
     max_frequency_rank: int = 0  # 0 = no filtering; e.g. 10000 = only top 10k words
 
     # Known word database
-    known_words_db_path: Path = field(
-        default_factory=lambda: Path.home() / ".anki_miner" / "known_words.db"
-    )
+    known_words_db_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "known_words.db")
     use_known_words_db: bool = False
 
     # Word list settings
@@ -159,9 +147,7 @@ class AnkiMinerConfig:
     min_episode_appearances: int = 2  # Only mine words appearing in at least N episodes
 
     # History settings
-    history_db_path: Path = field(
-        default_factory=lambda: Path.home() / ".anki_miner" / "history.db"
-    )
+    history_db_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "history.db")
     enable_history: bool = True
 
     # Update settings
@@ -200,13 +186,9 @@ class AnkiMinerConfig:
         if isinstance(self.known_words_db_path, str):
             object.__setattr__(self, "known_words_db_path", Path(self.known_words_db_path))
         if isinstance(self.blacklist_path, str):
-            object.__setattr__(
-                self, "blacklist_path", Path(self.blacklist_path) if self.blacklist_path else None
-            )
+            object.__setattr__(self, "blacklist_path", Path(self.blacklist_path) if self.blacklist_path else None)
         if isinstance(self.whitelist_path, str):
-            object.__setattr__(
-                self, "whitelist_path", Path(self.whitelist_path) if self.whitelist_path else None
-            )
+            object.__setattr__(self, "whitelist_path", Path(self.whitelist_path) if self.whitelist_path else None)
         if isinstance(self.stats_db_path, str):
             object.__setattr__(self, "stats_db_path", Path(self.stats_db_path))
         if isinstance(self.history_db_path, str):

@@ -66,9 +66,7 @@ class WordFilterService:
         if not max_rank or max_rank <= 0:
             return words
 
-        return [
-            word for word in words if word.frequency_rank is None or word.frequency_rank <= max_rank
-        ]
+        return [word for word in words if word.frequency_rank is None or word.frequency_rank <= max_rank]
 
     def filter_by_word_lists(
         self,
@@ -89,9 +87,7 @@ class WordFilterService:
         """
         result = []
         for word in words:
-            if word_list_service.is_whitelisted(word.lemma) or not word_list_service.is_blacklisted(
-                word.lemma
-            ):
+            if word_list_service.is_whitelisted(word.lemma) or not word_list_service.is_blacklisted(word.lemma):
                 result.append(word)
         return result
 
@@ -197,6 +193,4 @@ class WordFilterService:
         if min_appearances <= 1:
             return words
 
-        return [
-            word for word in words if cross_episode_counts.get(word.lemma, 0) >= min_appearances
-        ]
+        return [word for word in words if cross_episode_counts.get(word.lemma, 0) >= min_appearances]

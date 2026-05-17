@@ -47,9 +47,7 @@ class FilteringSettingsPanel(FormPanel):
         self.add_section("Word Frequency")
 
         # Frequency file path
-        self.frequency_selector = FileSelector(
-            label="", file_mode=True, placeholder="Select frequency list CSV..."
-        )
+        self.frequency_selector = FileSelector(label="", file_mode=True, placeholder="Select frequency list CSV...")
         self.frequency_selector.setToolTip("Path to word frequency list CSV")
         self.add_field(
             "Frequency List File",
@@ -70,9 +68,7 @@ class FilteringSettingsPanel(FormPanel):
         self.max_frequency_spinbox = QSpinBox()
         self.max_frequency_spinbox.setRange(0, 100000)
         self.max_frequency_spinbox.setSpecialValueText("No limit")
-        self.max_frequency_spinbox.setToolTip(
-            "Only mine words within the top N most frequent (0 = no limit)"
-        )
+        self.max_frequency_spinbox.setToolTip("Only mine words within the top N most frequent (0 = no limit)")
         self.add_field(
             "Max Frequency Rank",
             self.max_frequency_spinbox,
@@ -93,9 +89,7 @@ class FilteringSettingsPanel(FormPanel):
         # Word Lists section
         self.add_section("Word Lists")
 
-        self.blacklist_selector = FileSelector(
-            label="", file_mode=True, placeholder="Select blacklist file..."
-        )
+        self.blacklist_selector = FileSelector(label="", file_mode=True, placeholder="Select blacklist file...")
         self.add_field(
             "Blacklist File",
             self.blacklist_selector,
@@ -109,9 +103,7 @@ class FilteringSettingsPanel(FormPanel):
             helper="Skip words found in the blacklist file",
         )
 
-        self.whitelist_selector = FileSelector(
-            label="", file_mode=True, placeholder="Select whitelist file..."
-        )
+        self.whitelist_selector = FileSelector(label="", file_mode=True, placeholder="Select whitelist file...")
         self.add_field(
             "Whitelist File",
             self.whitelist_selector,
@@ -143,9 +135,7 @@ class FilteringSettingsPanel(FormPanel):
 
         self.subtitle_replacement_edit = QLineEdit()
         self.subtitle_replacement_edit.setPlaceholderText("(empty = delete match)")
-        self.subtitle_replacement_edit.setToolTip(
-            "Text inserted in place of each match. Empty deletes the match."
-        )
+        self.subtitle_replacement_edit.setToolTip("Text inserted in place of each match. Empty deletes the match.")
         self.add_field(
             "Replacement",
             self.subtitle_replacement_edit,
@@ -238,8 +228,6 @@ class FilteringSettingsPanel(FormPanel):
             service = FrequencyService(Path(path_str))
             service.load()
             count = service.entry_count
-            self.frequency_selector.status_label.setText(
-                f"{Path(path_str).name} ({count:,} entries)"
-            )
+            self.frequency_selector.status_label.setText(f"{Path(path_str).name} ({count:,} entries)")
         except Exception as e:
             self.frequency_selector.status_label.setText(f"Could not parse file: {e}")

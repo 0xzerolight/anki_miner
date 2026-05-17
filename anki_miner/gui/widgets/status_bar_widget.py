@@ -145,11 +145,7 @@ class StatusBarWidget(QStatusBar):
         """Update the system status indicators using StatusBadge."""
         # AnkiConnect status
         status = "success" if self._ankiconnect_status else "error"
-        tooltip = (
-            "AnkiConnect is connected"
-            if self._ankiconnect_status
-            else "AnkiConnect is not connected"
-        )
+        tooltip = "AnkiConnect is connected" if self._ankiconnect_status else "AnkiConnect is not connected"
         self.anki_status_badge.set_status(status, tooltip)
 
         # ffmpeg status

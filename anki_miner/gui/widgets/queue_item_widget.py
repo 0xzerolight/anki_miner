@@ -114,9 +114,7 @@ class QueueItemWidget(QFrame):
         self.subtitle_path_label.setObjectName("queue-item-path")
         self.subtitle_path_label.setFont(path_font)
         self.subtitle_path_label.setWordWrap(False)
-        self.subtitle_path_label.setSizePolicy(
-            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum
-        )
+        self.subtitle_path_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum)
         body_layout.addWidget(self.subtitle_path_label)
 
         # Statistics
@@ -330,9 +328,7 @@ class QueueItemWidget(QFrame):
             offset_str = f" • Offset: {sign}{self._subtitle_offset:.1f}s"
 
         if self._status == "complete" and self._cards_created > 0:
-            stats_text = (
-                f"{self._episode_count} episodes • {self._cards_created} cards created{offset_str}"
-            )
+            stats_text = f"{self._episode_count} episodes • {self._cards_created} cards created{offset_str}"
         elif self._episode_count > 0:
             stats_text = f"{self._episode_count} episodes • Ready to process{offset_str}"
         else:

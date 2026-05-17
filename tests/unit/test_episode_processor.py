@@ -128,9 +128,7 @@ class TestProcessEpisode:
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = words
 
-        result = processor.process_episode(
-            tmp_path / "v.mkv", tmp_path / "s.ass", preview_mode=True
-        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", preview_mode=True)
 
         assert result.new_words_found == 1
         assert result.cards_created == 0
@@ -196,9 +194,7 @@ class TestProcessEpisode:
 
     def test_subtitle_parse_error_handling(self, processor, mock_services, tmp_path):
         """SubtitleParseError should be caught and returned as error."""
-        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = SubtitleParseError(
-            "parse failed"
-        )
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = SubtitleParseError("parse failed")
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
@@ -208,9 +204,7 @@ class TestProcessEpisode:
 
     def test_unexpected_exception_handling(self, processor, mock_services, tmp_path):
         """Unexpected exceptions should be caught and returned as error."""
-        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = RuntimeError(
-            "unexpected"
-        )
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = RuntimeError("unexpected")
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
@@ -329,9 +323,7 @@ class TestOptionalServices:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         # Verify filter_by_frequency was called with the max_rank
-        mock_services["word_filter"].filter_by_frequency.assert_called_once_with(
-            [word1, word2], 1000
-        )
+        mock_services["word_filter"].filter_by_frequency.assert_called_once_with([word1, word2], 1000)
 
     def test_pitch_accent_populates_extra_fields(self, test_config, mock_services, tmp_path):
         """Pitch accent service should populate extra_fields in card data."""
@@ -533,9 +525,7 @@ class TestWordListServiceIntegration:
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        mock_services["word_filter"].filter_by_word_lists.assert_called_once_with(
-            [word1, word2], mock_wls
-        )
+        mock_services["word_filter"].filter_by_word_lists.assert_called_once_with([word1, word2], mock_wls)
         assert result.cards_created == 1
 
 
@@ -583,13 +573,9 @@ class TestCrossEpisodeFiltering:
             **mock_services,
         )
 
-        result = processor.process_episode(
-            tmp_path / "v.mkv", tmp_path / "s.ass", cross_episode_counts=cross_counts
-        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cross_episode_counts=cross_counts)
 
-        mock_services["word_filter"].filter_by_episode_count.assert_called_once_with(
-            [word1, word2], cross_counts, 3
-        )
+        mock_services["word_filter"].filter_by_episode_count.assert_called_once_with([word1, word2], cross_counts, 3)
         assert result.cards_created == 1
 
 
@@ -701,9 +687,7 @@ class TestStatsServiceIntegration:
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = [words[0]]  # 1 unknown
-        mock_services["media_extractor"].extract_media_batch.return_value = [
-            (words[0], _make_media())
-        ]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
@@ -773,16 +757,12 @@ class TestPerRunTempFolder:
             "anki_service": anki_service,
         }
 
-    def test_extract_media_batch_receives_unique_temp_folder_per_run(
-        self, test_config, mock_services, tmp_path
-    ):
+    def test_extract_media_batch_receives_unique_temp_folder_per_run(self, test_config, mock_services, tmp_path):
         words = [_make_word("食べる")]
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = words
-        mock_services["media_extractor"].extract_media_batch.return_value = [
-            (words[0], _make_media("a"))
-        ]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], _make_media("a"))]
         mock_services["definition_service"].get_definitions_batch.return_value = ["def"]
 
         processor = EpisodeProcessor(
@@ -805,9 +785,7 @@ class TestPerRunTempFolder:
         assert not first_folder.exists()
         assert not second_folder.exists()
 
-    def test_keep_temp_env_var_preserves_folder(
-        self, test_config, mock_services, tmp_path, monkeypatch
-    ):
+    def test_keep_temp_env_var_preserves_folder(self, test_config, mock_services, tmp_path, monkeypatch):
         monkeypatch.setenv("ANKI_MINER_KEEP_TEMP", "1")
 
         config = replace(test_config, media_temp_folder=tmp_path / "persisted")
@@ -815,9 +793,7 @@ class TestPerRunTempFolder:
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = words
-        mock_services["media_extractor"].extract_media_batch.return_value = [
-            (words[0], _make_media("a"))
-        ]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], _make_media("a"))]
         mock_services["definition_service"].get_definitions_batch.return_value = ["def"]
 
         processor = EpisodeProcessor(
@@ -827,9 +803,7 @@ class TestPerRunTempFolder:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        folder = mock_services["media_extractor"].extract_media_batch.call_args.kwargs[
-            "temp_folder"
-        ]
+        folder = mock_services["media_extractor"].extract_media_batch.call_args.kwargs["temp_folder"]
         assert folder is not None
         assert folder.exists()
         # Lives under the configured base, not a random system temp dir.
@@ -880,9 +854,7 @@ class TestProcessYoutubeUrl:
                 cancel_event=threading.Event(),
             )
 
-    def test_happy_path_calls_fetch_then_process_episode(
-        self, test_config, mock_services, tmp_path
-    ):
+    def test_happy_path_calls_fetch_then_process_episode(self, test_config, mock_services, tmp_path):
         """process_youtube_url should call fetch_video then run the mining pipeline."""
         video_file = tmp_path / "abc123.mp4"
         subtitle_file = tmp_path / "abc123.ja.srt"
@@ -1028,9 +1000,7 @@ class TestProcessYoutubeUrl:
         assert session.episode_name == "YT:abc123"
         assert session.series_name == "YouTube"
 
-    def test_episode_name_override_preserves_default_when_none(
-        self, test_config, mock_services, tmp_path
-    ):
+    def test_episode_name_override_preserves_default_when_none(self, test_config, mock_services, tmp_path):
         """process_episode with no override still derives identity from video_file paths."""
         mock_stats = MagicMock()
         mock_stats.is_available.return_value = True
@@ -1083,9 +1053,7 @@ class TestProcessYoutubeUrl:
         )
         return processor
 
-    def test_curation_callback_forwarded_to_process_episode(
-        self, test_config, mock_services, tmp_path
-    ):
+    def test_curation_callback_forwarded_to_process_episode(self, test_config, mock_services, tmp_path):
         """Supplied curation_callback reaches process_episode and gets invoked."""
         processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
 
@@ -1109,9 +1077,7 @@ class TestProcessYoutubeUrl:
         assert len(seen) == 1
         assert [w.lemma for w in seen[0]] == ["食べる"]
 
-    def test_preview_mode_true_forwarded_to_process_episode(
-        self, test_config, mock_services, tmp_path
-    ):
+    def test_preview_mode_true_forwarded_to_process_episode(self, test_config, mock_services, tmp_path):
         """preview_mode=True short-circuits before card creation."""
         processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
 
@@ -1130,9 +1096,7 @@ class TestProcessYoutubeUrl:
         mock_services["media_extractor"].extract_media_batch.assert_not_called()
         assert result.cards_created == 0
 
-    def test_curation_and_preview_default_to_none_and_false(
-        self, test_config, mock_services, tmp_path
-    ):
+    def test_curation_and_preview_default_to_none_and_false(self, test_config, mock_services, tmp_path):
         """Omitting the new kwargs preserves pre-C3 behaviour: curation off, cards created."""
         processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
 
@@ -1215,9 +1179,7 @@ class TestIPlusOneFilter:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        mock_services["subtitle_parser"].parse_subtitle_file_with_index.assert_called_once_with(
-            tmp_path / "s.ass"
-        )
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.assert_called_once_with(tmp_path / "s.ass")
         mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
 
     def test_calls_legacy_parse_when_flag_off(self, test_config, mock_services, tmp_path):
@@ -1236,9 +1198,7 @@ class TestIPlusOneFilter:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(
-            tmp_path / "s.ass"
-        )
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(tmp_path / "s.ass")
         mock_services["subtitle_parser"].parse_subtitle_file_with_index.assert_not_called()
 
     def test_skips_dedup_when_flag_on(self, test_config, mock_services, tmp_path):
@@ -1377,9 +1337,7 @@ class TestGlossaryFetch:
         processor = self._build_processor(cfg, mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
 
-        glossary_html = (
-            '<div class="yomitan-glossary"><ol><li data-dictionary="X">X def</li></ol></div>'
-        )
+        glossary_html = '<div class="yomitan-glossary"><ol><li data-dictionary="X">X def</li></ol></div>'
         mock_services["definition_service"].get_glossaries_batch.return_value = [glossary_html]
 
         processor.process_episode(video, sub)

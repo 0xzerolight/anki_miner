@@ -71,13 +71,9 @@ def create_services(config: AnkiMinerConfig) -> tuple:
             if available:
                 load_result.info.append(f"Dictionary chain loaded: {', '.join(available)}")
             if failed:
-                load_result.warnings.append(
-                    f"Provider(s) unavailable, will be skipped: {', '.join(failed)}"
-                )
+                load_result.warnings.append(f"Provider(s) unavailable, will be skipped: {', '.join(failed)}")
             if not available and not failed:
-                load_result.warnings.append(
-                    "No offline dictionary index available; lookups will use Jisho only"
-                )
+                load_result.warnings.append("No offline dictionary index available; lookups will use Jisho only")
 
     # Optional services
     pitch_accent_service = None

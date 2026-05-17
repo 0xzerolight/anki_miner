@@ -55,10 +55,7 @@ class MediaExtractorService:
         safe_word = safe_filename(word.lemma)
         timestamp = int(word.start_time * 1000)
 
-        if self.config.screenshot_animated:
-            screenshot_ext = self.config.screenshot_animated_format
-        else:
-            screenshot_ext = "jpg"
+        screenshot_ext = self.config.screenshot_animated_format if self.config.screenshot_animated else "jpg"
         screenshot_file = f"{safe_word}_{timestamp}.{screenshot_ext}"
         audio_file = f"{safe_word}_{timestamp}.{self.config.audio_format}"
 
@@ -67,9 +64,7 @@ class MediaExtractorService:
         audio_path = output_dir / audio_file
 
         # Extract screenshot
-        screenshot_success = self._extract_screenshot(
-            video_file, word.start_time, word.duration, screenshot_path
-        )
+        screenshot_success = self._extract_screenshot(video_file, word.start_time, word.duration, screenshot_path)
 
         # Extract audio
         audio_success = self._extract_audio(video_file, word.start_time, word.duration, audio_path)
@@ -112,8 +107,7 @@ class MediaExtractorService:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all extraction jobs
             future_to_word = {
-                executor.submit(self.extract_media, video_file, word, temp_folder): word
-                for word in words
+                executor.submit(self.extract_media, video_file, word, temp_folder): word for word in words
             }
 
             # Collect results as they complete
@@ -132,9 +126,7 @@ class MediaExtractorService:
                     if media.has_screenshot:
                         media_data_list.append((word, media))
                         if progress_callback:
-                            progress_callback.on_progress(
-                                completed, f"Extracting media: {word.lemma}"
-                            )
+                            progress_callback.on_progress(completed, f"Extracting media: {word.lemma}")
                     else:
                         if progress_callback:
                             progress_callback.on_progress(completed, f"No screenshot: {word.lemma}")
@@ -392,12 +384,8 @@ class MediaExtractorService:
 
                 if language in japanese_codes:
                     stream_index = stream.get("index")
-                    logger.info(
-                        f"Found Japanese audio: stream {stream_index} (language: {language})"
-                    )
-                    stream_index_int: int | None = (
-                        int(stream_index) if stream_index is not None else None
-                    )
+                    logger.info(f"Found Japanese audio: stream {stream_index} (language: {language})")
+                    stream_index_int: int | None = int(stream_index) if stream_index is not None else None
                     with self._cache_lock:
                         self._audio_stream_cache[video_file] = stream_index_int
                     return stream_index_int

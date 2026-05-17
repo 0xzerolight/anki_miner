@@ -201,9 +201,7 @@ class TestEpisodeProcessorCancel:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        cancelled_check = mock_services["media_extractor"].extract_media_batch.call_args[1][
-            "cancelled_check"
-        ]
+        cancelled_check = mock_services["media_extractor"].extract_media_batch.call_args[1]["cancelled_check"]
 
         assert cancelled_check() is False
         processor.cancel()
@@ -256,9 +254,7 @@ class TestMediaExtractorBatchCancel:
         assert len(result) >= 1
         assert len(result) < 3
 
-    def test_no_cancelled_check_processes_all(
-        self, service, video_file, make_tokenized_word, tmp_path
-    ):
+    def test_no_cancelled_check_processes_all(self, service, video_file, make_tokenized_word, tmp_path):
         """Should process all words when cancelled_check is None."""
         words = [
             make_tokenized_word(lemma="食べる", start_time=1.0),
@@ -275,9 +271,7 @@ class TestMediaExtractorBatchCancel:
 
         assert len(result) == 2
 
-    def test_cancelled_before_any_processing(
-        self, service, video_file, make_tokenized_word, tmp_path
-    ):
+    def test_cancelled_before_any_processing(self, service, video_file, make_tokenized_word, tmp_path):
         """Should return empty list when cancelled immediately."""
         words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
 

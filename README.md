@@ -1,8 +1,10 @@
 # Anki Miner
 
+[![CI](https://github.com/0xzerolight/anki_miner/actions/workflows/ci.yml/badge.svg)](https://github.com/0xzerolight/anki_miner/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/anki-miner.svg)](https://pypi.org/project/anki-miner/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-Contributor%20Covenant%203.0-blueviolet.svg)](CODE_OF_CONDUCT.md)
 
 Batch-mines Japanese vocabulary from anime and YouTube into Anki cards. Given a season folder or a YouTube URL, it produces cards containing screenshots, sentence audio, furigana, pitch accent, and frequency data.
 
@@ -166,13 +168,18 @@ Anki Miner checks GitHub for new releases on startup (toggle in Settings). When 
 | Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.     |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI.                                      |
 
-## Issues, Feature Ideas, Contributing
+## Contributing
 
-Report bugs in [Issues](https://github.com/0xzerolight/anki_miner/issues).
+Contributions are welcome — bug fixes, dictionary integrations, GUI polish, doc improvements, all sizes.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
+- New here? Start with [CONTRIBUTING.md](CONTRIBUTING.md).
+- Architecture overview: [ARCHITECTURE.md](ARCHITECTURE.md).
+- Testing strategy: [docs/TESTING.md](docs/TESTING.md).
+- Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+- Security: [SECURITY.md](SECURITY.md).
 
-New feature ideas in [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
+Bug reports and feature requests → [Issues](https://github.com/0xzerolight/anki_miner/issues).
+General questions and discussion → [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
 
 ## License
 

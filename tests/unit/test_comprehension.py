@@ -105,9 +105,7 @@ class TestComprehensionCalculation:
         # Preview mode to avoid needing media/definitions
         mock_services["media_extractor"].extract_media_batch.return_value = []
 
-        result = processor.process_episode(
-            tmp_path / "v.mkv", tmp_path / "s.ass", preview_mode=True
-        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", preview_mode=True)
 
         assert result.comprehension_percentage == 0.0
 
@@ -130,9 +128,7 @@ class TestComprehensionCalculation:
         }
         mock_services["word_filter"].filter_unknown.return_value = unknown
 
-        result = processor.process_episode(
-            tmp_path / "v.mkv", tmp_path / "s.ass", preview_mode=True
-        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", preview_mode=True)
 
         assert result.comprehension_percentage == 75.0
 

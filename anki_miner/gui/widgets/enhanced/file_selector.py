@@ -126,14 +126,10 @@ class FileSelector(QWidget):
         # Set accessibility properties
         file_or_folder = "file" if self._file_mode else "folder"
         self.setAccessibleName(self._label_text)
-        self.setAccessibleDescription(
-            f"Select a {file_or_folder} by typing path, browsing, or dragging"
-        )
+        self.setAccessibleDescription(f"Select a {file_or_folder} by typing path, browsing, or dragging")
 
         self.input.setAccessibleName(f"{self._label_text} path")
-        self.input.setAccessibleDescription(
-            f"Path to {file_or_folder}. Type or paste a path, or use browse button"
-        )
+        self.input.setAccessibleDescription(f"Path to {file_or_folder}. Type or paste a path, or use browse button")
 
         self.browse_button.setAccessibleName(f"Browse for {file_or_folder}")
         self.browse_button.setAccessibleDescription(f"Opens file dialog to select {file_or_folder}")
@@ -164,9 +160,7 @@ class FileSelector(QWidget):
         """Handle browse button click."""
         if self._file_mode:
             # File selection
-            file_path, _ = QFileDialog.getOpenFileName(
-                self, f"Select {self._label_text}", "", self._file_filter
-            )
+            file_path, _ = QFileDialog.getOpenFileName(self, f"Select {self._label_text}", "", self._file_filter)
             if file_path:
                 self.input.setText(file_path)
                 self.input.setCursorPosition(0)

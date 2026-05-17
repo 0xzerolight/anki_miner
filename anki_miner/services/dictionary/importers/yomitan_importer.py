@@ -93,8 +93,7 @@ def import_yomitan_zip(
                 total = sum(info.file_size for info in zf.infolist())
                 if total > MAX_UNCOMPRESSED_BYTES:
                     raise SetupError(
-                        f"Zip uncompressed size exceeds limit "
-                        f"({total:,} > {MAX_UNCOMPRESSED_BYTES:,} bytes)"
+                        f"Zip uncompressed size exceeds limit " f"({total:,} > {MAX_UNCOMPRESSED_BYTES:,} bytes)"
                     )
 
                 zf.extractall(tmp_path)
@@ -113,14 +112,8 @@ def import_yomitan_zip(
         title = str(index.get("title", "")).strip()
         revision = str(index.get("revision", "")).strip()
         format_version = index.get("format")
-        if (
-            not isinstance(format_version, int)
-            or isinstance(format_version, bool)
-            or format_version < 3
-        ):
-            raise SetupError(
-                f"Unsupported Yomitan format version {format_version!r}; need format >= 3"
-            )
+        if not isinstance(format_version, int) or isinstance(format_version, bool) or format_version < 3:
+            raise SetupError(f"Unsupported Yomitan format version {format_version!r}; need format >= 3")
         if not title:
             raise SetupError("index.json missing required 'title'")
 

@@ -239,9 +239,7 @@ class TestCheckForUpdate:
 
         self._mock_urlopen(
             mock_urlopen,
-            self._make_response(
-                "v3.0.0", "https://github.com/0xzerolight/anki_miner/releases/tag/v3.0.0"
-            ),
+            self._make_response("v3.0.0", "https://github.com/0xzerolight/anki_miner/releases/tag/v3.0.0"),
         )
 
         checker = UpdateChecker("2.0.4")
@@ -259,9 +257,7 @@ class TestCheckForUpdate:
         """Returns None when already up to date."""
         self._mock_urlopen(
             mock_urlopen,
-            self._make_response(
-                "v2.0.4", "https://github.com/0xzerolight/anki_miner/releases/tag/v2.0.4"
-            ),
+            self._make_response("v2.0.4", "https://github.com/0xzerolight/anki_miner/releases/tag/v2.0.4"),
         )
         checker = UpdateChecker("2.0.4")
         assert checker.check_for_update() is None
@@ -348,9 +344,7 @@ class TestCheckForUpdate:
     @patch("anki_miner.services.update_checker.urllib.request.urlopen")
     def test_missing_body_field_yields_empty_string(self, mock_urlopen):
         """A null/missing body field is coerced to empty string, not None."""
-        body = json.dumps(
-            {"tag_name": "v3.0.0", "html_url": "https://example.com", "assets": []}
-        ).encode("utf-8")
+        body = json.dumps({"tag_name": "v3.0.0", "html_url": "https://example.com", "assets": []}).encode("utf-8")
         self._mock_urlopen(mock_urlopen, body)
 
         result = UpdateChecker("2.0.4").check_for_update()

@@ -59,9 +59,7 @@ class EpisodeMatcher:
     """Match video/subtitle files by episode number."""
 
     @staticmethod
-    def match_by_episode_number(
-        video_files: list[Path], subtitle_files: list[Path]
-    ) -> list[tuple[Path, Path]]:
+    def match_by_episode_number(video_files: list[Path], subtitle_files: list[Path]) -> list[tuple[Path, Path]]:
         """Match video and subtitle files by episode number.
 
         Matches:
@@ -102,9 +100,7 @@ class EpisodeMatcher:
                     ):
                         continue  # Seasons don't match, skip
 
-                    pairs.append(
-                        (video_info.file_path, subtitle_info.file_path, video_info.episode_number)
-                    )
+                    pairs.append((video_info.file_path, subtitle_info.file_path, video_info.episode_number))
                     break  # Found match, move to next video
 
         # Sort by episode number using cached value

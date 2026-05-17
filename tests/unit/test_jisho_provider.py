@@ -41,9 +41,7 @@ class TestJishoProvider:
         }
 
         provider = JishoProvider(delay=0)
-        with patch(
-            "anki_miner.services.providers.jisho_provider.requests.get", return_value=mock_response
-        ):
+        with patch("anki_miner.services.providers.jisho_provider.requests.get", return_value=mock_response):
             result = provider.lookup("食べる")
 
         assert result is not None
@@ -57,9 +55,7 @@ class TestJishoProvider:
         mock_response.json.return_value = {"data": []}
 
         provider = JishoProvider(delay=0)
-        with patch(
-            "anki_miner.services.providers.jisho_provider.requests.get", return_value=mock_response
-        ):
+        with patch("anki_miner.services.providers.jisho_provider.requests.get", return_value=mock_response):
             result = provider.lookup("nonexistent")
 
         assert result is None
@@ -70,9 +66,7 @@ class TestJishoProvider:
         mock_response.status_code = 500
 
         provider = JishoProvider(delay=0)
-        with patch(
-            "anki_miner.services.providers.jisho_provider.requests.get", return_value=mock_response
-        ):
+        with patch("anki_miner.services.providers.jisho_provider.requests.get", return_value=mock_response):
             result = provider.lookup("食べる")
 
         assert result is None
@@ -123,9 +117,7 @@ class TestJishoProvider:
         mock_response.json.return_value = {"data": [{"japanese": [{"word": "食べる"}]}]}
 
         provider = JishoProvider(delay=0)
-        with patch(
-            "anki_miner.services.providers.jisho_provider.requests.get", return_value=mock_response
-        ):
+        with patch("anki_miner.services.providers.jisho_provider.requests.get", return_value=mock_response):
             result = provider.lookup("食べる")
 
         assert result is None

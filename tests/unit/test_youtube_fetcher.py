@@ -141,9 +141,7 @@ class TestProbeMetadata:
         payload = _make_metadata()
         del payload["id"]
         with (
-            patch(
-                "subprocess.run", return_value=_fake_run(0, json.dumps(payload), stderr="some warn")
-            ),
+            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload), stderr="some warn")),
             pytest.raises(YouTubeFetchError, match="incomplete metadata"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
@@ -276,9 +274,7 @@ class TestFetchVideoPreflight:
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
-    def test_configured_ffmpeg_missing_raises(
-        self, yt_config: AnkiMinerConfig, tmp_path: Path
-    ) -> None:
+    def test_configured_ffmpeg_missing_raises(self, yt_config: AnkiMinerConfig, tmp_path: Path) -> None:
         cfg = replace(yt_config, youtube_ffmpeg_location=tmp_path / "no-such-ffmpeg")
         svc = YouTubeFetcherService(cfg)
         with pytest.raises(FfmpegNotFoundError):
@@ -286,9 +282,7 @@ class TestFetchVideoPreflight:
 
 
 class TestFetchVideoCommand:
-    def test_manual_only_adds_write_sub(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_manual_only_adds_write_sub(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
         captured: dict[str, Any] = {}
 
@@ -297,9 +291,7 @@ class TestFetchVideoCommand:
             return _FakePopen(lines=[], returncode=0)
 
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", side_effect=fake_popen),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
@@ -309,9 +301,7 @@ class TestFetchVideoCommand:
         assert "--sub-lang" in cmd and cmd[cmd.index("--sub-lang") + 1] == "ja"
         assert "--convert-subs" in cmd and cmd[cmd.index("--convert-subs") + 1] == "srt"
 
-    def test_auto_only_adds_write_auto_sub(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_auto_only_adds_write_auto_sub(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
         captured: dict[str, Any] = {}
 
@@ -320,9 +310,7 @@ class TestFetchVideoCommand:
             return _FakePopen(lines=[], returncode=0)
 
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", side_effect=fake_popen),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "auto_only")
@@ -341,9 +329,7 @@ class TestFetchVideoCommand:
             return _FakePopen(lines=[], returncode=0)
 
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", side_effect=fake_popen),
         ):
             svc.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
@@ -371,9 +357,7 @@ class TestFetchVideoCommand:
 
 
 class TestFetchVideoProgress:
-    def test_progress_parse_with_total(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_progress_parse_with_total(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
         lines = [
             "[ankimine_dl] 512 1024",
@@ -385,9 +369,7 @@ class TestFetchVideoProgress:
             calls.append((label, frac))
 
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
         ):
             service.fetch_video(
@@ -399,17 +381,13 @@ class TestFetchVideoProgress:
             )
         assert calls == [("Downloading video", 0.5), ("Downloading video", 1.0)]
 
-    def test_progress_parse_with_na_total(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_progress_parse_with_na_total(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
         lines = ["[ankimine_dl] 1024 NA"]
         calls: list[tuple[str, float | None]] = []
 
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
         ):
             service.fetch_video(
@@ -421,17 +399,13 @@ class TestFetchVideoProgress:
             )
         assert calls == [("Downloading video", None)]
 
-    def test_warning_prefixed_progress_line_still_parses(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_warning_prefixed_progress_line_still_parses(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
         lines = ["WARNING: whatever [ankimine_dl] 1024 2048"]
         calls: list[tuple[str, float | None]] = []
 
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
         ):
             service.fetch_video(
@@ -443,9 +417,7 @@ class TestFetchVideoProgress:
             )
         assert calls == [("Downloading video", 0.5)]
 
-    def test_postprocess_detection_fires_once(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_postprocess_detection_fires_once(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
         lines = [
             "[ankimine_dl] 512 1024",
@@ -456,9 +428,7 @@ class TestFetchVideoProgress:
         calls: list[tuple[str, float | None]] = []
 
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
         ):
             service.fetch_video(
@@ -476,9 +446,7 @@ class TestFetchVideoErrors:
     def test_bot_detection(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         lines = ["ERROR: Sign in to confirm you're not a bot"]
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=1)),
             pytest.raises(BotDetectionError),
         ):
@@ -487,9 +455,7 @@ class TestFetchVideoErrors:
     def test_cookie_database_locked(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         lines = ["ERROR: could not decrypt cookies: database is locked"]
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=1)),
             pytest.raises(CookieDatabaseLockedError),
         ):
@@ -498,9 +464,7 @@ class TestFetchVideoErrors:
     def test_generic_failure(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         lines = ["ERROR: Video unavailable"]
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=1)),
             pytest.raises(YouTubeFetchError) as exc,
         ):
@@ -508,23 +472,17 @@ class TestFetchVideoErrors:
         # Not the bot/cookies subclasses.
         assert not isinstance(exc.value, (BotDetectionError, CookieDatabaseLockedError))
 
-    def test_missing_output_after_exit_zero(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_missing_output_after_exit_zero(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         # No files created in workspace.
         lines: list[str] = []
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
             pytest.raises(YouTubeFetchError, match="expected output files are missing"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
-    def test_zero_byte_subtitle_after_exit_zero(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_zero_byte_subtitle_after_exit_zero(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         video = tmp_path / "abc123.mp4"
         sub = tmp_path / "abc123.ja.srt"
         _touch(video, b"fake-mp4")
@@ -532,9 +490,7 @@ class TestFetchVideoErrors:
 
         lines: list[str] = []
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
             pytest.raises(YouTubeFetchError, match="zero-byte subtitle"),
         ):
@@ -542,9 +498,7 @@ class TestFetchVideoErrors:
 
 
 class TestFetchVideoCancel:
-    def test_cancel_event_triggers_kill_tree(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_cancel_event_triggers_kill_tree(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         lines = ["[ankimine_dl] 100 1000", "[ankimine_dl] 200 1000"]
         cancel = threading.Event()
         cancel.set()  # pre-set; the first line iteration will notice.
@@ -554,9 +508,7 @@ class TestFetchVideoCancel:
         fake_parent.terminate = MagicMock()
 
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
             patch(
                 "anki_miner.services.youtube_fetcher.psutil.Process",
@@ -579,15 +531,11 @@ class TestFetchVideoCancel:
 
 
 class TestFetchVideoHappyPath:
-    def test_returns_fetched_media_manual(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_returns_fetched_media_manual(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         video, sub = _make_happy_outputs(tmp_path)
         lines = ["[ankimine_dl] 1024 1024"]
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
         ):
             out = service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
@@ -595,14 +543,10 @@ class TestFetchVideoHappyPath:
         assert out.subtitle_file == sub
         assert out.sub_source == "manual"
 
-    def test_returns_fetched_media_auto(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_returns_fetched_media_auto(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
         ):
             out = service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "auto_only")
@@ -643,13 +587,9 @@ class TestFlatpakSnapCookieGuidance:
     ]
     _GUIDANCE_SUBSTR = "Flatpak or Snap"
 
-    def test_linux_profile_not_found_adds_guidance(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_linux_profile_not_found_adds_guidance(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(self._PROFILE_NOT_FOUND_LINES, 1)),
             patch("anki_miner.services.youtube_fetcher.sys.platform", "linux"),
             pytest.raises(CookieDatabaseLockedError) as exc,
@@ -665,9 +605,7 @@ class TestFlatpakSnapCookieGuidance:
         platform: str,
     ) -> None:
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(self._PROFILE_NOT_FOUND_LINES, 1)),
             patch("anki_miner.services.youtube_fetcher.sys.platform", platform),
             pytest.raises(CookieDatabaseLockedError) as exc,
@@ -704,9 +642,7 @@ class TestKillTreeEdgeCases:
             process_patch_kwargs["return_value"] = process_return
 
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
             patch(
                 "anki_miner.services.youtube_fetcher.psutil.Process",
@@ -726,9 +662,7 @@ class TestKillTreeEdgeCases:
                 cancel_event=cancel,
             )
 
-    def test_parent_vanished_before_children(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_parent_vanished_before_children(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         # psutil.Process(pid) raises NoSuchProcess -> cancel path must exit cleanly.
         self._run_cancel(
             service,
@@ -736,9 +670,7 @@ class TestKillTreeEdgeCases:
             process_side_effect=psutil.NoSuchProcess(4242),
         )
 
-    def test_child_vanished_mid_iteration(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_child_vanished_mid_iteration(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         # One child whose terminate() raises NoSuchProcess. Parent survives.
         dead_child = MagicMock()
         dead_child.terminate.side_effect = psutil.NoSuchProcess(9999)
@@ -758,9 +690,7 @@ class TestKillTreeEdgeCases:
         parent.terminate.assert_called_once()
         dead_child.terminate.assert_called_once()
 
-    def test_sigkill_escalation_when_wait_procs_times_out(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_sigkill_escalation_when_wait_procs_times_out(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         # wait_procs reports the parent still alive after SIGTERM -> .kill() fires.
         parent = MagicMock()
         parent.children.return_value = []
@@ -821,9 +751,7 @@ class TestProgressRegexMiss:
     """Lines that do not match _PROGRESS_RE must not call progress_cb and must
     not crash the loop."""
 
-    def test_non_matching_lines_do_not_invoke_cb(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_non_matching_lines_do_not_invoke_cb(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
         # None of these carry the ankimine_dl sentinel -> _PROGRESS_RE.search misses.
         lines = [
@@ -834,9 +762,7 @@ class TestProgressRegexMiss:
         calls: list[tuple[str, float | None]] = []
 
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
         ):
             out = service.fetch_video(
@@ -851,9 +777,7 @@ class TestProgressRegexMiss:
         assert [c for c in calls if c[0] == "Downloading video"] == []
         assert out.sub_source == "manual"
 
-    def test_mixed_miss_then_match_still_reports_match(
-        self, service: YouTubeFetcherService, tmp_path: Path
-    ) -> None:
+    def test_mixed_miss_then_match_still_reports_match(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
         lines = [
             "random noise",
@@ -864,9 +788,7 @@ class TestProgressRegexMiss:
         calls: list[tuple[str, float | None]] = []
 
         with (
-            patch(
-                "anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"
-            ),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
         ):
             service.fetch_video(
