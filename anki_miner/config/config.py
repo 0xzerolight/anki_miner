@@ -59,6 +59,10 @@ class AnkiMinerConfig:
     media_temp_folder: Path = field(
         default_factory=lambda: Path(tempfile.gettempdir()) / "anki_miner_temp"
     )
+    # Audio extraction settings (Issue #18)
+    audio_format: str = "mp3"  # "mp3" | "opus"
+    audio_bitrate: int = 192  # kbps; applies to both mp3 and opus
+
     # Animated screenshot settings (opt-in; static JPEG remains default)
     screenshot_animated: bool = False
     screenshot_animated_format: str = "avif"  # "avif" | "webp"

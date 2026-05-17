@@ -35,7 +35,7 @@ Suited to batch processing after viewing, rather than real-time lookup during pl
 - Queue a folder of episode/subtitle pairs for sequential processing.
 - Pluggable dictionary chain: load any Yomitan-format dictionaries, reorder freely, with Jisho online as optional fallback.
 - Preview and curate the word list before any cards are created.
-- Parallel ffmpeg extraction for screenshots and sentence audio.
+- Parallel ffmpeg extraction for screenshots and sentence audio. Configurable audio codec (MP3 or Opus) and bitrate in Settings → Media for storage-conscious collections.
 - Analytics dashboard with history, undo, and series difficulty rankings.
 - Four themes (Light, Dark, Sakura, Tokyo Night) plus custom JSON themes.
 

@@ -174,6 +174,8 @@ class SettingsTab(QWidget):
         self.anki_panel.set_card_fields(self.config.anki_fields)
 
         # Media settings
+        self.media_panel.audio_format_combo.setCurrentText(self.config.audio_format)
+        self.media_panel.audio_bitrate_spinbox.setValue(self.config.audio_bitrate)
         self.media_panel.audio_padding_spinbox.setValue(self.config.audio_padding)
         self.media_panel.screenshot_offset_spinbox.setValue(self.config.screenshot_offset)
         self.media_panel.max_workers_spinbox.setValue(self.config.max_parallel_workers)
@@ -281,6 +283,8 @@ class SettingsTab(QWidget):
             anki_fields=self.anki_panel.get_card_fields(),
             anki_word_field=self.anki_panel.get_card_fields().get("word", "Expression"),
             # Media settings
+            audio_format=self.media_panel.audio_format_combo.currentText(),
+            audio_bitrate=self.media_panel.audio_bitrate_spinbox.value(),
             audio_padding=self.media_panel.audio_padding_spinbox.value(),
             screenshot_offset=self.media_panel.screenshot_offset_spinbox.value(),
             max_parallel_workers=self.media_panel.max_workers_spinbox.value(),
