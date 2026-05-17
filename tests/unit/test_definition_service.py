@@ -10,6 +10,7 @@ def make_provider(name="Test", available=True, return_value=None, load_raises=No
     """Create a mock DictionaryProvider with configurable behavior."""
     p = MagicMock()
     p.name = name
+    p.is_online = False  # default; tests override as needed
     p.is_available.return_value = available
     p.lookup.return_value = return_value
     if load_raises is not None:
@@ -203,3 +204,78 @@ class TestConfigStored:
         config = AnkiMinerConfig()
         service = DefinitionService(config, providers=[])
         assert service.config is config
+
+
+class TestGetGlossary:
+    """Tests for DefinitionService.get_glossary — collect-all with online fallback."""
+
+    def test_concatenates_all_offline_hits(self, test_config):
+        p1 = make_provider("A", return_value="<div>A</div>")
+        p1.is_online = False
+        p2 = make_provider("B", return_value="<div>B</div>")
+        p2.is_online = False
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        assert service.get_glossary("x") == "<div>A</div><div>B</div>"
+        p1.lookup.assert_called_once_with("x")
+        p2.lookup.assert_called_once_with("x")
+
+    def test_skips_online_when_offline_hit_exists(self, test_config):
+        offline = make_provider("Off", return_value="<div>off</div>")
+        offline.is_online = False
+        online = make_provider("Jisho", return_value="<div>online</div>")
+        online.is_online = True
+        service = DefinitionService(test_config, providers=[offline, online])
+
+        assert service.get_glossary("x") == "<div>off</div>"
+        offline.lookup.assert_called_once_with("x")
+        online.lookup.assert_not_called()
+
+    def test_uses_online_when_no_offline_hits(self, test_config):
+        offline = make_provider("Off", return_value=None)
+        offline.is_online = False
+        online = make_provider("Jisho", return_value="<div>online</div>")
+        online.is_online = True
+        service = DefinitionService(test_config, providers=[offline, online])
+
+        assert service.get_glossary("x") == "<div>online</div>"
+        offline.lookup.assert_called_once_with("x")
+        online.lookup.assert_called_once_with("x")
+
+    def test_returns_none_when_all_miss(self, test_config):
+        offline = make_provider("Off", return_value=None)
+        offline.is_online = False
+        online = make_provider("Jisho", return_value=None)
+        online.is_online = True
+        service = DefinitionService(test_config, providers=[offline, online])
+
+        assert service.get_glossary("x") is None
+
+    def test_skips_unavailable_providers(self, test_config):
+        unavail = make_provider("X", available=False, return_value="<div>X</div>")
+        unavail.is_online = False
+        ok = make_provider("Y", available=True, return_value="<div>Y</div>")
+        ok.is_online = False
+        service = DefinitionService(test_config, providers=[unavail, ok])
+
+        assert service.get_glossary("x") == "<div>Y</div>"
+        unavail.lookup.assert_not_called()
+
+
+class TestGetGlossariesBatch:
+    """Tests for DefinitionService.get_glossaries_batch."""
+
+    def test_returns_glossaries_in_order(self, test_config):
+        responses = {"a": "<div>a</div>", "b": None, "c": "<div>c</div>"}
+        p = make_provider("M", available=True)
+        p.is_online = False
+        p.lookup.side_effect = lambda w: responses.get(w)
+        service = DefinitionService(test_config, providers=[p])
+
+        results = service.get_glossaries_batch(["a", "b", "c"])
+
+        assert results == ["<div>a</div>", None, "<div>c</div>"]
+
+    def test_empty_list_returns_empty_list(self, test_config):
+        service = DefinitionService(test_config, providers=[])
+        assert service.get_glossaries_batch([]) == []
