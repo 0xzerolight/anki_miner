@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
+from .paths import ANKI_MINER_HOME
+
 
 @dataclass(frozen=True)
 class ChainEntry:
@@ -97,13 +99,13 @@ class AnkiMinerConfig:
             ChainEntry(kind="jisho", dict_id=None, enabled=True),
         )
     )
-    jmdict_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "JMdict_e")
-    dicts_root: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "dicts")
+    jmdict_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "JMdict_e")
+    dicts_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "dicts")
     jisho_api_url: str = "https://jisho.org/api/v1/search/words"
     jisho_delay: float = 0.5  # Seconds between API calls
 
     # Pitch accent settings
-    pitch_accent_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "pitch_accent.csv")
+    pitch_accent_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "pitch_accent.csv")
     use_pitch_accent: bool = False
     # Output label format for the pitch_category Anki field.
     # "jp": 平板/頭高/中高/尾高/起伏 (legacy)
@@ -111,12 +113,12 @@ class AnkiMinerConfig:
     pitch_category_format: Literal["jp", "romaji"] = "jp"
 
     # Frequency settings
-    frequency_list_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "frequency.csv")
+    frequency_list_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "frequency.csv")
     use_frequency_data: bool = False
     max_frequency_rank: int = 0  # 0 = no filtering; e.g. 10000 = only top 10k words
 
     # Known word database
-    known_words_db_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "known_words.db")
+    known_words_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "known_words.db")
     use_known_words_db: bool = False
 
     # Word list settings
@@ -147,7 +149,7 @@ class AnkiMinerConfig:
     min_episode_appearances: int = 2  # Only mine words appearing in at least N episodes
 
     # History settings
-    history_db_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "history.db")
+    history_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "history.db")
     enable_history: bool = True
 
     # Update settings
@@ -162,7 +164,7 @@ class AnkiMinerConfig:
     max_parallel_workers: int = 6  # Number of parallel ffmpeg processes
 
     # Analytics settings
-    stats_db_path: Path = field(default_factory=lambda: Path.home() / ".anki_miner" / "stats.db")
+    stats_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "stats.db")
 
     # --- YouTube ---
     youtube_max_duration_s: int = 7200

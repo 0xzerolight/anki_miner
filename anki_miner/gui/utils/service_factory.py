@@ -2,7 +2,6 @@
 
 import logging
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.presenter import PresenterProtocol
@@ -21,8 +20,6 @@ from anki_miner.services.word_list_service import WordListService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 
 logger = logging.getLogger(__name__)
-
-DICTS_ROOT = Path.home() / ".anki_miner" / "dicts"
 
 
 @dataclass
@@ -53,7 +50,7 @@ def create_services(config: AnkiMinerConfig) -> tuple:
     media_extractor = MediaExtractorService(config)
 
     # Build the provider chain via the registry, then hand it to DefinitionService.
-    registry = DictionaryRegistry(DICTS_ROOT)
+    registry = DictionaryRegistry(config.dicts_root)
     providers = registry.build_provider_chain(config)
     definition_service = DefinitionService(config, providers=providers)
     anki_service = AnkiService(config)

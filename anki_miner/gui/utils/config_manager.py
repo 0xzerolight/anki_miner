@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from anki_miner.config import AnkiMinerConfig, create_default_config
+from anki_miner.config.paths import ANKI_MINER_HOME
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ class GUIConfigManager:
     provides fallback to default configuration if the file doesn't exist or is invalid.
     """
 
-    CONFIG_FILE = Path.home() / ".anki_miner" / "gui_config.json"
+    CONFIG_FILE = ANKI_MINER_HOME / "gui_config.json"
 
     @classmethod
     def save_config(cls, config: AnkiMinerConfig) -> None:

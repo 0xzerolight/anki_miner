@@ -54,11 +54,7 @@ def confirm_remove(monkeypatch):
 
 
 def test_panel_renders_default_chain(qapp, monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(AnkiMinerConfig().dictionary_chain)
     chain = panel.get_chain()
     # Default has two entries; one indexed (missing on disk -> keeps entry), one jisho
@@ -67,11 +63,7 @@ def test_panel_renders_default_chain(qapp, monkeypatch, tmp_path):
 
 
 def test_reorder_moves_entry_up(qapp, monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -86,11 +78,7 @@ def test_reorder_moves_entry_up(qapp, monkeypatch, tmp_path):
 
 
 def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, monkeypatch, tmp_path, confirm_remove):
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -120,11 +108,7 @@ def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, monkeypatch, tmp
 
 
 def test_jisho_remove_is_noop(qapp, monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -143,11 +127,7 @@ def test_jisho_remove_is_noop(qapp, monkeypatch, tmp_path):
 
 
 def test_edge_reorder_calls_are_noops(qapp, monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -173,11 +153,7 @@ def test_edge_reorder_calls_are_noops(qapp, monkeypatch, tmp_path):
 def test_checkbox_toggle_preserved_on_reorder(qapp, monkeypatch, tmp_path, confirm_remove):
     """The implementer's deviation: get_chain()-resync before mutation must
     preserve a user's checkbox toggle across move_up/move_down/remove."""
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -222,17 +198,13 @@ def test_checkbox_toggle_preserved_on_reorder(qapp, monkeypatch, tmp_path, confi
 
 
 def test_remove_deletes_dict_folder_on_disk(qapp, monkeypatch, tmp_path, confirm_remove):
-    """Regression: remove() must delete DICTS_ROOT/<dict_id>/ so a re-add of the
+    """Regression: remove() must delete dicts_root/<dict_id>/ so a re-add of the
     same dict does not hit the importer's 'already exists' guard."""
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
     dict_dir = tmp_path / "a"
     dict_dir.mkdir()
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
 
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -250,10 +222,6 @@ def test_remove_deletes_dict_folder_on_disk(qapp, monkeypatch, tmp_path, confirm
 def test_remove_cancelled_keeps_dict_and_chain(qapp, monkeypatch, tmp_path):
     """Clicking 'No' on the confirm dialog must leave both disk + chain intact."""
     monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
-    monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.No,
     )
@@ -262,7 +230,7 @@ def test_remove_cancelled_keeps_dict_and_chain(qapp, monkeypatch, tmp_path):
     dict_dir.mkdir()
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
 
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -281,16 +249,12 @@ def test_remove_cancelled_keeps_dict_and_chain(qapp, monkeypatch, tmp_path):
     assert events == [], "cancel must not emit chain_changed"
 
 
-def test_remove_tolerates_missing_dict_folder(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_remove_tolerates_missing_dict_folder(qapp, tmp_path, confirm_remove):
     """If the dict folder is already gone (e.g. user deleted it manually), remove()
     should still drop the in-memory entry instead of erroring."""
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
     # No folder created on disk.
 
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="ghost", enabled=True),
@@ -304,12 +268,8 @@ def test_remove_tolerates_missing_dict_folder(qapp, monkeypatch, tmp_path, confi
     assert [e.kind for e in chain] == ["jisho"]
 
 
-def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, monkeypatch, tmp_path):
+def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, tmp_path):
     """A Yomitan dictionary with outdated schema_version renders the stale UI."""
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
     _make_dict_on_disk(
         tmp_path,
         "stale-yomi",
@@ -317,7 +277,7 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, monkeypatch, 
         schema_version=SCHEMA_VERSION - 1,
         source_name="Stale Yomi",
     )
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="stale-yomi", enabled=True),
@@ -349,13 +309,9 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, monkeypatch, 
     assert jmdict_fired == [], "Yomitan row must not fire the JMdict signal"
 
 
-def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, monkeypatch, tmp_path):
+def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, tmp_path):
     """A JMdict dictionary with outdated schema_version wires the per-row button
     to the existing reimport_jmdict_requested signal, not the new generic one."""
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
     _make_dict_on_disk(
         tmp_path,
         "jmdict-english",
@@ -363,7 +319,7 @@ def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, monkeypatch, tmp_pa
         schema_version=SCHEMA_VERSION - 1,
         source_name="JMdict (English)",
     )
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
@@ -386,13 +342,9 @@ def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, monkeypatch, tmp_pa
     assert generic_fired == [], "JMdict row must not fire the generic signal"
 
 
-def test_current_schema_row_has_no_stale_ui(qapp, monkeypatch, tmp_path):
+def test_current_schema_row_has_no_stale_ui(qapp, tmp_path):
     """A dictionary at the current schema_version renders clean: no ⚠, no italic
     suffix, no Re-import button."""
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
-        tmp_path,
-    )
     _make_dict_on_disk(
         tmp_path,
         "fresh-yomi",
@@ -400,7 +352,7 @@ def test_current_schema_row_has_no_stale_ui(qapp, monkeypatch, tmp_path):
         schema_version=SCHEMA_VERSION,
         source_name="Fresh Yomi",
     )
-    panel = DictionarySettingsPanel()
+    panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="fresh-yomi", enabled=True),

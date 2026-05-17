@@ -4,6 +4,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from anki_miner.config.paths import ANKI_MINER_HOME
+
 
 class RecentFilesManager:
     """Manages a list of recently processed video/subtitle file pairs.
@@ -18,7 +20,7 @@ class RecentFilesManager:
             max_items: Maximum number of recent entries to store.
         """
         self._max_items = max_items
-        self._file_path = Path.home() / ".anki_miner" / "recent_files.json"
+        self._file_path = ANKI_MINER_HOME / "recent_files.json"
 
     def add_entry(self, video_path: Path, subtitle_path: Path) -> None:
         """Add a video/subtitle pair to recent files.
