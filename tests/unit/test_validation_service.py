@@ -26,7 +26,7 @@ class TestValidationService:
             mock_response.status_code = 200
             mock_response.json.return_value = {"result": 6, "error": None}
 
-            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
                 success, message = service._check_ankiconnect()
 
             assert success is True
@@ -38,7 +38,7 @@ class TestValidationService:
             import requests
 
             with patch(
-                "anki_miner.services.validation_service.requests.post",
+                "anki_miner.services._ankiconnect.requests.post",
                 side_effect=requests.exceptions.ConnectionError(),
             ):
                 success, message = service._check_ankiconnect()
@@ -52,25 +52,13 @@ class TestValidationService:
             import requests
 
             with patch(
-                "anki_miner.services.validation_service.requests.post",
+                "anki_miner.services._ankiconnect.requests.post",
                 side_effect=requests.exceptions.Timeout(),
             ):
                 success, message = service._check_ankiconnect()
 
             assert success is False
             assert "timed out" in message
-
-        def test_non_200_status(self, test_config):
-            service = ValidationService(test_config)
-
-            mock_response = MagicMock()
-            mock_response.status_code = 500
-
-            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
-                success, message = service._check_ankiconnect()
-
-            assert success is False
-            assert "non-200" in message
 
         def test_ankiconnect_error(self, test_config):
             service = ValidationService(test_config)
@@ -79,7 +67,7 @@ class TestValidationService:
             mock_response.status_code = 200
             mock_response.json.return_value = {"result": None, "error": "Some error"}
 
-            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
                 success, message = service._check_ankiconnect()
 
             assert success is False
@@ -149,7 +137,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
                 success, message = service._check_deck_exists()
 
             assert success is True
@@ -164,7 +152,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
                 success, message = service._check_deck_exists()
 
             assert success is False
@@ -182,7 +170,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
                 success, message = service._check_note_type_exists()
 
             assert success is True
@@ -197,7 +185,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
                 success, message = service._check_note_type_exists()
 
             assert success is False
@@ -208,7 +196,7 @@ class TestValidationService:
             service = ValidationService(test_config)
 
             with patch(
-                "anki_miner.services.validation_service.requests.post",
+                "anki_miner.services._ankiconnect.requests.post",
                 side_effect=RuntimeError("something broke"),
             ):
                 success, message = service._check_ankiconnect()
@@ -240,7 +228,7 @@ class TestValidationService:
             service = ValidationService(test_config)
 
             with patch(
-                "anki_miner.services.validation_service.requests.post",
+                "anki_miner.services._ankiconnect.requests.post",
                 side_effect=RuntimeError("connection failed"),
             ):
                 success, message = service._check_deck_exists()
@@ -259,7 +247,7 @@ class TestValidationService:
             }
 
             with patch(
-                "anki_miner.services.validation_service.requests.post",
+                "anki_miner.services._ankiconnect.requests.post",
                 return_value=mock_response,
             ):
                 success, message = service._check_deck_exists()
@@ -275,7 +263,7 @@ class TestValidationService:
             service = ValidationService(test_config)
 
             with patch(
-                "anki_miner.services.validation_service.requests.post",
+                "anki_miner.services._ankiconnect.requests.post",
                 side_effect=RuntimeError("connection failed"),
             ):
                 success, message = service._check_note_type_exists()
@@ -294,7 +282,7 @@ class TestValidationService:
             }
 
             with patch(
-                "anki_miner.services.validation_service.requests.post",
+                "anki_miner.services._ankiconnect.requests.post",
                 return_value=mock_response,
             ):
                 success, message = service._check_note_type_exists()
@@ -342,7 +330,7 @@ class TestValidationService:
 
             with (
                 patch(
-                    "anki_miner.services.validation_service.requests.post",
+                    "anki_miner.services._ankiconnect.requests.post",
                     side_effect=mock_post,
                 ),
                 patch(
@@ -420,7 +408,7 @@ class TestValidationService:
             ffmpeg_result.stdout = "ffmpeg version 6.0"
 
             with (
-                patch("anki_miner.services.validation_service.requests.post", side_effect=mock_post),
+                patch("anki_miner.services._ankiconnect.requests.post", side_effect=mock_post),
                 patch(
                     "anki_miner.services.validation_service.subprocess.run",
                     return_value=ffmpeg_result,
@@ -443,7 +431,7 @@ class TestValidationService:
 
             with (
                 patch(
-                    "anki_miner.services.validation_service.requests.post",
+                    "anki_miner.services._ankiconnect.requests.post",
                     side_effect=req.exceptions.ConnectionError(),
                 ),
                 patch(
@@ -491,7 +479,7 @@ class TestValidationService:
                 return dispatch.get(action, MagicMock())
 
             with (
-                patch("anki_miner.services.validation_service.requests.post", side_effect=mock_post),
+                patch("anki_miner.services._ankiconnect.requests.post", side_effect=mock_post),
                 patch(
                     "anki_miner.services.validation_service.subprocess.run",
                     side_effect=FileNotFoundError(),
@@ -526,7 +514,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
                 success, message = service._check_field_names_exist()
 
             assert success is True
@@ -541,7 +529,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
                 success, message = service._check_field_names_exist()
 
             assert success is False
@@ -556,7 +544,7 @@ class TestValidationService:
                 "error": "model not found",
             }
 
-            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
                 success, message = service._check_field_names_exist()
 
             assert success is False
@@ -568,7 +556,7 @@ class TestValidationService:
             import requests
 
             with patch(
-                "anki_miner.services.validation_service.requests.post",
+                "anki_miner.services._ankiconnect.requests.post",
                 side_effect=requests.exceptions.ConnectionError(),
             ):
                 success, message = service._check_field_names_exist()

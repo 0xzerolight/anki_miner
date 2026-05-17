@@ -56,7 +56,7 @@ class TestGetExistingVocabulary:
             ]
         )
 
-        with patch("requests.post", side_effect=[find_resp, notes_resp]):
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
             result = service.get_existing_vocabulary()
 
         assert result == {"食べる", "飲む", "走る"}
@@ -67,7 +67,7 @@ class TestGetExistingVocabulary:
 
         find_resp = _mock_response(result=[])
 
-        with patch("requests.post", return_value=find_resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=find_resp):
             result = service.get_existing_vocabulary()
 
         assert result == set()
@@ -79,7 +79,7 @@ class TestGetExistingVocabulary:
         find_resp = _mock_response(error="Invalid query")
 
         with (
-            patch("requests.post", return_value=find_resp),
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=find_resp),
             pytest.raises(AnkiConnectionError),
         ):
             service.get_existing_vocabulary()
@@ -92,7 +92,7 @@ class TestGetExistingVocabulary:
         notes_resp = _mock_response(error="Something went wrong")
 
         with (
-            patch("requests.post", side_effect=[find_resp, notes_resp]),
+            patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]),
             pytest.raises(AnkiConnectionError),
         ):
             service.get_existing_vocabulary()
@@ -102,7 +102,7 @@ class TestGetExistingVocabulary:
         service = AnkiService(test_config)
 
         with (
-            patch("requests.post", side_effect=requests.exceptions.ConnectionError()),
+            patch("anki_miner.services._ankiconnect.requests.post", side_effect=requests.exceptions.ConnectionError()),
             pytest.raises(AnkiConnectionError, match="Cannot connect"),
         ):
             service.get_existing_vocabulary()
@@ -111,7 +111,7 @@ class TestGetExistingVocabulary:
         """Should return empty set on generic RequestException."""
         service = AnkiService(test_config)
 
-        with patch("requests.post", side_effect=requests.exceptions.Timeout()):
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=requests.exceptions.Timeout()):
             result = service.get_existing_vocabulary()
 
         assert result == set()
@@ -123,7 +123,7 @@ class TestGetExistingVocabulary:
         bad_resp = MagicMock()
         bad_resp.json.side_effect = ValueError("No JSON")
 
-        with patch("requests.post", return_value=bad_resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=bad_resp):
             result = service.get_existing_vocabulary()
 
         assert result == set()
@@ -141,7 +141,7 @@ class TestGetExistingVocabulary:
             ]
         )
 
-        with patch("requests.post", side_effect=[find_resp, notes_resp]):
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
             result = service.get_existing_vocabulary()
 
         assert result == {"食べる", "走る"}
@@ -158,7 +158,7 @@ class TestGetExistingVocabulary:
             ]
         )
 
-        with patch("requests.post", side_effect=[find_resp, notes_resp]):
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
             result = service.get_existing_vocabulary()
 
         assert result == {"飲む"}
@@ -170,7 +170,7 @@ class TestGetExistingVocabulary:
         find_resp = _mock_response(result=[1])
         notes_resp = _mock_response(result=[{"fields": {"Expression": {"value": "見る"}}}])
 
-        with patch("requests.post", side_effect=[find_resp, notes_resp]) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]) as mock_post:
             result = service.get_existing_vocabulary()
 
         find_call_payload = mock_post.call_args_list[0][1]["json"]
@@ -193,7 +193,7 @@ class TestGetExistingVocabulary:
             ]
         )
 
-        with patch("requests.post", side_effect=[find_resp, notes_resp]):
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
             result = service.get_existing_vocabulary()
 
         assert result == {"食べる", "飲む", "走る"}
@@ -212,7 +212,7 @@ class TestGetExistingVocabulary:
             ]
         )
 
-        with patch("requests.post", side_effect=[find_resp, notes_resp]):
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
             result = service.get_existing_vocabulary()
 
         assert result == {"食べる", "日本語"}
@@ -224,7 +224,7 @@ class TestGetExistingVocabulary:
         find_resp = _mock_response(result=[])
 
         with (
-            patch("requests.post", return_value=find_resp),
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=find_resp),
             caplog.at_level(logging.WARNING),
         ):
             result = service.get_existing_vocabulary()
@@ -237,7 +237,9 @@ class TestGetExistingVocabulary:
         service = AnkiService(test_config)
 
         with (
-            patch("requests.post", side_effect=requests.exceptions.Timeout("timed out")),
+            patch(
+                "anki_miner.services._ankiconnect.requests.post", side_effect=requests.exceptions.Timeout("timed out")
+            ),
             caplog.at_level(logging.WARNING),
         ):
             result = service.get_existing_vocabulary()
@@ -257,7 +259,10 @@ class TestGetExistingVocabulary:
         batch2_resp = _mock_response(result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(1000, 2000)])
         batch3_resp = _mock_response(result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(2000, 2500)])
 
-        with patch("requests.post", side_effect=[find_resp, batch1_resp, batch2_resp, batch3_resp]) as mock_post:
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[find_resp, batch1_resp, batch2_resp, batch3_resp],
+        ) as mock_post:
             result = service.get_existing_vocabulary()
 
         # 1 findNotes + 3 notesInfo batches = 4 calls
@@ -292,7 +297,7 @@ class TestStoreMediaFile:
 
         resp = _mock_response(result="test.jpg")
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             result = service.store_media_file("test.jpg", filepath)
 
         assert result is True
@@ -312,7 +317,7 @@ class TestStoreMediaFile:
 
         resp = _mock_response(error="Permission denied")
 
-        with patch("requests.post", return_value=resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.store_media_file("test.jpg", filepath)
 
         assert result is False
@@ -323,7 +328,7 @@ class TestStoreMediaFile:
         filepath = tmp_path / "test.jpg"
         filepath.write_bytes(b"data")
 
-        with patch("requests.post", side_effect=requests.exceptions.ConnectionError()):
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=requests.exceptions.ConnectionError()):
             result = service.store_media_file("test.jpg", filepath)
 
         assert result is False
@@ -345,7 +350,7 @@ class TestStoreMediaFile:
 
         resp = _mock_response(result="audio.mp3")
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service.store_media_file("my_audio.mp3", filepath)
 
         mock_post.assert_called_once()
@@ -391,7 +396,7 @@ class TestCreateCardsBatch:
 
         resp = _mock_response(result=[100, 101, 102])
 
-        with patch("requests.post", return_value=resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.create_cards_batch(items, recording_progress)
 
         assert result == 3
@@ -406,7 +411,9 @@ class TestCreateCardsBatch:
         # Second batch: 25 items, all succeed
         batch2_resp = _mock_response(result=list(range(50, 75)))
 
-        with patch("requests.post", side_effect=[batch1_resp, batch2_resp]) as mock_post:
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post", side_effect=[batch1_resp, batch2_resp]
+        ) as mock_post:
             result = service.create_cards_batch(items, recording_progress)
 
         assert result == 75
@@ -421,7 +428,7 @@ class TestCreateCardsBatch:
         # 3 out of 5 succeed (2 are null / duplicates)
         resp = _mock_response(result=[100, None, 102, None, 104])
 
-        with patch("requests.post", return_value=resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.create_cards_batch(items)
 
         assert result == 3
@@ -433,7 +440,7 @@ class TestCreateCardsBatch:
 
         resp = _mock_response(result=[1, 2, 3])
 
-        with patch("requests.post", return_value=resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             service.create_cards_batch(items, recording_progress)
 
         # on_start called once with total count
@@ -450,37 +457,37 @@ class TestCreateCardsBatch:
         # no errors
         assert len(recording_progress.errors) == 0
 
-    def test_batch_error_in_response(self, test_config, make_tokenized_word, recording_progress):
-        """Should report error via callback when batch returns error."""
+    def test_batch_error_in_response_propagates(self, test_config, make_tokenized_word, recording_progress):
+        """AnkiConnect error payloads now propagate as AnkiConnectionError.
+
+        Pre-T2.3 the batch path swallowed errors and reported them via the
+        progress callback. The unified ``post_action`` helper raises, and
+        callers catch at the pipeline boundary instead.
+        """
         service = AnkiService(test_config)
         items = self._make_word_data(make_tokenized_word, n=3)
 
         resp = _mock_response(error="deck not found")
 
-        with patch("requests.post", return_value=resp):
-            result = service.create_cards_batch(items, recording_progress)
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            pytest.raises(AnkiConnectionError, match="deck not found"),
+        ):
+            service.create_cards_batch(items, recording_progress)
 
-        assert result == 0
-        assert len(recording_progress.errors) == 1
-        assert "Batch 1" in recording_progress.errors[0][0]
-        assert "deck not found" in recording_progress.errors[0][1]
-
-    def test_request_exception_handling(self, test_config, make_tokenized_word, recording_progress):
-        """Should catch exceptions during batch request and report via callback."""
+    def test_request_exception_propagates(self, test_config, make_tokenized_word, recording_progress):
+        """Connection errors now propagate as AnkiConnectionError."""
         service = AnkiService(test_config)
         items = self._make_word_data(make_tokenized_word, n=3)
 
-        with patch(
-            "requests.post",
-            side_effect=requests.exceptions.ConnectionError("network down"),
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=requests.exceptions.ConnectionError("network down"),
+            ),
+            pytest.raises(AnkiConnectionError, match="Cannot connect"),
         ):
-            result = service.create_cards_batch(items, recording_progress)
-
-        assert result == 0
-        assert len(recording_progress.errors) == 1
-        assert "Batch 1" in recording_progress.errors[0][0]
-        # on_complete should still be called
-        assert recording_progress.completes == 1
+            service.create_cards_batch(items, recording_progress)
 
     def test_create_cards_batch_uses_surface_for_expression(self, test_config, make_tokenized_word):
         """Batch creation should use word.surface for the Expression field, not word.lemma.
@@ -494,7 +501,7 @@ class TestCreateCardsBatch:
 
         resp = _mock_response(result=[12345])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             result = service.create_cards_batch([(word, media, "definition")])
 
         assert result == 1
@@ -531,7 +538,7 @@ class TestStoreMediaFilesBatch:
 
         resp = _mock_response(result="ok")
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service._store_media_files_batch([(word, media, "def")])
 
         # Two calls: one for screenshot, one for audio
@@ -556,7 +563,7 @@ class TestStoreMediaFilesBatch:
 
         resp = _mock_response(result="ok")
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service._store_media_files_batch([(word, media, "def")])
 
         # No calls because files don't exist
@@ -576,7 +583,7 @@ class TestStoreMediaFilesBatch:
         )
 
         with patch(
-            "requests.post",
+            "anki_miner.services._ankiconnect.requests.post",
             side_effect=requests.exceptions.ConnectionError("fail"),
         ):
             # Should not raise
@@ -619,7 +626,7 @@ class TestOptionalFields:
 
         resp = _mock_response(result=[12345])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service.create_cards_batch(
                 [
                     (
@@ -646,7 +653,7 @@ class TestOptionalFields:
 
         resp = _mock_response(result=[12345])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service.create_cards_batch([(word, media, "definition", {"unknown_key": "some_value"})])
 
         payload = mock_post.call_args[1]["json"]
@@ -662,7 +669,7 @@ class TestOptionalFields:
 
         resp = _mock_response(result=[12345])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             result = service.create_cards_batch([(word, media, "definition", extra)])
 
         assert result == 1
@@ -714,7 +721,7 @@ class TestReadingFields:
         media = MediaData()
 
         resp = _mock_response(result=[12345])
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service.create_cards_batch([(word, media, "definition")])
 
         payload = mock_post.call_args[1]["json"]
@@ -736,7 +743,7 @@ class TestReadingFields:
         media = MediaData()
 
         resp = _mock_response(result=[55555])
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service.create_cards_batch([(word, media, "definition")])
 
         payload = mock_post.call_args[1]["json"]
@@ -758,7 +765,7 @@ class TestDeleteNotes:
         service = AnkiService(test_config)
         resp = _mock_response(result=None)
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             result = service.delete_notes([100, 200, 300])
 
         assert result == 3
@@ -779,8 +786,8 @@ class TestDeleteNotes:
         resp = _mock_response(error="notes not found")
 
         with (
-            patch("requests.post", return_value=resp),
-            pytest.raises(AnkiConnectionError, match="Failed to delete"),
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            pytest.raises(AnkiConnectionError, match="notes not found"),
         ):
             service.delete_notes([100])
 
@@ -789,7 +796,7 @@ class TestDeleteNotes:
         service = AnkiService(test_config)
 
         with (
-            patch("requests.post", side_effect=requests.exceptions.ConnectionError()),
+            patch("anki_miner.services._ankiconnect.requests.post", side_effect=requests.exceptions.ConnectionError()),
             pytest.raises(AnkiConnectionError, match="Cannot connect"),
         ):
             service.delete_notes([100])
@@ -818,7 +825,7 @@ class TestLastCreatedNoteIds:
         items = self._make_word_data(make_tokenized_word, n=3)
         resp = _mock_response(result=[100, 101, 102])
 
-        with patch("requests.post", return_value=resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             service.create_cards_batch(items)
 
         assert service.last_created_note_ids == [100, 101, 102]
@@ -831,12 +838,12 @@ class TestLastCreatedNoteIds:
         resp1 = _mock_response(result=[100, 101])
         resp2 = _mock_response(result=[200])
 
-        with patch("requests.post", return_value=resp1):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp1):
             service.create_cards_batch(items)
         assert service.last_created_note_ids == [100, 101]
 
         items2 = self._make_word_data(make_tokenized_word, n=1)
-        with patch("requests.post", return_value=resp2):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp2):
             service.create_cards_batch(items2)
         assert service.last_created_note_ids == [200]
 
@@ -846,7 +853,7 @@ class TestLastCreatedNoteIds:
         items = self._make_word_data(make_tokenized_word, n=5)
         resp = _mock_response(result=[100, None, 102, None, 104])
 
-        with patch("requests.post", return_value=resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             service.create_cards_batch(items)
 
         assert service.last_created_note_ids == [100, 102, 104]
@@ -877,7 +884,7 @@ class TestGetNoteTypeFields:
         service = AnkiService(test_config)
         resp = _mock_response(result=["Expression", "Sentence", "Definition"])
 
-        with patch("requests.post", return_value=resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.get_note_type_fields()
 
         assert result == ["Expression", "Sentence", "Definition"]
@@ -887,7 +894,7 @@ class TestGetNoteTypeFields:
         service = AnkiService(test_config)
         resp = _mock_response(result=["Field1"])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service.get_note_type_fields()
 
         payload = mock_post.call_args[1]["json"]
@@ -898,7 +905,7 @@ class TestGetNoteTypeFields:
         service = AnkiService(test_config)
         resp = _mock_response(result=["Field1"])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service.get_note_type_fields("CustomNote")
 
         payload = mock_post.call_args[1]["json"]
@@ -909,7 +916,7 @@ class TestGetNoteTypeFields:
         service = AnkiService(test_config)
         resp = _mock_response(error="model not found")
 
-        with patch("requests.post", return_value=resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.get_note_type_fields()
 
         assert result == []
@@ -918,7 +925,7 @@ class TestGetNoteTypeFields:
         """Should return empty list on connection error."""
         service = AnkiService(test_config)
 
-        with patch("requests.post", side_effect=requests.exceptions.ConnectionError()):
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=requests.exceptions.ConnectionError()):
             result = service.get_note_type_fields()
 
         assert result == []
@@ -968,7 +975,7 @@ class TestConfigurableFields:
 
         resp = _mock_response(result=[12345])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service.create_cards_batch([(word, media, "def")])
 
         payload = mock_post.call_args[1]["json"]
@@ -1010,7 +1017,9 @@ class TestDictMediaUpload:
         store_resp = _mock_response(result=None)
         create_resp = _mock_response(result=[12345])
 
-        with patch("requests.post", side_effect=[store_resp, create_resp]) as mock_post:
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post", side_effect=[store_resp, create_resp]
+        ) as mock_post:
             service.create_cards_batch([(word, media, definition)])
 
         # First call is storeMediaFile for the dict asset
@@ -1033,7 +1042,7 @@ class TestDictMediaUpload:
         create_resp = _mock_response(result=[12345])
 
         with patch(
-            "requests.post",
+            "anki_miner.services._ankiconnect.requests.post",
             side_effect=[store_resp, create_resp, create_resp, create_resp],
         ) as mock_post:
             service.create_cards_batch([(word, media, definition)])
@@ -1059,7 +1068,7 @@ class TestDictMediaUpload:
 
         with (
             caplog.at_level(logging.WARNING),
-            patch("requests.post", return_value=create_resp) as mock_post,
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=create_resp) as mock_post,
         ):
             service.create_cards_batch([(word, media, definition)])
             service.create_cards_batch([(word, media, definition)])
@@ -1083,7 +1092,7 @@ class TestDictMediaUpload:
         media = MediaData()
         create_resp = _mock_response(result=[12345])
 
-        with patch("requests.post", return_value=create_resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=create_resp) as mock_post:
             service.create_cards_batch([(word, media, definition)])
 
         store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
@@ -1110,7 +1119,7 @@ class TestDictMediaUpload:
         create_resp = _mock_response(result=[1, 2, 3])
 
         with patch(
-            "requests.post",
+            "anki_miner.services._ankiconnect.requests.post",
             side_effect=[store_resp, store_resp, create_resp],
         ) as mock_post:
             service.create_cards_batch(word_data_list)
@@ -1152,7 +1161,7 @@ class TestAnkiTagsConfig:
 
         resp = _mock_response(result=[12345])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             count = service.create_cards_batch([(word, media, "definition")])
 
         assert count == 1
@@ -1216,7 +1225,7 @@ class TestGlossaryFieldRouting:
 
         resp = _mock_response(result=[123])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             result = service.create_cards_batch([(word, media, "single-def", {"glossary": self._GLOSSARY_HTML})])
 
         assert result == 1
@@ -1235,7 +1244,7 @@ class TestGlossaryFieldRouting:
 
         resp = _mock_response(result=[123])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             result = service.create_cards_batch([(word, media, "single-def", {"glossary": self._GLOSSARY_HTML})])
 
         assert result == 1
@@ -1258,7 +1267,7 @@ class TestGlossaryFieldRouting:
 
         resp = _mock_response(result=[123])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service.create_cards_batch([(word, media, "def", {"glossary": self._GLOSSARY_HTML})])
 
         payload = mock_post.call_args[1]["json"]
@@ -1275,7 +1284,7 @@ class TestGlossaryFieldRouting:
 
         resp = _mock_response(result=[123])
 
-        with patch("requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             result = service.create_cards_batch(
                 [
                     (
@@ -1327,7 +1336,9 @@ class TestGlossaryFieldRouting:
         store_resp = _mock_response(result=None)
         create_resp = _mock_response(result=[123])
 
-        with patch("requests.post", side_effect=[store_resp, create_resp]) as mock_post:
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post", side_effect=[store_resp, create_resp]
+        ) as mock_post:
             result = service.create_cards_batch([(word, media, "def", {"glossary": glossary_with_media})])
 
         assert result == 1
@@ -1343,7 +1354,7 @@ class TestGlossaryFieldRouting:
 
         resp = _mock_response(result=[123])
 
-        with patch("requests.post", return_value=resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.create_cards_batch([(word, media, "def", {"pitch_position": "0"})])
 
         assert result == 1
@@ -1356,7 +1367,7 @@ class TestGlossaryFieldRouting:
 
         resp = _mock_response(result=[123])
 
-        with patch("requests.post", return_value=resp):
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.create_cards_batch([(word, media, "def")])
 
         assert result == 1
