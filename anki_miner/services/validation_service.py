@@ -5,7 +5,9 @@ import subprocess
 import requests
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.models import ValidationIssue, ValidationResult
+from anki_miner.services._ankiconnect import post_action
 from anki_miner.utils import ensure_directory
 
 
@@ -171,28 +173,21 @@ class ValidationService:
             Tuple of (success, message)
         """
         try:
-            response = requests.post(
+            version = post_action(
                 self.config.ankiconnect_url,
-                json={"action": "version", "version": 6},
+                "version",
                 timeout=5,
             )
-
-            if response.status_code != 200:
-                return False, "AnkiConnect returned non-200 status"
-
-            result = response.json()
-            if result.get("error"):
-                return False, f"AnkiConnect error: {result['error']}"
-
-            version = result.get("result", "unknown")
-            return True, f"AnkiConnect v{version} is running"
-
-        except requests.exceptions.ConnectionError:
-            return False, "Cannot connect to Anki. Is Anki running with AnkiConnect installed?"
-        except requests.exceptions.Timeout:
-            return False, "Connection to AnkiConnect timed out"
+        except AnkiConnectionError as e:
+            cause = e.__cause__
+            if isinstance(cause, requests.exceptions.ConnectionError):
+                return False, "Cannot connect to Anki. Is Anki running with AnkiConnect installed?"
+            if isinstance(cause, requests.exceptions.Timeout):
+                return False, "Connection to AnkiConnect timed out"
+            return False, f"AnkiConnect error: {e}"
         except Exception as e:
             return False, f"Unexpected error: {e}"
+        return True, f"AnkiConnect v{version if version is not None else 'unknown'} is running"
 
     def _check_ffmpeg(self) -> tuple[bool, str]:
         """Check if ffmpeg is installed and accessible.
@@ -229,28 +224,32 @@ class ValidationService:
             Tuple of (success, message)
         """
         try:
-            response = requests.post(
-                self.config.ankiconnect_url,
-                json={"action": "deckNames", "version": 6},
-                timeout=10,
+            decks = (
+                post_action(
+                    self.config.ankiconnect_url,
+                    "deckNames",
+                    timeout=10,
+                )
+                or []
             )
-
-            result = response.json()
-            if result.get("error"):
-                return False, f"Error fetching decks: {result['error']}"
-
-            decks = result.get("result", [])
-            deck_name = self.config.anki_deck_name
-
-            if deck_name in decks:
-                return True, f"Deck '{deck_name}' found"
-            else:
-                available = ", ".join(decks[:5])
-                more = "..." if len(decks) > 5 else ""
-                return False, f"Deck '{deck_name}' not found. Available: {available}{more}"
-
+        except AnkiConnectionError as e:
+            # Surface AnkiConnect-side error payloads with the historical
+            # "Error fetching decks: ..." prefix; everything else falls
+            # through to "Error checking deck: ...".
+            msg = str(e)
+            prefix = "AnkiConnect error in 'deckNames': "
+            if msg.startswith(prefix):
+                return False, f"Error fetching decks: {msg[len(prefix):]}"
+            return False, f"Error checking deck: {e}"
         except Exception as e:
             return False, f"Error checking deck: {e}"
+
+        deck_name = self.config.anki_deck_name
+        if deck_name in decks:
+            return True, f"Deck '{deck_name}' found"
+        available = ", ".join(decks[:5])
+        more = "..." if len(decks) > 5 else ""
+        return False, f"Deck '{deck_name}' not found. Available: {available}{more}"
 
     def _check_note_type_exists(self) -> tuple[bool, str]:
         """Check if the note type (model) exists in Anki.
@@ -259,28 +258,29 @@ class ValidationService:
             Tuple of (success, message)
         """
         try:
-            response = requests.post(
-                self.config.ankiconnect_url,
-                json={"action": "modelNames", "version": 6},
-                timeout=10,
+            models = (
+                post_action(
+                    self.config.ankiconnect_url,
+                    "modelNames",
+                    timeout=10,
+                )
+                or []
             )
-
-            result = response.json()
-            if result.get("error"):
-                return False, f"Error fetching models: {result['error']}"
-
-            models = result.get("result", [])
-            note_type = self.config.anki_note_type
-
-            if note_type in models:
-                return True, f"Note type '{note_type}' found"
-            else:
-                available = ", ".join(models[:5])
-                more = "..." if len(models) > 5 else ""
-                return False, f"Note type '{note_type}' not found. Available: {available}{more}"
-
+        except AnkiConnectionError as e:
+            msg = str(e)
+            prefix = "AnkiConnect error in 'modelNames': "
+            if msg.startswith(prefix):
+                return False, f"Error fetching models: {msg[len(prefix):]}"
+            return False, f"Error checking note type: {e}"
         except Exception as e:
             return False, f"Error checking note type: {e}"
+
+        note_type = self.config.anki_note_type
+        if note_type in models:
+            return True, f"Note type '{note_type}' found"
+        available = ", ".join(models[:5])
+        more = "..." if len(models) > 5 else ""
+        return False, f"Note type '{note_type}' not found. Available: {available}{more}"
 
     def _check_field_names_exist(self) -> tuple[bool, str]:
         """Check that configured field names exist on the note type.
@@ -289,30 +289,31 @@ class ValidationService:
             Tuple of (success, message)
         """
         try:
-            response = requests.post(
-                self.config.ankiconnect_url,
-                json={
-                    "action": "modelFieldNames",
-                    "version": 6,
-                    "params": {"modelName": self.config.anki_note_type},
-                },
-                timeout=10,
-            )
-
-            result = response.json()
-            if result.get("error"):
-                return False, f"Error fetching fields: {result['error']}"
-
-            actual_fields = set(result.get("result", []))
-            configured_fields = {v for v in self.config.anki_fields.values() if v}
-            missing = configured_fields - actual_fields
-            if missing:
-                return False, (
-                    f"Field(s) {', '.join(sorted(missing))} not found on note type "
-                    f"'{self.config.anki_note_type}'. "
-                    f"Available: {', '.join(sorted(actual_fields))}"
+            actual_fields_list = (
+                post_action(
+                    self.config.ankiconnect_url,
+                    "modelFieldNames",
+                    params={"modelName": self.config.anki_note_type},
+                    timeout=10,
                 )
-            return True, "All configured fields exist"
-
+                or []
+            )
+        except AnkiConnectionError as e:
+            msg = str(e)
+            prefix = "AnkiConnect error in 'modelFieldNames': "
+            if msg.startswith(prefix):
+                return False, f"Error fetching fields: {msg[len(prefix):]}"
+            return False, f"Error checking fields: {e}"
         except Exception as e:
             return False, f"Error checking fields: {e}"
+
+        actual_fields = set(actual_fields_list)
+        configured_fields = {v for v in self.config.anki_fields.values() if v}
+        missing = configured_fields - actual_fields
+        if missing:
+            return False, (
+                f"Field(s) {', '.join(sorted(missing))} not found on note type "
+                f"'{self.config.anki_note_type}'. "
+                f"Available: {', '.join(sorted(actual_fields))}"
+            )
+        return True, "All configured fields exist"
