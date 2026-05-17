@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- **Multi-dictionary export** (Issue #17): new optional `Glossary` Anki field is populated with every enabled offline dictionary's hit concatenated as Yomitan-format HTML (`<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="…">…</li></ol></div>` per dict), making the result compatible with the Senren dictionary-toggle UI. Jisho online lookup acts as a fallback only when no offline dictionary returned a hit. Existing `MainDefinition` field keeps first-hit-wins behavior — opt in by entering a field name in Settings → Anki Settings → Glossary Field. Empty by default (no behavior change for existing users).
+
 ### Removed
 - Dead-code cleanup: removed `FolderProcessor` and its same-folder pairing path, unused `HistoryService` query methods, `StatsService.get_series_stats`/`get_series_progress`, the orphan `queue_changed` signal, ~20 unused widget setters/properties, single-card `AnkiService.create_card` (batch path is canonical), service `lookup_batch` test-only methods, `DictionaryRegistry.list_dicts`, `WordListService.get_blacklist`/`get_whitelist`, `WordFilterService.filter_by_length`, orphan `config_exists`/`delete_config`/`reset_cancellation` methods, the never-raised `NoJapaneseSubsError`, and the obsolete `use_offline_dict` config field (legacy values are silently stripped on load).
 
