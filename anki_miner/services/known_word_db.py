@@ -3,6 +3,7 @@
 import logging
 import os
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -30,8 +31,7 @@ class KnownWordDB:
         Creates the parent directories and the known_words table.
         """
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(self._db_path)
-        try:
+        with closing(sqlite3.connect(self._db_path)) as conn:
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS known_words ("
                 "lemma TEXT PRIMARY KEY, "
@@ -40,8 +40,6 @@ class KnownWordDB:
                 ")"
             )
             conn.commit()
-        finally:
-            conn.close()
 
     def is_available(self) -> bool:
         """Check if the database file exists and is readable.
@@ -57,12 +55,9 @@ class KnownWordDB:
         Returns:
             Set of all lemma strings in the database.
         """
-        conn = sqlite3.connect(self._db_path)
-        try:
+        with closing(sqlite3.connect(self._db_path)) as conn:
             cursor = conn.execute("SELECT lemma FROM known_words")
             return {row[0] for row in cursor.fetchall()}
-        finally:
-            conn.close()
 
     def add_words(self, words: set[str], source: str = "anki") -> int:
         """Bulk insert words into the database, ignoring duplicates.
@@ -77,8 +72,7 @@ class KnownWordDB:
         if not words:
             return 0
 
-        conn = sqlite3.connect(self._db_path)
-        try:
+        with closing(sqlite3.connect(self._db_path)) as conn:
             before = self._count(conn)
             conn.executemany(
                 "INSERT OR IGNORE INTO known_words (lemma, source) VALUES (?, ?)",
@@ -87,8 +81,6 @@ class KnownWordDB:
             conn.commit()
             after = self._count(conn)
             return after - before
-        finally:
-            conn.close()
 
     def sync_with_anki(self, anki_vocabulary: set[str]) -> tuple[int, int]:
         """Differential sync: add words from Anki that are not yet in the DB.
@@ -113,11 +105,8 @@ class KnownWordDB:
         Returns:
             Count of rows in the known_words table.
         """
-        conn = sqlite3.connect(self._db_path)
-        try:
+        with closing(sqlite3.connect(self._db_path)) as conn:
             return self._count(conn)
-        finally:
-            conn.close()
 
     @staticmethod
     def _count(conn: sqlite3.Connection) -> int:
