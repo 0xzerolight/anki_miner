@@ -2,6 +2,7 @@
 
 import re
 import threading
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -298,8 +299,6 @@ class TestOptionalServices:
 
     def test_frequency_filter_removes_words(self, test_config, mock_services, tmp_path):
         """Frequency filter should remove words outside the threshold."""
-        from dataclasses import replace
-
         config = replace(test_config, max_frequency_rank=1000)
 
         word1 = _make_word("食べる")
@@ -561,8 +560,6 @@ class TestCrossEpisodeFiltering:
 
     def test_cross_episode_counts_filters_words(self, test_config, mock_services, tmp_path):
         """Words below min_episode_appearances should be filtered out."""
-        from dataclasses import replace
-
         config = replace(test_config, min_episode_appearances=3)
 
         word1 = _make_word("食べる")
@@ -812,8 +809,6 @@ class TestPerRunTempFolder:
         self, test_config, mock_services, tmp_path, monkeypatch
     ):
         monkeypatch.setenv("ANKI_MINER_KEEP_TEMP", "1")
-
-        from dataclasses import replace
 
         config = replace(test_config, media_temp_folder=tmp_path / "persisted")
         words = [_make_word("食べる")]
@@ -1186,8 +1181,6 @@ class TestIPlusOneFilter:
         }
 
     def _config_with_flag(self, test_config, *, flag: bool, dedup: bool = True):
-        from dataclasses import replace
-
         return replace(
             test_config,
             use_i_plus_one_filter=flag,
@@ -1336,3 +1329,80 @@ class TestIPlusOneFilter:
         )
         # Specifically: kept 1/2 (50%).
         assert "kept 1/2 words (50%)" in matched[0]
+
+
+class TestGlossaryFetch:
+    """Tests for optional multi-dict glossary fetch in process_episode."""
+
+    def _build_processor(self, cfg, mock_services):
+        return EpisodeProcessor(
+            config=cfg,
+            subtitle_parser=mock_services["subtitle_parser"],
+            word_filter=mock_services["word_filter"],
+            media_extractor=mock_services["media_extractor"],
+            definition_service=mock_services["definition_service"],
+            anki_service=mock_services["anki_service"],
+            presenter=NullPresenter(),
+        )
+
+    def _seed_happy_path(self, mock_services, tmp_path):
+        words = [_make_word("食べる")]
+        media = _make_media("taberu")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+        return tmp_path / "v.mkv", tmp_path / "s.ass"
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_glossary_fetched_when_field_mapped(self, test_config, mock_services, tmp_path):
+        cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
+        processor = self._build_processor(cfg, mock_services)
+        video, sub = self._seed_happy_path(mock_services, tmp_path)
+
+        glossary_html = (
+            '<div class="yomitan-glossary"><ol><li data-dictionary="X">X def</li></ol></div>'
+        )
+        mock_services["definition_service"].get_glossaries_batch.return_value = [glossary_html]
+
+        processor.process_episode(video, sub)
+
+        mock_services["definition_service"].get_glossaries_batch.assert_called_once()
+        call_args = mock_services["anki_service"].create_cards_batch.call_args
+        card_data = call_args[0][0]
+        assert len(card_data) == 1
+        word, media, definition, extra_fields = card_data[0]
+        assert extra_fields is not None
+        assert extra_fields["glossary"] == glossary_html
+
+    def test_glossary_skipped_when_field_unmapped(self, test_config, mock_services, tmp_path):
+        # Default test_config has anki_fields["glossary"] == "" (after Task 4).
+        processor = self._build_processor(test_config, mock_services)
+        video, sub = self._seed_happy_path(mock_services, tmp_path)
+
+        processor.process_episode(video, sub)
+
+        mock_services["definition_service"].get_glossaries_batch.assert_not_called()
+        call_args = mock_services["anki_service"].create_cards_batch.call_args
+        card_data = call_args[0][0]
+        word, media, definition, extra_fields = card_data[0]
+        # extra_fields may be None or a dict — but must NOT contain glossary.
+        if extra_fields is not None:
+            assert "glossary" not in extra_fields
