@@ -410,6 +410,16 @@ class EpisodeProcessor:
             )
             self.presenter.show_success(f"Found {sum(1 for d in definitions if d)} definitions")
 
+            # Optional: fetch concatenated multi-dict glossary if the user
+            # mapped the Glossary field. Skipped otherwise to avoid the
+            # extra chain walk per word.
+            glossaries: list[str | None] = [None] * len(words_with_media)
+            if self.config.anki_fields.get("glossary"):
+                glossaries = self.definition_service.get_glossaries_batch(
+                    [w.lemma for w in words_with_media],
+                    progress_callback,
+                )
+
             # Check cancellation after Phase 4
             if self._cancelled:
                 return self._make_cancelled_result(
@@ -434,8 +444,8 @@ class EpisodeProcessor:
             self.presenter.show_info("Step 5/5 \u2014 Creating Anki cards")
             # Combine words, media, definitions, and extra data
             card_data: list[tuple] = []
-            for (word, media), definition, (pitch_position, pitch_category) in zip(
-                media_results, definitions, pitch_data, strict=True
+            for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
+                media_results, definitions, glossaries, pitch_data, strict=True
             ):
                 if definition is None:
                     continue
@@ -447,6 +457,8 @@ class EpisodeProcessor:
                     extra_fields["pitch_category"] = pitch_category
                 if word.frequency_rank is not None:
                     extra_fields["frequency"] = str(word.frequency_rank)
+                if glossary:
+                    extra_fields["glossary"] = glossary
 
                 card_data.append((word, media, definition, extra_fields if extra_fields else None))
 
