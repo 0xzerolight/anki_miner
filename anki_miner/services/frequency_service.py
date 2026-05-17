@@ -5,30 +5,9 @@ import logging
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
+from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
 
 logger = logging.getLogger(__name__)
-
-# Common header keywords that indicate a header row (case-insensitive)
-_HEADER_KEYWORDS = {"word", "rank", "frequency", "freq", "lemma", "reading", "kana", "kanji"}
-
-
-def _detect_delimiter(sample: str) -> str:
-    """Detect whether a file uses tab or comma as delimiter.
-
-    Args:
-        sample: First few lines of the file.
-
-    Returns:
-        Detected delimiter character.
-    """
-    tab_count = sample.count("\t")
-    comma_count = sample.count(",")
-    return "\t" if tab_count > comma_count else ","
-
-
-def _is_header_row(row: list[str]) -> bool:
-    """Check if a row looks like a header based on common keywords."""
-    return any(cell.strip().lower() in _HEADER_KEYWORDS for cell in row)
 
 
 def _extract_word_rank(row: list[str]) -> tuple[str, int | None]:
@@ -131,7 +110,7 @@ class FrequencyService:
             with open(self._path, encoding="utf-8") as f:
                 sample = f.read(4096)
                 f.seek(0)
-                delimiter = _detect_delimiter(sample)
+                delimiter = detect_delimiter(sample)
 
                 reader = csv.reader(f, delimiter=delimiter)
                 first_row = True
@@ -140,7 +119,7 @@ class FrequencyService:
                         continue
                     if first_row:
                         first_row = False
-                        if _is_header_row(row):
+                        if is_header_row(row):
                             continue
 
                     word, rank = _extract_word_rank(row)
