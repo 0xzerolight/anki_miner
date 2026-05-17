@@ -397,7 +397,7 @@ class MediaExtractorService:
                 self._audio_stream_cache[video_file] = None
             return None
 
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError, json.JSONDecodeError) as e:
             logger.warning(f"Error probing audio streams: {e}")
             with self._cache_lock:
                 self._audio_stream_cache[video_file] = None
@@ -480,6 +480,6 @@ class MediaExtractorService:
                 logger.error(f"ffmpeg audio extraction failed: {proc.stderr.decode()}")
                 return False
             return output_path.exists()
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError) as e:
             logger.error(f"Audio extraction error: {e}")
             return False
