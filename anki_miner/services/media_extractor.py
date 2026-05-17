@@ -152,20 +152,24 @@ class MediaExtractorService:
             return self._extract_animated_screenshot(video_file, start_time, duration, output_path)
         return self._extract_static_screenshot(video_file, start_time, duration, output_path)
 
-    def _run_ffmpeg(self, cmd: list[str], op_name: str, timeout: int) -> bool:
+    def _run_ffmpeg(self, cmd: list[str], op_name: str, timeout: int, context: str = "") -> bool:
         """Run an ffmpeg/ffprobe command. Log + swallow errors. Return success bool.
 
         Returns True only on a zero exit code. Callers may impose additional
         post-run checks (e.g. ``output_path.exists()``) on top of this.
         """
+        suffix = f" for {context}" if context else ""
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
             if result.returncode == 0:
                 return True
-            logger.error("%s failed: %s", op_name, result.stderr)
+            logger.warning("%s failed%s: ffmpeg exit code %s: %s", op_name, suffix, result.returncode, result.stderr)
+            return False
+        except subprocess.TimeoutExpired:
+            logger.warning("%s timed out%s after %ss", op_name, suffix, timeout)
             return False
         except (subprocess.SubprocessError, OSError) as e:
-            logger.error("%s error: %s", op_name, e)
+            logger.warning("%s error%s: %s", op_name, suffix, e)
             return False
 
     def _extract_static_screenshot(
@@ -193,7 +197,7 @@ class MediaExtractorService:
             str(output_path),
         ]
 
-        if not self._run_ffmpeg(cmd, "Static screenshot extraction", timeout=30):
+        if not self._run_ffmpeg(cmd, "Static screenshot extraction", timeout=30, context=output_path.name):
             return False
         return output_path.exists()
 
@@ -318,7 +322,7 @@ class MediaExtractorService:
 
         cmd.append(str(output_path))
 
-        if not self._run_ffmpeg(cmd, "Animated screenshot extraction", timeout=60):
+        if not self._run_ffmpeg(cmd, "Animated screenshot extraction", timeout=60, context=output_path.name):
             return False
         return output_path.exists()
 
@@ -458,6 +462,6 @@ class MediaExtractorService:
 
         cmd.append(str(output_path))
 
-        if not self._run_ffmpeg(cmd, "Audio extraction", timeout=30):
+        if not self._run_ffmpeg(cmd, "Audio extraction", timeout=30, context=output_path.name):
             return False
         return output_path.exists()
