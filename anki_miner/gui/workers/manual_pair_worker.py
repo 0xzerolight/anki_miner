@@ -85,6 +85,6 @@ class ManualPairWorkerThread(CancellableWorker):
             if not self.check_cancelled():
                 self.result_ready.emit(results)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — surface every failure to GUI
             if not self.check_cancelled():
                 self.error.emit(str(e))
