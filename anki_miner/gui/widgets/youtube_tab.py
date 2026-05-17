@@ -38,6 +38,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.service_factory import create_episode_processor, create_youtube_fetcher
+from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -87,8 +88,14 @@ def _subs_label(info: VideoInfo) -> str:
     return "None"
 
 
-class YouTubeTab(QWidget):
-    """Tab widget for mining Japanese vocabulary from a YouTube video."""
+class YouTubeTab(MiningTabBase):
+    """Tab widget for mining Japanese vocabulary from a YouTube video.
+
+    Inherits from :class:`MiningTabBase` for type consistency with the other
+    mining tabs, but does not use its progress-callback wiring or drag-drop
+    scaffolding — the YouTube flow drives progress through its own state
+    machine and accepts no dropped files.
+    """
 
     # Cross-thread curation bridge: emitted from the worker thread, handled on
     # the GUI thread. Mirrors the pattern in SingleEpisodeTab.
