@@ -2,7 +2,7 @@
 
 from .anki_service import AnkiService
 from .definition_service import DefinitionService
-from .dictionary.providers import JishoProvider
+from .dictionary.providers import IndexedDictProvider, JishoProvider
 from .export_service import ExportService
 from .frequency_service import FrequencyService
 from .history_service import HistoryService
@@ -26,6 +26,7 @@ __all__ = [
     "FrequencyService",
     "StatsService",
     "HistoryService",
+    "IndexedDictProvider",
     "JishoProvider",
     "ShortcutService",
     "ShortcutResult",
