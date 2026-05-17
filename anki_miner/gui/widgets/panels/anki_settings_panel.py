@@ -182,6 +182,20 @@ class AnkiSettingsPanel(FormPanel):
             "Anki field that stores the English definition",
         )
 
+        # Glossary field (optional second definition field — populated with
+        # concatenated hits from all enabled dictionaries; Senren-toggle compatible).
+        self.glossary_field_input = QLineEdit()
+        self.glossary_field_input.setPlaceholderText("Glossary (optional)")
+        self.glossary_field_input.setToolTip(
+            "Anki field that receives every enabled dictionary's hit concatenated as "
+            "Yomitan-format HTML. Leave blank to skip."
+        )
+        self._add_simple_field(
+            "Glossary Field",
+            self.glossary_field_input,
+            "Optional. Receives multi-dictionary entries concatenated as Yomitan HTML.",
+        )
+
         # Picture field
         self.picture_field_input = QLineEdit()
         self.picture_field_input.setPlaceholderText("Picture")
@@ -482,6 +496,10 @@ class AnkiSettingsPanel(FormPanel):
                 self.definition_field_input,
                 ["definition", "meaning", "maindefinition"],
             ),
+            "glossary": (
+                self.glossary_field_input,
+                ["glossary", "definitions", "dictionary"],
+            ),
             "picture": (self.picture_field_input, ["picture", "image", "screenshot", "photo"]),
             "audio": (self.audio_field_input, ["audio", "sound", "sentenceaudio"]),
             "expression_furigana": (
@@ -534,6 +552,7 @@ class AnkiSettingsPanel(FormPanel):
             "word": self.expression_field_input.text().strip(),
             "sentence": self.sentence_field_input.text().strip(),
             "definition": self.definition_field_input.text().strip(),
+            "glossary": self.glossary_field_input.text().strip(),
             "picture": self.picture_field_input.text().strip(),
             "audio": self.audio_field_input.text().strip(),
             "expression_furigana": self.expression_furigana_field_input.text().strip(),
@@ -554,6 +573,7 @@ class AnkiSettingsPanel(FormPanel):
         self.expression_field_input.setText(fields.get("word", "Expression"))
         self.sentence_field_input.setText(fields.get("sentence", "Sentence"))
         self.definition_field_input.setText(fields.get("definition", "MainDefinition"))
+        self.glossary_field_input.setText(fields.get("glossary", ""))
         self.picture_field_input.setText(fields.get("picture", "Picture"))
         self.audio_field_input.setText(fields.get("audio", "SentenceAudio"))
         self.expression_furigana_field_input.setText(
