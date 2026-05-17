@@ -106,6 +106,7 @@ class DictionarySettingsPanel(FormPanel):
     def refresh_registry(self) -> None:
         """Force a registry rescan. Call after an import finishes."""
         self._registry = DictionaryRegistry(self._dicts_root)
+        self._registry.load()
         self._rebuild_list()
 
     def set_per_row_reimport_enabled(self, enabled: bool) -> None:
@@ -267,6 +268,7 @@ class DictionarySettingsPanel(FormPanel):
         # import. Repeated reorder/toggle ticks reuse the same scan.
         if self._registry is None:
             self._registry = DictionaryRegistry(self._dicts_root)
+            self._registry.load()
         registry = self._registry
         for entry in self._chain:
             meta: DictMeta | None = None

@@ -40,6 +40,7 @@ class TestDictionaryRegistry:
         _seed_dict(tmp_path, "jmdict-english", "JMdict (English)")
 
         registry = DictionaryRegistry(tmp_path)
+        registry.load()
         assert registry.get("daijirin-v1") is not None
         assert registry.get("jmdict-english") is not None
 
@@ -51,6 +52,7 @@ class TestDictionaryRegistry:
 
         caplog.set_level(logging.WARNING)
         registry = DictionaryRegistry(tmp_path)
+        registry.load()
         assert registry.get("good") is not None
         assert registry.get("bad") is None
         assert "corrupt" in caplog.text.lower() or "skipping" in caplog.text.lower()
@@ -70,6 +72,7 @@ class TestDictionaryRegistry:
         )
 
         registry = DictionaryRegistry(tmp_path)
+        registry.load()
         chain = registry.build_provider_chain(config)
 
         assert len(chain) == 3
@@ -91,6 +94,7 @@ class TestDictionaryRegistry:
         )
 
         registry = DictionaryRegistry(tmp_path)
+        registry.load()
         chain = registry.build_provider_chain(config)
         assert len(chain) == 1
         assert isinstance(chain[0], JishoProvider)
@@ -107,6 +111,7 @@ class TestDictionaryRegistry:
         )
 
         registry = DictionaryRegistry(tmp_path)
+        registry.load()
         caplog.set_level(logging.WARNING)
         chain = registry.build_provider_chain(config)
         assert len(chain) == 1
@@ -119,6 +124,7 @@ class TestDictionaryRegistry:
         _seed_dict(tmp_path, "new-on-disk", "Surprise Dict")
 
         registry = DictionaryRegistry(tmp_path)
+        registry.load()
         assert registry.get("new-on-disk") is not None
 
     def test_dicts_root_is_file_returns_empty(self, tmp_path: Path):
@@ -127,11 +133,13 @@ class TestDictionaryRegistry:
         bad_root.write_text("oops")
 
         registry = DictionaryRegistry(bad_root)
+        registry.load()
         assert registry.get("anything") is None
 
     def test_dicts_root_missing_returns_empty(self, tmp_path: Path):
         """If dicts_root doesn't exist, registry stays empty."""
         registry = DictionaryRegistry(tmp_path / "ghost")
+        registry.load()
         assert registry.get("anything") is None
 
     def test_folder_without_index_sqlite_skipped(self, tmp_path: Path):
@@ -140,6 +148,7 @@ class TestDictionaryRegistry:
         _seed_dict(tmp_path, "real-dict", "Real")
 
         registry = DictionaryRegistry(tmp_path)
+        registry.load()
         assert registry.get("real-dict") is not None
         assert registry.get("no-db") is None
 
@@ -171,6 +180,7 @@ class TestDictionaryRegistry:
         )
 
         registry = DictionaryRegistry(tmp_path)
+        registry.load()
         # list_dicts still shows it (with schema_ok=False)
         meta = registry.get("stale-dict")
         assert meta is not None
