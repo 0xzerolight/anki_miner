@@ -60,7 +60,7 @@ class MediaExtractorService:
         else:
             screenshot_ext = "jpg"
         screenshot_file = f"{safe_word}_{timestamp}.{screenshot_ext}"
-        audio_file = f"{safe_word}_{timestamp}.mp3"
+        audio_file = f"{safe_word}_{timestamp}.{self.config.audio_format}"
 
         output_dir = temp_folder if temp_folder is not None else self.config.media_temp_folder
         screenshot_path = output_dir / screenshot_file
@@ -437,6 +437,12 @@ class MediaExtractorService:
         audio_start = max(0, start_time - self.config.audio_padding)
         audio_duration = duration + (self.config.audio_padding * 2)
 
+        # Resolve encoder for the configured format and probe ffmpeg for support
+        # before launching the encode. Cached probe; failure logs a clear error.
+        encoder = "libopus" if self.config.audio_format == "opus" else "libmp3lame"
+        if not self._check_encoder_available(encoder):
+            return False
+
         # Detect Japanese audio stream
         jp_stream = self._get_japanese_audio_stream(video_file)
 
@@ -464,12 +470,21 @@ class MediaExtractorService:
             [
                 "-vn",  # No video
                 "-acodec",
-                "libmp3lame",
-                "-q:a",
-                "2",  # Audio quality
-                str(output_path),
+                encoder,
+                "-b:a",
+                f"{self.config.audio_bitrate}k",
             ]
         )
+
+        # libopus rejects multi-channel input (e.g. 5.1 surround eac3 common in
+        # anime BD/WEB-DL releases) without an explicit channel mapping. Downmix
+        # to stereo — Anki flashcards play through headphones/laptop speakers,
+        # surround serves no purpose. MP3 (libmp3lame) tolerates 5.1 natively so
+        # we leave its channel layout alone to preserve existing behavior.
+        if self.config.audio_format == "opus":
+            cmd.extend(["-ac", "2"])
+
+        cmd.append(str(output_path))
 
         try:
             proc = subprocess.run(cmd, capture_output=True, timeout=30)
