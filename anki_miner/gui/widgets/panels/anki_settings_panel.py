@@ -185,7 +185,7 @@ class AnkiSettingsPanel(FormPanel):
         # Glossary field (optional second definition field — populated with
         # concatenated hits from all enabled dictionaries; Senren-toggle compatible).
         self.glossary_field_input = QLineEdit()
-        self.glossary_field_input.setPlaceholderText("Glossary (optional)")
+        self.glossary_field_input.setPlaceholderText("Glossary")
         self.glossary_field_input.setToolTip(
             "Anki field that receives every enabled dictionary's hit concatenated as "
             "Yomitan-format HTML. Leave blank to skip."
