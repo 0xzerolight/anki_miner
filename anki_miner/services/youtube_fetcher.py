@@ -18,35 +18,17 @@ from typing import Literal
 import psutil  # type: ignore[import-untyped]
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions.youtube import (
+    BotDetectionError,
+    CookieDatabaseLockedError,
+    FfmpegNotFoundError,
+    VideoTooLongError,
+    YouTubeFetchError,
+)
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube import FetchedMedia, SubMode, VideoInfo
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Exceptions
-# ---------------------------------------------------------------------------
-
-
-class FfmpegNotFoundError(Exception):
-    """Raised when ffmpeg cannot be located during preflight."""
-
-
-class YouTubeFetchError(Exception):
-    """Base class for YouTube fetch failures."""
-
-
-class BotDetectionError(YouTubeFetchError):
-    """Raised when yt-dlp hits the 'sign in to confirm' anti-bot flow."""
-
-
-class CookieDatabaseLockedError(YouTubeFetchError):
-    """Raised when yt-dlp cannot read a cookies-from-browser database."""
-
-
-class VideoTooLongError(YouTubeFetchError):
-    """Raised when a video's duration exceeds the configured maximum."""
 
 
 # ---------------------------------------------------------------------------
