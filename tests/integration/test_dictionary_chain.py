@@ -55,6 +55,7 @@ def test_first_hit_wins_indexed_before_jisho(tmp_path: Path) -> None:
     )
 
     registry = DictionaryRegistry(tmp_path)
+    registry.load()
     chain = registry.build_provider_chain(config)
     service = DefinitionService(config, providers=chain)
 
@@ -89,6 +90,7 @@ def test_falls_through_to_jisho_when_no_indexed_hit(tmp_path: Path) -> None:
     )
 
     registry = DictionaryRegistry(tmp_path)
+    registry.load()
     chain = registry.build_provider_chain(config)
     service = DefinitionService(config, providers=chain)
 
@@ -139,6 +141,7 @@ def test_glossary_concatenates_two_offline_dicts(tmp_path: Path) -> None:
     )
 
     registry = DictionaryRegistry(config.dicts_root)
+    registry.load()
     providers = registry.build_provider_chain(config)
     service = DefinitionService(config, providers)
 
@@ -189,6 +192,7 @@ def test_glossary_falls_back_to_jisho_when_no_offline_hit(tmp_path: Path) -> Non
             return {"data": [{"senses": [{"english_definitions": ["to eat"]}]}]}
 
     registry = DictionaryRegistry(config.dicts_root)
+    registry.load()
     providers = registry.build_provider_chain(config)
     service = DefinitionService(config, providers)
 

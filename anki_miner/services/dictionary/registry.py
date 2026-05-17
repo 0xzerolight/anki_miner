@@ -32,9 +32,8 @@ class DictionaryRegistry:
     def __init__(self, dicts_root: Path):
         self._root = dicts_root
         self._dicts: dict[str, DictMeta] = {}
-        self._rescan()
 
-    def _rescan(self) -> None:
+    def load(self) -> None:
         self._dicts.clear()
         if not self._root.is_dir():
             return
