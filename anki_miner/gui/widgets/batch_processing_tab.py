@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QFont, QKeySequence, QShortcut
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -24,6 +24,7 @@ from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.service_factory import create_episode_processor
+from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.panels import QueuePanel
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
     from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
 
 
-class BatchProcessingTab(QWidget):
+class BatchProcessingTab(MiningTabBase):
     """Enhanced batch processing tab with modern UI design.
 
     Features:
@@ -76,16 +77,13 @@ class BatchProcessingTab(QWidget):
 
         self.batch_queue = BatchQueue()
 
-        # Connect progress callback signals
-        self.progress_callback.start_signal.connect(self._on_progress_start)
-        self.progress_callback.progress_signal.connect(self._on_progress_update)
-        self.progress_callback.complete_signal.connect(self._on_progress_complete)
-        self.progress_callback.error_signal.connect(self._on_progress_error)
+        # Connect progress callback signals via shared base.
+        self._wire_progress_callback(self.progress_callback)
 
         self._setup_ui()
 
-        # Enable drag-and-drop on the tab
-        self.setAcceptDrops(True)
+        # Enable drag-and-drop on the tab (subclass implements dragEnter/drop filtering).
+        self._setup_drag_drop()
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -577,15 +575,6 @@ class BatchProcessingTab(QWidget):
             f"{self._current_phase} \u2014 done" if self._current_phase else "Complete"
         )
 
-    def _on_progress_error(self, item: str, error: str) -> None:
-        """Handle per-item error from progress callback.
-
-        Args:
-            item: Description of the failed item
-            error: Error message
-        """
-        self.log_widget.append_error(f"Failed: {item} \u2014 {error}")
-
     def _on_processing_finished(self, results: list) -> None:
         """Handle processing finished signal (for manual pair processing).
 
@@ -625,11 +614,6 @@ class BatchProcessingTab(QWidget):
             if Path(url.toLocalFile()).is_dir():
                 event.acceptProposedAction()
                 return
-
-    def dragMoveEvent(self, event: QDragMoveEvent | None) -> None:
-        """Accept drag move events."""
-        if event is not None:
-            event.acceptProposedAction()
 
     def dropEvent(self, event: QDropEvent | None) -> None:
         """Route dropped folders to the appropriate folder selector."""
