@@ -64,7 +64,7 @@ orchestration/
   │
   ▼
 services/
-services/providers/
+services/dictionary/providers/
   │
 ┌───────┼───────┐
 ▼       ▼       ▼
@@ -149,7 +149,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 **Dictionary providers** (`services/dictionary/providers/`):
 
 - **IndexedDictProvider**: SQLite-backed offline provider used by every on-disk dictionary (JMdict and user-loaded Yomitan dicts). On first launch, JMdict XML is migrated to a SQLite index at `~/.anki_miner/dicts/jmdict-english/index.sqlite`; lookups run against that index. The read-only connection is opened with `check_same_thread=False` so a single instance is safe to share across worker threads.
-- **DictionaryRegistry**: discovers indexed dicts on disk and builds the provider chain from `config.dictionary_chain`. The chain is first-hit-wins, with `JishoProvider` appended as the online fallback.
+- **DictionaryRegistry**: scans `config.dicts_root` (`ANKI_MINER_HOME/dicts/`) for installed dictionaries and builds the provider chain from `config.dictionary_chain`. Disk I/O happens in the explicit `load()` call, not in `__init__`. The chain is first-hit-wins, with `JishoProvider` appended as the online fallback.
 - **JishoProvider**: REST client for the jisho.org API. Always available. Rate-limited with a configurable delay (`jisho_delay`).
 
 ## Orchestration
@@ -179,7 +179,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 - **Anki:** deck name, note type, field mappings, AnkiConnect URL
 - **Media:** audio padding, screenshot offset, temp folder, subtitle offset
 - **Filtering:** min word length, allowed POS tags, excluded subtypes, deduplication
-- **Dictionary:** `dictionary_chain` (the runtime-authoritative ordered list of providers — indexed dicts and Jisho, each toggleable), `dicts_root` (where installed `.sqlite` indexes live), Jisho URL/delay. Legacy `jmdict_path` + `use_offline_dict` are retained one release for first-launch migration only.
+- **Dictionary:** `dictionary_chain` (the runtime-authoritative ordered list of providers — indexed dicts and Jisho, each toggleable), `dicts_root` (root for all installed `.sqlite` indexes; defaults to `ANKI_MINER_HOME/dicts/` via the `ANKI_MINER_HOME` constant in `config/paths.py`), Jisho URL/delay. Legacy `jmdict_path` + `use_offline_dict` are retained one release for first-launch migration only.
 - **Optional data:** pitch accent, frequency, known words DB, blacklist/whitelist paths and toggles
 - **History/analytics:** DB paths, enable flags
 - **Performance:** max parallel workers (default 6)
