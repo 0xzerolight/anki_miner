@@ -264,10 +264,20 @@ class MediaExtractorService:
         if not self._check_encoder_available(encoder):
             return False
 
-        # Clip duration: capped by word duration so we never run past subtitle end.
-        # Floor at 0.5s for very short subtitles to avoid 0-frame clips.
-        configured = float(self.config.screenshot_animated_clip_duration)
-        clip_duration = min(configured, max(duration, 0.5))
+        # Clip timing:
+        # - When `screenshot_animated_match_audio` is enabled, the clip spans the
+        #   full audio range (subtitle window + audio padding on both sides) so the
+        #   visual matches the audio exactly.
+        # - Otherwise, clip duration is capped by subtitle duration and configurable.
+        # In both cases a 0.5s floor avoids 0-frame clips on very short subtitles.
+        if self.config.screenshot_animated_match_audio:
+            pad = float(self.config.audio_padding)
+            clip_start = max(0.0, start_time - pad)
+            clip_duration = max(duration + 2 * pad, 0.5)
+        else:
+            clip_start = start_time
+            configured = float(self.config.screenshot_animated_clip_duration)
+            clip_duration = min(configured, max(duration, 0.5))
 
         fps = int(self.config.screenshot_animated_fps)
         height = int(self.config.screenshot_animated_height)
@@ -277,7 +287,7 @@ class MediaExtractorService:
             "ffmpeg",
             "-y",
             "-ss",
-            str(start_time),
+            str(clip_start),
             "-t",
             str(clip_duration),
             "-i",

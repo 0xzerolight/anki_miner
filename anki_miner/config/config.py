@@ -63,6 +63,9 @@ class AnkiMinerConfig:
     screenshot_animated: bool = False
     screenshot_animated_format: str = "avif"  # "avif" | "webp"
     screenshot_animated_clip_duration: float = 2.0  # seconds; capped by word.duration
+    screenshot_animated_match_audio: bool = (
+        False  # If True, clip spans full audio range (subtitle + audio_padding on both sides), overriding clip_duration
+    )
     screenshot_animated_fps: int = 20
     screenshot_animated_height: int = 720  # scale-to-height, aspect preserved
     screenshot_animated_quality: int = 30  # 0-100 user scale, mapped per codec
