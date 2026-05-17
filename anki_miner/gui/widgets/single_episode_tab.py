@@ -5,7 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QKeySequence, QShortcut
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -30,6 +30,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.service_factory import create_episode_processor
+from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import configure_expanding_container, make_label_fit_text
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -39,7 +40,7 @@ VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".m4v", ".mov"}
 SUBTITLE_EXTENSIONS = {".ass", ".srt", ".ssa"}
 
 
-class SingleEpisodeTab(QWidget):
+class SingleEpisodeTab(MiningTabBase):
     """Tab for processing a single episode.
 
     This tab allows users to select a video and subtitle file, adjust subtitle
@@ -81,16 +82,13 @@ class SingleEpisodeTab(QWidget):
         self._curation_result: list = []
         self._curation_requested.connect(self._on_curation_requested)
 
-        # Connect progress callback signals
-        self.progress_callback.start_signal.connect(self._on_progress_start)
-        self.progress_callback.progress_signal.connect(self._on_progress_update)
-        self.progress_callback.complete_signal.connect(self._on_progress_complete)
-        self.progress_callback.error_signal.connect(self._on_progress_error)
+        # Connect progress callback signals via shared base.
+        self._wire_progress_callback(self.progress_callback)
 
         self._setup_ui()
 
-        # Enable drag-and-drop on the tab
-        self.setAcceptDrops(True)
+        # Enable drag-and-drop on the tab (subclass implements dragEnter/drop filtering).
+        self._setup_drag_drop()
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -429,15 +427,6 @@ class SingleEpisodeTab(QWidget):
         """Handle progress complete signal."""
         self.progress_widget.set_status(f"{self._current_phase} \u2014 done" if self._current_phase else "Complete")
 
-    def _on_progress_error(self, item: str, error: str) -> None:
-        """Handle per-item error from progress callback.
-
-        Args:
-            item: Description of the failed item
-            error: Error message
-        """
-        self.log_widget.append_error(f"Failed: {item} \u2014 {error}")
-
     def _curation_bridge(self, words: list) -> list:
         """Thread-safe bridge: called from worker thread, shows dialog on GUI thread.
 
@@ -548,11 +537,6 @@ class SingleEpisodeTab(QWidget):
             if suffix in VIDEO_EXTENSIONS or suffix in SUBTITLE_EXTENSIONS:
                 event.acceptProposedAction()
                 return
-
-    def dragMoveEvent(self, event: QDragMoveEvent | None) -> None:
-        """Accept drag move events."""
-        if event is not None:
-            event.acceptProposedAction()
 
     def dropEvent(self, event: QDropEvent | None) -> None:
         """Route dropped files to the appropriate file selector."""
