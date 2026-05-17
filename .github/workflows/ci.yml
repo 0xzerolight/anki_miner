@@ -47,6 +47,26 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
 
+  smoke-min-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Qt system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libpulse0 libxkbcommon0
+      - name: Install with floor versions of fragile deps
+        run: |
+          pip install -e ".[dev]"
+          pip install "yt-dlp==2026.3.0" "psutil==5.9.0"
+      - name: Smoke-test YouTube layer at floor versions
+        run: pytest tests/unit/test_youtube_fetcher.py tests/unit/test_youtube_workspace_cleanup.py -m "not youtube" -q
+        env:
+          QT_QPA_PLATFORM: offscreen
+
   wheel-assets:
     runs-on: ubuntu-latest
     steps:
