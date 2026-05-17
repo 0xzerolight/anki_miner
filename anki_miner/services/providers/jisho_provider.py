@@ -82,7 +82,7 @@ class JishoProvider:
             return (
                 '<div class="yomitan-glossary">'
                 '<ol data-count="1">'
-                '<li data-dictionary="Jisho API">'
+                f'<li data-dictionary="{self.name}">'
                 f"{inner}"
                 "</li>"
                 "</ol>"
