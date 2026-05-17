@@ -17,7 +17,11 @@ MODULE = "anki_miner.services.media_extractor"
 def service(test_config):
     """Create a MediaExtractorService with ensure_directory patched out."""
     with patch(f"{MODULE}.ensure_directory"):
-        return MediaExtractorService(test_config)
+        svc = MediaExtractorService(test_config)
+    # Skip audio encoder probe; audio tests use mocked subprocess.run.
+    svc._animated_encoder_ok["libmp3lame"] = True
+    svc._animated_encoder_ok["libopus"] = True
+    return svc
 
 
 @pytest.fixture
@@ -643,6 +647,144 @@ class TestExtractAudio:
             result = service._extract_audio(video_file, 1.0, 2.0, output_path)
 
         assert result is False
+
+    def test_uses_libmp3lame_when_format_mp3(self, service, video_file, tmp_path):
+        """Should pass -acodec libmp3lame when audio_format='mp3' (Issue #18)."""
+        output_path = tmp_path / "out.mp3"
+        output_path.write_bytes(b"\xff\xfbfake-mp3")
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+        ):
+            service._extract_audio(video_file, 1.0, 2.0, output_path)
+
+        cmd = mock_run.call_args[0][0]
+        codec_index = cmd.index("-acodec")
+        assert cmd[codec_index + 1] == "libmp3lame"
+
+    def test_uses_libopus_when_format_opus(self, test_config, video_file, tmp_path):
+        """Should pass -acodec libopus when audio_format='opus' (Issue #18)."""
+        cfg = dataclasses.replace(test_config, audio_format="opus", audio_bitrate=64)
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+        svc._animated_encoder_ok["libopus"] = True
+
+        output_path = tmp_path / "out.opus"
+        output_path.write_bytes(b"OggS")
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(svc, "_get_japanese_audio_stream", return_value=None),
+        ):
+            svc._extract_audio(video_file, 1.0, 2.0, output_path)
+
+        cmd = mock_run.call_args[0][0]
+        codec_index = cmd.index("-acodec")
+        assert cmd[codec_index + 1] == "libopus"
+
+    def test_passes_configured_bitrate(self, test_config, video_file, tmp_path):
+        """Should pass -b:a {bitrate}k from config (Issue #18)."""
+        cfg = dataclasses.replace(test_config, audio_bitrate=64)
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+        svc._animated_encoder_ok["libmp3lame"] = True
+
+        output_path = tmp_path / "out.mp3"
+        output_path.write_bytes(b"\xff\xfbfake")
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(svc, "_get_japanese_audio_stream", return_value=None),
+        ):
+            svc._extract_audio(video_file, 1.0, 2.0, output_path)
+
+        cmd = mock_run.call_args[0][0]
+        bitrate_index = cmd.index("-b:a")
+        assert cmd[bitrate_index + 1] == "64k"
+
+    def test_returns_false_when_encoder_unavailable(self, service, video_file, tmp_path):
+        """Should hard-fail (return False) when the configured encoder is missing (Issue #18)."""
+        output_path = tmp_path / "out.mp3"
+
+        with (
+            patch.object(service, "_check_encoder_available", return_value=False),
+            patch(f"{MODULE}.subprocess.run") as mock_run,
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+        ):
+            result = service._extract_audio(video_file, 1.0, 2.0, output_path)
+
+        assert result is False
+        # No ffmpeg encode call should have been made.
+        mock_run.assert_not_called()
+
+    def test_opus_downmixes_to_stereo(self, test_config, video_file, tmp_path):
+        """Should pass -ac 2 when opus to avoid libopus 5.1 channel-mapping error (Issue #18)."""
+        cfg = dataclasses.replace(test_config, audio_format="opus", audio_bitrate=64)
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+        svc._animated_encoder_ok["libopus"] = True
+
+        output_path = tmp_path / "out.opus"
+        output_path.write_bytes(b"OggS")
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(svc, "_get_japanese_audio_stream", return_value=None),
+        ):
+            svc._extract_audio(video_file, 1.0, 2.0, output_path)
+
+        cmd = mock_run.call_args[0][0]
+        ac_index = cmd.index("-ac")
+        assert cmd[ac_index + 1] == "2"
+
+    def test_mp3_does_not_force_stereo(self, service, video_file, tmp_path):
+        """MP3 path preserves source channel layout (libmp3lame handles 5.1 natively)."""
+        output_path = tmp_path / "out.mp3"
+        output_path.write_bytes(b"\xff\xfbfake")
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+        ):
+            service._extract_audio(video_file, 1.0, 2.0, output_path)
+
+        cmd = mock_run.call_args[0][0]
+        assert "-ac" not in cmd
+
+    def test_filename_extension_matches_format(
+        self, test_config, video_file, make_tokenized_word, tmp_path
+    ):
+        """extract_media should produce .opus filename when audio_format='opus' (Issue #18)."""
+        cfg = dataclasses.replace(test_config, audio_format="opus", media_temp_folder=tmp_path)
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+
+        word = make_tokenized_word(lemma="食べる", start_time=1.0, duration=2.0)
+
+        with (
+            patch.object(svc, "_extract_screenshot", return_value=True),
+            patch.object(svc, "_extract_audio", return_value=True),
+        ):
+            result = svc.extract_media(video_file, word)
+
+        assert result.audio_filename is not None
+        assert result.audio_filename.endswith(".opus")
 
 
 class TestGetJapaneseAudioStream:

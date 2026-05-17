@@ -9,6 +9,7 @@ class MediaSettingsPanel(FormPanel):
     """Panel for media extraction settings.
 
     Provides:
+    - Audio format + bitrate configuration
     - Audio padding configuration
     - Screenshot offset configuration
     - Max parallel workers configuration
@@ -22,6 +23,31 @@ class MediaSettingsPanel(FormPanel):
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
+        # Audio format (Issue #18)
+        self.audio_format_combo = QComboBox()
+        self.audio_format_combo.addItems(["mp3", "opus"])
+        self.audio_format_combo.setToolTip(
+            "Opus delivers higher quality than MP3 at low bitrates (~64 kbps). "
+            "Requires ffmpeg with libopus support."
+        )
+        self.add_field(
+            "Audio Format",
+            self.audio_format_combo,
+            helper="MP3: universal compatibility. Opus: smaller files at equivalent quality.",
+        )
+
+        # Audio bitrate (Issue #18)
+        self.audio_bitrate_spinbox = QSpinBox()
+        self.audio_bitrate_spinbox.setRange(32, 320)
+        self.audio_bitrate_spinbox.setSingleStep(16)
+        self.audio_bitrate_spinbox.setSuffix(" kbps")
+        self.audio_bitrate_spinbox.setToolTip("Higher = better quality, larger files")
+        self.add_field(
+            "Audio Bitrate",
+            self.audio_bitrate_spinbox,
+            helper="64-96 kbps Opus or 128-192 kbps MP3 are good defaults.",
+        )
+
         # Audio padding
         self.audio_padding_spinbox = QDoubleSpinBox()
         self.audio_padding_spinbox.setRange(0.0, 5.0)
@@ -113,11 +139,7 @@ class MediaSettingsPanel(FormPanel):
         self.animated_quality_spinbox = QSpinBox()
         self.animated_quality_spinbox.setRange(0, 100)
         self.animated_quality_spinbox.setToolTip("0 = smallest file, 100 = best quality")
-        self.add_field(
-            "Quality",
-            self.animated_quality_spinbox,
-            helper="Mind your AnkiWeb media quota at high quality settings",
-        )
+        self.add_field("Quality", self.animated_quality_spinbox)
 
         self.animated_checkbox.toggled.connect(self._set_animated_enabled)
         self.animated_match_audio_checkbox.toggled.connect(self._set_match_audio)
