@@ -240,7 +240,7 @@ def _copy_dict_media(zip_root: Path, dest: Path, rel_paths: set[str]) -> None:
 
     For each path encountered by the renderer (e.g. `sankoku8/svg-accent/X.svg`),
     we copy the file to ``dest/<flattened-basename>`` so AnkiService can later
-    locate it via ``<DICTS_ROOT>/<dict_id>/media/<flattened-basename>``. The
+    locate it via ``<dicts_root>/<dict_id>/media/<flattened-basename>``. The
     flattened form matches what the renderer wrote into the Anki `<img src>`,
     so this is a stable, reversible mapping.
     """

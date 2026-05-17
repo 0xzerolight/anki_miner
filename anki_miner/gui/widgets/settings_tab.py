@@ -75,7 +75,7 @@ class SettingsTab(QWidget):
         # Create panels using extracted components
         self.anki_panel = AnkiSettingsPanel()
         self.media_panel = MediaSettingsPanel()
-        self.dictionary_panel = DictionarySettingsPanel()
+        self.dictionary_panel = DictionarySettingsPanel(self.config.dicts_root)
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
 
@@ -192,6 +192,7 @@ class SettingsTab(QWidget):
         self.media_panel._set_match_audio(self.config.screenshot_animated_match_audio)
 
         # Dictionary chain
+        self.dictionary_panel.set_dicts_root(self.config.dicts_root)
         self.dictionary_panel.set_chain(self.config.dictionary_chain)
 
         # Pitch accent settings
@@ -431,7 +432,7 @@ class SettingsTab(QWidget):
         if not zip_path_str:
             return
 
-        dest_root = Path.home() / ".anki_miner" / "dicts"
+        dest_root = self.config.dicts_root
         dlg = QProgressDialog("Importing dictionary…", "Cancel", 0, 100, self)
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
@@ -498,7 +499,7 @@ class SettingsTab(QWidget):
             )
             return
 
-        dest_root = Path.home() / ".anki_miner" / "dicts"
+        dest_root = self.config.dicts_root
         dlg = QProgressDialog("Re-importing dictionary…", "Cancel", 0, 100, self)
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
@@ -557,7 +558,7 @@ class SettingsTab(QWidget):
             )
             return
 
-        dest_root = Path.home() / ".anki_miner" / "dicts"
+        dest_root = self.config.dicts_root
         dlg = QProgressDialog("Reimporting JMdict…", "Cancel", 0, 100, self)
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()

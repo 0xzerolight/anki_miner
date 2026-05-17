@@ -570,7 +570,7 @@ class MainWindow(QMainWindow):
         """One-time: migrate legacy JMdict XML into a SQLite index in the background."""
         from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 
-        dicts_root = Path.home() / ".anki_miner" / "dicts"
+        dicts_root = self.config.dicts_root
         if not _needs_jmdict_migration(self.config.jmdict_path, dicts_root, self.config.dictionary_chain):
             return
 
