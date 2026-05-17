@@ -11,6 +11,7 @@ import requests
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.interfaces import ProgressCallback
+from anki_miner.models import CardPayload
 from anki_miner.services._ankiconnect import post_action
 from anki_miner.services.dictionary.yomitan_renderer import DICT_MEDIA_CLASS
 
@@ -260,14 +261,13 @@ class AnkiService:
 
     def create_cards_batch(
         self,
-        word_data_list: list[tuple],
+        word_data_list: list[CardPayload],
         progress_callback: ProgressCallback | None = None,
     ) -> int:
         """Create multiple Anki cards in batches.
 
         Args:
-            word_data_list: List of (word, media, definition) or
-                            (word, media, definition, extra_fields) tuples
+            word_data_list: List of CardPayload objects to submit
             progress_callback: Optional callback for progress reporting
 
         Returns:
@@ -290,11 +290,9 @@ class AnkiService:
         # the batch. Done up-front so storeMediaFile races finish before notes
         # reference the filenames; AnkiConnect serializes per-connection, safe.
         for item in word_data_list:
-            definition = item[2] if len(item) > 2 else None
-            extra_fields = item[3] if len(item) > 3 else None
-            self._upload_dict_media(definition if isinstance(definition, str) else None)
-            if extra_fields and isinstance(extra_fields.get("glossary"), str):
-                self._upload_dict_media(extra_fields["glossary"])
+            self._upload_dict_media(item.definition)
+            if item.extra_fields and isinstance(item.extra_fields.get("glossary"), str):
+                self._upload_dict_media(item.extra_fields["glossary"])
 
         # Then create notes in batches
         batch_size = 50
@@ -306,12 +304,10 @@ class AnkiService:
             # Build notes array for this batch
             notes = []
             for item in batch:
-                # Support both 3-tuples and 4-tuples for backwards compatibility
-                if len(item) == 4:
-                    word, media, definition, extra_fields = item
-                else:
-                    word, media, definition = item
-                    extra_fields = None
+                word = item.word
+                media = item.media
+                definition = item.definition
+                extra_fields = item.extra_fields
 
                 # Pull glossary out of extra_fields BEFORE the OPTIONAL pass —
                 # OPTIONAL_FIELD_KEYS html.escape()s its values, but glossary
@@ -400,12 +396,12 @@ class AnkiService:
 
     def _store_media_files_batch(
         self,
-        word_data_list: list[tuple],
+        word_data_list: list[CardPayload],
     ) -> set[str]:
         """Store all media files in Anki collection.
 
         Args:
-            word_data_list: List of (word, media, definition[, extra_fields]) tuples
+            word_data_list: List of CardPayload objects whose media should be uploaded
 
         Returns:
             Set of filenames that were successfully stored
@@ -417,7 +413,7 @@ class AnkiService:
             batch = word_data_list[i : i + batch_size]
 
             for item in batch:
-                media = item[1]  # media is always the second element
+                media = item.media
                 for filename, src_path in [
                     (media.screenshot_filename, media.screenshot_path),
                     (media.audio_filename, media.audio_path),

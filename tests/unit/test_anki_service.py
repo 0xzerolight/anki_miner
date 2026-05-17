@@ -8,7 +8,7 @@ import pytest
 import requests
 
 from anki_miner.exceptions import AnkiConnectionError
-from anki_miner.models import MediaData
+from anki_miner.models import CardPayload, MediaData
 from anki_miner.services.anki_service import AnkiService
 
 # ---------------------------------------------------------------------------
@@ -373,12 +373,12 @@ class TestCreateCardsBatch:
     """Tests for AnkiService.create_cards_batch."""
 
     def _make_word_data(self, make_tokenized_word, n=1, prefix="word"):
-        """Helper to create a list of (word, media, definition) tuples."""
+        """Helper to create a list of CardPayload objects."""
         items = []
         for i in range(n):
             word = make_tokenized_word(lemma=f"{prefix}_{i}")
             media = MediaData()  # no files to avoid store_media_file IO
-            items.append((word, media, f"def_{i}"))
+            items.append(CardPayload(word=word, media=media, definition=f"def_{i}"))
         return items
 
     def test_empty_list_returns_zero(self, test_config):
@@ -502,7 +502,7 @@ class TestCreateCardsBatch:
         resp = _mock_response(result=[12345])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            result = service.create_cards_batch([(word, media, "definition")])
+            result = service.create_cards_batch([CardPayload(word=word, media=media, definition="definition")])
 
         assert result == 1
         payload = mock_post.call_args[1]["json"]
@@ -539,7 +539,7 @@ class TestStoreMediaFilesBatch:
         resp = _mock_response(result="ok")
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            service._store_media_files_batch([(word, media, "def")])
+            service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
 
         # Two calls: one for screenshot, one for audio
         assert mock_post.call_count == 2
@@ -564,7 +564,7 @@ class TestStoreMediaFilesBatch:
         resp = _mock_response(result="ok")
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            service._store_media_files_batch([(word, media, "def")])
+            service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
 
         # No calls because files don't exist
         mock_post.assert_not_called()
@@ -587,7 +587,7 @@ class TestStoreMediaFilesBatch:
             side_effect=requests.exceptions.ConnectionError("fail"),
         ):
             # Should not raise
-            service._store_media_files_batch([(word, media, "def")])
+            service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
 
 
 # ---------------------------------------------------------------------------
@@ -629,11 +629,11 @@ class TestOptionalFields:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             service.create_cards_batch(
                 [
-                    (
-                        word,
-                        media,
-                        "definition",
-                        {"pitch_position": "0", "pitch_category": "平板", "frequency": "500"},
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition="definition",
+                        extra_fields={"pitch_position": "0", "pitch_category": "平板", "frequency": "500"},
                     )
                 ]
             )
@@ -654,14 +654,23 @@ class TestOptionalFields:
         resp = _mock_response(result=[12345])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            service.create_cards_batch([(word, media, "definition", {"unknown_key": "some_value"})])
+            service.create_cards_batch(
+                [
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition="definition",
+                        extra_fields={"unknown_key": "some_value"},
+                    )
+                ]
+            )
 
         payload = mock_post.call_args[1]["json"]
         note_fields = payload["params"]["notes"][0]["fields"]
         assert "some_value" not in note_fields.values()
 
-    def test_batch_with_4_tuples_and_extra_fields(self, test_config, make_tokenized_word):
-        """Should include optional fields when batch items are 4-tuples."""
+    def test_batch_with_extra_fields(self, test_config, make_tokenized_word):
+        """Should include optional fields when CardPayload has extra_fields set."""
         service = AnkiService(test_config)
         word = make_tokenized_word()
         media = MediaData()
@@ -670,7 +679,9 @@ class TestOptionalFields:
         resp = _mock_response(result=[12345])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            result = service.create_cards_batch([(word, media, "definition", extra)])
+            result = service.create_cards_batch(
+                [CardPayload(word=word, media=media, definition="definition", extra_fields=extra)]
+            )
 
         assert result == 1
         payload = mock_post.call_args[1]["json"]
@@ -722,7 +733,7 @@ class TestReadingFields:
 
         resp = _mock_response(result=[12345])
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            service.create_cards_batch([(word, media, "definition")])
+            service.create_cards_batch([CardPayload(word=word, media=media, definition="definition")])
 
         payload = mock_post.call_args[1]["json"]
         note_fields = payload["params"]["notes"][0]["fields"]
@@ -744,7 +755,7 @@ class TestReadingFields:
 
         resp = _mock_response(result=[55555])
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            service.create_cards_batch([(word, media, "definition")])
+            service.create_cards_batch([CardPayload(word=word, media=media, definition="definition")])
 
         payload = mock_post.call_args[1]["json"]
         note_fields = payload["params"]["notes"][0]["fields"]
@@ -811,12 +822,12 @@ class TestLastCreatedNoteIds:
     """Tests for AnkiService.last_created_note_ids tracking."""
 
     def _make_word_data(self, make_tokenized_word, n=1):
-        """Helper to create a list of (word, media, definition) tuples."""
+        """Helper to create a list of CardPayload objects."""
         items = []
         for i in range(n):
             word = make_tokenized_word(lemma=f"word_{i}")
             media = MediaData()
-            items.append((word, media, f"def_{i}"))
+            items.append(CardPayload(word=word, media=media, definition=f"def_{i}"))
         return items
 
     def test_batch_populates_last_created_note_ids(self, test_config, make_tokenized_word):
@@ -976,7 +987,7 @@ class TestConfigurableFields:
         resp = _mock_response(result=[12345])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            service.create_cards_batch([(word, media, "def")])
+            service.create_cards_batch([CardPayload(word=word, media=media, definition="def")])
 
         payload = mock_post.call_args[1]["json"]
         note_fields = payload["params"]["notes"][0]["fields"]
@@ -1020,7 +1031,7 @@ class TestDictMediaUpload:
         with patch(
             "anki_miner.services._ankiconnect.requests.post", side_effect=[store_resp, create_resp]
         ) as mock_post:
-            service.create_cards_batch([(word, media, definition)])
+            service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
 
         # First call is storeMediaFile for the dict asset
         store_call = mock_post.call_args_list[0]
@@ -1045,9 +1056,9 @@ class TestDictMediaUpload:
             "anki_miner.services._ankiconnect.requests.post",
             side_effect=[store_resp, create_resp, create_resp, create_resp],
         ) as mock_post:
-            service.create_cards_batch([(word, media, definition)])
-            service.create_cards_batch([(word, media, definition)])
-            service.create_cards_batch([(word, media, definition)])
+            service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
+            service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
+            service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
 
         # Three card creations + exactly one media upload.
         store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
@@ -1070,8 +1081,8 @@ class TestDictMediaUpload:
             caplog.at_level(logging.WARNING),
             patch("anki_miner.services._ankiconnect.requests.post", return_value=create_resp) as mock_post,
         ):
-            service.create_cards_batch([(word, media, definition)])
-            service.create_cards_batch([(word, media, definition)])
+            service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
+            service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
 
         # No storeMediaFile attempted; warning logged once (cached after first).
         store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
@@ -1093,7 +1104,7 @@ class TestDictMediaUpload:
         create_resp = _mock_response(result=[12345])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=create_resp) as mock_post:
-            service.create_cards_batch([(word, media, definition)])
+            service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
 
         store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
         assert len(store_calls) == 0
@@ -1113,7 +1124,7 @@ class TestDictMediaUpload:
             # Duplicate of the first — must not re-upload.
             '<img class="anki-miner-dict-media" src="d1__svg-accent_X.svg">',
         ]
-        word_data_list = [(word, media, d) for d in defs]
+        word_data_list = [CardPayload(word=word, media=media, definition=d) for d in defs]
 
         store_resp = _mock_response(result=None)
         create_resp = _mock_response(result=[1, 2, 3])
@@ -1162,7 +1173,7 @@ class TestAnkiTagsConfig:
         resp = _mock_response(result=[12345])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            count = service.create_cards_batch([(word, media, "definition")])
+            count = service.create_cards_batch([CardPayload(word=word, media=media, definition="definition")])
 
         assert count == 1
         payload = mock_post.call_args[1]["json"]
@@ -1226,7 +1237,16 @@ class TestGlossaryFieldRouting:
         resp = _mock_response(result=[123])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            result = service.create_cards_batch([(word, media, "single-def", {"glossary": self._GLOSSARY_HTML})])
+            result = service.create_cards_batch(
+                [
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition="single-def",
+                        extra_fields={"glossary": self._GLOSSARY_HTML},
+                    )
+                ]
+            )
 
         assert result == 1
         payload = mock_post.call_args[1]["json"]
@@ -1245,7 +1265,16 @@ class TestGlossaryFieldRouting:
         resp = _mock_response(result=[123])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            result = service.create_cards_batch([(word, media, "single-def", {"glossary": self._GLOSSARY_HTML})])
+            result = service.create_cards_batch(
+                [
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition="single-def",
+                        extra_fields={"glossary": self._GLOSSARY_HTML},
+                    )
+                ]
+            )
 
         assert result == 1
         payload = mock_post.call_args[1]["json"]
@@ -1268,7 +1297,16 @@ class TestGlossaryFieldRouting:
         resp = _mock_response(result=[123])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            service.create_cards_batch([(word, media, "def", {"glossary": self._GLOSSARY_HTML})])
+            service.create_cards_batch(
+                [
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition="def",
+                        extra_fields={"glossary": self._GLOSSARY_HTML},
+                    )
+                ]
+            )
 
         payload = mock_post.call_args[1]["json"]
         note = payload["params"]["notes"][0]
@@ -1287,11 +1325,11 @@ class TestGlossaryFieldRouting:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             result = service.create_cards_batch(
                 [
-                    (
-                        word,
-                        media,
-                        "def",
-                        {
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition="def",
+                        extra_fields={
                             "glossary": self._GLOSSARY_HTML,
                             "pitch_position": "1",
                             "pitch_category": "頭高",
@@ -1339,7 +1377,16 @@ class TestGlossaryFieldRouting:
         with patch(
             "anki_miner.services._ankiconnect.requests.post", side_effect=[store_resp, create_resp]
         ) as mock_post:
-            result = service.create_cards_batch([(word, media, "def", {"glossary": glossary_with_media})])
+            result = service.create_cards_batch(
+                [
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition="def",
+                        extra_fields={"glossary": glossary_with_media},
+                    )
+                ]
+            )
 
         assert result == 1
         store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
@@ -1355,12 +1402,21 @@ class TestGlossaryFieldRouting:
         resp = _mock_response(result=[123])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
-            result = service.create_cards_batch([(word, media, "def", {"pitch_position": "0"})])
+            result = service.create_cards_batch(
+                [
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition="def",
+                        extra_fields={"pitch_position": "0"},
+                    )
+                ]
+            )
 
         assert result == 1
 
     def test_none_extra_fields_does_not_crash(self, test_config, make_tokenized_word):
-        """3-tuple (no extra_fields) must still work fine after glossary wiring."""
+        """CardPayload with default extra_fields=None must still work fine after glossary wiring."""
         service = AnkiService(test_config)
         word = make_tokenized_word()
         media = MediaData()
@@ -1368,6 +1424,6 @@ class TestGlossaryFieldRouting:
         resp = _mock_response(result=[123])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
-            result = service.create_cards_batch([(word, media, "def")])
+            result = service.create_cards_batch([CardPayload(word=word, media=media, definition="def")])
 
         assert result == 1
