@@ -1427,3 +1427,144 @@ class TestGlossaryFieldRouting:
             result = service.create_cards_batch([CardPayload(word=word, media=media, definition="def")])
 
         assert result == 1
+
+
+# ---------------------------------------------------------------------------
+# TestExistingVocabCache
+# ---------------------------------------------------------------------------
+
+
+class TestExistingVocabCache:
+    """Tests for the session-scoped vocabulary cache on AnkiService."""
+
+    def _find_resp(self, ids=(1,)):
+        return _mock_response(result=list(ids))
+
+    def _notes_resp(self, words):
+        return _mock_response(result=[{"fields": {"word": {"value": w}}} for w in words])
+
+    def test_second_call_returns_cached_without_requerying(self, test_config):
+        """Second call must return the cached set without hitting AnkiConnect again."""
+        service = AnkiService(test_config)
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[["1"], [{"fields": {"word": {"value": "食べる"}}}]],
+        ) as mock_pa:
+            result1 = service.get_existing_vocabulary()
+            result2 = service.get_existing_vocabulary()
+
+        # post_action should only have been called for the first query
+        assert mock_pa.call_count == 2  # findNotes + notesInfo, then no more
+        assert result1 == result2 == {"食べる"}
+
+    def test_cache_starts_as_none(self, test_config):
+        """Cache field should be None before first call."""
+        service = AnkiService(test_config)
+        assert service._existing_vocab_cache is None
+
+    def test_cache_populated_after_first_call(self, test_config):
+        """Cache is set after a successful get_existing_vocabulary call."""
+        service = AnkiService(test_config)
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[1], [{"fields": {"word": {"value": "飲む"}}}]],
+        ):
+            service.get_existing_vocabulary()
+
+        assert service._existing_vocab_cache == {"飲む"}
+
+    def test_invalidate_sets_cache_to_none(self, test_config):
+        """invalidate_existing_vocabulary_cache() resets cache to None."""
+        service = AnkiService(test_config)
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[1], [{"fields": {"word": {"value": "走る"}}}]],
+        ):
+            service.get_existing_vocabulary()
+
+        assert service._existing_vocab_cache is not None
+        service.invalidate_existing_vocabulary_cache()
+        assert service._existing_vocab_cache is None
+
+    def test_invalidate_forces_refresh_on_next_call(self, test_config):
+        """After invalidation, next call re-queries AnkiConnect."""
+        service = AnkiService(test_config)
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[1], [{"fields": {"word": {"value": "走る"}}}]],
+        ):
+            service.get_existing_vocabulary()
+
+        service.invalidate_existing_vocabulary_cache()
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[2], [{"fields": {"word": {"value": "走る"}}, "fields2": {}}]],
+        ) as mock_pa2:
+            service.get_existing_vocabulary()
+
+        # Should re-query after invalidation
+        assert mock_pa2.call_count > 0
+
+    def test_create_cards_batch_invalidates_on_success(self, test_config, make_tokenized_word):
+        """create_cards_batch must invalidate the cache when cards are created."""
+        service = AnkiService(test_config)
+        # Warm the cache
+        service._existing_vocab_cache = {"食べる"}
+        assert service._existing_vocab_cache is not None
+
+        word = make_tokenized_word()
+        media = MediaData()
+        resp = _mock_response(result=[12345])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            service.create_cards_batch([CardPayload(word=word, media=media, definition="def")])
+
+        assert service._existing_vocab_cache is None
+
+    def test_create_cards_batch_no_invalidation_when_zero_created(self, test_config, make_tokenized_word):
+        """Cache must NOT be invalidated when all note IDs come back null (zero created)."""
+        service = AnkiService(test_config)
+        service._existing_vocab_cache = {"食べる"}
+
+        word = make_tokenized_word()
+        media = MediaData()
+        # All IDs null → total_created == 0
+        resp = _mock_response(result=[None, None])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            service.create_cards_batch([CardPayload(word=word, media=media, definition="def")])
+
+        # Cache preserved — nothing was actually added
+        assert service._existing_vocab_cache == {"食べる"}
+
+    def test_create_cards_batch_no_invalidation_on_empty_list(self, test_config):
+        """Cache must NOT be invalidated for an empty submission."""
+        service = AnkiService(test_config)
+        service._existing_vocab_cache = {"食べる"}
+
+        service.create_cards_batch([])
+
+        assert service._existing_vocab_cache == {"食べる"}
+
+    def test_second_call_hits_no_post_action(self, test_config):
+        """After caching, a second call must not invoke post_action at all."""
+        service = AnkiService(test_config)
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[1], [{"fields": {"word": {"value": "食べる"}}}]],
+        ) as mock_pa:
+            service.get_existing_vocabulary()
+            call_count_after_first = mock_pa.call_count
+
+            # Second call
+            service.get_existing_vocabulary()
+            call_count_after_second = mock_pa.call_count
+
+        # No additional calls after the first population
+        assert call_count_after_second == call_count_after_first
