@@ -152,6 +152,22 @@ class MediaExtractorService:
             return self._extract_animated_screenshot(video_file, start_time, duration, output_path)
         return self._extract_static_screenshot(video_file, start_time, duration, output_path)
 
+    def _run_ffmpeg(self, cmd: list[str], op_name: str, timeout: int) -> bool:
+        """Run an ffmpeg/ffprobe command. Log + swallow errors. Return success bool.
+
+        Returns True only on a zero exit code. Callers may impose additional
+        post-run checks (e.g. ``output_path.exists()``) on top of this.
+        """
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            if result.returncode == 0:
+                return True
+            logger.error("%s failed: %s", op_name, result.stderr)
+            return False
+        except (subprocess.SubprocessError, OSError) as e:
+            logger.error("%s error: %s", op_name, e)
+            return False
+
     def _extract_static_screenshot(
         self,
         video_file: Path,
@@ -177,25 +193,9 @@ class MediaExtractorService:
             str(output_path),
         ]
 
-        try:
-            proc = subprocess.run(
-                cmd,
-                capture_output=True,
-                timeout=30,
-            )
-            if proc.returncode != 0:
-                logger.warning(
-                    f"Screenshot extraction failed for {output_path.name}: "
-                    f"ffmpeg exit code {proc.returncode}: {proc.stderr.decode(errors='replace').strip()}"
-                )
-                return False
-            return output_path.exists()
-        except subprocess.TimeoutExpired:
-            logger.warning(f"Screenshot extraction timed out for {output_path.name}")
+        if not self._run_ffmpeg(cmd, "Static screenshot extraction", timeout=30):
             return False
-        except (subprocess.SubprocessError, OSError) as e:
-            logger.warning(f"Screenshot extraction error for {output_path.name}: {e}")
-            return False
+        return output_path.exists()
 
     @staticmethod
     def _quality_to_avif_crf(quality: int) -> int:
@@ -318,25 +318,9 @@ class MediaExtractorService:
 
         cmd.append(str(output_path))
 
-        try:
-            proc = subprocess.run(
-                cmd,
-                capture_output=True,
-                timeout=60,
-            )
-            if proc.returncode != 0:
-                logger.warning(
-                    f"Animated screenshot extraction failed for {output_path.name}: "
-                    f"ffmpeg exit code {proc.returncode}: {proc.stderr.decode(errors='replace').strip()}"
-                )
-                return False
-            return output_path.exists()
-        except subprocess.TimeoutExpired:
-            logger.warning(f"Animated screenshot extraction timed out for {output_path.name}")
+        if not self._run_ffmpeg(cmd, "Animated screenshot extraction", timeout=60):
             return False
-        except (subprocess.SubprocessError, OSError) as e:
-            logger.warning(f"Animated screenshot extraction error for {output_path.name}: {e}")
-            return False
+        return output_path.exists()
 
     def _get_japanese_audio_stream(self, video_file: Path) -> int | None:
         """Detect Japanese audio stream index using ffprobe.
@@ -474,12 +458,6 @@ class MediaExtractorService:
 
         cmd.append(str(output_path))
 
-        try:
-            proc = subprocess.run(cmd, capture_output=True, timeout=30)
-            if proc.returncode != 0:
-                logger.error(f"ffmpeg audio extraction failed: {proc.stderr.decode()}")
-                return False
-            return output_path.exists()
-        except (subprocess.SubprocessError, OSError) as e:
-            logger.error(f"Audio extraction error: {e}")
+        if not self._run_ffmpeg(cmd, "Audio extraction", timeout=30):
             return False
+        return output_path.exists()
