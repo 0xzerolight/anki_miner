@@ -72,6 +72,7 @@ def create_services(config: AnkiMinerConfig) -> Services:
 
     # Build the provider chain via the registry, then hand it to DefinitionService.
     registry = DictionaryRegistry(config.dicts_root)
+    registry.load()
     providers = registry.build_provider_chain(config)
     definition_service = DefinitionService(config, providers=providers)
     anki_service = AnkiService(config)
