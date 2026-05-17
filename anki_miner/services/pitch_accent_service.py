@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
-from anki_miner.services.frequency_service import _detect_delimiter, _is_header_row
+from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ class PitchAccentService:
             with open(self._path, encoding="utf-8") as f:
                 sample = f.read(4096)
                 f.seek(0)
-                delimiter = _detect_delimiter(sample)
+                delimiter = detect_delimiter(sample)
 
                 reader = csv.reader(f, delimiter=delimiter)
                 first_row = True
@@ -142,7 +142,7 @@ class PitchAccentService:
                         continue
                     if first_row:
                         first_row = False
-                        if _is_header_row(row):
+                        if is_header_row(row):
                             continue
                     reading, kanji, pattern = row[0].strip(), row[1].strip(), row[2].strip()
                     # Store by kanji (primary key) and by reading (fallback)
