@@ -15,14 +15,14 @@ import psutil  # type: ignore[import-untyped]
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.services.youtube_fetcher import (
+from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
     FfmpegNotFoundError,
     VideoTooLongError,
     YouTubeFetchError,
-    YouTubeFetcherService,
 )
+from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 
 # ---------------------------------------------------------------------------
 # Test helpers
