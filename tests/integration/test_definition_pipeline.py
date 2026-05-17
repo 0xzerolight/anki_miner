@@ -6,7 +6,7 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.services.definition_service import DefinitionService
-from anki_miner.services.providers.jisho_provider import JishoProvider
+from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
 
 
 class _StubOfflineProvider:
