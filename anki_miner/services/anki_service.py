@@ -303,12 +303,15 @@ class AnkiService:
         # First, store all media files and track which succeeded
         stored_files = self._store_media_files_batch(word_data_list)
 
-        # Ship dict-bundled assets referenced by any definition in the batch.
-        # Done up-front so storeMediaFile races finish before notes reference
-        # the filenames; AnkiConnect serializes per-connection so this is safe.
+        # Ship dict-bundled assets referenced by any definition or glossary in
+        # the batch. Done up-front so storeMediaFile races finish before notes
+        # reference the filenames; AnkiConnect serializes per-connection, safe.
         for item in word_data_list:
             definition = item[2] if len(item) > 2 else None
+            extra_fields = item[3] if len(item) > 3 else None
             self._upload_dict_media(definition if isinstance(definition, str) else None)
+            if extra_fields and isinstance(extra_fields.get("glossary"), str):
+                self._upload_dict_media(extra_fields["glossary"])
 
         # Then create notes in batches
         batch_size = 50
@@ -327,6 +330,16 @@ class AnkiService:
                     word, media, definition = item
                     extra_fields = None
 
+                # Pull glossary out of extra_fields BEFORE the OPTIONAL pass —
+                # OPTIONAL_FIELD_KEYS html.escape()s its values, but glossary
+                # is raw HTML and must be sent verbatim.
+                glossary_html = ""
+                if extra_fields and "glossary" in extra_fields:
+                    glossary_html = extra_fields["glossary"] or ""
+                    extra_fields = {k: v for k, v in extra_fields.items() if k != "glossary"}
+                    if not extra_fields:
+                        extra_fields = None
+
                 # Build field values (only reference successfully stored media)
                 picture_html = ""
                 if media.screenshot_filename and media.screenshot_filename in stored_files:
@@ -341,6 +354,7 @@ class AnkiService:
                     "word": html.escape(word.surface),
                     "sentence": html.escape(word.sentence),
                     "definition": definition or "",
+                    "glossary": glossary_html,
                     "picture": picture_html,
                     "audio": audio_ref,
                     "expression_furigana": html.escape(word.expression_furigana),
