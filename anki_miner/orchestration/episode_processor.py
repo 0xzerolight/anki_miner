@@ -10,13 +10,14 @@ import threading
 import time
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
-from anki_miner.models import CardPayload, ProcessingResult
+from anki_miner.models import CardPayload, MediaData, ProcessingResult, TokenizedWord
 from anki_miner.models.youtube import SubMode
 from anki_miner.services import (
     AnkiService,
@@ -37,6 +38,59 @@ if TYPE_CHECKING:
     from anki_miner.services.stats_service import StatsService
     from anki_miner.services.word_list_service import WordListService
     from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+
+
+def _resolve_identity(override: str | None, default: str) -> str:
+    """Return ``override`` when supplied (non-None), else ``default``.
+
+    Preserves the historical ``is not None`` semantics so an explicit empty
+    string is honored as-is.
+    """
+    return override if override is not None else default
+
+
+@dataclass
+class _EpisodeContext:
+    """Mutable accumulator carried through the five phase helpers.
+
+    Stores the immutable inputs every phase needs (timing, identity, file
+    strings) plus a small set of accumulator fields that ``build_result``
+    reads when constructing the final ``ProcessingResult``. Each phase
+    helper returns its own outputs explicitly; ``ctx`` is intentionally a
+    thin state holder, not a god-object.
+    """
+
+    start_time: float
+    video_file_str: str
+    subtitle_file_str: str
+    episode_name: str
+    series_name: str
+
+    # Accumulator fields populated as phases progress.
+    errors: list[str] = field(default_factory=list)
+    total_words_found: int = 0
+    new_words_found: int = 0
+    comprehension_percentage: float = 0.0
+
+    def build_result(self, **overrides: Any) -> ProcessingResult:
+        """Construct a ProcessingResult from accumulated state.
+
+        ``overrides`` lets the caller stamp values that aren't part of the
+        default accumulator (e.g. ``cards_created``, ``card_ids``) or
+        override the accumulated defaults (e.g. force ``errors``).
+        """
+        defaults: dict[str, Any] = {
+            "total_words_found": self.total_words_found,
+            "new_words_found": self.new_words_found,
+            "cards_created": 0,
+            "errors": list(self.errors),
+            "elapsed_time": time.time() - self.start_time,
+            "comprehension_percentage": self.comprehension_percentage,
+            "video_file": self.video_file_str,
+            "subtitle_file": self.subtitle_file_str,
+        }
+        defaults.update(overrides)
+        return ProcessingResult(**defaults)
 
 
 class EpisodeProcessor:
@@ -135,6 +189,260 @@ class EpisodeProcessor:
             elapsed_time=time.time() - start_time,
         )
 
+    def _cancelled_result_from_ctx(self, ctx: _EpisodeContext) -> ProcessingResult:
+        """Cancellation result populated from the accumulator ctx."""
+        return self._make_cancelled_result(
+            ctx.start_time,
+            total_words_found=ctx.total_words_found,
+            new_words_found=ctx.new_words_found,
+        )
+
+    def _phase1_parse(
+        self,
+        ctx: _EpisodeContext,
+        subtitle_file: Path,
+    ) -> tuple[list[TokenizedWord], list[LineLemmas] | None]:
+        """Phase 1: parse subtitles into tokenized words (and optionally a line index).
+
+        Returns the raw parse output; mutates ``ctx.total_words_found``.
+        """
+        self.presenter.show_info(f"Step 1/5 — Parsing subtitles: {subtitle_file.name}")
+        line_index: list[LineLemmas] | None = None
+        if self.config.use_i_plus_one_filter:
+            all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(subtitle_file)
+        else:
+            all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file)
+        self.presenter.show_success(f"Found {len(all_words)} unique words")
+        ctx.total_words_found = len(all_words)
+        return all_words, line_index
+
+    def _phase2_filter(
+        self,
+        ctx: _EpisodeContext,
+        all_words: list[TokenizedWord],
+        line_index: list[LineLemmas] | None,
+        cross_episode_counts: dict[str, int] | None,
+    ) -> list[TokenizedWord]:
+        """Phase 2: attach frequency data, filter against known vocab, apply optional filters.
+
+        Mutates ``ctx.new_words_found`` and ``ctx.comprehension_percentage``.
+        Records difficulty stats if a stats service is available.
+        """
+        # Attach frequency data if available (mutates words in-place).
+        if self.frequency_service and self.frequency_service.is_available():
+            for word in all_words:
+                word.frequency_rank = self.frequency_service.lookup(word.lemma)
+            ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
+            self.presenter.show_info(f"Frequency data: {ranked_count}/{len(all_words)} words ranked")
+
+        # Filter against existing vocabulary.
+        self.presenter.show_info("Step 2/5 — Filtering against known vocabulary")
+        if self.known_word_db and self.known_word_db.is_available():
+            known_words = self.known_word_db.get_known_words()
+            unknown_words = self.word_filter.filter_unknown(all_words, known_words)
+            # Sync with Anki to keep DB up to date.
+            anki_vocab = self.anki_service.get_existing_vocabulary()
+            added, total = self.known_word_db.sync_with_anki(anki_vocab)
+            if added > 0:
+                self.presenter.show_info(f"Known word DB synced: {added} new words ({total} total)")
+                # Re-filter with updated known words.
+                known_words = self.known_word_db.get_known_words()
+                unknown_words = self.word_filter.filter_unknown(all_words, known_words)
+        else:
+            existing_words = self.anki_service.get_existing_vocabulary()
+            unknown_words = self.word_filter.filter_unknown(all_words, existing_words)
+        self.presenter.show_success(f"{len(unknown_words)} new words to mine")
+
+        # Comprehension percentage.
+        comprehension = ((len(all_words) - len(unknown_words)) / len(all_words)) * 100 if all_words else 0.0
+        self.presenter.show_info(f"Comprehension: {comprehension:.1f}% of words already known")
+        ctx.comprehension_percentage = comprehension
+
+        # Frequency rank cutoff.
+        if self.config.max_frequency_rank > 0:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_frequency(unknown_words, self.config.max_frequency_rank)
+            filtered_out = before - len(unknown_words)
+            if filtered_out > 0:
+                self.presenter.show_info(
+                    f"Frequency filter: removed {filtered_out} words " f"outside top {self.config.max_frequency_rank}"
+                )
+
+        # Word list (blacklist/whitelist) filter.
+        if self.word_list_service and self.word_list_service.is_available():
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_word_lists(unknown_words, self.word_list_service)
+            filtered_out = before - len(unknown_words)
+            if filtered_out > 0:
+                self.presenter.show_info(f"Word list filter: removed {filtered_out} words")
+
+        # Sentence deduplication. i+1 filter does its own sentence picking;
+        # dedup would be a no-op (post-i+1 sentences are unique by construction).
+        if self.config.deduplicate_sentences and not self.config.use_i_plus_one_filter:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
+            deduped = before - len(unknown_words)
+            if deduped > 0:
+                self.presenter.show_info(f"Sentence deduplication: removed {deduped} duplicate-sentence words")
+
+        # Cross-episode frequency filter.
+        if cross_episode_counts is not None and self.config.min_episode_appearances > 1:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_episode_count(
+                unknown_words,
+                cross_episode_counts,
+                self.config.min_episode_appearances,
+            )
+            filtered_out = before - len(unknown_words)
+            if filtered_out > 0:
+                self.presenter.show_info(
+                    f"Cross-episode filter: removed {filtered_out} words "
+                    f"appearing in fewer than {self.config.min_episode_appearances} episodes"
+                )
+
+        # i+1 sentence filtering. Restricts mining to words with an i+1 example
+        # sentence (exactly one mineable unknown). Rescans lines and may swap
+        # the chosen sentence per word. Drops words with no i+1 coverage.
+        if self.config.use_i_plus_one_filter:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_i_plus_one(unknown_words, line_index or [])
+            kept = len(unknown_words)
+            pct = (kept / before * 100.0) if before else 0.0
+            self.presenter.show_info(f"i+1 filter: kept {kept}/{before} words ({pct:.0f}%)")
+
+        # Record difficulty data if stats service available.
+        if self.stats_service and self.stats_service.is_available():
+            self.stats_service.record_difficulty(
+                series_name=ctx.series_name,
+                episode_name=ctx.episode_name,
+                total_words=len(all_words),
+                unknown_words=len(unknown_words),
+                unique_words=len(all_words),
+            )
+
+        ctx.new_words_found = len(unknown_words)
+        return unknown_words
+
+    def _phase3_extract(
+        self,
+        ctx: _EpisodeContext,
+        video_file: Path,
+        unknown_words: list[TokenizedWord],
+        progress_callback: ProgressCallback | None,
+        run_temp_folder: Path,
+    ) -> list[tuple[TokenizedWord, MediaData]]:
+        """Phase 3: extract media (screenshots + audio) for each unknown word."""
+        self.presenter.show_info("Step 3/5 — Extracting media from video")
+        media_results: list[tuple[TokenizedWord, MediaData]] = self.media_extractor.extract_media_batch(
+            video_file,
+            unknown_words,
+            progress_callback,
+            cancelled_check=lambda: self._cancelled,
+            temp_folder=run_temp_folder,
+        )
+        return media_results
+
+    def _phase4_lookup(
+        self,
+        ctx: _EpisodeContext,
+        media_results: list[tuple[TokenizedWord, MediaData]],
+        progress_callback: ProgressCallback | None,
+    ) -> tuple[
+        list[str | None],
+        list[str | None],
+        list[tuple[str | None, str | None]],
+    ]:
+        """Phase 4: look up definitions, optional glossaries, and pitch accents."""
+        self.presenter.show_info("Step 4/5 — Fetching definitions")
+        words_with_media = [word for word, _ in media_results]
+        definitions = self.definition_service.get_definitions_batch(
+            [w.lemma for w in words_with_media],
+            progress_callback,
+        )
+        self.presenter.show_success(f"Found {sum(1 for d in definitions if d)} definitions")
+
+        # Optional: fetch concatenated multi-dict glossary if the user mapped
+        # the Glossary field. Skipped otherwise to avoid the extra chain walk
+        # per word.
+        glossaries: list[str | None] = [None] * len(words_with_media)
+        if self.config.anki_fields.get("glossary"):
+            glossaries = self.definition_service.get_glossaries_batch(
+                [w.lemma for w in words_with_media],
+                progress_callback,
+            )
+
+        # Pitch accents if available.
+        pitch_data: list[tuple[str | None, str | None]] = [(None, None)] * len(words_with_media)
+        if self.pitch_accent_service and self.pitch_accent_service.is_available():
+            pitch_data = self.pitch_accent_service.lookup_batch_detailed(
+                [(w.lemma, w.reading, w.pos) for w in words_with_media],
+                fmt=self.config.pitch_category_format,
+            )
+            found_count = sum(1 for pos, _ in pitch_data if pos)
+            self.presenter.show_info(f"Pitch accent data: {found_count}/{len(words_with_media)} words")
+
+        return definitions, glossaries, pitch_data
+
+    def _phase5_create(
+        self,
+        ctx: _EpisodeContext,
+        media_results: list[tuple[TokenizedWord, MediaData]],
+        definitions: list[str | None],
+        glossaries: list[str | None],
+        pitch_data: list[tuple[str | None, str | None]],
+        progress_callback: ProgressCallback | None,
+    ) -> tuple[int, list[int]]:
+        """Phase 5: build CardPayloads and submit them to Anki.
+
+        Returns ``(cards_created, created_note_ids)``.
+        """
+        self.presenter.show_info("Step 5/5 — Creating Anki cards")
+        card_data: list[CardPayload] = []
+        for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
+            media_results, definitions, glossaries, pitch_data, strict=True
+        ):
+            if definition is None:
+                continue
+
+            extra_fields: dict[str, str] = {}
+            if pitch_position:
+                extra_fields["pitch_position"] = pitch_position
+            if pitch_category:
+                extra_fields["pitch_category"] = pitch_category
+            if word.frequency_rank is not None:
+                extra_fields["frequency"] = str(word.frequency_rank)
+            if glossary:
+                extra_fields["glossary"] = glossary
+
+            card_data.append(
+                CardPayload(
+                    word=word,
+                    media=media,
+                    definition=definition,
+                    extra_fields=extra_fields if extra_fields else None,
+                )
+            )
+
+        skipped_words = [
+            word.lemma for (word, _), definition in zip(media_results, definitions, strict=True) if definition is None
+        ]
+        if skipped_words:
+            preview = ", ".join(skipped_words[:10])
+            more = f" (+{len(skipped_words) - 10} more)" if len(skipped_words) > 10 else ""
+            self.presenter.show_warning(f"Skipped {len(skipped_words)} words with no definition found: {preview}{more}")
+
+        cards_created = self.anki_service.create_cards_batch(card_data, progress_callback)
+        created_note_ids = list(self.anki_service.last_created_note_ids)
+
+        self.presenter.show_success(f"Successfully created {cards_created} cards")
+
+        # Add newly mined words to known word DB.
+        if self.known_word_db and self.known_word_db.is_available() and card_data:
+            mined_words = {payload.word.lemma for payload in card_data}
+            self.known_word_db.add_words(mined_words, source="mined")
+
+        return cards_created, created_note_ids
+
     def process_episode(
         self,
         video_file: Path,
@@ -148,383 +456,94 @@ class EpisodeProcessor:
     ) -> ProcessingResult:
         """Process a single episode and create Anki cards.
 
-        This orchestrates all services to:
-        1. Parse subtitles
-        2. Filter unknown words
-        3. Extract media
-        4. Fetch definitions
-        5. Create Anki cards
+        Orchestrates the five phase helpers: parse → filter → extract media →
+        lookup definitions/pitch → create cards. Each phase is a small method
+        on this class; this entrypoint owns only cancellation checkpoints,
+        early-return paths, and temp folder cleanup.
 
         Args:
-            video_file: Path to video file
-            subtitle_file: Path to subtitle file
-            preview_mode: If True, only show words without creating cards
-            progress_callback: Optional progress callback
+            video_file: Path to video file.
+            subtitle_file: Path to subtitle file.
+            preview_mode: If True, only show words without creating cards.
+            progress_callback: Optional progress callback.
             curation_callback: Optional callback for word curation. Receives
                 filtered words, returns user-selected subset. Empty list cancels.
-            cross_episode_counts: Optional cross-episode word frequency counts
+            cross_episode_counts: Optional cross-episode word frequency counts.
             episode_name_override: Optional override for the episode identity
-                passed to stats_service. When ``None`` (default) the identity is
-                derived from ``video_file.stem`` (preserves current anime flow).
-                Used by ``process_youtube_url`` to record ``YT:<video_id>``.
+                passed to stats_service. When ``None`` (default) the identity
+                is derived from ``video_file.stem`` (preserves current anime
+                flow). Used by ``process_youtube_url`` to record
+                ``YT:<video_id>``.
             series_name_override: Optional override for the series identity
                 passed to stats_service. When ``None`` the identity is derived
                 from ``video_file.parent.name``.
 
         Returns:
-            ProcessingResult with statistics
+            ProcessingResult with statistics.
         """
-        start_time = time.time()
-        episode_name = episode_name_override if episode_name_override is not None else video_file.stem
-        series_name = series_name_override if series_name_override is not None else video_file.parent.name
-        errors: list[str] = []
-        vf = str(video_file)
-        sf = str(subtitle_file)
-
+        ctx = _EpisodeContext(
+            start_time=time.time(),
+            video_file_str=str(video_file),
+            subtitle_file_str=str(subtitle_file),
+            episode_name=_resolve_identity(episode_name_override, video_file.stem),
+            series_name=_resolve_identity(series_name_override, video_file.parent.name),
+        )
         run_temp_folder = self._allocate_run_temp_folder()
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
         try:
-            # Phase 1: Parse subtitles
-            self.presenter.show_info(f"Step 1/5 \u2014 Parsing subtitles: {subtitle_file.name}")
-            line_index: list[LineLemmas] | None = None
-            if self.config.use_i_plus_one_filter:
-                all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(subtitle_file)
-            else:
-                all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file)
-            self.presenter.show_success(f"Found {len(all_words)} unique words")
-
+            all_words, line_index = self._phase1_parse(ctx, subtitle_file)
             if not all_words:
                 self.presenter.show_warning("No words found in subtitles")
-                return ProcessingResult(
-                    total_words_found=0,
-                    new_words_found=0,
-                    cards_created=0,
-                    errors=[],
-                    elapsed_time=time.time() - start_time,
-                    video_file=vf,
-                    subtitle_file=sf,
-                )
-
-            # Check cancellation after Phase 1
+                return ctx.build_result()
             if self._cancelled:
-                return self._make_cancelled_result(start_time, total_words_found=len(all_words))
+                return self._cancelled_result_from_ctx(ctx)
 
-            # Attach frequency data if available
-            if self.frequency_service and self.frequency_service.is_available():
-                for word in all_words:
-                    word.frequency_rank = self.frequency_service.lookup(word.lemma)
-                ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
-                self.presenter.show_info(f"Frequency data: {ranked_count}/{len(all_words)} words ranked")
-
-            # Phase 2: Filter against existing vocabulary
-            self.presenter.show_info("Step 2/5 \u2014 Filtering against known vocabulary")
-            if self.known_word_db and self.known_word_db.is_available():
-                known_words = self.known_word_db.get_known_words()
-                unknown_words = self.word_filter.filter_unknown(all_words, known_words)
-                # Sync with Anki to keep DB up to date
-                anki_vocab = self.anki_service.get_existing_vocabulary()
-                added, total = self.known_word_db.sync_with_anki(anki_vocab)
-                if added > 0:
-                    self.presenter.show_info(f"Known word DB synced: {added} new words ({total} total)")
-                    # Re-filter with updated known words
-                    known_words = self.known_word_db.get_known_words()
-                    unknown_words = self.word_filter.filter_unknown(all_words, known_words)
-            else:
-                existing_words = self.anki_service.get_existing_vocabulary()
-                unknown_words = self.word_filter.filter_unknown(all_words, existing_words)
-            self.presenter.show_success(f"{len(unknown_words)} new words to mine")
-
-            # Calculate comprehension percentage
-            comprehension = ((len(all_words) - len(unknown_words)) / len(all_words)) * 100 if all_words else 0.0
-            self.presenter.show_info(f"Comprehension: {comprehension:.1f}% of words already known")
-
-            # Apply frequency filter if configured
-            if self.config.max_frequency_rank > 0:
-                before = len(unknown_words)
-                unknown_words = self.word_filter.filter_by_frequency(unknown_words, self.config.max_frequency_rank)
-                filtered_out = before - len(unknown_words)
-                if filtered_out > 0:
-                    self.presenter.show_info(
-                        f"Frequency filter: removed {filtered_out} words "
-                        f"outside top {self.config.max_frequency_rank}"
-                    )
-
-            # Apply word list filtering if available
-            if self.word_list_service and self.word_list_service.is_available():
-                before = len(unknown_words)
-                unknown_words = self.word_filter.filter_by_word_lists(unknown_words, self.word_list_service)
-                filtered_out = before - len(unknown_words)
-                if filtered_out > 0:
-                    self.presenter.show_info(f"Word list filter: removed {filtered_out} words")
-
-            # Apply sentence deduplication if configured.
-            # i+1 filter does its own sentence picking; dedup would be a no-op
-            # (post-i+1 sentences are unique by construction).
-            if self.config.deduplicate_sentences and not self.config.use_i_plus_one_filter:
-                before = len(unknown_words)
-                unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
-                deduped = before - len(unknown_words)
-                if deduped > 0:
-                    self.presenter.show_info(f"Sentence deduplication: removed {deduped} duplicate-sentence words")
-
-            # Apply cross-episode frequency filter if provided
-            if cross_episode_counts is not None and self.config.min_episode_appearances > 1:
-                before = len(unknown_words)
-                unknown_words = self.word_filter.filter_by_episode_count(
-                    unknown_words,
-                    cross_episode_counts,
-                    self.config.min_episode_appearances,
-                )
-                filtered_out = before - len(unknown_words)
-                if filtered_out > 0:
-                    self.presenter.show_info(
-                        f"Cross-episode filter: removed {filtered_out} words "
-                        f"appearing in fewer than {self.config.min_episode_appearances} episodes"
-                    )
-
-            # i+1 sentence filtering. Restricts mining to words with an i+1 example
-            # sentence (exactly one mineable unknown). Rescans lines and may swap
-            # the chosen sentence per word. Drops words with no i+1 coverage.
-            if self.config.use_i_plus_one_filter:
-                before = len(unknown_words)
-                unknown_words = self.word_filter.filter_i_plus_one(unknown_words, line_index or [])
-                kept = len(unknown_words)
-                pct = (kept / before * 100.0) if before else 0.0
-                self.presenter.show_info(f"i+1 filter: kept {kept}/{before} words ({pct:.0f}%)")
-
-            # Record difficulty data if stats service available
-            if self.stats_service and self.stats_service.is_available():
-                self.stats_service.record_difficulty(
-                    series_name=series_name,
-                    episode_name=episode_name,
-                    total_words=len(all_words),
-                    unknown_words=len(unknown_words),
-                    unique_words=len(all_words),
-                )
-
+            unknown_words = self._phase2_filter(ctx, all_words, line_index, cross_episode_counts)
             if not unknown_words:
                 self.presenter.show_info("All words already in Anki!")
-                return ProcessingResult(
-                    total_words_found=len(all_words),
-                    new_words_found=0,
-                    cards_created=0,
-                    errors=[],
-                    elapsed_time=time.time() - start_time,
-                    comprehension_percentage=comprehension,
-                    video_file=vf,
-                    subtitle_file=sf,
-                )
-
-            # Check cancellation after Phase 2
+                return ctx.build_result(new_words_found=0)
             if self._cancelled:
-                return self._make_cancelled_result(
-                    start_time,
-                    total_words_found=len(all_words),
-                    new_words_found=len(unknown_words),
-                )
+                return self._cancelled_result_from_ctx(ctx)
 
-            # Word curation callback (if provided, not in preview mode)
             if curation_callback is not None and not preview_mode:
                 unknown_words = curation_callback(unknown_words)
+                ctx.new_words_found = len(unknown_words)
                 if not unknown_words:
-                    return self._make_cancelled_result(
-                        start_time,
-                        total_words_found=len(all_words),
-                        new_words_found=0,
-                    )
+                    return self._cancelled_result_from_ctx(ctx)
                 self.presenter.show_info(f"User selected {len(unknown_words)} words for card creation")
 
-            # Preview mode - show and return
             if preview_mode:
                 self.presenter.show_word_preview(unknown_words)
-                return ProcessingResult(
-                    total_words_found=len(all_words),
-                    new_words_found=len(unknown_words),
-                    cards_created=0,
-                    errors=[],
-                    elapsed_time=time.time() - start_time,
-                    comprehension_percentage=comprehension,
-                    video_file=vf,
-                    subtitle_file=sf,
-                )
+                return ctx.build_result()
 
-            # Phase 3: Extract media
-            self.presenter.show_info("Step 3/5 \u2014 Extracting media from video")
-            media_results = self.media_extractor.extract_media_batch(
-                video_file,
-                unknown_words,
-                progress_callback,
-                cancelled_check=lambda: self._cancelled,
-                temp_folder=run_temp_folder,
-            )
-
+            media_results = self._phase3_extract(ctx, video_file, unknown_words, progress_callback, run_temp_folder)
             if self._cancelled:
-                return self._make_cancelled_result(
-                    start_time,
-                    total_words_found=len(all_words),
-                    new_words_found=len(unknown_words),
-                )
-
+                return self._cancelled_result_from_ctx(ctx)
             if not media_results:
                 self.presenter.show_warning("No media extracted successfully")
-                return ProcessingResult(
-                    total_words_found=len(all_words),
-                    new_words_found=len(unknown_words),
-                    cards_created=0,
-                    errors=["Media extraction failed for all words"],
-                    elapsed_time=time.time() - start_time,
-                    comprehension_percentage=comprehension,
-                    video_file=vf,
-                    subtitle_file=sf,
-                )
-
+                return ctx.build_result(errors=["Media extraction failed for all words"])
             self.presenter.show_success(f"Extracted media for {len(media_results)} words")
 
-            # Phase 4: Fetch definitions
-            self.presenter.show_info("Step 4/5 \u2014 Fetching definitions")
-            words_with_media = [word for word, _ in media_results]
-            definitions = self.definition_service.get_definitions_batch(
-                [w.lemma for w in words_with_media],
-                progress_callback,
-            )
-            self.presenter.show_success(f"Found {sum(1 for d in definitions if d)} definitions")
-
-            # Optional: fetch concatenated multi-dict glossary if the user
-            # mapped the Glossary field. Skipped otherwise to avoid the
-            # extra chain walk per word.
-            glossaries: list[str | None] = [None] * len(words_with_media)
-            if self.config.anki_fields.get("glossary"):
-                glossaries = self.definition_service.get_glossaries_batch(
-                    [w.lemma for w in words_with_media],
-                    progress_callback,
-                )
-
-            # Check cancellation after Phase 4
+            definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, progress_callback)
             if self._cancelled:
-                return self._make_cancelled_result(
-                    start_time,
-                    total_words_found=len(all_words),
-                    new_words_found=len(unknown_words),
-                )
+                return self._cancelled_result_from_ctx(ctx)
 
-            # Look up pitch accents if available
-            pitch_data: list[tuple[str | None, str | None]] = [(None, None)] * len(words_with_media)
-            if self.pitch_accent_service and self.pitch_accent_service.is_available():
-                pitch_data = self.pitch_accent_service.lookup_batch_detailed(
-                    [(w.lemma, w.reading, w.pos) for w in words_with_media],
-                    fmt=self.config.pitch_category_format,
-                )
-                found_count = sum(1 for pos, _ in pitch_data if pos)
-                self.presenter.show_info(f"Pitch accent data: {found_count}/{len(words_with_media)} words")
-
-            # Phase 5: Create cards
-            self.presenter.show_info("Step 5/5 \u2014 Creating Anki cards")
-            # Combine words, media, definitions, and extra data
-            card_data: list[CardPayload] = []
-            for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
-                media_results, definitions, glossaries, pitch_data, strict=True
-            ):
-                if definition is None:
-                    continue
-
-                extra_fields: dict[str, str] = {}
-                if pitch_position:
-                    extra_fields["pitch_position"] = pitch_position
-                if pitch_category:
-                    extra_fields["pitch_category"] = pitch_category
-                if word.frequency_rank is not None:
-                    extra_fields["frequency"] = str(word.frequency_rank)
-                if glossary:
-                    extra_fields["glossary"] = glossary
-
-                card_data.append(
-                    CardPayload(
-                        word=word,
-                        media=media,
-                        definition=definition,
-                        extra_fields=extra_fields if extra_fields else None,
-                    )
-                )
-
-            skipped_words = [
-                word.lemma
-                for (word, _), definition in zip(media_results, definitions, strict=True)
-                if definition is None
-            ]
-            if skipped_words:
-                preview = ", ".join(skipped_words[:10])
-                more = f" (+{len(skipped_words) - 10} more)" if len(skipped_words) > 10 else ""
-                self.presenter.show_warning(
-                    f"Skipped {len(skipped_words)} words with no definition found: " f"{preview}{more}"
-                )
-
-            cards_created = self.anki_service.create_cards_batch(
-                card_data,
-                progress_callback,
+            cards_created, created_note_ids = self._phase5_create(
+                ctx, media_results, definitions, glossaries, pitch_data, progress_callback
             )
-            created_note_ids = list(self.anki_service.last_created_note_ids)
-
-            self.presenter.show_success(f"Successfully created {cards_created} cards")
-
-            # Add newly mined words to known word DB
-            if self.known_word_db and self.known_word_db.is_available() and card_data:
-                mined_words = {payload.word.lemma for payload in card_data}
-                self.known_word_db.add_words(mined_words, source="mined")
-
-            result = ProcessingResult(
-                total_words_found=len(all_words),
-                new_words_found=len(unknown_words),
-                cards_created=cards_created,
-                errors=errors,
-                elapsed_time=time.time() - start_time,
-                comprehension_percentage=comprehension,
-                card_ids=created_note_ids,
-                video_file=vf,
-                subtitle_file=sf,
-            )
-
-            # Record mining session if stats service available
-            if self.stats_service and self.stats_service.is_available():
-                from anki_miner.models.stats import MiningSession
-
-                self.stats_service.record_session(
-                    MiningSession(
-                        series_name=series_name,
-                        episode_name=episode_name,
-                        total_words=result.total_words_found,
-                        unknown_words=result.new_words_found,
-                        cards_created=result.cards_created,
-                        elapsed_time=result.elapsed_time,
-                    )
-                )
-
+            result = ctx.build_result(cards_created=cards_created, card_ids=created_note_ids)
+            self._record_session(ctx, result)
             return result
 
         except AnkiMinerException as e:
-            errors.append(str(e))
+            ctx.errors.append(str(e))
             self.presenter.show_error(f"Error: {e}")
-            return ProcessingResult(
-                total_words_found=0,
-                new_words_found=0,
-                cards_created=0,
-                errors=errors,
-                elapsed_time=time.time() - start_time,
-                video_file=vf,
-                subtitle_file=sf,
-            )
+            return ctx.build_result(total_words_found=0, new_words_found=0)
         except Exception as e:
-            errors.append(f"Unexpected error: {e}")
+            ctx.errors.append(f"Unexpected error: {e}")
             self.presenter.show_error(f"Unexpected error: {e}")
-            return ProcessingResult(
-                total_words_found=0,
-                new_words_found=0,
-                cards_created=0,
-                errors=errors,
-                elapsed_time=time.time() - start_time,
-                video_file=vf,
-                subtitle_file=sf,
-            )
+            return ctx.build_result(total_words_found=0, new_words_found=0)
         finally:
             if keep_temp:
                 logger.info(
@@ -533,6 +552,23 @@ class EpisodeProcessor:
                 )
             else:
                 shutil.rmtree(run_temp_folder, ignore_errors=True)
+
+    def _record_session(self, ctx: _EpisodeContext, result: ProcessingResult) -> None:
+        """Record a mining session in the stats service if one is configured."""
+        if not (self.stats_service and self.stats_service.is_available()):
+            return
+        from anki_miner.models.stats import MiningSession
+
+        self.stats_service.record_session(
+            MiningSession(
+                series_name=ctx.series_name,
+                episode_name=ctx.episode_name,
+                total_words=result.total_words_found,
+                unknown_words=result.new_words_found,
+                cards_created=result.cards_created,
+                elapsed_time=result.elapsed_time,
+            )
+        )
 
     def process_youtube_url(
         self,
