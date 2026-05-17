@@ -9,7 +9,13 @@ from __future__ import annotations
 
 import re
 from html import escape
-from typing import Any
+from typing import Any, TypeAlias
+
+# Yomitan structured-content nodes are heterogeneous: dict (with "tag"/"content" keys),
+# list of children, or bare string leaf. Recursion is implicit via the dict["content"]
+# subnode. Full TypedDict modeling is overkill given the schema's openness; this alias
+# documents the shape and gives type checkers a hint at the top of each signature.
+YomitanNode: TypeAlias = "dict[str, Any] | list[Any] | str"
 
 _ALLOWED_TAGS = frozenset(
     {
@@ -225,7 +231,7 @@ _GLOSS_IMAGE_CLASS = "gloss-image"
 
 
 def _resolve_img_src(
-    raw_path: Any,
+    raw_path: YomitanNode | None,
     *,
     dict_id: str | None,
     media_collector: set[str] | None,
@@ -299,7 +305,7 @@ def _camel_to_kebab(name: str) -> str:
     return _CAMEL_RE.sub(r"\1-\2", name).lower()
 
 
-def _coerce_style_value(value: Any) -> str | None:
+def _coerce_style_value(value: YomitanNode) -> str | None:
     """Stringify a Yomitan style value safely.
 
     Numbers become bare strings (Yomitan uses unitless ints for some props).
@@ -323,7 +329,7 @@ def _coerce_style_value(value: Any) -> str | None:
     return candidate
 
 
-def _collect_style(node: dict[str, Any]) -> str:
+def _collect_style(node: dict[str, YomitanNode]) -> str:
     """Build an inline style="..." value from a node's style props.
 
     Reads both nested `style: {...}` and Yomitan's top-level shortcut keys
@@ -365,7 +371,7 @@ def _collect_style(node: dict[str, Any]) -> str:
 
 
 def structured_content_to_html(
-    node: Any,
+    node: YomitanNode,
     _depth: int = 0,
     *,
     dict_id: str | None = None,
@@ -438,7 +444,7 @@ def structured_content_to_html(
 
 
 def _render_img(
-    node: dict[str, Any],
+    node: dict[str, YomitanNode],
     *,
     dict_id: str | None,
     media_collector: set[str] | None,
@@ -467,7 +473,7 @@ def _render_img(
                 extras.append(f'{attr}="{escape(stripped, quote=True)}"')
         elif attr in int_attrs:
             try:
-                ival = int(value)
+                ival = int(value)  # type: ignore[arg-type]
             except (TypeError, ValueError):
                 continue
             if 1 <= ival <= _INT_ATTR_MAX:
@@ -491,7 +497,7 @@ def _render_img(
     )
 
 
-def _render_attrs(node: dict[str, Any], tag: str) -> str:
+def _render_attrs(node: dict[str, YomitanNode], tag: str) -> str:
     parts: list[str] = []
 
     # Every element carries a `gloss-sc-<tag>` hook so card templates can
@@ -543,7 +549,7 @@ def _render_attrs(node: dict[str, Any], tag: str) -> str:
                 parts.append(f'{attr}="{escape(stripped, quote=True)}"')
         elif attr in int_attrs:
             try:
-                ival = int(value)
+                ival = int(value)  # type: ignore[arg-type]
             except (TypeError, ValueError):
                 continue
             if 1 <= ival <= _INT_ATTR_MAX:
@@ -555,7 +561,7 @@ def _render_attrs(node: dict[str, Any], tag: str) -> str:
 
 
 def render_glossary_entry(
-    glossary: list[Any],
+    glossary: list[YomitanNode],
     *,
     dict_id: str | None = None,
     media_collector: set[str] | None = None,
