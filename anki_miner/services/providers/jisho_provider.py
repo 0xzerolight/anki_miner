@@ -75,7 +75,19 @@ class JishoProvider:
                 if eng:
                     definitions.append(f"{i}. {'; '.join(eng)}")
 
-            return "<br>".join(definitions) if definitions else None
+            if not definitions:
+                return None
+
+            inner = "<br>".join(definitions)
+            return (
+                '<div class="yomitan-glossary">'
+                '<ol data-count="1">'
+                '<li data-dictionary="Jisho API">'
+                f"{inner}"
+                "</li>"
+                "</ol>"
+                "</div>"
+            )
 
         except requests.exceptions.Timeout:
             return None
