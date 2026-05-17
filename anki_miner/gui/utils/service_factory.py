@@ -30,18 +30,39 @@ class ServiceLoadResult:
     info: list[str] = field(default_factory=list)
 
 
-def create_services(config: AnkiMinerConfig) -> tuple:
+@dataclass(frozen=True)
+class Services:
+    """Bundle of services required to construct an :class:`EpisodeProcessor`.
+
+    Attribute names mirror the historical tuple-position names so callers
+    that previously unpacked ``create_services(...)`` can switch to
+    attribute access without renaming locals.
+    """
+
+    subtitle_parser: SubtitleParserService
+    word_filter: WordFilterService
+    media_extractor: MediaExtractorService
+    definition_service: DefinitionService
+    anki_service: AnkiService
+    pitch_accent_service: PitchAccentService | None
+    frequency_service: FrequencyService | None
+    known_word_db: KnownWordDB | None
+    word_list_service: WordListService | None
+    youtube_fetcher: YouTubeFetcherService
+    load_result: ServiceLoadResult
+
+
+def create_services(config: AnkiMinerConfig) -> Services:
     """Create all services needed for episode processing.
 
     Args:
         config: Mining configuration
 
     Returns:
-        Tuple of (subtitle_parser, word_filter, media_extractor,
-                  definition_service, anki_service,
-                  pitch_accent_service, frequency_service,
-                  known_word_db, word_list_service, youtube_fetcher,
-                  load_result)
+        A frozen :class:`Services` bundle holding every constructed
+        service plus a :class:`ServiceLoadResult` describing any
+        warnings or info messages produced during optional-service
+        initialization.
     """
     load_result = ServiceLoadResult()
 
@@ -134,18 +155,18 @@ def create_services(config: AnkiMinerConfig) -> tuple:
             load_result.warnings.append(f"Could not load word lists: {e}")
             word_list_service = None
 
-    return (
-        subtitle_parser,
-        word_filter,
-        media_extractor,
-        definition_service,
-        anki_service,
-        pitch_accent_service,
-        frequency_service,
-        known_word_db,
-        word_list_service,
-        youtube_fetcher,
-        load_result,
+    return Services(
+        subtitle_parser=subtitle_parser,
+        word_filter=word_filter,
+        media_extractor=media_extractor,
+        definition_service=definition_service,
+        anki_service=anki_service,
+        pitch_accent_service=pitch_accent_service,
+        frequency_service=frequency_service,
+        known_word_db=known_word_db,
+        word_list_service=word_list_service,
+        youtube_fetcher=youtube_fetcher,
+        load_result=load_result,
     )
 
 
@@ -164,40 +185,28 @@ def create_episode_processor(
     Returns:
         Configured EpisodeProcessor instance
     """
-    (
-        subtitle_parser,
-        word_filter,
-        media_extractor,
-        definition_service,
-        anki_service,
-        pitch_accent_service,
-        frequency_service,
-        known_word_db,
-        word_list_service,
-        youtube_fetcher,
-        load_result,
-    ) = create_services(config)
+    services = create_services(config)
 
     # Surface service load feedback to the user
-    for msg in load_result.info:
+    for msg in services.load_result.info:
         presenter.show_info(msg)
-    for msg in load_result.warnings:
+    for msg in services.load_result.warnings:
         presenter.show_warning(msg)
 
     return EpisodeProcessor(
         config=config,
-        subtitle_parser=subtitle_parser,
-        word_filter=word_filter,
-        media_extractor=media_extractor,
-        definition_service=definition_service,
-        anki_service=anki_service,
+        subtitle_parser=services.subtitle_parser,
+        word_filter=services.word_filter,
+        media_extractor=services.media_extractor,
+        definition_service=services.definition_service,
+        anki_service=services.anki_service,
         presenter=presenter,
-        pitch_accent_service=pitch_accent_service,
-        frequency_service=frequency_service,
-        known_word_db=known_word_db,
-        word_list_service=word_list_service,
+        pitch_accent_service=services.pitch_accent_service,
+        frequency_service=services.frequency_service,
+        known_word_db=services.known_word_db,
+        word_list_service=services.word_list_service,
         stats_service=stats_service,
-        youtube_fetcher=youtube_fetcher,
+        youtube_fetcher=services.youtube_fetcher,
     )
 
 
