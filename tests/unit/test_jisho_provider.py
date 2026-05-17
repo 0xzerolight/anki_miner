@@ -129,3 +129,8 @@ class TestJishoProvider:
             result = provider.lookup("食べる")
 
         assert result is None
+
+
+def test_jisho_provider_is_online():
+    provider = JishoProvider()
+    assert provider.is_online is True

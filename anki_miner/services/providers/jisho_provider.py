@@ -32,6 +32,10 @@ class JishoProvider:
     def name(self) -> str:
         return "Jisho API"
 
+    @property
+    def is_online(self) -> bool:
+        return True
+
     def is_available(self) -> bool:
         return True
 
