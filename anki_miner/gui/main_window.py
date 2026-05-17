@@ -441,15 +441,11 @@ class MainWindow(QMainWindow):
         Args:
             result: Processing result to record
         """
-        import logging
-
         from anki_miner.services.history_service import HistoryService
 
         try:
             service = HistoryService(self.config.history_db_path)
             service.initialize()
-            from pathlib import Path
-
             service.record_session(
                 video_file=Path(result.video_file) if result.video_file else Path("unknown"),
                 subtitle_file=(Path(result.subtitle_file) if result.subtitle_file else Path("unknown")),
@@ -457,7 +453,7 @@ class MainWindow(QMainWindow):
                 card_ids=result.card_ids,
             )
         except Exception:
-            logging.getLogger(__name__).debug("Failed to record history", exc_info=True)
+            logger.debug("Failed to record history", exc_info=True)
 
     def _on_word_preview(self, words: list) -> None:
         """Handle word preview from presenter.
