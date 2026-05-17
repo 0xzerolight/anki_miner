@@ -15,6 +15,16 @@ class DictionaryProvider(Protocol):
         """Human-readable name for this provider (e.g., 'JMdict Offline')."""
         ...
 
+    @property
+    def is_online(self) -> bool:
+        """Whether this provider performs network I/O for lookups.
+
+        Online providers (Jisho) are used as a fallback in glossary
+        collection: skipped when at least one offline provider returns
+        a hit, to avoid per-word network latency.
+        """
+        ...
+
     def is_available(self) -> bool:
         """Check if this provider is ready to serve lookups."""
         ...

@@ -39,6 +39,10 @@ class IndexedDictProvider:
     def name(self) -> str:
         return self._display_name
 
+    @property
+    def is_online(self) -> bool:
+        return False
+
     def is_available(self) -> bool:
         return self._conn is not None
 
