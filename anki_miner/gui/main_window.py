@@ -31,6 +31,25 @@ from anki_miner.services.anki_service import AnkiService
 
 logger = logging.getLogger(__name__)
 
+_ABOUT_FEATURES: list[str] = [
+    "Single episode mining with preview",
+    "Batch processing for entire series",
+    "YouTube URL mining (yt-dlp powered)",
+    "Automatic media extraction (screenshots & audio)",
+    "Dictionary definitions from JMdict",
+    "Frequency filtering to focus on common words",
+    "Mining analytics and progress tracking",
+    "Three beautiful themes: Light, Dark, Sakura",
+]
+
+_ABOUT_SHORTCUTS: list[tuple[str, str]] = [
+    ("Ctrl+1..5", "Switch tabs"),
+    ("Ctrl+T", "Cycle themes"),
+    ("Ctrl+,", "Open Settings"),
+    ("Ctrl+Shift+V", "Run system validation"),
+    ("F1", "Show this help dialog"),
+]
+
 
 def _needs_jmdict_migration(xml_path: Path, dicts_root: Path, chain: tuple | None = None) -> bool:
     """Return True iff we should auto-trigger the JMdict → SQLite migration.
@@ -311,6 +330,8 @@ class MainWindow(QMainWindow):
 
     def _show_about(self) -> None:
         """Show the About dialog."""
+        features_html = "".join(f"            <li>{f}</li>\n" for f in _ABOUT_FEATURES)
+        shortcuts_html = "".join(f"            <li><b>{key}:</b> {desc}</li>\n" for key, desc in _ABOUT_SHORTCUTS)
         about_text = f"""
         <h2>Anki Miner</h2>
         <p><b>Version:</b> {__version__}</p>
@@ -321,24 +342,11 @@ class MainWindow(QMainWindow):
         <br>
         <p><b>Features:</b></p>
         <ul>
-            <li>Single episode mining with preview</li>
-            <li>Batch processing for entire series</li>
-            <li>YouTube URL mining (yt-dlp powered)</li>
-            <li>Automatic media extraction (screenshots & audio)</li>
-            <li>Dictionary definitions from JMDict</li>
-            <li>Frequency filtering to focus on common words</li>
-            <li>Mining analytics and progress tracking</li>
-            <li>Three beautiful themes: Light, Dark, Sakura</li>
-        </ul>
+{features_html}        </ul>
         <br>
         <p><b>Keyboard Shortcuts:</b></p>
         <ul>
-            <li><b>Ctrl+1..5:</b> Switch tabs</li>
-            <li><b>Ctrl+T:</b> Cycle themes</li>
-            <li><b>Ctrl+,:</b> Open Settings</li>
-            <li><b>Ctrl+Shift+V:</b> Run system validation</li>
-            <li><b>F1:</b> Show this help dialog</li>
-        </ul>
+{shortcuts_html}        </ul>
         <br>
         <p><b>Requirements:</b></p>
         <ul>
