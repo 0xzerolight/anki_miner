@@ -130,41 +130,36 @@ class TestJishoProvider:
 
         assert result is None
 
+    def test_lookup_returns_yomitan_envelope(self):
+        """Test that lookup wraps results in a Yomitan-compatible HTML envelope."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {
+                    "senses": [
+                        {"english_definitions": ["to eat"]},
+                        {"english_definitions": ["to live on", "subsist on"]},
+                    ]
+                }
+            ]
+        }
+
+        with patch(
+            "anki_miner.services.providers.jisho_provider.requests.get",
+            return_value=mock_response,
+        ):
+            provider = JishoProvider(delay=0)
+            result = provider.lookup("食べる")
+
+        assert result is not None
+        assert result.startswith('<div class="yomitan-glossary">')
+        assert '<li data-dictionary="Jisho API">' in result
+        assert "1. to eat" in result
+        assert "2. to live on; subsist on" in result
+        assert result.endswith("</div>")
+
 
 def test_jisho_provider_is_online():
     provider = JishoProvider()
     assert provider.is_online is True
-
-
-def test_lookup_returns_yomitan_envelope(monkeypatch):
-    fake = {
-        "data": [
-            {
-                "senses": [
-                    {"english_definitions": ["to eat"]},
-                    {"english_definitions": ["to live on", "subsist on"]},
-                ]
-            }
-        ]
-    }
-
-    class _R:
-        status_code = 200
-
-        def json(self):
-            return fake
-
-    monkeypatch.setattr(
-        "anki_miner.services.providers.jisho_provider.requests.get",
-        lambda *a, **k: _R(),
-    )
-    provider = JishoProvider(delay=0)
-
-    result = provider.lookup("食べる")
-
-    assert result is not None
-    assert result.startswith('<div class="yomitan-glossary">')
-    assert '<li data-dictionary="Jisho API">' in result
-    assert "1. to eat" in result
-    assert "2. to live on; subsist on" in result
-    assert result.endswith("</div>")
