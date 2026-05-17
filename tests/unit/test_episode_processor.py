@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.exceptions import SubtitleParseError
-from anki_miner.models import LineLemmas, MediaData, TokenizedWord
+from anki_miner.models import CardPayload, LineLemmas, MediaData, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.presenters import NullPresenter
@@ -185,12 +185,12 @@ class TestProcessEpisode:
         ds_args = mock_services["definition_service"].get_definitions_batch.call_args
         assert ds_args[0][0] == ["食べる"]
 
-        # Verify anki_service gets combined (word, media, definition, extra_fields)
+        # Verify anki_service gets combined CardPayload entries
         mock_services["anki_service"].create_cards_batch.assert_called_once()
         as_args = mock_services["anki_service"].create_cards_batch.call_args
         card_data = as_args[0][0]
         assert len(card_data) == 1
-        assert card_data[0] == (word, media, "1. to eat", None)
+        assert card_data[0] == CardPayload(word=word, media=media, definition="1. to eat", extra_fields=None)
 
     def test_subtitle_parse_error_handling(self, processor, mock_services, tmp_path):
         """SubtitleParseError should be caught and returned as error."""
@@ -353,7 +353,7 @@ class TestOptionalServices:
         # Verify card data includes pitch fields in extra_fields
         card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
         assert len(card_data) == 1
-        _, _, _, extra_fields = card_data[0]
+        extra_fields = card_data[0].extra_fields
         assert extra_fields is not None
         assert extra_fields["pitch_position"] == "0"
         assert extra_fields["pitch_category"] == "平板"
@@ -390,7 +390,7 @@ class TestOptionalServices:
 
         assert result.cards_created == 1
         card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
-        _, _, _, extra_fields = card_data[0]
+        extra_fields = card_data[0].extra_fields
         assert extra_fields is not None
         assert extra_fields["pitch_position"] == "0"
         assert extra_fields["pitch_category"] == "平板"
@@ -629,7 +629,7 @@ class TestDefinitionSkipping:
         # Only 1 card should be created (word2 skipped)
         card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
         assert len(card_data) == 1
-        assert card_data[0][0] == word1
+        assert card_data[0].word == word1
 
 
 class TestStatsServiceIntegration:
@@ -1346,9 +1346,9 @@ class TestGlossaryFetch:
         call_args = mock_services["anki_service"].create_cards_batch.call_args
         card_data = call_args[0][0]
         assert len(card_data) == 1
-        word, media, definition, extra_fields = card_data[0]
-        assert extra_fields is not None
-        assert extra_fields["glossary"] == glossary_html
+        payload = card_data[0]
+        assert payload.extra_fields is not None
+        assert payload.extra_fields["glossary"] == glossary_html
 
     def test_glossary_skipped_when_field_unmapped(self, test_config, mock_services, tmp_path):
         # Default test_config has anki_fields["glossary"] == "" (after Task 4).
@@ -1360,7 +1360,7 @@ class TestGlossaryFetch:
         mock_services["definition_service"].get_glossaries_batch.assert_not_called()
         call_args = mock_services["anki_service"].create_cards_batch.call_args
         card_data = call_args[0][0]
-        word, media, definition, extra_fields = card_data[0]
+        payload = card_data[0]
         # extra_fields may be None or a dict — but must NOT contain glossary.
-        if extra_fields is not None:
-            assert "glossary" not in extra_fields
+        if payload.extra_fields is not None:
+            assert "glossary" not in payload.extra_fields

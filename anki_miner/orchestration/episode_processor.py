@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
-from anki_miner.models import ProcessingResult
+from anki_miner.models import CardPayload, ProcessingResult
 from anki_miner.models.youtube import SubMode
 from anki_miner.services import (
     AnkiService,
@@ -421,7 +421,7 @@ class EpisodeProcessor:
             # Phase 5: Create cards
             self.presenter.show_info("Step 5/5 \u2014 Creating Anki cards")
             # Combine words, media, definitions, and extra data
-            card_data: list[tuple] = []
+            card_data: list[CardPayload] = []
             for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
                 media_results, definitions, glossaries, pitch_data, strict=True
             ):
@@ -438,7 +438,14 @@ class EpisodeProcessor:
                 if glossary:
                     extra_fields["glossary"] = glossary
 
-                card_data.append((word, media, definition, extra_fields if extra_fields else None))
+                card_data.append(
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition=definition,
+                        extra_fields=extra_fields if extra_fields else None,
+                    )
+                )
 
             skipped_words = [
                 word.lemma
@@ -462,7 +469,7 @@ class EpisodeProcessor:
 
             # Add newly mined words to known word DB
             if self.known_word_db and self.known_word_db.is_available() and card_data:
-                mined_words = {word.lemma for word, _, _, _ in card_data}
+                mined_words = {payload.word.lemma for payload in card_data}
                 self.known_word_db.add_words(mined_words, source="mined")
 
             result = ProcessingResult(
