@@ -35,9 +35,7 @@ class RecentFilesManager:
         # Remove existing entry with same pair (dedup)
         video_str = str(video_path)
         subtitle_str = str(subtitle_path)
-        entries = [
-            e for e in entries if not (e["video"] == video_str and e["subtitle"] == subtitle_str)
-        ]
+        entries = [e for e in entries if not (e["video"] == video_str and e["subtitle"] == subtitle_str)]
 
         # Prepend new entry
         entries.insert(

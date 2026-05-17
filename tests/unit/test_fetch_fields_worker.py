@@ -99,9 +99,7 @@ class TestFetchFieldsWorker:
 class TestSettingsTabFetchFieldsWiring:
     """Pin the button-click -> service -> populate_from_field_list path."""
 
-    def test_click_with_empty_note_type_does_not_spawn_worker(
-        self, test_config: AnkiMinerConfig, monkeypatch
-    ):
+    def test_click_with_empty_note_type_does_not_spawn_worker(self, test_config: AnkiMinerConfig, monkeypatch):
         tab = SettingsTab(test_config)
         try:
             tab.anki_panel.note_type_input.setText("")  # explicit empty
@@ -118,9 +116,7 @@ class TestSettingsTabFetchFieldsWiring:
         finally:
             tab.deleteLater()
 
-    def test_click_routes_fetched_fields_into_populate(
-        self, test_config: AnkiMinerConfig, monkeypatch
-    ):
+    def test_click_routes_fetched_fields_into_populate(self, test_config: AnkiMinerConfig, monkeypatch):
         tab = SettingsTab(test_config)
         try:
             tab.anki_panel.note_type_input.setText("Japanese-1.0")
@@ -166,9 +162,7 @@ class TestSettingsTabFetchFieldsWiring:
         finally:
             tab.deleteLater()
 
-    def test_empty_fetch_result_shows_friendly_status(
-        self, test_config: AnkiMinerConfig, monkeypatch
-    ):
+    def test_empty_fetch_result_shows_friendly_status(self, test_config: AnkiMinerConfig, monkeypatch):
         tab = SettingsTab(test_config)
         try:
             tab.anki_panel.note_type_input.setText("Missing")

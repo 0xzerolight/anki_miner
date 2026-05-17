@@ -154,9 +154,7 @@ def import_jmdict_xml(
         final = dest_root / JMDICT_DICT_ID
 
         if final.exists():
-            backup = final.with_name(
-                final.name + ".bak-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
-            )
+            backup = final.with_name(final.name + ".bak-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f"))
             final.rename(backup)
             try:
                 shutil.move(str(staging), str(final))

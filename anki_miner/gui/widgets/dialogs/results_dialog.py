@@ -55,9 +55,7 @@ class ResultsDialog(EnhancedDialog):
         if self.processing_result.success:
             self.set_header("complete", "Success!", "Processing completed successfully")
         else:
-            self.set_header(
-                "error", "Completed with Errors", "Some issues occurred during processing"
-            )
+            self.set_header("error", "Completed with Errors", "Some issues occurred during processing")
 
         # Statistics cards in a frame
         stats_container = QFrame()
@@ -77,15 +75,11 @@ class ResultsDialog(EnhancedDialog):
         row1_layout.addWidget(words_card)
 
         # New words card
-        new_words_card = StatCard(
-            value=str(self.processing_result.new_words_found), label="New Words"
-        )
+        new_words_card = StatCard(value=str(self.processing_result.new_words_found), label="New Words")
         row1_layout.addWidget(new_words_card)
 
         # Cards created card
-        cards_card = StatCard(
-            value=str(self.processing_result.cards_created), label="Cards Created"
-        )
+        cards_card = StatCard(value=str(self.processing_result.cards_created), label="Cards Created")
         row1_layout.addWidget(cards_card)
 
         stats_layout.addLayout(row1_layout)

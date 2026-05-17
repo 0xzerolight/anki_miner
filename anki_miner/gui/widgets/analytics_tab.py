@@ -76,9 +76,7 @@ class AnalyticsTab(QWidget):
 
     def _setup_accessibility(self) -> None:
         self.setAccessibleName("Analytics Tab")
-        self.setAccessibleDescription(
-            "View mining statistics, series difficulty rankings, and progress milestones"
-        )
+        self.setAccessibleDescription("View mining statistics, series difficulty rankings, and progress milestones")
 
     def _create_dashboard_section(self) -> QFrame:
         group = QFrame()
@@ -117,9 +115,7 @@ class AnalyticsTab(QWidget):
         header = SectionHeader("Recent Sessions")
         layout.addWidget(header)
 
-        self.sessions_empty_label = QLabel(
-            "No sessions yet. Process an episode to see your history here."
-        )
+        self.sessions_empty_label = QLabel("No sessions yet. Process an episode to see your history here.")
         self.sessions_empty_label.setObjectName("helper-text")
         self.sessions_empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.sessions_empty_label.setMinimumHeight(80)
@@ -127,9 +123,7 @@ class AnalyticsTab(QWidget):
 
         self.sessions_table = QTableWidget()
         self.sessions_table.setColumnCount(6)
-        self.sessions_table.setHorizontalHeaderLabels(
-            ["Date", "Series", "Episode", "Words", "New Words", "Cards"]
-        )
+        self.sessions_table.setHorizontalHeaderLabels(["Date", "Series", "Episode", "Words", "New Words", "Cards"])
         self.sessions_table.horizontalHeader().setStretchLastSection(True)  # type: ignore[union-attr]
         self.sessions_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)  # type: ignore[union-attr]
         self.sessions_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -171,9 +165,7 @@ class AnalyticsTab(QWidget):
 
         self.difficulty_table = QTableWidget()
         self.difficulty_table.setColumnCount(5)
-        self.difficulty_table.setHorizontalHeaderLabels(
-            ["Rank", "Series", "Avg Words", "Avg Unknown", "Difficulty"]
-        )
+        self.difficulty_table.setHorizontalHeaderLabels(["Rank", "Series", "Avg Words", "Avg Unknown", "Difficulty"])
         self.difficulty_table.horizontalHeader().setStretchLastSection(True)  # type: ignore[union-attr]
         self.difficulty_table.horizontalHeader().setSectionResizeMode(  # type: ignore[union-attr]
             QHeaderView.ResizeMode.Stretch

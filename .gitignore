@@ -51,6 +51,7 @@ docs/
 .claude-runner/
 .codex
 resources/
+TECH_DEBT_AUDIT.md
 
 # OS
 .DS_Store

@@ -114,9 +114,7 @@ class ValidationService:
         # missing on disk. The chain falls back to other providers (Jisho), so
         # this is only a warning, not an error.
         dicts_root = Path.home() / ".anki_miner" / "dicts"
-        indexed_entries = [
-            e for e in self.config.dictionary_chain if e.kind == "indexed" and e.enabled
-        ]
+        indexed_entries = [e for e in self.config.dictionary_chain if e.kind == "indexed" and e.enabled]
         if indexed_entries:
             missing = [
                 e.dict_id

@@ -47,9 +47,7 @@ class TestImportJmdictXml:
             count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
             assert count == 4
 
-            content = conn.execute(
-                "SELECT content FROM entries WHERE term = ?", ("食べる",)
-            ).fetchone()[0]
+            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("食べる",)).fetchone()[0]
             assert "to eat" in content
             assert "<ol>" in content
         finally:
@@ -131,9 +129,7 @@ class TestImportJmdictXmlEdgeCases:
         db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
         conn = open_readonly(db)
         try:
-            content = conn.execute(
-                "SELECT content FROM entries WHERE term = ?", ("例",)
-            ).fetchone()[0]
+            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("例",)).fetchone()[0]
             # Original raw text should be entity-escaped; '<text>' must not appear as a tag
             assert "&lt;text&gt;" in content
             assert "<text>" not in content
@@ -151,9 +147,7 @@ class TestImportJmdictXmlEdgeCases:
         db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
         conn = open_readonly(db)
         try:
-            content = conn.execute(
-                "SELECT content FROM entries WHERE term = ?", ("多義",)
-            ).fetchone()[0]
+            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("多義",)).fetchone()[0]
             # Exactly MAX_SENSES <li> tags
             assert content.count("<li>") == MAX_SENSES
             assert f"def{MAX_SENSES}" in content

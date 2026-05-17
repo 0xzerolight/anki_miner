@@ -200,9 +200,7 @@ class LogWidget(QWidget):
             cursor = self.text_edit.textCursor()
             cursor.movePosition(QTextCursor.MoveOperation.Start)
             for _ in range(blocks_to_remove):
-                cursor.movePosition(
-                    QTextCursor.MoveOperation.NextBlock, QTextCursor.MoveMode.KeepAnchor
-                )
+                cursor.movePosition(QTextCursor.MoveOperation.NextBlock, QTextCursor.MoveMode.KeepAnchor)
             cursor.removeSelectedText()
             cursor.deleteChar()  # Remove trailing newline
             self._line_count = LOG_ROTATION_THRESHOLD

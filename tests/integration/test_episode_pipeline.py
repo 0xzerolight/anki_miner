@@ -124,9 +124,7 @@ class TestEpisodePipeline:
             # Jisho returns definitions
             jisho_resp = MagicMock()
             jisho_resp.status_code = 200
-            jisho_resp.json.return_value = {
-                "data": [{"senses": [{"english_definitions": ["to eat"]}]}]
-            }
+            jisho_resp.json.return_value = {"data": [{"senses": [{"english_definitions": ["to eat"]}]}]}
             mock_get.return_value = jisho_resp
 
             # Build services with real instances

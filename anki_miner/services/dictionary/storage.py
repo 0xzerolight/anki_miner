@@ -78,16 +78,14 @@ def bulk_insert(db_path: Path, rows: Iterable[DictRow], batch_size: int = 5000) 
             batch.append((row.term, row.reading, row.content, row.tags, row.score, row.sequence))
             if len(batch) >= batch_size:
                 conn.executemany(
-                    "INSERT INTO entries (term, reading, content, tags, score, sequence) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO entries (term, reading, content, tags, score, sequence) " "VALUES (?, ?, ?, ?, ?, ?)",
                     batch,
                 )
                 total += len(batch)
                 batch.clear()
         if batch:
             conn.executemany(
-                "INSERT INTO entries (term, reading, content, tags, score, sequence) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO entries (term, reading, content, tags, score, sequence) " "VALUES (?, ?, ?, ?, ?, ?)",
                 batch,
             )
             total += len(batch)
@@ -103,8 +101,7 @@ def write_meta(db_path: Path, items: dict[str, str]) -> None:
     try:
         for key, value in items.items():
             conn.execute(
-                "INSERT INTO meta (key, value) VALUES (?, ?) "
-                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                "INSERT INTO meta (key, value) VALUES (?, ?) " "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                 (key, value),
             )
         conn.commit()

@@ -50,9 +50,7 @@ class ManualPairWorkerThread(CancellableWorker):
 
             # Report overall progress
             if self.progress_callback:
-                self.progress_callback.on_start(
-                    len(self.pairs), f"Processing {len(self.pairs)} episodes"
-                )
+                self.progress_callback.on_start(len(self.pairs), f"Processing {len(self.pairs)} episodes")
 
             for i, pair in enumerate(self.pairs, 1):
                 if self.check_cancelled():

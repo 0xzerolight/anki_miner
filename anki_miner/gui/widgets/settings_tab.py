@@ -182,15 +182,9 @@ class SettingsTab(QWidget):
 
         # Animated screenshot settings
         self.media_panel.animated_checkbox.setChecked(self.config.screenshot_animated)
-        self.media_panel.animated_format_combo.setCurrentText(
-            self.config.screenshot_animated_format
-        )
-        self.media_panel.animated_duration_spinbox.setValue(
-            self.config.screenshot_animated_clip_duration
-        )
-        self.media_panel.animated_match_audio_checkbox.setChecked(
-            self.config.screenshot_animated_match_audio
-        )
+        self.media_panel.animated_format_combo.setCurrentText(self.config.screenshot_animated_format)
+        self.media_panel.animated_duration_spinbox.setValue(self.config.screenshot_animated_clip_duration)
+        self.media_panel.animated_match_audio_checkbox.setChecked(self.config.screenshot_animated_match_audio)
         self.media_panel.animated_fps_spinbox.setValue(self.config.screenshot_animated_fps)
         self.media_panel.animated_height_spinbox.setValue(self.config.screenshot_animated_height)
         self.media_panel.animated_quality_spinbox.setValue(self.config.screenshot_animated_quality)
@@ -223,17 +217,11 @@ class SettingsTab(QWidget):
 
         # Subtitle text filtering settings (Issue #8)
         self.filtering_panel.subtitle_regex_edit.setText(self.config.subtitle_regex_filter)
-        self.filtering_panel.subtitle_replacement_edit.setText(
-            self.config.subtitle_regex_replacement
-        )
-        self.filtering_panel.use_subtitle_regex_checkbox.setChecked(
-            self.config.use_subtitle_regex_filter
-        )
+        self.filtering_panel.subtitle_replacement_edit.setText(self.config.subtitle_regex_replacement)
+        self.filtering_panel.use_subtitle_regex_checkbox.setChecked(self.config.use_subtitle_regex_filter)
 
         # Deduplication settings
-        self.filtering_panel.deduplicate_sentences_checkbox.setChecked(
-            self.config.deduplicate_sentences
-        )
+        self.filtering_panel.deduplicate_sentences_checkbox.setChecked(self.config.deduplicate_sentences)
 
         # i+1 sentence filter setting
         self.filtering_panel.use_i_plus_one_checkbox.setChecked(self.config.use_i_plus_one_filter)
@@ -439,9 +427,7 @@ class SettingsTab(QWidget):
 
     def _on_add_dict_clicked(self) -> None:
         """Prompt for a Yomitan zip and run the import worker."""
-        zip_path_str, _ = QFileDialog.getOpenFileName(
-            self, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)"
-        )
+        zip_path_str, _ = QFileDialog.getOpenFileName(self, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)")
         if not zip_path_str:
             return
 
@@ -493,9 +479,7 @@ class SettingsTab(QWidget):
         ``overwrite=True``. Picking a different zip would orphan the stale slot
         and silently create a new one — we abort with a warning instead.
         """
-        zip_path_str, _ = QFileDialog.getOpenFileName(
-            self, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)"
-        )
+        zip_path_str, _ = QFileDialog.getOpenFileName(self, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)")
         if not zip_path_str:
             return
 
@@ -510,8 +494,7 @@ class SettingsTab(QWidget):
             QMessageBox.warning(
                 self,
                 "Zip does not match slot",
-                f"This zip is for '{derived_id}', but you are re-importing "
-                f"'{slot_id}'. Pick the matching zip.",
+                f"This zip is for '{derived_id}', but you are re-importing " f"'{slot_id}'. Pick the matching zip.",
             )
             return
 
@@ -627,9 +610,7 @@ class SettingsTab(QWidget):
 
         note_type = self.anki_panel.note_type_input.text().strip()
         if not note_type:
-            self.anki_panel.set_notetype_status(
-                False, "Enter a note type name before fetching fields"
-            )
+            self.anki_panel.set_notetype_status(False, "Enter a note type name before fetching fields")
             return
 
         ankiconnect_url = self.anki_panel.ankiconnect_url_input.text().strip()
@@ -671,9 +652,7 @@ class SettingsTab(QWidget):
             )
             return
         self.anki_panel.populate_from_field_list(field_names)
-        self.anki_panel.set_notetype_status(
-            True, f"Fetched {len(field_names)} fields and auto-mapped them"
-        )
+        self.anki_panel.set_notetype_status(True, f"Fetched {len(field_names)} fields and auto-mapped them")
 
     def _on_fetch_fields_error(self, message: str) -> None:
         """Surface an unexpected worker exception via the note-type status line."""

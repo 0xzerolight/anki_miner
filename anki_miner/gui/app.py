@@ -87,9 +87,7 @@ def main():
         sys.exit(_run_bundled_smoke())
 
     # Enable high DPI scaling
-    QApplication.setHighDpiScaleFactorRoundingPolicy(
-        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
-    )
+    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 
     # Create application
     app = QApplication(sys.argv)

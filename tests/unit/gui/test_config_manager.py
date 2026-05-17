@@ -54,9 +54,7 @@ class TestAllowedPosMigration:
         assert "代名詞" in config.allowed_pos
         assert set(config.allowed_pos) == set(create_default_config().allowed_pos)
 
-    def test_migrate_allowed_pos_replaces_old_default_regardless_of_order(
-        self, tmp_path, monkeypatch
-    ):
+    def test_migrate_allowed_pos_replaces_old_default_regardless_of_order(self, tmp_path, monkeypatch):
         """Order of items in saved JSON must not block migration (set compare)."""
         cfg_file = tmp_path / "gui_config.json"
         cfg_file.write_text(

@@ -95,9 +95,7 @@ def test_falls_through_to_jisho_when_no_indexed_hit(tmp_path: Path) -> None:
     with patch("anki_miner.services.providers.jisho_provider.requests.get") as mock_get:
         mock_response = mock_get.return_value
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "data": [{"senses": [{"english_definitions": ["jisho fallback"]}]}]
-        }
+        mock_response.json.return_value = {"data": [{"senses": [{"english_definitions": ["jisho fallback"]}]}]}
         result = service.get_definition("聞く")  # not in the local dict
         assert result is not None
         assert "jisho fallback" in result

@@ -396,9 +396,7 @@ def structured_content_to_html(
 
     if isinstance(node, list):
         return "".join(
-            structured_content_to_html(
-                child, _depth + 1, dict_id=dict_id, media_collector=media_collector
-            )
+            structured_content_to_html(child, _depth + 1, dict_id=dict_id, media_collector=media_collector)
             for child in node
         )
 
@@ -453,9 +451,7 @@ def _render_img(
     contract — "img nodes always produce something" — is preserved. The
     envelope only appears when there's actually an image to show.
     """
-    img_src, dict_media = _resolve_img_src(
-        node.get("path"), dict_id=dict_id, media_collector=media_collector
-    )
+    img_src, dict_media = _resolve_img_src(node.get("path"), dict_id=dict_id, media_collector=media_collector)
 
     # Per-tag passthroughs that belong on the inner <img>.
     extras: list[str] = []
@@ -589,8 +585,6 @@ def render_glossary_entry(
         if isinstance(item, str):
             inner = escape(item)
         else:
-            inner = structured_content_to_html(
-                item, dict_id=dict_id, media_collector=media_collector
-            )
+            inner = structured_content_to_html(item, dict_id=dict_id, media_collector=media_collector)
         parts.append(f'<li class="gloss-item"><span class="gloss-content">{inner}</span></li>')
     return "".join(parts)

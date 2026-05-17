@@ -186,9 +186,7 @@ class MainWindow(QMainWindow):
         """Set up accessibility features for screen readers and keyboard navigation."""
         # Set window accessible name and description
         self.setAccessibleName("Anki Miner Main Window")
-        self.setAccessibleDescription(
-            "Japanese vocabulary mining tool for creating Anki flashcards from anime"
-        )
+        self.setAccessibleDescription("Japanese vocabulary mining tool for creating Anki flashcards from anime")
 
         # Set accessible names for main components
         self.tabs.setAccessibleName("Main Tabs")
@@ -200,9 +198,7 @@ class MainWindow(QMainWindow):
         self.header.setAccessibleDescription("Application title and theme selector")
 
         self.status_bar.setAccessibleName("Status Bar")
-        self.status_bar.setAccessibleDescription(
-            "Shows current operation, statistics, and system status"
-        )
+        self.status_bar.setAccessibleDescription("Shows current operation, statistics, and system status")
 
         # Set tab order: header -> tabs -> status bar
         self.setTabOrder(self.header, self.tabs)
@@ -410,12 +406,8 @@ class MainWindow(QMainWindow):
             self.status_bar.set_operation("System validation passed", "success")
         elif not silent:
             # Show validation issues (skip popup during startup auto-check)
-            issues_text = "\n".join(
-                [f"- {issue.component}: {issue.message}" for issue in result.issues]
-            )
-            QMessageBox.warning(
-                self, "Validation Issues", f"System validation found issues:\n\n{issues_text}"
-            )
+            issues_text = "\n".join([f"- {issue.component}: {issue.message}" for issue in result.issues])
+            QMessageBox.warning(self, "Validation Issues", f"System validation found issues:\n\n{issues_text}")
 
     def _on_processing_result(self, result: ProcessingResult) -> None:
         """Handle processing result from presenter.
@@ -460,9 +452,7 @@ class MainWindow(QMainWindow):
 
             service.record_session(
                 video_file=Path(result.video_file) if result.video_file else Path("unknown"),
-                subtitle_file=(
-                    Path(result.subtitle_file) if result.subtitle_file else Path("unknown")
-                ),
+                subtitle_file=(Path(result.subtitle_file) if result.subtitle_file else Path("unknown")),
                 result=result,
                 card_ids=result.card_ids,
             )
@@ -585,18 +575,12 @@ class MainWindow(QMainWindow):
         from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 
         dicts_root = Path.home() / ".anki_miner" / "dicts"
-        if not _needs_jmdict_migration(
-            self.config.jmdict_path, dicts_root, self.config.dictionary_chain
-        ):
+        if not _needs_jmdict_migration(self.config.jmdict_path, dicts_root, self.config.dictionary_chain):
             return
 
-        self._jmdict_migration_worker = DictionaryImportWorker.for_jmdict(
-            self.config.jmdict_path, dicts_root
-        )
+        self._jmdict_migration_worker = DictionaryImportWorker.for_jmdict(self.config.jmdict_path, dicts_root)
         self._jmdict_migration_worker.import_finished.connect(self._on_jmdict_migration_finished)
-        self._jmdict_migration_worker.failed.connect(
-            lambda err: logger.warning("JMdict migration failed: %s", err)
-        )
+        self._jmdict_migration_worker.failed.connect(lambda err: logger.warning("JMdict migration failed: %s", err))
         logger.info("Starting one-time JMdict SQLite migration")
         self.status_bar.set_operation("Migrating JMdict to SQLite in background…", "info")
         self._jmdict_migration_worker.start()
@@ -609,9 +593,7 @@ class MainWindow(QMainWindow):
         tab) rebuilds its processor and picks up the newly-available index.
         """
         logger.info("JMdict migration complete: %s (%s entries)", dict_id, meta.get("entry_count"))
-        self.status_bar.set_operation(
-            f"JMdict ready ({meta.get('entry_count', 0):,} entries)", "info"
-        )
+        self.status_bar.set_operation(f"JMdict ready ({meta.get('entry_count', 0):,} entries)", "info")
         self.config_refreshed.emit(self.config)
 
     def _check_for_updates(self) -> None:

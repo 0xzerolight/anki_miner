@@ -31,15 +31,11 @@ class TestDownloadLabel:
         assert banner._download_btn.text() == "Download .deb"
 
     def test_appimage_label(self):
-        banner = UpdateBanner(
-            _info(asset_url="https://example.com/AnkiMiner-2.4.0-x86_64.AppImage")
-        )
+        banner = UpdateBanner(_info(asset_url="https://example.com/AnkiMiner-2.4.0-x86_64.AppImage"))
         assert banner._download_btn.text() == "Download AppImage"
 
     def test_installer_label_case_insensitive(self):
-        banner = UpdateBanner(
-            _info(asset_url="https://example.com/AnkiMiner-2.4.0-Windows-x86_64-Setup.exe")
-        )
+        banner = UpdateBanner(_info(asset_url="https://example.com/AnkiMiner-2.4.0-Windows-x86_64-Setup.exe"))
         assert banner._download_btn.text() == "Download installer"
 
     def test_tar_gz_label(self):

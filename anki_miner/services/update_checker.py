@@ -123,8 +123,7 @@ class UpdateChecker:
                     # GitHub requires a User-Agent header for abuse triage; omitting
                     # it occasionally yields 403 from anonymous unauthenticated calls.
                     "User-Agent": (
-                        f"anki-miner/{self.current_version} "
-                        "(+https://github.com/0xzerolight/anki_miner)"
+                        f"anki-miner/{self.current_version} " "(+https://github.com/0xzerolight/anki_miner)"
                     ),
                 },
             )

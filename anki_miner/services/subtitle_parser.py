@@ -21,9 +21,7 @@ _NOMINAL_SUFFIX_POS2 = {"名詞的", "形状詞的", "副詞的"}
 # Whitelist of 接頭辞 surfaces that productively form compounds with
 # 名詞/形状詞 roots. Used by _merge_prefix_compounds to avoid false positives
 # from rare/unproductive 接頭辞 entries in unidic.
-_PREFIX_WHITELIST = frozenset(
-    {"無", "不", "非", "反", "超", "未", "新", "旧", "全", "半", "副", "元", "再", "最"}
-)
+_PREFIX_WHITELIST = frozenset({"無", "不", "非", "反", "超", "未", "新", "旧", "全", "半", "副", "元", "再", "最"})
 
 # 接尾辞(名詞的) surfaces that nominalize a preceding 動詞 連用形 stem
 # (e.g. 言い+方 → 言い方). Restricted to a small productive set; 者/事/物
@@ -207,9 +205,7 @@ class SubtitleParserService:
 
         return all_words
 
-    def parse_subtitle_file_with_index(
-        self, subtitle_file: Path
-    ) -> tuple[list[TokenizedWord], list[LineLemmas]]:
+    def parse_subtitle_file_with_index(self, subtitle_file: Path) -> tuple[list[TokenizedWord], list[LineLemmas]]:
         """Parse a subtitle file and produce both the deduped mining list and a per-line lemma index.
 
         ``all_words`` is identical to ``parse_subtitle_file(subtitle_file)`` —
@@ -426,9 +422,7 @@ class SubtitleParserService:
                     continue
                 if root_pos1 in {"名詞", "形状詞"}:
                     # Treat unidic's "*" placeholder as missing pos2.
-                    root_pos2 = (
-                        raw_root_pos2 if raw_root_pos2 and raw_root_pos2 != "*" else "普通名詞"
-                    )
+                    root_pos2 = raw_root_pos2 if raw_root_pos2 and raw_root_pos2 != "*" else "普通名詞"
                     surf = head.surface + root.surface
                     try:
                         head_kana = head.feature.kana or head.surface
@@ -481,11 +475,7 @@ class SubtitleParserService:
                     merged.append(head)
                     i += 1
                     continue
-                if (
-                    suf_pos1 == "接尾辞"
-                    and suf_pos2 == "名詞的"
-                    and suffix.surface in _VERB_NOMINALIZER_SUFFIXES
-                ):
+                if suf_pos1 == "接尾辞" and suf_pos2 == "名詞的" and suffix.surface in _VERB_NOMINALIZER_SUFFIXES:
                     surf = head.surface + suffix.surface
                     try:
                         head_kana = head.feature.kana or head.surface

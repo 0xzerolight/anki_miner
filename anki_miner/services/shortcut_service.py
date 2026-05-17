@@ -42,9 +42,7 @@ class ShortcutService:
     def shortcut_exists() -> bool:
         """Check whether a shortcut already exists for the current platform."""
         if sys.platform == "linux":
-            return (
-                Path.home() / ".local" / "share" / "applications" / f"{APP_ID}.desktop"
-            ).exists()
+            return (Path.home() / ".local" / "share" / "applications" / f"{APP_ID}.desktop").exists()
         if sys.platform == "win32":
             return (Path.home() / "Desktop" / f"{APP_NAME}.lnk").exists()
         return False
@@ -91,8 +89,7 @@ class ShortcutService:
         elif sys.platform == "darwin":
             result.success = True
             result.messages.append(
-                f"Automatic shortcut creation is not supported on macOS. "
-                f"To launch {APP_NAME}, run:\n  {exe_path}"
+                f"Automatic shortcut creation is not supported on macOS. " f"To launch {APP_NAME}, run:\n  {exe_path}"
             )
         else:
             result.error = f"Unsupported platform: {sys.platform}"
@@ -178,15 +175,7 @@ StartupWMClass=anki_miner
             result.error = "PowerShell not found. Cannot create shortcut."
             return
 
-        start_menu = (
-            Path.home()
-            / "AppData"
-            / "Roaming"
-            / "Microsoft"
-            / "Windows"
-            / "Start Menu"
-            / "Programs"
-        )
+        start_menu = Path.home() / "AppData" / "Roaming" / "Microsoft" / "Windows" / "Start Menu" / "Programs"
         if start_menu.exists():
             start_shortcut = start_menu / f"{APP_NAME}.lnk"
             ps_script_start = (

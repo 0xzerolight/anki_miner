@@ -163,18 +163,12 @@ class BatchProcessingTab(QWidget):
         # Ctrl+O: Browse anime folder
         browse_shortcut = QShortcut(QKeySequence("Ctrl+O"), self)
         browse_shortcut.activated.connect(
-            lambda: (
-                self.anime_folder_selector.browse()
-                if hasattr(self, "anime_folder_selector")
-                else None
-            )
+            lambda: (self.anime_folder_selector.browse() if hasattr(self, "anime_folder_selector") else None)
         )
 
         # Ctrl+P: Preview/Scan pairs
         preview_shortcut = QShortcut(QKeySequence("Ctrl+P"), self)
-        preview_shortcut.activated.connect(
-            lambda: self._process_pairs() if hasattr(self, "scan_button") else None
-        )
+        preview_shortcut.activated.connect(lambda: self._process_pairs() if hasattr(self, "scan_button") else None)
 
         # Ctrl+Return: Process queue
         process_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
@@ -201,15 +195,11 @@ class BatchProcessingTab(QWidget):
         layout.addWidget(header)
 
         # Anime folder selector
-        self.anime_folder_selector = FileSelector(
-            label="Anime Folder:", file_mode=False, file_filter=""
-        )
+        self.anime_folder_selector = FileSelector(label="Anime Folder:", file_mode=False, file_filter="")
         layout.addWidget(self.anime_folder_selector)
 
         # Subtitle folder selector
-        self.subtitle_folder_selector = FileSelector(
-            label="Subtitle Folder:", file_mode=False, file_filter=""
-        )
+        self.subtitle_folder_selector = FileSelector(label="Subtitle Folder:", file_mode=False, file_filter="")
         layout.addWidget(self.subtitle_folder_selector)
 
         # Action buttons
@@ -255,10 +245,7 @@ class BatchProcessingTab(QWidget):
         if not anime_path or not subtitle_path:
             return None
 
-        if (
-            not self.anime_folder_selector.is_valid()
-            or not self.subtitle_folder_selector.is_valid()
-        ):
+        if not self.anime_folder_selector.is_valid() or not self.subtitle_folder_selector.is_valid():
             return None
 
         return Path(anime_path), Path(subtitle_path)
@@ -281,9 +268,7 @@ class BatchProcessingTab(QWidget):
         """Preview video/subtitle pairs before processing."""
         folders = self._get_validated_folders()
         if not folders:
-            QMessageBox.warning(
-                self, "Invalid Folders", "Please select valid anime and subtitle folders"
-            )
+            QMessageBox.warning(self, "Invalid Folders", "Please select valid anime and subtitle folders")
             return
 
         anime_folder, subtitle_folder = folders
@@ -312,9 +297,7 @@ class BatchProcessingTab(QWidget):
 
         folders = self._get_validated_folders()
         if not folders:
-            QMessageBox.warning(
-                self, "Invalid Folders", "Please select valid anime and subtitle folders"
-            )
+            QMessageBox.warning(self, "Invalid Folders", "Please select valid anime and subtitle folders")
             return
 
         anime_folder, subtitle_folder = folders
@@ -343,16 +326,12 @@ class BatchProcessingTab(QWidget):
         self.presenter.show_info(f"Starting batch processing of {len(pairs)} episodes...")
 
         # Create episode processor using service factory
-        episode_processor = create_episode_processor(
-            self.config, self.presenter, self.stats_service
-        )
+        episode_processor = create_episode_processor(self.config, self.presenter, self.stats_service)
 
         # Process each pair sequentially in worker thread
         from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
 
-        self.worker_thread = ManualPairWorkerThread(
-            episode_processor, pairs, self.progress_callback
-        )
+        self.worker_thread = ManualPairWorkerThread(episode_processor, pairs, self.progress_callback)
 
         self.worker_thread.result_ready.connect(self._on_processing_finished)
         self.worker_thread.error.connect(self._on_processing_error)
@@ -418,9 +397,7 @@ class BatchProcessingTab(QWidget):
         self._is_processing = True
         self.log_widget.clear_log()
         self._show_cancel_state()
-        self.presenter.show_info(
-            f"Starting queue processing ({self.batch_queue.pending_count} series)..."
-        )
+        self.presenter.show_info(f"Starting queue processing ({self.batch_queue.pending_count} series)...")
 
         # Start worker (creates processors per-item with subtitle offset)
         self._start_queue_worker()
@@ -504,9 +481,7 @@ class BatchProcessingTab(QWidget):
         completed = self.batch_queue.completed_count
         total = self.batch_queue.total_items
 
-        self.overall_progress_widget.set_progress(
-            completed, total, f"Completed: {completed}/{total}"
-        )
+        self.overall_progress_widget.set_progress(completed, total, f"Completed: {completed}/{total}")
         self.presenter.show_success(f"Created {cards_created} cards")
 
         # Update queue panel
@@ -550,10 +525,7 @@ class BatchProcessingTab(QWidget):
         # Show summary
         self.overall_progress_widget.set_status("Queue processing complete")
         failed = self.batch_queue.failed_count
-        summary = (
-            f"Processed {self.batch_queue.total_items} anime series\n"
-            f"Total cards created: {total_cards}"
-        )
+        summary = f"Processed {self.batch_queue.total_items} anime series\n" f"Total cards created: {total_cards}"
         if failed > 0:
             summary += f"\n{failed} series failed"
         QMessageBox.information(self, "Queue Processing Complete", summary)
@@ -565,9 +537,7 @@ class BatchProcessingTab(QWidget):
 
         reset_count = self.batch_queue.reset_failed_for_retry()
         if reset_count == 0:
-            QMessageBox.information(
-                self, "No Items to Retry", "No failed items eligible for retry."
-            )
+            QMessageBox.information(self, "No Items to Retry", "No failed items eligible for retry.")
             self.retry_button.setVisible(False)
             return
 
