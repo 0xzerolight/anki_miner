@@ -45,6 +45,7 @@ class AnkiMinerConfig:
             "pitch_position": "",
             "pitch_category": "",
             "frequency": "",
+            "glossary": "",
         }
     )
     ankiconnect_url: str = "http://127.0.0.1:8765"

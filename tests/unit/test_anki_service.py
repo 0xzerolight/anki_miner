@@ -1222,3 +1222,188 @@ class TestExtractDictMediaSrcsEnvelope:
         )
 
         assert _extract_dict_media_srcs(definition) == ["my-dict__path.svg"]
+
+
+# ---------------------------------------------------------------------------
+# TestGlossaryFieldRouting (Issue #17: multi-dict glossary field)
+# ---------------------------------------------------------------------------
+
+
+class TestGlossaryFieldRouting:
+    """Tests for routing glossary HTML through the mapped Anki field.
+
+    Glossary HTML is a Yomitan envelope (raw HTML) and must NOT be
+    html.escape()d — it must bypass OPTIONAL_FIELD_KEYS and flow through
+    field_data verbatim.
+    """
+
+    _GLOSSARY_HTML = (
+        '<div class="yomitan-glossary">' '<ol><li data-dictionary="X">X def</li></ol>' "</div>"
+    )
+
+    def test_glossary_routed_to_mapped_anki_field(self, test_config, make_tokenized_word):
+        """When anki_fields['glossary'] is set, AnkiService writes the raw HTML to that field."""
+        from dataclasses import replace
+
+        cfg = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "glossary": "Glossary"},
+        )
+        service = AnkiService(cfg)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=[123])
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            result = service.create_cards_batch(
+                [(word, media, "single-def", {"glossary": self._GLOSSARY_HTML})]
+            )
+
+        assert result == 1
+        payload = mock_post.call_args[1]["json"]
+        note = payload["params"]["notes"][0]
+        assert note["fields"]["Glossary"] == self._GLOSSARY_HTML
+        # MainDefinition still gets the positional definition string
+        assert note["fields"]["definition"] == "single-def"
+
+    def test_glossary_skipped_when_field_mapping_empty(self, test_config, make_tokenized_word):
+        """Default config (anki_fields['glossary'] == '') means Glossary is never sent."""
+        # test_config has no 'glossary' key → .get("glossary", "") returns "" → skipped
+        service = AnkiService(test_config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=[123])
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            result = service.create_cards_batch(
+                [(word, media, "single-def", {"glossary": self._GLOSSARY_HTML})]
+            )
+
+        assert result == 1
+        payload = mock_post.call_args[1]["json"]
+        note = payload["params"]["notes"][0]
+        assert "Glossary" not in note["fields"]
+        assert "" not in note["fields"]
+
+    def test_glossary_not_html_escaped(self, test_config, make_tokenized_word):
+        """Glossary HTML tags must reach AnkiConnect unescaped."""
+        from dataclasses import replace
+
+        cfg = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "glossary": "Glossary"},
+        )
+        service = AnkiService(cfg)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=[123])
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            service.create_cards_batch([(word, media, "def", {"glossary": self._GLOSSARY_HTML})])
+
+        payload = mock_post.call_args[1]["json"]
+        note = payload["params"]["notes"][0]
+        # Must contain literal angle brackets, not &lt; / &gt;
+        assert "<" in note["fields"]["Glossary"]
+        assert "&lt;" not in note["fields"]["Glossary"]
+
+    def test_other_extra_fields_survive_glossary_extraction(self, test_config, make_tokenized_word):
+        """Pulling glossary out of extra_fields must not discard other keys."""
+        service = AnkiService(test_config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=[123])
+
+        with patch("requests.post", return_value=resp) as mock_post:
+            result = service.create_cards_batch(
+                [
+                    (
+                        word,
+                        media,
+                        "def",
+                        {
+                            "glossary": self._GLOSSARY_HTML,
+                            "pitch_position": "1",
+                            "pitch_category": "頭高",
+                            "frequency": "200",
+                        },
+                    )
+                ]
+            )
+
+        assert result == 1
+        payload = mock_post.call_args[1]["json"]
+        note = payload["params"]["notes"][0]
+        # Optional fields still routed normally
+        assert note["fields"]["PitchPosition"] == "1"
+        assert note["fields"]["PitchCategory"] == "頭高"
+        assert note["fields"]["Frequency"] == "200"
+
+    def test_glossary_dict_media_uploaded(self, test_config, temp_dir, make_tokenized_word):
+        """dict-media images embedded in glossary HTML must be uploaded to Anki."""
+        from dataclasses import replace
+
+        dicts_root = temp_dir / "dicts"
+        media_dir = dicts_root / "test-dict" / "media"
+        media_dir.mkdir(parents=True)
+        (media_dir / "svg-pitch_X.svg").write_bytes(b"<svg/>")
+
+        cfg = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "glossary": "Glossary"},
+            dicts_root=dicts_root,
+        )
+        service = AnkiService(cfg)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        glossary_with_media = (
+            '<div class="yomitan-glossary">'
+            '<img class="anki-miner-dict-media" src="test-dict__svg-pitch_X.svg">'
+            "</div>"
+        )
+
+        store_resp = _mock_response(result=None)
+        create_resp = _mock_response(result=[123])
+
+        with patch("requests.post", side_effect=[store_resp, create_resp]) as mock_post:
+            result = service.create_cards_batch(
+                [(word, media, "def", {"glossary": glossary_with_media})]
+            )
+
+        assert result == 1
+        store_calls = [
+            c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"
+        ]
+        assert len(store_calls) == 1
+        assert store_calls[0][1]["json"]["params"]["filename"] == "test-dict__svg-pitch_X.svg"
+
+    def test_no_glossary_in_extra_fields_does_not_crash(self, test_config, make_tokenized_word):
+        """extra_fields without a glossary key must still work fine."""
+        service = AnkiService(test_config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=[123])
+
+        with patch("requests.post", return_value=resp):
+            result = service.create_cards_batch([(word, media, "def", {"pitch_position": "0"})])
+
+        assert result == 1
+
+    def test_none_extra_fields_does_not_crash(self, test_config, make_tokenized_word):
+        """3-tuple (no extra_fields) must still work fine after glossary wiring."""
+        service = AnkiService(test_config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=[123])
+
+        with patch("requests.post", return_value=resp):
+            result = service.create_cards_batch([(word, media, "def")])
+
+        assert result == 1
