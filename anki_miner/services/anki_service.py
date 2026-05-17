@@ -495,4 +495,5 @@ class AnkiService:
             params={"notes": note_ids},
             timeout=30,
         )
+        self.invalidate_existing_vocabulary_cache()
         return len(note_ids)
