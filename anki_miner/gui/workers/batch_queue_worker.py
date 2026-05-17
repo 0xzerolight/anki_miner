@@ -107,7 +107,7 @@ class BatchQueueWorkerThread(CancellableWorker):
                 total_cards += cards_for_item
                 self.item_completed.emit(item.id, cards_for_item)
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — surface every failure to GUI
                 self.item_failed.emit(item.id, str(e))
 
         self.queue_finished.emit(total_cards)
