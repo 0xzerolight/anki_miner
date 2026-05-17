@@ -11,6 +11,7 @@ import requests
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.interfaces import ProgressCallback
+from anki_miner.services._ankiconnect import post_action
 from anki_miner.services.dictionary.yomitan_renderer import DICT_MEDIA_CLASS
 
 logger = logging.getLogger(__name__)
@@ -116,22 +117,15 @@ class AnkiService:
         """
         name = model_name or self.config.anki_note_type
         try:
-            response = requests.post(
+            result = post_action(
                 self.config.ankiconnect_url,
-                json={
-                    "action": "modelFieldNames",
-                    "version": 6,
-                    "params": {"modelName": name},
-                },
+                "modelFieldNames",
+                params={"modelName": name},
                 timeout=15,
             )
-            result = response.json()
-            if result.get("error"):
-                return []
-            decks: list[str] = result.get("result", [])
-            return decks
-        except (requests.RequestException, ValueError):
+        except AnkiConnectionError:
             return []
+        return list(result or [])
 
     def get_existing_vocabulary(self) -> set[str]:
         """Get all Japanese vocabulary words already in Anki across ALL decks.
@@ -143,10 +137,10 @@ class AnkiService:
         Returns:
             Set of words (lemmas) already in the collection. Returns an
             empty set as a graceful-degradation fallback if AnkiConnect
-            responds but the call fails for a recoverable reason (e.g.
-            non-connection ``requests.RequestException`` or a
-            ``ValueError`` from JSON decoding) — a warning is logged and
-            filtering is effectively disabled for the run.
+            responds but the call fails for a recoverable, non-connection
+            transport reason (e.g. a ``Timeout`` or a JSON decode
+            ``ValueError``) — a warning is logged and filtering is
+            effectively disabled for the run.
 
         Raises:
             AnkiConnectionError: If a connection to AnkiConnect cannot be
@@ -154,22 +148,16 @@ class AnkiService:
                 payload for ``findNotes`` / ``notesInfo``.
         """
         try:
-            # Find ALL notes in the collection
-            response = requests.post(
-                self.config.ankiconnect_url,
-                json={
-                    "action": "findNotes",
-                    "version": 6,
-                    "params": {"query": "deck:*"},
-                },
-                timeout=30,
+            # Find ALL notes in the collection.
+            note_ids = (
+                post_action(
+                    self.config.ankiconnect_url,
+                    "findNotes",
+                    params={"query": "deck:*"},
+                    timeout=30,
+                )
+                or []
             )
-
-            result = response.json()
-            if result.get("error"):
-                raise AnkiConnectionError(f"AnkiConnect error while finding notes: {result['error']}")
-
-            note_ids = result.get("result", [])
 
             if not note_ids:
                 logger.warning(
@@ -178,27 +166,23 @@ class AnkiService:
                 )
                 return set()
 
-            # Get note info in batches to avoid timeouts on large collections
+            # Get note info in batches to avoid timeouts on large collections.
             existing_words: set[str] = set()
             batch_size = 1000
 
             for i in range(0, len(note_ids), batch_size):
                 batch = note_ids[i : i + batch_size]
-                response = requests.post(
-                    self.config.ankiconnect_url,
-                    json={
-                        "action": "notesInfo",
-                        "version": 6,
-                        "params": {"notes": batch},
-                    },
-                    timeout=30,
+                notes = (
+                    post_action(
+                        self.config.ankiconnect_url,
+                        "notesInfo",
+                        params={"notes": batch},
+                        timeout=30,
+                    )
+                    or []
                 )
 
-                result = response.json()
-                if result.get("error"):
-                    raise AnkiConnectionError(f"AnkiConnect error while getting notes info: {result['error']}")
-
-                for note in result.get("result", []):
+                for note in notes:
                     fields = note.get("fields", {})
                     if not fields:
                         continue
@@ -210,9 +194,16 @@ class AnkiService:
 
             return existing_words
 
-        except requests.exceptions.ConnectionError as e:
-            raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
-        except (requests.RequestException, ValueError) as e:
+        except AnkiConnectionError as e:
+            # `post_action` translates `ConnectionError` (Anki down) and
+            # AnkiConnect-side error payloads to `AnkiConnectionError` —
+            # both must propagate so the GUI can surface a hard failure.
+            # Other transport failures (`Timeout`, JSON parse) are wrapped
+            # with `__cause__` set to a `RequestException`/`ValueError`;
+            # those degrade to an empty set + warning.
+            cause = e.__cause__
+            if cause is None or isinstance(cause, requests.exceptions.ConnectionError):
+                raise
             logger.warning("Failed to fetch existing vocabulary (filtering disabled): %s", e)
             return set()
 
@@ -229,22 +220,18 @@ class AnkiService:
         try:
             with open(filepath, "rb") as f:
                 data_b64 = base64.b64encode(f.read()).decode("utf-8")
-
-            response = requests.post(
+        except OSError:
+            return False
+        try:
+            post_action(
                 self.config.ankiconnect_url,
-                json={
-                    "action": "storeMediaFile",
-                    "version": 6,
-                    "params": {"filename": filename, "data": data_b64},
-                },
+                "storeMediaFile",
+                params={"filename": filename, "data": data_b64},
                 timeout=30,
             )
-
-            result = response.json()
-            return not result.get("error")
-
-        except (requests.RequestException, OSError, ValueError):
+        except AnkiConnectionError:
             return False
+        return True
 
     def _upload_dict_media(self, definition_html: str | None) -> None:
         """Ship any dict-media files referenced in `definition_html` to Anki.
@@ -380,38 +367,30 @@ class AnkiService:
                     }
                 )
 
-            # Send batch request
-            try:
-                response = requests.post(
+            # Send batch request. `post_action` raises `AnkiConnectionError`
+            # for connection failures, transport errors, and AnkiConnect-side
+            # error payloads — propagate them; callers catch at the
+            # pipeline boundary.
+            note_ids = (
+                post_action(
                     self.config.ankiconnect_url,
-                    json={
-                        "action": "addNotes",
-                        "version": 6,
-                        "params": {"notes": notes},
-                    },
+                    "addNotes",
+                    params={"notes": notes},
                     timeout=60,
                 )
+                or []
+            )
 
-                result = response.json()
-                if not result.get("error"):
-                    # Count successful creations (non-null IDs)
-                    note_ids = result.get("result", [])
-                    batch_created = sum(1 for nid in note_ids if nid is not None)
-                    total_created += batch_created
-                    all_created_ids.extend(nid for nid in note_ids if nid is not None)
+            # Count successful creations (non-null IDs)
+            batch_created = sum(1 for nid in note_ids if nid is not None)
+            total_created += batch_created
+            all_created_ids.extend(nid for nid in note_ids if nid is not None)
 
-                    if progress_callback:
-                        progress_callback.on_progress(
-                            min(i + batch_size, len(word_data_list)),
-                            f"Cards created: {batch_created}/{len(batch)}",
-                        )
-                else:
-                    if progress_callback:
-                        progress_callback.on_error(f"Batch {i // batch_size + 1}", result.get("error"))
-
-            except Exception as e:
-                if progress_callback:
-                    progress_callback.on_error(f"Batch {i // batch_size + 1}", str(e))
+            if progress_callback:
+                progress_callback.on_progress(
+                    min(i + batch_size, len(word_data_list)),
+                    f"Cards created: {batch_created}/{len(batch)}",
+                )
 
         if progress_callback:
             progress_callback.on_complete()
@@ -444,22 +423,17 @@ class AnkiService:
                     try:
                         with open(media.screenshot_path, "rb") as f:
                             screenshot_base64 = base64.b64encode(f.read()).decode("utf-8")
-
-                        response = requests.post(
+                        post_action(
                             self.config.ankiconnect_url,
-                            json={
-                                "action": "storeMediaFile",
-                                "version": 6,
-                                "params": {
-                                    "filename": media.screenshot_filename,
-                                    "data": screenshot_base64,
-                                },
+                            "storeMediaFile",
+                            params={
+                                "filename": media.screenshot_filename,
+                                "data": screenshot_base64,
                             },
                             timeout=30,
                         )
-                        if not response.json().get("error"):
-                            stored.add(media.screenshot_filename)
-                    except (requests.RequestException, OSError, ValueError) as e:
+                        stored.add(media.screenshot_filename)
+                    except (AnkiConnectionError, OSError) as e:
                         logger.warning(f"Failed to store screenshot {media.screenshot_filename}: {e}")
 
                 # Store audio
@@ -467,22 +441,17 @@ class AnkiService:
                     try:
                         with open(media.audio_path, "rb") as f:
                             audio_base64 = base64.b64encode(f.read()).decode("utf-8")
-
-                        response = requests.post(
+                        post_action(
                             self.config.ankiconnect_url,
-                            json={
-                                "action": "storeMediaFile",
-                                "version": 6,
-                                "params": {
-                                    "filename": media.audio_filename,
-                                    "data": audio_base64,
-                                },
+                            "storeMediaFile",
+                            params={
+                                "filename": media.audio_filename,
+                                "data": audio_base64,
                             },
                             timeout=30,
                         )
-                        if not response.json().get("error"):
-                            stored.add(media.audio_filename)
-                    except (requests.RequestException, OSError, ValueError) as e:
+                        stored.add(media.audio_filename)
+                    except (AnkiConnectionError, OSError) as e:
                         logger.warning(f"Failed to store audio {media.audio_filename}: {e}")
 
         return stored
@@ -502,35 +471,17 @@ class AnkiService:
             if no error was raised)
 
         Raises:
-            AnkiConnectionError: If a connection to AnkiConnect cannot be
-                established, or if AnkiConnect returns an error payload
-                for the ``deleteNotes`` call.
-            requests.RequestException: Non-``ConnectionError`` HTTP failures
-                from the underlying ``requests.post`` (e.g. ``Timeout``,
-                ``HTTPError``) propagate uncaught — only
-                ``ConnectionError`` is translated to ``AnkiConnectionError``.
-            ValueError: Raised by ``response.json()`` if AnkiConnect's
-                response is not valid JSON; propagates uncaught.
+            AnkiConnectionError: On any AnkiConnect failure — connection
+                refused, transport error, JSON parse failure, or an error
+                payload in the ``deleteNotes`` response.
         """
         if not note_ids:
             return 0
 
-        try:
-            response = requests.post(
-                self.config.ankiconnect_url,
-                json={
-                    "action": "deleteNotes",
-                    "version": 6,
-                    "params": {"notes": note_ids},
-                },
-                timeout=30,
-            )
-
-            result = response.json()
-            if result.get("error"):
-                raise AnkiConnectionError(f"Failed to delete notes: {result['error']}")
-
-            return len(note_ids)
-
-        except requests.exceptions.ConnectionError as e:
-            raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
+        post_action(
+            self.config.ankiconnect_url,
+            "deleteNotes",
+            params={"notes": note_ids},
+            timeout=30,
+        )
+        return len(note_ids)
