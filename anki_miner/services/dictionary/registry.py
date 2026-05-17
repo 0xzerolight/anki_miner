@@ -10,8 +10,8 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.dictionary_provider import DictionaryProvider
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
+from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, read_meta
-from anki_miner.services.providers.jisho_provider import JishoProvider
 
 logger = logging.getLogger(__name__)
 
