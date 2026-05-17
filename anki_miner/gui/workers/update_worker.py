@@ -41,6 +41,6 @@ class UpdateWorkerThread(CancellableWorker):
                 # Always emit (info may be None) so the main-thread slot can
                 # take the single config-write code path either way.
                 self.result_ready.emit(info)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — surface every failure to GUI
             if not self.check_cancelled():
                 self.error.emit(f"Error checking for updates: {e}")

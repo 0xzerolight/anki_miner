@@ -74,7 +74,7 @@ class EpisodeWorkerThread(CancellableWorker):
             if not self.check_cancelled():
                 self.result_ready.emit(result)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — surface every failure to GUI
             if not self.check_cancelled():
                 error_msg = f"Error processing episode: {str(e)}"
                 self.error.emit(error_msg)
