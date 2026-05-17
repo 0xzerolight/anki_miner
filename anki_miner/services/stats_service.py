@@ -2,6 +2,7 @@
 
 import logging
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -75,10 +76,15 @@ class StatsService:
         """Check if the stats service has been initialized."""
         return self._initialized
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self):
         conn = sqlite3.connect(str(self._db_path))
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            with conn:  # commit on success, rollback on exception
+                yield conn
+        finally:
+            conn.close()
 
     def _create_tables(self, conn: sqlite3.Connection) -> None:
         conn.execute("""
