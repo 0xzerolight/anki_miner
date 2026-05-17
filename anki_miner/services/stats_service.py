@@ -62,12 +62,8 @@ class StatsService:
         """Initialize the database, creating tables if needed."""
         try:
             self._db_path.parent.mkdir(parents=True, exist_ok=True)
-            conn = self._connect()
-            try:
+            with self._connect() as conn:
                 self._create_tables(conn)
-                conn.commit()
-            finally:
-                conn.close()
             self._initialized = True
             logger.info(f"Stats database initialized at {self._db_path}")
             return True
@@ -124,8 +120,7 @@ class StatsService:
         """Record a mining session. Returns the row ID, or -1 on failure."""
         if not self._initialized:
             return -1
-        conn = self._connect()
-        try:
+        with self._connect() as conn:
             cursor = conn.execute(
                 """INSERT INTO mining_sessions
                    (series_name, episode_name, total_words, unknown_words,
@@ -141,17 +136,13 @@ class StatsService:
                     session.mined_at.isoformat(),
                 ),
             )
-            conn.commit()
             return cursor.lastrowid or -1
-        finally:
-            conn.close()
 
     def get_overall_stats(self) -> OverallStats:
         """Get aggregated statistics across all sessions."""
         if not self._initialized:
             return OverallStats()
-        conn = self._connect()
-        try:
+        with self._connect() as conn:
             row = conn.execute("""
                 SELECT
                     COUNT(*) as total_sessions,
@@ -170,23 +161,18 @@ class StatsService:
                 total_time_spent=row["total_time"],
                 series_count=row["series_count"],
             )
-        finally:
-            conn.close()
 
     def get_recent_sessions(self, limit: int = 20) -> list[MiningSession]:
         """Get the most recent mining sessions, most recent first."""
         if not self._initialized:
             return []
-        conn = self._connect()
-        try:
+        with self._connect() as conn:
             rows = conn.execute(
                 """SELECT * FROM mining_sessions
                    ORDER BY mined_at DESC LIMIT ?""",
                 (limit,),
             ).fetchall()
             return [self._row_to_session(row) for row in rows]
-        finally:
-            conn.close()
 
     # === Feature 2: Difficulty Ranking ===
 
@@ -206,8 +192,7 @@ class StatsService:
         if not self._initialized or total_words == 0:
             return
         difficulty_score = unknown_words / total_words
-        conn = self._connect()
-        try:
+        with self._connect() as conn:
             conn.execute(
                 """INSERT INTO series_difficulty
                    (series_name, episode_name, total_words, unknown_words,
@@ -223,16 +208,12 @@ class StatsService:
                     datetime.now().isoformat(),
                 ),
             )
-            conn.commit()
-        finally:
-            conn.close()
 
     def get_series_difficulty(self) -> list[DifficultyEntry]:
         """Get average difficulty ranking per series, sorted easiest first."""
         if not self._initialized:
             return []
-        conn = self._connect()
-        try:
+        with self._connect() as conn:
             rows = conn.execute("""
                 SELECT
                     series_name,
@@ -256,8 +237,6 @@ class StatsService:
                 )
                 for row in rows
             ]
-        finally:
-            conn.close()
 
     # === Feature 3: Progress Milestones ===
 
