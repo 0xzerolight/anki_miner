@@ -26,9 +26,6 @@ from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 
 logger = logging.getLogger(__name__)
 
-# Patchable in tests
-DICTS_ROOT = Path.home() / ".anki_miner" / "dicts"
-
 
 class _ChainRow(QWidget):
     """One row in the chain list: checkbox + label + format badge + count."""
@@ -90,8 +87,9 @@ class DictionarySettingsPanel(FormPanel):
     reimport_dict_requested = pyqtSignal(str)
     chain_changed = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, dicts_root: Path, parent=None):
         super().__init__("Dictionary Settings", parent=parent)
+        self._dicts_root = dicts_root
         self._chain: list[ChainEntry] = []
         # Cached registry; refreshed on demand instead of per UI tick. Each
         # construction scans every dict's meta table — needlessly slow on
@@ -99,9 +97,15 @@ class DictionarySettingsPanel(FormPanel):
         self._registry: DictionaryRegistry | None = None
         self._setup_fields()
 
+    def set_dicts_root(self, dicts_root: Path) -> None:
+        """Update the dicts root (e.g. after a config save) and invalidate caches."""
+        self._dicts_root = dicts_root
+        self._registry = None
+        self._rebuild_list()
+
     def refresh_registry(self) -> None:
         """Force a registry rescan. Call after an import finishes."""
-        self._registry = DictionaryRegistry(DICTS_ROOT)
+        self._registry = DictionaryRegistry(self._dicts_root)
         self._rebuild_list()
 
     def set_per_row_reimport_enabled(self, enabled: bool) -> None:
@@ -212,12 +216,12 @@ class DictionarySettingsPanel(FormPanel):
             return  # Jisho can be disabled but not removed
 
         # Resolve display name + on-disk folder for the confirm prompt and
-        # the actual rmtree. dict_id is the folder name under DICTS_ROOT.
+        # the actual rmtree. dict_id is the folder name under dicts_root.
         dict_id = entry.dict_id
         registry = self._registry
         meta = registry.get(dict_id) if (registry is not None and dict_id) else None
         display = meta.source_name if meta else (dict_id or "(missing)")
-        dict_dir = (DICTS_ROOT / dict_id) if dict_id else None
+        dict_dir = (self._dicts_root / dict_id) if dict_id else None
 
         reply = QMessageBox.question(
             self,
@@ -262,7 +266,7 @@ class DictionarySettingsPanel(FormPanel):
         # Lazy-construct + cache. refresh_registry() invalidates after an
         # import. Repeated reorder/toggle ticks reuse the same scan.
         if self._registry is None:
-            self._registry = DictionaryRegistry(DICTS_ROOT)
+            self._registry = DictionaryRegistry(self._dicts_root)
         registry = self._registry
         for entry in self._chain:
             meta: DictMeta | None = None

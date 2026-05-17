@@ -1,7 +1,6 @@
 """Service for validating system setup and dependencies."""
 
 import subprocess
-from pathlib import Path
 
 import requests
 
@@ -113,7 +112,7 @@ class ValidationService:
         # Dictionary chain validation — warn if every enabled indexed entry is
         # missing on disk. The chain falls back to other providers (Jisho), so
         # this is only a warning, not an error.
-        dicts_root = Path.home() / ".anki_miner" / "dicts"
+        dicts_root = self.config.dicts_root
         indexed_entries = [e for e in self.config.dictionary_chain if e.kind == "indexed" and e.enabled]
         if indexed_entries:
             missing = [

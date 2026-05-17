@@ -6,11 +6,12 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.models.processing import ProcessingResult
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DB_PATH = Path.home() / ".anki_miner" / "history.db"
+DEFAULT_DB_PATH = ANKI_MINER_HOME / "history.db"
 
 
 class HistoryService:

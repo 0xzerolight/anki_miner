@@ -619,13 +619,9 @@ class TestOptionalResourceWarnings:
         from dataclasses import replace
 
         self._patch_external_checks(monkeypatch)
-        # Redirect Path.home() so the validator looks at an empty tmp_path
-        # instead of the developer's real ~/.anki_miner/dicts/.
-        monkeypatch.setattr(
-            "anki_miner.services.validation_service.Path.home",
-            classmethod(lambda cls: tmp_path),
-        )
-        config = replace(test_config)
+        # Point dicts_root at an empty tmp_path so the validator finds nothing
+        # on disk instead of looking at the developer's real ~/.anki_miner/dicts/.
+        config = replace(test_config, dicts_root=tmp_path / "dicts")
         result = ValidationService(config).validate_setup()
 
         assert self._has_warning(result, "Offline Dictionary")
@@ -638,15 +634,11 @@ class TestOptionalResourceWarnings:
 
         self._patch_external_checks(monkeypatch)
 
-        # Redirect Path.home() inside validation_service to point at tmp_path,
-        # then stage tmp_path/.anki_miner/dicts/<dict_id>/index.sqlite so the
-        # validator finds it.
-        monkeypatch.setattr(
-            "anki_miner.services.validation_service.Path.home",
-            classmethod(lambda cls: tmp_path),
-        )
+        # Point dicts_root at tmp_path/dicts and stage the dict folder so the
+        # validator finds the index.sqlite.
+        dicts_root = tmp_path / "dicts"
         dict_id = "test-dict"
-        target = tmp_path / ".anki_miner" / "dicts" / dict_id
+        target = dicts_root / dict_id
         target.mkdir(parents=True)
         (target / "index.sqlite").write_bytes(b"placeholder")
 
@@ -654,7 +646,7 @@ class TestOptionalResourceWarnings:
             ChainEntry(kind="indexed", dict_id=dict_id, enabled=True),
             ChainEntry(kind="jisho", dict_id=None, enabled=True),
         )
-        config = replace(test_config, dictionary_chain=chain)
+        config = replace(test_config, dictionary_chain=chain, dicts_root=dicts_root)
         result = ValidationService(config).validate_setup()
 
         assert not self._has_warning(result, "Offline Dictionary")
