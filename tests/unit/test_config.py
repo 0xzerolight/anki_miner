@@ -144,6 +144,13 @@ def test_chain_entry_is_frozen():
         entry.dict_id = "other"  # type: ignore[misc]
 
 
+def test_anki_fields_includes_glossary_default():
+    cfg = AnkiMinerConfig()
+    # Empty string default = "do not write Glossary field unless user maps it".
+    assert "glossary" in cfg.anki_fields
+    assert cfg.anki_fields["glossary"] == ""
+
+
 def test_dictionary_chain_replace():
     from dataclasses import replace
 
