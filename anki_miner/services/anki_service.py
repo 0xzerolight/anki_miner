@@ -418,43 +418,36 @@ class AnkiService:
 
             for item in batch:
                 media = item[1]  # media is always the second element
-                # Store screenshot
-                if media.screenshot_path and media.screenshot_filename and media.screenshot_path.exists():
-                    try:
-                        with open(media.screenshot_path, "rb") as f:
-                            screenshot_base64 = base64.b64encode(f.read()).decode("utf-8")
-                        post_action(
-                            self.config.ankiconnect_url,
-                            "storeMediaFile",
-                            params={
-                                "filename": media.screenshot_filename,
-                                "data": screenshot_base64,
-                            },
-                            timeout=30,
-                        )
-                        stored.add(media.screenshot_filename)
-                    except (AnkiConnectionError, OSError) as e:
-                        logger.warning(f"Failed to store screenshot {media.screenshot_filename}: {e}")
-
-                # Store audio
-                if media.audio_path and media.audio_filename and media.audio_path.exists():
-                    try:
-                        with open(media.audio_path, "rb") as f:
-                            audio_base64 = base64.b64encode(f.read()).decode("utf-8")
-                        post_action(
-                            self.config.ankiconnect_url,
-                            "storeMediaFile",
-                            params={
-                                "filename": media.audio_filename,
-                                "data": audio_base64,
-                            },
-                            timeout=30,
-                        )
-                        stored.add(media.audio_filename)
-                    except (AnkiConnectionError, OSError) as e:
-                        logger.warning(f"Failed to store audio {media.audio_filename}: {e}")
+                for filename, src_path in [
+                    (media.screenshot_filename, media.screenshot_path),
+                    (media.audio_filename, media.audio_path),
+                ]:
+                    if filename and src_path and src_path.exists() and self._store_one_media(filename, src_path):
+                        stored.add(filename)
 
         return stored
+
+    def _store_one_media(self, filename: str, src_path: Path) -> bool:
+        """Upload one media file via AnkiConnect. Returns True on success.
+
+        On failure (file read error, AnkiConnect error), logs and returns False.
+        """
+        try:
+            with open(src_path, "rb") as f:
+                data_base64 = base64.b64encode(f.read()).decode("utf-8")
+            post_action(
+                self.config.ankiconnect_url,
+                "storeMediaFile",
+                params={
+                    "filename": filename,
+                    "data": data_base64,
+                },
+                timeout=30,
+            )
+            return True
+        except (AnkiConnectionError, OSError) as e:
+            logger.warning(f"Failed to store media file {filename}: {e}")
+            return False
 
     def delete_notes(self, note_ids: list[int]) -> int:
         """Delete notes from Anki by their IDs.
