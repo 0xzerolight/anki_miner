@@ -101,6 +101,11 @@ class AnkiService:
         # AnkiConnect this run. Avoids re-uploading the same accent SVG once
         # per card across a 5000-word batch.
         self._dict_media_uploaded: set[str] = set()
+        # Session-scoped cache for get_existing_vocabulary. None means
+        # unpopulated; subsequent calls return the cached set without
+        # re-querying AnkiConnect. Call invalidate_existing_vocabulary_cache()
+        # to force a refresh (e.g. after card creation or a manual sync).
+        self._existing_vocab_cache: set[str] | None = None
 
         # Validate required field keys upfront
         missing = self.REQUIRED_FIELD_KEYS - set(config.anki_fields.keys())
@@ -148,6 +153,10 @@ class AnkiService:
                 established, or if AnkiConnect itself returns an error
                 payload for ``findNotes`` / ``notesInfo``.
         """
+        if self._existing_vocab_cache is not None:
+            logger.debug("get_existing_vocabulary: returning %d words from cache", len(self._existing_vocab_cache))
+            return self._existing_vocab_cache
+
         try:
             # Find ALL notes in the collection.
             note_ids = (
@@ -165,7 +174,8 @@ class AnkiService:
                     "No notes found in Anki collection. "
                     "If you have cards in Anki, check that AnkiConnect can access them.",
                 )
-                return set()
+                self._existing_vocab_cache = set()
+                return self._existing_vocab_cache
 
             # Get note info in batches to avoid timeouts on large collections.
             existing_words: set[str] = set()
@@ -193,7 +203,8 @@ class AnkiService:
                     if word and _JAPANESE_RE.search(word):
                         existing_words.add(word)
 
-            return existing_words
+            self._existing_vocab_cache = existing_words
+            return self._existing_vocab_cache
 
         except AnkiConnectionError as e:
             # `post_action` translates `ConnectionError` (Anki down) and
@@ -207,6 +218,15 @@ class AnkiService:
                 raise
             logger.warning("Failed to fetch existing vocabulary (filtering disabled): %s", e)
             return set()
+
+    def invalidate_existing_vocabulary_cache(self) -> None:
+        """Invalidate the session-scoped vocabulary cache.
+
+        The next call to ``get_existing_vocabulary`` will re-query AnkiConnect.
+        Call this after creating new cards or after a manual Anki sync so that
+        the filter reflects the updated collection.
+        """
+        self._existing_vocab_cache = None
 
     def store_media_file(self, filename: str, filepath: Path) -> bool:
         """Store a media file in Anki's collection.
@@ -392,6 +412,8 @@ class AnkiService:
             progress_callback.on_complete()
 
         self.last_created_note_ids = all_created_ids
+        if total_created > 0:
+            self.invalidate_existing_vocabulary_cache()
         return total_created
 
     def _store_media_files_batch(
