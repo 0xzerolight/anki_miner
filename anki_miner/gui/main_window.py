@@ -27,6 +27,7 @@ from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutService, ValidationService
+from anki_miner.services.anki_service import AnkiService
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,10 @@ class MainWindow(QMainWindow):
         # Create validation service
         self.validation_service = ValidationService(self.config)
         self.validation_worker = None
+
+        # AnkiService instance shared across undo callbacks (avoids constructing
+        # a fresh instance per result — reuses the same config-bound service).
+        self._anki_service = AnkiService(self.config)
         self._validation_silent = False
 
         # Connect presenter signals
@@ -420,10 +425,7 @@ class MainWindow(QMainWindow):
 
         # Create undo callback
         def undo_callback(note_ids: list[int]) -> int:
-            from anki_miner.services.anki_service import AnkiService
-
-            service = AnkiService(self.config)
-            deleted = service.delete_notes(note_ids)
+            deleted = self._anki_service.delete_notes(note_ids)
             self.status_bar.increment_cards_created(-deleted)
             return deleted
 
