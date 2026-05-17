@@ -22,6 +22,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import MIN_HEIGHT_QUEUE_SECTION
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -618,13 +619,12 @@ class BatchProcessingTab(QWidget):
 
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept drag if any URL is a directory."""
-        if event is None or event.mimeData() is None:
+        if event is None:
             return
-        if event.mimeData().hasUrls():  # type: ignore[union-attr]
-            for url in event.mimeData().urls():  # type: ignore[union-attr]
-                if Path(url.toLocalFile()).is_dir():
-                    event.acceptProposedAction()
-                    return
+        for url in urls_from_event(event):
+            if Path(url.toLocalFile()).is_dir():
+                event.acceptProposedAction()
+                return
 
     def dragMoveEvent(self, event: QDragMoveEvent | None) -> None:
         """Accept drag move events."""
@@ -633,13 +633,9 @@ class BatchProcessingTab(QWidget):
 
     def dropEvent(self, event: QDropEvent | None) -> None:
         """Route dropped folders to the appropriate folder selector."""
-        if event is None or event.mimeData() is None:
+        if event is None:
             return
-        folders = [
-            url.toLocalFile()
-            for url in event.mimeData().urls()  # type: ignore[union-attr]
-            if Path(url.toLocalFile()).is_dir()
-        ]
+        folders = [url.toLocalFile() for url in urls_from_event(event) if Path(url.toLocalFile()).is_dir()]
         if len(folders) >= 1:
             self.anime_folder_selector.set_path(folders[0])
         if len(folders) >= 2:
