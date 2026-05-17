@@ -186,10 +186,14 @@ class SettingsTab(QWidget):
         self.media_panel.animated_duration_spinbox.setValue(
             self.config.screenshot_animated_clip_duration
         )
+        self.media_panel.animated_match_audio_checkbox.setChecked(
+            self.config.screenshot_animated_match_audio
+        )
         self.media_panel.animated_fps_spinbox.setValue(self.config.screenshot_animated_fps)
         self.media_panel.animated_height_spinbox.setValue(self.config.screenshot_animated_height)
         self.media_panel.animated_quality_spinbox.setValue(self.config.screenshot_animated_quality)
         self.media_panel._set_animated_enabled(self.config.screenshot_animated)
+        self.media_panel._set_match_audio(self.config.screenshot_animated_match_audio)
 
         # Dictionary chain
         self.dictionary_panel.set_chain(self.config.dictionary_chain)
@@ -284,6 +288,7 @@ class SettingsTab(QWidget):
             screenshot_animated=self.media_panel.animated_checkbox.isChecked(),
             screenshot_animated_format=self.media_panel.animated_format_combo.currentText(),
             screenshot_animated_clip_duration=(self.media_panel.animated_duration_spinbox.value()),
+            screenshot_animated_match_audio=self.media_panel.animated_match_audio_checkbox.isChecked(),
             screenshot_animated_fps=self.media_panel.animated_fps_spinbox.value(),
             screenshot_animated_height=self.media_panel.animated_height_spinbox.value(),
             screenshot_animated_quality=self.media_panel.animated_quality_spinbox.value(),

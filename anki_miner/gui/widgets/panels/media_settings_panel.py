@@ -73,13 +73,22 @@ class MediaSettingsPanel(FormPanel):
             helper="AVIF: smaller files; WebP: broader Anki client support",
         )
 
+        # Match audio duration toggle
+        self.animated_match_audio_checkbox = QCheckBox("Match audio duration")
+        self.animated_match_audio_checkbox.setToolTip(
+            "When enabled, the animated clip spans the same time range as the audio "
+            "clip (subtitle range plus audio padding on both sides). Overrides Clip Duration."
+        )
+        self.add_field("Match Audio Duration", self.animated_match_audio_checkbox)
+
         # Clip duration
         self.animated_duration_spinbox = QDoubleSpinBox()
         self.animated_duration_spinbox.setRange(0.5, 10.0)
         self.animated_duration_spinbox.setSingleStep(0.5)
         self.animated_duration_spinbox.setSuffix(" seconds")
         self.animated_duration_spinbox.setToolTip(
-            "Maximum clip length. Capped automatically by the subtitle duration."
+            "Maximum clip length, capped by the subtitle duration. "
+            "Ignored when 'Match Audio Duration' is enabled."
         )
         self.add_field("Clip Duration", self.animated_duration_spinbox)
 
@@ -111,6 +120,7 @@ class MediaSettingsPanel(FormPanel):
         )
 
         self.animated_checkbox.toggled.connect(self._set_animated_enabled)
+        self.animated_match_audio_checkbox.toggled.connect(self._set_match_audio)
         self._set_animated_enabled(self.animated_checkbox.isChecked())
 
         self.add_stretch()
@@ -119,9 +129,22 @@ class MediaSettingsPanel(FormPanel):
         """Enable or disable the animated screenshot sub-controls."""
         for widget in (
             self.animated_format_combo,
+            self.animated_match_audio_checkbox,
             self.animated_duration_spinbox,
             self.animated_fps_spinbox,
             self.animated_height_spinbox,
             self.animated_quality_spinbox,
         ):
             widget.setEnabled(enabled)
+        # Re-apply match-audio gating so the duration spinbox stays disabled
+        # when match-audio is on, even after the parent feature is re-enabled.
+        self._set_match_audio(self.animated_match_audio_checkbox.isChecked())
+
+    def _set_match_audio(self, match: bool) -> None:
+        """Disable the duration spinbox when match-audio overrides it.
+
+        Only enables the spinbox when the parent animated feature is on AND
+        match-audio is off; otherwise the spinbox value is irrelevant.
+        """
+        feature_on = self.animated_checkbox.isChecked()
+        self.animated_duration_spinbox.setEnabled(feature_on and not match)

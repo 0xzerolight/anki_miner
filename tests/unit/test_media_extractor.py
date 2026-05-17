@@ -359,6 +359,78 @@ class TestAnimatedScreenshot:
         cmd = mock_run.call_args[0][0]
         assert cmd[cmd.index("-t") + 1] == str(0.5)
 
+    def test_match_audio_uses_padded_range_when_enabled(
+        self, animated_avif_service, video_file, tmp_path
+    ):
+        """match_audio=True shifts -ss back by padding and extends -t by 2*padding."""
+        cfg = dataclasses.replace(
+            animated_avif_service.config,
+            screenshot_animated_match_audio=True,
+            audio_padding=0.3,
+        )
+        animated_avif_service.config = cfg
+        output_path = tmp_path / "clip.avif"
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            animated_avif_service._extract_animated_screenshot(
+                video_file, start_time=5.0, duration=1.0, output_path=output_path
+            )
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("-ss") + 1] == str(4.7)
+        assert cmd[cmd.index("-t") + 1] == str(1.6)
+
+    def test_match_audio_clamps_start_to_zero(self, animated_avif_service, video_file, tmp_path):
+        """match_audio=True must not produce a negative -ss when padding exceeds start_time."""
+        cfg = dataclasses.replace(
+            animated_avif_service.config,
+            screenshot_animated_match_audio=True,
+            audio_padding=0.3,
+        )
+        animated_avif_service.config = cfg
+        output_path = tmp_path / "clip.avif"
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            animated_avif_service._extract_animated_screenshot(
+                video_file, start_time=0.1, duration=1.0, output_path=output_path
+            )
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("-ss") + 1] == str(0.0)
+
+    def test_match_audio_overrides_configured_duration(
+        self, animated_avif_service, video_file, tmp_path
+    ):
+        """match_audio=True bypasses the configured clip_duration cap."""
+        cfg = dataclasses.replace(
+            animated_avif_service.config,
+            screenshot_animated_match_audio=True,
+            audio_padding=0.3,
+            screenshot_animated_clip_duration=2.0,
+        )
+        animated_avif_service.config = cfg
+        output_path = tmp_path / "clip.avif"
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            animated_avif_service._extract_animated_screenshot(
+                video_file, start_time=5.0, duration=5.0, output_path=output_path
+            )
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("-t") + 1] == str(5.6)
+
     def test_avif_command_shape(self, animated_avif_service, video_file, tmp_path):
         """AVIF ffmpeg command must include libsvtav1, CRF, loop, scale filter."""
         output_path = tmp_path / "clip.avif"
