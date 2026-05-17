@@ -175,12 +175,8 @@ class EpisodeProcessor:
             ProcessingResult with statistics
         """
         start_time = time.time()
-        episode_name = (
-            episode_name_override if episode_name_override is not None else video_file.stem
-        )
-        series_name = (
-            series_name_override if series_name_override is not None else video_file.parent.name
-        )
+        episode_name = episode_name_override if episode_name_override is not None else video_file.stem
+        series_name = series_name_override if series_name_override is not None else video_file.parent.name
         errors: list[str] = []
         vf = str(video_file)
         sf = str(subtitle_file)
@@ -193,9 +189,7 @@ class EpisodeProcessor:
             self.presenter.show_info(f"Step 1/5 \u2014 Parsing subtitles: {subtitle_file.name}")
             line_index: list[LineLemmas] | None = None
             if self.config.use_i_plus_one_filter:
-                all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(
-                    subtitle_file
-                )
+                all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(subtitle_file)
             else:
                 all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file)
             self.presenter.show_success(f"Found {len(all_words)} unique words")
@@ -221,9 +215,7 @@ class EpisodeProcessor:
                 for word in all_words:
                     word.frequency_rank = self.frequency_service.lookup(word.lemma)
                 ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
-                self.presenter.show_info(
-                    f"Frequency data: {ranked_count}/{len(all_words)} words ranked"
-                )
+                self.presenter.show_info(f"Frequency data: {ranked_count}/{len(all_words)} words ranked")
 
             # Phase 2: Filter against existing vocabulary
             self.presenter.show_info("Step 2/5 \u2014 Filtering against known vocabulary")
@@ -234,9 +226,7 @@ class EpisodeProcessor:
                 anki_vocab = self.anki_service.get_existing_vocabulary()
                 added, total = self.known_word_db.sync_with_anki(anki_vocab)
                 if added > 0:
-                    self.presenter.show_info(
-                        f"Known word DB synced: {added} new words ({total} total)"
-                    )
+                    self.presenter.show_info(f"Known word DB synced: {added} new words ({total} total)")
                     # Re-filter with updated known words
                     known_words = self.known_word_db.get_known_words()
                     unknown_words = self.word_filter.filter_unknown(all_words, known_words)
@@ -246,17 +236,13 @@ class EpisodeProcessor:
             self.presenter.show_success(f"{len(unknown_words)} new words to mine")
 
             # Calculate comprehension percentage
-            comprehension = (
-                ((len(all_words) - len(unknown_words)) / len(all_words)) * 100 if all_words else 0.0
-            )
+            comprehension = ((len(all_words) - len(unknown_words)) / len(all_words)) * 100 if all_words else 0.0
             self.presenter.show_info(f"Comprehension: {comprehension:.1f}% of words already known")
 
             # Apply frequency filter if configured
             if self.config.max_frequency_rank > 0:
                 before = len(unknown_words)
-                unknown_words = self.word_filter.filter_by_frequency(
-                    unknown_words, self.config.max_frequency_rank
-                )
+                unknown_words = self.word_filter.filter_by_frequency(unknown_words, self.config.max_frequency_rank)
                 filtered_out = before - len(unknown_words)
                 if filtered_out > 0:
                     self.presenter.show_info(
@@ -267,9 +253,7 @@ class EpisodeProcessor:
             # Apply word list filtering if available
             if self.word_list_service and self.word_list_service.is_available():
                 before = len(unknown_words)
-                unknown_words = self.word_filter.filter_by_word_lists(
-                    unknown_words, self.word_list_service
-                )
+                unknown_words = self.word_filter.filter_by_word_lists(unknown_words, self.word_list_service)
                 filtered_out = before - len(unknown_words)
                 if filtered_out > 0:
                     self.presenter.show_info(f"Word list filter: removed {filtered_out} words")
@@ -282,9 +266,7 @@ class EpisodeProcessor:
                 unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
                 deduped = before - len(unknown_words)
                 if deduped > 0:
-                    self.presenter.show_info(
-                        f"Sentence deduplication: removed {deduped} duplicate-sentence words"
-                    )
+                    self.presenter.show_info(f"Sentence deduplication: removed {deduped} duplicate-sentence words")
 
             # Apply cross-episode frequency filter if provided
             if cross_episode_counts is not None and self.config.min_episode_appearances > 1:
@@ -351,9 +333,7 @@ class EpisodeProcessor:
                         total_words_found=len(all_words),
                         new_words_found=0,
                     )
-                self.presenter.show_info(
-                    f"User selected {len(unknown_words)} words for card creation"
-                )
+                self.presenter.show_info(f"User selected {len(unknown_words)} words for card creation")
 
             # Preview mode - show and return
             if preview_mode:
@@ -436,9 +416,7 @@ class EpisodeProcessor:
                     fmt=self.config.pitch_category_format,
                 )
                 found_count = sum(1 for pos, _ in pitch_data if pos)
-                self.presenter.show_info(
-                    f"Pitch accent data: {found_count}/{len(words_with_media)} words"
-                )
+                self.presenter.show_info(f"Pitch accent data: {found_count}/{len(words_with_media)} words")
 
             # Phase 5: Create cards
             self.presenter.show_info("Step 5/5 \u2014 Creating Anki cards")
@@ -471,8 +449,7 @@ class EpisodeProcessor:
                 preview = ", ".join(skipped_words[:10])
                 more = f" (+{len(skipped_words) - 10} more)" if len(skipped_words) > 10 else ""
                 self.presenter.show_warning(
-                    f"Skipped {len(skipped_words)} words with no definition found: "
-                    f"{preview}{more}"
+                    f"Skipped {len(skipped_words)} words with no definition found: " f"{preview}{more}"
                 )
 
             cards_created = self.anki_service.create_cards_batch(

@@ -50,9 +50,7 @@ class YouTubeSettingsPanel(FormPanel):
         self.max_duration_spinbox = QSpinBox()
         self.max_duration_spinbox.setRange(1, 600)
         self.max_duration_spinbox.setSuffix(" minutes")
-        self.max_duration_spinbox.setToolTip(
-            "Videos longer than this will be rejected before fetching"
-        )
+        self.max_duration_spinbox.setToolTip("Videos longer than this will be rejected before fetching")
         self.add_field(
             "YouTube max duration",
             self.max_duration_spinbox,

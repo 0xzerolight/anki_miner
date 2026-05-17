@@ -32,9 +32,7 @@ class TestImportYomitanZip:
         try:
             count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
             assert count == 2
-            content = conn.execute(
-                "SELECT content FROM entries WHERE term = ?", ("食べる",)
-            ).fetchone()[0]
+            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("食べる",)).fetchone()[0]
             assert "to eat" in content
             # Tag badges moved to provider-side composition (Task 4); content
             # is now glossary-only items. Task 3 will populate DictRow.tags.
@@ -187,9 +185,7 @@ class TestImportYomitanZip:
         db_path = dest_root / result.dict_id / "index.sqlite"
         conn = open_readonly(db_path)
         try:
-            content = conn.execute(
-                "SELECT content FROM entries WHERE term = ?", ("走る",)
-            ).fetchone()[0]
+            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
         finally:
             conn.close()
 
@@ -238,9 +234,7 @@ class TestImportYomitanZip:
         db_path = tmp_path / "dicts" / result.dict_id / "index.sqlite"
         conn = open_readonly(db_path)
         try:
-            content = conn.execute(
-                "SELECT content FROM entries WHERE term = ?", ("走る",)
-            ).fetchone()[0]
+            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
             assert '<li class="gloss-item">' in content
             assert "to run" in content
             # Renderer no longer emits tag badges or tag-list wrapper.
@@ -327,9 +321,7 @@ class TestDeriveDictIdFromZip:
 
     def test_matches_importer_dict_id(self, tmp_path: Path):
         """Helper output must equal the importer's `dict_id` for the same zip."""
-        zip_path = build_yomitan_zip(
-            tmp_path / "src" / "test.zip", title="My Dict", revision="2024-01"
-        )
+        zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip", title="My Dict", revision="2024-01")
         derived = derive_dict_id_from_zip(zip_path)
         imported = import_yomitan_zip(zip_path, tmp_path / "dicts").dict_id
         assert derived == imported

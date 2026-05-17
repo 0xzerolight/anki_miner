@@ -75,8 +75,7 @@ def test_sessions_table_items_have_tooltips(tab: AnalyticsTab) -> None:
         item = table.item(0, col)
         assert item is not None, f"missing item at column {col}"
         assert item.toolTip() == item.text(), (
-            f"sessions table column {col} tooltip mismatch: "
-            f"tooltip={item.toolTip()!r} text={item.text()!r}"
+            f"sessions table column {col} tooltip mismatch: " f"tooltip={item.toolTip()!r} text={item.text()!r}"
         )
 
 
@@ -96,8 +95,7 @@ def test_difficulty_table_items_have_tooltips(tab: AnalyticsTab) -> None:
         item = table.item(0, col)
         assert item is not None, f"missing item at column {col}"
         assert item.toolTip() == item.text(), (
-            f"difficulty table column {col} tooltip mismatch: "
-            f"tooltip={item.toolTip()!r} text={item.text()!r}"
+            f"difficulty table column {col} tooltip mismatch: " f"tooltip={item.toolTip()!r} text={item.text()!r}"
         )
 
 

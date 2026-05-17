@@ -188,9 +188,7 @@ class QueuePanel(QFrame):
         layout.addLayout(offset_layout)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         button_box.accepted.connect(dialog.accept)
         button_box.rejected.connect(dialog.reject)
         layout.addWidget(button_box)
@@ -209,9 +207,7 @@ class QueuePanel(QFrame):
                 from anki_miner.utils.file_pairing import FilePairMatcher
 
                 try:
-                    pairs = FilePairMatcher.find_pairs_by_episode_number(
-                        Path(anime_path), Path(subtitle_path)
-                    )
+                    pairs = FilePairMatcher.find_pairs_by_episode_number(Path(anime_path), Path(subtitle_path))
                     widget.set_episode_count(len(pairs))
                 except Exception as e:
                     logger.warning(f"Failed to count episodes for {widget.display_name}: {e}")
@@ -252,9 +248,7 @@ class QueuePanel(QFrame):
         if series_count == 0:
             text = "Queue is empty"
         elif total_cards > 0:
-            text = (
-                f"{series_count} series - {total_episodes} episodes - {total_cards} cards created"
-            )
+            text = f"{series_count} series - {total_episodes} episodes - {total_cards} cards created"
         else:
             text = f"{series_count} series - {total_episodes} episodes - Ready to process"
 

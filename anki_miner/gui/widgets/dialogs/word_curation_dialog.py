@@ -113,9 +113,7 @@ class WordCurationDialog(QDialog):
         # Table
         self.table = QTableWidget()
         self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels(
-            ["", "Surface", "Lemma", "Reading", "Sentence", "Freq. Rank"]
-        )
+        self.table.setHorizontalHeaderLabels(["", "Surface", "Lemma", "Reading", "Sentence", "Freq. Rank"])
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
@@ -194,9 +192,7 @@ class WordCurationDialog(QDialog):
             # Checkbox column
             check_item = QTableWidgetItem()
             check_item.setFlags(
-                Qt.ItemFlag.ItemIsUserCheckable
-                | Qt.ItemFlag.ItemIsEnabled
-                | Qt.ItemFlag.ItemIsSelectable
+                Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
             )
             check_item.setCheckState(Qt.CheckState.Checked)
             check_item.setData(Qt.ItemDataRole.UserRole, row)  # Store original index
@@ -220,9 +216,7 @@ class WordCurationDialog(QDialog):
 
             # Frequency Rank — sort numerically, not lexically (issue #6)
             if word.frequency_rank is not None:
-                rank_item = _NumericTableWidgetItem(
-                    str(word.frequency_rank), float(word.frequency_rank)
-                )
+                rank_item = _NumericTableWidgetItem(str(word.frequency_rank), float(word.frequency_rank))
             else:
                 rank_item = _NumericTableWidgetItem("-", float("inf"))
             rank_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
@@ -268,11 +262,7 @@ class WordCurationDialog(QDialog):
         selection_model = self.table.selectionModel()
         if selection_model is not None:
             selected = sorted(
-                {
-                    index.row()
-                    for index in selection_model.selectedRows()
-                    if not self.table.isRowHidden(index.row())
-                }
+                {index.row() for index in selection_model.selectedRows() if not self.table.isRowHidden(index.row())}
             )
             if len(selected) >= 2:
                 return selected
@@ -309,11 +299,7 @@ class WordCurationDialog(QDialog):
         rows: list[int] = []
         if selection_model is not None:
             rows = sorted(
-                {
-                    index.row()
-                    for index in selection_model.selectedRows()
-                    if not self.table.isRowHidden(index.row())
-                }
+                {index.row() for index in selection_model.selectedRows() if not self.table.isRowHidden(index.row())}
             )
         if not rows:
             current = self.table.currentRow()

@@ -27,8 +27,7 @@ class MediaSettingsPanel(FormPanel):
         self.audio_format_combo = QComboBox()
         self.audio_format_combo.addItems(["mp3", "opus"])
         self.audio_format_combo.setToolTip(
-            "Opus delivers higher quality than MP3 at low bitrates (~64 kbps). "
-            "Requires ffmpeg with libopus support."
+            "Opus delivers higher quality than MP3 at low bitrates (~64 kbps). " "Requires ffmpeg with libopus support."
         )
         self.add_field(
             "Audio Format",
@@ -113,8 +112,7 @@ class MediaSettingsPanel(FormPanel):
         self.animated_duration_spinbox.setSingleStep(0.5)
         self.animated_duration_spinbox.setSuffix(" seconds")
         self.animated_duration_spinbox.setToolTip(
-            "Maximum clip length, capped by the subtitle duration. "
-            "Ignored when 'Match Audio Duration' is enabled."
+            "Maximum clip length, capped by the subtitle duration. " "Ignored when 'Match Audio Duration' is enabled."
         )
         self.add_field("Clip Duration", self.animated_duration_spinbox)
 

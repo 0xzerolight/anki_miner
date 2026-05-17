@@ -26,9 +26,7 @@ class TestValidationService:
             mock_response.status_code = 200
             mock_response.json.return_value = {"result": 6, "error": None}
 
-            with patch(
-                "anki_miner.services.validation_service.requests.post", return_value=mock_response
-            ):
+            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
                 success, message = service._check_ankiconnect()
 
             assert success is True
@@ -68,9 +66,7 @@ class TestValidationService:
             mock_response = MagicMock()
             mock_response.status_code = 500
 
-            with patch(
-                "anki_miner.services.validation_service.requests.post", return_value=mock_response
-            ):
+            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
                 success, message = service._check_ankiconnect()
 
             assert success is False
@@ -83,9 +79,7 @@ class TestValidationService:
             mock_response.status_code = 200
             mock_response.json.return_value = {"result": None, "error": "Some error"}
 
-            with patch(
-                "anki_miner.services.validation_service.requests.post", return_value=mock_response
-            ):
+            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
                 success, message = service._check_ankiconnect()
 
             assert success is False
@@ -101,9 +95,7 @@ class TestValidationService:
             mock_result.returncode = 0
             mock_result.stdout = "ffmpeg version 5.0"
 
-            with patch(
-                "anki_miner.services.validation_service.subprocess.run", return_value=mock_result
-            ):
+            with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result):
                 success, message = service._check_ffmpeg()
 
             assert success is True
@@ -139,9 +131,7 @@ class TestValidationService:
             mock_result = MagicMock()
             mock_result.returncode = 1
 
-            with patch(
-                "anki_miner.services.validation_service.subprocess.run", return_value=mock_result
-            ):
+            with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result):
                 success, message = service._check_ffmpeg()
 
             assert success is False
@@ -159,9 +149,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch(
-                "anki_miner.services.validation_service.requests.post", return_value=mock_response
-            ):
+            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
                 success, message = service._check_deck_exists()
 
             assert success is True
@@ -176,9 +164,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch(
-                "anki_miner.services.validation_service.requests.post", return_value=mock_response
-            ):
+            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
                 success, message = service._check_deck_exists()
 
             assert success is False
@@ -196,9 +182,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch(
-                "anki_miner.services.validation_service.requests.post", return_value=mock_response
-            ):
+            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
                 success, message = service._check_note_type_exists()
 
             assert success is True
@@ -213,9 +197,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch(
-                "anki_miner.services.validation_service.requests.post", return_value=mock_response
-            ):
+            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
                 success, message = service._check_note_type_exists()
 
             assert success is False
@@ -438,9 +420,7 @@ class TestValidationService:
             ffmpeg_result.stdout = "ffmpeg version 6.0"
 
             with (
-                patch(
-                    "anki_miner.services.validation_service.requests.post", side_effect=mock_post
-                ),
+                patch("anki_miner.services.validation_service.requests.post", side_effect=mock_post),
                 patch(
                     "anki_miner.services.validation_service.subprocess.run",
                     return_value=ffmpeg_result,
@@ -511,9 +491,7 @@ class TestValidationService:
                 return dispatch.get(action, MagicMock())
 
             with (
-                patch(
-                    "anki_miner.services.validation_service.requests.post", side_effect=mock_post
-                ),
+                patch("anki_miner.services.validation_service.requests.post", side_effect=mock_post),
                 patch(
                     "anki_miner.services.validation_service.subprocess.run",
                     side_effect=FileNotFoundError(),
@@ -548,9 +526,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch(
-                "anki_miner.services.validation_service.requests.post", return_value=mock_response
-            ):
+            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
                 success, message = service._check_field_names_exist()
 
             assert success is True
@@ -565,9 +541,7 @@ class TestValidationService:
                 "error": None,
             }
 
-            with patch(
-                "anki_miner.services.validation_service.requests.post", return_value=mock_response
-            ):
+            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
                 success, message = service._check_field_names_exist()
 
             assert success is False
@@ -582,9 +556,7 @@ class TestValidationService:
                 "error": "model not found",
             }
 
-            with patch(
-                "anki_miner.services.validation_service.requests.post", return_value=mock_response
-            ):
+            with patch("anki_miner.services.validation_service.requests.post", return_value=mock_response):
                 success, message = service._check_field_names_exist()
 
             assert success is False
@@ -610,10 +582,7 @@ class TestOptionalResourceWarnings:
 
     @staticmethod
     def _has_warning(result, component_substring):
-        return any(
-            issue.severity == "WARNING" and component_substring in issue.component
-            for issue in result.issues
-        )
+        return any(issue.severity == "WARNING" and component_substring in issue.component for issue in result.issues)
 
     @staticmethod
     def _patch_external_checks(monkeypatch):
@@ -705,9 +674,7 @@ class TestOptionalResourceWarnings:
 
         assert not self._has_warning(result, "Offline Dictionary")
 
-    def test_warns_when_pitch_accent_enabled_but_file_missing(
-        self, test_config, monkeypatch, tmp_path
-    ):
+    def test_warns_when_pitch_accent_enabled_but_file_missing(self, test_config, monkeypatch, tmp_path):
         from dataclasses import replace
 
         self._patch_external_checks(monkeypatch)
@@ -720,9 +687,7 @@ class TestOptionalResourceWarnings:
 
         assert self._has_warning(result, "Pitch Accent")
 
-    def test_warns_when_frequency_enabled_but_file_missing(
-        self, test_config, monkeypatch, tmp_path
-    ):
+    def test_warns_when_frequency_enabled_but_file_missing(self, test_config, monkeypatch, tmp_path):
         from dataclasses import replace
 
         self._patch_external_checks(monkeypatch)

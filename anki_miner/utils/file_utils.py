@@ -62,9 +62,7 @@ def safe_filename(filename: str) -> str:
     safe_name = re.sub(r"[\x00-\x1f\x7f]", "", safe_name)
 
     # Handle Windows reserved names
-    reserved = {"CON", "PRN", "AUX", "NUL"} | {
-        f"{name}{i}" for name in ("COM", "LPT") for i in range(1, 10)
-    }
+    reserved = {"CON", "PRN", "AUX", "NUL"} | {f"{name}{i}" for name in ("COM", "LPT") for i in range(1, 10)}
     stem = Path(safe_name).stem.upper()
     if stem in reserved:
         safe_name = f"_{safe_name}"

@@ -85,9 +85,7 @@ def test_reorder_moves_entry_up(qapp, monkeypatch, tmp_path):
     assert chain[1].dict_id == "a"
 
 
-def test_chain_changed_emits_on_reorder_remove_and_toggle(
-    qapp, monkeypatch, tmp_path, confirm_remove
-):
+def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, monkeypatch, tmp_path, confirm_remove):
     monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.dictionary_settings_panel.DICTS_ROOT",
         tmp_path,

@@ -42,9 +42,7 @@ class FilePairMatcher:
 
         # Get all videos and subtitles
         videos = [
-            f
-            for f in anime_folder.iterdir()
-            if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
+            f for f in anime_folder.iterdir() if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
         ]
 
         subtitles = [

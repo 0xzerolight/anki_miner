@@ -658,9 +658,7 @@ class TestPrefixCompounds:
             ("超", "能力", "名詞", "超能力"),
         ],
     )
-    def test_merges_whitelisted_prefix_plus_nominal(
-        self, service, prefix_surface, root_surface, root_pos1, expected
-    ):
+    def test_merges_whitelisted_prefix_plus_nominal(self, service, prefix_surface, root_surface, root_pos1, expected):
         """Whitelisted prefix + 名詞/形状詞 root → single synthetic emitted as 名詞.
 
         pos1 is normalized to 名詞 regardless of root_pos1 so that downstream
@@ -752,9 +750,7 @@ class TestVerbNominalizers:
             ("やり", "遣る", "方", "やり方"),
         ],
     )
-    def test_merges_verb_stem_plus_nominalizer(
-        self, service, verb_surface, verb_lemma, suffix_surface, expected
-    ):
+    def test_merges_verb_stem_plus_nominalizer(self, service, verb_surface, verb_lemma, suffix_surface, expected):
         """Verb 連用形 + nominalizer (方/手/様) → synthetic with surface=lemma=連用形+suffix."""
         verb = _make_token(verb_surface, "動詞", pos2="一般", lemma=verb_lemma)
         suffix = _make_token(suffix_surface, "接尾辞", pos2="名詞的", lemma=suffix_surface)
@@ -1104,15 +1100,11 @@ class TestParseSubtitleFileWithIndex:
         with (
             patch(
                 "anki_miner.services.subtitle_parser.generate_furigana",
-                wraps=__import__(
-                    "anki_miner.utils", fromlist=["generate_furigana"]
-                ).generate_furigana,
+                wraps=__import__("anki_miner.utils", fromlist=["generate_furigana"]).generate_furigana,
             ) as mock_furi,
             patch(
                 "anki_miner.services.subtitle_parser.generate_reading",
-                wraps=__import__(
-                    "anki_miner.utils", fromlist=["generate_reading"]
-                ).generate_reading,
+                wraps=__import__("anki_miner.utils", fromlist=["generate_reading"]).generate_reading,
             ) as mock_read,
         ):
             service.parse_subtitle_file_with_index(srt)
@@ -1120,12 +1112,8 @@ class TestParseSubtitleFileWithIndex:
         # Count calls where the first positional arg is the FULL line text
         # (i.e. sentence-level calls, not per-word surface calls).
         line_texts = {"学校で勉強する事件", "また勉強する"}
-        sentence_furi_calls = [
-            c for c in mock_furi.call_args_list if c.args and c.args[0] in line_texts
-        ]
-        sentence_read_calls = [
-            c for c in mock_read.call_args_list if c.args and c.args[0] in line_texts
-        ]
+        sentence_furi_calls = [c for c in mock_furi.call_args_list if c.args and c.args[0] in line_texts]
+        sentence_read_calls = [c for c in mock_read.call_args_list if c.args and c.args[0] in line_texts]
         # One sentence-level call per line, period.
         assert len(sentence_furi_calls) == 2
         assert len(sentence_read_calls) == 2
@@ -1338,9 +1326,7 @@ class TestSubtitleRegexFilter:
             subtitle_regex_replacement="",
             use_subtitle_regex_filter=True,
         )
-        sub_file, mock_subs = self._patch_subs(
-            tmp_path, [("(田中) [足音] ♪歌う♪ こんにちは", 0, 2000)]
-        )
+        sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) [足音] ♪歌う♪ こんにちは", 0, 2000)])
         with (
             patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),

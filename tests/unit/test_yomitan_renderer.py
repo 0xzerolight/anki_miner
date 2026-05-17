@@ -50,9 +50,7 @@ class TestStructuredContentToHtml:
 
     def test_anchor_uses_href(self):
         node = {"tag": "a", "href": "https://example.com", "content": "link"}
-        assert structured_content_to_html(node) == (
-            '<a class="gloss-sc-a" href="https://example.com">link</a>'
-        )
+        assert structured_content_to_html(node) == ('<a class="gloss-sc-a" href="https://example.com">link</a>')
 
     def test_structured_content_wrapper_unwraps(self):
         node = {"type": "structured-content", "content": {"tag": "div", "content": "x"}}
@@ -161,10 +159,7 @@ class TestAllowedTagsExpanded:
             ],
         }
         assert structured_content_to_html(node) == (
-            '<details class="gloss-sc-details">'
-            '<summary class="gloss-sc-summary">more</summary>'
-            "body"
-            "</details>"
+            '<details class="gloss-sc-details">' '<summary class="gloss-sc-summary">more</summary>' "body" "</details>"
         )
 
     def test_headings_preserved(self):
@@ -174,10 +169,7 @@ class TestAllowedTagsExpanded:
             assert structured_content_to_html(node) == f'<{tag} class="gloss-sc-{tag}">x</{tag}>'
 
     def test_paragraph_preserved(self):
-        assert (
-            structured_content_to_html({"tag": "p", "content": "x"})
-            == '<p class="gloss-sc-p">x</p>'
-        )
+        assert structured_content_to_html({"tag": "p", "content": "x"}) == '<p class="gloss-sc-p">x</p>'
 
 
 class TestStylePassthrough:
@@ -337,8 +329,7 @@ class TestRenderGlossaryEntry:
         assert html.count('<li class="gloss-item">') == 2
         assert ('<li class="gloss-item"><span class="gloss-content">plain text</span></li>') in html
         assert (
-            '<li class="gloss-item"><span class="gloss-content">'
-            '<div class="gloss-sc-div">x</div></span></li>'
+            '<li class="gloss-item"><span class="gloss-content">' '<div class="gloss-sc-div">x</div></span></li>'
         ) in html
 
 
@@ -370,15 +361,11 @@ class TestSecurityHardening:
 
     def test_relative_url_preserved(self):
         node = {"tag": "a", "href": "page.html#section", "content": "x"}
-        assert structured_content_to_html(node) == (
-            '<a class="gloss-sc-a" href="page.html#section">x</a>'
-        )
+        assert structured_content_to_html(node) == ('<a class="gloss-sc-a" href="page.html#section">x</a>')
 
     def test_https_url_preserved(self):
         node = {"tag": "a", "href": "https://example.com/x", "content": "x"}
-        assert structured_content_to_html(node) == (
-            '<a class="gloss-sc-a" href="https://example.com/x">x</a>'
-        )
+        assert structured_content_to_html(node) == ('<a class="gloss-sc-a" href="https://example.com/x">x</a>')
 
     def test_attribute_break_in_href_escaped(self):
         node = {"tag": "a", "href": 'https://example.com/" onclick="alert(1)', "content": "x"}
@@ -654,10 +641,7 @@ class TestDictMediaHelpers:
         assert dict_media_filename("dict-1", "svg/x.svg") == "dict-1__svg_x.svg"
 
     def test_dict_media_safe_basename_preserves_cjk(self):
-        assert (
-            dict_media_safe_basename("sankoku8/svg-accent/アクセント.svg")
-            == "sankoku8_svg-accent_アクセント.svg"
-        )
+        assert dict_media_safe_basename("sankoku8/svg-accent/アクセント.svg") == "sankoku8_svg-accent_アクセント.svg"
 
     def test_dict_media_safe_basename_rejects_traversal(self):
         assert dict_media_safe_basename("../x.svg") is None

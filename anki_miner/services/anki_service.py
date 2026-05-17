@@ -167,9 +167,7 @@ class AnkiService:
 
             result = response.json()
             if result.get("error"):
-                raise AnkiConnectionError(
-                    f"AnkiConnect error while finding notes: {result['error']}"
-                )
+                raise AnkiConnectionError(f"AnkiConnect error while finding notes: {result['error']}")
 
             note_ids = result.get("result", [])
 
@@ -198,9 +196,7 @@ class AnkiService:
 
                 result = response.json()
                 if result.get("error"):
-                    raise AnkiConnectionError(
-                        f"AnkiConnect error while getting notes info: {result['error']}"
-                    )
+                    raise AnkiConnectionError(f"AnkiConnect error while getting notes info: {result['error']}")
 
                 for note in result.get("result", []):
                     fields = note.get("fields", {})
@@ -411,9 +407,7 @@ class AnkiService:
                         )
                 else:
                     if progress_callback:
-                        progress_callback.on_error(
-                            f"Batch {i // batch_size + 1}", result.get("error")
-                        )
+                        progress_callback.on_error(f"Batch {i // batch_size + 1}", result.get("error"))
 
             except Exception as e:
                 if progress_callback:
@@ -446,11 +440,7 @@ class AnkiService:
             for item in batch:
                 media = item[1]  # media is always the second element
                 # Store screenshot
-                if (
-                    media.screenshot_path
-                    and media.screenshot_filename
-                    and media.screenshot_path.exists()
-                ):
+                if media.screenshot_path and media.screenshot_filename and media.screenshot_path.exists():
                     try:
                         with open(media.screenshot_path, "rb") as f:
                             screenshot_base64 = base64.b64encode(f.read()).decode("utf-8")
@@ -470,9 +460,7 @@ class AnkiService:
                         if not response.json().get("error"):
                             stored.add(media.screenshot_filename)
                     except (requests.RequestException, OSError, ValueError) as e:
-                        logger.warning(
-                            f"Failed to store screenshot {media.screenshot_filename}: {e}"
-                        )
+                        logger.warning(f"Failed to store screenshot {media.screenshot_filename}: {e}")
 
                 # Store audio
                 if media.audio_path and media.audio_filename and media.audio_path.exists():

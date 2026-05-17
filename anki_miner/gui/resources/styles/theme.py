@@ -165,8 +165,7 @@ class Theme:
 
         if not self._themes:
             raise RuntimeError(
-                f"No valid theme files found in {themes_dir}. "
-                "At least one valid JSON theme file is required."
+                f"No valid theme files found in {themes_dir}. " "At least one valid JSON theme file is required."
             )
 
         # Load saved preference

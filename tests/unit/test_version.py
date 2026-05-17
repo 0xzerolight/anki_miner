@@ -42,9 +42,7 @@ def _parse_version_literal_with_ast() -> str:
                         "up orphan dist-info from prior installs."
                     )
                 if not isinstance(node.value.value, str):
-                    pytest.fail(
-                        f"__version__ literal must be str, got {type(node.value.value).__name__}"
-                    )
+                    pytest.fail(f"__version__ literal must be str, got {type(node.value.value).__name__}")
                 return node.value.value
     pytest.fail("No __version__ assignment found in anki_miner/__init__.py")
 

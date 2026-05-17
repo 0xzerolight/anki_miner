@@ -56,8 +56,7 @@ def check_spec_references_resources() -> None:
     expected = '"anki_miner", "gui", "resources"'
     if expected not in text:
         sys.exit(
-            f"error: {SPEC_FILE} does not reference {expected!r}; "
-            "PyInstaller spec and MANIFEST.in have drifted"
+            f"error: {SPEC_FILE} does not reference {expected!r}; " "PyInstaller spec and MANIFEST.in have drifted"
         )
 
 

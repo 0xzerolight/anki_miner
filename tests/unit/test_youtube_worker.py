@@ -77,9 +77,7 @@ def make_worker(mock_processor, youtube_config):
 # ---------------------------------------------------------------------------
 
 
-def test_happy_path_creates_workspace_calls_processor_emits_result(
-    make_worker, mock_processor, youtube_config
-):
+def test_happy_path_creates_workspace_calls_processor_emits_result(make_worker, mock_processor, youtube_config):
     worker = make_worker()
     observed_workspaces: list = []
 
@@ -156,9 +154,7 @@ def test_processor_exception_emits_error_and_cleans_workspace(make_worker, mock_
 # ---------------------------------------------------------------------------
 
 
-def test_cancelled_before_run_skips_processor_and_workspace(
-    make_worker, mock_processor, youtube_config
-):
+def test_cancelled_before_run_skips_processor_and_workspace(make_worker, mock_processor, youtube_config):
     worker = make_worker()
     worker.cancel()
 

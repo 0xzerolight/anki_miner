@@ -141,9 +141,7 @@ class TestRecordSession:
         """Should serialize the words_mined list as JSON."""
         video = tmp_path / "ep01.mkv"
         subtitle = tmp_path / "ep01.ass"
-        row_id = history_service.record_session(
-            video, subtitle, sample_result, words_mined=["猫", "犬"]
-        )
+        row_id = history_service.record_session(video, subtitle, sample_result, words_mined=["猫", "犬"])
         row = _fetch_row(history_service.db_path, row_id)
         assert row is not None
         assert json.loads(row["words_mined"]) == ["猫", "犬"]

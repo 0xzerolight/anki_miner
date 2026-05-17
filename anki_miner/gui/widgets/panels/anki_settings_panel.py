@@ -143,9 +143,7 @@ class AnkiSettingsPanel(FormPanel):
         fetch_layout = QHBoxLayout()
         fetch_layout.addStretch()
         self.fetch_fields_button = ModernButton("Fetch Fields from Note Type", variant="secondary")
-        self.fetch_fields_button.setToolTip(
-            "Query AnkiConnect for the note type's field names and auto-map them"
-        )
+        self.fetch_fields_button.setToolTip("Query AnkiConnect for the note type's field names and auto-map them")
         self.fetch_fields_button.clicked.connect(self._on_fetch_fields)
         fetch_layout.addWidget(self.fetch_fields_button)
         self.add_layout(fetch_layout)
@@ -200,17 +198,13 @@ class AnkiSettingsPanel(FormPanel):
         self.picture_field_input = QLineEdit()
         self.picture_field_input.setPlaceholderText("Picture")
         self.picture_field_input.setToolTip("Anki field for the screenshot")
-        self._add_simple_field(
-            "Picture Field", self.picture_field_input, "Anki field that stores the video screenshot"
-        )
+        self._add_simple_field("Picture Field", self.picture_field_input, "Anki field that stores the video screenshot")
 
         # Audio field
         self.audio_field_input = QLineEdit()
         self.audio_field_input.setPlaceholderText("SentenceAudio")
         self.audio_field_input.setToolTip("Anki field for the audio clip")
-        self._add_simple_field(
-            "Audio Field", self.audio_field_input, "Anki field that stores the sentence audio clip"
-        )
+        self._add_simple_field("Audio Field", self.audio_field_input, "Anki field that stores the sentence audio clip")
 
         # Expression Furigana field
         self.expression_furigana_field_input = QLineEdit()
@@ -225,9 +219,7 @@ class AnkiSettingsPanel(FormPanel):
         # Expression Reading field (plain kana)
         self.expression_reading_field_input = QLineEdit()
         self.expression_reading_field_input.setPlaceholderText("ExpressionReading")
-        self.expression_reading_field_input.setToolTip(
-            "Anki field for expression with plain kana reading"
-        )
+        self.expression_reading_field_input.setToolTip("Anki field for expression with plain kana reading")
         self._add_simple_field(
             "Expression Reading Field",
             self.expression_reading_field_input,
@@ -247,9 +239,7 @@ class AnkiSettingsPanel(FormPanel):
         # Sentence Reading field (plain kana)
         self.sentence_reading_field_input = QLineEdit()
         self.sentence_reading_field_input.setPlaceholderText("SentenceReading")
-        self.sentence_reading_field_input.setToolTip(
-            "Anki field for sentence with plain kana reading"
-        )
+        self.sentence_reading_field_input.setToolTip("Anki field for sentence with plain kana reading")
         self._add_simple_field(
             "Sentence Reading Field",
             self.sentence_reading_field_input,
@@ -291,9 +281,7 @@ class AnkiSettingsPanel(FormPanel):
         # Pitch Category format (jp vs romaji)
         self.pitch_category_format_combo = QComboBox()
         self.pitch_category_format_combo.addItem("Japanese (平板/頭高/中高/尾高/起伏)", "jp")
-        self.pitch_category_format_combo.addItem(
-            "Romaji (heiban/atamadaka/nakadaka/odaka/kifuku)", "romaji"
-        )
+        self.pitch_category_format_combo.addItem("Romaji (heiban/atamadaka/nakadaka/odaka/kifuku)", "romaji")
         self.pitch_category_format_combo.setToolTip(
             "Output style for the pitch category label. Romaji matches Yomitan/Lapis CSS classes."
         )
@@ -373,9 +361,7 @@ class AnkiSettingsPanel(FormPanel):
             helper.setFont(helper_font)
             self.add_widget(helper)
 
-    def _add_simple_field(
-        self, label_text: str, input_widget: QWidget, helper_text: str = ""
-    ) -> None:
+    def _add_simple_field(self, label_text: str, input_widget: QWidget, helper_text: str = "") -> None:
         """Add a simple labeled field to the main layout.
 
         Args:
@@ -534,9 +520,7 @@ class AnkiSettingsPanel(FormPanel):
 
         for _key, (widget, keywords) in mapping.items():
             for field_name in field_names:
-                if field_name.lower().replace(" ", "").replace("_", "") in [
-                    kw.lower() for kw in keywords
-                ]:
+                if field_name.lower().replace(" ", "").replace("_", "") in [kw.lower() for kw in keywords]:
                     widget.setText(field_name)
                     break
 
@@ -576,13 +560,9 @@ class AnkiSettingsPanel(FormPanel):
         self.glossary_field_input.setText(fields.get("glossary", ""))
         self.picture_field_input.setText(fields.get("picture", "Picture"))
         self.audio_field_input.setText(fields.get("audio", "SentenceAudio"))
-        self.expression_furigana_field_input.setText(
-            fields.get("expression_furigana", "ExpressionFurigana")
-        )
+        self.expression_furigana_field_input.setText(fields.get("expression_furigana", "ExpressionFurigana"))
         self.expression_reading_field_input.setText(fields.get("expression_reading", ""))
-        self.sentence_furigana_field_input.setText(
-            fields.get("sentence_furigana", "SentenceFurigana")
-        )
+        self.sentence_furigana_field_input.setText(fields.get("sentence_furigana", "SentenceFurigana"))
         self.sentence_reading_field_input.setText(fields.get("sentence_reading", ""))
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))

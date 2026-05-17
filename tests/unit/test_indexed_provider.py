@@ -172,9 +172,7 @@ class TestIndexedDictProvider:
         assert provider.is_available() is False
 
     def test_missing_file_marks_unavailable(self, tmp_path: Path):
-        provider = IndexedDictProvider(
-            "test-dict", tmp_path / "missing.sqlite", display_name="Test"
-        )
+        provider = IndexedDictProvider("test-dict", tmp_path / "missing.sqlite", display_name="Test")
         assert provider.load() is False
         assert provider.is_available() is False
 

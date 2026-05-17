@@ -21,14 +21,10 @@ class TestCreateIndex:
         create_index(db_path)
 
         with sqlite3.connect(db_path) as conn:
-            tables = {
-                row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            }
+            tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             assert {"entries", "meta"} <= tables
 
-            indexes = {
-                row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
-            }
+            indexes = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
             assert "idx_term" in indexes
             assert "idx_reading" in indexes
 
@@ -139,9 +135,7 @@ class TestBulkInsertAndLookup:
         bulk_insert(
             db_path,
             [
-                DictRow(
-                    term="水", reading="みず", content="<div>water</div>", tags="n", sequence=1
-                ),
+                DictRow(term="水", reading="みず", content="<div>water</div>", tags="n", sequence=1),
             ],
         )
 

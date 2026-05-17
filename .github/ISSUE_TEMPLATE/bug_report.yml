@@ -1,0 +1,99 @@
+name: Bug report
+description: Report a bug to help improve Anki Miner.
+title: "[Bug]: "
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report.
+        Please fill in as much detail as you can — it makes the fix faster.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of what the bug is.
+      placeholder: When I do X, Y happens instead of Z.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that reliably trigger the bug.
+      placeholder: |
+        1. Open Anki Miner.
+        2. Load episode `…`.
+        3. Click `Mine`.
+        4. Observe error.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened?
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: e.g. Ubuntu 24.04, macOS 15.2, Windows 11.
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      description: Output of `python --version`. Leave blank if running a bundled installer.
+    validations:
+      required: false
+
+  - type: input
+    id: anki-version
+    attributes:
+      label: Anki version
+      description: e.g. 24.11. Find under Anki → About.
+    validations:
+      required: true
+
+  - type: input
+    id: anki-miner-version
+    attributes:
+      label: Anki Miner version
+      description: e.g. 2.4.0. Find under Help → About, or `pip show anki-miner`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / error output
+      description: Paste any relevant log output or error messages. Will be rendered as code.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Subtitle format, video container, dictionary in use, anything else relevant.
+    validations:
+      required: false

@@ -78,17 +78,13 @@ class BatchQueueWorkerThread(CancellableWorker):
                 config_with_offset = replace(self.config, subtitle_offset=item.subtitle_offset)
 
                 # Create processor for this item with its specific offset
-                episode_processor = create_episode_processor(
-                    config_with_offset, self.presenter, self.stats_service
-                )
+                episode_processor = create_episode_processor(config_with_offset, self.presenter, self.stats_service)
                 self._current_processor = episode_processor
 
                 # Use FilePairMatcher for cross-folder pairing
                 from anki_miner.utils.file_pairing import FilePairMatcher
 
-                pairs = FilePairMatcher.find_pairs_by_episode_number(
-                    item.anime_folder, item.subtitle_folder
-                )
+                pairs = FilePairMatcher.find_pairs_by_episode_number(item.anime_folder, item.subtitle_folder)
 
                 if not pairs:
                     raise ValueError("No matching video/subtitle pairs found")

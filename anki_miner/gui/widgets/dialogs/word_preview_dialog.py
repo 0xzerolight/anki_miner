@@ -147,9 +147,7 @@ class WordPreviewDialog(QDialog):
         # Table
         self.table = QTableWidget()
         self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels(
-            ["Surface", "Lemma", "Reading", "Sentence", "Time", "Video"]
-        )
+        self.table.setHorizontalHeaderLabels(["Surface", "Lemma", "Reading", "Sentence", "Time", "Video"])
 
         # Configure table appearance
         self.table.setAlternatingRowColors(True)
@@ -241,13 +239,9 @@ class WordPreviewDialog(QDialog):
         self.table.setSortingEnabled(True)
 
         # Update result count
-        self.result_count_label.setText(
-            f"Showing {len(self.filtered_words)} of {len(self.all_words)} words"
-        )
+        self.result_count_label.setText(f"Showing {len(self.filtered_words)} of {len(self.all_words)} words")
 
-    def _add_words_to_table(
-        self, words: list[TokenizedWord], group_name: str | None = None
-    ) -> None:
+    def _add_words_to_table(self, words: list[TokenizedWord], group_name: str | None = None) -> None:
         """Add words to the table.
 
         Args:
