@@ -2,6 +2,13 @@
 
 This module owns the schema and all low-level read/write primitives.
 Importers populate; providers query.
+
+Note on connection idiom: This module deliberately uses explicit ``try/finally
+conn.close()`` rather than ``with sqlite3.connect()`` as a context manager.
+Reason: the sqlite3 ``with`` block commits/rolls back but does NOT close the
+connection — we close explicitly so the db file is not held open across the
+importer's staging-dir cleanup (matters on Windows where open file handles
+block directory deletion).
 """
 
 from __future__ import annotations
