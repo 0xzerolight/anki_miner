@@ -8,7 +8,12 @@ from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
 
 
-def create_word(lemma: str, surface: str = None, sentence: str = "Test sentence") -> TokenizedWord:
+def create_word(
+    lemma: str,
+    surface: str = None,
+    sentence: str = "Test sentence",
+    pos: str | None = None,
+) -> TokenizedWord:
     """Helper to create a TokenizedWord for testing."""
     return TokenizedWord(
         surface=surface or lemma,
@@ -18,6 +23,7 @@ def create_word(lemma: str, surface: str = None, sentence: str = "Test sentence"
         start_time=0.0,
         end_time=1.0,
         duration=1.0,
+        pos=pos,
     )
 
 
@@ -48,25 +54,44 @@ class TestWordFilterService:
             assert result[0].lemma == "新しい"
 
         def test_does_not_filter_by_surface_form(self, test_config):
-            """Filter is lemma-only: a known surface does not block its lemma's siblings.
+            """Legacy verb surface-form cards do not block re-mining as lemma.
 
-            After Issue #19 cleanup, ``filter_unknown`` compares lemmas only.
-            A legacy Anki card with Expression == 知った matches lemma 知った
-            (not the wider lemma 知る), so other conjugations of 知る remain
-            mineable until their own lemma enters the collection.
+            ``filter_unknown`` compares by ``mined_form`` (lemma for verbs).
+            A legacy Anki card with Expression == 知った matches the surface
+            string 知った, not the verb's lemma 知る; mining the verb under
+            its dictionary form is allowed until that lemma itself enters
+            the collection.
             """
             service = WordFilterService(test_config)
             words = [
-                create_word("知る", "知った"),
-                create_word("食べる", "食べた"),
+                create_word("知る", "知った", pos="動詞"),
+                create_word("食べる", "食べた", pos="動詞"),
             ]
             existing = {"知った"}  # legacy surface-form card
 
             result = service.filter_unknown(words, existing)
 
-            # Both words pass: lemmas 知る and 食べる are not in `existing`.
+            # Both pass: mined_form for verbs == lemma, neither in `existing`.
             assert len(result) == 2
             assert {w.lemma for w in result} == {"知る", "食べる"}
+
+        def test_filters_noun_when_lemma_differs_from_surface(self, test_config):
+            """Regression: noun whose unidic lemma differs from its surface must
+            be blocked when its mined_form (the surface) already exists in Anki.
+
+            unidic-lite maps the noun surface 豪腕 to lemma 剛腕 (homograph
+            quirk; Issue #5). The card's Expression field is mined_form
+            (surface for nouns), so existing_vocabulary contains 豪腕, and
+            filtering on lemma alone would let a duplicate through and
+            trigger an AnkiConnect duplicate error at addNotes time.
+            """
+            service = WordFilterService(test_config)
+            words = [create_word(lemma="剛腕", surface="豪腕", pos="名詞")]
+            existing = {"豪腕"}
+
+            result = service.filter_unknown(words, existing)
+
+            assert result == []
 
         def test_empty_existing_vocabulary(self, test_config):
             """Should return all words when existing vocabulary is empty."""
