@@ -12,7 +12,13 @@ import pysubs2
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
-from anki_miner.utils import clean_subtitle_text, generate_furigana, generate_reading
+from anki_miner.utils import (
+    clean_subtitle_text,
+    generate_furigana,
+    generate_reading,
+    wrap_target_furigana,
+    wrap_target_plain,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +169,16 @@ class SubtitleParserService:
         seen_lemmas: set[str] = set()  # Track unique words by dictionary form (lemma).
 
         for text, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
+            # Cursor walks merged_tokens in order. Tokens partition the line
+            # text (compound-merge passes only merge adjacent tokens, so
+            # concatenated surfaces still equal ``text``), so cumulative
+            # surface length gives each token's char span in ``text``.
+            cursor = 0
             for word_token in merged_tokens:
+                tok_start = cursor
+                tok_end = cursor + len(word_token.surface)
+                cursor = tok_end
+
                 if not self._should_include_word(word_token):
                     continue
 
@@ -190,6 +205,13 @@ class SubtitleParserService:
                 expression_reading = generate_reading(mined, self.tagger)
                 sentence_reading = generate_reading(text, self.tagger)
 
+                if self.config.bold_target_in_sentence:
+                    sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
+                    sentence_furigana_bolded = wrap_target_furigana(text, self.tagger, tok_start, tok_end)
+                else:
+                    sentence_bolded = ""
+                    sentence_furigana_bolded = ""
+
                 all_words.append(
                     TokenizedWord(
                         surface=surface,
@@ -204,6 +226,10 @@ class SubtitleParserService:
                         sentence_furigana=sentence_furigana,
                         sentence_reading=sentence_reading,
                         pos=word_token.feature.pos1,
+                        surface_start=tok_start,
+                        surface_end=tok_end,
+                        sentence_bolded=sentence_bolded,
+                        sentence_furigana_bolded=sentence_furigana_bolded,
                     )
                 )
 
@@ -243,13 +269,25 @@ class SubtitleParserService:
         for text, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
             # First pass: collect every content-word lemma on this line.
             # _should_include_word handles particle/aux/proper-noun filtering.
+            # We also record (surface, start, end) for the FIRST occurrence
+            # of each content lemma — the i+1 filter uses this to re-bold
+            # against the swapped-in line.
             line_lemmas: set[str] = set()
             included_tokens: list = []
+            included_spans: list[tuple[int, int]] = []
+            lemma_first_span: dict[str, tuple[str, int, int]] = {}
+            cursor = 0
             for word_token in merged_tokens:
+                tok_start = cursor
+                tok_end = cursor + len(word_token.surface)
+                cursor = tok_end
                 if not self._should_include_word(word_token):
                     continue
-                line_lemmas.add(self._extract_lemma(word_token))
+                lemma_here = self._extract_lemma(word_token)
+                line_lemmas.add(lemma_here)
                 included_tokens.append(word_token)
+                included_spans.append((tok_start, tok_end))
+                lemma_first_span.setdefault(lemma_here, (word_token.surface, tok_start, tok_end))
 
             # A line with zero content words can never be i+1 — skip it from
             # the index entirely. (Word emission is also skipped trivially.)
@@ -269,11 +307,15 @@ class SubtitleParserService:
                     duration=duration,
                     sentence_furigana=sentence_furigana,
                     sentence_reading=sentence_reading,
+                    lemma_spans=tuple(
+                        (lemma_key, surface, span_start, span_end)
+                        for lemma_key, (surface, span_start, span_end) in lemma_first_span.items()
+                    ),
                 )
             )
 
             # Second pass: emit deduped TokenizedWord entries (lemma-keyed).
-            for word_token in included_tokens:
+            for word_token, (tok_start, tok_end) in zip(included_tokens, included_spans, strict=True):
                 lemma = self._extract_lemma(word_token)
                 surface = word_token.surface
 
@@ -290,6 +332,13 @@ class SubtitleParserService:
                 expression_furigana = generate_furigana(mined, self.tagger)
                 expression_reading = generate_reading(mined, self.tagger)
 
+                if self.config.bold_target_in_sentence:
+                    sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
+                    sentence_furigana_bolded = wrap_target_furigana(text, self.tagger, tok_start, tok_end)
+                else:
+                    sentence_bolded = ""
+                    sentence_furigana_bolded = ""
+
                 all_words.append(
                     TokenizedWord(
                         surface=surface,
@@ -304,6 +353,10 @@ class SubtitleParserService:
                         sentence_furigana=sentence_furigana,
                         sentence_reading=sentence_reading,
                         pos=word_token.feature.pos1,
+                        surface_start=tok_start,
+                        surface_end=tok_end,
+                        sentence_bolded=sentence_bolded,
+                        sentence_furigana_bolded=sentence_furigana_bolded,
                     )
                 )
 

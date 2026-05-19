@@ -67,7 +67,10 @@ def create_services(config: AnkiMinerConfig) -> Services:
     load_result = ServiceLoadResult()
 
     subtitle_parser = SubtitleParserService(config)
-    word_filter = WordFilterService(config)
+    # Share the parser's tagger with the word filter so i+1 swap can
+    # rebuild bolded sentence fields without spinning up a second tagger
+    # (fugashi.Tagger initialization is non-trivial).
+    word_filter = WordFilterService(config, tagger=subtitle_parser.tagger)
     media_extractor = MediaExtractorService(config)
 
     # Build the provider chain via the registry, then hand it to DefinitionService.
