@@ -25,6 +25,21 @@ class TokenizedWord:
     frequency_rank: int | None = None  # Word frequency rank (1 = most common)
     pos: str | None = None  # MeCab pos1 (動詞/形容詞/名詞/...) — used for kifuku/odaka distinction
 
+    @property
+    def mined_form(self) -> str:
+        """The form that becomes the card front (Expression field).
+
+        Verbs and adjectives mine as lemma (dictionary form) so that
+        ``破れ`` becomes ``破れる`` — the learner studies the form that
+        recognizes/produces every conjugation (Issue #19).
+
+        Nouns and other non-conjugating POS keep the surface form: unidic
+        sometimes maps homograph-like nouns to a different headword
+        (``豪腕`` → ``剛腕``); preserving surface for nouns avoids that
+        regression (Issue #5).
+        """
+        return self.lemma if self.pos in ("動詞", "形容詞") else self.surface
+
     def __str__(self) -> str:
         return f"{self.lemma} ({self.reading})"
 

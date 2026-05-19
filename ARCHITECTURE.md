@@ -106,7 +106,7 @@ Data classes in `models/`:
 
 | Model | File | Purpose |
 |-------|------|---------|
-| `TokenizedWord` | `word.py` | Parsed word with surface, lemma, reading, sentence, timing, furigana, frequency_rank |
+| `TokenizedWord` | `word.py` | Parsed word with surface, lemma, reading, sentence, timing, furigana, frequency_rank, pos. `mined_form` property selects lemma for verbs/adjectives, surface for nouns — this is the form that becomes the Anki Expression. |
 | `WordData` | `word.py` | TokenizedWord + definition + media paths + pitch accent |
 | `MediaData` | `media.py` | Screenshot/audio file paths and filenames |
 | `ProcessingResult` | `processing.py` | Pipeline output: word counts, card count, errors, elapsed time, comprehension %, card IDs |
@@ -127,8 +127,8 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 
 **Core services (always created):**
 
-- **SubtitleParserService**: parses ASS/SRT/SSA files via `pysubs2`, tokenizes Japanese text with `fugashi` (MeCab wrapper), generates furigana annotations, deduplicates by lemma+surface.
-- **WordFilterService**: multi-layer filtering via `filter_unknown` (against known vocabulary), `filter_by_length`, `filter_by_frequency`, `filter_by_word_lists`, `deduplicate_by_sentence`, and `filter_by_episode_count`.
+- **SubtitleParserService**: parses ASS/SRT/SSA files via `pysubs2`, tokenizes Japanese text with `fugashi` (MeCab wrapper), generates furigana annotations against `TokenizedWord.mined_form` (lemma for verbs/adjectives, surface for nouns), and deduplicates emitted words by lemma. Compound-merge passes (prefix, noun-suffix, verb-nominalizer) reconstruct synthetic lemmas from each component's `feature.lemma` so dictionary lookups can hit the headword.
+- **WordFilterService**: multi-layer filtering via `filter_unknown` (lemma-only check against known vocabulary), `filter_by_frequency`, `filter_by_word_lists` (blacklist/whitelist keyed by lemma), `deduplicate_by_sentence` (NFKC-normalized, whitespace-collapsed dedup key), `filter_i_plus_one`, and `filter_by_episode_count`.
 - **MediaExtractorService**: extracts screenshots (`ffmpeg -frames:v 1`) and audio clips (`ffmpeg libmp3lame`) at subtitle timestamps. Runs in parallel via `ThreadPoolExecutor` with `max_parallel_workers` threads. Auto-detects the Japanese audio stream via `ffprobe` with thread-safe caching.
 - **DefinitionService**: orchestrates the provider chain built by `DictionaryRegistry` from `config.dictionary_chain`. First-hit-wins across offline `IndexedDictProvider` instances, with `JishoProvider` as the online fallback. Returns HTML-formatted definition strings.
 - **AnkiService**: AnkiConnect HTTP API wrapper (localhost:8765). Key operations: `get_existing_vocabulary`, `store_media_file`, `create_cards_batch` (batch size 50), `delete_notes`. Stores `last_created_note_ids` for undo support.

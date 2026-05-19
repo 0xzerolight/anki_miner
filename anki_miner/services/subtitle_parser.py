@@ -160,7 +160,7 @@ class SubtitleParserService:
         subs = self._load_subs(subtitle_file)
 
         all_words: list[TokenizedWord] = []
-        seen_words: set[str] = set()  # Track unique words by lemma AND surface
+        seen_lemmas: set[str] = set()  # Track unique words by dictionary form (lemma).
 
         for text, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
             for word_token in merged_tokens:
@@ -171,19 +171,23 @@ class SubtitleParserService:
                 lemma = self._extract_lemma(word_token)
                 surface = word_token.surface
 
-                # Skip if we've already seen this word
-                if lemma in seen_words or surface in seen_words:
+                # Dedup on lemma alone: surface variants of the same dictionary
+                # form should collapse, not block each other.
+                if lemma in seen_lemmas:
                     continue
-                seen_words.add(lemma)
-                seen_words.add(surface)
+                seen_lemmas.add(lemma)
 
                 # Get reading if available
                 reading = self._extract_reading(word_token)
 
-                # Generate furigana annotations and plain-kana readings
-                expression_furigana = generate_furigana(surface, self.tagger)
+                # ExpressionFurigana/Reading match the mined card front:
+                # lemma for verbs/adjectives, surface for nouns (see
+                # TokenizedWord.mined_form for the trade-off).
+                pos = word_token.feature.pos1
+                mined = lemma if pos in ("動詞", "形容詞") else surface
+                expression_furigana = generate_furigana(mined, self.tagger)
                 sentence_furigana = generate_furigana(text, self.tagger)
-                expression_reading = generate_reading(surface, self.tagger)
+                expression_reading = generate_reading(mined, self.tagger)
                 sentence_reading = generate_reading(text, self.tagger)
 
                 all_words.append(
@@ -234,7 +238,7 @@ class SubtitleParserService:
 
         all_words: list[TokenizedWord] = []
         line_index: list[LineLemmas] = []
-        seen_words: set[str] = set()
+        seen_lemmas: set[str] = set()
 
         for text, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
             # First pass: collect every content-word lemma on this line.
@@ -268,22 +272,23 @@ class SubtitleParserService:
                 )
             )
 
-            # Second pass: emit deduped TokenizedWord entries (legacy semantics).
+            # Second pass: emit deduped TokenizedWord entries (lemma-keyed).
             for word_token in included_tokens:
                 lemma = self._extract_lemma(word_token)
                 surface = word_token.surface
 
-                if lemma in seen_words or surface in seen_words:
+                if lemma in seen_lemmas:
                     continue
-                seen_words.add(lemma)
-                seen_words.add(surface)
+                seen_lemmas.add(lemma)
 
                 reading = self._extract_reading(word_token)
 
-                # Per-word fields are still tokenized individually so the
-                # ExpressionFurigana matches the surface, not the lemma.
-                expression_furigana = generate_furigana(surface, self.tagger)
-                expression_reading = generate_reading(surface, self.tagger)
+                # ExpressionFurigana/Reading match the mined card front
+                # (lemma for verbs/adjectives, surface for nouns).
+                pos = word_token.feature.pos1
+                mined = lemma if pos in ("動詞", "形容詞") else surface
+                expression_furigana = generate_furigana(mined, self.tagger)
+                expression_reading = generate_reading(mined, self.tagger)
 
                 all_words.append(
                     TokenizedWord(
@@ -328,10 +333,11 @@ class SubtitleParserService:
 
         Walks tokens left-to-right. When a 名詞 head is followed by one or
         more nominal-suffix tokens, both base and suffixes are consumed and
-        replaced by a single _SyntheticToken whose surface == lemma == the
-        concatenated form (e.g. 刑務所, 爆発的, 入院中的). Avoids unidic
-        English-translation contamination in lemmas by setting lemma to the
-        merged surface.
+        replaced by a single _SyntheticToken whose surface is the concatenated
+        form and whose lemma is reconstructed from each component's
+        feature.lemma (falling back to surface when unidic emits "*"/None).
+        Nouns rarely conjugate, so lemma usually equals surface, but morphemes
+        like ~性 / ~中 / ~的 carry their own dictionary form and we preserve it.
         """
         merged: list = []
         i, n = 0, len(tokens)
@@ -374,12 +380,22 @@ class SubtitleParserService:
                         head_pos2 = head.feature.pos2 or "普通名詞"
                     except AttributeError:
                         head_pos2 = "普通名詞"
+                    try:
+                        head_lemma = self._extract_lemma(head)
+                    except AttributeError:
+                        head_lemma = head.surface
+                    suffix_lemmas: list[str] = []
+                    for t in chain:
+                        try:
+                            suffix_lemmas.append(self._extract_lemma(t))
+                        except AttributeError:
+                            suffix_lemmas.append(t.surface)
                     merged.append(
                         _SyntheticToken(
                             surface=surf,
                             pos1="名詞",
                             pos2=head_pos2,
-                            lemma=surf,
+                            lemma=head_lemma + "".join(suffix_lemmas),
                             kana=kana,
                         )
                     )
@@ -432,12 +448,20 @@ class SubtitleParserService:
                         root_kana = root.feature.kana or root.surface
                     except AttributeError:
                         root_kana = root.surface
+                    try:
+                        head_lemma = self._extract_lemma(head)
+                    except AttributeError:
+                        head_lemma = head.surface
+                    try:
+                        root_lemma = self._extract_lemma(root)
+                    except AttributeError:
+                        root_lemma = root.surface
                     merged.append(
                         _SyntheticToken(
                             surface=surf,
                             pos1="名詞",
                             pos2=root_pos2,
-                            lemma=surf,
+                            lemma=head_lemma + root_lemma,
                             kana=head_kana + root_kana,
                         )
                     )
@@ -455,6 +479,10 @@ class SubtitleParserService:
         (連用形, e.g. 言い/読み/生き) — NOT its lemma — so the merged form
         is 言い方 not 言う方. The synthetic is emitted as pos1=名詞,
         pos2=普通名詞 (the compound is nominalized).
+
+        ``lemma`` is set to the merged surface (NOT head.lemma + suffix.lemma)
+        because the dictionary entry IS 言い方 / 読み方 — using 言う + 方 would
+        yield 言う方, which is not a headword and would miss dictionary lookups.
         """
         merged: list = []
         i, n = 0, len(tokens)
@@ -514,10 +542,13 @@ class SubtitleParserService:
         except AttributeError:
             lemma = word_token.surface
 
-        # Clean lemma - remove English translations or POS tags after hyphens
-        # e.g., "スクランブル-scramble" -> "スクランブル"
+        # Clean lemma - strip unidic's English-gloss tail
+        # (e.g. "スクランブル-scramble" -> "スクランブル") but leave Japanese
+        # names like "メル-ビル" intact: only split when the tail is ASCII.
         if "-" in lemma:
-            lemma = lemma.split("-")[0]
+            head, _, tail = lemma.partition("-")
+            if tail.isascii():
+                lemma = head
 
         return str(lemma)
 

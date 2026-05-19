@@ -72,6 +72,7 @@ def make_tokenized_word():
         sentence_furigana="",
         sentence_reading="",
         frequency_rank=None,
+        pos=None,
     ):
         return TokenizedWord(
             surface=surface,
@@ -87,6 +88,7 @@ def make_tokenized_word():
             sentence_furigana=sentence_furigana,
             sentence_reading=sentence_reading,
             frequency_rank=frequency_rank,
+            pos=pos,
         )
 
     return _make

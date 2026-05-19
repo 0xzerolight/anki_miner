@@ -47,20 +47,26 @@ class TestWordFilterService:
             assert len(result) == 1
             assert result[0].lemma == "新しい"
 
-        def test_filters_known_surface_forms(self, test_config):
-            """Should filter out words with known surface forms."""
+        def test_does_not_filter_by_surface_form(self, test_config):
+            """Filter is lemma-only: a known surface does not block its lemma's siblings.
+
+            After Issue #19 cleanup, ``filter_unknown`` compares lemmas only.
+            A legacy Anki card with Expression == 知った matches lemma 知った
+            (not the wider lemma 知る), so other conjugations of 知る remain
+            mineable until their own lemma enters the collection.
+            """
             service = WordFilterService(test_config)
             words = [
                 create_word("知る", "知った"),
                 create_word("食べる", "食べた"),
             ]
-            # Even though lemma is different, surface form matches
-            existing = {"知った"}
+            existing = {"知った"}  # legacy surface-form card
 
             result = service.filter_unknown(words, existing)
 
-            assert len(result) == 1
-            assert result[0].surface == "食べた"
+            # Both words pass: lemmas 知る and 食べる are not in `existing`.
+            assert len(result) == 2
+            assert {w.lemma for w in result} == {"知る", "食べる"}
 
         def test_empty_existing_vocabulary(self, test_config):
             """Should return all words when existing vocabulary is empty."""
@@ -257,6 +263,19 @@ class TestWordFilterService:
 
             result = service.deduplicate_by_sentence(words)
             assert [w.lemma for w in result] == ["A", "B", "D"]
+
+        def test_normalizes_whitespace_and_fullwidth(self, test_config):
+            """Sentences differing only by trailing whitespace or NFKC-foldable width."""
+            service = WordFilterService(test_config)
+            words = [
+                create_word("A", sentence="１２時に会う。"),  # full-width digits
+                create_word("B", sentence="12時に会う。 "),  # NFKC-folded + trailing space
+                create_word("C", sentence="別の文章です。"),
+                create_word("D", sentence="別の文章です。"),  # exact duplicate
+            ]
+
+            result = service.deduplicate_by_sentence(words)
+            assert [w.lemma for w in result] == ["A", "C"]
 
     class TestFilterIPlusOne:
         """Tests for filter_i_plus_one method."""

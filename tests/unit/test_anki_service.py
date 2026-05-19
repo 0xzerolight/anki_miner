@@ -489,14 +489,10 @@ class TestCreateCardsBatch:
         ):
             service.create_cards_batch(items, recording_progress)
 
-    def test_create_cards_batch_uses_surface_for_expression(self, test_config, make_tokenized_word):
-        """Batch creation should use word.surface for the Expression field, not word.lemma.
-
-        Regression test for issue #5: 豪腕 (surface) was being rewritten to 剛腕
-        (unidic dictionary lemma) on the Anki card.
-        """
+    def test_create_cards_batch_uses_surface_for_noun_expression(self, test_config, make_tokenized_word):
+        """Nouns mine as surface (Issue #5: unidic 豪腕 → 剛腕 mis-lemma)."""
         service = AnkiService(test_config)
-        word = make_tokenized_word(surface="豪腕", lemma="剛腕", sentence="豪腕の男だ。")
+        word = make_tokenized_word(surface="豪腕", lemma="剛腕", sentence="豪腕の男だ。", pos="名詞")
         media = MediaData()
 
         resp = _mock_response(result=[12345])
@@ -509,6 +505,23 @@ class TestCreateCardsBatch:
         note = payload["params"]["notes"][0]
         word_field_name = test_config.anki_fields["word"]
         assert note["fields"][word_field_name] == "豪腕"
+
+    def test_create_cards_batch_uses_lemma_for_verb_expression(self, test_config, make_tokenized_word):
+        """Verbs mine as lemma (Issue #19: 破れ surface → 破れる dictionary form)."""
+        service = AnkiService(test_config)
+        word = make_tokenized_word(surface="破れ", lemma="破れる", sentence="胸のとこ破れそう。", pos="動詞")
+        media = MediaData()
+
+        resp = _mock_response(result=[12346])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            result = service.create_cards_batch([CardPayload(word=word, media=media, definition="definition")])
+
+        assert result == 1
+        payload = mock_post.call_args[1]["json"]
+        note = payload["params"]["notes"][0]
+        word_field_name = test_config.anki_fields["word"]
+        assert note["fields"][word_field_name] == "破れる"
 
 
 # ---------------------------------------------------------------------------

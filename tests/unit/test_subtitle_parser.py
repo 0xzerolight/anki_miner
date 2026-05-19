@@ -175,8 +175,12 @@ class TestParseSubtitleFile:
 
         assert len(words) == 1
 
-    def test_deduplicates_by_surface(self, test_config, tmp_path):
-        """Same surface form should only produce one word."""
+    def test_distinct_lemmas_not_deduped_when_surface_equal(self, test_config, tmp_path):
+        """Lemma-only dedup: same surface with different lemmas stays as two entries.
+
+        After the Issue #19 cleanup, dedup is keyed on lemma alone — shared
+        surface no longer collapses entries with distinct dictionary forms.
+        """
         sub_file = tmp_path / "test.ass"
         sub_file.write_text("placeholder", encoding="utf-8")
 
@@ -197,14 +201,16 @@ class TestParseSubtitleFile:
         token2 = _make_token("学生", "名詞", lemma="学生X", kana="ガクセイ")
 
         mock_tagger = MagicMock()
-        # Extra entries for generate_furigana + generate_reading calls
-        # (expression + sentence, each twice) after token1's initial tokenize call
         mock_tagger.side_effect = [
             [token1],
             [token1],
             [token1],
             [token1],
             [token1],
+            [token2],
+            [token2],
+            [token2],
+            [token2],
             [token2],
         ]
 
@@ -215,7 +221,8 @@ class TestParseSubtitleFile:
             service = SubtitleParserService(test_config)
             words = service.parse_subtitle_file(sub_file)
 
-        assert len(words) == 1
+        assert len(words) == 2
+        assert {w.lemma for w in words} == {"学生", "学生X"}
 
     def test_skips_empty_cleaned_text(self, test_config, tmp_path):
         """Lines that clean to empty should be skipped."""
@@ -244,33 +251,24 @@ class TestParseSubtitleFile:
         mock_tagger.assert_not_called()
 
 
-class TestExpressionFuriganaFromSurface:
-    """Regression: ExpressionFurigana must be generated from surface, not lemma.
+class TestExpressionFuriganaSource:
+    """ExpressionFurigana source is POS-aware (mirrors TokenizedWord.mined_form).
 
-    Lapis renders ExpressionFurigana as the headword, so it must agree with the
-    Expression field (which is the surface). For tokens where surface != lemma
-    (e.g. 豪腕 vs 剛腕), generating furigana from lemma would put a different
-    kanji on the card than the one in Expression.
+    Nouns: surface (Issue #5 — unidic 豪腕 → 剛腕 mis-lemma).
+    Verbs/adjectives: lemma (Issue #19 — 破れ → 破れる).
     """
 
-    def test_generate_furigana_called_with_surface_for_expression(self, test_config, tmp_path):
-        """generate_furigana for the Expression field must be called with surface."""
+    def _run_parse(self, test_config, tmp_path, line_text: str, token):
         sub_file = tmp_path / "test.ass"
         sub_file.write_text("placeholder", encoding="utf-8")
-
         mock_line = MagicMock()
-        mock_line.text = "彼は豪腕の投手だ"
+        mock_line.text = line_text
         mock_line.start = 1000
         mock_line.end = 3000
-
         mock_subs = MagicMock()
         mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
-
-        # surface ≠ lemma — unidic sometimes maps 豪腕 to 剛腕 as the lemma.
-        word_token = _make_token("豪腕", "名詞", lemma="剛腕", kana="ゴウワン")
-
         mock_tagger = MagicMock()
-        mock_tagger.return_value = [word_token]
+        mock_tagger.return_value = [token]
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
@@ -282,14 +280,21 @@ class TestExpressionFuriganaFromSurface:
         ):
             service = SubtitleParserService(test_config)
             service.parse_subtitle_file(sub_file)
+        return mock_furigana
 
-        # First call generates expression furigana, second generates sentence furigana.
-        # The first positional arg of the first call must be the surface, not the lemma.
-        assert mock_furigana.call_count >= 1
+    def test_noun_furigana_uses_surface(self, test_config, tmp_path):
+        """Noun token: expression furigana generated from surface."""
+        token = _make_token("豪腕", "名詞", lemma="剛腕", kana="ゴウワン")
+        mock_furigana = self._run_parse(test_config, tmp_path, "彼は豪腕の投手だ", token)
         first_call_text = mock_furigana.call_args_list[0].args[0]
-        assert (
-            first_call_text == "豪腕"
-        ), f"Expression furigana must be generated from surface (豪腕), got {first_call_text!r}"
+        assert first_call_text == "豪腕"
+
+    def test_verb_furigana_uses_lemma(self, test_config, tmp_path):
+        """Verb token: expression furigana generated from lemma."""
+        token = _make_token("破れ", "動詞", lemma="破れる", kana="ヤブレ")
+        mock_furigana = self._run_parse(test_config, tmp_path, "胸のとこ破れそう", token)
+        first_call_text = mock_furigana.call_args_list[0].args[0]
+        assert first_call_text == "破れる"
 
 
 class TestShouldIncludeWord:
@@ -433,6 +438,11 @@ class TestExtractLemma:
     def test_strips_english_after_hyphen(self, service):
         token = _make_token("スクランブル", "名詞", lemma="スクランブル-scramble")
         assert service._extract_lemma(token) == "スクランブル"
+
+    def test_keeps_japanese_after_hyphen(self, service):
+        """A Japanese tail after a hyphen (compound names) must NOT be stripped."""
+        token = _make_token("メル", "名詞", lemma="メル-ビル")
+        assert service._extract_lemma(token) == "メル-ビル"
 
 
 class TestExtractReading:
@@ -638,6 +648,21 @@ class TestCompoundReassembly:
         merged = result[0]
         assert merged.surface == "田中様"
         assert merged.feature.pos2 == "固有名詞"
+
+    def test_lemma_reconstructed_from_base_lemmas(self, service):
+        """Synthetic lemma concatenates component feature.lemmas, not surfaces.
+
+        Distinct head-surface vs head-lemma (rare in nouns but possible with
+        unidic's English-gloss stripping fallback) is preserved in the
+        synthetic so dictionary lookups can hit the headword.
+        """
+        head = _make_token("入院", "名詞", pos2="普通名詞", lemma="入院LEMMA")
+        suffix = _make_token("中", "接尾辞", pos2="名詞的", lemma="中LEMMA")
+        result = service._merge_compound_suffixes([head, suffix])
+        assert len(result) == 1
+        merged = result[0]
+        assert merged.surface == "入院中"
+        assert merged.feature.lemma == "入院LEMMA中LEMMA"
 
 
 class TestPrefixCompounds:
