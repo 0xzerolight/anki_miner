@@ -15,3 +15,7 @@ updates:
     labels:
       - dependencies
       - ci
+    groups:
+      gh-actions:
+        patterns:
+          - "*"
