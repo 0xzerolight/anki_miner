@@ -174,7 +174,7 @@ Contributions are welcome — bug fixes, dictionary integrations, GUI polish, do
 
 - New here? Start with [CONTRIBUTING.md](CONTRIBUTING.md).
 - Architecture overview: [ARCHITECTURE.md](ARCHITECTURE.md).
-- Testing strategy: [docs/TESTING.md](docs/TESTING.md).
+- Testing strategy: [docs/TESTING.md](TESTING.md).
 - Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 - Security: [SECURITY.md](SECURITY.md).
 
