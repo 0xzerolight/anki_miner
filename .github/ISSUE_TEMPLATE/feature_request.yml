@@ -11,15 +11,6 @@ body:
         Thanks for sharing an idea. Before filing, please skim existing Issues and Discussions
         in case it has already been raised.
 
-  - type: input
-    id: summary
-    attributes:
-      label: Summary
-      description: One-line summary of the feature.
-      placeholder: Add support for X.
-    validations:
-      required: true
-
   - type: textarea
     id: problem
     attributes:
@@ -33,14 +24,6 @@ body:
     attributes:
       label: Proposed solution
       description: How would you like this to work? Sketches, UI ideas, API shape — all welcome.
-    validations:
-      required: false
-
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: Alternatives considered
-      description: Other approaches you thought about, and why they don't fit as well.
     validations:
       required: false
 
