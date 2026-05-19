@@ -1,6 +1,6 @@
 """Data models for vocabulary words."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from anki_miner.models.media import MediaData
@@ -24,6 +24,16 @@ class TokenizedWord:
     sentence_reading: str = ""  # Plain kana reading of sentence, e.g. "にほんごをたべる。"
     frequency_rank: int | None = None  # Word frequency rank (1 = most common)
     pos: str | None = None  # MeCab pos1 (動詞/形容詞/名詞/...) — used for kifuku/odaka distinction
+    # Character offsets of the target morpheme within ``sentence`` (post-filter).
+    # -1 sentinel means "not tracked" — card builder falls back to plain escape.
+    surface_start: int = -1
+    surface_end: int = -1
+    # Precomputed bolded variants of sentence / sentence_furigana with
+    # <b>...</b> wrapping the target morpheme. Populated at parse time
+    # (or i+1 swap time) only when config.bold_target_in_sentence is on.
+    # Empty string means "not precomputed" — card builder falls back to escape.
+    sentence_bolded: str = ""
+    sentence_furigana_bolded: str = ""
 
     @property
     def mined_form(self) -> str:
@@ -63,6 +73,11 @@ class LineLemmas:
     duration: float  # end_time - start_time
     sentence_furigana: str = ""  # Furigana annotation for the whole line
     sentence_reading: str = ""  # Plain-kana reading for the whole line
+    # Per-lemma (surface, start, end) for each content lemma's first
+    # appearance on this line. Used by the i+1 sentence filter to bold
+    # the correct morpheme after swapping the sentence to a different
+    # line. Tuple-of-tuples instead of dict to keep the dataclass frozen.
+    lemma_spans: tuple[tuple[str, str, int, int], ...] = field(default_factory=tuple)
 
 
 @dataclass

@@ -200,6 +200,23 @@ class FilteringSettingsPanel(FormPanel):
             "Overrides sentence deduplication when enabled.",
         )
 
+        # Card Formatting section (Issue #20)
+        self.add_section("Card Formatting")
+
+        self.bold_target_in_sentence_checkbox = QCheckBox("Bold target word in sentence")
+        self.bold_target_in_sentence_checkbox.setToolTip(
+            "Wrap the mined word in <b>...</b> inside the Sentence and "
+            "SentenceFurigana fields. Match is the exact MeCab span of the "
+            "mined morpheme, so duplicated surfaces in a sentence only bold "
+            "the actually-mined occurrence."
+        )
+        self.add_field(
+            "",
+            self.bold_target_in_sentence_checkbox,
+            helper="Helpful for targeted-sentence card styles; matches the Yomitan "
+            "{cloze-prefix}<b>{cloze-body}</b>{cloze-suffix} idiom.",
+        )
+
         self.add_stretch()
 
     def _append_preset(self, pattern: str) -> None:

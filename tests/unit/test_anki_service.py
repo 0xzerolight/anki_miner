@@ -523,6 +523,70 @@ class TestCreateCardsBatch:
         word_field_name = test_config.anki_fields["word"]
         assert note["fields"][word_field_name] == "破れる"
 
+    def test_bolded_sentence_used_when_flag_on(self, test_config, make_tokenized_word):
+        """When bold_target_in_sentence=True and precomputed forms exist, the
+        Sentence and SentenceFurigana fields use those (Issue #20)."""
+        import dataclasses as _dc
+
+        config = _dc.replace(test_config, bold_target_in_sentence=True)
+        service = AnkiService(config)
+        word = make_tokenized_word(
+            surface="食べる",
+            lemma="食べる",
+            sentence="毎日食べる",
+            sentence_furigana="毎日 食べる[たべる]",
+            pos="動詞",
+        )
+        word.sentence_bolded = "毎日<b>食べる</b>"
+        word.sentence_furigana_bolded = "毎日 <b>食べる[たべる]</b>"
+        media = MediaData()
+        resp = _mock_response(result=[1])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            service.create_cards_batch([CardPayload(word=word, media=media, definition="def")])
+
+        note = mock_post.call_args[1]["json"]["params"]["notes"][0]
+        sentence_field = config.anki_fields["sentence"]
+        furi_field = config.anki_fields["sentence_furigana"]
+        assert note["fields"][sentence_field] == "毎日<b>食べる</b>"
+        assert note["fields"][furi_field] == "毎日 <b>食べる[たべる]</b>"
+
+    def test_sentence_escape_path_when_flag_off(self, test_config, make_tokenized_word):
+        """Flag off: even if precomputed strings exist, fall back to plain escape.
+
+        Regression guard: existing cards must keep current behavior.
+        """
+        service = AnkiService(test_config)
+        word = make_tokenized_word(sentence="A & B", sentence_furigana="A & B")
+        word.sentence_bolded = "A <b>&amp;</b> B"  # should NOT be used
+        media = MediaData()
+        resp = _mock_response(result=[1])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            service.create_cards_batch([CardPayload(word=word, media=media, definition="d")])
+
+        note = mock_post.call_args[1]["json"]["params"]["notes"][0]
+        sentence_field = test_config.anki_fields["sentence"]
+        assert note["fields"][sentence_field] == "A &amp; B"
+
+    def test_bolded_falls_back_when_precomputed_empty(self, test_config, make_tokenized_word):
+        """Flag on but precomputed string empty → escape fallback (defensive)."""
+        import dataclasses as _dc
+
+        config = _dc.replace(test_config, bold_target_in_sentence=True)
+        service = AnkiService(config)
+        word = make_tokenized_word(sentence="A & B")
+        # sentence_bolded left empty intentionally
+        media = MediaData()
+        resp = _mock_response(result=[1])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            service.create_cards_batch([CardPayload(word=word, media=media, definition="d")])
+
+        note = mock_post.call_args[1]["json"]["params"]["notes"][0]
+        sentence_field = config.anki_fields["sentence"]
+        assert note["fields"][sentence_field] == "A &amp; B"
+
 
 # ---------------------------------------------------------------------------
 # TestStoreMediaFilesBatch
