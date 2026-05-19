@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import unicodedata
 from typing import TYPE_CHECKING
 
 from anki_miner.config import AnkiMinerConfig
@@ -10,6 +11,15 @@ from anki_miner.models import LineLemmas, TokenizedWord
 
 if TYPE_CHECKING:
     from anki_miner.services.word_list_service import WordListService
+
+
+def _normalize_sentence(text: str) -> str:
+    """Normalize a sentence for dedup-key purposes only.
+
+    NFKC fold (full/half-width punctuation, kana, digits) + whitespace
+    collapse. The original sentence on each word is left untouched.
+    """
+    return " ".join(unicodedata.normalize("NFKC", text).split())
 
 
 class WordFilterService:
@@ -30,21 +40,25 @@ class WordFilterService:
     ) -> list[TokenizedWord]:
         """Filter out words that already exist in Anki collection.
 
+        Comparison is by lemma only. ``existing_vocabulary`` is populated from
+        AnkiService.get_existing_vocabulary(), which reads the raw first field
+        (Expression) of every note. Cards written by this pipeline now store
+        the lemma there, so the comparison is self-consistent for newly-mined
+        cards. Legacy cards with surface-form Expressions still block their
+        own surface (because their stored Expression IS the surface string),
+        but will not block a re-mining of the same word under its lemma form
+        — that's a known intentional consequence of switching to lemma-based
+        mining; see CHANGELOG.
+
         Args:
-            all_words: List of all discovered words
-            existing_vocabulary: Set of words already in Anki (lemmas)
+            all_words: List of all discovered words.
+            existing_vocabulary: Set of Expression-field values already in
+                Anki (a mix of lemmas and, for legacy cards, surfaces).
 
         Returns:
-            List of unknown words (not in existing vocabulary)
+            List of unknown words (lemma not in existing vocabulary).
         """
-        unknown_words = []
-
-        for word in all_words:
-            # Check both lemma and surface form against existing vocabulary
-            if word.lemma not in existing_vocabulary and word.surface not in existing_vocabulary:
-                unknown_words.append(word)
-
-        return unknown_words
+        return [word for word in all_words if word.lemma not in existing_vocabulary]
 
     def filter_by_frequency(
         self,
@@ -75,8 +89,10 @@ class WordFilterService:
     ) -> list[TokenizedWord]:
         """Filter words using blacklist/whitelist.
 
-        Removes blacklisted words. Whitelisted words are always kept.
-        If a word is on both lists, whitelist wins.
+        Blacklist/whitelist entries match against ``word.lemma`` (dictionary
+        form). Users should enter dictionary forms in their list files
+        (e.g. 食べる, not 食べた). Whitelist short-circuits the blacklist
+        check, so an entry on both lists is kept.
 
         Args:
             words: List of words to filter.
@@ -97,7 +113,9 @@ class WordFilterService:
     ) -> list[TokenizedWord]:
         """Remove words that share a sentence with an already-selected word.
 
-        For each unique sentence text, only the first word is kept.
+        For each unique sentence text, only the first word is kept. The dedup
+        key is NFKC-normalized with whitespace collapsed so that punctuation
+        and spacing variants do not slip through.
 
         Args:
             words: List of words to deduplicate.
@@ -108,8 +126,9 @@ class WordFilterService:
         seen_sentences: set[str] = set()
         result = []
         for word in words:
-            if word.sentence not in seen_sentences:
-                seen_sentences.add(word.sentence)
+            key = _normalize_sentence(word.sentence)
+            if key not in seen_sentences:
+                seen_sentences.add(key)
                 result.append(word)
         return result
 

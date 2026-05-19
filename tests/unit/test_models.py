@@ -95,6 +95,37 @@ class TestTokenizedWord:
         assert word.expression_furigana == " 食べる[たべる]"
         assert word.sentence_furigana == " 日本語[にほんご]を 食べる[たべる]。"
 
+    @pytest.mark.parametrize(
+        "pos,surface,lemma,expected",
+        [
+            # Verb conjugation → lemma wins (Issue #19).
+            ("動詞", "破れ", "破れる", "破れる"),
+            ("動詞", "食べた", "食べる", "食べる"),
+            # Adjective inflection → lemma wins.
+            ("形容詞", "高い", "高い", "高い"),
+            ("形容詞", "高かった", "高い", "高い"),
+            # Noun → surface wins (Issue #5: unidic 豪腕 → 剛腕 quirk).
+            ("名詞", "豪腕", "剛腕", "豪腕"),
+            ("名詞", "刑務所", "刑務所", "刑務所"),
+            # Other / missing pos → falls back to surface defensively.
+            ("形状詞", "綺麗", "綺麗", "綺麗"),
+            (None, "テスト", "テスト", "テスト"),
+        ],
+    )
+    def test_mined_form_pos_aware(self, pos, surface, lemma, expected):
+        """mined_form returns lemma for conjugating POS, surface otherwise."""
+        word = TokenizedWord(
+            surface=surface,
+            lemma=lemma,
+            reading="",
+            sentence="",
+            start_time=0,
+            end_time=0,
+            duration=0,
+            pos=pos,
+        )
+        assert word.mined_form == expected
+
 
 class TestLineLemmas:
     """Tests for LineLemmas dataclass."""

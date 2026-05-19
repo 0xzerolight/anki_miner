@@ -113,7 +113,9 @@ class WordCurationDialog(QDialog):
         # Table
         self.table = QTableWidget()
         self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels(["", "Surface", "Lemma", "Reading", "Sentence", "Freq. Rank"])
+        self.table.setHorizontalHeaderLabels(
+            ["", "Word (mined)", "Form in subtitle", "Reading", "Sentence", "Freq. Rank"]
+        )
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
@@ -198,11 +200,12 @@ class WordCurationDialog(QDialog):
             check_item.setData(Qt.ItemDataRole.UserRole, row)  # Store original index
             self.table.setItem(row, 0, check_item)
 
-            # Surface
-            self.table.setItem(row, 1, self._make_readonly_item(word.surface))
+            # Word (mined) — what becomes the Anki Expression
+            # (lemma for verbs/adjectives, surface for nouns)
+            self.table.setItem(row, 1, self._make_readonly_item(word.mined_form))
 
-            # Lemma
-            self.table.setItem(row, 2, self._make_readonly_item(word.lemma))
+            # Form in subtitle — the raw surface as it appeared
+            self.table.setItem(row, 2, self._make_readonly_item(word.surface))
 
             # Reading
             self.table.setItem(row, 3, self._make_readonly_item(word.reading))

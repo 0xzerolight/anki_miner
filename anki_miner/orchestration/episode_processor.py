@@ -401,7 +401,7 @@ class EpisodeProcessor:
         for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
             media_results, definitions, glossaries, pitch_data, strict=True
         ):
-            if definition is None:
+            if not definition:
                 continue
 
             extra_fields: dict[str, str] = {}
@@ -424,7 +424,7 @@ class EpisodeProcessor:
             )
 
         skipped_words = [
-            word.lemma for (word, _), definition in zip(media_results, definitions, strict=True) if definition is None
+            word.lemma for (word, _), definition in zip(media_results, definitions, strict=True) if not definition
         ]
         if skipped_words:
             preview = ", ".join(skipped_words[:10])
