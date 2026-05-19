@@ -1360,3 +1360,112 @@ class TestSubtitleRegexFilter:
             entries = service.parse_raw_entries(sub_file)
 
         assert entries[0][2] == "歌う こんにちは"
+
+
+# ---------------------------------------------------------------------------
+# Surface offsets + bold precomputation (Issue #20)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestSurfaceOffsetsAndBolding:
+    """Parser must emit char offsets for each mined morpheme and, when the
+    bold_target_in_sentence flag is on, precompute the bolded sentence
+    + sentence_furigana fields on the TokenizedWord."""
+
+    def test_emits_surface_offsets_matching_sentence_slice(self, tmp_path):
+        srt_file = tmp_path / "offset.srt"
+        srt_file.write_text(
+            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で爆発的な事件を起こした\n",
+            encoding="utf-8",
+        )
+
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        words = service.parse_subtitle_file(srt_file)
+
+        for word in words:
+            assert word.surface_start >= 0, f"missing offset on {word.surface}"
+            assert word.surface_end > word.surface_start
+            assert word.sentence[word.surface_start : word.surface_end] == word.surface
+
+    def test_offsets_span_compound_merged_token(self, tmp_path):
+        srt_file = tmp_path / "compound.srt"
+        srt_file.write_text(
+            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で爆発的な事件を起こした\n",
+            encoding="utf-8",
+        )
+
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        words = service.parse_subtitle_file(srt_file)
+        by_surface = {w.surface: w for w in words}
+
+        # 刑務所 is a compound-merge synthetic. Offsets must cover all three chars.
+        keimusho = by_surface["刑務所"]
+        assert keimusho.surface_end - keimusho.surface_start == len("刑務所")
+        assert keimusho.sentence[keimusho.surface_start : keimusho.surface_end] == "刑務所"
+
+    def test_no_bolded_fields_when_flag_off(self, tmp_path):
+        srt_file = tmp_path / "no_bold.srt"
+        srt_file.write_text(
+            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で事件を起こした\n",
+            encoding="utf-8",
+        )
+
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        words = service.parse_subtitle_file(srt_file)
+
+        for word in words:
+            assert word.sentence_bolded == ""
+            assert word.sentence_furigana_bolded == ""
+
+    def test_bolded_fields_populated_when_flag_on(self, tmp_path):
+        srt_file = tmp_path / "bold.srt"
+        srt_file.write_text(
+            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で事件を起こした\n",
+            encoding="utf-8",
+        )
+
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            bold_target_in_sentence=True,
+        )
+        service = SubtitleParserService(config)
+        words = service.parse_subtitle_file(srt_file)
+        by_surface = {w.surface: w for w in words}
+
+        keimusho = by_surface["刑務所"]
+        # Plain bolded form wraps exactly the morpheme.
+        assert "<b>刑務所</b>" in keimusho.sentence_bolded
+        # Furigana bolded form keeps furigana annotations and bolds the target.
+        assert "<b>" in keimusho.sentence_furigana_bolded
+        assert "</b>" in keimusho.sentence_furigana_bolded
+        # Within the <b>...</b> run, the kanji of the merged compound must
+        # all be present (the wrap helper re-tokenizes via the raw tagger,
+        # so a compound-merge synthetic may split into per-morpheme rubies
+        # like "刑務[けいむ] 所[しょ]" — both halves should still be bolded).
+        between = keimusho.sentence_furigana_bolded.split("<b>", 1)[1].split("</b>", 1)[0]
+        for ch in "刑務所":
+            assert ch in between
+
+    def test_with_index_emits_lemma_spans(self, tmp_path):
+        srt_file = tmp_path / "index.srt"
+        srt_file.write_text(
+            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で事件を起こした\n",
+            encoding="utf-8",
+        )
+
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        _words, line_index = service.parse_subtitle_file_with_index(srt_file)
+
+        assert len(line_index) == 1
+        ll = line_index[0]
+        assert ll.lemma_spans, "expected lemma_spans populated for the line"
+        by_lemma = {entry[0]: entry for entry in ll.lemma_spans}
+        keimusho_entry = by_lemma["刑務所"]
+        _, surface, span_start, span_end = keimusho_entry
+        assert surface == "刑務所"
+        assert ll.line_text[span_start:span_end] == "刑務所"

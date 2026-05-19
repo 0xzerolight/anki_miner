@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import dataclasses
 import unicodedata
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import LineLemmas, TokenizedWord
+from anki_miner.utils import wrap_target_furigana, wrap_target_plain
 
 if TYPE_CHECKING:
     from anki_miner.services.word_list_service import WordListService
@@ -25,13 +26,19 @@ def _normalize_sentence(text: str) -> str:
 class WordFilterService:
     """Filter vocabulary words based on various criteria (stateless service)."""
 
-    def __init__(self, config: AnkiMinerConfig):
+    def __init__(self, config: AnkiMinerConfig, tagger: Any | None = None):
         """Initialize the word filter service.
 
         Args:
-            config: Configuration for filtering
+            config: Configuration for filtering.
+            tagger: Optional fugashi.Tagger used to rebuild bolded sentence
+                fields after the i+1 filter swaps in a different example
+                line. Required only when ``config.bold_target_in_sentence``
+                is True AND ``filter_i_plus_one`` is called; otherwise the
+                bolded-field recompute is skipped and the tagger is unused.
         """
         self.config = config
+        self.tagger = tagger
 
     def filter_unknown(
         self,
@@ -178,15 +185,44 @@ class WordFilterService:
             match = earliest.get(word.lemma)
             if match is None:
                 continue
+
+            # Look up the lemma's morpheme position on the matched line so
+            # the bold span (and the surface form, which may have a
+            # different inflection on the new line) lands on the right
+            # token after the swap. If the entry is missing for any reason
+            # (e.g. legacy index without lemma_spans), fall back to the
+            # original surface/offsets — bold will then point at the old
+            # sentence, so we also disable the bolded fields below.
+            span_entry = next(
+                ((s, st, en) for (lemma_key, s, st, en) in match.lemma_spans if lemma_key == word.lemma),
+                None,
+            )
+            if span_entry is not None:
+                new_surface, new_start, new_end = span_entry
+            else:
+                new_surface, new_start, new_end = word.surface, -1, -1
+
+            if self.config.bold_target_in_sentence and span_entry is not None and self.tagger is not None:
+                new_bolded = wrap_target_plain(match.line_text, new_start, new_end)
+                new_furi_bolded = wrap_target_furigana(match.line_text, self.tagger, new_start, new_end)
+            else:
+                new_bolded = ""
+                new_furi_bolded = ""
+
             result.append(
                 dataclasses.replace(
                     word,
+                    surface=new_surface,
+                    surface_start=new_start,
+                    surface_end=new_end,
                     sentence=match.line_text,
                     start_time=match.start_time,
                     end_time=match.end_time,
                     duration=match.duration,
                     sentence_furigana=match.sentence_furigana,
                     sentence_reading=match.sentence_reading,
+                    sentence_bolded=new_bolded,
+                    sentence_furigana_bolded=new_furi_bolded,
                 )
             )
         return result

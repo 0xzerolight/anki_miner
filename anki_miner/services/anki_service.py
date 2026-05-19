@@ -348,17 +348,33 @@ class AnkiService:
                 if media.audio_filename and media.audio_filename in stored_files:
                     audio_ref = f"[sound:{media.audio_filename}]"
 
+                # Sentence + SentenceFurigana use the bolded forms when the
+                # config flag is on AND the parse pre-computed them. The
+                # precomputed forms are already HTML-safe (per-token escape
+                # in wrap_target_*); the <b> tags must not be double-escaped.
+                # Empty precomputed string means "fall back to escape" — this
+                # is the path for entries that came from a code path that
+                # did not honor the bold flag (defensive).
+                if self.config.bold_target_in_sentence and word.sentence_bolded:
+                    sentence_field = word.sentence_bolded
+                else:
+                    sentence_field = html.escape(word.sentence)
+                if self.config.bold_target_in_sentence and word.sentence_furigana_bolded:
+                    sentence_furigana_field = word.sentence_furigana_bolded
+                else:
+                    sentence_furigana_field = html.escape(word.sentence_furigana)
+
                 # Build fields, skipping any with empty config mapping
                 field_data = {
                     "word": html.escape(word.mined_form),
-                    "sentence": html.escape(word.sentence),
+                    "sentence": sentence_field,
                     "definition": definition or "",
                     "glossary": glossary_html,
                     "picture": picture_html,
                     "audio": audio_ref,
                     "expression_furigana": html.escape(word.expression_furigana),
                     "expression_reading": html.escape(word.expression_reading),
-                    "sentence_furigana": html.escape(word.sentence_furigana),
+                    "sentence_furigana": sentence_furigana_field,
                     "sentence_reading": html.escape(word.sentence_reading),
                 }
                 fields = {}

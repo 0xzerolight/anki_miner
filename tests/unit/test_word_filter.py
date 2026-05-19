@@ -472,6 +472,90 @@ class TestWordFilterService:
             assert swapped.sentence_furigana == "new furigana"
             assert swapped.sentence_reading == "new reading"
 
+        def test_i_plus_one_swap_updates_surface_and_offsets_from_lemma_spans(self, test_config):
+            """When LineLemmas carries lemma_spans, the swap replaces surface and offsets
+            with the matched lemma's morpheme on the new line (Issue #20)."""
+            service = WordFilterService(test_config)
+            word = TokenizedWord(
+                surface="食べた",
+                lemma="食べる",
+                reading="タベル",
+                sentence="original",
+                start_time=0.0,
+                end_time=1.0,
+                duration=1.0,
+                surface_start=0,
+                surface_end=3,
+            )
+            line = LineLemmas(
+                line_text="今日も食べる",
+                lemmas=frozenset({"食べる"}),
+                start_time=10.0,
+                end_time=12.0,
+                duration=2.0,
+                lemma_spans=(("食べる", "食べる", 3, 6),),
+            )
+            result = service.filter_i_plus_one([word], [line])
+
+            assert len(result) == 1
+            swapped = result[0]
+            assert swapped.surface == "食べる"  # Replaced with the form that appears on the new line
+            assert swapped.surface_start == 3
+            assert swapped.surface_end == 6
+            assert swapped.sentence == "今日も食べる"
+            # Bolded fields are empty because config flag is off (default).
+            assert swapped.sentence_bolded == ""
+            assert swapped.sentence_furigana_bolded == ""
+
+        def test_i_plus_one_swap_recomputes_bolded_when_flag_on(self):
+            """When the bold flag is on and a tagger is supplied, the swap rebuilds
+            the bolded sentence + furigana against the new line."""
+            from unittest.mock import MagicMock, PropertyMock
+
+            from anki_miner.config import AnkiMinerConfig
+
+            config = AnkiMinerConfig(bold_target_in_sentence=True)
+
+            # Mock tagger that yields three tokens partitioning "今日も食べる".
+            def _tok(surface, kana):
+                token = MagicMock()
+                token.surface = surface
+                if kana is None:
+                    token.feature = MagicMock(spec=[])
+                    type(token.feature).kana = PropertyMock(side_effect=AttributeError)
+                else:
+                    token.feature.kana = kana
+                return token
+
+            tagger = MagicMock(return_value=[_tok("今日", "キョウ"), _tok("も", "モ"), _tok("食べる", "タベル")])
+            service = WordFilterService(config, tagger=tagger)
+
+            word = TokenizedWord(
+                surface="食べた",
+                lemma="食べる",
+                reading="タベル",
+                sentence="original",
+                start_time=0.0,
+                end_time=1.0,
+                duration=1.0,
+            )
+            line = LineLemmas(
+                line_text="今日も食べる",
+                lemmas=frozenset({"食べる"}),
+                start_time=10.0,
+                end_time=12.0,
+                duration=2.0,
+                lemma_spans=(("食べる", "食べる", 3, 6),),
+            )
+
+            result = service.filter_i_plus_one([word], [line])
+            assert len(result) == 1
+            swapped = result[0]
+            assert swapped.sentence == "今日も食べる"
+            assert "<b>食べる</b>" in swapped.sentence_bolded
+            assert "<b>" in swapped.sentence_furigana_bolded
+            assert "食べる" in swapped.sentence_furigana_bolded
+
         def test_blacklisted_lemma_not_counted_as_unknown(self, test_config):
             """Lemmas absent from target_lemmas (blacklisted upstream) don't count.
 

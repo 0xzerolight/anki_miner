@@ -8,6 +8,8 @@ from .text_utils import (
     generate_furigana,
     generate_reading,
     katakana_to_hiragana,
+    wrap_target_furigana,
+    wrap_target_plain,
 )
 
 __all__ = [
@@ -20,4 +22,6 @@ __all__ = [
     "generate_reading",
     "katakana_to_hiragana",
     "natural_sort_key",
+    "wrap_target_furigana",
+    "wrap_target_plain",
 ]

@@ -136,6 +136,14 @@ class AnkiMinerConfig:
     subtitle_regex_replacement: str = ""
     use_subtitle_regex_filter: bool = False
 
+    # Card formatting
+    # When True, wrap the mined target word in <b>...</b> inside the
+    # Sentence and SentenceFurigana fields. Match is the exact MeCab span
+    # of the mined surface (after compound-merge), not a string search,
+    # so duplicated surfaces in the same sentence bold only the morpheme
+    # that was actually mined. See Issue #20.
+    bold_target_in_sentence: bool = False
+
     # Deduplication settings
     deduplicate_sentences: bool = True
 
