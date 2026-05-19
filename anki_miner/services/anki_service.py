@@ -350,7 +350,7 @@ class AnkiService:
 
                 # Build fields, skipping any with empty config mapping
                 field_data = {
-                    "word": html.escape(word.surface),
+                    "word": html.escape(word.mined_form),
                     "sentence": html.escape(word.sentence),
                     "definition": definition or "",
                     "glossary": glossary_html,
