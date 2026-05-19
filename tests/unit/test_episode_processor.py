@@ -15,7 +15,7 @@ from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.presenters import NullPresenter
 
 
-def _make_word(lemma="食べる", surface=None, start_time=1.0):
+def _make_word(lemma="食べる", surface=None, start_time=1.0, pos="動詞"):
     return TokenizedWord(
         surface=surface or f"{lemma}た",
         lemma=lemma,
@@ -24,6 +24,7 @@ def _make_word(lemma="食べる", surface=None, start_time=1.0):
         start_time=start_time,
         end_time=start_time + 2.0,
         duration=2.0,
+        pos=pos,
     )
 
 
