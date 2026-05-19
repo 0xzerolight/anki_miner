@@ -33,7 +33,7 @@ dependencies = [
     "fugashi>=1.3.0",
     "unidic-lite>=1.0.8",
     "PyQt6>=6.6.0",
-    "yt-dlp>=2026.3.0,<2027.0.0",
+    "yt-dlp>=2026.3.3,<2027.0.0",
     "psutil>=5.9.0",
     "packaging>=21.0",
 ]
