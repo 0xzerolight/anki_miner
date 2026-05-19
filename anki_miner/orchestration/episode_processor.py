@@ -437,8 +437,10 @@ class EpisodeProcessor:
         self.presenter.show_success(f"Successfully created {cards_created} cards")
 
         # Add newly mined words to known word DB.
+        # Store mined_form so the local DB matches what Anki stores in the
+        # Expression first field (POS-aware via mined_form); Issue #5.
         if self.known_word_db and self.known_word_db.is_available() and card_data:
-            mined_words = {payload.word.lemma for payload in card_data}
+            mined_words = {payload.word.mined_form for payload in card_data}
             self.known_word_db.add_words(mined_words, source="mined")
 
         return cards_created, created_note_ids

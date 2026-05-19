@@ -47,25 +47,34 @@ class WordFilterService:
     ) -> list[TokenizedWord]:
         """Filter out words that already exist in Anki collection.
 
-        Comparison is by lemma only. ``existing_vocabulary`` is populated from
-        AnkiService.get_existing_vocabulary(), which reads the raw first field
-        (Expression) of every note. Cards written by this pipeline now store
-        the lemma there, so the comparison is self-consistent for newly-mined
-        cards. Legacy cards with surface-form Expressions still block their
-        own surface (because their stored Expression IS the surface string),
-        but will not block a re-mining of the same word under its lemma form
-        — that's a known intentional consequence of switching to lemma-based
-        mining; see CHANGELOG.
+        Comparison is by ``word.mined_form`` — the same string
+        ``AnkiService.create_cards_batch`` writes to the card's Expression
+        (first) field, and the same string Anki itself dedups on. This is
+        POS-aware: verbs/adjectives use lemma, nouns use surface (see
+        ``TokenizedWord.mined_form``). Aligning the filter key with the
+        stored field keeps the pipeline self-consistent and prevents the
+        AnkiConnect duplicate error that surfaced when a noun's unidic
+        lemma differed from its surface (e.g. 豪腕→剛腕; Issue #5).
+
+        ``existing_vocabulary`` is populated from
+        ``AnkiService.get_existing_vocabulary()``, which reads the raw
+        first field of every note — i.e. the same ``mined_form`` strings.
+
+        Legacy verb cards with surface-form Expressions still block their
+        own surface (because their stored Expression IS the surface
+        string) but will not block re-mining of the same verb under its
+        lemma form — a known intentional consequence of switching to
+        lemma-based mining for verbs; see CHANGELOG.
 
         Args:
             all_words: List of all discovered words.
             existing_vocabulary: Set of Expression-field values already in
-                Anki (a mix of lemmas and, for legacy cards, surfaces).
+                Anki (the ``mined_form`` of each note).
 
         Returns:
-            List of unknown words (lemma not in existing vocabulary).
+            List of unknown words (``mined_form`` not in existing vocabulary).
         """
-        return [word for word in all_words if word.lemma not in existing_vocabulary]
+        return [word for word in all_words if word.mined_form not in existing_vocabulary]
 
     def filter_by_frequency(
         self,
