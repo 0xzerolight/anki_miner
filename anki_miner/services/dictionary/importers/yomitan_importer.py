@@ -197,6 +197,11 @@ def import_yomitan_zip(
             },
         )
 
+        # Persist the source zip alongside index.sqlite so "Reimport All" can
+        # rebuild without the user re-picking the file. Lives in staging so
+        # the atomic rename below promotes it together with the index.
+        shutil.copy2(zip_path, staging / "source.zip")
+
         # Move staging into dest_root atomically
         dest_root.mkdir(parents=True, exist_ok=True)
         final_path = dest_root / dict_id
