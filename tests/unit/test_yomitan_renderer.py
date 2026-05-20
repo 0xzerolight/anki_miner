@@ -332,6 +332,17 @@ class TestRenderGlossaryEntry:
             '<li class="gloss-item"><span class="gloss-content">' '<div class="gloss-sc-div">x</div></span></li>'
         ) in html
 
+    def test_plain_string_newlines_become_br(self):
+        # Issue #28: plain-text monolingual dicts use \n between sub-senses.
+        # Anki collapses literal newlines; <br> is needed for visual line breaks.
+        html = render_glossary_entry(["① a\n② b\n③ c"])
+        assert html == ('<li class="gloss-item"><span class="gloss-content">' "① a<br>② b<br>③ c" "</span></li>")
+
+    def test_plain_string_crlf_normalized(self):
+        # Windows-authored dictionaries may use CRLF or bare CR; render same as LF.
+        html = render_glossary_entry(["a\r\nb\rc"])
+        assert html == ('<li class="gloss-item"><span class="gloss-content">' "a<br>b<br>c" "</span></li>")
+
 
 class TestSecurityHardening:
     def test_javascript_href_dropped(self):
