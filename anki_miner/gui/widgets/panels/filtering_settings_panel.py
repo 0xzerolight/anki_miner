@@ -216,8 +216,7 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             "",
             self.bold_target_in_sentence_checkbox,
-            helper="Helpful for targeted-sentence card styles; matches the Yomitan "
-            "{cloze-prefix}<b>{cloze-body}</b>{cloze-suffix} idiom.",
+            helper="Wraps mined word in <b>...</b> in Sentence and SentenceFurigana fields.",
         )
 
         self.add_stretch()
