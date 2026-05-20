@@ -589,7 +589,8 @@ def render_glossary_entry(
     parts: list[str] = []
     for item in glossary:
         if isinstance(item, str):
-            inner = escape(item)
+            normalized = item.replace("\r\n", "\n").replace("\r", "\n")
+            inner = escape(normalized).replace("\n", "<br>")
         else:
             inner = structured_content_to_html(item, dict_id=dict_id, media_collector=media_collector)
         parts.append(f'<li class="gloss-item"><span class="gloss-content">{inner}</span></li>')

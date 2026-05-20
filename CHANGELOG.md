@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **Monolingual dictionary glosses missing line breaks** (Issue #28): plain-text Yomitan monolingual dictionaries (e.g. `旺文社国語辞典`) store each entry as a single string with `\n` separators between numbered sub-senses. The renderer HTML-escaped the gloss but left the newlines literal, which Anki's WebView collapses to a single space — multi-sense entries rendered as a visually-dense block. Newlines are now converted to `<br>`, matching Yomitan's own card output. `\r\n` and bare `\r` are normalized to `\n` first so Windows-authored dictionaries render identically. Structured-content dictionaries are unaffected (they use Yomitan's native `br` node). **Re-import affected monolingual dictionaries** after upgrading to refresh the cached HTML; existing cards in your Anki collection are not rewritten retroactively.
 
 ### Removed
 
