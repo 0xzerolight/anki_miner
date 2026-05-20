@@ -85,6 +85,7 @@ class DictionarySettingsPanel(FormPanel):
     add_dict_requested = pyqtSignal()
     reimport_jmdict_requested = pyqtSignal()
     reimport_dict_requested = pyqtSignal(str)
+    reimport_all_requested = pyqtSignal()
     chain_changed = pyqtSignal()
 
     def __init__(self, dicts_root: Path, parent=None):
@@ -138,8 +139,8 @@ class DictionarySettingsPanel(FormPanel):
         self._add_btn.clicked.connect(self.add_dict_requested.emit)
         buttons.addWidget(self._add_btn)
 
-        self._reimport_btn = QPushButton("Reimport JMdict")
-        self._reimport_btn.clicked.connect(self.reimport_jmdict_requested.emit)
+        self._reimport_btn = QPushButton("Reimport All")
+        self._reimport_btn.clicked.connect(self.reimport_all_requested.emit)
         buttons.addWidget(self._reimport_btn)
 
         self._up_btn = QPushButton("↑")

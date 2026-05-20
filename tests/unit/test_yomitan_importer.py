@@ -94,6 +94,60 @@ class TestImportYomitanZip:
         assert second.dict_id == first.dict_id
         assert (dest_root / first.dict_id / "index.sqlite").exists()
 
+    def test_import_creates_source_zip(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip")
+        dest_root = tmp_path / "dicts"
+
+        result = import_yomitan_zip(zip_path, dest_root)
+
+        saved = dest_root / result.dict_id / "source.zip"
+        assert saved.exists()
+        assert saved.read_bytes() == zip_path.read_bytes()
+
+    def test_reimport_seeds_source_zip_for_legacy_dict(self, tmp_path: Path):
+        """Pre-existing dict folder (index.sqlite, no source.zip) gains a
+        source.zip after the per-row reimport flow (overwrite=True). This is
+        the path users hit when reimporting a dict installed before the
+        source-copy feature shipped.
+        """
+        zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip")
+        dest_root = tmp_path / "dicts"
+
+        # First import seeds the dict; remove source.zip to simulate legacy.
+        first = import_yomitan_zip(zip_path, dest_root)
+        legacy_source = dest_root / first.dict_id / "source.zip"
+        legacy_source.unlink()
+        assert not legacy_source.exists()
+
+        # Per-row reimport path calls the importer with overwrite=True.
+        import_yomitan_zip(zip_path, dest_root, overwrite=True)
+        assert legacy_source.exists()
+        assert legacy_source.read_bytes() == zip_path.read_bytes()
+
+    def test_reimport_replaces_source_zip(self, tmp_path: Path):
+        first_zip = build_yomitan_zip(tmp_path / "src" / "first.zip")
+        # Different term_banks ⇒ different bytes, same dict_id (title/revision unchanged)
+        second_zip = build_yomitan_zip(
+            tmp_path / "src" / "second.zip",
+            term_banks=[
+                [
+                    ["食べる", "たべる", "v1", "v1", 0, ["to eat", "to consume"], 1, ""],
+                    ["飲む", "のむ", "v5m", "v5m", 0, ["to drink"], 2, ""],
+                    ["走る", "はしる", "v5r", "v5r", 0, ["to run"], 3, ""],
+                ]
+            ],
+        )
+        dest_root = tmp_path / "dicts"
+
+        first = import_yomitan_zip(first_zip, dest_root)
+        import_yomitan_zip(second_zip, dest_root, overwrite=True)
+
+        saved = dest_root / first.dict_id / "source.zip"
+        assert saved.read_bytes() == second_zip.read_bytes()
+        # No .bak-* folder remains after successful overwrite
+        backups = [p for p in dest_root.iterdir() if p.name.startswith(first.dict_id + ".bak-")]
+        assert backups == []
+
     @pytest.mark.parametrize(
         "evil_name",
         [
