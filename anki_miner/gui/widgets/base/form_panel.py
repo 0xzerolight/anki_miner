@@ -132,6 +132,11 @@ class FormPanel(QFrame):
             container_layout.addWidget(widget)
 
             helper_label = QLabel(helper)
+            # QLabel defaults to AutoText, which renders strings containing
+            # angle brackets (e.g. ``<b>{cloze-body}</b>`` in the bold-target
+            # helper) as HTML. Helpers are descriptive copy, never rich text,
+            # so force PlainText so users see the literal markup. Issue #20.
+            helper_label.setTextFormat(Qt.TextFormat.PlainText)
             helper_label.setObjectName("helper-text")
             helper_font = QFont()
             helper_font.setPixelSize(FONT_SIZES.small)

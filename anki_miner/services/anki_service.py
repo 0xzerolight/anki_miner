@@ -317,6 +317,12 @@ class AnkiService:
         # Then create notes in batches
         batch_size = 50
         total_created = 0
+        # Diagnostic counters for the bold path (Issue #20). Surface whether
+        # the precomputed bolded strings actually made it to the note body,
+        # so users who enable the option but see no bold can tell from the
+        # log whether the parse populated the fields.
+        bold_used = 0
+        bold_fallback = 0
 
         for i in range(0, len(word_data_list), batch_size):
             batch = word_data_list[i : i + batch_size]
@@ -357,8 +363,11 @@ class AnkiService:
                 # did not honor the bold flag (defensive).
                 if self.config.bold_target_in_sentence and word.sentence_bolded:
                     sentence_field = word.sentence_bolded
+                    bold_used += 1
                 else:
                     sentence_field = html.escape(word.sentence)
+                    if self.config.bold_target_in_sentence:
+                        bold_fallback += 1
                 if self.config.bold_target_in_sentence and word.sentence_furigana_bolded:
                     sentence_furigana_field = word.sentence_furigana_bolded
                 else:
@@ -430,6 +439,13 @@ class AnkiService:
         self.last_created_note_ids = all_created_ids
         if total_created > 0:
             self.invalidate_existing_vocabulary_cache()
+        if self.config.bold_target_in_sentence and word_data_list:
+            logger.info(
+                "bold_target_in_sentence=on: precomputed bold used on %d/%d cards (escape fallback: %d)",
+                bold_used,
+                len(word_data_list),
+                bold_fallback,
+            )
         return total_created
 
     def _store_media_files_batch(
