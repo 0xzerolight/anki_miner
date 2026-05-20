@@ -33,6 +33,7 @@ from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWork
 from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
+from anki_miner.services.dictionary.registry import DictionaryRegistry
 
 
 class SettingsTab(QWidget):
@@ -129,6 +130,7 @@ class SettingsTab(QWidget):
         self.dictionary_panel.add_dict_requested.connect(self._on_add_dict_clicked)
         self.dictionary_panel.reimport_jmdict_requested.connect(self._on_reimport_jmdict_clicked)
         self.dictionary_panel.reimport_dict_requested.connect(self._on_reimport_dict_clicked)
+        self.dictionary_panel.reimport_all_requested.connect(self._on_reimport_all_clicked)
 
         # Hold a reference to the fetch-fields worker across its lifetime.
         # Without this attribute, a freshly-spawned QThread can be garbage
@@ -598,6 +600,166 @@ class SettingsTab(QWidget):
         worker.failed.connect(on_failed)
         dlg.canceled.connect(worker.cancel)
         worker.start()
+
+    def _on_reimport_all_clicked(self) -> None:
+        """Reimport every dictionary in the chain from its saved source.
+
+        For each indexed ChainEntry, dispatch based on format:
+        - jmdict format → reimport from ``config.jmdict_path`` (the XML stays
+          on disk between sessions, no copy needed).
+        - yomitan format → reimport from ``<dicts_root>/<dict_id>/source.zip``
+          if present.
+
+        Dicts with no saved source are skipped and surfaced in the final
+        summary dialog. The user can seed them via the per-row stale-reimport
+        button (which prompts for the zip and now persists it on success).
+
+        Runs sequentially: each worker's ``on_done`` chains the next dispatch
+        so a single ApplicationModal QProgressDialog tracks the whole batch.
+        Per-dict failures accumulate into ``errors`` and don't abort the
+        loop. ``config_changed`` is emitted once at the end so cached
+        DefinitionService instances rebuild a single time.
+        """
+        # Fresh registry scan so we see source_name / format for the summary.
+        registry = DictionaryRegistry(self.config.dicts_root)
+        registry.load()
+
+        # Job tuples: ("yomitan", dict_id, display_name, source_zip_path)
+        #             ("jmdict",  dict_id, display_name, xml_path)
+        jobs: list[tuple[str, str, str, Path]] = []
+        missing_legacy: list[str] = []
+
+        for entry in self.dictionary_panel.get_chain():
+            if entry.kind != "indexed" or entry.dict_id is None:
+                continue
+            meta = registry.get(entry.dict_id)
+            if meta is None:
+                missing_legacy.append(entry.dict_id)
+                continue
+            if meta.format == "jmdict":
+                if self.config.jmdict_path.exists():
+                    jobs.append(("jmdict", meta.dict_id, meta.source_name, self.config.jmdict_path))
+                else:
+                    missing_legacy.append(meta.source_name)
+                continue
+            # Yomitan and anything else with a saved zip
+            source_zip = self.config.dicts_root / meta.dict_id / "source.zip"
+            if source_zip.exists():
+                jobs.append(("yomitan", meta.dict_id, meta.source_name, source_zip))
+            else:
+                missing_legacy.append(meta.source_name)
+
+        if not jobs:
+            if missing_legacy:
+                body = (
+                    "No dictionaries with saved sources were found.\n\n"
+                    "Skipped (no saved source — use the per-row Re-import "
+                    "button on a stale row to seed):\n" + "\n".join(f"  • {n}" for n in missing_legacy)
+                )
+            else:
+                body = "No dictionaries in the chain."
+            QMessageBox.information(self, "Nothing to reimport", body)
+            return
+
+        dlg = QProgressDialog("Reimporting dictionaries…", "Cancel", 0, 100, self)
+        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+        dlg.show()
+
+        self._set_import_buttons_enabled(False)
+
+        # Mutable state shared across the chained closures.
+        state: dict[str, object] = {
+            "index": 0,
+            "cancelled": False,
+            "reimported": [],
+            "errors": [],
+        }
+
+        def finish() -> None:
+            dlg.close()
+            # One refresh + one config_changed for the whole batch so
+            # DefinitionService rebuilds once, not N times.
+            current_chain = self.dictionary_panel.get_chain()
+            self.dictionary_panel.refresh_registry()
+            self.dictionary_panel.set_chain(current_chain)
+            self.config_changed.emit(self.config)
+            self._set_import_buttons_enabled(True)
+
+            reimported = state["reimported"]
+            errors = state["errors"]
+            assert isinstance(reimported, list)
+            assert isinstance(errors, list)
+
+            lines: list[str] = []
+            if reimported:
+                lines.append(f"Reimported {len(reimported)} dictionar" f"{'y' if len(reimported) == 1 else 'ies'}:")
+                lines.extend(f"  • {n}" for n in reimported)
+            if missing_legacy:
+                if lines:
+                    lines.append("")
+                lines.append("Skipped (no saved source — use the per-row " "Re-import button on a stale row to seed):")
+                lines.extend(f"  • {n}" for n in missing_legacy)
+            if errors:
+                if lines:
+                    lines.append("")
+                lines.append("Failed:")
+                lines.extend(f"  • {name}: {msg}" for name, msg in errors)
+            if state["cancelled"]:
+                if lines:
+                    lines.append("")
+                lines.append("Cancelled before remaining dictionaries.")
+
+            QMessageBox.information(self, "Reimport All", "\n".join(lines) or "Done.")
+
+        def launch_next() -> None:
+            idx = state["index"]
+            assert isinstance(idx, int)
+            if state["cancelled"] or idx >= len(jobs):
+                finish()
+                return
+
+            kind, dict_id, display, source_path = jobs[idx]
+            dlg.setLabelText(f"Dictionary {idx + 1} of {len(jobs)}: {display}")
+            dlg.setMaximum(100)
+            dlg.setValue(0)
+
+            if kind == "jmdict":
+                worker = DictionaryImportWorker.for_jmdict(source_path, self.config.dicts_root)
+            else:
+                worker = DictionaryImportWorker.for_yomitan(source_path, self.config.dicts_root, overwrite=True)
+            self._active_import_worker = worker
+
+            def on_progress(cur: int, total: int, msg: str) -> None:
+                dlg.setMaximum(total)
+                dlg.setValue(cur)
+
+            def on_done(_dict_id: str, _meta: dict) -> None:
+                reimported = state["reimported"]
+                assert isinstance(reimported, list)
+                reimported.append(display)
+                state["index"] = idx + 1
+                launch_next()
+
+            def on_failed(err: str) -> None:
+                errors = state["errors"]
+                assert isinstance(errors, list)
+                errors.append((display, err))
+                state["index"] = idx + 1
+                launch_next()
+
+            worker.progress.connect(on_progress)
+            worker.import_finished.connect(on_done)
+            worker.failed.connect(on_failed)
+            worker.start()
+
+        def on_cancel() -> None:
+            state["cancelled"] = True
+            worker = getattr(self, "_active_import_worker", None)
+            if worker is not None and worker.isRunning():
+                worker.cancel()
+
+        dlg.canceled.connect(on_cancel)
+        launch_next()
 
     # === Fetch fields handler ===
 

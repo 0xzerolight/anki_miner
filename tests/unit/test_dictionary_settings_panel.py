@@ -371,3 +371,24 @@ def test_current_schema_row_has_no_stale_ui(qapp, tmp_path):
     label_texts = [lbl.text() for lbl in labels]
     assert not any(t.startswith("⚠") for t in label_texts)
     assert not any("re-import for new formatting" in t for t in label_texts)
+
+
+def test_global_button_labeled_reimport_all(qapp, tmp_path):
+    """The top-level button reads 'Reimport All', not the legacy 'Reimport JMdict'."""
+    panel = DictionarySettingsPanel(tmp_path)
+    assert panel._reimport_btn.text() == "Reimport All"
+
+
+def test_reimport_all_signal_fires_on_button_click(qapp, tmp_path):
+    """Clicking the top-level button emits the new reimport_all_requested signal,
+    not the per-row reimport_jmdict_requested signal."""
+    panel = DictionarySettingsPanel(tmp_path)
+
+    all_fired: list[None] = []
+    panel.reimport_all_requested.connect(lambda: all_fired.append(None))
+    jmdict_fired: list[None] = []
+    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
+
+    panel._reimport_btn.click()
+    assert all_fired == [None]
+    assert jmdict_fired == [], "Global button must not fire the JMdict-only signal"
