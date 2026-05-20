@@ -204,8 +204,11 @@ class FilteringSettingsPanel(FormPanel):
         self.add_section("Card Formatting")
 
         self.bold_target_in_sentence_checkbox = QCheckBox("Bold target word in sentence")
+        # QToolTip has no PlainText format and auto-detects HTML when the
+        # string contains tag-like substrings. Escape the angle brackets so
+        # the literal "<b>...</b>" markup is visible. Issue #20.
         self.bold_target_in_sentence_checkbox.setToolTip(
-            "Wrap the mined word in <b>...</b> inside the Sentence and "
+            "Wrap the mined word in &lt;b&gt;...&lt;/b&gt; inside the Sentence and "
             "SentenceFurigana fields. Match is the exact MeCab span of the "
             "mined morpheme, so duplicated surfaces in a sentence only bold "
             "the actually-mined occurrence."

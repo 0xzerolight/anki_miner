@@ -258,6 +258,19 @@ class EpisodeProcessor:
         self.presenter.show_info(f"Comprehension: {comprehension:.1f}% of words already known")
         ctx.comprehension_percentage = comprehension
 
+        # Surface the "everything was already known" case explicitly. Without
+        # this, users who enable a card-format option (bold target word, etc.)
+        # and re-mine the same episode see no visible change because every
+        # word was filtered out before card creation. The pipeline silently
+        # produces zero cards. Issue #20 (reopened): user mistook silent
+        # no-op for "bold isn't working".
+        if all_words and not unknown_words:
+            self.presenter.show_warning(
+                f"All {len(all_words)} words from this subtitle are already in your "
+                "Anki collection — no new cards will be created. Card-format "
+                "options (bold target word, etc.) only apply to newly mined cards."
+            )
+
         # Frequency rank cutoff.
         if self.config.max_frequency_rank > 0:
             before = len(unknown_words)
