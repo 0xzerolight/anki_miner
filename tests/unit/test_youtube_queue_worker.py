@@ -201,8 +201,11 @@ def test_retry_twice_fails_emits_error_and_queue_continues(make_worker, mock_pro
 def test_non_fetch_exception_no_retry_continues_queue(make_worker, mock_processor):
     items = [_make_item(video_id="a"), _make_item(video_id="b")]
 
+    workspaces: list = []
+
     def _side_effect(**kw):
         if kw["video_id"] == "a":
+            workspaces.append(kw["workspace"])
             raise ValueError("boom")
         return "R_B"
 
@@ -218,6 +221,9 @@ def test_non_fetch_exception_no_retry_continues_queue(make_worker, mock_processo
         (1, "R_B", None, 1),
     ]
     assert len(caps["queue_finished"].calls) == 1
+    # Workspace for the failed item must be cleaned up.
+    for ws in workspaces:
+        assert not ws.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -228,9 +234,12 @@ def test_non_fetch_exception_no_retry_continues_queue(make_worker, mock_processo
 def test_cancel_during_item_returns_without_emitting_finished(make_worker, mock_processor):
     items = [_make_item(video_id="a"), _make_item(video_id="b")]
 
+    workspaces: list = []
+
     def _cancel_then_raise(**kw):
         # Simulate the fetcher's psutil kill path: cancel_event gets set,
         # then YouTubeFetchError is raised.
+        workspaces.append(kw["workspace"])
         kw["cancel_event"].set()
         raise YouTubeFetchError("Cancelled")
 
@@ -249,6 +258,9 @@ def test_cancel_during_item_returns_without_emitting_finished(make_worker, mock_
     # from inside the except clause). Per spec snippet, ``return`` skips the
     # queue_finished.emit at the bottom of run().
     assert caps["queue_finished"].calls == []
+    # Workspace must be cleaned up even on cancel.
+    for ws in workspaces:
+        assert not ws.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -310,6 +322,39 @@ def test_each_attempt_gets_unique_workspace_and_is_cleaned(make_worker, mock_pro
         assert not ws.exists()
 
     assert caps["finished"].calls == [(0, "R_A", None, 2)]
+
+
+# ---------------------------------------------------------------------------
+# BotDetectionError (YouTubeFetchError subclass) retried + workspace cleaned
+# ---------------------------------------------------------------------------
+
+
+def test_bot_detection_error_workspace_cleaned(mock_processor, youtube_config):
+    """BotDetectionError (subclass of YouTubeFetchError) follows the retry+cleanup path."""
+    from anki_miner.exceptions.youtube import BotDetectionError
+
+    item = _make_item("https://www.youtube.com/watch?v=bot", "bot")
+    workspaces: list = []
+
+    def _record_then_raise(**kwargs):
+        workspaces.append(kwargs["workspace"])
+        raise BotDetectionError("sign in to confirm")
+
+    mock_processor.process_youtube_url.side_effect = _record_then_raise
+
+    worker = YouTubeQueueWorker(
+        processor=mock_processor,
+        config=youtube_config,
+        items=[item],
+        curation_callback=None,
+        preview_mode=False,
+    )
+    worker.run()
+
+    # Two attempts (retry-once), each its own workspace, both cleaned.
+    assert len(workspaces) == 2
+    for ws in workspaces:
+        assert not ws.exists()
 
 
 # ---------------------------------------------------------------------------
