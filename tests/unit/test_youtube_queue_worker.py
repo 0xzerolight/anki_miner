@@ -187,7 +187,7 @@ def test_retry_twice_fails_emits_error_and_queue_continues(make_worker, mock_pro
 
     assert caps["finished"].calls == [
         (0, "R_A", None, 1),
-        (1, None, "persistent", 2),
+        (1, None, "YouTubeFetchError: persistent", 2),
         (2, "R_C", None, 1),
     ]
     assert len(caps["queue_finished"].calls) == 1
@@ -435,6 +435,20 @@ def test_queue_mining_progress_adapter_on_error_emits_nothing():
     )
     adapter.on_error("word", "boom")
     assert emitted == []
+
+
+def test_mining_progress_adapter_handles_zero_total():
+    """on_start(0, ...) clamps total to 1 so on_progress(1, ...) yields 100%."""
+    emitted: list[tuple[int, str, int]] = []
+    adapter = _QueueMiningProgressAdapter(
+        idx=3,
+        emit=lambda idx, label, pct: emitted.append((idx, label, pct)),
+    )
+    adapter.on_start(0, "Edge case")
+    adapter.on_progress(1, "item")
+
+    # on_start emits pct=0; on_progress emits 1/1 = 100% under the clamp
+    assert emitted[-1] == (3, "Edge case: item", 100)
 
 
 def test_fetch_progress_emit_clamps_and_handles_none(make_worker, mock_processor):
