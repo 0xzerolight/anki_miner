@@ -1,28 +1,26 @@
 """YouTube mining tab for the GUI.
 
-Lets a user paste a YouTube URL, probe its metadata, and mine the video into
-Anki cards against whatever deck / note-type is currently configured by the
-global settings panel. This tab owns no deck, note-type, or tag inputs — the
-existing :class:`AnkiSettingsPanel` controls those globally.
-
-The tab runs two kinds of background work:
+Drives a multi-URL queue: the user pastes URLs, each one is probed
+asynchronously, and once at least one item is READY the user can run
+*Preview* or *Mine* across the whole queue. The tab itself is a thin shell
+around three collaborators:
 
 * :class:`~anki_miner.gui.workers.youtube_probe_worker.YouTubeProbeWorker` —
-  a one-shot metadata probe spawned when the user clicks *Fetch Info*.
-* :class:`~anki_miner.gui.workers.youtube_worker.YouTubeWorkerThread` —
-  the full fetch + mining pipeline spawned when the user clicks
-  *Preview Words* or *Process Video*.
+  one short-lived QThread per Add click, run in parallel.
+* :class:`~anki_miner.gui.workers.youtube_queue_worker.YouTubeQueueWorker` —
+  single long-running worker that sweeps the queue sequentially.
+* :class:`~anki_miner.gui.widgets.youtube_queue_item_widget.YouTubeQueueItemWidget` —
+  per-row renderer embedded inside a :class:`QListWidget`.
 
-Button enable/disable, the status banner, and the *Accept auto-captions*
-button are all driven by a single :class:`_UIState` enum so the behaviour is
-deterministic and unit-testable. Transitions happen in :meth:`_transition`.
+Button enable/disable is recomputed on every queue/worker signal by
+:meth:`_recompute_buttons`. There is no explicit state enum — the
+queue contents plus the worker handle fully determine the UI.
 """
 
 from __future__ import annotations
 
 import contextlib
 import threading
-from enum import Enum, auto
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -30,6 +28,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -41,57 +41,51 @@ from anki_miner.gui.utils.service_factory import create_episode_processor, creat
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
+from anki_miner.gui.widgets.youtube_queue_item_widget import YouTubeQueueItemWidget
 from anki_miner.gui.workers.youtube_probe_worker import YouTubeProbeWorker
-from anki_miner.gui.workers.youtube_worker import YouTubeWorkerThread
+from anki_miner.gui.workers.youtube_queue_worker import YouTubeQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube import SubMode, VideoInfo
+from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueue, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 
 
-class _UIState(Enum):
-    """Finite states that drive button/status rendering for the YouTube tab."""
+def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bool, str | None, SubMode | None]:
+    """Classify a probe result.
 
-    IDLE_NO_URL = auto()
-    PROBING = auto()
-    PROBE_ERROR = auto()
-    LIVE = auto()
-    TOO_LONG = auto()
-    AGE_LOCKED = auto()
-    NO_SUBS = auto()
-    MANUAL_READY = auto()
-    AUTO_READY = auto()
-    MINING = auto()
-    MINED = auto()
-    MINE_ERROR = auto()
-    MINE_CANCELLED = auto()
-
-
-def _format_duration(seconds: int) -> str:
-    """Format ``seconds`` as ``Xm Ys`` or ``Hh Mm Ss``."""
-    if seconds < 0:
-        seconds = 0
-    hours, remainder = divmod(seconds, 3600)
-    minutes, secs = divmod(remainder, 60)
-    if hours:
-        return f"{hours}h {minutes}m {secs}s"
-    return f"{minutes}m {secs}s"
-
-
-def _subs_label(info: VideoInfo) -> str:
-    """Short human label for the subtitle availability on a probed video."""
+    Returns:
+        (is_mineable, error_message, resolved_sub_mode). On success
+        ``is_mineable`` is True, ``error_message`` is None, and
+        ``resolved_sub_mode`` is the chosen sub mode. On failure the
+        triple's first element is False and ``error_message`` describes
+        why the video cannot be mined.
+    """
+    if info.is_live:
+        return False, "Live streams are not supported.", None
+    if info.duration_s > config.youtube_max_duration_s:
+        minutes_limit = max(1, config.youtube_max_duration_s // 60)
+        return False, f"Video exceeds max duration ({minutes_limit} min).", None
+    if info.is_age_restricted and not config.youtube_cookies_from_browser:
+        return (
+            False,
+            "Age-restricted video. Set Cookies → Browser in Settings and retry.",
+            None,
+        )
     if info.has_manual_ja_subs:
-        return "Manual JA"
+        return True, None, "manual_only"
     if info.has_auto_ja_subs:
-        return "Native auto JA"
-    return "None"
+        return True, None, "auto_only"
+    return False, "No Japanese subtitles available for this video.", None
 
 
 class YouTubeTab(QWidget):
-    """Tab widget for mining Japanese vocabulary from a YouTube video.
+    """Multi-URL YouTube queue mining tab.
 
-    Drives progress through its own state machine and accepts no dropped files,
-    so it does not inherit from :class:`MiningTabBase`.
+    The tab owns a :class:`YouTubeQueue`, a list of in-flight
+    :class:`YouTubeProbeWorker` instances, and at most one running
+    :class:`YouTubeQueueWorker`. Button state is derived from the queue
+    contents and the worker handle via :meth:`_recompute_buttons`.
     """
 
     # Cross-thread curation bridge: emitted from the worker thread, handled on
@@ -113,9 +107,7 @@ class YouTubeTab(QWidget):
             processor: Episode processor (shared across tabs).
             fetcher: YouTube fetcher service used for metadata probes and,
                 indirectly via ``processor.process_youtube_url``, downloads.
-            presenter: Optional presenter for routing log messages. Log output
-                for mining runs flows through the worker's progress signal
-                instead; this is kept for parity with other tabs.
+            presenter: Optional presenter for routing log messages.
             parent: Optional parent widget.
         """
         super().__init__(parent)
@@ -124,27 +116,26 @@ class YouTubeTab(QWidget):
         self._fetcher = fetcher
         self._presenter = presenter
 
-        # Worker handles — exposed for main_window's closeEvent.
-        self.worker_thread: YouTubeWorkerThread | None = None
-        self._probe_worker: YouTubeProbeWorker | None = None
+        # Queue model + per-row widget map.
+        self._queue: YouTubeQueue = YouTubeQueue()
+        self._row_widgets: dict[YouTubeQueueItem, YouTubeQueueItemWidget] = {}
+        self._list_items: dict[YouTubeQueueItem, QListWidgetItem] = {}
 
-        # Latest probe result, and the resolved sub_mode once the user has
-        # accepted whatever is available. Both stay None until a successful
-        # probe settles on a READY state.
-        self._video_info: VideoInfo | None = None
-        self._resolved_sub_mode: SubMode | None = None
+        # In-flight probe workers — kept alive until they finish.
+        self._probe_workers: list[YouTubeProbeWorker] = []
 
-        # State machine; transitions go through _transition.
-        self._state: _UIState = _UIState.IDLE_NO_URL
+        # Active queue worker. Public name preserved for
+        # ``MainWindow.closeEvent`` which looks up ``getattr(tab, "worker_thread")``.
+        self.worker_thread: YouTubeQueueWorker | None = None
 
-        # Curation bridge: the worker thread blocks on this event while the
-        # GUI thread shows the curation dialog. Mirrors SingleEpisodeTab.
+        # Curation bridge: the queue worker thread blocks on this event while
+        # the GUI thread shows the curation dialog. Mirrors SingleEpisodeTab.
         self._curation_event = threading.Event()
         self._curation_result: list = []
         self._curation_requested.connect(self._on_curation_requested)
 
         self._setup_ui()
-        self._transition(_UIState.IDLE_NO_URL)
+        self._recompute_buttons()
 
     # ------------------------------------------------------------------
     # UI construction
@@ -153,9 +144,8 @@ class YouTubeTab(QWidget):
     def _setup_ui(self) -> None:
         """Build the tab layout.
 
-        Structure mirrors SingleEpisodeTab: a QScrollArea wraps a container
-        of card-style QFrame groups (Source / Actions / Progress) plus a
-        standalone LogWidget.
+        A QScrollArea wraps a Queue card (URL input + list + action buttons),
+        a Progress card, and a LogWidget.
         """
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -167,79 +157,71 @@ class YouTubeTab(QWidget):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        # --- Source card: URL + metadata + status + accept-auto-captions
-        source_card = QFrame()
-        source_card.setObjectName("card")
-        source_layout = QVBoxLayout()
-        source_layout.setSpacing(SPACING.sm)
-        source_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        # --- Queue card: URL row + list + action buttons
+        queue_card = QFrame()
+        queue_card.setObjectName("card")
+        queue_layout = QVBoxLayout()
+        queue_layout.setSpacing(SPACING.sm)
+        queue_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        source_layout.addWidget(SectionHeader("YouTube URL"))
+        queue_layout.addWidget(SectionHeader("YouTube queue"))
 
+        # URL row
         url_row = QHBoxLayout()
         url_row.setSpacing(SPACING.xs)
         self.url_edit = QLineEdit()
         self.url_edit.setPlaceholderText("https://www.youtube.com/watch?v=…")
-        self.url_edit.textChanged.connect(self._on_url_changed)
+        self.url_edit.returnPressed.connect(self._on_add_clicked)
         url_row.addWidget(self.url_edit, 1)
 
-        self.fetch_button = ModernButton("Fetch Info", variant="secondary")
-        self.fetch_button.clicked.connect(self._on_fetch_clicked)
-        url_row.addWidget(self.fetch_button)
-        source_layout.addLayout(url_row)
+        self.add_button = ModernButton("Add", variant="secondary")
+        self.add_button.setToolTip("Add the URL to the queue and probe its metadata.")
+        self.add_button.clicked.connect(self._on_add_clicked)
+        url_row.addWidget(self.add_button)
+        queue_layout.addLayout(url_row)
 
-        self.metadata_label = QLabel("")
-        self.metadata_label.setWordWrap(True)
-        self.metadata_label.setTextFormat(Qt.TextFormat.PlainText)
-        self.metadata_label.setObjectName("youtube-metadata")
-        source_layout.addWidget(self.metadata_label)
+        # Queue list
+        self.list_widget = QListWidget()
+        self.list_widget.setObjectName("yt-queue-list")
+        self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self.list_widget.setUniformItemSizes(False)
+        queue_layout.addWidget(self.list_widget, 1)
 
-        # Status banner: uses the "helper-text" QSS rule (small, italic,
-        # muted). One label serves both the idle hint and status/error
-        # strings.
-        self.status_label = QLabel("")
-        self.status_label.setWordWrap(True)
-        self.status_label.setTextFormat(Qt.TextFormat.PlainText)
-        self.status_label.setObjectName("helper-text")
-        source_layout.addWidget(self.status_label)
+        # Empty-state hint (shown when the list is empty).
+        self.empty_label = QLabel("Paste a YouTube URL above and click Add.")
+        self.empty_label.setObjectName("helper-text")
+        self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        queue_layout.addWidget(self.empty_label)
 
-        source_card.setLayout(source_layout)
-        layout.addWidget(source_card)
-
-        # --- Actions card: Preview + Process + Cancel
-        actions_card = QFrame()
-        actions_card.setObjectName("card")
-        actions_layout = QVBoxLayout()
-        actions_layout.setSpacing(SPACING.sm)
-        actions_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
-
-        actions_layout.addWidget(SectionHeader("Actions"))
-
+        # Action buttons
         button_row = QHBoxLayout()
         button_row.setSpacing(SPACING.xs)
 
-        self.preview_button = ModernButton("Preview Words", variant="secondary")
-        self.preview_button.setToolTip("Show discovered words without creating Anki cards.")
+        self.preview_button = ModernButton("Preview", variant="secondary")
+        self.preview_button.setToolTip("Run the queue in preview mode — no cards created.")
         self.preview_button.clicked.connect(self._on_preview_clicked)
-        self.preview_button.setEnabled(False)
 
-        self.process_button = ModernButton("Process Video", variant="primary")
-        self.process_button.setToolTip("Curate words, then create Anki cards from the video.")
-        self.process_button.clicked.connect(self._on_process_clicked)
-        self.process_button.setEnabled(False)
+        self.mine_button = ModernButton("Mine", variant="primary")
+        self.mine_button.setToolTip("Mine every READY item in the queue into Anki cards.")
+        self.mine_button.clicked.connect(self._on_mine_clicked)
 
-        self.cancel_button = ModernButton("Cancel", variant="danger")
-        self.cancel_button.clicked.connect(self._on_cancel_clicked)
-        self.cancel_button.hide()
+        self.clear_button = ModernButton("Clear", variant="ghost")
+        self.clear_button.setToolTip("Remove every queued item that is not currently mining.")
+        self.clear_button.clicked.connect(self._on_clear_clicked)
+
+        self.stop_button = ModernButton("Stop All", variant="danger")
+        self.stop_button.setToolTip("Cancel the active run.")
+        self.stop_button.clicked.connect(self._on_stop_all_clicked)
 
         button_row.addWidget(self.preview_button)
-        button_row.addWidget(self.process_button)
-        button_row.addWidget(self.cancel_button)
+        button_row.addWidget(self.mine_button)
+        button_row.addWidget(self.clear_button)
+        button_row.addWidget(self.stop_button)
         button_row.addStretch()
-        actions_layout.addLayout(button_row)
+        queue_layout.addLayout(button_row)
 
-        actions_card.setLayout(actions_layout)
-        layout.addWidget(actions_card)
+        queue_card.setLayout(queue_layout)
+        layout.addWidget(queue_card)
 
         # --- Progress card
         progress_card = QFrame()
@@ -268,134 +250,164 @@ class YouTubeTab(QWidget):
         self.setLayout(main_layout)
 
     # ------------------------------------------------------------------
-    # Event handlers
+    # Add + probe lifecycle
     # ------------------------------------------------------------------
 
-    def _on_url_changed(self, _text: str) -> None:
-        """Reset the state machine whenever the URL field is edited.
-
-        Any existing probe result is invalidated — the user must press Fetch
-        Info again before they can mine. This keeps the Mine button from
-        firing against stale metadata.
-        """
-        if self._state in (_UIState.MINING,):
-            # Don't yank state out from under an active run.
-            return
-        self._video_info = None
-        self._resolved_sub_mode = None
-        self.metadata_label.setText("")
+    def _on_add_clicked(self) -> None:
+        """Add the current URL to the queue and spawn a probe worker."""
+        if not self.add_button.isEnabled():
+            return  # Defensive: returnPressed fires even when the button is disabled.
         url = self.url_edit.text().strip()
         if not url:
-            self._transition(_UIState.IDLE_NO_URL)
-        else:
-            # URL present but unprobed — still in the IDLE bucket until the
-            # user hits Fetch Info.
-            self._transition(_UIState.IDLE_NO_URL)
-
-    def _on_fetch_clicked(self) -> None:
-        """Kick off a metadata probe for the current URL."""
-        url = self.url_edit.text().strip()
-        if not url:
-            self._transition(_UIState.IDLE_NO_URL)
-            return
-        # Reject overlapping probes.
-        if self._probe_worker is not None and self._probe_worker.isRunning():
             return
 
-        # Defensively detach signal slots from any retired worker still pending
-        # GC so a late ``finished`` emission cannot clobber a fresh probe's
-        # ``_probe_worker`` handle via ``_on_probe_finished``.
-        if self._probe_worker is not None:
-            try:
-                self._probe_worker.probe_done.disconnect(self._on_probe_done)
-                self._probe_worker.probe_error.disconnect(self._on_probe_error)
-                self._probe_worker.finished.disconnect(self._on_probe_finished)
-            except TypeError:
-                # Already disconnected (e.g. _on_probe_finished ran cleanly).
-                pass
+        item = self._queue.add(url)
+        # The queue model defaults to PENDING; flip to PROBING up-front so the
+        # row widget renders the "(probing...)" hint immediately.
+        item.status = YouTubeItemStatus.PROBING
+        self._render_new_item(item)
+        self.url_edit.clear()
 
-        self._transition(_UIState.PROBING)
-        worker = YouTubeProbeWorker(self._fetcher, url)
-        worker.probe_done.connect(self._on_probe_done)
-        worker.probe_error.connect(self._on_probe_error)
-        worker.finished.connect(self._on_probe_finished)
-        self._probe_worker = worker
-        worker.start()
+        probe = YouTubeProbeWorker(self._fetcher, url, parent=self)
+        probe.probe_done.connect(lambda info, it=item: self._on_probe_done(it, info))
+        probe.probe_error.connect(lambda msg, it=item: self._on_probe_error(it, msg))
+        probe.finished.connect(lambda pw=probe: self._on_probe_finished(pw))
+        self._probe_workers.append(probe)
+        probe.start()
+        self._recompute_buttons()
 
-    def _on_probe_done(self, info: object) -> None:
-        """Handle a successful probe result. ``info`` is a VideoInfo."""
+    def _on_probe_done(self, item: YouTubeQueueItem, info: object) -> None:
+        """Probe succeeded — classify the result and update the item."""
         if not isinstance(info, VideoInfo):  # pragma: no cover - signal guard
-            self._transition(_UIState.PROBE_ERROR, error="Invalid probe result.")
+            self._mark_probe_error(item, "Invalid probe result.")
             return
-        self._video_info = info
-        self._render_metadata(info)
-        self._transition(self._classify_video(info))
 
-    def _on_probe_error(self, message: str) -> None:
-        """Handle a probe failure (any exception from yt-dlp)."""
-        self._video_info = None
-        self.metadata_label.setText("")
-        self._transition(_UIState.PROBE_ERROR, error=message)
+        mineable, error, sub_mode = _classify_probe_result(info, self._config)
+        if not mineable:
+            item.video_info = info
+            self._mark_probe_error(item, error or "Probe rejected.")
+            return
 
-    def _on_probe_finished(self) -> None:
-        """Clear the probe worker handle once the QThread signals finished."""
-        self._probe_worker = None
+        item.video_info = info
+        item.video_id = info.video_id
+        item.resolved_sub_mode = sub_mode
+        item.error_message = None
+        item.status = YouTubeItemStatus.READY
+        self._refresh_row(item)
+        self._recompute_buttons()
+
+    def _on_probe_error(self, item: YouTubeQueueItem, message: str) -> None:
+        """Probe failed — the item is unmineable."""
+        self._mark_probe_error(item, message)
+
+    def _mark_probe_error(self, item: YouTubeQueueItem, message: str) -> None:
+        """Shared transition into PROBE_ERROR with consistent fields."""
+        item.status = YouTubeItemStatus.PROBE_ERROR
+        item.error_message = message
+        self._refresh_row(item)
+        self._recompute_buttons()
+
+    def _on_probe_finished(self, probe: YouTubeProbeWorker) -> None:
+        """Drop the probe handle once its QThread emits finished."""
+        with contextlib.suppress(ValueError):
+            self._probe_workers.remove(probe)
+
+    # ------------------------------------------------------------------
+    # Run lifecycle
+    # ------------------------------------------------------------------
 
     def _on_preview_clicked(self) -> None:
-        """Preview Words button: run pipeline with ``preview_mode=True``."""
-        self._start_mining(preview_mode=True)
+        """Preview button — runs the queue with ``preview_mode=True``."""
+        self._start_run(preview_mode=True)
 
-    def _on_process_clicked(self) -> None:
-        """Process Video button: run pipeline with ``preview_mode=False``."""
-        self._start_mining(preview_mode=False)
+    def _on_mine_clicked(self) -> None:
+        """Mine button — runs the queue with ``preview_mode=False``."""
+        self._start_run(preview_mode=False)
 
-    def _start_mining(self, *, preview_mode: bool) -> None:
-        """Kick off the fetch+mine pipeline.
-
-        Curation callback is wired only on Process, never on Preview. The
-        processor also gates curation on ``not preview_mode`` so this is
-        belt-and-braces rather than load-bearing.
-        """
-        if self._state not in (_UIState.MANUAL_READY, _UIState.AUTO_READY, _UIState.MINED):
+    def _start_run(self, *, preview_mode: bool) -> None:
+        """Construct and start a :class:`YouTubeQueueWorker` over READY items."""
+        if self.worker_thread is not None:
             return
-        if self._video_info is None or self._resolved_sub_mode is None:
+        ready_items = [i for i in self._queue.all_items() if i.status == YouTubeItemStatus.READY]
+        if not ready_items:
             return
 
-        url = self.url_edit.text().strip()
-        if not url:
-            return
-
-        self.log_widget.clear_log()
         self.progress_widget.reset()
-        self._transition(_UIState.MINING)
 
-        curation_cb = self._curation_bridge if not preview_mode else None
-
-        worker = YouTubeWorkerThread(
+        worker = YouTubeQueueWorker(
             processor=self._processor,
             config=self._config,
-            url=url,
-            video_id=self._video_info.video_id,
-            sub_mode=self._resolved_sub_mode,
-            curation_callback=curation_cb,
+            items=ready_items,
+            curation_callback=self._curation_bridge,
             preview_mode=preview_mode,
         )
-        worker.progress.connect(self._on_mine_progress)
-        worker.result_ready.connect(self._on_mine_finished)
-        worker.error.connect(self._on_mine_error)
-        worker.finished.connect(self._on_worker_finished)
+        worker.item_started.connect(self._on_item_started)
+        worker.item_progress.connect(self._on_item_progress)
+        worker.item_finished.connect(self._on_item_finished)
+        worker.queue_finished.connect(self._on_queue_finished)
         self.worker_thread = worker
+
+        mode_label = "Preview" if preview_mode else "Mine"
+        self.log_widget.append_info(f"{mode_label} run starting — {len(ready_items)} items.")
+        self._recompute_buttons()
         worker.start()
 
-    def _on_cancel_clicked(self) -> None:
-        """Request cancellation of the active mining run."""
-        if self.worker_thread is not None:
-            self.worker_thread.cancel()
-        self.cancel_button.setEnabled(False)
-        self.cancel_button.setText("Cancelling…")
+    def _on_stop_all_clicked(self) -> None:
+        """Cancel the active run."""
+        worker = self.worker_thread
+        if worker is None:
+            return
+        worker.cancel()
+        self.stop_button.setEnabled(False)
+        self.stop_button.setText("Cancelling…")
 
-    def _on_mine_progress(self, label: str, pct: int) -> None:
+    # ------------------------------------------------------------------
+    # Per-item signal slots
+    # ------------------------------------------------------------------
+
+    def _item_at(self, idx: int) -> YouTubeQueueItem | None:
+        """Map a worker-emitted ``idx`` back to a queue item.
+
+        The worker indexes into the slice of READY items it was constructed
+        with — find the idx-th item whose ``video_id`` is set (i.e. that was
+        READY when the run started). Items removed via Clear during the run
+        are protected by Clear's filter, so this mapping stays consistent.
+        """
+        ready_or_processing = [
+            i
+            for i in self._queue.all_items()
+            if i.status
+            in (
+                YouTubeItemStatus.READY,
+                YouTubeItemStatus.PROCESSING,
+                YouTubeItemStatus.COMPLETED,
+                YouTubeItemStatus.ERROR,
+            )
+            and i.video_id is not None
+        ]
+        if idx < 0 or idx >= len(ready_or_processing):
+            return None
+        return ready_or_processing[idx]
+
+    def _on_item_started(self, idx: int) -> None:
+        """Mark the item as PROCESSING and update progress text."""
+        item = self._item_at(idx)
+        if item is None:
+            return
+        item.status = YouTubeItemStatus.PROCESSING
+        self._refresh_row(item)
+
+        total = len(self._worker_items())
+        title = item.video_info.title if item.video_info else item.url
+        self.progress_widget.set_status(f"Mining {idx + 1} of {total}: {title}")
+        self.progress_widget.set_determinate(100)
+        self.progress_widget.set_value(0)
+        self._recompute_buttons()
+
+    def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
         """Route worker progress into the progress widget."""
+        # Translation mirrors YouTubeQueueWorker's progress adapter:
+        # pct < 0 → indeterminate; otherwise determinate.
         if pct < 0:
             self.progress_widget.set_indeterminate()
         else:
@@ -403,164 +415,146 @@ class YouTubeTab(QWidget):
             self.progress_widget.set_value(pct)
         self.progress_widget.set_status(label)
 
-    def _on_mine_finished(self, result: object) -> None:
-        """Handle a successful mining result."""
-        # ``ProcessingResult.cards_created`` is the canonical count; the
-        # fallbacks keep the tab resilient to schema tweaks.
-        cards_added = getattr(result, "cards_created", None)
-        if cards_added is None:
-            cards_added = getattr(result, "cards_added", 0)
-        message = f"Mining complete. {cards_added} cards added."
-        self._transition(_UIState.MINED, message=message)
-        if self._presenter is not None:
-            # Presenter forwarding is best-effort — the log widget already
-            # has the mining result; we don't want a broken presenter slot
-            # to bubble up as a mining failure.
-            with contextlib.suppress(Exception):  # pragma: no cover
-                self._presenter.show_processing_result(result)  # type: ignore[arg-type]
+    def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
+        """Update the item with success/error and forward to the presenter."""
+        item = self._item_at(idx)
+        if item is None:
+            return
 
-    def _on_mine_error(self, error_message: str) -> None:
-        """Handle a worker error; re-enable Mine for retry."""
-        self._transition(_UIState.MINE_ERROR, error=error_message)
-
-    def _on_worker_finished(self) -> None:
-        """Clear the worker handle; recover UI on pure-cancel exit.
-
-        On cancel the worker suppresses both ``result_ready`` and ``error``
-        (see :meth:`YouTubeWorkerThread.run`), so the state machine would
-        otherwise stay pinned at ``MINING`` with the progress widget stuck
-        on whatever the last emit left behind. Detect that path here and
-        land the tab in ``MINE_CANCELLED``.
-        """
-        self.worker_thread = None
-        if self._state == _UIState.MINING:
-            self._transition(_UIState.MINE_CANCELLED, message="Cancelled.")
-
-    # ------------------------------------------------------------------
-    # State machine
-    # ------------------------------------------------------------------
-
-    def _classify_video(self, info: VideoInfo) -> _UIState:
-        """Pick the next state based on a fresh ``VideoInfo``.
-
-        Ordering matters: live-stream and duration gates take precedence
-        over subtitle availability because the latter is irrelevant if the
-        video can't be fetched.
-        """
-        if info.is_live:
-            return _UIState.LIVE
-        if info.duration_s > self._config.youtube_max_duration_s:
-            return _UIState.TOO_LONG
-        if info.is_age_restricted and not self._config.youtube_cookies_from_browser:
-            return _UIState.AGE_LOCKED
-        if info.has_manual_ja_subs:
-            return _UIState.MANUAL_READY
-        if info.has_auto_ja_subs:
-            return _UIState.AUTO_READY
-        return _UIState.NO_SUBS
-
-    def _transition(
-        self,
-        new_state: _UIState,
-        *,
-        error: str | None = None,
-        message: str | None = None,
-    ) -> None:
-        """Enter ``new_state`` and refresh all observable UI properties.
-
-        Args:
-            new_state: State to enter.
-            error: Error text for PROBE_ERROR / MINE_ERROR states.
-            message: Override for the default status text (used by MINED to
-                include the card count).
-        """
-        self._state = new_state
-
-        # Defaults; per-state code overrides these below.
-        mine_enabled = False
-        cancel_visible = False
-        fetch_enabled = True
-        status_text = ""
-
-        if new_state == _UIState.IDLE_NO_URL:
-            status_text = "Enter a YouTube URL and click Fetch Info."
-
-        elif new_state == _UIState.PROBING:
-            fetch_enabled = False
-            status_text = "Fetching metadata…"
-
-        elif new_state == _UIState.PROBE_ERROR:
-            status_text = error or "Probe failed."
-
-        elif new_state == _UIState.LIVE:
-            status_text = "Live streams are not supported."
-
-        elif new_state == _UIState.TOO_LONG:
-            minutes_limit = max(1, self._config.youtube_max_duration_s // 60)
-            status_text = f"Video exceeds max duration ({minutes_limit} min)."
-
-        elif new_state == _UIState.AGE_LOCKED:
-            status_text = "Age-restricted video. Set Cookies → Browser in Settings and retry."
-
-        elif new_state == _UIState.NO_SUBS:
-            status_text = "No Japanese subtitles available for this video."
-
-        elif new_state == _UIState.MANUAL_READY:
-            self._resolved_sub_mode = "manual_only"
-            mine_enabled = True
-            status_text = "Manual Japanese subtitles. Ready to mine."
-
-        elif new_state == _UIState.AUTO_READY:
-            self._resolved_sub_mode = "auto_only"
-            mine_enabled = True
-            status_text = "Japanese auto-captions only. Ready to mine."
-
-        elif new_state == _UIState.MINING:
-            mine_enabled = False
-            fetch_enabled = False
-            cancel_visible = True
-            status_text = message or "Mining in progress…"
-
-        elif new_state == _UIState.MINED:
-            mine_enabled = True
-            status_text = message or "Mining complete."
-
-        elif new_state == _UIState.MINE_ERROR:
-            mine_enabled = True
-            status_text = error or "Mining failed."
-
-        elif new_state == _UIState.MINE_CANCELLED:
-            mine_enabled = True
-            status_text = message or "Cancelled."
-
-        self.status_label.setText(status_text)
-        self.preview_button.setEnabled(mine_enabled)
-        self.process_button.setEnabled(mine_enabled)
-        self.fetch_button.setEnabled(fetch_enabled)
-
-        if cancel_visible:
-            self.preview_button.hide()
-            self.process_button.hide()
-            self.cancel_button.setText("Cancel")
-            self.cancel_button.setEnabled(True)
-            self.cancel_button.show()
+        if error is None:
+            cards = int(getattr(result, "cards_created", 0) or 0)
+            item.status = YouTubeItemStatus.COMPLETED
+            item.cards_created = cards
+            item.error_message = None
+            self.log_widget.append_success(f"Mined {item.url}: {cards} cards (attempts={attempts}).")
+            if self._presenter is not None:
+                # Presenter forwarding is best-effort — the queue worker has
+                # already recorded the result; a broken presenter slot
+                # shouldn't take down the queue.
+                with contextlib.suppress(Exception):
+                    self._presenter.show_processing_result(result)  # type: ignore[arg-type]
         else:
-            self.cancel_button.hide()
-            self.preview_button.show()
-            self.process_button.show()
+            item.status = YouTubeItemStatus.ERROR
+            item.error_message = str(error)
+            self.log_widget.append_error(f"Failed {item.url}: {error} (attempts={attempts}).")
 
-        # Progress widget terminal state — centralized so every transition
-        # fully specifies UI. Entering a non-mining terminal state clears any
-        # indeterminate animation the worker's last progress emit left behind.
-        if new_state == _UIState.MINED:
-            self.progress_widget.set_determinate(100)
-            self.progress_widget.set_value(100)
-            self.progress_widget.set_status("Complete")
-        elif new_state == _UIState.MINE_ERROR:
-            self.progress_widget.reset()
-        elif new_state == _UIState.MINE_CANCELLED:
-            self.progress_widget.reset()
-            self.progress_widget.set_status("Cancelled")
+        self._refresh_row(item)
+        self._recompute_buttons()
+
+    def _on_queue_finished(self) -> None:
+        """Final signal — clear the worker handle and recompute buttons."""
+        self.worker_thread = None
+        # Reset the stop button text in case we were cancelling.
+        self.stop_button.setText("Stop All")
+        self.stop_button.setEnabled(True)
+
+        succeeded = sum(1 for i in self._queue.all_items() if i.status == YouTubeItemStatus.COMPLETED)
+        failed = sum(1 for i in self._queue.all_items() if i.status == YouTubeItemStatus.ERROR)
+        self.log_widget.append_info(f"Queue done: {succeeded} succeeded, {failed} failed.")
+        self._recompute_buttons()
+
+    def _worker_items(self) -> list[YouTubeQueueItem]:
+        """Return the items currently being processed by the worker, if any."""
+        return [
+            i
+            for i in self._queue.all_items()
+            if i.status
+            in (
+                YouTubeItemStatus.PROCESSING,
+                YouTubeItemStatus.COMPLETED,
+                YouTubeItemStatus.ERROR,
+            )
+            and i.video_id is not None
+        ]
+
+    # ------------------------------------------------------------------
+    # Remove + clear
+    # ------------------------------------------------------------------
+
+    def _on_remove_clicked(self, item: YouTubeQueueItem) -> None:
+        """Remove a single item from the queue (and its row from the list)."""
+        if item.status == YouTubeItemStatus.PROCESSING:
+            # The row widget disables its [×] button in this state, but
+            # belt-and-braces guard against an out-of-band trigger.
+            return
+        self._drop_item(item)
+        self._recompute_buttons()
+
+    def _on_clear_clicked(self) -> None:
+        """Remove every non-PROCESSING item from the queue."""
+        # Collect targets first so we don't mutate during iteration.
+        targets = [i for i in self._queue.all_items() if i.status != YouTubeItemStatus.PROCESSING]
+        for item in targets:
+            self._drop_item(item)
+        self._recompute_buttons()
+
+    def _drop_item(self, item: YouTubeQueueItem) -> None:
+        """Remove ``item`` from queue model, list widget, and bookkeeping."""
+        self._queue.remove(item)
+        list_item = self._list_items.pop(item, None)
+        if list_item is not None:
+            row = self.list_widget.row(list_item)
+            if row >= 0:
+                # takeItem deletes the QListWidgetItem; Qt manages the
+                # embedded widget (deleted alongside the list item).
+                self.list_widget.takeItem(row)
+        self._row_widgets.pop(item, None)
+
+    # ------------------------------------------------------------------
+    # Button recomputation
+    # ------------------------------------------------------------------
+
+    def _recompute_buttons(self) -> None:
+        """Refresh every button's enabled/visible state from the queue + worker.
+
+        Derived from queue contents + worker handle:
+
+        * Run active → Add/Preview/Mine disabled, Stop visible, Clear allowed.
+        * Otherwise → Add enabled; Preview/Mine/Clear enabled iff a READY
+          item exists; Stop hidden.
+        """
+        items = self._queue.all_items()
+        has_items = bool(items)
+        has_ready = any(i.status == YouTubeItemStatus.READY for i in items)
+        run_active = self.worker_thread is not None
+
+        self.add_button.setEnabled(not run_active)
+        self.preview_button.setEnabled(has_ready and not run_active)
+        self.mine_button.setEnabled(has_ready and not run_active)
+        # Clear still works during a run for non-PROCESSING items — it's how
+        # the user trims the tail mid-run.
+        self.clear_button.setEnabled(has_items)
+
+        if run_active:
+            self.stop_button.show()
+        else:
+            self.stop_button.hide()
+
+        # Empty-state hint vs list visibility.
+        self.empty_label.setVisible(not has_items)
+
+    # ------------------------------------------------------------------
+    # Row widget integration
+    # ------------------------------------------------------------------
+
+    def _render_new_item(self, item: YouTubeQueueItem) -> None:
+        """Create a row widget for ``item`` and add it to the list widget."""
+        widget = YouTubeQueueItemWidget(item)
+        widget.removed.connect(lambda it=item: self._on_remove_clicked(it))
+
+        list_item = QListWidgetItem()
+        list_item.setSizeHint(widget.sizeHint())
+        self.list_widget.addItem(list_item)
+        self.list_widget.setItemWidget(list_item, widget)
+
+        self._row_widgets[item] = widget
+        self._list_items[item] = list_item
+
+    def _refresh_row(self, item: YouTubeQueueItem) -> None:
+        """Update the row widget for ``item`` after the model has changed."""
+        widget = self._row_widgets.get(item)
+        if widget is not None:
+            widget.update_from(item)
 
     # ------------------------------------------------------------------
     # Curation bridge
@@ -591,78 +585,43 @@ class YouTubeTab(QWidget):
         self._curation_event.set()
 
     # ------------------------------------------------------------------
-    # Helpers
+    # Lifecycle
     # ------------------------------------------------------------------
 
-    def _render_metadata(self, info: VideoInfo) -> None:
-        """Populate the metadata preview label with a probed video's info."""
-        lines = [
-            f"Title: {info.title}",
-            f"Uploader: {info.uploader or 'Unknown'}",
-            f"Duration: {_format_duration(info.duration_s)}",
-            f"Subtitles: {_subs_label(info)}",
-        ]
-        self.metadata_label.setText("\n".join(lines))
-
     def update_config(self, config: AnkiMinerConfig) -> None:
-        """Adopt a new frozen config and refresh any config-dependent UI.
+        """Adopt a new frozen config and refresh config-dependent services.
 
-        Called when the Settings tab emits ``config_changed``. Updates the
-        cached fetcher (which snapshots config on construction) so that
-        subsequent probes and mining runs honour the latest values, and
-        re-classifies the already-probed video if the new duration limit
-        changes the verdict.
+        Always rebuilds the fetcher (cheap; snapshots config in the ctor).
+        Only rebuilds the processor when no run is active — DefinitionService
+        caches a provider chain that may have an open SQLite connection.
 
         Args:
             config: New frozen configuration.
         """
         self._config = config
-
-        # Fetcher snapshots config on construction (see YouTubeFetcherService
-        # __init__) and is used for both probe_metadata and, through the
-        # worker thread, the full fetch pipeline. Recreate via the factory
-        # to keep construction routed through a single code path.
         self._fetcher = create_youtube_fetcher(config)
 
-        # Processor caches the DefinitionService (and its provider chain) at
-        # construction. If we don't rebuild it on config refresh, chain edits
-        # in Settings — and background JMdict migration completion — are
-        # invisible to YouTube mining until app restart. SingleEpisodeTab /
-        # BatchProcessingTab construct their processor per-mine and don't
-        # need this; YouTubeTab caches one across mines, so rebuild here.
-        # Reuse the existing stats_service so analytics rows stay attributed
-        # to the same store.
         worker_busy = self.worker_thread is not None and self.worker_thread.isRunning()
         if not worker_busy and self._presenter is not None:
-            # Don't yank the processor out from under an in-flight worker —
-            # they share a DefinitionService whose providers may have an
-            # open SQLite connection currently being used.
             self._processor = create_episode_processor(
                 config,
                 self._presenter,
                 stats_service=getattr(self._processor, "stats_service", None),
             )
 
-        # If we're not in the middle of a run, re-classify any already-probed
-        # video against the new config so the TOO_LONG gate reflects the
-        # freshly-saved duration limit and the status label is refreshed.
-        if self._state == _UIState.MINING:
-            return
-        if self._video_info is not None:
-            self._transition(self._classify_video(self._video_info))
-
     def shutdown(self) -> None:
-        """Stop any running worker threads.
+        """Stop the active worker and tear down probe workers.
 
         Called by :class:`MainWindow` during closeEvent so that background
         threads don't outlive the application.
         """
-        if self._probe_worker is not None:
-            self._probe_worker.quit()
-            self._probe_worker.wait()
-            self._probe_worker = None
         if self.worker_thread is not None:
             self.worker_thread.cancel()
             self.worker_thread.quit()
             self.worker_thread.wait()
             self.worker_thread = None
+
+        for probe in list(self._probe_workers):
+            probe.quit()
+            probe.wait()
+        self._probe_workers.clear()
