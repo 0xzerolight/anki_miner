@@ -20,7 +20,7 @@ class YouTubeItemStatus(Enum):
     ERROR = "error"  # mining attempt failed
 
 
-@dataclass(eq=False)
+@dataclass(eq=False)  # identity-based equality: list.remove() targets the exact instance
 class YouTubeQueueItem:
     """A single item in the YouTube URL processing queue."""
 
@@ -31,7 +31,7 @@ class YouTubeQueueItem:
     resolved_sub_mode: SubMode | None = None
     cards_created: int = 0
     error_message: str | None = None
-    retry_count: int = 0  # 0 or 1
+    retry_count: int = 0  # incremented by worker; capped at 1 (single retry only)
 
 
 class YouTubeQueue:
