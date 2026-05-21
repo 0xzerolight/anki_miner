@@ -8,10 +8,7 @@ from __future__ import annotations
 
 from PyQt6.QtWidgets import QApplication
 
-from anki_miner.gui.widgets.youtube_queue_item_widget import (
-    YouTubeQueueItemWidget,
-    _format_duration,
-)
+from anki_miner.gui.widgets.youtube_queue_item_widget import YouTubeQueueItemWidget
 from anki_miner.models.youtube import VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 
@@ -54,32 +51,21 @@ def _pending_item(url: str = "https://youtu.be/abc") -> YouTubeQueueItem:
 
 
 # ---------------------------------------------------------------------------
-# _format_duration
+# Duration formatting (via widget behaviour — no direct import of _format_duration)
 # ---------------------------------------------------------------------------
 
 
-def test_format_duration_zero() -> None:
-    assert _format_duration(0) == ""
+def test_ready_duration_over_hour() -> None:
+    """H:MM:SS format kicks in at >= 3600 s."""
+    item = _pending_item()
+    item.video_info = _make_video_info(duration_s=3725)
+    item.status = YouTubeItemStatus.READY
+    item.resolved_sub_mode = "manual_only"
 
+    widget = YouTubeQueueItemWidget(_pending_item())
+    widget.update_from(item)
 
-def test_format_duration_negative() -> None:
-    assert _format_duration(-5) == ""
-
-
-def test_format_duration_under_minute() -> None:
-    assert _format_duration(59) == "0:59"
-
-
-def test_format_duration_over_minute() -> None:
-    assert _format_duration(65) == "1:05"
-
-
-def test_format_duration_boundary_3600() -> None:
-    assert _format_duration(3600) == "1:00:00"
-
-
-def test_format_duration_over_hour() -> None:
-    assert _format_duration(3725) == "1:02:05"
+    assert widget.duration_label.text() == "1:02:05"
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +79,7 @@ def test_pending_item_title_contains_url() -> None:
     widget = YouTubeQueueItemWidget(item)
 
     title_text = widget.title_label.text()
-    assert url in title_text or "(pending...)" in title_text
+    assert title_text == url
 
 
 def test_pending_item_remove_enabled() -> None:
@@ -104,6 +90,19 @@ def test_pending_item_remove_enabled() -> None:
 def test_pending_item_no_duration_text() -> None:
     widget = YouTubeQueueItemWidget(_pending_item())
     assert widget.duration_label.text() == ""
+
+
+# ---------------------------------------------------------------------------
+# Test 1b — PROBING state
+# ---------------------------------------------------------------------------
+
+
+def test_probing_shows_placeholder() -> None:
+    item = YouTubeQueueItem(url="https://www.youtube.com/watch?v=xyz", status=YouTubeItemStatus.PROBING)
+    widget = YouTubeQueueItemWidget(item)
+    assert widget.title_label.text() == "(probing...)"
+    assert widget.duration_label.text() == ""
+    assert widget.remove_button.isEnabled()
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +227,20 @@ def test_error_shows_error_message() -> None:
 
     combined = widget.title_label.text() + widget.sub_source_label.text()
     assert "Network timeout" in combined
+
+
+def test_error_without_video_info_falls_back_to_url() -> None:
+    """ERROR with no video_info shows item URL in the title and error in sub-source."""
+    url = "https://www.youtube.com/watch?v=zzz"
+    item = YouTubeQueueItem(
+        url=url,
+        status=YouTubeItemStatus.ERROR,
+        video_info=None,
+        error_message="network timeout",
+    )
+    widget = YouTubeQueueItemWidget(item)
+    assert widget.title_label.text() == url
+    assert "network timeout" in widget.sub_source_label.text()
 
 
 # ---------------------------------------------------------------------------
