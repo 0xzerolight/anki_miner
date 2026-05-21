@@ -7,12 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- Multi-URL queue in YouTube tab: paste several URLs, preview or mine them sequentially, walk away. Each URL is probed eagerly on Add; failed fetches retry once before being marked ERROR; cancellation halts the current item and the queue.
 
 ### Changed
 
 ### Fixed
 
 ### Removed
+- Single-URL `YouTubeWorkerThread` (replaced by `YouTubeQueueWorker`).
 
 ## [2.4.3] - 2026-05-21
 
