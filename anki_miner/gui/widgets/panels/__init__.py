@@ -5,6 +5,7 @@ from .dictionary_settings_panel import DictionarySettingsPanel
 from .filtering_settings_panel import FilteringSettingsPanel
 from .media_settings_panel import MediaSettingsPanel
 from .queue_panel import QueuePanel
+from .themes_panel import ThemesPanel
 from .youtube_settings_panel import YouTubeSettingsPanel
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "DictionarySettingsPanel",
     "FilteringSettingsPanel",
     "QueuePanel",
+    "ThemesPanel",
     "YouTubeSettingsPanel",
 ]
