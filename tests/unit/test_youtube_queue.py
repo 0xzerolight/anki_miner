@@ -4,31 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from anki_miner.models.youtube import VideoInfo
 from anki_miner.models.youtube_queue import (
     YouTubeItemStatus,
     YouTubeQueue,
     YouTubeQueueItem,
 )
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_video_info(video_id: str = "abc123") -> VideoInfo:
-    return VideoInfo(
-        video_id=video_id,
-        title="Test Video",
-        duration_s=300,
-        has_manual_ja_subs=True,
-        has_auto_ja_subs=False,
-        thumbnail_url=None,
-        uploader="Tester",
-        is_live=False,
-        is_age_restricted=False,
-    )
-
 
 # ---------------------------------------------------------------------------
 # YouTubeQueueItem defaults
@@ -155,6 +135,15 @@ class TestYouTubeQueueRemove:
         queue.remove(item)
         with pytest.raises(ValueError):
             queue.remove(item)
+
+    def test_remove_uses_identity_not_equality(self):
+        """remove() must remove the specific instance, not the first field-equal item."""
+        queue = YouTubeQueue()
+        item_a = queue.add("https://youtu.be/abc")
+        item_b = queue.add("https://youtu.be/abc")
+        queue.remove(item_b)
+        assert len(queue.all_items()) == 1
+        assert queue.all_items()[0] is item_a
 
 
 # ---------------------------------------------------------------------------
