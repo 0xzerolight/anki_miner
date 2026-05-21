@@ -1471,9 +1471,13 @@ class TestSurfaceOffsetsAndBolding:
         assert ll.line_text[span_start:span_end] == "刑務所"
 
     def test_offsets_survive_internal_spaces(self, tmp_path):
-        """Regression for Issue #20: MeCab elides whitespace from the token
-        stream. Cursor arithmetic by token-surface length drifts left by the
-        number of preceding spaces, so bolded spans land on the wrong chars."""
+        """Regression for Issue #20 and Issue #31: MeCab elides whitespace
+        from the token stream. Cursor arithmetic by token-surface length
+        drifts left by the number of preceding spaces, so bolded spans
+        land on the wrong chars — both in the plain Sentence field
+        (#20) and in the SentenceFurigana field (#31)."""
+        import re
+
         srt_file = tmp_path / "spaces.srt"
         # Lines lifted from the user's exported reproducer (Issue #20 apkg).
         # Each has internal spaces and a target morpheme that previously got
@@ -1513,6 +1517,28 @@ class TestSurfaceOffsetsAndBolding:
         # 真っ赤: was bolding "な 顔" before the fix.
         makka = by_lemma["真っ赤"]
         assert "<b>真っ赤</b>" in makka.sentence_bolded, makka.sentence_bolded
+
+        # The bolded furigana field must wrap the exact morpheme's
+        # ``surface[reading]`` chunk — not the preceding/following token.
+        # Pre-#31 fix, the <b> tag drifted left by the count of preceding
+        # spaces and engulfed the next morpheme too. We don't hardcode
+        # readings here because they come from unidic-lite and could
+        # legitimately differ across versions; we assert structurally.
+        def _assert_furigana_bold(word, surface_head: str, must_not_contain: str):
+            field = word.sentence_furigana_bolded
+            m = re.search(r"<b>([^<]+)</b>", field)
+            assert m, f"no <b>...</b> in {field!r}"
+            body = m.group(1)
+            assert body.startswith(
+                surface_head
+            ), f"bold body {body!r} does not start with {surface_head!r} in {field!r}"
+            assert (
+                must_not_contain not in body
+            ), f"bold body {body!r} bled into adjacent morpheme {must_not_contain!r} in {field!r}"
+
+        _assert_furigana_bold(sunao, "素直", "に")
+        _assert_furigana_bold(toosu, "通", "。")
+        _assert_furigana_bold(makka, "真", "顔")
 
     def test_with_index_offsets_survive_internal_spaces(self, tmp_path):
         """The lemma_spans table (used by the i+1 swap to rebuild bold fields
