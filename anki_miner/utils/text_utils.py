@@ -140,9 +140,13 @@ def wrap_target_plain(sentence: str, start: int, end: int) -> str:
 def wrap_target_furigana(text: str, tagger, start: int, end: int) -> str:
     """Generate furigana-annotated text with the target morpheme wrapped in ``<b>``.
 
-    Walks fugashi tokens over ``text``, tracking a cumulative character
-    cursor in the *plain* text. Each token contributes either its surface
-    or a ``surface[kana]`` annotation. Tokens whose plain-text span is
+    Walks fugashi tokens over ``text`` and locates each token's char span
+    via :py:meth:`str.find` from a running cursor — MeCab silently drops
+    whitespace from the token stream, so naive ``cursor += len(surface)``
+    walking drifts and misaligns the bold window when ``text`` contains
+    spaces (Issue #31, parallel to the Issue #20 fix in
+    ``subtitle_parser.py``). Each token contributes either its surface
+    or a ``surface[kana]`` annotation. Tokens whose raw-text span is
     fully contained in ``[start, end)`` are emitted inside a single
     contiguous ``<b>...</b>`` run; surrounding tokens are emitted outside.
 
@@ -152,8 +156,8 @@ def wrap_target_furigana(text: str, tagger, start: int, end: int) -> str:
     Args:
         text: Raw subtitle line text.
         tagger: A fugashi.Tagger instance.
-        start: Inclusive plain-text offset of the target morpheme.
-        end: Exclusive plain-text offset of the target morpheme.
+        start: Inclusive raw-text offset of the target morpheme.
+        end: Exclusive raw-text offset of the target morpheme.
 
     Returns:
         Furigana-annotated text with the target morpheme bolded. If the
@@ -170,8 +174,16 @@ def wrap_target_furigana(text: str, tagger, start: int, end: int) -> str:
 
     for token in tagger(text):
         surface = token.surface
-        tok_start = cursor
-        tok_end = cursor + len(surface)
+        # Issue #31: locate the token's actual position in ``text`` rather
+        # than concatenating surface lengths, so whitespace between tokens
+        # doesn't desync the bold window.
+        idx = text.find(surface, cursor)
+        if idx == -1:
+            # Defensive: should not happen for unmodified MeCab surfaces.
+            # Keep cursor where it was so we never roll backwards.
+            idx = cursor
+        tok_start = idx
+        tok_end = tok_start + len(surface)
         cursor = tok_end
 
         # Pick the destination buffer for this token.

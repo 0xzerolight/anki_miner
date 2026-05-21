@@ -132,3 +132,69 @@ class TestWrapTargetFurigana:
         start = text.index("&")
         out = wrap_target_furigana(text, tagger, start, start + 1)
         assert out == "A <b>&amp;</b> B"
+
+    def test_target_after_internal_space(self):
+        """Issue #31: MeCab drops whitespace from its token stream, so a
+        naive cursor walk drifts left by 1 per preceding space and bolds
+        the wrong morpheme. ``str.find`` keeps token offsets aligned to
+        the raw ``text``."""
+        text = "なんで 素直に"
+        tokens = [
+            _make_mock_token("なんで", kana="ナンデ"),
+            _make_mock_token("素直", kana="スナオ"),
+            _make_mock_token("に", kana="ニ"),
+        ]
+        tagger = MagicMock(return_value=tokens)
+        start = text.index("素直")
+        end = start + len("素直")
+        out = wrap_target_furigana(text, tagger, start, end)
+        assert out == "なんで <b>素直[すなお]</b>に"
+
+    def test_target_after_multiple_internal_spaces(self):
+        """Drift would compound across multiple preceding whitespace
+        characters; verify the find-based walk stays aligned."""
+        text = "なんで 素直に 好き"
+        tokens = [
+            _make_mock_token("なんで", kana="ナンデ"),
+            _make_mock_token("素直", kana="スナオ"),
+            _make_mock_token("に", kana="ニ"),
+            _make_mock_token("好き", kana="スキ"),
+        ]
+        tagger = MagicMock(return_value=tokens)
+        start = text.index("好き")
+        end = start + len("好き")
+        out = wrap_target_furigana(text, tagger, start, end)
+        assert out == "なんで 素直[すなお]に <b>好き[すき]</b>"
+
+    def test_target_before_internal_space_unchanged(self):
+        """Token preceding the first space was already correct under the
+        naive cursor; guard against the find-based rewrite breaking it."""
+        text = "素直に 言えない"
+        tokens = [
+            _make_mock_token("素直", kana="スナオ"),
+            _make_mock_token("に", kana="ニ"),
+            _make_mock_token("言え", kana="イエ"),
+            _make_mock_token("ない", kana="ナイ"),
+        ]
+        tagger = MagicMock(return_value=tokens)
+        start = text.index("素直")
+        end = start + len("素直")
+        out = wrap_target_furigana(text, tagger, start, end)
+        assert out == "<b>素直[すなお]</b>に 言え[いえ]ない"
+
+    def test_no_spaces_unchanged_after_rewrite(self):
+        """Regression guard: the no-space happy path that worked before
+        Issue #31 must still produce identical output after the rewrite."""
+        text = "スウェーデンや王国です。"
+        tokens = [
+            _make_mock_token("スウェーデン", kana="スウェーデン"),
+            _make_mock_token("や", kana="ヤ"),
+            _make_mock_token("王国", kana="オウコク"),
+            _make_mock_token("です", kana="デス"),
+            _make_mock_token("。", kana="。"),
+        ]
+        tagger = MagicMock(return_value=tokens)
+        start = text.index("王国")
+        end = start + len("王国")
+        out = wrap_target_furigana(text, tagger, start, end)
+        assert out == "スウェーデンや <b>王国[おうこく]</b>です。"
