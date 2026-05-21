@@ -20,7 +20,7 @@ class YouTubeItemStatus(Enum):
     ERROR = "error"  # mining attempt failed
 
 
-@dataclass
+@dataclass(eq=False)
 class YouTubeQueueItem:
     """A single item in the YouTube URL processing queue."""
 
