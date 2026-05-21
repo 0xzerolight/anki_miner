@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
+import stat
+import time
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
@@ -26,6 +29,41 @@ from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 
 logger = logging.getLogger(__name__)
+
+
+def _on_rmtree_error(func, path, exc_info):
+    """rmtree onerror handler: clear the read-only bit then retry once.
+
+    Windows refuses to delete read-only files; Yomitan zip extractions sometimes
+    inherit that attribute. Clearing S_IWRITE and re-invoking the failing op
+    (unlink / rmdir) lets the walk continue. Any other failure re-raises.
+    """
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+    except OSError:
+        raise
+
+
+def _robust_rmtree(target: Path, *, retries: int = 3, delay_s: float = 0.1) -> None:
+    """rmtree with Windows-aware retry.
+
+    Two failure modes seen on Win11: read-only file attributes (handled inline by
+    ``_on_rmtree_error``) and transient ``[WinError 32] file in use`` from sqlite
+    read-only handles still being released by GC. The retry loop absorbs the
+    second case best-effort; final failure surfaces to the caller as the last
+    OSError so the UI can show the same dialog as before.
+    """
+    last_exc: OSError | None = None
+    for _ in range(retries):
+        try:
+            shutil.rmtree(target, onerror=_on_rmtree_error)
+            return
+        except OSError as e:
+            last_exc = e
+            time.sleep(delay_s)
+    assert last_exc is not None
+    raise last_exc
 
 
 class _ChainRow(QWidget):
@@ -88,6 +126,12 @@ class DictionarySettingsPanel(FormPanel):
     reimport_dict_requested = pyqtSignal(str)
     reimport_all_requested = pyqtSignal()
     chain_changed = pyqtSignal()
+    # Emitted once a dictionary has been successfully removed from both the
+    # in-memory chain and disk. Distinct from ``chain_changed`` so the settings
+    # tab can persist the new chain to gui_config.json immediately — a delete is
+    # destructive and asymmetric with reorder/toggle, which the user may still
+    # be experimenting with.
+    dictionary_removed = pyqtSignal()
 
     def __init__(self, dicts_root: Path, parent=None):
         super().__init__("Dictionary Settings", parent=parent)
@@ -241,7 +285,7 @@ class DictionarySettingsPanel(FormPanel):
 
         if dict_dir is not None and dict_dir.exists():
             try:
-                shutil.rmtree(dict_dir)
+                _robust_rmtree(dict_dir)
             except OSError as e:
                 logger.error("Failed to delete dictionary folder %s: %s", dict_dir, e)
                 QMessageBox.warning(
@@ -258,6 +302,7 @@ class DictionarySettingsPanel(FormPanel):
         self._registry = None
         self._rebuild_list()
         self.chain_changed.emit()
+        self.dictionary_removed.emit()
 
     def _on_row_context_menu(self, pos: QPoint) -> None:
         """Right-click a dictionary row to re-import or remove it.
