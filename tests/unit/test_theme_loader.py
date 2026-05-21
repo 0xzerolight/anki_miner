@@ -200,6 +200,55 @@ class TestDiscoverThemes:
         assert "my-theme" in themes
 
 
+class TestDiscoverThemesTwoDir:
+    """Tests for discover_themes(sequence) — shipped + user dir merge."""
+
+    def test_user_dir_overrides_shipped(self, tmp_path: Path):
+        from anki_miner.gui.resources.styles.theme import SOURCE_SHIPPED, SOURCE_USER, discover_themes
+
+        shipped_dir = tmp_path / "shipped"
+        shipped_dir.mkdir()
+        user_dir = tmp_path / "user"
+        user_dir.mkdir()
+
+        shipped_theme = _make_valid_theme("Dark (shipped)")
+        (shipped_dir / "dark.json").write_text(json.dumps(shipped_theme))
+        user_theme = _make_valid_theme("Dark (user)")
+        (user_dir / "dark.json").write_text(json.dumps(user_theme))
+
+        themes = discover_themes([shipped_dir, user_dir])
+        # Same key, user wins.
+        assert themes["dark"]["name"] == "Dark (user)"
+        assert themes["dark"]["_source"] == SOURCE_USER
+        # Without a collision the source is SOURCE_SHIPPED.
+        (shipped_dir / "light.json").write_text(json.dumps(_make_valid_theme("Light")))
+        themes = discover_themes([shipped_dir, user_dir])
+        assert themes["light"]["_source"] == SOURCE_SHIPPED
+
+    def test_missing_user_dir_tolerated(self, tmp_path: Path):
+        from anki_miner.gui.resources.styles.theme import discover_themes
+
+        shipped_dir = tmp_path / "shipped"
+        shipped_dir.mkdir()
+        (shipped_dir / "light.json").write_text(json.dumps(_make_valid_theme("Light")))
+
+        missing_user = tmp_path / "does_not_exist"
+        themes = discover_themes([shipped_dir, missing_user])
+        # No crash, shipped themes still discovered.
+        assert "light" in themes
+
+    def test_path_stamp_present(self, tmp_path: Path):
+        from anki_miner.gui.resources.styles.theme import discover_themes
+
+        shipped_dir = tmp_path / "shipped"
+        shipped_dir.mkdir()
+        path = shipped_dir / "light.json"
+        path.write_text(json.dumps(_make_valid_theme("Light")))
+
+        themes = discover_themes([shipped_dir])
+        assert themes["light"]["_path"] == str(path)
+
+
 class TestGetColorVariables:
     """Tests for getting color variables from a theme for QSS substitution."""
 

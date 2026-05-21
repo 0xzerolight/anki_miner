@@ -57,7 +57,17 @@ class GUIConfigManager:
             and logs a warning.
         """
         if not cls.CONFIG_FILE.exists():
-            return create_default_config()
+            default = create_default_config()
+            # Pre-v2.5: theme was stored in QSettings. If a user upgrades from
+            # such a build and has never saved any other GUI config, the file
+            # won't exist yet — read QSettings and seed the default so they
+            # don't lose their theme preference on first launch.
+            from dataclasses import replace
+
+            qs_theme = cls._read_qsettings_theme()
+            if qs_theme is not None and qs_theme != default.theme:
+                return replace(default, theme=qs_theme)
+            return default
 
         try:
             with cls.CONFIG_FILE.open("r", encoding="utf-8") as f:
@@ -74,6 +84,10 @@ class GUIConfigManager:
 
             # Migrate legacy dictionary fields → dictionary_chain
             config_dict = cls._migrate_dictionary_chain(config_dict)
+
+            # Migrate theme key out of QSettings (only when the key is absent
+            # from the loaded dict — i.e. first launch after v2.5 upgrade).
+            config_dict = cls._migrate_theme_from_qsettings(config_dict)
 
             # Drop keys not in the current dataclass (e.g., removed fields from old
             # versions). Without this filter, AnkiMinerConfig(**config_dict) raises
@@ -155,6 +169,46 @@ class GUIConfigManager:
         return data
 
     @staticmethod
+    def _read_qsettings_theme() -> str | None:
+        """Read a legacy theme value from QSettings, returning None if absent.
+
+        Pre-v2.5 the active theme was persisted as a QSettings key
+        ``("AnkiMiner", "GUI", "theme")``. The new home is gui_config.json.
+        This helper exists only to migrate older installs on upgrade.
+
+        Imports PyQt6 lazily so the module is safely importable in non-GUI
+        contexts (e.g. CLI invocations or tests that don't pull in Qt).
+        """
+        try:
+            from PyQt6.QtCore import QSettings
+        except Exception:  # pragma: no cover — Qt not installed in this env
+            return None
+
+        settings = QSettings("AnkiMiner", "GUI")
+        if not settings.contains("theme"):
+            return None
+        value = settings.value("theme")
+        if isinstance(value, str) and value:
+            return value
+        return None
+
+    @classmethod
+    def _migrate_theme_from_qsettings(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Inject the legacy QSettings theme value when missing from the dict.
+
+        No-op when:
+          * ``data`` already contains a ``theme`` key (user is on v2.5+), or
+          * QSettings has no ``theme`` value (fresh install or never customised).
+        """
+        if "theme" in data:
+            return data
+        legacy = cls._read_qsettings_theme()
+        if legacy is None:
+            return data
+        data["theme"] = legacy
+        return data
+
+    @staticmethod
     def _migrate_field_names(data: dict[str, Any]) -> dict[str, Any]:
         """Migrate old anki_fields keys to current names.
 
@@ -218,6 +272,7 @@ class GUIConfigManager:
             "whitelist_path",
             "stats_db_path",
             "history_db_path",
+            "themes_root",
         }
 
         result: dict[str, Any] = {}

@@ -11,6 +11,7 @@ from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.service_factory import (
     create_episode_processor,
     create_youtube_fetcher,
@@ -99,8 +100,15 @@ def main():
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
 
-    # Initialize theme system and apply stylesheet + palette
-    Theme.get_instance()
+    # Seed the theme singleton from gui_config.json so the initial paint uses
+    # the right active theme and the favorites combo is correctly populated.
+    # MainWindow re-loads the same config a moment later (idempotent).
+    _initial_config = GUIConfigManager.load_config()
+    Theme.initialize(
+        active=_initial_config.theme,
+        favorites=_initial_config.theme_favorites,
+        user_dir=_initial_config.themes_root,
+    )
     Theme.apply_to_app(app)
 
     # Create main window
@@ -173,6 +181,13 @@ def main():
     settings_tab.config_changed.connect(episode_tab.update_config)
     settings_tab.config_changed.connect(batch_tab.update_config)
     settings_tab.config_changed.connect(youtube_tab.update_config)
+    # Favorites-list edits in Themes panel must repopulate the top-right combo
+    # immediately; the panel doesn't know about the header so the wiring lives
+    # here. Active-theme changes from the panel must update the selected entry
+    # in the combo without re-emitting `theme_changed` (the theme is already
+    # applied — re-emitting would loop back through `_on_theme_changed`).
+    settings_tab.themes_panel.favorites_changed.connect(window.header.refresh_favorites)
+    settings_tab.themes_panel.state_changed.connect(lambda *_: window.header.update_theme_selector())
     window.tabs.addTab(settings_tab, "Settings")
 
     # Non-Settings config refreshes (e.g. JMdict migration finishing in the

@@ -27,6 +27,7 @@ from anki_miner.gui.widgets.panels import (
     DictionarySettingsPanel,
     FilteringSettingsPanel,
     MediaSettingsPanel,
+    ThemesPanel,
     YouTubeSettingsPanel,
 )
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
@@ -79,6 +80,7 @@ class SettingsTab(QWidget):
         self.dictionary_panel = DictionarySettingsPanel(self.config.dicts_root)
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
+        self.themes_panel = ThemesPanel(self.config.themes_root)
 
         # Add tabs with scroll areas for each panel
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.anki_panel), "Anki")
@@ -86,6 +88,12 @@ class SettingsTab(QWidget):
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.dictionary_panel), "Dictionary")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), "Filtering")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), "YouTube")
+        # Themes tab — sub-tab index captured so MainWindow / shortcuts can
+        # jump straight to it via :meth:`open_themes_tab`.
+        self._themes_subtab_index = self.tab_widget.addTab(self._wrap_in_scroll_area(self.themes_panel), "Themes")
+        # Reset preview baseline when the user navigates away from Themes so
+        # a later visit reverts to their last-chosen theme, not session start.
+        self.tab_widget.currentChanged.connect(self._on_settings_subtab_changed)
 
         layout.addWidget(self.tab_widget)
 
@@ -134,6 +142,9 @@ class SettingsTab(QWidget):
         # Persist immediately after a destructive remove so an orphan dict_id
         # doesn't reappear in gui_config.json on next launch (Issue #30).
         self.dictionary_panel.dictionary_removed.connect(self._on_save_clicked)
+
+        # Themes panel persists immediately on any change (live-preview model).
+        self.themes_panel.state_changed.connect(self._on_theme_state_changed)
 
         # Hold a reference to the fetch-fields worker across its lifetime.
         # Without this attribute, a freshly-spawned QThread can be garbage
@@ -241,6 +252,30 @@ class SettingsTab(QWidget):
 
         # Update settings
         self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
+
+    def open_themes_subtab(self) -> None:
+        """Switch the settings sub-tab to Themes.
+
+        Called by MainWindow when the user picks the 'All themes…' sentinel
+        in the header combo.
+        """
+        self.tab_widget.setCurrentIndex(self._themes_subtab_index)
+
+    def _on_settings_subtab_changed(self, index: int) -> None:
+        """Reset the Themes panel preview baseline when leaving its sub-tab."""
+        if index != self._themes_subtab_index:
+            self.themes_panel.reset_baseline()
+
+    def _on_theme_state_changed(self, active: str, favorites: tuple) -> None:
+        """Forward Themes panel changes through ``config_changed``.
+
+        The Themes panel writes through Theme directly (live preview); this
+        slot mirrors the change into ``self.config`` and re-emits so the
+        existing ``config_changed`` → ``MainWindow.update_config`` chain
+        persists to ``gui_config.json`` without duplicate logic.
+        """
+        self.config = replace(self.config, theme=active, theme_favorites=tuple(favorites))
+        self.config_changed.emit(self.config)
 
     def _on_save_clicked(self) -> None:
         """Handle save button click."""
