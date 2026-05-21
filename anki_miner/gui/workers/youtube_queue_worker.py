@@ -152,7 +152,7 @@ class YouTubeQueueWorker(CancellableWorker):
                         # Mid-fetch cancellation: don't retry, don't emit
                         # item_finished, and skip queue_finished entirely.
                         return
-                    last_error = str(exc)
+                    last_error = f"{type(exc).__name__}: {exc}"
                     if attempt == 0:
                         continue  # retry once
                 except Exception as exc:  # noqa: BLE001 - surface any other failure to GUI
@@ -184,11 +184,12 @@ class YouTubeQueueWorker(CancellableWorker):
         exception propagates to the retry/error handling in ``run``.
 
         Items that reach this method are READY (probe already populated
-        ``video_id`` and ``resolved_sub_mode``). The assertions narrow
-        Optional types from the queue model for mypy.
+        ``video_id`` and ``resolved_sub_mode``). The guard below narrows
+        Optional types from the queue model for mypy and raises explicitly
+        rather than silently passing None into yt-dlp.
         """
-        assert item.video_id is not None, "READY items must have video_id"
-        assert item.resolved_sub_mode is not None, "READY items must have resolved_sub_mode"
+        if item.video_id is None or item.resolved_sub_mode is None:
+            raise RuntimeError(f"READY item {item.url!r} missing video_id or resolved_sub_mode — probe step incomplete")
 
         mining_cb = _QueueMiningProgressAdapter(idx, self.item_progress.emit)
 
@@ -200,6 +201,7 @@ class YouTubeQueueWorker(CancellableWorker):
             cancel_event=self._cancel_event,
             progress_callback=mining_cb,
             fetch_progress_cb=lambda label, frac: self._emit_fetch_progress(idx, label, frac),
+            # Curation only fires per item in preview mode; non-preview runs skip it.
             curation_callback=self._curation_callback if self._preview_mode else None,
             preview_mode=self._preview_mode,
         )
