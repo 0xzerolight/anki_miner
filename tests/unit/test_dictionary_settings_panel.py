@@ -1,5 +1,8 @@
 """Smoke tests for DictionarySettingsPanel."""
 
+import os
+import shutil
+import stat
 from pathlib import Path
 
 import pytest
@@ -9,6 +12,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.gui.widgets.panels import dictionary_settings_panel as dsp_mod
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
 
@@ -486,6 +490,182 @@ def test_right_click_jmdict_row_emits_reimport_jmdict_requested(qapp, monkeypatc
 
     assert jmdict_fired == [None]
     assert generic_fired == [], "JMdict row must not fire the generic signal"
+
+
+def test_remove_emits_dictionary_removed_signal(qapp, tmp_path, confirm_remove):
+    """remove() must fire dictionary_removed so settings_tab can persist the
+    chain to gui_config.json without waiting for the user to click Save."""
+    dict_dir = tmp_path / "a"
+    dict_dir.mkdir()
+    (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+
+    panel = DictionarySettingsPanel(tmp_path)
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="a", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    removed: list[None] = []
+    panel.dictionary_removed.connect(lambda: removed.append(None))
+
+    panel.remove(0)
+    assert removed == [None]
+
+
+def test_remove_cancelled_does_not_emit_dictionary_removed(qapp, monkeypatch, tmp_path):
+    """Cancelling the confirm dialog must not fire dictionary_removed — nothing
+    on disk changed, so we don't want settings_tab to persist."""
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.No,
+    )
+    dict_dir = tmp_path / "a"
+    dict_dir.mkdir()
+    (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+
+    panel = DictionarySettingsPanel(tmp_path)
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="a", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    removed: list[None] = []
+    panel.dictionary_removed.connect(lambda: removed.append(None))
+
+    panel.remove(0)
+    assert removed == []
+
+
+def test_remove_failed_rmtree_does_not_emit_dictionary_removed(qapp, monkeypatch, tmp_path, confirm_remove):
+    """If rmtree exhausts its retries we abort early; dictionary_removed must
+    not fire because the chain mutation also did not happen."""
+    dict_dir = tmp_path / "a"
+    dict_dir.mkdir()
+    (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+
+    # Stub QMessageBox.warning so the error dialog doesn't try to render.
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.warning",
+        lambda *a, **kw: QMessageBox.StandardButton.Ok,
+    )
+
+    def _always_fail(*args, **kwargs):
+        raise PermissionError("simulated locked file")
+
+    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _always_fail)
+    # Speed up the retry loop — the helper sleeps between attempts.
+    monkeypatch.setattr(dsp_mod.time, "sleep", lambda _s: None)
+
+    panel = DictionarySettingsPanel(tmp_path)
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="a", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    removed: list[None] = []
+    panel.dictionary_removed.connect(lambda: removed.append(None))
+
+    panel.remove(0)
+    assert removed == []
+    chain = panel.get_chain()
+    assert [e.dict_id for e in chain[:1]] == ["a"], "failed remove must leave chain intact"
+
+
+def test_remove_retries_transient_oserror(qapp, monkeypatch, tmp_path, confirm_remove):
+    """A flake on the first rmtree attempt should be absorbed by the retry loop
+    and succeed without surfacing an error dialog (Win11 sqlite-handle race)."""
+    dict_dir = tmp_path / "a"
+    dict_dir.mkdir()
+    (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+
+    real_rmtree = shutil.rmtree
+    calls = {"n": 0}
+
+    def _flaky(path, *args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise PermissionError("[WinError 32] simulated transient lock")
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _flaky)
+    monkeypatch.setattr(dsp_mod.time, "sleep", lambda _s: None)
+
+    warned: list[None] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.warning",
+        lambda *a, **kw: warned.append(None) or QMessageBox.StandardButton.Ok,
+    )
+
+    panel = DictionarySettingsPanel(tmp_path)
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="a", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    removed: list[None] = []
+    panel.dictionary_removed.connect(lambda: removed.append(None))
+
+    panel.remove(0)
+
+    assert calls["n"] >= 2, "retry loop should have triggered at least once"
+    assert not dict_dir.exists(), "second attempt must complete the rmtree"
+    assert warned == [], "successful retry must not show an error dialog"
+    assert removed == [None]
+
+
+def test_on_rmtree_error_clears_readonly_then_retries(tmp_path):
+    """Unit test the onerror handler in isolation: PermissionError on a RO file
+    should result in chmod(S_IWRITE) + retry of the failing op (Win11 zip RO)."""
+    target = tmp_path / "ro.bin"
+    target.write_bytes(b"x")
+    os.chmod(target, stat.S_IREAD)
+
+    # First call simulates the rmtree-internal failure; the handler should
+    # chmod the file then re-invoke os.unlink, which now succeeds on Windows
+    # (and is harmless on POSIX since the parent dir is writable).
+    dsp_mod._on_rmtree_error(os.unlink, str(target), None)
+
+    assert not target.exists()
+
+
+def test_on_rmtree_error_reraises_non_permission(tmp_path):
+    """Non-RO failures must re-raise so the retry loop / caller can surface
+    them — we only special-case the read-only bit, nothing else."""
+    target = tmp_path / "missing"
+
+    def _always_oserror(_path):
+        raise FileNotFoundError(target)
+
+    with pytest.raises(OSError):
+        dsp_mod._on_rmtree_error(_always_oserror, str(target), None)
+
+
+def test_robust_rmtree_exhausts_retries_and_raises(monkeypatch, tmp_path):
+    """After ``retries`` failures the helper must surface the last OSError."""
+    target = tmp_path / "doomed"
+    target.mkdir()
+
+    attempts = {"n": 0}
+
+    def _always_fail(*args, **kwargs):
+        attempts["n"] += 1
+        raise PermissionError("simulated")
+
+    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _always_fail)
+    monkeypatch.setattr(dsp_mod.time, "sleep", lambda _s: None)
+
+    with pytest.raises(PermissionError):
+        dsp_mod._robust_rmtree(target, retries=3, delay_s=0)
+
+    assert attempts["n"] == 3
 
 
 def test_right_click_jisho_row_shows_no_menu(qapp, monkeypatch, tmp_path):

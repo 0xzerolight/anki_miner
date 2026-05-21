@@ -131,6 +131,9 @@ class SettingsTab(QWidget):
         self.dictionary_panel.reimport_jmdict_requested.connect(self._on_reimport_jmdict_clicked)
         self.dictionary_panel.reimport_dict_requested.connect(self._on_reimport_dict_clicked)
         self.dictionary_panel.reimport_all_requested.connect(self._on_reimport_all_clicked)
+        # Persist immediately after a destructive remove so an orphan dict_id
+        # doesn't reappear in gui_config.json on next launch (Issue #30).
+        self.dictionary_panel.dictionary_removed.connect(self._on_save_clicked)
 
         # Hold a reference to the fetch-fields worker across its lifetime.
         # Without this attribute, a freshly-spawned QThread can be garbage
