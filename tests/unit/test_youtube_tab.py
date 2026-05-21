@@ -344,14 +344,17 @@ class TestPerItemSignals:
     """Per-item signals update the row widgets and progress widget."""
 
     def test_item_started_marks_processing(self, tab):
-        item = _add_ready_item(tab)
+        item_a = _add_ready_item(tab, "https://youtu.be/v1", video_id="aaa")
+        _add_ready_item(tab, "https://youtu.be/v2", video_id="bbb")
+        _add_ready_item(tab, "https://youtu.be/v3", video_id="ccc")
         tab._on_mine_clicked()
 
         tab._on_item_started(0)
 
-        assert item.status == YouTubeItemStatus.PROCESSING
-        # Progress widget shows "Mining 1 of 1: Sample Video".
-        assert "Mining 1 of 1" in tab.progress_widget.status_label.text()
+        assert item_a.status == YouTubeItemStatus.PROCESSING
+        # Progress widget shows "Mining 1 of 3: Sample Video" — total drawn from
+        # the run snapshot, not the live queue, so it never shows "1 of 1".
+        assert "Mining 1 of 3" in tab.progress_widget.status_label.text()
         assert "Sample Video" in tab.progress_widget.status_label.text()
 
     def test_item_progress_determinate(self, tab):
@@ -525,6 +528,76 @@ class TestShutdown:
     def test_shutdown_with_nothing_active(self, tab):
         # Should not raise.
         tab.shutdown()
+
+
+class TestIdxSnapshotBug:
+    """Regression: removing a COMPLETED row mid-run must not shift the idx mapping."""
+
+    def test_idx_resolution_survives_completed_item_removal_during_run(self, tab):
+        """Removing a COMPLETED item mid-run must not shift idx mapping for surviving items."""
+        # Add three items and probe them all to READY.
+        item_a = _add_ready_item(tab, "https://youtu.be/v1", video_id="aaa")
+        item_b = _add_ready_item(tab, "https://youtu.be/v2", video_id="bbb")
+        item_c = _add_ready_item(tab, "https://youtu.be/v3", video_id="ccc")
+
+        tab._on_mine_clicked()
+
+        # Simulate item 0 (A) starting and finishing.
+        tab._on_item_started(0)
+        assert item_a.status == YouTubeItemStatus.PROCESSING
+        tab._on_item_finished(0, MagicMock(cards_created=2), None, 1)
+        assert item_a.status == YouTubeItemStatus.COMPLETED
+
+        # User removes the COMPLETED row for A while the run is still in flight.
+        tab._on_remove_clicked(item_a)
+        # A is gone from the live queue…
+        assert item_a not in tab._queue.all_items()
+        # …but _run_items snapshot still holds all three in order.
+        assert tab._run_items == [item_a, item_b, item_c]
+
+        # Worker fires item_started(1) — must land on B, not C.
+        tab._on_item_started(1)
+        assert item_b.status == YouTubeItemStatus.PROCESSING, (
+            "item_b should be PROCESSING after item_started(1); "
+            "a live-queue lookup would have resolved to item_c instead"
+        )
+        assert item_c.status == YouTubeItemStatus.READY
+
+        # Worker finishes item 1 — B becomes COMPLETED; C unchanged.
+        tab._on_item_finished(1, MagicMock(cards_created=1), None, 1)
+        assert item_b.status == YouTubeItemStatus.COMPLETED
+        assert item_c.status == YouTubeItemStatus.READY
+
+        # Worker fires item_started(2) — must land on C.
+        tab._on_item_started(2)
+        assert item_c.status == YouTubeItemStatus.PROCESSING
+
+    def test_run_items_cleared_after_queue_finished(self, tab):
+        """_run_items is reset to [] when the queue worker finishes."""
+        _add_ready_item(tab, "https://youtu.be/v1")
+        tab._on_mine_clicked()
+        assert len(tab._run_items) == 1
+
+        tab._on_queue_finished()
+        assert tab._run_items == []
+
+    def test_mining_total_uses_snapshot_not_live_queue(self, tab):
+        """'Mining X of Y' total reflects the run snapshot even if items were removed."""
+        item_a = _add_ready_item(tab, "https://youtu.be/v1", video_id="aaa")
+        item_b = _add_ready_item(tab, "https://youtu.be/v2", video_id="bbb")
+        _add_ready_item(tab, "https://youtu.be/v3", video_id="ccc")
+        tab._on_mine_clicked()
+
+        # Simulate A finishing and its row being removed.
+        tab._on_item_started(0)
+        tab._on_item_finished(0, MagicMock(cards_created=1), None, 1)
+        tab._on_remove_clicked(item_a)
+
+        # Now B starts — total should still be 3 (from snapshot), not 2 (live).
+        tab._on_item_started(1)
+        status_text = tab.progress_widget.status_label.text()
+        assert "of 3" in status_text, f"Expected 'of 3' in status text but got: {status_text!r}"
+        assert item_b.status == YouTubeItemStatus.PROCESSING
 
 
 class TestUpdateConfig:
