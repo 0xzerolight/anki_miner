@@ -392,3 +392,118 @@ def test_reimport_all_signal_fires_on_button_click(qapp, tmp_path):
     panel._reimport_btn.click()
     assert all_fired == [None]
     assert jmdict_fired == [], "Global button must not fire the JMdict-only signal"
+
+
+def _patch_menu_exec(monkeypatch, action_label: str | None):
+    """Stub ``QMenu.exec`` to return the action matching ``action_label``.
+
+    Use ``action_label=None`` to simulate the user dismissing the menu.
+    Records every constructed menu so tests can assert it was opened.
+    """
+    constructed: list[object] = []
+    real_init = __import__("PyQt6.QtWidgets", fromlist=["QMenu"]).QMenu.__init__
+
+    def tracking_init(self, *args, **kwargs):
+        real_init(self, *args, **kwargs)
+        constructed.append(self)
+
+    monkeypatch.setattr("PyQt6.QtWidgets.QMenu.__init__", tracking_init)
+
+    def fake_exec(self, *_args, **_kwargs):
+        if action_label is None:
+            return None
+        for action in self.actions():
+            if action.text() == action_label:
+                return action
+        return None
+
+    monkeypatch.setattr("PyQt6.QtWidgets.QMenu.exec", fake_exec)
+    return constructed
+
+
+def test_right_click_non_stale_yomitan_row_emits_reimport_dict_requested(qapp, monkeypatch, tmp_path):
+    """Right-clicking a current-schema Yomitan row → Re-import… emits the
+    per-dict signal so legacy users (no source.zip) have a discoverable seed path."""
+    _make_dict_on_disk(
+        tmp_path,
+        "fresh-yomi",
+        fmt="yomitan",
+        schema_version=SCHEMA_VERSION,
+        source_name="Fresh Yomi",
+    )
+    panel = DictionarySettingsPanel(tmp_path)
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="fresh-yomi", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    constructed = _patch_menu_exec(monkeypatch, "Re-import…")
+
+    emitted: list[str] = []
+    panel.reimport_dict_requested.connect(emitted.append)
+    jmdict_fired: list[None] = []
+    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+
+    assert len(constructed) == 1, "Yomitan row must open the context menu"
+    assert emitted == ["fresh-yomi"]
+    assert jmdict_fired == [], "Yomitan row must not fire the JMdict signal"
+
+
+def test_right_click_jmdict_row_emits_reimport_jmdict_requested(qapp, monkeypatch, tmp_path):
+    """Right-clicking a JMdict row → Re-import… emits the JMdict-specific
+    signal (which uses the configured XML path, not a file picker)."""
+    _make_dict_on_disk(
+        tmp_path,
+        "jmdict-english",
+        fmt="jmdict",
+        schema_version=SCHEMA_VERSION,
+        source_name="JMdict (English)",
+    )
+    panel = DictionarySettingsPanel(tmp_path)
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+
+    _patch_menu_exec(monkeypatch, "Re-import…")
+
+    jmdict_fired: list[None] = []
+    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
+    generic_fired: list[str] = []
+    panel.reimport_dict_requested.connect(generic_fired.append)
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+
+    assert jmdict_fired == [None]
+    assert generic_fired == [], "JMdict row must not fire the generic signal"
+
+
+def test_right_click_jisho_row_shows_no_menu(qapp, monkeypatch, tmp_path):
+    """Jisho is an online fallback — no zip, no re-import, no menu."""
+    panel = DictionarySettingsPanel(tmp_path)
+    panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+
+    constructed = _patch_menu_exec(monkeypatch, "Re-import…")
+
+    emitted: list[str] = []
+    panel.reimport_dict_requested.connect(emitted.append)
+    jmdict_fired: list[None] = []
+    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+
+    assert constructed == [], "Jisho row must not open a context menu"
+    assert emitted == []
+    assert jmdict_fired == []
