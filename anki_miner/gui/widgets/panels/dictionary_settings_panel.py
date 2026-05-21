@@ -6,13 +6,14 @@ import logging
 import shutil
 from pathlib import Path
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QPoint, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QMenu,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
@@ -132,6 +133,8 @@ class DictionarySettingsPanel(FormPanel):
 
         self._list = QListWidget()
         self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self._list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._list.customContextMenuRequested.connect(self._on_row_context_menu)
         layout.addWidget(self._list)
 
         buttons = QHBoxLayout()
@@ -255,6 +258,43 @@ class DictionarySettingsPanel(FormPanel):
         self._registry = None
         self._rebuild_list()
         self.chain_changed.emit()
+
+    def _on_row_context_menu(self, pos: QPoint) -> None:
+        """Right-click a dictionary row to re-import or remove it.
+
+        Reuses the stale-row re-import signals so the handler in settings_tab
+        (`_on_reimport_dict_clicked`) drives the import flow regardless of
+        entry point. Jisho rows have no menu — the online fallback can't be
+        re-imported. Missing meta (dict files vanished from disk) also skip
+        because we can't decide between yomitan and jmdict dispatch.
+        """
+        item = self._list.itemAt(pos)
+        if item is None:
+            return
+        index = self._list.row(item)
+        if index < 0 or index >= len(self._chain):
+            return
+        entry = self._chain[index]
+        if entry.kind == "jisho" or entry.dict_id is None:
+            return
+        registry = self._registry
+        meta = registry.get(entry.dict_id) if registry is not None else None
+        if meta is None:
+            return
+
+        menu = QMenu(self._list)
+        reimport_action = menu.addAction("Re-import…")
+        remove_action = menu.addAction("Remove")
+        viewport = self._list.viewport()
+        global_pos = viewport.mapToGlobal(pos) if viewport is not None else self._list.mapToGlobal(pos)
+        chosen = menu.exec(global_pos)
+        if chosen is reimport_action:
+            if meta.format == "jmdict":
+                self.reimport_jmdict_requested.emit()
+            else:
+                self.reimport_dict_requested.emit(entry.dict_id)
+        elif chosen is remove_action:
+            self.remove(index)
 
     def _row_widget(self, index: int) -> _ChainRow | None:
         item = self._list.item(index)

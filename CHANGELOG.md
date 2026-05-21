@@ -14,6 +14,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Removed
 
+## [2.4.3] - 2026-05-21
+
+### Fixed
+- **No discoverable per-row re-import for dictionaries** (Issue #29): the per-row "Re-import" button added in 2.4.2 only rendered on stale-schema rows, leaving users who imported their dictionaries before 2.4.2 with no way to seed `source.zip` — "Reimport All" skipped them and pointed at a stale-row button they did not have. Dictionary rows now expose a right-click context menu with **Re-import…** and **Remove** for indexed entries (Yomitan and JMdict). The "Reimport All" skip dialog now points users at the new menu instead of the stale-row button.
+
 ## [2.4.2] - 2026-05-21
 
 ### Added
