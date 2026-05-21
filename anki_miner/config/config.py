@@ -180,6 +180,13 @@ class AnkiMinerConfig:
     youtube_cookies_from_browser: str | None = None
     youtube_ffmpeg_location: Path | None = None
 
+    # Theme settings (UI state — persisted via gui_config.json).
+    # `theme_favorites` is the curated list that drives the top-right combo;
+    # the active `theme` does not need to be in favorites.
+    theme: str = "light"
+    theme_favorites: tuple[str, ...] = ("light", "dark")
+    themes_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "themes")
+
     def __post_init__(self):
         """Convert string paths to Path objects if needed."""
         # Convert paths to Path objects (handles both str and Path inputs)
@@ -209,6 +216,12 @@ class AnkiMinerConfig:
                 "youtube_ffmpeg_location",
                 Path(self.youtube_ffmpeg_location) if self.youtube_ffmpeg_location else None,
             )
+        if isinstance(self.themes_root, str):
+            object.__setattr__(self, "themes_root", Path(self.themes_root))
+        # JSON round-trip yields a list for theme_favorites; coerce to tuple
+        # so the frozen dataclass stays internally immutable.
+        if isinstance(self.theme_favorites, list):
+            object.__setattr__(self, "theme_favorites", tuple(self.theme_favorites))
 
         # Keep anki_word_field in sync with anki_fields["word"]
         word_field_from_mapping = self.anki_fields.get("word", "")

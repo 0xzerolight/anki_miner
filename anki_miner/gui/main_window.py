@@ -39,12 +39,12 @@ _ABOUT_FEATURES: list[str] = [
     "Dictionary definitions from JMdict",
     "Frequency filtering to focus on common words",
     "Mining analytics and progress tracking",
-    "Three beautiful themes: Light, Dark, Sakura",
+    "Customizable theme system with user-installable themes",
 ]
 
 _ABOUT_SHORTCUTS: list[tuple[str, str]] = [
     ("Ctrl+1..5", "Switch tabs"),
-    ("Ctrl+T", "Cycle themes"),
+    ("Ctrl+T", "Cycle favourite themes"),
     ("Ctrl+,", "Open Settings"),
     ("Ctrl+Shift+V", "Run system validation"),
     ("F1", "Show this help dialog"),
@@ -183,6 +183,7 @@ class MainWindow(QMainWindow):
         # Add header
         self.header = HeaderWidget()
         self.header.theme_changed.connect(self._on_theme_changed)
+        self.header.open_theme_settings.connect(self._open_theme_settings)
         self.central_layout.addWidget(self.header)
 
         # Create tab widget
@@ -287,20 +288,32 @@ class MainWindow(QMainWindow):
             self.tabs.setCurrentIndex(index)
 
     def _cycle_theme(self) -> None:
-        """Cycle through available themes."""
+        """Cycle through favorited themes (Ctrl+T)."""
         new_mode = Theme.cycle_theme()
 
         # Update combo box to reflect the new theme
         self.header.update_theme_selector()
 
-        # Apply theme
+        # Apply theme + persist
         app = QApplication.instance()
         if isinstance(app, QApplication):
             Theme.apply_to_app(app, new_mode)
+        if new_mode != self.config.theme:
+            self.update_config(replace(self.config, theme=new_mode))
 
     def _open_settings(self) -> None:
         """Open the Settings tab."""
         self.tabs.setCurrentIndex(TAB_SETTINGS)
+
+    def _open_theme_settings(self) -> None:
+        """Switch to Settings → Themes (triggered by 'All themes…' sentinel)."""
+        self.tabs.setCurrentIndex(TAB_SETTINGS)
+        # The Settings tab widget was registered by app.py at TAB_SETTINGS;
+        # call through to its convenience method to land on the right sub-tab.
+        settings_widget = self.tabs.widget(TAB_SETTINGS)
+        open_subtab = getattr(settings_widget, "open_themes_subtab", None)
+        if callable(open_subtab):
+            open_subtab()
 
     def _report_issue(self) -> None:
         """Open the GitHub issues page in the default browser."""
@@ -667,3 +680,7 @@ class MainWindow(QMainWindow):
 
         # Update header to reflect current theme
         self.header.update_theme_selector()
+
+        # Persist active theme to gui_config.json so it survives restart.
+        if theme_name != self.config.theme:
+            self.update_config(replace(self.config, theme=theme_name))
