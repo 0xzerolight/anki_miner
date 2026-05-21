@@ -169,14 +169,21 @@ class SubtitleParserService:
         seen_lemmas: set[str] = set()  # Track unique words by dictionary form (lemma).
 
         for text, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
-            # Cursor walks merged_tokens in order. Tokens partition the line
-            # text (compound-merge passes only merge adjacent tokens, so
-            # concatenated surfaces still equal ``text``), so cumulative
-            # surface length gives each token's char span in ``text``.
+            # Locate each token's char span via ``str.find`` from a running
+            # cursor. MeCab silently drops whitespace from the token stream,
+            # so naive ``cursor += len(surface)`` walking drifts left by the
+            # count of preceding spaces and misaligns every downstream
+            # offset (bold wrapping, surface_start/end). Issue #20.
             cursor = 0
             for word_token in merged_tokens:
-                tok_start = cursor
-                tok_end = cursor + len(word_token.surface)
+                surface = word_token.surface
+                idx = text.find(surface, cursor)
+                if idx == -1:
+                    # Defensive: should not happen for unmodified MeCab
+                    # surfaces. Skip rather than emit a wrong span.
+                    continue
+                tok_start = idx
+                tok_end = idx + len(surface)
                 cursor = tok_end
 
                 if not self._should_include_word(word_token):
@@ -276,10 +283,17 @@ class SubtitleParserService:
             included_tokens: list = []
             included_spans: list[tuple[int, int]] = []
             lemma_first_span: dict[str, tuple[str, int, int]] = {}
+            # Same offset rule as parse_subtitle_file: locate each token's
+            # span via str.find from a running cursor, because MeCab strips
+            # whitespace from the token stream. Issue #20.
             cursor = 0
             for word_token in merged_tokens:
-                tok_start = cursor
-                tok_end = cursor + len(word_token.surface)
+                surface = word_token.surface
+                idx = text.find(surface, cursor)
+                if idx == -1:
+                    continue
+                tok_start = idx
+                tok_end = idx + len(surface)
                 cursor = tok_end
                 if not self._should_include_word(word_token):
                     continue
