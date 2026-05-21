@@ -653,8 +653,8 @@ class SettingsTab(QWidget):
             if missing_legacy:
                 body = (
                     "No dictionaries with saved sources were found.\n\n"
-                    "Skipped (no saved source — use the per-row Re-import "
-                    "button on a stale row to seed):\n" + "\n".join(f"  • {n}" for n in missing_legacy)
+                    "Skipped (no saved source — right-click a dictionary "
+                    "row → Re-import… to seed):\n" + "\n".join(f"  • {n}" for n in missing_legacy)
                 )
             else:
                 body = "No dictionaries in the chain."
@@ -697,7 +697,7 @@ class SettingsTab(QWidget):
             if missing_legacy:
                 if lines:
                     lines.append("")
-                lines.append("Skipped (no saved source — use the per-row " "Re-import button on a stale row to seed):")
+                lines.append("Skipped (no saved source — right-click a " "dictionary row → Re-import… to seed):")
                 lines.extend(f"  • {n}" for n in missing_legacy)
             if errors:
                 if lines:
