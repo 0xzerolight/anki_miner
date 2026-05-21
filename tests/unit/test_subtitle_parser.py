@@ -1469,3 +1469,68 @@ class TestSurfaceOffsetsAndBolding:
         _, surface, span_start, span_end = keimusho_entry
         assert surface == "刑務所"
         assert ll.line_text[span_start:span_end] == "刑務所"
+
+    def test_offsets_survive_internal_spaces(self, tmp_path):
+        """Regression for Issue #20: MeCab elides whitespace from the token
+        stream. Cursor arithmetic by token-surface length drifts left by the
+        number of preceding spaces, so bolded spans land on the wrong chars."""
+        srt_file = tmp_path / "spaces.srt"
+        # Lines lifted from the user's exported reproducer (Issue #20 apkg).
+        # Each has internal spaces and a target morpheme that previously got
+        # bolded one or more characters too early.
+        srt_file.write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\nなんで 素直に 好きって 言えないんだろう。\n"
+            "\n"
+            "2\n00:00:06,000 --> 00:00:10,000\nごめんね 通して。 あっ 押さないで。\n"
+            "\n"
+            "3\n00:00:11,000 --> 00:00:15,000\n何？ 女の子に そんな 顔 真っ赤にして！\n",
+            encoding="utf-8",
+        )
+
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            bold_target_in_sentence=True,
+        )
+        service = SubtitleParserService(config)
+        words = service.parse_subtitle_file(srt_file)
+        by_lemma = {w.lemma: w for w in words}
+
+        # Every mined word's stored offsets must round-trip the surface.
+        for word in words:
+            assert word.surface_start >= 0, f"missing offset on {word.surface}"
+            assert word.sentence[word.surface_start : word.surface_end] == word.surface, (
+                f"offset drift on {word.surface!r} in {word.sentence!r}: "
+                f"slice={word.sentence[word.surface_start : word.surface_end]!r}"
+            )
+
+        # The bolded plain field must wrap the exact morpheme.
+        # 素直: was bolding " 素" before the fix.
+        sunao = by_lemma["素直"]
+        assert "<b>素直</b>" in sunao.sentence_bolded, sunao.sentence_bolded
+        # 通す: was bolding " 通" before the fix.
+        toosu = by_lemma["通す"]
+        assert "<b>通し</b>" in toosu.sentence_bolded, toosu.sentence_bolded
+        # 真っ赤: was bolding "な 顔" before the fix.
+        makka = by_lemma["真っ赤"]
+        assert "<b>真っ赤</b>" in makka.sentence_bolded, makka.sentence_bolded
+
+    def test_with_index_offsets_survive_internal_spaces(self, tmp_path):
+        """The lemma_spans table (used by the i+1 swap to rebuild bold fields
+        against a different example line) must also use raw-text offsets."""
+        srt_file = tmp_path / "index_spaces.srt"
+        srt_file.write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\n彼は 刑務所で 事件を 起こした\n",
+            encoding="utf-8",
+        )
+
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        _words, line_index = service.parse_subtitle_file_with_index(srt_file)
+
+        assert len(line_index) == 1
+        ll = line_index[0]
+        for lemma_key, surface, span_start, span_end in ll.lemma_spans:
+            assert ll.line_text[span_start:span_end] == surface, (
+                f"lemma_spans drift on {lemma_key!r}: "
+                f"slice={ll.line_text[span_start:span_end]!r}, surface={surface!r}"
+            )
