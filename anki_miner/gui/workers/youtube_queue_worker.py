@@ -45,11 +45,10 @@ from anki_miner.orchestration import EpisodeProcessor
 
 
 class _QueueMiningProgressAdapter:
-    """``ProgressCallback`` shim that emits ``(idx, label, pct)`` per item.
+    """``ProgressCallback`` shim that translates progress into ``(idx, label, pct)`` emits with ``idx`` baked in.
 
-    Same translation rules as the legacy single-URL worker's
-    ``_MiningProgressAdapter``, but with the queue item ``idx`` baked into
-    the emit signature so the tab can route updates to the right list row.
+    The queue item ``idx`` is baked into the emit signature so the tab can
+    route updates to the right list row.
     """
 
     def __init__(self, idx: int, emit: Callable[[int, str, int], None]) -> None:

@@ -196,7 +196,7 @@ The `__post_init__` method uses `object.__setattr__` to convert string paths to 
 `MainWindow` contains a `QTabWidget` with five tabs:
 1. **SingleEpisodeTab**: file selectors (drag-and-drop), subtitle offset control, process/preview buttons, log widget, progress widget.
 2. **BatchProcessingTab**: folder selection, `BatchQueue` management via queue panel, dual progress bars.
-3. **YouTubeTab** (`gui/widgets/youtube_tab.py`): URL input, Fetch Info button, metadata preview, auto-caption warning + explicit "Accept auto-captions" button, Mine button, progress bar. Deck/note-type/tags widgets live in the tab (not pulled from global settings) so YouTube and file-based mining can target different decks.
+3. **YouTubeTab** (`gui/widgets/youtube_tab.py`): URL input + Add button, `QListWidget` queue of `YouTubeQueueItemWidget` rows (per-row status glyph, title, duration, sub source line, remove button), action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. Deck/note-type/tags widgets are global (see `AnkiSettingsPanel`).
 4. **AnalyticsTab**: mining statistics dashboard (queries `StatsService`).
 5. **SettingsTab**: config editing with sub-panels (Anki, media, dictionary, filtering, YouTube). Emits `config_changed` signal.
 
@@ -213,7 +213,8 @@ Worker implementations:
 - `ValidationWorkerThread`: runs system validation checks.
 - `UpdateWorkerThread`: checks for updates.
 - `YouTubeProbeWorker` (`gui/workers/youtube_probe_worker.py`): short-lived QThread that calls `YouTubeFetcherService.probe_metadata` so the GUI stays responsive during network I/O.
-- `YouTubeWorkerThread` (`gui/workers/youtube_worker.py`): `CancellableWorker` subclass. Allocates a fresh workspace under `media_temp_folder/youtube/run-<uuid>/`, calls `EpisodeProcessor.process_youtube_url(...)`, and deletes the workspace on every exit path (success, cancel, error) via `shutil.rmtree` in `finally`. Threads its `threading.Event` through to the fetcher so cancel can kill the yt-dlp process tree.
+- `YouTubeQueueWorker` (`gui/workers/youtube_queue_worker.py`): `CancellableWorker` subclass that drives a list of `YouTubeQueueItem` through fetch + mine sequentially with retry-once on `YouTubeFetchError`. Per-attempt workspace allocation under `media_temp_folder/youtube/run-<uuid>/`.
+- `YouTubeQueueItemWidget` (`gui/widgets/youtube_queue_item_widget.py`): pure renderer for one `YouTubeQueueItem` in the queue list.
 
 ### Signal Architecture
 
@@ -293,4 +294,4 @@ All persistent user data under `~/.anki_miner/`:
 | `pitch_accent.csv` | CSV | Pitch accent lookup data |
 | `frequency.csv` | CSV | Word frequency rankings |
 
-Temporary media files are stored in the system temp directory under `anki_miner_temp/` and cleaned up after each processing run. YouTube downloads go one level deeper — `anki_miner_temp/youtube/run-<uuid>/` — owned by `YouTubeWorkerThread` and `rmtree`'d on every exit path (success, cancel, exception).
+Temporary media files are stored in the system temp directory under `anki_miner_temp/` and cleaned up after each processing run. YouTube downloads go one level deeper — `anki_miner_temp/youtube/run-<uuid>/` — owned by `YouTubeQueueWorker` (one workspace per attempt; cleaned up in `finally` on every exit path) and `rmtree`'d on every exit path (success, cancel, exception).
