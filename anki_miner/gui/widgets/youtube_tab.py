@@ -128,6 +128,11 @@ class YouTubeTab(QWidget):
         # ``MainWindow.closeEvent`` which looks up ``getattr(tab, "worker_thread")``.
         self.worker_thread: YouTubeQueueWorker | None = None
 
+        # Snapshot of the items handed to the active worker, in order.
+        # Indexed by the worker's per-item idx signals; frozen at _start_run
+        # so mid-run removals of COMPLETED rows don't shift the mapping.
+        self._run_items: list[YouTubeQueueItem] = []
+
         # Curation bridge: the queue worker thread blocks on this event while
         # the GUI thread shows the curation dialog. Mirrors SingleEpisodeTab.
         self._curation_event = threading.Event()
@@ -332,6 +337,10 @@ class YouTubeTab(QWidget):
         if not ready_items:
             return
 
+        # Snapshot BEFORE constructing the worker so all idx-based signal
+        # handlers resolve against a frozen list that survives mid-run removals.
+        self._run_items = list(ready_items)
+
         self.progress_widget.reset()
 
         worker = YouTubeQueueWorker(
@@ -368,26 +377,13 @@ class YouTubeTab(QWidget):
     def _item_at(self, idx: int) -> YouTubeQueueItem | None:
         """Map a worker-emitted ``idx`` back to a queue item.
 
-        The worker indexes into the slice of READY items it was constructed
-        with — find the idx-th item whose ``video_id`` is set (i.e. that was
-        READY when the run started). Items removed via Clear during the run
-        are protected by Clear's filter, so this mapping stays consistent.
+        Resolves against ``_run_items`` — the snapshot taken at :meth:`_start_run`.
+        Because the snapshot is frozen, mid-run removals of COMPLETED rows do not
+        shift the mapping.
         """
-        ready_or_processing = [
-            i
-            for i in self._queue.all_items()
-            if i.status
-            in (
-                YouTubeItemStatus.READY,
-                YouTubeItemStatus.PROCESSING,
-                YouTubeItemStatus.COMPLETED,
-                YouTubeItemStatus.ERROR,
-            )
-            and i.video_id is not None
-        ]
-        if idx < 0 or idx >= len(ready_or_processing):
-            return None
-        return ready_or_processing[idx]
+        if 0 <= idx < len(self._run_items):
+            return self._run_items[idx]
+        return None
 
     def _on_item_started(self, idx: int) -> None:
         """Mark the item as PROCESSING and update progress text."""
@@ -397,7 +393,7 @@ class YouTubeTab(QWidget):
         item.status = YouTubeItemStatus.PROCESSING
         self._refresh_row(item)
 
-        total = len(self._worker_items())
+        total = len(self._run_items)
         title = item.video_info.title if item.video_info else item.url
         self.progress_widget.set_status(f"Mining {idx + 1} of {total}: {title}")
         self.progress_widget.set_determinate(100)
@@ -444,6 +440,7 @@ class YouTubeTab(QWidget):
     def _on_queue_finished(self) -> None:
         """Final signal — clear the worker handle and recompute buttons."""
         self.worker_thread = None
+        self._run_items = []
         # Reset the stop button text in case we were cancelling.
         self.stop_button.setText("Stop All")
         self.stop_button.setEnabled(True)
@@ -452,20 +449,6 @@ class YouTubeTab(QWidget):
         failed = sum(1 for i in self._queue.all_items() if i.status == YouTubeItemStatus.ERROR)
         self.log_widget.append_info(f"Queue done: {succeeded} succeeded, {failed} failed.")
         self._recompute_buttons()
-
-    def _worker_items(self) -> list[YouTubeQueueItem]:
-        """Return the items currently being processed by the worker, if any."""
-        return [
-            i
-            for i in self._queue.all_items()
-            if i.status
-            in (
-                YouTubeItemStatus.PROCESSING,
-                YouTubeItemStatus.COMPLETED,
-                YouTubeItemStatus.ERROR,
-            )
-            and i.video_id is not None
-        ]
 
     # ------------------------------------------------------------------
     # Remove + clear
