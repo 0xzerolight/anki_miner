@@ -317,11 +317,15 @@ class TestYouTubeQueueResetErrorsToPending:
         ready = queue.add("https://youtu.be/ready")
         completed = queue.add("https://youtu.be/completed")
         processing = queue.add("https://youtu.be/processing")
+        probing = queue.add("https://youtu.be/probing")
+        probe_error = queue.add("https://youtu.be/probe_error")
 
         pending.status = YouTubeItemStatus.PENDING
         ready.status = YouTubeItemStatus.READY
         completed.status = YouTubeItemStatus.COMPLETED
         processing.status = YouTubeItemStatus.PROCESSING
+        probing.status = YouTubeItemStatus.PROBING
+        probe_error.status = YouTubeItemStatus.PROBE_ERROR
 
         queue.reset_errors_to_pending()
 
@@ -329,6 +333,8 @@ class TestYouTubeQueueResetErrorsToPending:
         assert ready.status == YouTubeItemStatus.READY
         assert completed.status == YouTubeItemStatus.COMPLETED
         assert processing.status == YouTubeItemStatus.PROCESSING
+        assert probing.status == YouTubeItemStatus.PROBING
+        assert probe_error.status == YouTubeItemStatus.PROBE_ERROR
 
     def test_multiple_error_items_all_reset(self):
         queue = YouTubeQueue()
