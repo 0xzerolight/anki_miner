@@ -354,6 +354,9 @@ class YouTubeTab(QWidget):
         worker.item_progress.connect(self._on_item_progress)
         worker.item_finished.connect(self._on_item_finished)
         worker.queue_finished.connect(self._on_queue_finished)
+        # QThread.finished fires on every run() exit (success, cancel, exception),
+        # so run-end cleanup converges here rather than only on the success path.
+        worker.finished.connect(self._on_worker_finished)
         self.worker_thread = worker
 
         mode_label = "Preview" if preview_mode else "Mine"
@@ -438,16 +441,29 @@ class YouTubeTab(QWidget):
         self._recompute_buttons()
 
     def _on_queue_finished(self) -> None:
-        """Final signal — clear the worker handle and recompute buttons."""
-        self.worker_thread = None
-        self._run_items = []
-        # Reset the stop button text in case we were cancelling.
-        self.stop_button.setText("Stop All")
-        self.stop_button.setEnabled(True)
+        """Success-path summary log. State cleanup runs in `_on_worker_finished`.
 
+        ``queue_finished`` is emitted from inside ``run()`` and only on the
+        non-cancelled path; ``QThread.finished`` fires later on every exit
+        path. Splitting the two keeps the cancel-mid-fetch case from leaking
+        worker state, while still logging a per-run summary on success.
+        """
         succeeded = sum(1 for i in self._queue.all_items() if i.status == YouTubeItemStatus.COMPLETED)
         failed = sum(1 for i in self._queue.all_items() if i.status == YouTubeItemStatus.ERROR)
         self.log_widget.append_info(f"Queue done: {succeeded} succeeded, {failed} failed.")
+
+    def _on_worker_finished(self) -> None:
+        """Single cleanup slot wired to ``QThread.finished``.
+
+        Fires after ``run()`` returns regardless of path (success, mid-fetch
+        cancel, unhandled exception), so worker state and the progress widget
+        always recover instead of stranding ``"Merging"`` / a leaked handle.
+        """
+        self.worker_thread = None
+        self._run_items = []
+        self.stop_button.setText("Stop All")
+        self.stop_button.setEnabled(True)
+        self.progress_widget.reset()
         self._recompute_buttons()
 
     # ------------------------------------------------------------------
@@ -469,6 +485,10 @@ class YouTubeTab(QWidget):
         targets = [i for i in self._queue.all_items() if i.status != YouTubeItemStatus.PROCESSING]
         for item in targets:
             self._drop_item(item)
+        # Reset the progress widget only when idle. Mid-run clears must not wipe
+        # the live "Mining N of M…" / fetch progress display for the still-PROCESSING item.
+        if self.worker_thread is None:
+            self.progress_widget.reset()
         self._recompute_buttons()
 
     def _drop_item(self, item: YouTubeQueueItem) -> None:

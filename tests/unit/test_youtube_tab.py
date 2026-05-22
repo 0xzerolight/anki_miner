@@ -414,33 +414,11 @@ class TestPerItemSignals:
 
 
 class TestQueueFinished:
-    """``queue_finished`` clears worker, restores buttons, logs summary."""
+    """``queue_finished`` (success-path-only) logs the run summary.
 
-    def test_queue_finished_clears_worker(self, tab):
-        _add_ready_item(tab)
-        tab._on_mine_clicked()
-        assert tab.worker_thread is not None
-
-        tab._on_queue_finished()
-
-        assert tab.worker_thread is None
-
-    def test_queue_finished_recomputes_buttons(self, tab):
-        item = _add_ready_item(tab)
-        tab._on_mine_clicked()
-
-        # Mark item complete to keep it READY-like (no remaining mineable items).
-        tab._on_item_started(0)
-        tab._on_item_finished(0, MagicMock(cards_created=2), None, 1)
-        tab._on_queue_finished()
-
-        # No more READY items; Preview/Mine disabled, Add re-enabled, Stop hidden.
-        assert tab.add_button.isEnabled()
-        assert not tab.preview_button.isEnabled()
-        assert not tab.mine_button.isEnabled()
-        assert tab.stop_button.isHidden()
-        # Item record preserved.
-        assert item.status == YouTubeItemStatus.COMPLETED
+    Worker state cleanup lives in :class:`TestWorkerFinished` because it must
+    run on every exit path, not just the success path.
+    """
 
     def test_queue_finished_summary_logged(self, tab):
         _add_ready_item(tab, "https://youtu.be/ok")
@@ -456,6 +434,99 @@ class TestQueueFinished:
         text = tab.log_widget.text_edit.toPlainText()
         assert "1 succeeded" in text
         assert "1 failed" in text
+
+    def test_queue_finished_does_not_mutate_state(self, tab):
+        """``_on_queue_finished`` only logs — state cleanup is wired to ``QThread.finished``."""
+        _add_ready_item(tab)
+        tab._on_mine_clicked()
+        worker = tab.worker_thread
+        assert worker is not None
+        assert tab._run_items != []
+
+        tab._on_queue_finished()
+
+        # No state mutation: cleanup is the job of ``_on_worker_finished``.
+        assert tab.worker_thread is worker
+        assert tab._run_items != []
+
+
+class TestWorkerFinished:
+    """``QThread.finished`` is the single cleanup signal for every run-exit path."""
+
+    def test_worker_finished_clears_worker(self, tab):
+        _add_ready_item(tab)
+        tab._on_mine_clicked()
+        assert tab.worker_thread is not None
+
+        tab._on_worker_finished()
+
+        assert tab.worker_thread is None
+        assert tab._run_items == []
+
+    def test_worker_finished_recomputes_buttons(self, tab):
+        item = _add_ready_item(tab)
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        tab._on_item_finished(0, MagicMock(cards_created=2), None, 1)
+        tab._on_queue_finished()
+        tab._on_worker_finished()
+
+        # No more READY items; Preview/Mine disabled, Add re-enabled, Stop hidden.
+        assert tab.add_button.isEnabled()
+        assert not tab.preview_button.isEnabled()
+        assert not tab.mine_button.isEnabled()
+        assert tab.stop_button.isHidden()
+        # Item record preserved.
+        assert item.status == YouTubeItemStatus.COMPLETED
+
+    def test_worker_finished_restores_stop_button(self, tab):
+        _add_ready_item(tab)
+        tab._on_mine_clicked()
+        # Simulate Stop All click mid-run.
+        tab._on_stop_all_clicked()
+        assert tab.stop_button.text() == "Cancelling…"
+        assert not tab.stop_button.isEnabled()
+
+        tab._on_worker_finished()
+
+        assert tab.stop_button.text() == "Stop All"
+        assert tab.stop_button.isEnabled()
+
+    def test_worker_finished_resets_progress_after_merging(self, tab):
+        """Regression: progress bar left on ``Merging`` (indeterminate) gets reset on run end."""
+        _add_ready_item(tab)
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        # Simulate the fetcher's final indeterminate emit — last signal before
+        # the mining pipeline short-circuits on a zero-unknown-word preview.
+        tab._on_item_progress(0, "Merging", -1)
+        assert tab.progress_widget.progress_bar.maximum() == 0  # indeterminate
+        assert "Merging" in tab.progress_widget.status_label.text()
+
+        tab._on_queue_finished()
+        tab._on_worker_finished()
+
+        assert tab.progress_widget.progress_bar.maximum() == 100
+        assert tab.progress_widget.progress_bar.value() == 0
+        assert tab.progress_widget.status_label.text() == "Ready"
+
+    def test_worker_finished_recovers_from_cancel_without_queue_finished(self, tab):
+        """Mid-fetch cancel skips ``queue_finished`` — ``finished`` must still clean up."""
+        _add_ready_item(tab)
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        tab._on_item_progress(0, "Merging", -1)
+        tab._on_stop_all_clicked()
+        # Note: no _on_queue_finished — worker.run() returned early on cancel.
+
+        tab._on_worker_finished()
+
+        assert tab.worker_thread is None
+        assert tab._run_items == []
+        assert tab.stop_button.text() == "Stop All"
+        assert tab.stop_button.isEnabled()
+        assert tab.progress_widget.progress_bar.maximum() == 100
+        assert tab.progress_widget.status_label.text() == "Ready"
 
 
 class TestRemoveAndClear:
@@ -493,6 +564,36 @@ class TestRemoveAndClear:
         remaining = tab._queue.all_items()
         assert remaining == [item1]
         assert tab.list_widget.count() == 1
+
+    def test_clear_resets_progress_widget_when_idle(self, tab):
+        """Regression: clicking Clear after a stuck-bar scenario clears the bar."""
+        # Simulate the post-bug screenshot state: queue idle, bar stuck on "Merging".
+        _add_ready_item(tab, "https://youtu.be/v1")
+        tab.progress_widget.set_indeterminate()
+        tab.progress_widget.set_status("Merging")
+        assert tab.worker_thread is None
+
+        tab._on_clear_clicked()
+
+        assert tab.progress_widget.progress_bar.maximum() == 100
+        assert tab.progress_widget.progress_bar.value() == 0
+        assert tab.progress_widget.status_label.text() == "Ready"
+
+    def test_clear_during_run_does_not_reset_progress(self, tab):
+        """Clearing READY items mid-run must not wipe the live progress display."""
+        _add_ready_item(tab, "https://youtu.be/v1")
+        _add_ready_item(tab, "https://youtu.be/v2")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)  # item1 -> PROCESSING
+        # Live progress emit for the in-flight item.
+        tab._on_item_progress(0, "Downloading video", 42)
+        assert "Downloading" in tab.progress_widget.status_label.text()
+
+        tab._on_clear_clicked()
+
+        # Bar still reflects the in-flight item — Clear did not reset it.
+        assert "Downloading" in tab.progress_widget.status_label.text()
+        assert tab.progress_widget.progress_bar.value() == 42
 
 
 class TestShutdown:
@@ -572,13 +673,13 @@ class TestIdxSnapshotBug:
         tab._on_item_started(2)
         assert item_c.status == YouTubeItemStatus.PROCESSING
 
-    def test_run_items_cleared_after_queue_finished(self, tab):
-        """_run_items is reset to [] when the queue worker finishes."""
+    def test_run_items_cleared_after_worker_finished(self, tab):
+        """_run_items is reset to [] when the worker thread finishes."""
         _add_ready_item(tab, "https://youtu.be/v1")
         tab._on_mine_clicked()
         assert len(tab._run_items) == 1
 
-        tab._on_queue_finished()
+        tab._on_worker_finished()
         assert tab._run_items == []
 
     def test_mining_total_uses_snapshot_not_live_queue(self, tab):
