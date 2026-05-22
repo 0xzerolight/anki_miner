@@ -7,19 +7,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
-- Multi-URL queue in YouTube tab: paste several URLs, preview or mine them sequentially, walk away. Each URL is probed eagerly on Add; failed fetches retry once before being marked ERROR; cancellation halts the current item and the queue.
 
 ### Changed
 
 ### Fixed
 
 ### Removed
-- Single-URL `YouTubeWorkerThread` (replaced by `YouTubeQueueWorker`).
 
-## [2.4.3] - 2026-05-21
+## [2.4.3] - 2026-05-22
+
+### Added
+- **Multi-URL YouTube queue**: paste several URLs into the YouTube tab, watch each one probe its title and resolved subtitle source on Add, then mine the whole list sequentially in one click. Replaces the single-URL `YouTubeWorkerThread` path. Per-item retry-once absorbs transient yt-dlp fetch errors before the row is marked ERROR; cancellation halts the in-flight item via `psutil` process-tree kill (covers yt-dlp's ffmpeg child) before tearing down the per-attempt workspace under `media_temp_folder/youtube/run-<uuid>/`. Each retry attempt allocates its own workspace and cleans up in its own `finally`, so a failed first attempt cannot leak into the second. `YouTubeQueueItem` uses `eq=False` so identity-based `list.remove()` survives status mutations.
+- **Theme settings panel**: new Settings → Themes lists every shipped theme plus any user JSON dropped under `~/.anki_miner/themes/`. Click a row to live-preview across the whole app; the star toggle adds the theme to `theme_favorites`, which populate the header `QComboBox` and the `Ctrl+T` cycle order. A Revert button snaps back to whatever theme was active when the panel opened. Persisted as `theme` and `theme_favorites` in `gui_config.json`; `AnkiMinerConfig.__post_init__` coerces the favorites JSON list back to a tuple for frozen-dataclass safety.
 
 ### Fixed
 - **No discoverable per-row re-import for dictionaries** (Issue #29): the per-row "Re-import" button added in 2.4.2 only rendered on stale-schema rows, leaving users who imported their dictionaries before 2.4.2 with no way to seed `source.zip` — "Reimport All" skipped them and pointed at a stale-row button they did not have. Dictionary rows now expose a right-click context menu with **Re-import…** and **Remove** for indexed entries (Yomitan and JMdict). The "Reimport All" skip dialog now points users at the new menu instead of the stale-row button.
+- **"Remove" did nothing on dictionary rows** (Issue #30): the Dictionary Settings panel only exposed delete via a button bound to the selection model, so users who interacted with rows outside the main selection path had no way to remove a dictionary. Indexed rows (Yomitan, JMdict) now expose the right-click context menu introduced for #29; Jisho rows have no menu since the online fallback cannot be reimported. Remove calls a Windows-aware `_robust_rmtree` that clears `S_IWRITE` on read-only files and retries through transient `[WinError 32]` from lingering SQLite handles, then invalidates the registry cache and emits `dictionary_removed` (distinct from `chain_changed`) so the settings tab persists the trimmed chain immediately.
+- **Bold target word landed on the wrong characters in `SentenceFurigana` when a bracketed reading sat adjacent to the target** (Issue #31): the 2.4.1 bold-target feature (#20) reused subtitle-side cursor arithmetic that did not account for `[reading]` markup inserted by the furigana pass, so `SentenceFurigana` wrapped `<b>` around the kanji of the adjacent token whenever the target was preceded by a bracketed reading. `wrap_target_furigana` in `utils/text_utils.py` now resolves each token's span against the bracket-expanded string via `str.find` from a running cursor, then assigns tokens to pre/body/post buffers by containment within the resolved `[start:end)` window.
+
+### Removed
+- Single-URL `YouTubeWorkerThread` (replaced by `YouTubeQueueWorker`).
 
 ## [2.4.2] - 2026-05-21
 
