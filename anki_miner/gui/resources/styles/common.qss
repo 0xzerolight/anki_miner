@@ -108,6 +108,16 @@ QPushButton#iconButton {
     border-radius: ${border-radius-default}px;
 }
 
+/* Themes panel: star toggle in the favorites column. Geometry (size + font)
+ * is set in Python so it tracks the row-height constant; this rule only
+ * carries the chrome that the QSS pipeline owns. Color rules live further
+ * down with the other themed button rules. */
+QToolButton#starToggle {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
 /* ============== INPUT FIELD STYLES ============== */
 
 QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
@@ -219,6 +229,14 @@ QTableWidget::item {
 
 QTableWidget::item:selected {
     border: none;
+}
+
+/* Themes panel: the star column needs the full row height for its
+ * auto-sized icon button. The global 8-px item padding clips the top of
+ * the glyph; scope an override to just this table so other tables in the
+ * app keep their comfortable cell padding. */
+QTableWidget#themesPanelTable::item {
+    padding: 0px;
 }
 
 QHeaderView::section {
@@ -668,6 +686,18 @@ QPushButton#ghost {
 
 QPushButton#ghost:hover {
     background-color: ${color-surface-hover};
+}
+
+QToolButton#starToggle {
+    color: ${color-text-muted};
+}
+
+QToolButton#starToggle:hover {
+    color: ${color-text};
+}
+
+QToolButton#starToggle:checked {
+    color: ${color-warning};
 }
 
 QPushButton#danger {

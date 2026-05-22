@@ -30,22 +30,28 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QPushButton,
     QTableWidget,
     QTableWidgetItem,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.resources.styles.theme import SOURCE_USER, Theme
+from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.enhanced import ModernButton
 
 logger = logging.getLogger(__name__)
 
 
-STAR_ON = "★"
-STAR_OFF = "☆"
+# Single dial that drives row geometry, glyph pixel size, and button bounding
+# box. Bumped from 32 → 36 so the auto-sized star has comfortable headroom.
+_ROW_HEIGHT_PX = 36
+
+# Unicode star glyphs. Routed through the font pipeline so hinting/AA stays
+# sharp at small sizes — no QPainter math, no devicePixelRatio handling.
+_STAR_FILLED = "★"
+_STAR_OUTLINE = "☆"
 
 
 class ThemesPanel(QWidget):
@@ -65,8 +71,7 @@ class ThemesPanel(QWidget):
     # Column indices for clarity.
     COL_STAR = 0
     COL_NAME = 1
-    COL_SOURCE = 2
-    COL_STATUS = 3
+    COL_STATUS = 2
 
     def __init__(self, themes_root: Path, parent: QWidget | None = None) -> None:
         """Initialize the panel.
@@ -98,11 +103,16 @@ class ThemesPanel(QWidget):
         intro.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(intro)
 
-        self.table = QTableWidget(0, 4, self)
-        self.table.setHorizontalHeaderLabels(["", "Name", "Source", "Status"])
+        self.table = QTableWidget(0, 3, self)
+        # objectName lets common.qss scope a `::item { padding: 0 }` override
+        # to just this table without disturbing other tables in the app.
+        self.table.setObjectName("themesPanelTable")
+        self.table.setHorizontalHeaderLabels(["", "Name", "Status"])
         v_header = self.table.verticalHeader()
         if v_header is not None:
             v_header.setVisible(False)
+            v_header.setDefaultSectionSize(_ROW_HEIGHT_PX)
+            v_header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -113,7 +123,6 @@ class ThemesPanel(QWidget):
         if header is not None:
             header.setSectionResizeMode(self.COL_STAR, QHeaderView.ResizeMode.ResizeToContents)
             header.setSectionResizeMode(self.COL_NAME, QHeaderView.ResizeMode.Stretch)
-            header.setSectionResizeMode(self.COL_SOURCE, QHeaderView.ResizeMode.ResizeToContents)
             header.setSectionResizeMode(self.COL_STATUS, QHeaderView.ResizeMode.ResizeToContents)
 
         self.table.itemSelectionChanged.connect(self._on_row_selected)
@@ -154,26 +163,16 @@ class ThemesPanel(QWidget):
             for row, (key, display) in enumerate(available.items()):
                 self.table.insertRow(row)
 
-                # Column 0: star toggle (QPushButton as cell widget so it
-                # doesn't trigger row selection when clicked).
-                star_btn = QPushButton(STAR_ON if key in favorites else STAR_OFF)
-                star_btn.setFlat(True)
-                star_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-                star_btn.setToolTip("Click to add to / remove from favorites.")
-                # `key` is captured per-row; the bound default avoids
-                # closure-over-loop-variable bugs.
-                star_btn.clicked.connect(lambda _checked=False, k=key: self._toggle_favorite(k))
-                self.table.setCellWidget(row, self.COL_STAR, star_btn)
+                self.table.setCellWidget(
+                    row,
+                    self.COL_STAR,
+                    self._build_star_cell(key, key in favorites),
+                )
                 # Stash the theme key on the row's name item so row-select can
                 # find it without an extra dict lookup.
                 name_item = QTableWidgetItem(display)
                 name_item.setData(Qt.ItemDataRole.UserRole, key)
                 self.table.setItem(row, self.COL_NAME, name_item)
-
-                source = Theme.get_theme_source(key) or ""
-                source_label = "User" if source == SOURCE_USER else "Shipped"
-                source_item = QTableWidgetItem(source_label)
-                self.table.setItem(row, self.COL_SOURCE, source_item)
 
                 status_item = QTableWidgetItem("Active" if key == active else "")
                 self.table.setItem(row, self.COL_STATUS, status_item)
@@ -182,6 +181,55 @@ class ThemesPanel(QWidget):
                     self.table.selectRow(row)
         finally:
             self.table.blockSignals(False)
+
+    def _build_star_cell(self, key: str, is_favorite: bool) -> QWidget:
+        """Build a centered star-button cell for the given theme row.
+
+        QToolButton sidesteps the global ``QPushButton { padding: 4px 12px }``
+        rule that previously crushed icon-only buttons. ``autoRaise=True``
+        gives the ghost look (transparent background + hover highlight)
+        without an ``objectName`` override. The Unicode glyph routes through
+        the font pipeline so it stays sharp without QPainter or
+        devicePixelRatio handling.
+
+        Sizing auto-derives from ``_ROW_HEIGHT_PX``: font is 60% of row
+        height, button bounding box is the larger of the glyph's line height
+        and ``_ROW_HEIGHT_PX - 4``. Change the row height constant and the
+        star scales with it — no separate QSS pixel values to keep in sync.
+
+        The QToolButton is wrapped in a QWidget+QHBoxLayout so it sits on the
+        row's centerline regardless of cell padding — placing the button
+        directly into the cell left it floating at the cell's top-left corner.
+        """
+        button = QToolButton()
+        button.setObjectName("starToggle")
+        button.setCheckable(True)
+        button.setChecked(is_favorite)
+        button.setText(_STAR_FILLED if is_favorite else _STAR_OUTLINE)
+        button.setAutoRaise(True)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setToolTip("Click to add to / remove from favorites.")
+        # `key` captured per-row via default arg, sidesteps closure-over-loop-var.
+        button.clicked.connect(lambda _checked=False, k=key: self._toggle_favorite(k))
+
+        # Button always fits the row (cell padding is zeroed by the scoped
+        # QSS rule on `#themesPanelTable`). 1-px margin on each side keeps
+        # the button from butting up against the row divider.
+        side = _ROW_HEIGHT_PX - 2
+        button.setFixedSize(side, side)
+        # 60% of row height gives a readable ★ glyph that fits comfortably
+        # inside the button. Set via instance stylesheet so the base
+        # `QWidget { font-size: 14px }` rule from common.qss can't override
+        # it during a style re-polish.
+        font_px = int(_ROW_HEIGHT_PX * 0.6)
+        button.setStyleSheet(f"font-size: {font_px}px;")
+
+        wrapper = QWidget(self.table)
+        wrapper_layout = QHBoxLayout(wrapper)
+        wrapper_layout.setContentsMargins(0, 0, 0, 0)
+        wrapper_layout.setSpacing(0)
+        wrapper_layout.addWidget(button, 0, Qt.AlignmentFlag.AlignCenter)
+        return wrapper
 
     # ---- Events ----------------------------------------------------------
 
@@ -216,10 +264,22 @@ class ThemesPanel(QWidget):
             return
         Theme.set_mode(key)
         self._apply_to_app(key)
-        # Status column needs an update on the previously-active row too;
-        # cheapest correct path is a full repopulate.
-        self._populate()
+        # Avoid a full _populate() here — it rebuilt every row (including
+        # QPainter-drawn star icons) on each preview click and made theme
+        # switching feel laggy. The only visible mutation is the Active marker
+        # moving between two rows; update just those.
+        self._refresh_active_marker(key)
         self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
+
+    def _refresh_active_marker(self, new_active_key: str) -> None:
+        """Move the "Active" Status label to the row matching ``new_active_key``."""
+        for r in range(self.table.rowCount()):
+            name_item = self.table.item(r, self.COL_NAME)
+            status_item = self.table.item(r, self.COL_STATUS)
+            if name_item is None or status_item is None:
+                continue
+            key = name_item.data(Qt.ItemDataRole.UserRole)
+            status_item.setText("Active" if key == new_active_key else "")
 
     def _toggle_favorite(self, key: str) -> None:
         """Star/unstar `key`, refresh the table, notify listeners."""
