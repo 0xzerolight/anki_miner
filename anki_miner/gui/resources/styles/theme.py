@@ -194,6 +194,12 @@ class Theme:
     _themes: dict[str, dict[str, Any]] = {}
     _user_dir: Path | None = None
     _state_listener: StateListener | None = None
+    # Cache the raw common.qss bytes (shipped resource, never changes at
+    # runtime) and the substituted output per theme mode. Without this,
+    # previewing a theme re-read the 1183-line QSS file and re-ran a regex
+    # substitution across it on every row click.
+    _qss_template: str | None = None
+    _compiled_qss: dict[str, str] = {}
 
     def __init__(self) -> None:
         """Discover themes from shipped + user dirs."""
@@ -241,6 +247,11 @@ class Theme:
         cls._favorites = tuple(favorites)
         cls._user_dir = user_dir
         cls._state_listener = state_listener
+        # Theme JSONs may have changed (user dir swap, test reset); drop the
+        # compiled-stylesheet cache so the next apply rebuilds from current
+        # color values. The raw QSS template never changes at runtime, so
+        # leave _qss_template alone.
+        cls._compiled_qss = {}
         # Force re-discovery with new user_dir.
         cls.get_instance()
 
@@ -384,22 +395,32 @@ class Theme:
 
     @classmethod
     def get_stylesheet(cls, mode: str | None = None) -> str:
-        """Get the complete QSS stylesheet for a theme mode."""
+        """Get the complete QSS stylesheet for a theme mode (cached per mode)."""
         cls.get_instance()
         if mode is None:
             mode = cls._current_mode
 
-        styles_dir = get_resource_dir() / "styles"
-        common_qss = cls._load_qss_file(styles_dir / "common.qss", mode)
-        return common_qss
+        cached = cls._compiled_qss.get(mode)
+        if cached is not None:
+            return cached
+
+        if cls._qss_template is None:
+            common_path = get_resource_dir() / "styles" / "common.qss"
+            if common_path.exists():
+                with open(common_path, encoding="utf-8") as f:
+                    cls._qss_template = f.read()
+            else:
+                cls._qss_template = ""
+
+        compiled = cls._substitute_variables(cls._qss_template, mode)
+        cls._compiled_qss[mode] = compiled
+        return compiled
 
     @classmethod
     def apply_to_app(cls, app: QApplication, mode: str | None = None) -> None:
         """Apply theme stylesheet and palette to the application."""
         if mode is None:
             mode = cls.get_current_mode()
-
-        app.setStyleSheet("")
 
         colors = cls.get_colors(mode)
         palette = QPalette()
@@ -410,6 +431,8 @@ class Theme:
         palette.setColor(QPalette.ColorRole.Text, QColor(colors["text"]))
         app.setPalette(palette)
 
+        # One setStyleSheet call. The previous setStyleSheet("") clear forced
+        # Qt to unpolish + re-polish the entire widget tree twice per apply.
         app.setStyleSheet(cls.get_stylesheet(mode))
 
     @classmethod
@@ -449,25 +472,6 @@ class Theme:
             cls._state_listener(cls._current_mode, cls._favorites)
         except Exception:
             logger.exception("Theme state listener raised")
-
-    @classmethod
-    def _load_qss_file(cls, file_path: Path, mode: str | None = None) -> str:
-        """Load QSS file and perform variable substitution.
-
-        Args:
-            file_path: Path to QSS file
-            mode: Theme key for color variable resolution
-
-        Returns:
-            QSS content with variables substituted
-        """
-        if not file_path.exists():
-            return ""
-
-        with open(file_path, encoding="utf-8") as f:
-            qss_content = f.read()
-
-        return cls._substitute_variables(qss_content, mode)
 
     @classmethod
     def _substitute_variables(cls, qss_content: str, mode: str | None = None) -> str:
