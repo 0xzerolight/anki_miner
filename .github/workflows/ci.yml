@@ -61,9 +61,9 @@ jobs:
       - name: Install with floor versions of fragile deps
         run: |
           pip install -e ".[dev]"
-          pip install "yt-dlp==2026.3.3" "psutil==5.9.0"
+          pip install $(python scripts/extract_floor_pins.py)
       - name: Smoke-test YouTube layer at floor versions
-        run: pytest tests/unit/test_youtube_fetcher.py tests/unit/test_youtube_workspace_cleanup.py -m "not youtube" -q
+        run: pytest tests/unit/test_youtube_*.py -m "not youtube" --no-cov -q
         env:
           QT_QPA_PLATFORM: offscreen
 
