@@ -14,6 +14,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Removed
 
+## [2.4.4] - 2026-05-23
+
+### Fixed
+- **Dictionary "Remove" failed on Windows after mining** (Issue #30 follow-up to the 2.4.3 menu wiring): `DefinitionService` providers cache a read-only SQLite connection on `index.sqlite`, and Windows holds the file lock for the lifetime of that handle. Settings → Remove therefore worked on a freshly-launched app and failed with `[WinError 32]` once the user had run a single mine. `DefinitionService.close()` now walks the provider chain calling each provider's `close()` (probed via `getattr`, so Jisho is silently skipped) and resets `_loaded` so the next mine re-opens the chain. `DictionarySettingsPanel.set_release_callback` accepts a pre-remove hook injected by `app.py`; `MainWindow.release_dictionary_resources` fans the hook out to every mining tab. Tabs return `False` while a worker is in flight, surfacing a "Stop the mining run first" dialog instead of corrupting the in-flight processor.
+- **Dictionary "Re-import" failed on Windows after mining** (Issue #32): same root cause as #30 — `yomitan_importer.import_yomitan_zip`'s atomic directory rename fails with `Access denied` while any provider still holds the old `index.sqlite` open. All three re-import entry points (per-row Re-import, legacy "Reimport JMdict", and "Reimport All") now call `DictionarySettingsPanel.request_resource_release()` before dispatching the worker; refusal surfaces the same "Stop the mining run first" dialog.
+- **`release_dictionary_resources` was a no-op on `SingleEpisodeTab` and `BatchProcessingTab`**: the #30/#32 release hook only closed the live YouTube tab processor. The other tabs returned `True` without touching their cached worker, so a user who mined a file or a batch (without YouTube) and then tried to Remove or Re-import still hit the original lock. Both tabs now grab the finished worker's processor (`worker_thread.processor` for single, `episode_processor`/`_current_processor` for batch) and call `definition_service.close()`. In-flight workers still short-circuit to `False` — closing providers under a live processor would crash the run.
+- **CI smoke-min-deps job pin drift**: the smoke job hardcoded `yt-dlp==2026.3.3 psutil==5.9.0`, which silently diverges from the `>=` floors declared in `pyproject.toml`. New `scripts/extract_floor_pins.py` reads `project.dependencies`, extracts the `>=` lower bound for each name in `FRAGILE`, and prints `name==X.Y.Z` specs the workflow `pip install`s directly. The smoke test glob was also broadened from two named files to `tests/unit/test_youtube_*.py` so new YouTube unit tests are covered automatically.
+
 ## [2.4.3] - 2026-05-22
 
 ### Added
