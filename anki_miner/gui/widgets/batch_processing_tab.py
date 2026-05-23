@@ -635,11 +635,25 @@ class BatchProcessingTab(MiningTabBase):
         self.config = config
 
     def release_dictionary_resources(self) -> bool:
-        """No-op release for symmetry with YouTubeTab.
+        """Close sqlite handles cached by the most recent worker run.
 
-        BatchProcessingTab builds a fresh EpisodeProcessor per-item inside the
-        worker thread; no long-lived sqlite handles are cached on the tab.
-        Returns ``False`` while a worker is actively running because the
-        in-flight processor still holds dictionary handles open (Issue #30).
+        ``ManualPairWorkerThread`` keeps the single processor on
+        ``episode_processor``; ``BatchQueueWorkerThread`` keeps the last
+        item's processor on ``_current_processor``. Either way, the handle
+        is still open after the run finishes and blocks Settings → Remove /
+        Re-import on Windows (Issue #30 follow-up).
+
+        Returns ``False`` while a worker is actively running — closing
+        providers under an in-flight processor would crash the run.
+        ``DefinitionService.close()`` resets ``_loaded`` so the next mine
+        re-opens the chain cleanly.
         """
-        return not (self.worker_thread is not None and self.worker_thread.isRunning())
+        if self.worker_thread is not None and self.worker_thread.isRunning():
+            return False
+        if self.worker_thread is not None:
+            proc = getattr(self.worker_thread, "episode_processor", None) or getattr(
+                self.worker_thread, "_current_processor", None
+            )
+            if proc is not None:
+                proc.definition_service.close()
+        return True

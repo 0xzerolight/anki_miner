@@ -561,12 +561,23 @@ class SingleEpisodeTab(MiningTabBase):
         self.offset_spinbox.setValue(config.subtitle_offset)
 
     def release_dictionary_resources(self) -> bool:
-        """No-op release for symmetry with YouTubeTab.
+        """Close sqlite handles cached by the most recent worker run.
 
-        SingleEpisodeTab does not cache an EpisodeProcessor between runs — the
-        processor is built fresh inside ``_start_processing`` and dies with
-        the worker. So there are no long-lived sqlite handles to close here.
-        Returns ``False`` only while a worker is actively running, since the
-        in-flight processor still holds dictionary handles open (Issue #30).
+        The processor is created fresh per run, but the finished worker
+        retains it on ``self.worker_thread.processor`` until a new run
+        replaces ``self.worker_thread``. On Windows those cached handles
+        keep ``index.sqlite`` locked, so Settings → Remove / Re-import fails
+        after the user has mined at least once (Issue #30 follow-up).
+
+        Returns ``False`` while a worker is actively running — closing
+        providers under an in-flight processor would crash the run.
+        ``DefinitionService.close()`` resets ``_loaded`` so the next mine
+        re-opens the chain cleanly.
         """
-        return not (self.worker_thread is not None and self.worker_thread.isRunning())
+        if self.worker_thread is not None and self.worker_thread.isRunning():
+            return False
+        if self.worker_thread is not None:
+            proc = getattr(self.worker_thread, "processor", None)
+            if proc is not None:
+                proc.definition_service.close()
+        return True
