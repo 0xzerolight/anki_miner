@@ -329,3 +329,19 @@ class TestClose:
         service.get_definition("x")
 
         assert p1.load.call_count == 2
+
+    def test_close_is_idempotent(self, test_config):
+        """Two successive close() calls must not raise.
+
+        Required so the tab-level ``release_dictionary_resources`` can be
+        invoked repeatedly (e.g. user opens Settings, cancels, reopens)
+        without surprises — Issue #30 follow-up that hardens the release
+        path used by SingleEpisodeTab and BatchProcessingTab.
+        """
+        p1 = make_provider("A")
+        service = DefinitionService(test_config, providers=[p1])
+
+        service.close()
+        service.close()  # must not raise
+
+        assert p1.close.call_count == 2
