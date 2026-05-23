@@ -148,3 +148,56 @@ def test_cancelled_dialog_skips_warning_and_worker(tab, monkeypatch, stub_worker
 
     assert warnings == []
     stub_worker.assert_not_called()
+
+
+def test_resource_release_refusal_blocks_worker(tab, monkeypatch, stub_worker, tmp_path):
+    """When the release hook refuses (mining run in flight), the handler must
+    show the "Re-import blocked" warning and never spawn the importer worker —
+    otherwise on Windows the rename would crash with Access denied (Issue #32)."""
+    zip_path = build_yomitan_zip(tmp_path / "src.zip", title="Test Dict", revision="v1")
+    monkeypatch.setattr(
+        QFileDialog,
+        "getOpenFileName",
+        lambda *a, **kw: (str(zip_path), "Yomitan zip (*.zip)"),
+    )
+    warnings = _capture_warnings(monkeypatch)
+    monkeypatch.setattr(tab.dictionary_panel, "request_resource_release", lambda: False)
+
+    tab._on_reimport_dict_clicked("test-dict-v1")
+
+    assert any(title == "Re-import blocked" for title, _ in warnings), warnings
+    stub_worker.assert_not_called()
+
+
+def test_resource_release_runs_before_worker_start(tab, monkeypatch, stub_worker, tmp_path):
+    """The release hook must fire strictly before DictionaryImportWorker is
+    constructed, so cached sqlite handles are dropped before the importer
+    renames the dict folder (Issue #32 root-cause ordering)."""
+    zip_path = build_yomitan_zip(tmp_path / "src.zip", title="Test Dict", revision="v1")
+    monkeypatch.setattr(
+        QFileDialog,
+        "getOpenFileName",
+        lambda *a, **kw: (str(zip_path), "Yomitan zip (*.zip)"),
+    )
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **kw: 0)
+
+    events: list[str] = []
+    monkeypatch.setattr(
+        tab.dictionary_panel,
+        "request_resource_release",
+        lambda: events.append("release") or True,
+    )
+    stub_worker.side_effect = lambda *a, **kw: (
+        events.append("worker_built"),
+        MagicMock(
+            progress=MagicMock(),
+            import_finished=MagicMock(),
+            failed=MagicMock(),
+            cancel=MagicMock(),
+            start=MagicMock(),
+        ),
+    )[1]
+
+    tab._on_reimport_dict_clicked("test-dict-v1")
+
+    assert events == ["release", "worker_built"], events

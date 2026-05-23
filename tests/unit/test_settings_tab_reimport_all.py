@@ -317,3 +317,28 @@ def test_reimport_all_empty_chain_shows_message(tab_for_reimport_all, monkeypatc
     title, body = summaries[-1]
     assert title == "Nothing to reimport"
     assert "No dictionaries in the chain" in body
+
+
+def test_reimport_all_release_refusal_blocks_workers(tab_for_reimport_all, monkeypatch, stubbed_workers):
+    """If the release hook refuses (mining run in flight), Reimport All must
+    show "Re-import blocked" and never dispatch a worker — without the guard
+    the importer's rename would crash on Windows (Issue #32)."""
+    tab = tab_for_reimport_all
+    dicts_root = tab.config.dicts_root
+    _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),))
+
+    monkeypatch.setattr(tab.dictionary_panel, "request_resource_release", lambda: False)
+
+    warnings: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda parent, title, body, *a, **kw: warnings.append((title, body)) or 0,
+    )
+
+    tab._on_reimport_all_clicked()
+
+    stubbed_workers["yomitan_factory"].assert_not_called()
+    stubbed_workers["jmdict_factory"].assert_not_called()
+    assert any(title == "Re-import blocked" for title, _ in warnings), warnings

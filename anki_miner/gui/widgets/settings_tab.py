@@ -544,6 +544,18 @@ class SettingsTab(QWidget):
             )
             return
 
+        # Drop sqlite handles before the importer renames the dict folder.
+        # On Windows the rename fails with "Access denied" while any
+        # DefinitionService still holds its read-only connection open
+        # (Issue #32). The remove flow uses the same hook (Issue #30).
+        if not self.dictionary_panel.request_resource_release():
+            QMessageBox.warning(
+                self,
+                "Re-import blocked",
+                "A mining run is in progress. Stop it before re-importing dictionaries.",
+            )
+            return
+
         dest_root = self.config.dicts_root
         dlg = QProgressDialog("Re-importing dictionary…", "Cancel", 0, 100, self)
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
@@ -600,6 +612,17 @@ class SettingsTab(QWidget):
                 self,
                 "JMdict not found",
                 f"No JMdict XML at {xml}. Download from EDRDG and place it there.",
+            )
+            return
+
+        # Drop sqlite handles before the importer renames the dict folder
+        # (Issue #32 — same root cause as #30). Without this, the rename
+        # at yomitan_importer.py:215 fails with "Access denied" on Windows.
+        if not self.dictionary_panel.request_resource_release():
+            QMessageBox.warning(
+                self,
+                "Re-import blocked",
+                "A mining run is in progress. Stop it before re-importing dictionaries.",
             )
             return
 
@@ -697,6 +720,18 @@ class SettingsTab(QWidget):
             else:
                 body = "No dictionaries in the chain."
             QMessageBox.information(self, "Nothing to reimport", body)
+            return
+
+        # Drop sqlite handles before any worker touches the dict folders.
+        # On Windows the importer's directory rename fails with "Access
+        # denied" while a DefinitionService still holds its read-only
+        # connection open (Issue #32; same hook as the remove flow in #30).
+        if not self.dictionary_panel.request_resource_release():
+            QMessageBox.warning(
+                self,
+                "Re-import blocked",
+                "A mining run is in progress. Stop it before re-importing dictionaries.",
+            )
             return
 
         dlg = QProgressDialog("Reimporting dictionaries…", "Cancel", 0, 100, self)

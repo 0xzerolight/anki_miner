@@ -782,3 +782,29 @@ def test_right_click_jisho_row_shows_no_menu(qapp, monkeypatch, tmp_path):
     assert constructed == [], "Jisho row must not open a context menu"
     assert emitted == []
     assert jmdict_fired == []
+
+
+def test_request_resource_release_returns_true_when_unset(qapp, tmp_path):
+    """Headless/test setups never wire the release callback; the proxy must
+    treat 'no callback' as a successful no-op so re-import flows do not stall."""
+    panel = DictionarySettingsPanel(tmp_path)
+    assert panel.request_resource_release() is True
+
+
+def test_request_resource_release_proxies_callback_return(qapp, tmp_path):
+    """The proxy forwards the callback's return value verbatim so settings_tab
+    can branch on True/False (mining run in flight refuses with False)."""
+    panel = DictionarySettingsPanel(tmp_path)
+
+    calls = {"n": 0}
+
+    def _ok():
+        calls["n"] += 1
+        return True
+
+    panel.set_release_callback(_ok)
+    assert panel.request_resource_release() is True
+    assert calls["n"] == 1
+
+    panel.set_release_callback(lambda: False)
+    assert panel.request_resource_release() is False
