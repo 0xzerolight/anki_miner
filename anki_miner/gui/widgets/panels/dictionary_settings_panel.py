@@ -156,6 +156,19 @@ class DictionarySettingsPanel(FormPanel):
         """
         self._release_callback = cb
 
+    def request_resource_release(self) -> bool:
+        """Public proxy so siblings (e.g. settings_tab's re-import handler)
+        can ask the rest of the app to close cached sqlite handles without
+        reaching into ``_release_callback`` directly (Issue #32).
+
+        Returns ``True`` when no callback is wired or the callback succeeded;
+        ``False`` when the callback refused (typically a mining run is in
+        flight, see ``MainWindow.release_dictionary_resources``).
+        """
+        if self._release_callback is None:
+            return True
+        return self._release_callback()
+
     def set_dicts_root(self, dicts_root: Path) -> None:
         """Update the dicts root (e.g. after a config save) and invalidate caches."""
         self._dicts_root = dicts_root
