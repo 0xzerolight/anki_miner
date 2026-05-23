@@ -559,3 +559,14 @@ class SingleEpisodeTab(MiningTabBase):
         """
         self.config = config
         self.offset_spinbox.setValue(config.subtitle_offset)
+
+    def release_dictionary_resources(self) -> bool:
+        """No-op release for symmetry with YouTubeTab.
+
+        SingleEpisodeTab does not cache an EpisodeProcessor between runs — the
+        processor is built fresh inside ``_start_processing`` and dies with
+        the worker. So there are no long-lived sqlite handles to close here.
+        Returns ``False`` only while a worker is actively running, since the
+        in-flight processor still holds dictionary handles open (Issue #30).
+        """
+        return not (self.worker_thread is not None and self.worker_thread.isRunning())

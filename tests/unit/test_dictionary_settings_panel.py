@@ -648,6 +648,101 @@ def test_on_rmtree_error_reraises_non_permission(tmp_path):
         dsp_mod._on_rmtree_error(_always_oserror, str(target), None)
 
 
+def test_release_callback_returning_false_aborts_remove(qapp, monkeypatch, tmp_path, confirm_remove):
+    """When the release callback says no (mining run in flight), the panel
+    must show a warning and leave the dictionary on disk untouched."""
+    dict_dir = tmp_path / "a"
+    dict_dir.mkdir()
+    (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+
+    rmtree_calls: list[Path] = []
+    monkeypatch.setattr(dsp_mod.shutil, "rmtree", lambda p, *a, **kw: rmtree_calls.append(Path(p)))
+
+    warned: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.warning",
+        lambda parent, title, body, *a, **kw: warned.append(body) or QMessageBox.StandardButton.Ok,
+    )
+
+    panel = DictionarySettingsPanel(tmp_path)
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="a", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+    panel.set_release_callback(lambda: False)
+
+    removed: list[None] = []
+    panel.dictionary_removed.connect(lambda: removed.append(None))
+
+    panel.remove(0)
+
+    assert rmtree_calls == [], "rmtree must not run when release callback refuses"
+    assert dict_dir.exists()
+    assert any("mining run" in w.lower() for w in warned), warned
+    assert removed == []
+    assert [e.dict_id for e in panel.get_chain()[:1]] == ["a"]
+
+
+def test_release_callback_runs_before_rmtree(qapp, monkeypatch, tmp_path, confirm_remove):
+    """The release callback must fire strictly before rmtree so cached sqlite
+    handles are dropped first (Issue #30 Win11 file-lock ordering)."""
+    dict_dir = tmp_path / "a"
+    dict_dir.mkdir()
+    (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+
+    events: list[str] = []
+
+    def _release():
+        events.append("release")
+        return True
+
+    real_rmtree = dsp_mod.shutil.rmtree
+
+    def _spy_rmtree(path, *args, **kwargs):
+        events.append("rmtree")
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _spy_rmtree)
+
+    panel = DictionarySettingsPanel(tmp_path)
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="a", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+    panel.set_release_callback(_release)
+
+    panel.remove(0)
+
+    assert events == ["release", "rmtree"], events
+    assert not dict_dir.exists()
+
+
+def test_remove_without_release_callback_still_works(qapp, tmp_path, confirm_remove):
+    """Unwired panel (tests, headless) must keep the pre-Issue-#30 behaviour:
+    skip the release step entirely and just delete."""
+    dict_dir = tmp_path / "a"
+    dict_dir.mkdir()
+    (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+
+    panel = DictionarySettingsPanel(tmp_path)
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="a", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+    # Intentionally do NOT call set_release_callback.
+
+    panel.remove(0)
+
+    assert not dict_dir.exists()
+    assert [e.kind for e in panel.get_chain()] == ["jisho"]
+
+
 def test_robust_rmtree_exhausts_retries_and_raises(monkeypatch, tmp_path):
     """After ``retries`` failures the helper must surface the last OSError."""
     target = tmp_path / "doomed"

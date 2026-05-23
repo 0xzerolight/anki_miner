@@ -43,6 +43,26 @@ class DefinitionService:
                 logger.warning("Failed to load provider '%s': %s", provider.name, e)
         return any(p.is_available() for p in self._providers)
 
+    def close(self) -> None:
+        """Close every provider that exposes a ``close()`` method.
+
+        Needed so the GUI can release per-dict ``index.sqlite`` handles before
+        deleting a dictionary folder — on Windows, an open SQLite connection
+        keeps a file lock that blocks ``rmtree`` (Issue #30). The Protocol
+        does not require ``close``; probe via ``getattr`` so providers without
+        it (e.g. Jisho) are silently skipped. Resets ``_loaded`` so a later
+        ``ensure_loaded()`` will re-open the chain cleanly.
+        """
+        for provider in self._providers:
+            closer = getattr(provider, "close", None)
+            if not callable(closer):
+                continue
+            try:
+                closer()
+            except Exception as e:  # pragma: no cover - defensive
+                logger.warning("Failed to close provider '%s': %s", provider.name, e)
+        self._loaded = False
+
     def get_definition(self, word: str) -> str | None:
         self.ensure_loaded()
         for provider in self._providers:

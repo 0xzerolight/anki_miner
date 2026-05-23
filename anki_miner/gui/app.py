@@ -181,6 +181,10 @@ def main():
     settings_tab.config_changed.connect(episode_tab.update_config)
     settings_tab.config_changed.connect(batch_tab.update_config)
     settings_tab.config_changed.connect(youtube_tab.update_config)
+    # Wire the Dictionary Settings panel's pre-remove hook so deleting a
+    # dictionary closes cached sqlite handles across every tab first — Win11
+    # rejects the rmtree otherwise (Issue #30).
+    settings_tab.dictionary_panel.set_release_callback(window.release_dictionary_resources)
     # Favorites-list edits in Themes panel must repopulate the top-right combo
     # immediately; the panel doesn't know about the header so the wiring lives
     # here. Active-theme changes from the panel must update the selected entry

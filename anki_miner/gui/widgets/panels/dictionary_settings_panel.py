@@ -7,6 +7,7 @@ import os
 import shutil
 import stat
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
@@ -141,7 +142,19 @@ class DictionarySettingsPanel(FormPanel):
         # construction scans every dict's meta table — needlessly slow on
         # network mounts when the user is just reordering rows.
         self._registry: DictionaryRegistry | None = None
+        # Optional callback invoked before destructive remove to ask the rest
+        # of the app to close cached sqlite handles (Issue #30, Win11 lock).
+        # Returns True on success, False if a mining run is in flight.
+        self._release_callback: Callable[[], bool] | None = None
         self._setup_fields()
+
+    def set_release_callback(self, cb: Callable[[], bool] | None) -> None:
+        """Wire the pre-remove resource-release hook.
+
+        See ``remove()``. Injected by app.py at startup so the panel can call
+        ``MainWindow.release_dictionary_resources`` without importing it.
+        """
+        self._release_callback = cb
 
     def set_dicts_root(self, dicts_root: Path) -> None:
         """Update the dicts root (e.g. after a config save) and invalidate caches."""
@@ -281,6 +294,18 @@ class DictionarySettingsPanel(FormPanel):
             QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        # Drop sqlite handles before rmtree. On Windows the index.sqlite file
+        # stays locked while any DefinitionService still holds its read-only
+        # connection, and the retry loop in _robust_rmtree can't unblock that
+        # — only an explicit provider.close() can (Issue #30).
+        if self._release_callback is not None and not self._release_callback():
+            QMessageBox.warning(
+                self,
+                "Remove failed",
+                "A mining run is in progress. Stop it before removing dictionaries.",
+            )
             return
 
         if dict_dir is not None and dict_dir.exists():
