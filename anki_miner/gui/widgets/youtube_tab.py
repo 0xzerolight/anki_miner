@@ -112,7 +112,9 @@ class YouTubeTab(QWidget):
         """
         super().__init__(parent)
         self._config = config
-        self._processor = processor
+        # Optional so release_dictionary_resources() can null it out and
+        # _start_run rebuilds lazily on the next user click (Issue #30).
+        self._processor: EpisodeProcessor | None = processor
         self._fetcher = fetcher
         self._presenter = presenter
 
@@ -335,6 +337,15 @@ class YouTubeTab(QWidget):
             return
         ready_items = [i for i in self._queue.all_items() if i.status == YouTubeItemStatus.READY]
         if not ready_items:
+            return
+
+        # Processor may have been released by Settings → Remove dictionary
+        # (release_dictionary_resources sets it to None to drop sqlite handles).
+        # Rebuild lazily here so the user doesn't have to restart the app.
+        if self._processor is None and self._presenter is not None:
+            self._processor = create_episode_processor(self._config, self._presenter)
+        if self._processor is None:
+            self.log_widget.append_warning("Mining unavailable — services not initialized.")
             return
 
         # Snapshot BEFORE constructing the worker so all idx-based signal
@@ -606,11 +617,36 @@ class YouTubeTab(QWidget):
 
         worker_busy = self.worker_thread is not None and self.worker_thread.isRunning()
         if not worker_busy and self._presenter is not None:
+            old_processor = self._processor
             self._processor = create_episode_processor(
                 config,
                 self._presenter,
                 stats_service=getattr(self._processor, "stats_service", None),
             )
+            # Close the old chain explicitly — replacing the ref is not enough
+            # on Windows where sqlite handles keep the index.sqlite file locked
+            # until GC eventually runs (Issue #30).
+            if old_processor is not None:
+                old_processor.definition_service.close()
+
+    def release_dictionary_resources(self) -> bool:
+        """Close any cached dictionary handles so the file can be deleted.
+
+        Used by Settings → Dictionary Settings → Remove to drop SQLite handles
+        before ``rmtree`` (Issue #30, Win11 file-lock). Returns ``False`` while
+        a mining run is in flight — closing providers under an active worker
+        would crash the run. Returns ``True`` after a successful release, or
+        when there was nothing to release.
+
+        The processor is rebuilt lazily on the next Preview/Mine click via
+        ``_start_run``.
+        """
+        if self.worker_thread is not None and self.worker_thread.isRunning():
+            return False
+        if self._processor is not None:
+            self._processor.definition_service.close()
+            self._processor = None
+        return True
 
     def shutdown(self) -> None:
         """Stop the active worker and tear down probe workers.

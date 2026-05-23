@@ -279,3 +279,53 @@ class TestGetGlossariesBatch:
     def test_empty_list_returns_empty_list(self, test_config):
         service = DefinitionService(test_config, providers=[])
         assert service.get_glossaries_batch([]) == []
+
+
+class TestClose:
+    """Tests for DefinitionService.close (Issue #30 — Win11 sqlite handle release)."""
+
+    def test_calls_close_on_each_provider_that_has_it(self, test_config):
+        """Every provider exposing a ``close`` method must have it invoked."""
+        p1 = make_provider("A")
+        p2 = make_provider("B")
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        service.close()
+
+        p1.close.assert_called_once()
+        p2.close.assert_called_once()
+
+    def test_skips_providers_without_close(self, test_config):
+        """Providers without a ``close`` attribute must not raise (Jisho case)."""
+        p1 = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load"])
+        p1.name = "Jisho"
+        p2 = make_provider("Indexed")
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        service.close()  # must not raise even though p1 has no close()
+        p2.close.assert_called_once()
+
+    def test_swallows_provider_close_exception(self, test_config):
+        """A provider raising during close() must not abort the rest of the chain."""
+        p1 = make_provider("Broken")
+        p1.close.side_effect = Exception("boom")
+        p2 = make_provider("Working")
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        service.close()  # must not raise
+
+        p1.close.assert_called_once()
+        p2.close.assert_called_once()
+
+    def test_resets_loaded_so_next_lookup_reopens(self, test_config):
+        """After close(), the next get_definition() must re-invoke provider.load()."""
+        p1 = make_provider("A", return_value="hit")
+        service = DefinitionService(test_config, providers=[p1])
+
+        service.ensure_loaded()
+        p1.load.assert_called_once()
+
+        service.close()
+        service.get_definition("x")
+
+        assert p1.load.call_count == 2
