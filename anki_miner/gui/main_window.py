@@ -504,6 +504,21 @@ class MainWindow(QMainWindow):
         self.config = config
         GUIConfigManager.save_config(config)
 
+    def release_dictionary_resources(self) -> bool:
+        """Ask every tab to release cached dictionary handles.
+
+        Used by the Settings → Remove dictionary flow to drop SQLite handles
+        before ``rmtree`` (Issue #30, Win11 file-lock). Returns ``False`` if
+        any tab refused — typically because a mining run is in flight — so
+        the caller can surface a clear message instead of silently failing.
+        """
+        for i in range(self.tabs.count()):
+            tab = self.tabs.widget(i)
+            release = getattr(tab, "release_dictionary_resources", None)
+            if callable(release) and not release():
+                return False
+        return True
+
     def closeEvent(self, event) -> None:
         """Handle window close event.
 

@@ -633,3 +633,13 @@ class BatchProcessingTab(MiningTabBase):
             config: New configuration
         """
         self.config = config
+
+    def release_dictionary_resources(self) -> bool:
+        """No-op release for symmetry with YouTubeTab.
+
+        BatchProcessingTab builds a fresh EpisodeProcessor per-item inside the
+        worker thread; no long-lived sqlite handles are cached on the tab.
+        Returns ``False`` while a worker is actively running because the
+        in-flight processor still holds dictionary handles open (Issue #30).
+        """
+        return not (self.worker_thread is not None and self.worker_thread.isRunning())
