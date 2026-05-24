@@ -148,6 +148,39 @@ class WordFilterService:
                 result.append(word)
         return result
 
+    def filter_by_sentence_length(
+        self,
+        words: list[TokenizedWord],
+        max_duration: float = 0.0,
+        max_chars: int = 0,
+    ) -> list[TokenizedWord]:
+        """Drop words whose example sentence exceeds the configured caps.
+
+        Each cap is independent: ``0`` (or ``0.0``) disables that dimension.
+        Both caps are inclusive — a word at exactly the limit is kept.
+
+        Args:
+            words: List of words to filter.
+            max_duration: Maximum allowed ``word.duration`` in seconds.
+                ``0.0`` means no duration cap.
+            max_chars: Maximum allowed ``len(word.sentence)``. ``0`` means
+                no character cap.
+
+        Returns:
+            Filtered list of words.
+        """
+        if max_duration <= 0.0 and max_chars <= 0:
+            return words
+
+        result = []
+        for word in words:
+            if max_duration > 0.0 and word.duration > max_duration:
+                continue
+            if max_chars > 0 and len(word.sentence) > max_chars:
+                continue
+            result.append(word)
+        return result
+
     def filter_i_plus_one(
         self,
         mineable_unknowns: list[TokenizedWord],
