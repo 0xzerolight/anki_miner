@@ -42,6 +42,13 @@ def validate_zip_safe(zf: zipfile.ZipFile, tmp_root: Path) -> None:
         except ValueError:
             raise SetupError(f"Zip contains escaping path: {name}") from None
 
+    # info.file_size is the uncompressed size DECLARED in the zip's central
+    # directory and a malicious archive can lie about it; ZipFile.extractall
+    # does not verify the declared size during decompression. The current
+    # threat model is local-user only (zips come from the user, not the
+    # network), so this declared-size cap is an intentional shortcut.
+    # Hardening path: stream each entry via zf.open(name) with a running
+    # byte counter and abort on overflow. See review of commit 63ffcd9.
     total = sum(info.file_size for info in zf.infolist())
     if total > MAX_UNCOMPRESSED_BYTES:
         raise SetupError(f"Zip uncompressed size exceeds limit ({total:,} > {MAX_UNCOMPRESSED_BYTES:,} bytes)")
