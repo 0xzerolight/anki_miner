@@ -7,13 +7,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
-- **Sentence length filter** (Issue #33): new Settings → Word Filtering → "Sentence Length" section lets you drop cards whose example sentence exceeds an audio-duration cap (seconds), a character cap, or both — to reduce deck size and keep reviews snappy. Master toggle plus two independent caps; either cap set to `0` means "no limit" (the spinboxes render `0` as "No limit"). Runs **after** the i+1 sentence filter so the enforced cap applies to the FINAL chosen sentence (i+1 swaps each word's sentence/duration to its chosen line, so an earlier check would be silently bypassed by the swap). New config fields: `use_sentence_length_filter`, `max_sentence_duration_seconds`, `max_sentence_chars` (default off; no behavior change for existing users).
 
 ### Changed
 
 ### Fixed
 
 ### Removed
+
+## [2.4.5] - 2026-05-24
+
+### Added
+- **Sentence length filter** (Issue #33): new Settings → Word Filtering → "Sentence Length" section lets you drop cards whose example sentence exceeds an audio-duration cap (seconds), a character cap, or both — to reduce deck size and keep reviews snappy. Master toggle plus two independent caps; either cap set to `0` means "no limit" (the spinboxes render `0` as "No limit"). Runs **after** the i+1 sentence filter so the enforced cap applies to the FINAL chosen sentence (i+1 swaps each word's sentence/duration to its chosen line, so an earlier check would be silently bypassed by the swap). New config fields: `use_sentence_length_filter`, `max_sentence_duration_seconds`, `max_sentence_chars` (default off; no behavior change for existing users).
+- **Theme variants grouped under family nodes**: Settings → Themes now renders a `QTreeWidget` where themes sharing a `family` field (e.g. light/dark variants of the same palette) nest under an expandable parent row. The active theme's family auto-expands on open. The family row exposes a **tri-state star** — empty / half / full reflects how many of its variants are favorited; clicking toggles the whole family in a single batch (one `favorites_changed` emission, not one per variant). Family star uses a `QGraphicsOpacityEffect` dim pass so the icon stays readable on dark themes. New optional theme-schema fields: `family`, `variant`. Existing single-file themes without these fields continue to render as flat top-level rows.
+- **Yomitan-format frequency dictionaries**: Settings → Word Filtering → Frequency Source now accepts a Yomitan frequency zip in addition to the existing `frequency.csv`. The importer parses `term_meta_bank_*.json`, normalizes the three Yomitan rank shapes (integer, `{value: N}`, `{frequency: {value: N}}`), and writes the result to `~/.anki_miner/frequency.csv`. Rejects archives with `format != 3` (v1/v2 use a different `term_meta_bank` schema and would parse silently into garbage) and missing-`format` headers with a typed `SetupError`. Ranks `<= 0` are treated as display-only rather than producing nonsense "0th most common word" entries. Zip extraction reuses the same path-traversal / size-cap hardening as the dictionary importer.
+- **Background-threaded frequency import**: the Yomitan freq import now runs on a new `FrequencyImportWorker` (`CancellableWorker`) driven from `SettingsTab._resolve_frequency_path` via a modal `QProgressDialog` + nested `QEventLoop` — the caller stays blocking while the GUI thread stays responsive and the user can cancel. Overwrite confirmation prompt fires if `frequency.csv` already exists. Save flow reordered so the disk-mutating import runs last, after the candidate config is fully built, so a future validation failure can abort before touching `~/.anki_miner/frequency.csv`.
+
+### Fixed
+- **Theme colours not applied to the Analytics tab**: the Analytics page's tables, headers, and chart container inherited the host `QWidget` palette instead of the active theme's surface/text variables, so dark themes left Analytics rendering with light backgrounds. Added scoped Analytics selectors to `common.qss` that resolve against the theme variable set, so every theme now drives Analytics consistently.
 
 ## [2.4.4] - 2026-05-23
 
