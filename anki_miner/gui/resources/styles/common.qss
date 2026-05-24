@@ -235,7 +235,7 @@ QTableWidget::item:selected {
  * auto-sized icon button. The global 8-px item padding clips the top of
  * the glyph; scope an override to just this table so other tables in the
  * app keep their comfortable cell padding. */
-QTableWidget#themesPanelTable::item {
+QTreeWidget#themesPanelTree::item {
     padding: 0px;
 }
 

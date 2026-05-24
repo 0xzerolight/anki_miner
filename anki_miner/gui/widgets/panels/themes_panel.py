@@ -108,7 +108,7 @@ class ThemesPanel(QWidget):
         self.tree.setObjectName("themesPanelTree")
         self.tree.setColumnCount(3)
         self.tree.setHeaderLabels(["Name", "Status", ""])
-        self.tree.setRootIsDecorated(True)
+        self.tree.setRootIsDecorated(False)
         self.tree.setUniformRowHeights(True)
         self.tree.setAlternatingRowColors(True)
         self.tree.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
@@ -122,8 +122,7 @@ class ThemesPanel(QWidget):
             header.setSectionResizeMode(self.COL_STAR, QHeaderView.ResizeMode.ResizeToContents)
             header.setStretchLastSection(False)
 
-        # Apply the same row-height tracking the old QTableWidget had so the
-        # star button has predictable vertical room.
+        # Row min-height keeps the star button vertically centered.
         self.tree.setStyleSheet(f"QTreeWidget::item {{ padding: 0; min-height: {_ROW_HEIGHT_PX}px; }}")
 
         self.tree.itemSelectionChanged.connect(self._on_row_selected)
@@ -286,7 +285,7 @@ class ThemesPanel(QWidget):
                     descendant.setText(self.COL_STATUS, "Active" if key == new_active_key else "")
 
     def _toggle_favorite(self, key: str) -> None:
-        """Star/unstar `key`, refresh the table, notify listeners."""
+        """Star/unstar `key`, refresh the tree, notify listeners."""
         if Theme.is_favorite(key):
             Theme.remove_favorite(key)
         else:
