@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Sentence length filter** (Issue #33): new Settings → Word Filtering → "Sentence Length" section lets you drop cards whose example sentence exceeds an audio-duration cap (seconds), a character cap, or both — to reduce deck size and keep reviews snappy. Master toggle plus two independent caps; either cap set to `0` means "no limit" (the spinboxes render `0` as "No limit"). Runs **after** the i+1 sentence filter so the enforced cap applies to the FINAL chosen sentence (i+1 swaps each word's sentence/duration to its chosen line, so an earlier check would be silently bypassed by the swap). New config fields: `use_sentence_length_filter`, `max_sentence_duration_seconds`, `max_sentence_chars` (default off; no behavior change for existing users).
 
 ### Changed
 
