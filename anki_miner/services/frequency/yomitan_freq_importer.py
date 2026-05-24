@@ -94,6 +94,18 @@ def import_yomitan_freq_zip(
         if not title:
             raise SetupError("index.json missing required 'title'")
 
+        # Yomitan format v1/v2 use different term_meta_bank schemas than v3.
+        # A v1 zip would parse silently and could yield zero rows or wrong
+        # ranks. Strict equality with 3 surfaces the issue clearly; revisit
+        # if/when Yomitan ships a v4 we want to accept.
+        format_version = index.get("format")
+        if format_version != 3:
+            raise SetupError(
+                f"'{title}' uses unsupported Yomitan format version {format_version!r}. "
+                "anki_miner supports format version 3 only. "
+                "Re-download from a current Yomitan source."
+            )
+
         frequency_mode = str(index.get("frequencyMode", "")).strip()
         if frequency_mode == "occurrence-based":
             raise SetupError(
@@ -173,9 +185,21 @@ def import_yomitan_freq_zip(
 def _normalize_freq_rank(data: Any) -> int | None:
     """Extract an integer rank from any of Yomitan's five ``freq`` data shapes.
 
-    Returns ``None`` for display-only entries (e.g. ``"①"``) that carry no
-    integer rank — callers count these separately so they can be surfaced to
-    the user.
+    Returns ``None`` for display-only entries (e.g. ``"①"``) and for ranks
+    outside the valid range (rank must be >= 1; a "0th most common word" is
+    nonsense). Invalid-rank entries are lumped into the caller's display-only
+    count by design — they're equally unusable downstream.
+    """
+    rank = _normalize_freq_rank_raw(data)
+    if rank is None or rank < 1:
+        return None
+    return rank
+
+
+def _normalize_freq_rank_raw(data: Any) -> int | None:
+    """Raw shape-dispatch for the five spec-defined ``freq`` data shapes.
+
+    Validity gating (rank >= 1) is applied by :func:`_normalize_freq_rank`.
     """
     if isinstance(data, bool):
         # bool is a subclass of int; reject before the int branch below.
@@ -193,7 +217,7 @@ def _normalize_freq_rank(data: Any) -> int | None:
         # discarded — we recurse into `frequency` and keep min(rank) on
         # collision.
         if "frequency" in data:
-            return _normalize_freq_rank(data["frequency"])
+            return _normalize_freq_rank_raw(data["frequency"])
         # Inner `GenericFrequencyData`: `{value, displayValue?}`.
         if "value" in data:
             value = data["value"]

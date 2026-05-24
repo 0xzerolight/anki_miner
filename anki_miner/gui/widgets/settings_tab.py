@@ -4,10 +4,9 @@ import re
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QCursor, QKeySequence, QShortcut
+from PyQt6.QtCore import QEventLoop, Qt, pyqtSignal
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
-    QApplication,
     QCheckBox,
     QFileDialog,
     QFrame,
@@ -22,7 +21,6 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.config.paths import ANKI_MINER_HOME
-from anki_miner.exceptions import SetupError
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
@@ -35,10 +33,11 @@ from anki_miner.gui.widgets.panels import (
 )
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
+from anki_miner.gui.workers.frequency_import_worker import FrequencyImportWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
 from anki_miner.services.dictionary.registry import DictionaryRegistry
-from anki_miner.services.frequency import import_yomitan_freq_zip
+from anki_miner.services.frequency import YomitanFreqImportResult
 
 
 class SettingsTab(QWidget):
@@ -64,6 +63,10 @@ class SettingsTab(QWidget):
         """
         super().__init__(parent)
         self.config = config
+        # Long-lived worker reference; FrequencyImportWorker is a QThread and
+        # would be destroyed mid-run if the worker fell out of scope before
+        # joining. _resolve_frequency_path stores the active worker here.
+        self._active_freq_worker: FrequencyImportWorker | None = None
         self._setup_ui()
         self._connect_signals()
         self._load_config()
@@ -313,15 +316,13 @@ class SettingsTab(QWidget):
                 )
                 return
 
-        # If the user selected a Yomitan-format frequency zip, normalize it to
-        # CSV before persisting. We intercept here (not in the panel) so the
-        # import is bound to an explicit Save action and any failure aborts
-        # the whole save with a single dialog.
-        resolved_freq_path = self._resolve_frequency_path()
-        if resolved_freq_path is None:
-            return  # importer failed; user already saw the error dialog
-
-        # Create updated config from all panels
+        # Build the candidate config from all panels FIRST, then run
+        # frequency-zip import LAST so any current or future pre-import
+        # validation step has a chance to abort before we mutate
+        # ~/.anki_miner/frequency.csv on disk. The import is the only
+        # side-effecting step in this method — once it runs there's no
+        # rollback short of re-importing the previous CSV.
+        # See review of commit 63ffcd9 finding #2.
         new_config = replace(
             self.config,
             # Anki settings
@@ -355,9 +356,10 @@ class SettingsTab(QWidget):
             ),
             use_pitch_accent=self.dictionary_panel.use_pitch_accent_checkbox.isChecked(),
             pitch_category_format=self.anki_panel.get_pitch_category_format(),
-            # Frequency settings — path resolved above (Yomitan zips are
-            # imported to ~/.anki_miner/frequency.csv before reaching here).
-            frequency_list_path=resolved_freq_path,
+            # Frequency settings — frequency_list_path is filled in below
+            # after _resolve_frequency_path runs (last side-effect, see top
+            # of this method).
+            frequency_list_path=self.config.frequency_list_path,
             use_frequency_data=self.filtering_panel.use_frequency_checkbox.isChecked(),
             max_frequency_rank=self.filtering_panel.max_frequency_spinbox.value(),
             # Known words database settings
@@ -397,6 +399,15 @@ class SettingsTab(QWidget):
             skipped_update_version=skipped_update_version,
         )
 
+        # Last side-effect before commit: import the Yomitan frequency zip
+        # if the user picked one. Any pre-import validation belongs ABOVE
+        # this call. None here means import failed OR was cancelled — abort
+        # the whole save (the user already saw the error dialog, if any).
+        resolved_freq_path = self._resolve_frequency_path()
+        if resolved_freq_path is None:
+            return
+        new_config = replace(new_config, frequency_list_path=resolved_freq_path)
+
         # Emit signal to notify listeners of config change
         self.config = new_config
         self.config_changed.emit(new_config)
@@ -410,13 +421,20 @@ class SettingsTab(QWidget):
         """Resolve the user-picked frequency path for persistence.
 
         If the path points at a Yomitan-format frequency zip, run the importer
-        synchronously and return the materialized ``frequency.csv`` path so
-        the rest of the save flow sees a CSV exactly as if the user had
-        manually converted the zip beforehand. CSV/TSV paths pass through.
+        in a background ``FrequencyImportWorker`` (driven by a modal
+        ``QProgressDialog`` + a local ``QEventLoop`` so this method stays
+        blocking for the caller) and return the materialized
+        ``frequency.csv`` path. CSV/TSV paths pass through unchanged.
 
         Returns:
-            Path to write into ``config.frequency_list_path``, or ``None`` if
-            a zip import failed (the caller should abort the save).
+            * ``Path("")`` if no path is selected.
+            * The original CSV/TSV path if not a zip.
+            * The materialized CSV path on successful import.
+            * ``self.config.frequency_list_path`` if the user declined to
+              overwrite an existing ``frequency.csv`` (other settings still
+              save).
+            * ``None`` if the import failed or was cancelled (caller aborts
+              the whole save).
         """
         raw = self.filtering_panel.frequency_selector.get_path()
         if not raw:
@@ -427,15 +445,62 @@ class SettingsTab(QWidget):
         zip_path = Path(raw)
         dest_csv = ANKI_MINER_HOME / "frequency.csv"
 
-        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
-        try:
-            result = import_yomitan_freq_zip(zip_path, dest_csv)
-        except SetupError as e:
-            QApplication.restoreOverrideCursor()
-            QMessageBox.warning(self, "Frequency import failed", str(e))
+        # Overwrite guard. atomic_write_csv only protects against mid-write
+        # failures, not intentional clobbering of a user's existing CSV.
+        if dest_csv.exists() and dest_csv.stat().st_size > 0:
+            reply = QMessageBox.question(
+                self,
+                "Overwrite existing frequency list?",
+                f"{dest_csv} already exists and will be replaced.\n\nContinue with import?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                # User opted out of THIS setting; let the rest of the save
+                # commit with the existing frequency_list_path unchanged.
+                return self.config.frequency_list_path
+
+        dlg = QProgressDialog("Importing frequency dictionary…", "Cancel", 0, 100, self)
+        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+        dlg.show()
+
+        worker = FrequencyImportWorker(zip_path, dest_csv)
+        self._active_freq_worker = worker  # keep alive across QThread lifetime
+
+        result_holder: dict[str, object] = {}
+        loop = QEventLoop(self)
+
+        def on_progress(cur: int, total: int, msg: str) -> None:
+            dlg.setMaximum(total)
+            dlg.setValue(cur)
+            dlg.setLabelText(msg)
+
+        def on_done(res: object) -> None:
+            result_holder["ok"] = res
+            loop.quit()
+
+        def on_failed(err: str) -> None:
+            result_holder["err"] = err
+            loop.quit()
+
+        worker.progress.connect(on_progress)
+        worker.import_finished.connect(on_done)
+        worker.failed.connect(on_failed)
+        dlg.canceled.connect(worker.cancel)
+
+        worker.start()
+        loop.exec()
+        dlg.close()
+        worker.wait()  # join thread before next save might construct a new worker
+
+        if "err" in result_holder:
+            err_msg = str(result_holder["err"])
+            if "cancel" not in err_msg.lower():
+                QMessageBox.warning(self, "Frequency import failed", err_msg)
             return None
-        finally:
-            QApplication.restoreOverrideCursor()
+
+        result = result_holder["ok"]
+        assert isinstance(result, YomitanFreqImportResult)
 
         # Reflect the imported path back into the UI so subsequent saves don't
         # re-trigger the import every time the user clicks Save.

@@ -64,6 +64,48 @@ class TestNormalization:
             assert service.lookup("猫") == expected_rank
 
 
+class TestInvalidRank:
+    """Yomitan rank must be a positive integer (>= 1); reject 0 and negatives."""
+
+    @pytest.mark.parametrize(
+        "data",
+        [
+            -5,
+            0,
+            "-1",
+            "0",
+            {"value": -1},
+            {"value": 0},
+            {"reading": "ねこ", "frequency": -7},
+            {"reading": "ねこ", "frequency": {"value": 0}},
+        ],
+    )
+    def test_non_positive_rank_treated_as_unusable(self, tmp_path: Path, data: object) -> None:
+        zip_path = build_yomitan_freq_zip(
+            tmp_path / "src.zip",
+            meta_banks=[[["猫", "freq", data]]],
+        )
+        dest = tmp_path / "frequency.csv"
+        with pytest.raises(SetupError, match="no usable frequency entries"):
+            import_yomitan_freq_zip(zip_path, dest)
+
+    def test_invalid_rank_counted_in_skipped_display_only(self, tmp_path: Path) -> None:
+        # One valid + one negative entry — importer succeeds, skip count == 1.
+        zip_path = build_yomitan_freq_zip(
+            tmp_path / "src.zip",
+            meta_banks=[
+                [
+                    ["猫", "freq", 100],
+                    ["犬", "freq", -1],
+                ]
+            ],
+        )
+        dest = tmp_path / "frequency.csv"
+        result = import_yomitan_freq_zip(zip_path, dest)
+        assert result.entry_count == 1
+        assert result.skipped_display_only == 1
+
+
 class TestModeFilter:
     def test_pitch_and_ipa_entries_skipped(self, tmp_path: Path) -> None:
         zip_path = build_yomitan_freq_zip(
@@ -123,6 +165,38 @@ class TestReadingCollision:
         service = FrequencyService(dest)
         service.load()
         assert service.lookup("開く") == 250  # min rank wins
+
+
+class TestFormatVersion:
+    """Importer requires Yomitan format v3; reject v1/v2/missing explicitly."""
+
+    @pytest.mark.parametrize("bad_version", [1, 2, 0, 4])
+    def test_unsupported_format_version_rejected(self, tmp_path: Path, bad_version: int) -> None:
+        zip_path = build_yomitan_freq_zip(
+            tmp_path / "src.zip",
+            format_version=bad_version,
+            meta_banks=[[["猫", "freq", 100]]],
+        )
+        with pytest.raises(SetupError, match=f"format version {bad_version}"):
+            import_yomitan_freq_zip(zip_path, tmp_path / "frequency.csv")
+
+    def test_missing_format_rejected(self, tmp_path: Path) -> None:
+        zip_path = build_yomitan_freq_zip(
+            tmp_path / "src.zip",
+            format_version=None,
+            meta_banks=[[["猫", "freq", 100]]],
+        )
+        with pytest.raises(SetupError, match="format version None"):
+            import_yomitan_freq_zip(zip_path, tmp_path / "frequency.csv")
+
+    def test_format_v3_accepted(self, tmp_path: Path) -> None:
+        zip_path = build_yomitan_freq_zip(
+            tmp_path / "src.zip",
+            format_version=3,
+            meta_banks=[[["猫", "freq", 100]]],
+        )
+        result = import_yomitan_freq_zip(zip_path, tmp_path / "frequency.csv")
+        assert result.entry_count == 1
 
 
 class TestOccurrenceBasedRejected:
