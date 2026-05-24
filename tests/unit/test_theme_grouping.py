@@ -80,7 +80,7 @@ def themes_dir(tmp_path: Path) -> Path:
 class TestGetThemesGrouped:
     def _init_with(self, themes_dir: Path, active: str = "light") -> None:
         """Force Theme singleton to read from a temp directory."""
-        Theme.initialize(active=active, favorites=(), user_dir=themes_dir, shipped_dir=themes_dir)
+        Theme.initialize(active=active, favorites=(), shipped_dir=themes_dir)
 
     def test_standalone_theme_yields_none_family(self, themes_dir: Path) -> None:
         _write_theme_file(themes_dir / "light.json", "light", name="Light")
@@ -115,6 +115,11 @@ class TestGetThemesGrouped:
         assert family == "Catppuccin"
         keys = {e.key for e in entries}
         assert keys == {"catppuccin-mocha", "catppuccin-latte"}
+        variant_by_key = {e.key: e.variant_name for e in entries}
+        assert variant_by_key == {
+            "catppuccin-mocha": "Mocha",
+            "catppuccin-latte": "Latte",
+        }
 
     def test_variant_falls_back_to_name_when_missing(self, themes_dir: Path) -> None:
         _write_theme_file(
