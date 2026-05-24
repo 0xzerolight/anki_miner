@@ -144,6 +144,37 @@ class TestSelectionEmitsStateChanged:
         active, favs = captured[-1]
         assert active == "catppuccin-latte"
         assert isinstance(favs, tuple)
+        assert Theme.get_current_mode() == "catppuccin-latte"
+
+
+class TestVariantStarCell:
+    """Regression guards for the per-variant star button."""
+
+    def _variant_star_button(self, panel: ThemesPanel, key: str) -> QToolButton:
+        root = panel.tree.invisibleRootItem()
+        for i in range(root.childCount()):
+            for descendant in _walk(root.child(i)):
+                data = descendant.data(panel.COL_NAME, Qt.ItemDataRole.UserRole)
+                if data == key:
+                    widget = panel.tree.itemWidget(descendant, panel.COL_STAR)
+                    btn = widget.findChild(QToolButton)
+                    assert btn is not None
+                    return btn
+        raise AssertionError(f"Variant {key!r} not found")
+
+    def test_object_name_is_star_toggle(self, panel: ThemesPanel) -> None:
+        # QSS scope hook — themes target #starToggle for star color.
+        btn = self._variant_star_button(panel, "catppuccin-mocha")
+        assert btn.objectName() == "starToggle"
+
+    def test_auto_raise_enabled(self, panel: ThemesPanel) -> None:
+        # Ghost-button appearance: transparent background until hover.
+        btn = self._variant_star_button(panel, "catppuccin-mocha")
+        assert btn.autoRaise() is True
+
+    def test_pointing_hand_cursor(self, panel: ThemesPanel) -> None:
+        btn = self._variant_star_button(panel, "catppuccin-mocha")
+        assert btn.cursor().shape() == Qt.CursorShape.PointingHandCursor
 
 
 def _family_star_button(panel: ThemesPanel, family_name: str) -> QToolButton:
