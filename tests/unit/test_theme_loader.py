@@ -269,29 +269,29 @@ class TestGetColorVariables:
             assert f"color-{key}" in variables
 
 
+_BUILTIN_THEMES_DIR = Path(__file__).parent.parent.parent / "anki_miner" / "gui" / "resources" / "styles" / "themes"
+_BUILTIN_THEME_PATHS = sorted(_BUILTIN_THEMES_DIR.glob("*.json"))
+
+
 class TestBuiltinThemeFiles:
     """Tests that the shipped JSON theme files are valid."""
 
-    @pytest.mark.parametrize("theme_name", ["light", "dark", "sakura"])
-    def test_builtin_theme_valid(self, theme_name: str):
-        from anki_miner.gui.resources.styles.theme import validate_theme_data
+    def test_builtin_themes_discovered(self):
+        assert _BUILTIN_THEME_PATHS, f"No builtin themes found under {_BUILTIN_THEMES_DIR}"
 
-        themes_dir = Path(__file__).parent.parent.parent / "anki_miner" / "gui" / "resources" / "styles" / "themes"
-        theme_path = themes_dir / f"{theme_name}.json"
-        assert theme_path.exists(), f"{theme_name}.json not found"
+    @pytest.mark.parametrize("theme_path", _BUILTIN_THEME_PATHS, ids=lambda p: p.stem)
+    def test_builtin_theme_valid(self, theme_path: Path):
+        from anki_miner.gui.resources.styles.theme import validate_theme_data
 
         with open(theme_path) as f:
             data = json.load(f)
 
         errors = validate_theme_data(data)
-        assert errors == [], f"{theme_name}.json validation errors: {errors}"
+        assert errors == [], f"{theme_path.name} validation errors: {errors}"
 
-    @pytest.mark.parametrize("theme_name", ["light", "dark", "sakura"])
-    def test_builtin_theme_has_45_colors(self, theme_name: str):
-        themes_dir = Path(__file__).parent.parent.parent / "anki_miner" / "gui" / "resources" / "styles" / "themes"
-        theme_path = themes_dir / f"{theme_name}.json"
-
+    @pytest.mark.parametrize("theme_path", _BUILTIN_THEME_PATHS, ids=lambda p: p.stem)
+    def test_builtin_theme_has_46_colors(self, theme_path: Path):
         with open(theme_path) as f:
             data = json.load(f)
 
-        assert len(data["colors"]) == 46
+        assert len(data["colors"]) == 46, f"{theme_path.name}: {len(data['colors'])} colors"
