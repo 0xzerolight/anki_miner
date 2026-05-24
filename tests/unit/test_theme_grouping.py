@@ -40,3 +40,19 @@ class TestValidateThemeData:
     def test_variant_non_string_is_error(self) -> None:
         errors = validate_theme_data(_make_theme_dict(variant=42))
         assert any("variant" in e for e in errors)
+
+    def test_family_whitespace_only_is_error(self) -> None:
+        errors = validate_theme_data(_make_theme_dict(family="   "))
+        assert any("family" in e for e in errors)
+
+    def test_variant_empty_string_is_error(self) -> None:
+        errors = validate_theme_data(_make_theme_dict(variant=""))
+        assert any("variant" in e for e in errors)
+
+    def test_variant_whitespace_only_is_error(self) -> None:
+        errors = validate_theme_data(_make_theme_dict(variant="   "))
+        assert any("variant" in e for e in errors)
+
+    def test_variant_alone_without_family_is_valid(self) -> None:
+        errors = validate_theme_data(_make_theme_dict(variant="Mocha"))
+        assert errors == []
