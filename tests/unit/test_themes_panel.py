@@ -1,172 +1,209 @@
-"""Tests for the Themes settings panel UI surface.
+"""Tests for the family/variant grouped ThemesPanel."""
 
-Pins:
+from __future__ import annotations
 
-* 3-column layout (Source column removed in v2.4.3).
-* Star cell is a centered wrapper with a checkable QToolButton rendering a
-  Unicode glyph — guards against the "star looks wrong + barely visible"
-  regression caused by the global QPushButton padding rule.
-* Row preview avoids a full table repopulate; only the Active marker moves.
-"""
+import json
+from pathlib import Path
 
+import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication, QHBoxLayout, QToolButton, QWidget
+from PyQt6.QtWidgets import QApplication, QToolButton, QTreeWidget, QTreeWidgetItem
 
-from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.widgets.panels.themes_panel import ThemesPanel
-
-_app = QApplication.instance() or QApplication([])
-
-
-def _make_panel(tmp_path) -> ThemesPanel:
-    Theme.initialize(active="light", favorites=("light", "dark"), user_dir=None, state_listener=None)
-    return ThemesPanel(themes_root=tmp_path / "themes")
+from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
+from anki_miner.gui.widgets.panels.themes_panel import (
+    _FAMILY_STAR_PARTIAL_OPACITY,
+    _STAR_FILLED,
+    _STAR_OUTLINE,
+    ThemesPanel,
+)
 
 
-class TestColumnLayout:
-    def test_table_has_three_columns(self, tmp_path):
-        panel = _make_panel(tmp_path)
-        assert panel.table.columnCount() == 3
-
-    def test_table_has_themes_panel_object_name(self, tmp_path):
-        # objectName scopes the QSS `::item { padding: 0 }` override that
-        # keeps the star glyph from clipping at the row boundary. If this
-        # rename slips, the clipping bug returns silently.
-        panel = _make_panel(tmp_path)
-        assert panel.table.objectName() == "themesPanelTable"
-
-    def test_header_labels_drop_source(self, tmp_path):
-        panel = _make_panel(tmp_path)
-        header = panel.table.horizontalHeader()
-        assert header is not None
-        labels = [panel.table.horizontalHeaderItem(c).text() for c in range(panel.table.columnCount())]
-        assert labels == ["", "Name", "Status"]
-        assert "Source" not in labels
-
-    def test_column_indices_are_contiguous(self):
-        # COL_STAR=0, COL_NAME=1, COL_STATUS=2 — no COL_SOURCE left behind.
-        assert ThemesPanel.COL_STAR == 0
-        assert ThemesPanel.COL_NAME == 1
-        assert ThemesPanel.COL_STATUS == 2
-        assert not hasattr(ThemesPanel, "COL_SOURCE")
+@pytest.fixture(scope="module")
+def qapp():
+    app = QApplication.instance() or QApplication([])
+    yield app
 
 
-class TestStarCell:
-    def test_star_cell_is_centered_wrapper(self, tmp_path):
-        panel = _make_panel(tmp_path)
-        assert panel.table.rowCount() >= 1
-        cell = panel.table.cellWidget(0, ThemesPanel.COL_STAR)
-        assert isinstance(cell, QWidget)
-        layout = cell.layout()
-        # Centered wrapper is what fixes the vertical-offset bug.
-        assert isinstance(layout, QHBoxLayout)
-        assert layout.contentsMargins().left() == 0
-        assert layout.contentsMargins().top() == 0
-        assert layout.contentsMargins().right() == 0
-        assert layout.contentsMargins().bottom() == 0
-
-    def test_star_button_renders_unicode_glyph(self, tmp_path):
-        panel = _make_panel(tmp_path)
-        cell = panel.table.cellWidget(0, ThemesPanel.COL_STAR)
-        buttons = cell.findChildren(QToolButton)
-        assert len(buttons) == 1
-        button = buttons[0]
-        # Unicode glyph routes through the font pipeline; QPainter-drawn
-        # icons were crushed to a 4-px sliver by the global QPushButton
-        # padding rule. QToolButton sidesteps that rule.
-        assert button.text() in ("★", "☆")
-        assert button.isCheckable()
-        assert button.autoRaise()
-        assert button.cursor().shape() == Qt.CursorShape.PointingHandCursor
-
-    def test_star_button_uses_star_toggle_object_name(self, tmp_path):
-        # starToggle objectName is the QSS hook for theme-coherent coloring:
-        # muted text when empty, warning (gold) when checked.
-        panel = _make_panel(tmp_path)
-        cell = panel.table.cellWidget(0, ThemesPanel.COL_STAR)
-        button = cell.findChildren(QToolButton)[0]
-        assert button.objectName() == "starToggle"
-
-    def test_star_button_checked_state_matches_favorite(self, tmp_path):
-        # Favorites tuple is ("light", "dark") — both rows render as checked.
-        panel = _make_panel(tmp_path)
-        favorited = {"light", "dark"}
-        for r in range(panel.table.rowCount()):
-            name_item = panel.table.item(r, ThemesPanel.COL_NAME)
-            key = name_item.data(Qt.ItemDataRole.UserRole)
-            cell = panel.table.cellWidget(r, ThemesPanel.COL_STAR)
-            button = cell.findChildren(QToolButton)[0]
-            assert button.isChecked() == (key in favorited)
-            assert button.text() == ("★" if key in favorited else "☆")
-
-    def test_row_height_is_fixed(self, tmp_path):
-        from anki_miner.gui.widgets.panels.themes_panel import _ROW_HEIGHT_PX
-
-        panel = _make_panel(tmp_path)
-        v_header = panel.table.verticalHeader()
-        assert v_header is not None
-        # Fixed row height keeps the centered wrapper visually aligned with
-        # the row dividers; the constant drives the auto-sized star, so the
-        # test reads the constant rather than a literal pixel value.
-        assert v_header.defaultSectionSize() == _ROW_HEIGHT_PX
-
-    def test_star_button_sizes_track_row_height(self, tmp_path):
-        from anki_miner.gui.widgets.panels.themes_panel import _ROW_HEIGHT_PX
-
-        panel = _make_panel(tmp_path)
-        cell = panel.table.cellWidget(0, ThemesPanel.COL_STAR)
-        button = cell.findChildren(QToolButton)[0]
-        # Button is square and fits within the row so the glyph isn't
-        # clipped at top or bottom by the cell boundary.
-        assert button.width() == button.height()
-        assert button.width() <= _ROW_HEIGHT_PX
-        # Font tracks at least 50% of the row height so the glyph stays
-        # readable; current implementation targets 60%, set via instance
-        # stylesheet so the base QWidget font-size can't override it.
-        font_px = int(_ROW_HEIGHT_PX * 0.6)
-        assert f"font-size: {font_px}px" in button.styleSheet()
+def _theme_dict(name: str, **overrides) -> dict:
+    data: dict = {
+        "name": name,
+        "colors": dict.fromkeys(REQUIRED_COLOR_KEYS, "#000000"),
+    }
+    data.update(overrides)
+    return data
 
 
-class TestRowSelectionRefreshesActiveMarker:
-    def test_active_marker_moves_without_repopulate(self, tmp_path, monkeypatch):
-        panel = _make_panel(tmp_path)
+@pytest.fixture
+def themes_dir(tmp_path: Path) -> Path:
+    d = tmp_path / "themes"
+    d.mkdir()
+    # Two ungrouped themes
+    (d / "light.json").write_text(json.dumps(_theme_dict("Light")))
+    (d / "dark.json").write_text(json.dumps(_theme_dict("Dark")))
+    # One family with two variants
+    (d / "catppuccin-mocha.json").write_text(
+        json.dumps(_theme_dict("Catppuccin Mocha", family="Catppuccin", variant="Mocha"))
+    )
+    (d / "catppuccin-latte.json").write_text(
+        json.dumps(_theme_dict("Catppuccin Latte", family="Catppuccin", variant="Latte"))
+    )
+    return d
 
-        populate_calls = {"n": 0}
-        original_populate = panel._populate
 
-        def counting_populate():
-            populate_calls["n"] += 1
-            original_populate()
+@pytest.fixture
+def panel(qapp, themes_dir: Path) -> ThemesPanel:
+    Theme.initialize(
+        active="catppuccin-mocha",
+        favorites=("light",),
+        shipped_dir=themes_dir,
+    )
+    return ThemesPanel(themes_dir)
 
-        monkeypatch.setattr(panel, "_populate", counting_populate)
 
-        # Stub the expensive app-level QSS apply so the test only exercises
-        # the panel-side logic.
-        monkeypatch.setattr(panel, "_apply_to_app", lambda _key: None)
+def _walk(item: QTreeWidgetItem):
+    yield item
+    for i in range(item.childCount()):
+        yield from _walk(item.child(i))
 
-        # Find rows for "light" (currently active) and "dark".
-        def row_for(key: str) -> int:
-            for r in range(panel.table.rowCount()):
-                item = panel.table.item(r, ThemesPanel.COL_NAME)
-                if item is not None and item.data(Qt.ItemDataRole.UserRole) == key:
-                    return r
-            raise AssertionError(f"row not found for {key}")
 
-        dark_row = row_for("dark")
-        # setCurrentCell drives both the selection model AND the current-item
-        # focus, which is what a real mouse click does. selectRow() alone
-        # leaves currentItem unchanged, so the handler's None guard bails out.
-        panel.table.setCurrentCell(dark_row, ThemesPanel.COL_NAME)
+def _find_top_level(panel: ThemesPanel, name: str) -> QTreeWidgetItem:
+    root = panel.tree.invisibleRootItem()
+    for i in range(root.childCount()):
+        if root.child(i).text(panel.COL_NAME) == name:
+            return root.child(i)
+    raise AssertionError(f"Top-level item {name!r} not found")
 
-        # The hot path must NOT call _populate (that was the source of the lag).
-        assert populate_calls["n"] == 0
 
-        # And the Active marker must have moved to the dark row.
-        statuses = {
-            panel.table.item(r, ThemesPanel.COL_NAME)
-            .data(Qt.ItemDataRole.UserRole): panel.table.item(r, ThemesPanel.COL_STATUS)
-            .text()
-            for r in range(panel.table.rowCount())
+class TestTreeStructure:
+    def test_widget_is_tree(self, panel: ThemesPanel) -> None:
+        assert isinstance(panel.tree, QTreeWidget)
+
+    def test_columns_in_spec_order(self, panel: ThemesPanel) -> None:
+        assert panel.tree.columnCount() == 3
+        labels = [panel.tree.headerItem().text(i) for i in range(3)]
+        assert labels == ["Name", "Status", ""]
+
+    def test_column_constants(self, panel: ThemesPanel) -> None:
+        assert (panel.COL_NAME, panel.COL_STATUS, panel.COL_STAR) == (0, 1, 2)
+
+    def test_standalone_themes_top_level_with_no_children(self, panel: ThemesPanel) -> None:
+        keys_at_top: list[str] = []
+        root = panel.tree.invisibleRootItem()
+        for i in range(root.childCount()):
+            item = root.child(i)
+            data = item.data(panel.COL_NAME, Qt.ItemDataRole.UserRole)
+            if isinstance(data, str):
+                keys_at_top.append(data)
+                assert item.childCount() == 0
+        assert "light" in keys_at_top
+        assert "dark" in keys_at_top
+
+    def test_family_groups_variants(self, panel: ThemesPanel) -> None:
+        family_item = _find_top_level(panel, "Catppuccin")
+        assert family_item.childCount() == 2
+        variant_keys = {
+            family_item.child(i).data(panel.COL_NAME, Qt.ItemDataRole.UserRole) for i in range(family_item.childCount())
         }
-        assert statuses["dark"] == "Active"
-        assert statuses["light"] == ""
+        assert variant_keys == {"catppuccin-mocha", "catppuccin-latte"}
+
+    def test_family_variant_uses_variant_name(self, panel: ThemesPanel) -> None:
+        family_item = _find_top_level(panel, "Catppuccin")
+        variant_labels = {family_item.child(i).text(panel.COL_NAME) for i in range(family_item.childCount())}
+        assert variant_labels == {"Mocha", "Latte"}
+
+    def test_active_family_auto_expanded(self, panel: ThemesPanel) -> None:
+        family_item = _find_top_level(panel, "Catppuccin")
+        assert family_item.isExpanded()
+
+
+class TestActiveMarker:
+    def test_active_label_on_active_variant_only(self, panel: ThemesPanel) -> None:
+        root = panel.tree.invisibleRootItem()
+        active_keys: list[str] = []
+        for i in range(root.childCount()):
+            for d in _walk(root.child(i)):
+                if d.text(panel.COL_STATUS) == "Active":
+                    key = d.data(panel.COL_NAME, Qt.ItemDataRole.UserRole)
+                    if isinstance(key, str):
+                        active_keys.append(key)
+        assert active_keys == ["catppuccin-mocha"]
+
+
+class TestSelectionEmitsStateChanged:
+    def test_selecting_variant_emits_signal(self, panel: ThemesPanel) -> None:
+        captured: list[tuple[str, tuple]] = []
+        panel.state_changed.connect(lambda active, favs: captured.append((active, favs)))
+        family = _find_top_level(panel, "Catppuccin")
+        latte = next(
+            family.child(i)
+            for i in range(family.childCount())
+            if family.child(i).data(panel.COL_NAME, Qt.ItemDataRole.UserRole) == "catppuccin-latte"
+        )
+        panel.tree.setCurrentItem(latte)
+        assert captured, "state_changed was not emitted"
+        active, favs = captured[-1]
+        assert active == "catppuccin-latte"
+        assert isinstance(favs, tuple)
+
+
+def _family_star_button(panel: ThemesPanel, family_name: str) -> QToolButton:
+    family = _find_top_level(panel, family_name)
+    widget = panel.tree.itemWidget(family, panel.COL_STAR)
+    btn = widget.findChild(QToolButton)
+    assert btn is not None, "family star button missing"
+    return btn
+
+
+class TestFamilyStarTriState:
+    def test_outline_when_no_variant_favorited(self, panel: ThemesPanel) -> None:
+        Theme.set_favorites(["light"])
+        panel._populate()
+        btn = _family_star_button(panel, "Catppuccin")
+        assert btn.text() == _STAR_OUTLINE
+        # No opacity effect applied in the none-favorited path.
+        assert btn.graphicsEffect() is None
+
+    def test_filled_when_all_variants_favorited(self, panel: ThemesPanel) -> None:
+        Theme.set_favorites(["light", "catppuccin-mocha", "catppuccin-latte"])
+        panel._populate()
+        btn = _family_star_button(panel, "Catppuccin")
+        assert btn.text() == _STAR_FILLED
+        assert btn.graphicsEffect() is None  # no dimming when all-favorited
+
+    def test_dimmed_when_partial(self, panel: ThemesPanel) -> None:
+        Theme.set_favorites(["catppuccin-mocha"])
+        panel._populate()
+        btn = _family_star_button(panel, "Catppuccin")
+        assert btn.text() == _STAR_FILLED
+        effect = btn.graphicsEffect()
+        assert effect is not None
+        # Opacity matches the configured partial alpha.
+        assert effect.opacity() == _FAMILY_STAR_PARTIAL_OPACITY
+
+
+class TestFamilyStarBulkToggle:
+    def test_none_or_partial_clicks_favorite_all(self, panel: ThemesPanel) -> None:
+        Theme.set_favorites(["catppuccin-mocha"])  # partial state
+        panel._populate()
+        captured: list[tuple[str, tuple]] = []
+        panel.state_changed.connect(lambda a, f: captured.append((a, f)))
+        btn = _family_star_button(panel, "Catppuccin")
+        btn.click()
+        favs = set(Theme.get_favorites())
+        assert {"catppuccin-mocha", "catppuccin-latte"}.issubset(favs)
+        assert len(captured) == 1  # single batched emission
+
+    def test_all_clicks_unfavorite_all(self, panel: ThemesPanel) -> None:
+        Theme.set_favorites(["catppuccin-mocha", "catppuccin-latte"])
+        panel._populate()
+        btn = _family_star_button(panel, "Catppuccin")
+        btn.click()
+        favs = set(Theme.get_favorites())
+        assert "catppuccin-mocha" not in favs
+        assert "catppuccin-latte" not in favs
+
+
+class TestFamilyRowNotSelectable:
+    def test_family_row_is_not_selectable(self, panel: ThemesPanel) -> None:
+        family = _find_top_level(panel, "Catppuccin")
+        assert not bool(family.flags() & Qt.ItemFlag.ItemIsSelectable)
