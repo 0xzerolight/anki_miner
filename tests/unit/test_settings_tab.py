@@ -190,3 +190,40 @@ class TestAnkiTagsRoundTrip:
 
         assert len(received) == 1
         assert received[0].anki_tags == "new-tag another"
+
+
+class TestSentenceLengthFilterRoundTrip:
+    """Load/save round-trip for the sentence-length filter widgets (Issue #33)."""
+
+    def test_loads_sentence_length_filter_from_config(self, test_config: AnkiMinerConfig):
+        cfg = replace(
+            test_config,
+            use_sentence_length_filter=True,
+            max_sentence_duration_seconds=7.5,
+            max_sentence_chars=60,
+        )
+        widget = SettingsTab(cfg)
+        try:
+            assert widget.filtering_panel.use_sentence_length_checkbox.isChecked() is True
+            assert widget.filtering_panel.max_sentence_duration_spinbox.value() == pytest.approx(7.5)
+            assert widget.filtering_panel.max_sentence_chars_spinbox.value() == 60
+        finally:
+            widget.deleteLater()
+
+    def test_saves_sentence_length_filter_to_config(self, tab, monkeypatch):
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+
+        tab.filtering_panel.use_sentence_length_checkbox.setChecked(True)
+        tab.filtering_panel.max_sentence_duration_spinbox.setValue(7.5)
+        tab.filtering_panel.max_sentence_chars_spinbox.setValue(60)
+        tab._on_save_clicked()
+
+        assert len(received) == 1
+        assert received[0].use_sentence_length_filter is True
+        assert received[0].max_sentence_duration_seconds == pytest.approx(7.5)
+        assert received[0].max_sentence_chars == 60
