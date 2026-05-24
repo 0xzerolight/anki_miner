@@ -1,6 +1,8 @@
 {
   "name": "Tokyo Night",
   "author": "enkia/tokyo-night",
+  "family": "Tokyo Night",
+  "variant": "Tokyo Night",
   "colors": {
     "primary": "#7aa2f7",
     "primary-hover": "#7dcfff",
