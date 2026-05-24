@@ -5,6 +5,7 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QDoubleSpinBox,
     QHBoxLayout,
     QLineEdit,
     QPushButton,
@@ -198,6 +199,46 @@ class FilteringSettingsPanel(FormPanel):
             helper="Keep only words with at least one example sentence where they are "
             "the sole unknown. Trades card volume for sentence comprehensibility. "
             "Overrides sentence deduplication when enabled.",
+        )
+
+        # Sentence Length section (Issue #33)
+        self.add_section("Sentence Length")
+
+        self.use_sentence_length_checkbox = QCheckBox("Enable Sentence Length Filter")
+        self.use_sentence_length_checkbox.setToolTip(
+            "Drop words whose example sentence exceeds the audio-duration "
+            "or character caps below. Either cap set to 0 means no limit "
+            "for that dimension."
+        )
+        self.add_field(
+            "",
+            self.use_sentence_length_checkbox,
+            helper="Skip cards with long example sentences to reduce deck " "size and speed up reviews.",
+        )
+
+        self.max_sentence_duration_spinbox = QDoubleSpinBox()
+        self.max_sentence_duration_spinbox.setRange(0.0, 600.0)
+        self.max_sentence_duration_spinbox.setDecimals(1)
+        self.max_sentence_duration_spinbox.setSingleStep(0.5)
+        self.max_sentence_duration_spinbox.setSuffix(" s")
+        self.max_sentence_duration_spinbox.setSpecialValueText("No limit")
+        self.max_sentence_duration_spinbox.setToolTip(
+            "Maximum audio length of the example sentence in seconds " "(0 = no limit)"
+        )
+        self.add_field(
+            "Max Sentence Duration",
+            self.max_sentence_duration_spinbox,
+            helper="Drops cards whose subtitle line is longer than this. " "Set to 0 for no limit.",
+        )
+
+        self.max_sentence_chars_spinbox = QSpinBox()
+        self.max_sentence_chars_spinbox.setRange(0, 1000)
+        self.max_sentence_chars_spinbox.setSpecialValueText("No limit")
+        self.max_sentence_chars_spinbox.setToolTip("Maximum character count of the example sentence (0 = no limit)")
+        self.add_field(
+            "Max Sentence Characters",
+            self.max_sentence_chars_spinbox,
+            helper="Drops cards whose sentence text exceeds this many characters. " "Set to 0 for no limit.",
         )
 
         # Card Formatting section (Issue #20)
