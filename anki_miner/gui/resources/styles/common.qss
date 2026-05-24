@@ -821,7 +821,38 @@ QTableWidget::item:alternate:selected {
     color: ${color-table-selected-text};
 }
 
+QTreeWidget {
+    background-color: ${color-surface};
+    color: ${color-text};
+    border-color: ${color-border};
+}
+
+QTreeWidget::item:hover {
+    background-color: ${color-surface-hover};
+}
+
+QTreeWidget::item:selected {
+    background-color: ${color-table-selected-bg};
+    color: ${color-table-selected-text};
+}
+
+QTreeWidget::item:alternate {
+    background-color: ${color-surface-alt};
+    color: ${color-text};
+}
+
+QTreeWidget::item:alternate:selected {
+    background-color: ${color-table-selected-bg};
+    color: ${color-table-selected-text};
+}
+
 QHeaderView::section {
+    background-color: ${color-background};
+    color: ${color-text};
+    border-color: ${color-border};
+}
+
+QHeaderView::section:vertical {
     background-color: ${color-background};
     color: ${color-text};
     border-color: ${color-border};
