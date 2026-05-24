@@ -243,6 +243,11 @@ class SettingsTab(QWidget):
         # i+1 sentence filter setting
         self.filtering_panel.use_i_plus_one_checkbox.setChecked(self.config.use_i_plus_one_filter)
 
+        # Sentence length filter (Issue #33)
+        self.filtering_panel.use_sentence_length_checkbox.setChecked(self.config.use_sentence_length_filter)
+        self.filtering_panel.max_sentence_duration_spinbox.setValue(self.config.max_sentence_duration_seconds)
+        self.filtering_panel.max_sentence_chars_spinbox.setValue(self.config.max_sentence_chars)
+
         # Card formatting (Issue #20)
         self.filtering_panel.bold_target_in_sentence_checkbox.setChecked(self.config.bold_target_in_sentence)
 
@@ -369,6 +374,10 @@ class SettingsTab(QWidget):
             deduplicate_sentences=self.filtering_panel.deduplicate_sentences_checkbox.isChecked(),
             # i+1 sentence filter setting
             use_i_plus_one_filter=self.filtering_panel.use_i_plus_one_checkbox.isChecked(),
+            # Sentence length filter (Issue #33)
+            use_sentence_length_filter=self.filtering_panel.use_sentence_length_checkbox.isChecked(),
+            max_sentence_duration_seconds=self.filtering_panel.max_sentence_duration_spinbox.value(),
+            max_sentence_chars=self.filtering_panel.max_sentence_chars_spinbox.value(),
             # Card formatting (Issue #20)
             bold_target_in_sentence=self.filtering_panel.bold_target_in_sentence_checkbox.isChecked(),
             # YouTube settings
