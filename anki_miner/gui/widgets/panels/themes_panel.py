@@ -25,14 +25,13 @@ from pathlib import Path
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
-    QAbstractItemView,
     QApplication,
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QTableWidget,
-    QTableWidgetItem,
     QToolButton,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -69,9 +68,9 @@ class ThemesPanel(QWidget):
     favorites_changed = pyqtSignal()
 
     # Column indices for clarity.
-    COL_STAR = 0
-    COL_NAME = 1
-    COL_STATUS = 2
+    COL_NAME = 0  # tree expander + name
+    COL_STATUS = 1  # "Active" marker
+    COL_STAR = 2  # favorite toggle
 
     def __init__(self, themes_root: Path, parent: QWidget | None = None) -> None:
         """Initialize the panel.
@@ -103,30 +102,32 @@ class ThemesPanel(QWidget):
         intro.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(intro)
 
-        self.table = QTableWidget(0, 3, self)
-        # objectName lets common.qss scope a `::item { padding: 0 }` override
-        # to just this table without disturbing other tables in the app.
-        self.table.setObjectName("themesPanelTable")
-        self.table.setHorizontalHeaderLabels(["", "Name", "Status"])
-        v_header = self.table.verticalHeader()
-        if v_header is not None:
-            v_header.setVisible(False)
-            v_header.setDefaultSectionSize(_ROW_HEIGHT_PX)
-            v_header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.table.setShowGrid(False)
-        self.table.setAlternatingRowColors(True)
+        self.tree = QTreeWidget(self)
+        # objectName lets common.qss scope styling overrides to just this tree
+        # without disturbing other trees in the app.
+        self.tree.setObjectName("themesPanelTree")
+        self.tree.setColumnCount(3)
+        self.tree.setHeaderLabels(["Name", "Status", ""])
+        self.tree.setRootIsDecorated(True)
+        self.tree.setUniformRowHeights(True)
+        self.tree.setAlternatingRowColors(True)
+        self.tree.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
+        self.tree.setEditTriggers(QTreeWidget.EditTrigger.NoEditTriggers)
+        self.tree.setIndentation(18)
 
-        header = self.table.horizontalHeader()
+        header = self.tree.header()
         if header is not None:
-            header.setSectionResizeMode(self.COL_STAR, QHeaderView.ResizeMode.ResizeToContents)
             header.setSectionResizeMode(self.COL_NAME, QHeaderView.ResizeMode.Stretch)
             header.setSectionResizeMode(self.COL_STATUS, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(self.COL_STAR, QHeaderView.ResizeMode.ResizeToContents)
+            header.setStretchLastSection(False)
 
-        self.table.itemSelectionChanged.connect(self._on_row_selected)
-        layout.addWidget(self.table)
+        # Apply the same row-height tracking the old QTableWidget had so the
+        # star button has predictable vertical room.
+        self.tree.setStyleSheet(f"QTreeWidget::item {{ padding: 0; min-height: {_ROW_HEIGHT_PX}px; }}")
+
+        self.tree.itemSelectionChanged.connect(self._on_row_selected)
+        layout.addWidget(self.tree)
 
         buttons = QHBoxLayout()
         buttons.setSpacing(SPACING.sm)
@@ -152,35 +153,26 @@ class ThemesPanel(QWidget):
     # ---- Population ------------------------------------------------------
 
     def _populate(self) -> None:
-        """Rebuild the table from the current Theme state."""
+        """Rebuild the tree from the current Theme state."""
         available = Theme.get_available_themes()
         favorites = set(Theme.get_favorites())
         active = Theme.get_current_mode()
 
-        self.table.blockSignals(True)
+        self.tree.blockSignals(True)
         try:
-            self.table.setRowCount(0)
-            for row, (key, display) in enumerate(available.items()):
-                self.table.insertRow(row)
-
-                self.table.setCellWidget(
-                    row,
-                    self.COL_STAR,
-                    self._build_star_cell(key, key in favorites),
-                )
-                # Stash the theme key on the row's name item so row-select can
-                # find it without an extra dict lookup.
-                name_item = QTableWidgetItem(display)
-                name_item.setData(Qt.ItemDataRole.UserRole, key)
-                self.table.setItem(row, self.COL_NAME, name_item)
-
-                status_item = QTableWidgetItem("Active" if key == active else "")
-                self.table.setItem(row, self.COL_STATUS, status_item)
-
+            self.tree.clear()
+            for key, display in available.items():
+                item = QTreeWidgetItem([display, "Active" if key == active else "", ""])
+                # Stash the theme key on the name column so row-select can find
+                # it without an extra dict lookup.
+                item.setData(self.COL_NAME, Qt.ItemDataRole.UserRole, key)
+                self.tree.addTopLevelItem(item)
+                star_widget = self._build_star_cell(key, key in favorites)
+                self.tree.setItemWidget(item, self.COL_STAR, star_widget)
                 if key == active:
-                    self.table.selectRow(row)
+                    self.tree.setCurrentItem(item)
         finally:
-            self.table.blockSignals(False)
+            self.tree.blockSignals(False)
 
     def _build_star_cell(self, key: str, is_favorite: bool) -> QWidget:
         """Build a centered star-button cell for the given theme row.
@@ -213,7 +205,7 @@ class ThemesPanel(QWidget):
         button.clicked.connect(lambda _checked=False, k=key: self._toggle_favorite(k))
 
         # Button always fits the row (cell padding is zeroed by the scoped
-        # QSS rule on `#themesPanelTable`). 1-px margin on each side keeps
+        # QSS rule on `#themesPanelTree`). 1-px margin on each side keeps
         # the button from butting up against the row divider.
         side = _ROW_HEIGHT_PX - 2
         button.setFixedSize(side, side)
@@ -224,7 +216,7 @@ class ThemesPanel(QWidget):
         font_px = int(_ROW_HEIGHT_PX * 0.6)
         button.setStyleSheet(f"font-size: {font_px}px;")
 
-        wrapper = QWidget(self.table)
+        wrapper = QWidget(self.tree)
         wrapper_layout = QHBoxLayout(wrapper)
         wrapper_layout.setContentsMargins(0, 0, 0, 0)
         wrapper_layout.setSpacing(0)
@@ -252,15 +244,14 @@ class ThemesPanel(QWidget):
 
     def _on_row_selected(self) -> None:
         """Live-preview the selected theme."""
-        item = self.table.currentItem()
+        item = self.tree.currentItem()
         if item is None:
             return
-        row = item.row()
-        name_item = self.table.item(row, self.COL_NAME)
-        if name_item is None:
+        # Skip family rows (no key payload — added in Task 5).
+        key = item.data(self.COL_NAME, Qt.ItemDataRole.UserRole)
+        if not isinstance(key, str):
             return
-        key = name_item.data(Qt.ItemDataRole.UserRole)
-        if not key or key == Theme.get_current_mode():
+        if key == Theme.get_current_mode():
             return
         Theme.set_mode(key)
         self._apply_to_app(key)
@@ -272,14 +263,27 @@ class ThemesPanel(QWidget):
         self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
 
     def _refresh_active_marker(self, new_active_key: str) -> None:
-        """Move the "Active" Status label to the row matching ``new_active_key``."""
-        for r in range(self.table.rowCount()):
-            name_item = self.table.item(r, self.COL_NAME)
-            status_item = self.table.item(r, self.COL_STATUS)
-            if name_item is None or status_item is None:
-                continue
-            key = name_item.data(Qt.ItemDataRole.UserRole)
-            status_item.setText("Active" if key == new_active_key else "")
+        """Move the "Active" Status label to the row matching ``new_active_key``.
+
+        Walks the tree recursively so future nested variant rows (Task 5+) are
+        handled without further changes.
+        """
+
+        def walk(item: QTreeWidgetItem | None):
+            if item is None:
+                return
+            yield item
+            for i in range(item.childCount()):
+                yield from walk(item.child(i))
+
+        root = self.tree.invisibleRootItem()
+        if root is None:
+            return
+        for i in range(root.childCount()):
+            for descendant in walk(root.child(i)):
+                key = descendant.data(self.COL_NAME, Qt.ItemDataRole.UserRole)
+                if isinstance(key, str):
+                    descendant.setText(self.COL_STATUS, "Active" if key == new_active_key else "")
 
     def _toggle_favorite(self, key: str) -> None:
         """Star/unstar `key`, refresh the table, notify listeners."""
