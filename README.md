@@ -6,9 +6,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-Contributor%20Covenant%203.0-blueviolet.svg)](CODE_OF_CONDUCT.md)
 
-Batch-mines Japanese vocabulary from anime and YouTube into Anki cards. Given a season folder or a YouTube URL, it produces cards containing screenshots, sentence audio, furigana, pitch accent, and frequency data.
-
-Suited to batch processing after viewing, rather than real-time lookup during playback (the asbplayer and Yomitan workflow).
+Turn native Japanese content into Anki vocabulary cards - with screenshots, sentence audio, furigana, pitch accent, and frequency data.
 
 ## Showcase
 
@@ -19,27 +17,6 @@ Suited to batch processing after viewing, rather than real-time lookup during pl
 | | | |
 |---|---|---|
 | ![Cowboy Bebop](gifs/cowboy_bebop.gif) | ![Frieren](gifs/frieren.gif) | ![Steins;Gate](gifs/steins;gate.gif) |
-
-*Generated from video and subtitle files. Each card contains a screenshot, sentence audio, furigana, and definition.*
-
-## How It Works
-
-1. **Parse subtitles**: tokenize Japanese text with MeCab morphological analysis.
-2. **Filter words**: keep content words (nouns, verbs, adjectives, adverbs); drop words already in your Anki collection or on your blacklist.
-3. **Extract media**: capture screenshots and audio clips from the video at each subtitle's timestamp via ffmpeg.
-4. **Fetch definitions**: look up definitions through your configured dictionary chain (Yomitan-format dictionaries, with Jisho as optional online fallback).
-5. **Create cards**: batch upload to Anki via AnkiConnect.
-
-## Features
-
-- Lapis-compatible cards with furigana, pitch accent, and word frequency fields.
-- YouTube support: paste a URL, mine the video.
-- Queue a folder of episode/subtitle pairs for sequential processing.
-- Pluggable dictionary chain: load any Yomitan-format dictionaries, reorder freely, with Jisho online as optional fallback.
-- Preview and curate the word list before any cards are created.
-- Parallel ffmpeg extraction for screenshots and sentence audio. Configurable audio codec (MP3 or Opus) and bitrate in Settings → Media for storage-conscious collections.
-- Analytics dashboard with history, undo, and series difficulty rankings.
-- Four themes (Light, Dark, Sakura, Tokyo Night) plus custom JSON themes.
 
 ## Installation
 
@@ -86,69 +63,65 @@ pip install .
 
 ## Quick Start
 
-After installing, launch **Anki Miner** from your Start Menu, Applications folder, or app menu. If you installed from PyPI or source, run `anki_miner_gui` from a terminal. A desktop shortcut is created on first launch; re-run it from **Tools -> Create Desktop Shortcut...** inside the app.
+After installing, launch **Anki Miner** from your Start Menu, Applications folder, or app menu. If you installed from PyPI or source, run `anki_miner_gui` from a terminal. A desktop shortcut is created on first launch; re-run it from **Tools → Create Desktop Shortcut…** inside the app.
 
 Anki must be running with AnkiConnect installed before mining starts.
 
 Tabs:
-- **Single Episode**: mine one video/subtitle pair with file selectors and progress tracking.
-- **Batch Processing**: queue multiple series for sequential processing.
-- **YouTube**: paste a URL, fetch metadata, then mine.
-- **Analytics**: history, series difficulty, milestones.
-- **Settings**: Anki connection, media extraction, dictionary, word filtering. Saved to `~/.anki_miner/gui_config.json`.
 
-## Recommended Setup
+- **Episode Mining**: mine one video/subtitle pair with file selectors and progress tracking.
+- **Batch Mining**: queue a folder of episode/subtitle pairs for sequential processing.
+- **YouTube**: paste one or more URLs, then mine the queue.
+- **Analytics**: history, series difficulty rankings, milestones, undo.
+- **Settings**: Anki, Media, Dictionary, Filtering, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
 
-### Lapis Note Type
+## Features
 
-Anki Miner uses the [Lapis](https://github.com/donkuri/lapis) note type fields by default. For custom note types, rename the fields in Settings/Anki.
+- Anki cards with furigana, pitch accent, and word frequency.
+- **Bold the target word** in the sentence so it stands out on the card front.
+- **Glossary field** that combines every enabled dictionary into one card field, compatible with the Senren dictionary-toggle template.
+- Load any Yomitan dictionaries you like, reorder them, and add Jisho as an online fallback.
+- YouTube queue: paste a list of URLs, mine the whole list in one click.
+- Batch a folder of episode/subtitle pairs for unattended processing.
+- Review and edit the word list before any cards are created.
+- Audio in MP3 or Opus, at the bitrate you choose — Opus produces much smaller files for the same listening quality.
+- Animated screenshots in AVIF or WebP for cards that show a moment of motion instead of a still frame.
+- Analytics dashboard with history, undo, milestones, and series difficulty rankings.
+- Four built-in themes (Light, Dark, Sakura, Tokyo Night) with a favorites list, `Ctrl+T` to cycle, and custom themes from a JSON file.
 
-1. Download the latest `.apkg` from [Lapis releases](https://github.com/donkuri/lapis/releases).
-2. In Anki: **File → Import** and select the `.apkg`.
+<details>
+<summary><strong>How It Works</strong></summary>
 
-Default field mapping:
+1. **Read the subtitles** and split Japanese into individual words.
+2. **Filter** to content words you don't already know.
+3. **Grab a screenshot and audio clip** from the video for each line.
+4. **Look up definitions** in your configured dictionaries, falling back to Jisho online if needed.
+5. **Send the finished cards to Anki.**
 
-| Anki Miner Field       | Note Field          | Content                       |
-|------------------------|---------------------|-------------------------------|
-| word                   | Expression          | Dictionary form of the word   |
-| sentence               | Sentence            | Original subtitle line        |
-| definition             | MainDefinition      | English definitions           |
-| picture                | Picture             | Screenshot from the video     |
-| audio                  | SentenceAudio       | Audio clip of the sentence    |
-| expression_furigana    | ExpressionFurigana  | Word with furigana reading    |
-| sentence_furigana      | SentenceFurigana    | Sentence with furigana reading|
-| pitch_position         | *(unmapped)*        | Pitch accent position number  |
-| pitch_category         | *(unmapped)*        | Pitch accent category         |
-| frequency              | *(unmapped)*        | Word frequency rank           |
+</details>
 
-Fields marked *(unmapped)* have no default Lapis mapping. Map them in Settings if your note type has equivalents. Any note type with the required fields works.
-
-### Dictionaries
+## Dictionaries
 
 Anki Miner looks up definitions through a **provider chain** you configure. Each lookup tries the providers in order; the first hit wins. Mix any number of offline Yomitan-format dictionaries with the Jisho online fallback, in any order.
 
 Add a dictionary in **Settings → Add Dictionary…** by pointing at a Yomitan `.zip` archive. Drag entries to reorder the chain. Installed dictionaries are indexed once into `~/.anki_miner/dicts/<dict_id>/index.sqlite` and loaded on startup. Structured-content entries are rendered to HTML on import, so card definitions preserve the source dictionary's formatting (definition lists, examples, tags).
 
-**Recommended Japanese → English dictionaries** — both are JMdict-derived; pick whichever fits your cards (or load both and order them as you like):
+**Recommended Japanese → English dictionaries** — both are JMdict-derived; pick whichever fits your cards, or load both and order them as you like:
 
 - **[Jitendex](https://github.com/Jitendex/Jitendex)** — modern JMdict successor with structured-content formatting, example sentences, and richer tags. Best for visually rich cards. Grab the Yomitan archive from the [Jitendex releases page](https://github.com/Jitendex/Jitendex/releases).
 - **[JMdict](https://www.edrdg.org/jmdict/edict.html)** — the original community JMdict project. Plain-text glosses, smaller index, faster to add. Yomitan builds are available from the [Yomitan dictionary list](https://learnjapanese.moe/yomichan/#dictionaries) or you can rebuild from the EDRDG source.
 
 Install via **Settings → Add Dictionary…** in either case.
 
-Without any local dictionary, lookups fall back to the Jisho API (slower, online, rate-limited).
-
-> Upgrading from a pre-multi-dictionary release? A legacy `~/.anki_miner/JMdict_e` file is auto-migrated to the new SQLite index on first launch. The legacy XML can be deleted after migration.
-
 ## YouTube Mining
 
-Paste a URL, click **Fetch Info** to probe metadata (title, duration, subtitle availability), then click **Mine**. The fetch downloads the video and its Japanese subtitle track into a per-run temporary directory, then passes both files to the same pipeline used for file-based mining.
+Paste one or more URLs into the YouTube tab. Each row shows its title, length, and subtitle source as you add it; click **Mine** to process the whole list. Transient download errors are retried once before a row is marked failed. Cancel is safe at any point.
 
-Auto-captions are accepted only when native Japanese. Tracks that YouTube generates by machine-translating from English are rejected, since mining them yields unusable results. Native auto-captions remain lower quality than manual subtitles because they lack sentence boundaries.
+Manual Japanese subtitles are used when available. Auto-captions are accepted only when YouTube generated them natively from Japanese audio — captions that YouTube produced by machine-translating from another language are skipped, because they don't make usable cards. Even native auto-captions are rougher than manual subtitles, since they lack sentence boundaries.
 
 Gotchas:
 
-- **Bot-detection prompts**: if YouTube asks "Sign in to confirm you're not a bot", open **Settings -> Cookies -> Browser** and pick Firefox or Chrome. yt-dlp pulls cookies from that browser's profile on every fetch.
+- **Bot-detection prompts**: if YouTube asks "Sign in to confirm you're not a bot", open **Settings → Cookies → Browser** and pick Firefox or Chrome. Anki Miner pulls cookies from that browser's profile on every fetch.
 - **Age-restricted videos**: same fix.
 - **Max duration**: defaults to 120 minutes. The probe aborts before downloading if the video is longer. Adjust in Settings.
 
@@ -162,10 +135,10 @@ Anki Miner checks GitHub for new releases on startup (toggle in Settings). When 
 |--------------------------|----------------------------------------------------------------------------------|
 | "Cannot connect to Anki" | Start Anki and ensure AnkiConnect is installed.                                  |
 | "Deck not found"         | Create the deck in Anki or update the deck name in Settings.                     |
-| "Note type not found"    | Import Lapis (see above) or configure your own in Settings.                      |
+| "Note type not found"    | Configure your note type's field names in Settings → Anki.                       |
 | "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
 | No definitions found     | Add a Yomitan dictionary in Settings → Add Dictionary…, or enable the Jisho fallback. |
-| Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.     |
+| Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.      |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI.                                      |
 
 ## Contributing
