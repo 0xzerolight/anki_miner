@@ -152,6 +152,15 @@ class AnkiMinerConfig:
     # Supersedes deduplicate_sentences when enabled.
     use_i_plus_one_filter: bool = False
 
+    # Sentence length filter (Issue #33). Caps the example sentence by audio
+    # duration and/or character count. ``use_sentence_length_filter`` is the
+    # master toggle; each cap of ``0`` (or ``0.0``) means "no limit" for that
+    # dimension when the toggle is on. Runs after dedup, before i+1, so i+1
+    # alternatives are picked from the length-compliant pool.
+    use_sentence_length_filter: bool = False
+    max_sentence_duration_seconds: float = 0.0  # 0 = no duration cap
+    max_sentence_chars: int = 0  # 0 = no character cap
+
     # Cross-episode frequency settings
     use_cross_episode_priority: bool = False
     min_episode_appearances: int = 2  # Only mine words appearing in at least N episodes
