@@ -298,6 +298,29 @@ class EpisodeProcessor:
             if deduped > 0:
                 self.presenter.show_info(f"Sentence deduplication: removed {deduped} duplicate-sentence words")
 
+        # Sentence length filter (Issue #33). Drops words whose example sentence
+        # exceeds the configured audio-duration and/or character caps. Runs before
+        # i+1 so the i+1 scan only considers length-compliant alternatives.
+        if self.config.use_sentence_length_filter and (
+            self.config.max_sentence_duration_seconds > 0.0 or self.config.max_sentence_chars > 0
+        ):
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_sentence_length(
+                unknown_words,
+                max_duration=self.config.max_sentence_duration_seconds,
+                max_chars=self.config.max_sentence_chars,
+            )
+            filtered_out = before - len(unknown_words)
+            if filtered_out > 0:
+                caps = []
+                if self.config.max_sentence_duration_seconds > 0.0:
+                    caps.append(f"{self.config.max_sentence_duration_seconds:g}s")
+                if self.config.max_sentence_chars > 0:
+                    caps.append(f"{self.config.max_sentence_chars} chars")
+                self.presenter.show_info(
+                    f"Sentence length filter: removed {filtered_out} words " f"(cap: {', '.join(caps)})"
+                )
+
         # Cross-episode frequency filter.
         if cross_episode_counts is not None and self.config.min_episode_appearances > 1:
             before = len(unknown_words)
