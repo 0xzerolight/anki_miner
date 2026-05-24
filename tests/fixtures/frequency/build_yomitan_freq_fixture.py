@@ -13,7 +13,7 @@ def build_yomitan_freq_zip(
     *,
     title: str = "Test Freq",
     revision: str = "v1",
-    format_version: int = 3,
+    format_version: int | None = 3,
     frequency_mode: str | None = None,
     meta_banks: list[list[Any]] | None = None,
 ) -> Path:
@@ -21,6 +21,8 @@ def build_yomitan_freq_zip(
 
     Each item in ``meta_banks`` is one bank file. Entries are ``[term, mode, data]``
     triples passed through verbatim — callers control mode and data shape.
+    Pass ``format_version=None`` to omit the ``format`` key entirely (used to
+    test the importer's missing-format rejection path).
     """
     if meta_banks is None:
         meta_banks = [
@@ -34,8 +36,9 @@ def build_yomitan_freq_zip(
     index: dict[str, Any] = {
         "title": title,
         "revision": revision,
-        "format": format_version,
     }
+    if format_version is not None:
+        index["format"] = format_version
     if frequency_mode is not None:
         index["frequencyMode"] = frequency_mode
 
