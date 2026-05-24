@@ -23,7 +23,7 @@ import logging
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtGui import QCursor, QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.resources.styles.theme import Theme, ThemeGroupEntry
 from anki_miner.gui.widgets.enhanced import ModernButton
 
 logger = logging.getLogger(__name__)
@@ -51,6 +51,10 @@ _ROW_HEIGHT_PX = 36
 # sharp at small sizes — no QPainter math, no devicePixelRatio handling.
 _STAR_FILLED = "★"
 _STAR_OUTLINE = "☆"
+
+# Color used for the dimmed (partial) family star. Same glyph as filled,
+# lower alpha — reads as "some but not all variants favorited".
+_FAMILY_STAR_PARTIAL_OPACITY = 0.45
 
 
 class ThemesPanel(QWidget):
@@ -160,7 +164,6 @@ class ThemesPanel(QWidget):
         self.tree.blockSignals(True)
         try:
             self.tree.clear()
-            self._family_items: dict[str, QTreeWidgetItem] = {}
             for family_name, entries in groups:
                 if family_name is None:
                     # Standalone: render the single entry as a top-level row.
@@ -185,7 +188,6 @@ class ThemesPanel(QWidget):
                     family_item.setFlags(family_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
                     family_item.setData(self.COL_NAME, Qt.ItemDataRole.UserRole, None)
                     self.tree.addTopLevelItem(family_item)
-                    self._family_items[family_name] = family_item
 
                     active_inside = False
                     for entry in entries:
@@ -264,11 +266,56 @@ class ThemesPanel(QWidget):
     def _build_family_star_cell(
         self,
         family_name: str,
-        entries: list,
+        entries: list[ThemeGroupEntry],
         favorites: set[str],
     ) -> QWidget:
-        """Placeholder. Task 6 replaces this with the tri-state family star."""
-        return QWidget(self)
+        """Tri-state favorite star for a family row.
+
+        Visual:
+            0 favorited → outline ☆
+            all favorited → filled ★
+            partial → filled ★ at reduced opacity
+
+        Click rule: if all are favorited, unfavorite all; otherwise favorite all.
+        Same fixed height as ``_build_star_cell`` to keep family/variant rows aligned.
+        """
+        wrapper = QWidget(self)
+        layout = QHBoxLayout(wrapper)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        button = QToolButton(wrapper)
+        button.setObjectName("starToggle")
+        button.setAutoRaise(True)
+        button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        side = _ROW_HEIGHT_PX - 2
+        button.setFixedSize(side, side)
+
+        keys = [e.key for e in entries]
+        favorited_keys = [k for k in keys if k in favorites]
+        n_fav = len(favorited_keys)
+        n_total = len(keys)
+        font_size = int(_ROW_HEIGHT_PX * 0.6)
+
+        if n_fav == 0:
+            button.setText(_STAR_OUTLINE)
+            tooltip = f"Favorite all {n_total} {family_name} variants."
+            button.setStyleSheet(f"font-size: {font_size}px;")
+        elif n_fav == n_total:
+            button.setText(_STAR_FILLED)
+            tooltip = f"Unfavorite all {n_total} {family_name} variants."
+            button.setStyleSheet(f"font-size: {font_size}px;")
+        else:
+            button.setText(_STAR_FILLED)
+            tooltip = f"{n_fav} of {n_total} {family_name} variants favorited. " "Click to favorite all."
+            alpha = int(_FAMILY_STAR_PARTIAL_OPACITY * 255)
+            button.setStyleSheet(f"font-size: {font_size}px; color: rgba(0, 0, 0, {alpha});")
+
+        button.setToolTip(tooltip)
+        button.clicked.connect(lambda _checked=False, k=tuple(keys): self._toggle_family_favorites(k))
+        layout.addWidget(button)
+        return wrapper
 
     # ---- Events ----------------------------------------------------------
 
@@ -341,6 +388,28 @@ class ThemesPanel(QWidget):
         self._populate()
         self.favorites_changed.emit()
         self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
+
+    def _toggle_family_favorites(self, keys: tuple[str, ...]) -> None:
+        """Bulk-toggle every variant in a family.
+
+        Rule: if all are favorited, unfavorite all; otherwise favorite all.
+        Batches through ``Theme.set_favorites`` so the state listener fires once.
+        """
+        current = list(Theme.get_favorites())
+        current_set = set(current)
+        key_set = set(keys)
+        all_favorited = key_set.issubset(current_set)
+        if all_favorited:
+            new_favorites = [k for k in current if k not in key_set]
+        else:
+            new_favorites = list(current)
+            for k in keys:
+                if k not in current_set:
+                    new_favorites.append(k)
+        Theme.set_favorites(new_favorites)
+        self._populate()
+        self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
+        self.favorites_changed.emit()
 
     def _open_themes_folder(self) -> None:
         """Open (creating if necessary) the user themes directory."""
