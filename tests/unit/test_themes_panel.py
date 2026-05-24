@@ -233,6 +233,17 @@ class TestFamilyStarBulkToggle:
         assert "catppuccin-mocha" not in favs
         assert "catppuccin-latte" not in favs
 
+    def test_bulk_toggle_emits_favorites_changed(self, panel: ThemesPanel) -> None:
+        # HeaderWidget refreshes its combo on favorites_changed; regression
+        # guard for the family-star path.
+        Theme.set_favorites(["catppuccin-mocha"])
+        panel._populate()
+        emitted: list[None] = []
+        panel.favorites_changed.connect(lambda: emitted.append(None))
+        btn = _family_star_button(panel, "Catppuccin")
+        btn.click()
+        assert len(emitted) == 1
+
 
 class TestFamilyRowNotSelectable:
     def test_family_row_is_not_selectable(self, panel: ThemesPanel) -> None:
