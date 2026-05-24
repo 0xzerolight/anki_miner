@@ -155,8 +155,9 @@ class AnkiMinerConfig:
     # Sentence length filter (Issue #33). Caps the example sentence by audio
     # duration and/or character count. ``use_sentence_length_filter`` is the
     # master toggle; each cap of ``0`` (or ``0.0``) means "no limit" for that
-    # dimension when the toggle is on. Runs after dedup, before i+1, so i+1
-    # alternatives are picked from the length-compliant pool.
+    # dimension when the toggle is on. Runs AFTER i+1 because filter_i_plus_one
+    # swaps each word's sentence/duration to its chosen i+1 line — applying the
+    # cap before that swap would be silently bypassed by the swap.
     use_sentence_length_filter: bool = False
     max_sentence_duration_seconds: float = 0.0  # 0 = no duration cap
     max_sentence_chars: int = 0  # 0 = no character cap
