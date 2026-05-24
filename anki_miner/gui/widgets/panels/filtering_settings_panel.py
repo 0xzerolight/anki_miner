@@ -47,13 +47,24 @@ class FilteringSettingsPanel(FormPanel):
         # Word Frequency section
         self.add_section("Word Frequency")
 
-        # Frequency file path
-        self.frequency_selector = FileSelector(label="", file_mode=True, placeholder="Select frequency list CSV...")
-        self.frequency_selector.setToolTip("Path to word frequency list CSV")
+        # Frequency file path. Accepts CSV/TSV directly, or a Yomitan-format
+        # frequency zip — the latter is converted to CSV on Save (see
+        # SettingsTab._on_save_clicked).
+        self.frequency_selector = FileSelector(
+            label="",
+            file_mode=True,
+            file_filter="Frequency list (*.csv *.tsv *.txt *.zip);;All Files (*)",
+            placeholder="Select frequency list CSV/TSV or Yomitan zip...",
+        )
+        self.frequency_selector.setToolTip("CSV/TSV file or Yomitan-format frequency zip")
         self.add_field(
             "Frequency List File",
             self.frequency_selector,
-            helper="Path to a Japanese word frequency list (CSV format: word, rank)",
+            helper=(
+                "CSV/TSV with columns (word, rank), or a Yomitan-format "
+                "frequency zip (e.g. JPDB, BCCWJ). Yomitan zips are imported "
+                "into ~/.anki_miner/frequency.csv on Save."
+            ),
         )
 
         # Use frequency data checkbox
@@ -278,8 +289,17 @@ class FilteringSettingsPanel(FormPanel):
         self.frequency_selector.path_validated.connect(self._validate_frequency_file)
 
     def _validate_frequency_file(self, is_valid: bool, path_str: str) -> None:
-        """Validate frequency file and show entry count."""
+        """Validate frequency file and show entry count.
+
+        For ``.zip`` paths we don't parse — the actual Yomitan import runs on
+        Save (where progress + error dialogs are wired). Showing a "will import"
+        hint here keeps the slow extract off the validation hot path.
+        """
         if not is_valid or not path_str:
+            return
+
+        if path_str.lower().endswith(".zip"):
+            self.frequency_selector.status_label.setText(f"{Path(path_str).name} (Yomitan zip — will import on Save)")
             return
 
         try:
