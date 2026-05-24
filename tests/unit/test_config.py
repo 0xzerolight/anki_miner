@@ -162,3 +162,13 @@ def test_dictionary_chain_replace():
     assert updated.dictionary_chain == new_chain
     # Original is unchanged
     assert len(config.dictionary_chain) == 2
+
+
+def test_sentence_length_filter_defaults():
+    """Sentence-length filter fields default to disabled / 0 (Issue #33)."""
+    from anki_miner.config import AnkiMinerConfig
+
+    cfg = AnkiMinerConfig()
+    assert cfg.use_sentence_length_filter is False
+    assert cfg.max_sentence_duration_seconds == 0.0
+    assert cfg.max_sentence_chars == 0
