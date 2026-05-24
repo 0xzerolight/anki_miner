@@ -5,8 +5,9 @@ from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QCursor, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QFileDialog,
     QFrame,
@@ -20,6 +21,8 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
@@ -35,6 +38,7 @@ from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
 from anki_miner.services.dictionary.registry import DictionaryRegistry
+from anki_miner.services.frequency import import_yomitan_freq_zip
 
 
 class SettingsTab(QWidget):
@@ -309,6 +313,14 @@ class SettingsTab(QWidget):
                 )
                 return
 
+        # If the user selected a Yomitan-format frequency zip, normalize it to
+        # CSV before persisting. We intercept here (not in the panel) so the
+        # import is bound to an explicit Save action and any failure aborts
+        # the whole save with a single dialog.
+        resolved_freq_path = self._resolve_frequency_path()
+        if resolved_freq_path is None:
+            return  # importer failed; user already saw the error dialog
+
         # Create updated config from all panels
         new_config = replace(
             self.config,
@@ -343,12 +355,9 @@ class SettingsTab(QWidget):
             ),
             use_pitch_accent=self.dictionary_panel.use_pitch_accent_checkbox.isChecked(),
             pitch_category_format=self.anki_panel.get_pitch_category_format(),
-            # Frequency settings
-            frequency_list_path=(
-                Path(self.filtering_panel.frequency_selector.get_path())
-                if self.filtering_panel.frequency_selector.get_path()
-                else Path("")
-            ),
+            # Frequency settings — path resolved above (Yomitan zips are
+            # imported to ~/.anki_miner/frequency.csv before reaching here).
+            frequency_list_path=resolved_freq_path,
             use_frequency_data=self.filtering_panel.use_frequency_checkbox.isChecked(),
             max_frequency_rank=self.filtering_panel.max_frequency_spinbox.value(),
             # Known words database settings
@@ -396,6 +405,51 @@ class SettingsTab(QWidget):
             "Settings Saved",
             "Settings have been saved successfully",
         )
+
+    def _resolve_frequency_path(self) -> Path | None:
+        """Resolve the user-picked frequency path for persistence.
+
+        If the path points at a Yomitan-format frequency zip, run the importer
+        synchronously and return the materialized ``frequency.csv`` path so
+        the rest of the save flow sees a CSV exactly as if the user had
+        manually converted the zip beforehand. CSV/TSV paths pass through.
+
+        Returns:
+            Path to write into ``config.frequency_list_path``, or ``None`` if
+            a zip import failed (the caller should abort the save).
+        """
+        raw = self.filtering_panel.frequency_selector.get_path()
+        if not raw:
+            return Path("")
+        if not raw.lower().endswith(".zip"):
+            return Path(raw)
+
+        zip_path = Path(raw)
+        dest_csv = ANKI_MINER_HOME / "frequency.csv"
+
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
+        try:
+            result = import_yomitan_freq_zip(zip_path, dest_csv)
+        except SetupError as e:
+            QApplication.restoreOverrideCursor()
+            QMessageBox.warning(self, "Frequency import failed", str(e))
+            return None
+        finally:
+            QApplication.restoreOverrideCursor()
+
+        # Reflect the imported path back into the UI so subsequent saves don't
+        # re-trigger the import every time the user clicks Save.
+        self.filtering_panel.frequency_selector.set_path(str(dest_csv))
+
+        skipped_note = (
+            f" (skipped {result.skipped_display_only:,} display-only entries)" if result.skipped_display_only else ""
+        )
+        QMessageBox.information(
+            self,
+            "Frequency dictionary imported",
+            f"Imported {result.entry_count:,} entries from '{result.source_name}'.{skipped_note}",
+        )
+        return dest_csv
 
     def _on_reset_clicked(self) -> None:
         """Handle reset button click."""

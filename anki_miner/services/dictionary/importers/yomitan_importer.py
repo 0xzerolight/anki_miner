@@ -24,10 +24,9 @@ from anki_miner.services.dictionary.yomitan_renderer import (
     dict_media_safe_basename,
     render_glossary_entry,
 )
+from anki_miner.services.dictionary.zip_safety import validate_zip_safe
 
 ProgressFn = Callable[[int, int, str], None]
-
-MAX_UNCOMPRESSED_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB
 
 
 @dataclass(frozen=True)
@@ -70,32 +69,7 @@ def import_yomitan_zip(
         tmp_path = Path(tmp)
         try:
             with zipfile.ZipFile(zip_path, "r") as zf:
-                # Path traversal guard
-                tmp_root_resolved = tmp_path.resolve()
-                for name in zf.namelist():
-                    # Reject Windows backslashes (bypass current guard on Linux)
-                    if "\\" in name:
-                        raise SetupError(f"Zip contains unsafe path (backslash): {name}")
-                    # Reject absolute paths and Windows-style drive letters
-                    if name.startswith("/") or (len(name) > 1 and name[1] == ":"):
-                        raise SetupError(f"Zip contains unsafe path (absolute): {name}")
-                    # Reject explicit parent-dir traversal
-                    if ".." in Path(name).parts:
-                        raise SetupError(f"Zip contains unsafe path (traversal): {name}")
-                    # Belt-and-suspenders: verify the resolved path stays inside tmp_path
-                    resolved = (tmp_path / name).resolve()
-                    try:
-                        resolved.relative_to(tmp_root_resolved)
-                    except ValueError:
-                        raise SetupError(f"Zip contains escaping path: {name}") from None
-
-                # Basic zip-bomb mitigation: cap uncompressed size
-                total = sum(info.file_size for info in zf.infolist())
-                if total > MAX_UNCOMPRESSED_BYTES:
-                    raise SetupError(
-                        f"Zip uncompressed size exceeds limit " f"({total:,} > {MAX_UNCOMPRESSED_BYTES:,} bytes)"
-                    )
-
+                validate_zip_safe(zf, tmp_path)
                 zf.extractall(tmp_path)
         except zipfile.BadZipFile as e:
             raise SetupError(f"Corrupt zip file: {e}") from e
