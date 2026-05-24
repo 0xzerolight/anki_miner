@@ -108,7 +108,7 @@ class ThemesPanel(QWidget):
         self.tree.setObjectName("themesPanelTree")
         self.tree.setColumnCount(3)
         self.tree.setHeaderLabels(["Name", "Status", ""])
-        self.tree.setRootIsDecorated(False)
+        self.tree.setRootIsDecorated(True)
         self.tree.setUniformRowHeights(True)
         self.tree.setAlternatingRowColors(True)
         self.tree.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
@@ -153,23 +153,62 @@ class ThemesPanel(QWidget):
 
     def _populate(self) -> None:
         """Rebuild the tree from the current Theme state."""
-        available = Theme.get_available_themes()
+        groups = Theme.get_themes_grouped()
         favorites = set(Theme.get_favorites())
         active = Theme.get_current_mode()
 
         self.tree.blockSignals(True)
         try:
             self.tree.clear()
-            for key, display in available.items():
-                item = QTreeWidgetItem([display, "Active" if key == active else "", ""])
-                # Stash the theme key on the name column so row-select can find
-                # it without an extra dict lookup.
-                item.setData(self.COL_NAME, Qt.ItemDataRole.UserRole, key)
-                self.tree.addTopLevelItem(item)
-                star_widget = self._build_star_cell(key, key in favorites)
-                self.tree.setItemWidget(item, self.COL_STAR, star_widget)
-                if key == active:
-                    self.tree.setCurrentItem(item)
+            self._family_items: dict[str, QTreeWidgetItem] = {}
+            for family_name, entries in groups:
+                if family_name is None:
+                    # Standalone: render the single entry as a top-level row.
+                    entry = entries[0]
+                    item = QTreeWidgetItem(
+                        [
+                            entry.display_name,
+                            "Active" if entry.key == active else "",
+                            "",
+                        ]
+                    )
+                    item.setData(self.COL_NAME, Qt.ItemDataRole.UserRole, entry.key)
+                    self.tree.addTopLevelItem(item)
+                    star = self._build_star_cell(entry.key, entry.key in favorites)
+                    self.tree.setItemWidget(item, self.COL_STAR, star)
+                    if entry.key == active:
+                        self.tree.setCurrentItem(item)
+                else:
+                    family_item = QTreeWidgetItem([family_name, "", ""])
+                    # Family rows are not selectable; clicking the name only
+                    # expands/collapses.
+                    family_item.setFlags(family_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
+                    family_item.setData(self.COL_NAME, Qt.ItemDataRole.UserRole, None)
+                    self.tree.addTopLevelItem(family_item)
+                    self._family_items[family_name] = family_item
+
+                    active_inside = False
+                    for entry in entries:
+                        child = QTreeWidgetItem(
+                            [
+                                entry.variant_name,
+                                "Active" if entry.key == active else "",
+                                "",
+                            ]
+                        )
+                        child.setData(self.COL_NAME, Qt.ItemDataRole.UserRole, entry.key)
+                        family_item.addChild(child)
+                        star = self._build_star_cell(entry.key, entry.key in favorites)
+                        self.tree.setItemWidget(child, self.COL_STAR, star)
+                        if entry.key == active:
+                            self.tree.setCurrentItem(child)
+                            active_inside = True
+
+                    family_star = self._build_family_star_cell(family_name, entries, favorites)
+                    self.tree.setItemWidget(family_item, self.COL_STAR, family_star)
+
+                    if active_inside:
+                        family_item.setExpanded(True)
         finally:
             self.tree.blockSignals(False)
 
@@ -221,6 +260,15 @@ class ThemesPanel(QWidget):
         wrapper_layout.setSpacing(0)
         wrapper_layout.addWidget(button, 0, Qt.AlignmentFlag.AlignCenter)
         return wrapper
+
+    def _build_family_star_cell(
+        self,
+        family_name: str,
+        entries: list,
+        favorites: set[str],
+    ) -> QWidget:
+        """Placeholder. Task 6 replaces this with the tri-state family star."""
+        return QWidget(self)
 
     # ---- Events ----------------------------------------------------------
 
