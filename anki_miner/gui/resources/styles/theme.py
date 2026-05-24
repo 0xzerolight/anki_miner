@@ -4,6 +4,7 @@ import json
 import logging
 import re
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +72,15 @@ REQUIRED_COLOR_KEYS = frozenset(
 SOURCE_SHIPPED = "shipped"
 # Source marker for themes from ~/.anki_miner/themes/ (or wherever themes_root points).
 SOURCE_USER = "user"
+
+
+@dataclass(frozen=True)
+class ThemeGroupEntry:
+    """A single theme inside a grouped listing."""
+
+    key: str
+    variant_name: str
+    display_name: str
 
 
 def validate_theme_data(data: dict) -> list[str]:
@@ -199,6 +209,9 @@ class Theme:
     _favorites: tuple[str, ...] = ("light", "dark")
     _themes: dict[str, dict[str, Any]] = {}
     _user_dir: Path | None = None
+    # When set, overrides the auto-detected shipped themes directory.
+    # A non-existent path effectively disables shipped themes (used by tests).
+    _shipped_dir_override: Path | None = None
     _state_listener: StateListener | None = None
     # Cache the raw common.qss bytes (shipped resource, never changes at
     # runtime) and the substituted output per theme mode. Without this,
@@ -209,8 +222,11 @@ class Theme:
 
     def __init__(self) -> None:
         """Discover themes from shipped + user dirs."""
-        styles_dir = get_resource_dir() / "styles"
-        shipped_dir = styles_dir / "themes"
+        if self.__class__._shipped_dir_override is not None:
+            shipped_dir = self.__class__._shipped_dir_override
+        else:
+            styles_dir = get_resource_dir() / "styles"
+            shipped_dir = styles_dir / "themes"
         dirs: list[Path] = [shipped_dir]
         if self._user_dir is not None:
             dirs.append(self._user_dir)
@@ -233,6 +249,7 @@ class Theme:
         favorites: tuple[str, ...] = ("light", "dark"),
         user_dir: Path | None = None,
         state_listener: StateListener | None = None,
+        shipped_dir: Path | None = None,
     ) -> None:
         """Seed singleton state from external config and (re)discover themes.
 
@@ -247,11 +264,15 @@ class Theme:
             state_listener: Optional callback invoked with
                 ``(active, favorites)`` after every state change. Used to
                 persist to gui_config.json.
+            shipped_dir: Override the shipped themes directory. When provided,
+                replaces the auto-detected package shipped dir. A non-existent
+                path disables shipped themes (useful for test isolation).
         """
         cls._instance = None
         cls._current_mode = active
         cls._favorites = tuple(favorites)
         cls._user_dir = user_dir
+        cls._shipped_dir_override = shipped_dir
         cls._state_listener = state_listener
         # Theme JSONs may have changed (user dir swap, test reset); drop the
         # compiled-stylesheet cache so the next apply rebuilds from current
@@ -293,6 +314,34 @@ class Theme:
         """
         instance = cls.get_instance()
         return {key: data["name"] for key, data in instance._themes.items()}
+
+    @classmethod
+    def get_themes_grouped(cls) -> list[tuple[str | None, list[ThemeGroupEntry]]]:
+        """Return ordered list of (family | None, entries).
+
+        Themes with a ``family`` field group under that family in their
+        first-discovered position. Themes without ``family`` appear as
+        standalone groups (family=None, single entry) at their discovery
+        position.
+        """
+        instance = cls.get_instance()
+        groups: list[tuple[str | None, list[ThemeGroupEntry]]] = []
+        family_index: dict[str, int] = {}
+        for key, data in instance._themes.items():
+            display = str(data.get("name", key))
+            family = data.get("family")
+            variant_name = str(data.get("variant", display))
+            entry = ThemeGroupEntry(key=key, variant_name=variant_name, display_name=display)
+            if isinstance(family, str) and family.strip():
+                idx = family_index.get(family)
+                if idx is None:
+                    family_index[family] = len(groups)
+                    groups.append((family, [entry]))
+                else:
+                    groups[idx][1].append(entry)
+            else:
+                groups.append((None, [entry]))
+        return groups
 
     @classmethod
     def get_favorites(cls) -> tuple[str, ...]:
