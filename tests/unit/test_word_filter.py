@@ -302,6 +302,65 @@ class TestWordFilterService:
             result = service.deduplicate_by_sentence(words)
             assert [w.lemma for w in result] == ["A", "C"]
 
+    class TestFilterBySentenceLength:
+        """Tests for filter_by_sentence_length (Issue #33)."""
+
+        def _make_word(self, sentence: str, duration: float):
+            """Helper: TokenizedWord with controllable sentence + duration."""
+            return TokenizedWord(
+                surface="x",
+                lemma="x",
+                reading="",
+                sentence=sentence,
+                start_time=0.0,
+                end_time=duration,
+                duration=duration,
+            )
+
+        def test_returns_input_when_no_caps_set(self, test_config):
+            service = WordFilterService(test_config)
+            words = [self._make_word("any sentence", 99.0)]
+            assert service.filter_by_sentence_length(words, max_duration=0.0, max_chars=0) == words
+
+        def test_drops_words_exceeding_duration(self, test_config):
+            service = WordFilterService(test_config)
+            words = [
+                self._make_word("short", 2.0),
+                self._make_word("long", 10.0),
+            ]
+            result = service.filter_by_sentence_length(words, max_duration=5.0, max_chars=0)
+            assert [w.duration for w in result] == [2.0]
+
+        def test_drops_words_exceeding_chars(self, test_config):
+            service = WordFilterService(test_config)
+            words = [
+                self._make_word("short", 1.0),
+                self._make_word("a" * 60, 1.0),
+            ]
+            result = service.filter_by_sentence_length(words, max_duration=0.0, max_chars=40)
+            assert [w.sentence for w in result] == ["short"]
+
+        def test_both_caps_apply_independently(self, test_config):
+            service = WordFilterService(test_config)
+            words = [
+                self._make_word("ok", 2.0),  # passes both
+                self._make_word("ok", 99.0),  # fails duration
+                self._make_word("a" * 99, 2.0),  # fails chars
+                self._make_word("a" * 99, 99.0),  # fails both
+            ]
+            result = service.filter_by_sentence_length(words, max_duration=5.0, max_chars=40)
+            assert len(result) == 1
+            assert result[0].sentence == "ok" and result[0].duration == 2.0
+
+        def test_boundary_inclusive(self, test_config):
+            """Word with sentence/duration exactly at the cap is kept."""
+            service = WordFilterService(test_config)
+            words = [
+                self._make_word("a" * 40, 5.0),  # exactly at both caps
+            ]
+            result = service.filter_by_sentence_length(words, max_duration=5.0, max_chars=40)
+            assert result == words
+
     class TestFilterIPlusOne:
         """Tests for filter_i_plus_one method."""
 
