@@ -26,6 +26,7 @@ from PyQt6.QtCore import Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import QCursor, QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -279,7 +280,7 @@ class ThemesPanel(QWidget):
         Click rule: if all are favorited, unfavorite all; otherwise favorite all.
         Same fixed height as ``_build_star_cell`` to keep family/variant rows aligned.
         """
-        wrapper = QWidget(self)
+        wrapper = QWidget(self.tree)
         layout = QHBoxLayout(wrapper)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -308,9 +309,11 @@ class ThemesPanel(QWidget):
             button.setStyleSheet(f"font-size: {font_size}px;")
         else:
             button.setText(_STAR_FILLED)
-            tooltip = f"{n_fav} of {n_total} {family_name} variants favorited. " "Click to favorite all."
-            alpha = int(_FAMILY_STAR_PARTIAL_OPACITY * 255)
-            button.setStyleSheet(f"font-size: {font_size}px; color: rgba(0, 0, 0, {alpha});")
+            tooltip = f"{n_fav} of {n_total} {family_name} variants favorited. " f"Click to favorite all."
+            button.setStyleSheet(f"font-size: {font_size}px;")
+            effect = QGraphicsOpacityEffect(button)
+            effect.setOpacity(_FAMILY_STAR_PARTIAL_OPACITY)
+            button.setGraphicsEffect(effect)
 
         button.setToolTip(tooltip)
         button.clicked.connect(lambda _checked=False, k=tuple(keys): self._toggle_family_favorites(k))
