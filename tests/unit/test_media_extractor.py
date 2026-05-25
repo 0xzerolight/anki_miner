@@ -11,6 +11,7 @@ import pytest
 from anki_miner.services.media_extractor import MediaExtractorService
 
 MODULE = "anki_miner.services.media_extractor"
+DETECTOR_MODULE = "anki_miner.utils.audio_track_detector"
 
 
 @pytest.fixture
@@ -788,7 +789,7 @@ class TestGetJapaneseAudioStream:
         mock_proc.returncode = 0
         mock_proc.stdout = ffprobe_json
 
-        with patch(f"{MODULE}.subprocess.run", return_value=mock_proc):
+        with patch(f"{DETECTOR_MODULE}.subprocess.run", return_value=mock_proc):
             result = service._get_japanese_audio_stream(video_file)
 
         assert result == 1
@@ -806,7 +807,7 @@ class TestGetJapaneseAudioStream:
         mock_proc.returncode = 0
         mock_proc.stdout = ffprobe_json
 
-        with patch(f"{MODULE}.subprocess.run", return_value=mock_proc):
+        with patch(f"{DETECTOR_MODULE}.subprocess.run", return_value=mock_proc):
             result = service._get_japanese_audio_stream(video_file)
 
         assert result is None
@@ -823,7 +824,7 @@ class TestGetJapaneseAudioStream:
         mock_proc.returncode = 0
         mock_proc.stdout = ffprobe_json
 
-        with patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run:
+        with patch(f"{DETECTOR_MODULE}.subprocess.run", return_value=mock_proc) as mock_run:
             first = service._get_japanese_audio_stream(video_file)
             second = service._get_japanese_audio_stream(video_file)
 
@@ -837,7 +838,7 @@ class TestGetJapaneseAudioStream:
         mock_proc.returncode = 1
         mock_proc.stderr = "error"
 
-        with patch(f"{MODULE}.subprocess.run", return_value=mock_proc):
+        with patch(f"{DETECTOR_MODULE}.subprocess.run", return_value=mock_proc):
             result = service._get_japanese_audio_stream(video_file)
 
         assert result is None
@@ -858,7 +859,7 @@ class TestGetJapaneseAudioStream:
         mock_proc.returncode = 0
         mock_proc.stdout = ffprobe_json
 
-        with patch(f"{MODULE}.subprocess.run", return_value=mock_proc):
+        with patch(f"{DETECTOR_MODULE}.subprocess.run", return_value=mock_proc):
             result = service._get_japanese_audio_stream(vid)
 
         assert result == 3
