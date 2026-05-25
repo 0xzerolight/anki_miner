@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.4.6] - 2026-05-25
 
 ### Added
 - **Manual audio track override** (Issue #35): the Single Episode tab now exposes a "Tracks" button next to "Test Timing". Clicking opens a modal listing probed audio streams (codec, language, channel layout) with Auto-detect as the default. The chosen track persists per-tab in memory, resets when the video file changes or after Process completes, and flows through both the mini-player preview (`SubtitleViewer`) and the extraction worker (`MediaExtractorService.process_episode`) so preview and final cards use the same audio source. Override targets are validated by `audio_index` against a cached `list_audio_streams()` probe; a missing-stream override falls back to Japanese auto-detect with a warning rather than aborting. `SubtitleViewer` additionally falls back to `QMediaMetaData.Key.Language` when both override and ffprobe yield no Japanese track — handy for containers whose ffprobe-visible language tags are stripped but whose Qt demuxer can still identify the track.
@@ -17,8 +17,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - **Frequency filter now excludes unindexed words** (Issue #34): when `Max Frequency Rank` is set, words absent from the frequency list are filtered out instead of bypassing the cutoff. Previous "benefit of the doubt" behavior contradicted the GUI tooltip ("Only mine words within the top N most frequent") and produced uncommon words in mined decks even with strict caps. Set Max Frequency Rank back to 0 to restore the prior pass-everything behavior.
 - **Audio track override could be ignored after the source file was replaced**: `MediaExtractorService._audio_stream_list_cache` retained probed streams for the service lifetime, so swapping the file on disk between selecting a track and running Process left the resolver matching against stale ffprobe output (silently falling back to JP auto-detect). The cache is now invalidated at the start of each `process_episode` run via the new `invalidate_audio_stream_cache()` method, preserving the within-run double-probe fix from 2e0cc13.
-
-### Removed
 
 ## [2.4.5] - 2026-05-24
 
