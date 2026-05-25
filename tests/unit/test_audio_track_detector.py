@@ -8,8 +8,10 @@ import pytest
 
 from anki_miner.utils.audio_track_detector import (
     JAPANESE_LANGUAGE_CODES,
+    AudioStream,
     JapaneseAudioStream,
     find_japanese_audio_stream,
+    list_audio_streams,
 )
 
 MODULE = "anki_miner.utils.audio_track_detector"
@@ -18,13 +20,23 @@ MODULE = "anki_miner.utils.audio_track_detector"
 def _ffprobe_json(streams: list[dict]) -> str:
     """Build an ffprobe JSON payload from descriptors.
 
-    Each descriptor must include `index`; `language` is optional.
+    Required key: ``index`` (int).
+    Optional keys: ``language``, ``title``, ``codec_name``, ``channels``, ``default``.
+    Existing tests only use ``index`` and ``language``; new keys are ignored when absent.
     """
     out = []
     for s in streams:
         entry = {"index": s["index"], "codec_type": "audio", "tags": {}}
         if "language" in s:
             entry["tags"]["language"] = s["language"]
+        if "title" in s:
+            entry["tags"]["title"] = s["title"]
+        if "codec_name" in s:
+            entry["codec_name"] = s["codec_name"]
+        if "channels" in s:
+            entry["channels"] = s["channels"]
+        if "default" in s:
+            entry["disposition"] = {"default": s["default"]}
         out.append(entry)
     return json.dumps({"streams": out})
 
@@ -148,3 +160,142 @@ class TestFindJapaneseAudioStream:
         assert "-select_streams" in args
         assert args[args.index("-select_streams") + 1] == "a"
         assert str(video_file) in args
+
+
+class TestListAudioStreams:
+    def test_empty_streams_returns_empty_list(self, video_file):
+        stdout = json.dumps({"streams": []})
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert result == []
+
+    def test_single_stream_all_fields(self, video_file):
+        stdout = _ffprobe_json(
+            [
+                {
+                    "index": 2,
+                    "language": "jpn",
+                    "title": "Japanese 5.1",
+                    "codec_name": "aac",
+                    "channels": 6,
+                    "default": 1,
+                }
+            ]
+        )
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert len(result) == 1
+        s = result[0]
+        assert isinstance(s, AudioStream)
+        assert s.global_index == 2
+        assert s.audio_index == 0
+        assert s.language_tag == "jpn"
+        assert s.title_tag == "Japanese 5.1"
+        assert s.codec == "aac"
+        assert s.channels == 6
+        assert s.is_default is True
+
+    def test_multiple_streams_audio_index_increments(self, video_file):
+        stdout = _ffprobe_json(
+            [
+                {"index": 1, "language": "eng", "codec_name": "ac3", "channels": 2, "default": 1},
+                {"index": 2, "language": "jpn", "codec_name": "aac", "channels": 6, "default": 0},
+            ]
+        )
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert len(result) == 2
+        assert result[0].audio_index == 0
+        assert result[0].global_index == 1
+        assert result[0].language_tag == "eng"
+        assert result[1].audio_index == 1
+        assert result[1].global_index == 2
+        assert result[1].language_tag == "jpn"
+
+    def test_missing_index_skipped_but_audio_index_slot_consumed(self, video_file):
+        """Stream with no index is omitted from results; next stream gets audio_index=1."""
+        payload = {
+            "streams": [
+                {"codec_type": "audio", "tags": {"language": "eng"}},  # no index — skipped
+                {"index": 5, "codec_type": "audio", "tags": {"language": "jpn"}},
+            ]
+        }
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=json.dumps(payload))):
+            result = list_audio_streams(video_file)
+        assert len(result) == 1
+        assert result[0].global_index == 5
+        assert result[0].audio_index == 1  # slot 0 consumed by skipped stream
+
+    def test_ffprobe_nonzero_returncode_returns_empty(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(returncode=1, stderr="boom")):
+            assert list_audio_streams(video_file) == []
+
+    def test_ffprobe_timeout_returns_empty(self, video_file):
+        with patch(
+            f"{MODULE}.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd="ffprobe", timeout=30),
+        ):
+            assert list_audio_streams(video_file) == []
+
+    def test_ffprobe_os_error_returns_empty(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", side_effect=FileNotFoundError("ffprobe missing")):
+            assert list_audio_streams(video_file) == []
+
+    def test_malformed_json_returns_empty(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout="not json{")):
+            assert list_audio_streams(video_file) == []
+
+    def test_disposition_default_one_is_true(self, video_file):
+        stdout = _ffprobe_json([{"index": 0, "language": "jpn", "default": 1}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert result[0].is_default is True
+
+    def test_disposition_default_zero_is_false(self, video_file):
+        stdout = _ffprobe_json([{"index": 0, "language": "jpn", "default": 0}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert result[0].is_default is False
+
+    def test_disposition_absent_is_false(self, video_file):
+        stdout = _ffprobe_json([{"index": 0, "language": "jpn"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert result[0].is_default is False
+
+    def test_channels_as_int_coerced(self, video_file):
+        stdout = _ffprobe_json([{"index": 0, "channels": 2}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert result[0].channels == 2
+        assert isinstance(result[0].channels, int)
+
+    def test_channels_absent_is_none(self, video_file):
+        stdout = _ffprobe_json([{"index": 0}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert result[0].channels is None
+
+    def test_language_tag_none_when_absent(self, video_file):
+        stdout = _ffprobe_json([{"index": 0}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert result[0].language_tag is None
+
+    def test_title_tag_none_when_absent(self, video_file):
+        stdout = _ffprobe_json([{"index": 0}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert result[0].title_tag is None
+
+    def test_codec_none_when_absent(self, video_file):
+        stdout = _ffprobe_json([{"index": 0}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert result[0].codec is None
+
+    def test_language_tag_lowercased(self, video_file):
+        stdout = _ffprobe_json([{"index": 0, "language": "JPN"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_audio_streams(video_file)
+        assert result[0].language_tag == "jpn"
