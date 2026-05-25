@@ -1375,3 +1375,75 @@ class TestGlossaryFetch:
         # extra_fields may be None or a dict — but must NOT contain glossary.
         if payload.extra_fields is not None:
             assert "glossary" not in payload.extra_fields
+
+
+class TestAudioTrackOverrideForwarding:
+    """Verify process_episode forwards audio_track_override to extract_media_batch."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    @pytest.fixture
+    def processor(self, test_config, mock_services):
+        return EpisodeProcessor(
+            config=test_config,
+            subtitle_parser=mock_services["subtitle_parser"],
+            word_filter=mock_services["word_filter"],
+            media_extractor=mock_services["media_extractor"],
+            definition_service=mock_services["definition_service"],
+            anki_service=mock_services["anki_service"],
+            presenter=NullPresenter(),
+        )
+
+    def test_audio_track_override_forwarded_to_extract_media_batch(self, processor, mock_services, tmp_path):
+        """process_episode must pass audio_track_override to extract_media_batch."""
+        word = _make_word()
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        video = tmp_path / "ep01.mkv"
+        sub = tmp_path / "ep01.ass"
+
+        processor.process_episode(video, sub, audio_track_override=3)
+
+        call_kwargs = mock_services["media_extractor"].extract_media_batch.call_args[1]
+        assert call_kwargs.get("audio_track_override") == 3
+
+    def test_audio_track_override_none_by_default(self, processor, mock_services, tmp_path):
+        """process_episode must default audio_track_override to None."""
+        word = _make_word()
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        video = tmp_path / "ep01.mkv"
+        sub = tmp_path / "ep01.ass"
+
+        processor.process_episode(video, sub)
+
+        call_kwargs = mock_services["media_extractor"].extract_media_batch.call_args[1]
+        assert call_kwargs.get("audio_track_override") is None
