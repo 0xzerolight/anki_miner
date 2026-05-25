@@ -32,6 +32,8 @@ class EpisodeWorkerThread(CancellableWorker):
         progress_callback: GUIProgressCallback,
         curation_callback: Callable[[list], list] | None = None,
         parent=None,
+        *,
+        audio_track_override: int | None = None,
     ):
         """Initialize the episode worker thread.
 
@@ -43,6 +45,8 @@ class EpisodeWorkerThread(CancellableWorker):
             progress_callback: Progress callback for updates
             curation_callback: Optional callback for word curation
             parent: Optional parent QObject
+            audio_track_override: If set, forces the given audio_index instead of
+                auto-detecting the Japanese track. None means auto-detect.
         """
         super().__init__(parent)
         self.processor = processor
@@ -51,6 +55,7 @@ class EpisodeWorkerThread(CancellableWorker):
         self.preview_mode = preview_mode
         self.progress_callback = progress_callback
         self.curation_callback = curation_callback
+        self.audio_track_override = audio_track_override
 
     def cancel(self) -> None:
         """Cancel processing, propagating to the processor."""
@@ -69,6 +74,7 @@ class EpisodeWorkerThread(CancellableWorker):
                 self.preview_mode,
                 self.progress_callback,
                 curation_callback=self.curation_callback,
+                audio_track_override=self.audio_track_override,
             )
 
             if not self.check_cancelled():
