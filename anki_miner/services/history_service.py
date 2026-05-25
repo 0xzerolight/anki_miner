@@ -45,6 +45,8 @@ class HistoryService:
                     elapsed_time REAL NOT NULL DEFAULT 0.0
                 )
                 """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_history_timestamp " "ON mining_history(timestamp)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_history_series " "ON mining_history(series_name)")
 
     def record_session(
         self,

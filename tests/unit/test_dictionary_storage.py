@@ -1,7 +1,9 @@
 """Tests for dictionary SQLite storage layer."""
 
+import json
 import sqlite3
 from pathlib import Path
+from unittest.mock import patch
 
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
@@ -11,6 +13,7 @@ from anki_miner.services.dictionary.storage import (
     lookup,
     open_readonly,
     read_meta,
+    read_meta_cached,
     write_meta,
 )
 
@@ -219,3 +222,78 @@ class TestMeta:
 
     def test_read_missing_file(self, tmp_path: Path):
         assert read_meta(tmp_path / "nonexistent.sqlite") == {}
+
+
+class TestReadMetaCached:
+    """Sidecar cache for ``meta.json`` — skips SQLite open when fresh."""
+
+    def _setup_dict(self, tmp_path: Path) -> Path:
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        write_meta(
+            db_path,
+            {
+                "schema_version": str(SCHEMA_VERSION),
+                "source_name": "Test Dict",
+                "format": "yomitan",
+                "entry_count": "42",
+            },
+        )
+        return db_path
+
+    def test_write_meta_creates_sidecar(self, tmp_path: Path):
+        db_path = self._setup_dict(tmp_path)
+        sidecar = db_path.parent / "meta.json"
+        assert sidecar.is_file()
+        data = json.loads(sidecar.read_text(encoding="utf-8"))
+        assert data["source_name"] == "Test Dict"
+        assert data["entry_count"] == "42"
+
+    def test_cached_read_skips_sqlite_when_sidecar_fresh(self, tmp_path: Path):
+        """The hot startup path must not open SQLite when the sidecar is up to date."""
+        db_path = self._setup_dict(tmp_path)
+        with patch(
+            "anki_miner.services.dictionary.storage.read_meta",
+            wraps=read_meta,
+        ) as wrapped:
+            meta = read_meta_cached(db_path)
+        assert wrapped.call_count == 0
+        assert meta["source_name"] == "Test Dict"
+
+    def test_cached_read_falls_back_when_sidecar_missing(self, tmp_path: Path):
+        db_path = self._setup_dict(tmp_path)
+        sidecar = db_path.parent / "meta.json"
+        sidecar.unlink()
+        meta = read_meta_cached(db_path)
+        assert meta["source_name"] == "Test Dict"
+        # Fall-through rewrites the sidecar.
+        assert sidecar.is_file()
+
+    def test_cached_read_falls_back_when_sqlite_newer(self, tmp_path: Path):
+        db_path = self._setup_dict(tmp_path)
+        sidecar = db_path.parent / "meta.json"
+        # Backdate the sidecar so the SQLite file is "newer".
+        import os
+
+        old = sidecar.stat().st_mtime - 100
+        os.utime(sidecar, (old, old))
+        with patch(
+            "anki_miner.services.dictionary.storage.read_meta",
+            wraps=read_meta,
+        ) as wrapped:
+            read_meta_cached(db_path)
+        assert wrapped.call_count == 1
+        # Sidecar gets rewritten with current mtime.
+        assert sidecar.stat().st_mtime > old
+
+    def test_cached_read_handles_corrupt_sidecar(self, tmp_path: Path):
+        db_path = self._setup_dict(tmp_path)
+        sidecar = db_path.parent / "meta.json"
+        sidecar.write_text("{not valid json", encoding="utf-8")
+        meta = read_meta_cached(db_path)
+        assert meta["source_name"] == "Test Dict"
+        # Sidecar is rewritten with valid JSON.
+        assert json.loads(sidecar.read_text(encoding="utf-8"))["source_name"] == "Test Dict"
+
+    def test_cached_read_missing_db(self, tmp_path: Path):
+        assert read_meta_cached(tmp_path / "nonexistent.sqlite") == {}

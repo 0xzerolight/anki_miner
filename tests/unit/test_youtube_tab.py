@@ -267,6 +267,70 @@ class TestProbeOutcomes:
         assert tab.mine_button.isEnabled()
 
 
+class TestDeferredProcessor:
+    """Startup-deferral contract: tab accepts ``processor=None`` and rebuilds
+    lazily via service_factory, threading ``stats_service`` through so YouTube
+    mining sessions land in analytics.
+    """
+
+    def test_constructs_with_none_processor(self, test_config: AnkiMinerConfig):
+        cfg = replace(test_config, youtube_max_duration_s=7200)
+        sentinel = MagicMock(name="StatsService")
+        with (
+            patch("anki_miner.gui.widgets.youtube_tab.YouTubeProbeWorker", autospec=False),
+            patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker", autospec=False),
+        ):
+            widget = YouTubeTab(
+                config=cfg,
+                processor=None,
+                fetcher=MagicMock(name="Fetcher"),
+                presenter=MagicMock(name="Presenter"),
+                stats_service=sentinel,
+            )
+            try:
+                assert widget._processor is None
+                assert widget._stats_service is sentinel
+            finally:
+                widget.deleteLater()
+
+    def test_lazy_rebuild_threads_stats_service(self, test_config: AnkiMinerConfig):
+        cfg = replace(test_config, youtube_max_duration_s=7200)
+        sentinel_stats = MagicMock(name="StatsService")
+        with (
+            patch("anki_miner.gui.widgets.youtube_tab.YouTubeProbeWorker", autospec=False),
+            patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker", autospec=False) as q_cls,
+            patch(
+                "anki_miner.gui.widgets.youtube_tab.create_episode_processor",
+            ) as mock_create,
+        ):
+            q_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
+            built_processor = MagicMock(name="LazyProcessor")
+            mock_create.return_value = built_processor
+
+            widget = YouTubeTab(
+                config=cfg,
+                processor=None,
+                fetcher=MagicMock(name="Fetcher"),
+                presenter=MagicMock(name="Presenter"),
+                stats_service=sentinel_stats,
+            )
+            try:
+                # Drive _start_run via the public Mine path: add a ready item,
+                # click Mine, and assert the lazy rebuild happened with stats.
+                widget.url_edit.setText("https://youtu.be/abc")
+                widget._on_add_clicked()
+                item = widget._queue.all_items()[-1]
+                widget._on_probe_done(item, _make_video_info())
+                widget._on_mine_clicked()
+
+                assert mock_create.call_count == 1
+                kwargs = mock_create.call_args.kwargs
+                assert kwargs["stats_service"] is sentinel_stats
+                assert widget._processor is built_processor
+            finally:
+                widget.deleteLater()
+
+
 class TestRunStartup:
     """Preview / Mine buttons construct the queue worker correctly."""
 

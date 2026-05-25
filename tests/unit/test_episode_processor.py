@@ -418,23 +418,25 @@ class TestKnownWordDBIntegration:
         }
 
     def test_known_word_db_syncs_and_refilters(self, test_config, mock_services, tmp_path):
-        """Known word DB should sync with Anki and re-filter when new words are added."""
+        """Known word DB should sync with Anki and filter against the merged set in one pass.
+
+        Performance contract: ``get_known_words`` is invoked exactly once per
+        episode; the post-sync state is reconstructed in-memory by unioning
+        ``anki_vocab`` with the pre-fetched set rather than re-reading SQLite.
+        ``filter_unknown`` therefore runs exactly once with the merged set.
+        """
         word1 = _make_word("食べる")
         word2 = _make_word("走る", start_time=5.0)
         media1 = _make_media("taberu")
 
         mock_known_db = MagicMock()
         mock_known_db.is_available.return_value = True
-        mock_known_db.get_known_words.side_effect = [
-            {"走る"},  # First call: before sync
-            {"走る", "泳ぐ"},  # Second call: after sync (new word added)
-        ]
+        mock_known_db.get_known_words.return_value = {"走る"}
         mock_known_db.sync_with_anki.return_value = (1, 10)  # 1 added, 10 total
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
         mock_services["anki_service"].get_existing_vocabulary.return_value = {"走る", "泳ぐ"}
-        # First filter: word1 passes, word2 filtered. Second filter after sync: same result.
-        mock_services["word_filter"].filter_unknown.side_effect = [[word1], [word1]]
+        mock_services["word_filter"].filter_unknown.return_value = [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media1)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
@@ -449,7 +451,15 @@ class TestKnownWordDBIntegration:
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         mock_known_db.sync_with_anki.assert_called_once()
-        assert mock_services["word_filter"].filter_unknown.call_count == 2
+        # One scan, not three.
+        assert mock_known_db.get_known_words.call_count == 1
+        # sync_with_anki must be called with the pre-fetched set as ``existing=``.
+        sync_kwargs = mock_known_db.sync_with_anki.call_args.kwargs
+        assert sync_kwargs.get("existing") == {"走る"}
+        # Filter runs once against the merged set.
+        assert mock_services["word_filter"].filter_unknown.call_count == 1
+        merged_known = mock_services["word_filter"].filter_unknown.call_args[0][1]
+        assert merged_known == {"走る", "泳ぐ"}
         assert result.cards_created == 1
 
     def test_known_word_db_records_mined_words(self, test_config, mock_services, tmp_path):

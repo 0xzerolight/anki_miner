@@ -239,15 +239,15 @@ class EpisodeProcessor:
         self.presenter.show_info("Step 2/5 — Filtering against known vocabulary")
         if self.known_word_db and self.known_word_db.is_available():
             known_words = self.known_word_db.get_known_words()
-            unknown_words = self.word_filter.filter_unknown(all_words, known_words)
-            # Sync with Anki to keep DB up to date.
+            # Sync with Anki to keep DB up to date. Pass the pre-fetched
+            # ``known_words`` so the DB skips its internal scan; merge the
+            # diff in-memory below to avoid a post-sync re-read.
             anki_vocab = self.anki_service.get_existing_vocabulary()
-            added, total = self.known_word_db.sync_with_anki(anki_vocab)
+            added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
             if added > 0:
                 self.presenter.show_info(f"Known word DB synced: {added} new words ({total} total)")
-                # Re-filter with updated known words.
-                known_words = self.known_word_db.get_known_words()
-                unknown_words = self.word_filter.filter_unknown(all_words, known_words)
+                known_words = known_words | (anki_vocab - known_words)
+            unknown_words = self.word_filter.filter_unknown(all_words, known_words)
         else:
             existing_words = self.anki_service.get_existing_vocabulary()
             unknown_words = self.word_filter.filter_unknown(all_words, existing_words)

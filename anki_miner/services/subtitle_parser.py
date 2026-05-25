@@ -169,6 +169,14 @@ class SubtitleParserService:
         seen_lemmas: set[str] = set()  # Track unique words by dictionary form (lemma).
 
         for text, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
+            # Sentence-level furigana/reading depend only on ``text`` — compute
+            # once per line and share across every word emitted from this line.
+            # ``parse_subtitle_file_with_index`` already follows this pattern;
+            # hoisting here brings the i+1-OFF path to parity and eliminates
+            # 2N redundant MeCab passes per line (N = words emitted).
+            sentence_furigana = generate_furigana(text, self.tagger)
+            sentence_reading = generate_reading(text, self.tagger)
+
             # Locate each token's char span via ``str.find`` from a running
             # cursor. MeCab silently drops whitespace from the token stream,
             # so naive ``cursor += len(surface)`` walking drifts left by the
@@ -208,9 +216,7 @@ class SubtitleParserService:
                 pos = word_token.feature.pos1
                 mined = lemma if pos in ("動詞", "形容詞") else surface
                 expression_furigana = generate_furigana(mined, self.tagger)
-                sentence_furigana = generate_furigana(text, self.tagger)
                 expression_reading = generate_reading(mined, self.tagger)
-                sentence_reading = generate_reading(text, self.tagger)
 
                 if self.config.bold_target_in_sentence:
                     sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
