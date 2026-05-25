@@ -32,9 +32,11 @@ from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import configure_expanding_container, make_label_fit_text
+from anki_miner.gui.widgets.dialogs import AudioTracksDialog
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+from anki_miner.utils import find_japanese_audio_stream, list_audio_streams
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".m4v", ".mov"}
 SUBTITLE_EXTENSIONS = {".ass", ".srt", ".ssa"}
@@ -76,6 +78,7 @@ class SingleEpisodeTab(MiningTabBase):
         self._is_processing = False
         self._current_phase = ""
         self.recent_manager = RecentFilesManager()
+        self._audio_track_override: int | None = None
 
         # Curation bridge: allows worker thread to show dialog on GUI thread
         self._curation_event = threading.Event()
@@ -108,6 +111,9 @@ class SingleEpisodeTab(MiningTabBase):
         file_group = self._create_file_selection_group()
         layout.addWidget(file_group)
 
+        # Reset audio-track override when the video file changes
+        self.video_selector.path_changed.connect(self._on_video_path_changed)
+
         # Actions section
         from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 
@@ -123,6 +129,8 @@ class SingleEpisodeTab(MiningTabBase):
         self.process_button.setToolTip("Create Anki cards from the episode")
         self.timing_button = ModernButton("Test Timing", variant="secondary")
         self.timing_button.setToolTip("Preview video with subtitles to adjust timing offset")
+        self.tracks_button = ModernButton("Tracks", variant="secondary")
+        self.tracks_button.setToolTip("Manually choose which audio track to use for this episode")
 
         self.cancel_button = ModernButton("Cancel", variant="danger")
         self.cancel_button.setToolTip("Cancel processing")
@@ -132,10 +140,12 @@ class SingleEpisodeTab(MiningTabBase):
         self.process_button.clicked.connect(self._on_process_clicked)
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.timing_button.clicked.connect(self._on_timing_clicked)
+        self.tracks_button.clicked.connect(self._on_tracks_clicked)
 
         button_layout.addWidget(self.preview_button)
         button_layout.addWidget(self.process_button)
         button_layout.addWidget(self.timing_button)
+        button_layout.addWidget(self.tracks_button)
         button_layout.addWidget(self.cancel_button)
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -288,6 +298,57 @@ class SingleEpisodeTab(MiningTabBase):
 
         return group
 
+    def _on_video_path_changed(self, _new_path: str) -> None:
+        """Reset the audio-track override when the video file changes.
+
+        Selection is per-run and must not silently carry over across files.
+        """
+        self._audio_track_override = None
+
+    def _on_tracks_clicked(self) -> None:
+        """Open the AudioTracksDialog for manual audio track override selection."""
+        video_path = self.video_selector.get_path().strip()
+        if not video_path:
+            QMessageBox.warning(self, "Missing Video File", "Please select a video file first.")
+            return
+        if not self.video_selector.is_valid():
+            QMessageBox.warning(self, "File Not Found", f"Video file not found: {video_path}")
+            return
+
+        video_file = Path(video_path)
+
+        # Probe (cached transparently by MediaExtractorService is per-extractor; here
+        # we probe directly for the dialog). Each click probes fresh — cheap for
+        # typical anime files (<1s).
+        streams = list_audio_streams(video_file)
+
+        if not streams:
+            QMessageBox.information(
+                self,
+                "No Audio Tracks",
+                "Could not enumerate audio tracks in this file. The file may be missing audio, "
+                "ffprobe may be unavailable, or the file format may be unsupported.",
+            )
+            return
+
+        # Resolve the auto-detected pick so the dialog can show it in the "Auto" radio.
+        auto_jp = find_japanese_audio_stream(video_file)
+        auto_stream = None
+        if auto_jp is not None:
+            for s in streams:
+                if s.audio_index == auto_jp.audio_index:
+                    auto_stream = s
+                    break
+
+        dialog = AudioTracksDialog(
+            streams=streams,
+            current_override=self._audio_track_override,
+            auto_detected=auto_stream,
+            parent=self,
+        )
+        if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
+            self._audio_track_override = dialog.selected_override()
+
     def _on_preview_clicked(self) -> None:
         """Handle preview button click."""
         self._start_processing(preview_mode=True)
@@ -336,7 +397,13 @@ class SingleEpisodeTab(MiningTabBase):
         # Open subtitle viewer
         from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
 
-        viewer = SubtitleViewer(video_file, entries, initial_offset=offset, parent=self)
+        viewer = SubtitleViewer(
+            video_file,
+            entries,
+            initial_offset=offset,
+            parent=self,
+            audio_track_override=self._audio_track_override,
+        )
         if viewer.exec() == SubtitleViewer.DialogCode.Accepted:
             self.offset_spinbox.setValue(viewer.get_offset())
 
@@ -379,6 +446,7 @@ class SingleEpisodeTab(MiningTabBase):
         self._is_processing = True
         self.preview_button.hide()
         self.process_button.hide()
+        self.tracks_button.hide()
         self.cancel_button.setText("\u25a0 Cancel")
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
@@ -395,6 +463,7 @@ class SingleEpisodeTab(MiningTabBase):
             preview_mode,
             self.progress_callback,
             curation_callback=curation_cb,
+            audio_track_override=self._audio_track_override,
         )
 
         self.worker_thread.result_ready.connect(self._on_processing_finished)
@@ -464,6 +533,7 @@ class SingleEpisodeTab(MiningTabBase):
         self.cancel_button.hide()
         self.preview_button.show()
         self.process_button.show()
+        self.tracks_button.show()
 
     def _on_processing_finished(self, result) -> None:
         """Handle processing finished signal.
@@ -483,6 +553,9 @@ class SingleEpisodeTab(MiningTabBase):
         # Show result
         self.presenter.show_processing_result(result)
 
+        # Reset per-run override so next Process uses Auto unless user picks again
+        self._audio_track_override = None
+
     def _on_processing_error(self, error_message: str) -> None:
         """Handle processing error signal.
 
@@ -496,6 +569,9 @@ class SingleEpisodeTab(MiningTabBase):
 
         # Reset progress
         self.progress_widget.reset()
+
+        # Reset per-run override on error path too
+        self._audio_track_override = None
 
     def _refresh_recent_combo(self) -> None:
         """Refresh the recent files combo box from disk."""
