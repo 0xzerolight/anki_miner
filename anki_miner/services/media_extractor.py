@@ -1,6 +1,5 @@
 """Service for extracting media (screenshots and audio) from video files."""
 
-import json
 import logging
 import subprocess
 import threading
@@ -11,7 +10,7 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.models import MediaData, TokenizedWord
-from anki_miner.utils import ensure_directory, safe_filename
+from anki_miner.utils import ensure_directory, find_japanese_audio_stream, safe_filename
 
 logger = logging.getLogger(__name__)
 
@@ -329,67 +328,19 @@ class MediaExtractorService:
     def _get_japanese_audio_stream(self, video_file: Path) -> int | None:
         """Detect Japanese audio stream index using ffprobe.
 
-        Args:
-            video_file: Path to video file
-
-        Returns:
-            Stream index of Japanese audio, or None if not found
+        Returns the global ffprobe stream index for ffmpeg `-map 0:N`.
+        Thread-safe cache avoids re-probing the same file.
         """
-        # Check cache first (thread-safe)
         with self._cache_lock:
             if video_file in self._audio_stream_cache:
                 return self._audio_stream_cache[video_file]
 
-        cmd = [
-            "ffprobe",
-            "-v",
-            "quiet",
-            "-print_format",
-            "json",
-            "-show_streams",
-            "-select_streams",
-            "a",  # Audio streams only
-            str(video_file),
-        ]
+        result = find_japanese_audio_stream(video_file)
+        global_index = result.global_index if result is not None else None
 
-        try:
-            proc = subprocess.run(cmd, capture_output=True, timeout=30, text=True)
-            if proc.returncode != 0:
-                logger.warning(f"ffprobe failed for {video_file}: {proc.stderr}")
-                with self._cache_lock:
-                    self._audio_stream_cache[video_file] = None
-                return None
-
-            data = json.loads(proc.stdout)
-            streams = data.get("streams", [])
-
-            # Look for Japanese audio stream
-            japanese_codes = {"jpn", "ja", "japanese", "jp"}
-
-            for stream in streams:
-                tags = stream.get("tags", {})
-                language = tags.get("language", "").lower()
-
-                if language in japanese_codes:
-                    stream_index = stream.get("index")
-                    logger.info(f"Found Japanese audio: stream {stream_index} (language: {language})")
-                    stream_index_int: int | None = int(stream_index) if stream_index is not None else None
-                    with self._cache_lock:
-                        self._audio_stream_cache[video_file] = stream_index_int
-                    return stream_index_int
-
-            # Log available streams for debugging
-            available_langs = [s.get("tags", {}).get("language", "unknown") for s in streams]
-            logger.warning(f"No Japanese audio found. Available languages: {available_langs}")
-            with self._cache_lock:
-                self._audio_stream_cache[video_file] = None
-            return None
-
-        except (subprocess.SubprocessError, OSError, json.JSONDecodeError) as e:
-            logger.warning(f"Error probing audio streams: {e}")
-            with self._cache_lock:
-                self._audio_stream_cache[video_file] = None
-            return None
+        with self._cache_lock:
+            self._audio_stream_cache[video_file] = global_index
+        return global_index
 
     def _extract_audio(
         self,
