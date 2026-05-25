@@ -122,35 +122,43 @@ class PairPreviewDialog(QDialog):
         if v_header:
             v_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
-        # Populate table
-        for row, pair in enumerate(self.pairs):
-            # Video file name with icon
-            video_item = QTableWidgetItem(pair.video.name)
-            video_item.setToolTip(str(pair.video))
-            self.table.setItem(row, 0, video_item)
+        # Populate table. Suspend repaints + sorting so the populate loop
+        # doesn't trigger O(N) layout invalidations for large batch imports.
+        self.table.setUpdatesEnabled(False)
+        was_sorting = self.table.isSortingEnabled()
+        self.table.setSortingEnabled(False)
+        try:
+            for row, pair in enumerate(self.pairs):
+                # Video file name with icon
+                video_item = QTableWidgetItem(pair.video.name)
+                video_item.setToolTip(str(pair.video))
+                self.table.setItem(row, 0, video_item)
 
-            # Video file size
-            try:
-                video_size = pair.video.stat().st_size
-            except OSError:
-                video_size = 0
-            video_size_item = QTableWidgetItem(self._format_file_size(video_size))
-            video_size_item.setFont(self._create_font(12))
-            self.table.setItem(row, 1, video_size_item)
+                # Video file size
+                try:
+                    video_size = pair.video.stat().st_size
+                except OSError:
+                    video_size = 0
+                video_size_item = QTableWidgetItem(self._format_file_size(video_size))
+                video_size_item.setFont(self._create_font(12))
+                self.table.setItem(row, 1, video_size_item)
 
-            # Subtitle file name with icon
-            subtitle_item = QTableWidgetItem(pair.subtitle.name)
-            subtitle_item.setToolTip(str(pair.subtitle))
-            self.table.setItem(row, 2, subtitle_item)
+                # Subtitle file name with icon
+                subtitle_item = QTableWidgetItem(pair.subtitle.name)
+                subtitle_item.setToolTip(str(pair.subtitle))
+                self.table.setItem(row, 2, subtitle_item)
 
-            # Subtitle file size
-            try:
-                subtitle_size = pair.subtitle.stat().st_size
-            except OSError:
-                subtitle_size = 0
-            subtitle_size_item = QTableWidgetItem(self._format_file_size(subtitle_size))
-            subtitle_size_item.setFont(self._create_font(12))
-            self.table.setItem(row, 3, subtitle_size_item)
+                # Subtitle file size
+                try:
+                    subtitle_size = pair.subtitle.stat().st_size
+                except OSError:
+                    subtitle_size = 0
+                subtitle_size_item = QTableWidgetItem(self._format_file_size(subtitle_size))
+                subtitle_size_item.setFont(self._create_font(12))
+                self.table.setItem(row, 3, subtitle_size_item)
+        finally:
+            self.table.setSortingEnabled(was_sorting)
+            self.table.setUpdatesEnabled(True)
 
         main_layout.addWidget(self.table)
 

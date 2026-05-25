@@ -387,39 +387,47 @@ class DictionarySettingsPanel(FormPanel):
         return widget if isinstance(widget, _ChainRow) else None
 
     def _rebuild_list(self) -> None:
-        self._list.clear()
-        # Lazy-construct + cache. refresh_registry() invalidates after an
-        # import. Repeated reorder/toggle ticks reuse the same scan.
-        if self._registry is None:
-            self._registry = DictionaryRegistry(self._dicts_root)
-            self._registry.load()
-        registry = self._registry
-        for entry in self._chain:
-            meta: DictMeta | None = None
-            if entry.kind == "indexed":
-                meta = registry.get(entry.dict_id) if entry.dict_id else None
-                display = meta.source_name if meta else (entry.dict_id or "(missing)")
-                fmt = meta.format if meta else "missing"
-                count = meta.entry_count if meta else 0
-            else:
-                display = "Jisho (online fallback)"
-                fmt = "online"
-                count = 0
-            stale = meta is not None and not meta.schema_ok
-            row = _ChainRow(entry, display, fmt, count, stale=stale)
-            row.toggled.connect(self.chain_changed.emit)
-            if stale and row.reimport_button is not None and meta is not None:
-                # JMdict per-row Re-import fires the existing global signal so
-                # users land in the same import flow regardless of where they
-                # clicked. Other formats use the new per-dict signal.
-                if meta.format == "jmdict":
-                    row.reimport_button.clicked.connect(self.reimport_jmdict_requested.emit)
+        # Suspend repaints across clear+populate so the reorder ↑↓ buttons
+        # don't flash on each rebuild. clear() destroys the previous row
+        # widgets (and their signal connections), so there is no duplicate
+        # handler risk.
+        self._list.setUpdatesEnabled(False)
+        try:
+            self._list.clear()
+            # Lazy-construct + cache. refresh_registry() invalidates after an
+            # import. Repeated reorder/toggle ticks reuse the same scan.
+            if self._registry is None:
+                self._registry = DictionaryRegistry(self._dicts_root)
+                self._registry.load()
+            registry = self._registry
+            for entry in self._chain:
+                meta: DictMeta | None = None
+                if entry.kind == "indexed":
+                    meta = registry.get(entry.dict_id) if entry.dict_id else None
+                    display = meta.source_name if meta else (entry.dict_id or "(missing)")
+                    fmt = meta.format if meta else "missing"
+                    count = meta.entry_count if meta else 0
                 else:
-                    dict_id = meta.dict_id
-                    row.reimport_button.clicked.connect(
-                        lambda _checked=False, d=dict_id: self.reimport_dict_requested.emit(d)
-                    )
-            item = QListWidgetItem()
-            item.setSizeHint(row.sizeHint())
-            self._list.addItem(item)
-            self._list.setItemWidget(item, row)
+                    display = "Jisho (online fallback)"
+                    fmt = "online"
+                    count = 0
+                stale = meta is not None and not meta.schema_ok
+                row = _ChainRow(entry, display, fmt, count, stale=stale)
+                row.toggled.connect(self.chain_changed.emit)
+                if stale and row.reimport_button is not None and meta is not None:
+                    # JMdict per-row Re-import fires the existing global signal so
+                    # users land in the same import flow regardless of where they
+                    # clicked. Other formats use the new per-dict signal.
+                    if meta.format == "jmdict":
+                        row.reimport_button.clicked.connect(self.reimport_jmdict_requested.emit)
+                    else:
+                        dict_id = meta.dict_id
+                        row.reimport_button.clicked.connect(
+                            lambda _checked=False, d=dict_id: self.reimport_dict_requested.emit(d)
+                        )
+                item = QListWidgetItem()
+                item.setSizeHint(row.sizeHint())
+                self._list.addItem(item)
+                self._list.setItemWidget(item, row)
+        finally:
+            self._list.setUpdatesEnabled(True)

@@ -1,6 +1,7 @@
 """Analytics tab for mining statistics, difficulty ranking, and progress tracking."""
 
 import logging
+import time
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -28,9 +29,14 @@ from anki_miner.services.stats_service import StatsService
 class AnalyticsTab(QWidget):
     """Tab displaying mining analytics, difficulty rankings, and milestones."""
 
+    # showEvent fires on every tab switch. Skip the refresh if data is fresh
+    # within this window so rapid tab clicking stays snappy.
+    _REFRESH_TTL_SECONDS = 5.0
+
     def __init__(self, stats_service: StatsService, parent=None):
         super().__init__(parent)
         self.stats_service = stats_service
+        self._last_refresh: float | None = None
         self._setup_ui()
         self._setup_accessibility()
 
@@ -61,7 +67,7 @@ class AnalyticsTab(QWidget):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         self.refresh_button = ModernButton("Refresh", variant="secondary")
-        self.refresh_button.clicked.connect(self.refresh_data)
+        self.refresh_button.clicked.connect(lambda: self.refresh_data(force=True))
         button_layout.addWidget(self.refresh_button)
         layout.addLayout(button_layout)
 
@@ -197,9 +203,21 @@ class AnalyticsTab(QWidget):
         group.setLayout(layout)
         return group
 
-    def refresh_data(self) -> None:
-        """Refresh all analytics data from the stats service."""
+    def refresh_data(self, force: bool = False) -> None:
+        """Refresh all analytics data from the stats service.
+
+        Args:
+            force: Skip the staleness check. The Refresh button passes
+                ``force=True``; ``showEvent`` does not.
+        """
         if not self.stats_service.is_available():
+            return
+
+        if (
+            not force
+            and self._last_refresh is not None
+            and time.monotonic() - self._last_refresh < self._REFRESH_TTL_SECONDS
+        ):
             return
 
         try:
@@ -208,6 +226,7 @@ class AnalyticsTab(QWidget):
             self._update_recent_sessions()
             self._update_difficulty_ranking()
             self._update_milestones(stats)
+            self._last_refresh = time.monotonic()
         except Exception:
             logging.getLogger(__name__).exception("Failed to refresh analytics data")
 
@@ -222,43 +241,57 @@ class AnalyticsTab(QWidget):
         has_sessions = len(sessions) > 0
         self.sessions_table.setVisible(has_sessions)
         self.sessions_empty_label.setVisible(not has_sessions)
-        self.sessions_table.setRowCount(len(sessions))
 
-        for row_idx, session in enumerate(sessions):
-            date_str = session.mined_at.strftime("%Y-%m-%d %H:%M")
-            items = [
-                QTableWidgetItem(date_str),
-                QTableWidgetItem(session.series_name),
-                QTableWidgetItem(session.episode_name),
-                QTableWidgetItem(str(session.total_words)),
-                QTableWidgetItem(str(session.unknown_words)),
-                QTableWidgetItem(str(session.cards_created)),
-            ]
-            for col_idx, item in enumerate(items):
-                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                item.setToolTip(item.text())
-                self.sessions_table.setItem(row_idx, col_idx, item)
+        self.sessions_table.setUpdatesEnabled(False)
+        was_sorting = self.sessions_table.isSortingEnabled()
+        self.sessions_table.setSortingEnabled(False)
+        try:
+            self.sessions_table.setRowCount(len(sessions))
+            for row_idx, session in enumerate(sessions):
+                date_str = session.mined_at.strftime("%Y-%m-%d %H:%M")
+                items = [
+                    QTableWidgetItem(date_str),
+                    QTableWidgetItem(session.series_name),
+                    QTableWidgetItem(session.episode_name),
+                    QTableWidgetItem(str(session.total_words)),
+                    QTableWidgetItem(str(session.unknown_words)),
+                    QTableWidgetItem(str(session.cards_created)),
+                ]
+                for col_idx, item in enumerate(items):
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    item.setToolTip(item.text())
+                    self.sessions_table.setItem(row_idx, col_idx, item)
+        finally:
+            self.sessions_table.setSortingEnabled(was_sorting)
+            self.sessions_table.setUpdatesEnabled(True)
 
     def _update_difficulty_ranking(self) -> None:
         difficulties = self.stats_service.get_series_difficulty()
         has_difficulties = len(difficulties) > 0
         self.difficulty_table.setVisible(has_difficulties)
         self.difficulty_empty_label.setVisible(not has_difficulties)
-        self.difficulty_table.setRowCount(len(difficulties))
 
-        for row_idx, entry in enumerate(difficulties):
-            difficulty_pct = f"{entry.difficulty_score * 100:.1f}%"
-            items = [
-                QTableWidgetItem(str(row_idx + 1)),
-                QTableWidgetItem(entry.series_name),
-                QTableWidgetItem(str(entry.total_words)),
-                QTableWidgetItem(str(entry.unknown_words)),
-                QTableWidgetItem(difficulty_pct),
-            ]
-            for col_idx, item in enumerate(items):
-                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                item.setToolTip(item.text())
-                self.difficulty_table.setItem(row_idx, col_idx, item)
+        self.difficulty_table.setUpdatesEnabled(False)
+        was_sorting = self.difficulty_table.isSortingEnabled()
+        self.difficulty_table.setSortingEnabled(False)
+        try:
+            self.difficulty_table.setRowCount(len(difficulties))
+            for row_idx, entry in enumerate(difficulties):
+                difficulty_pct = f"{entry.difficulty_score * 100:.1f}%"
+                items = [
+                    QTableWidgetItem(str(row_idx + 1)),
+                    QTableWidgetItem(entry.series_name),
+                    QTableWidgetItem(str(entry.total_words)),
+                    QTableWidgetItem(str(entry.unknown_words)),
+                    QTableWidgetItem(difficulty_pct),
+                ]
+                for col_idx, item in enumerate(items):
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    item.setToolTip(item.text())
+                    self.difficulty_table.setItem(row_idx, col_idx, item)
+        finally:
+            self.difficulty_table.setSortingEnabled(was_sorting)
+            self.difficulty_table.setUpdatesEnabled(True)
 
     def _update_milestones(self, stats) -> None:
         # Clear existing milestone widgets
