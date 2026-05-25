@@ -1,5 +1,6 @@
 """Enhanced dialog for previewing discovered words with search, grouping, and export."""
 
+from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QBrush, QColor, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -47,6 +48,13 @@ class WordPreviewDialog(QDialog):
         self.all_words = words  # All words (never filtered)
         self.filtered_words = words.copy()  # Currently displayed words
         self._theme_colors: dict[str, str] = {}
+        # Debounce search keystrokes so a fast typist doesn't rebuild the
+        # table N times. 150ms is short enough to feel instant while
+        # collapsing a burst of characters into one populate.
+        self._search_debounce_timer = QTimer(self)
+        self._search_debounce_timer.setSingleShot(True)
+        self._search_debounce_timer.setInterval(150)
+        self._search_debounce_timer.timeout.connect(self._apply_search)
         self._setup_ui()
         self._populate_table()
         self._update_statistics()
@@ -214,29 +222,30 @@ class WordPreviewDialog(QDialog):
 
     def _populate_table(self) -> None:
         """Populate the table with filtered words."""
-        # Disable sorting while populating
+        # Suspend repaints + sorting across the populate to collapse O(N)
+        # layout invalidations into one. Without this, large word lists
+        # (>200 rows) make the search bar feel sluggish.
+        self.table.setUpdatesEnabled(False)
         self.table.setSortingEnabled(False)
+        try:
+            self.table.setRowCount(0)
 
-        # Clear existing rows
-        self.table.setRowCount(0)
+            # Snapshot theme colors once so subsequent calls to _add_words_to_table
+            # stay consistent even if the theme changes mid-populate.
+            self._theme_colors = Theme.get_colors()
 
-        # Snapshot theme colors once so subsequent calls to _add_words_to_table
-        # stay consistent even if the theme changes mid-populate.
-        self._theme_colors = Theme.get_colors()
-
-        # Group words if needed
-        grouping_mode = self.group_combo.currentIndex()
-        if grouping_mode == 0:  # No grouping
-            self._add_words_to_table(self.filtered_words)
-        elif grouping_mode == 1:  # Time Range
-            self._add_words_grouped_by_time()
-        elif grouping_mode == 2:  # Alphabetical
-            self._add_words_grouped_alphabetically()
-        elif grouping_mode == 3:  # Word Length
-            self._add_words_grouped_by_length()
-
-        # Re-enable sorting
-        self.table.setSortingEnabled(True)
+            grouping_mode = self.group_combo.currentIndex()
+            if grouping_mode == 0:  # No grouping
+                self._add_words_to_table(self.filtered_words)
+            elif grouping_mode == 1:  # Time Range
+                self._add_words_grouped_by_time()
+            elif grouping_mode == 2:  # Alphabetical
+                self._add_words_grouped_alphabetically()
+            elif grouping_mode == 3:  # Word Length
+                self._add_words_grouped_by_length()
+        finally:
+            self.table.setSortingEnabled(True)
+            self.table.setUpdatesEnabled(True)
 
         # Update result count
         self.result_count_label.setText(f"Showing {len(self.filtered_words)} of {len(self.all_words)} words")
@@ -396,17 +405,20 @@ class WordPreviewDialog(QDialog):
         span_str = self._format_time(span)
         self.time_span_label.setText(f"Span: {span_str}")
 
-    def _on_search_changed(self, text: str) -> None:
+    def _on_search_changed(self, _text: str) -> None:
         """Handle search text change.
 
-        Args:
-            text: Search query text
+        Restarts the debounce timer so rapid typing only triggers one
+        filter+repopulate after the user pauses.
         """
+        self._search_debounce_timer.start()
+
+    def _apply_search(self) -> None:
+        """Filter words by the current search text and repopulate the table."""
+        text = self.search_input.text()
         if not text:
-            # No filter, show all words
             self.filtered_words = self.all_words.copy()
         else:
-            # Filter words by search text (case-insensitive)
             text_lower = text.lower()
             self.filtered_words = [
                 word
