@@ -221,7 +221,23 @@ def test_zero_track_variant() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 10. Title tag appended
+# 10. Single/zero-track variants always return None, even with a non-None override
+# ---------------------------------------------------------------------------
+
+
+def test_single_track_returns_none_even_with_override() -> None:
+    stream = _stream(0, language="jpn", codec="aac", channels=2)
+    dialog = AudioTracksDialog([stream], current_override=5, auto_detected=stream)
+    assert dialog.selected_override() is None
+
+
+def test_zero_track_returns_none_even_with_override() -> None:
+    dialog = AudioTracksDialog([], current_override=5, auto_detected=None)
+    assert dialog.selected_override() is None
+
+
+# ---------------------------------------------------------------------------
+# 11. Title tag appended
 # ---------------------------------------------------------------------------
 
 
