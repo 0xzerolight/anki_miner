@@ -3,8 +3,8 @@
 import logging
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PyQt6.QtCore import QLocale, Qt, QUrl
+from PyQt6.QtMultimedia import QAudioOutput, QMediaMetaData, QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import (
     QDialog,
@@ -34,6 +34,8 @@ class SubtitleViewer(QDialog):
         subtitle_entries: list[tuple[float, float, str]],
         initial_offset: float = 0.0,
         parent=None,
+        *,
+        audio_track_override: int | None = None,
     ):
         """Initialize the subtitle viewer.
 
@@ -42,11 +44,14 @@ class SubtitleViewer(QDialog):
             subtitle_entries: List of (start_seconds, end_seconds, text) tuples
             initial_offset: Initial subtitle offset in seconds
             parent: Optional parent widget
+            audio_track_override: Optional 0-indexed audio track to force instead of
+                auto-detecting Japanese. None preserves auto-detect.
         """
         super().__init__(parent)
         self.subtitle_entries = subtitle_entries
         self._offset = initial_offset
         self._jp_audio_index: int | None = None
+        self._audio_track_override = audio_track_override
 
         self.setWindowTitle("Subtitle Timing Viewer")
         self.setMinimumSize(720, 540)
@@ -133,8 +138,11 @@ class SubtitleViewer(QDialog):
         Args:
             video_path: Path to the video file
         """
-        jp_stream = find_japanese_audio_stream(video_path)
-        self._jp_audio_index = jp_stream.audio_index if jp_stream is not None else None
+        if self._audio_track_override is None:
+            jp_stream = find_japanese_audio_stream(video_path)
+            self._jp_audio_index = jp_stream.audio_index if jp_stream is not None else None
+        else:
+            self._jp_audio_index = self._audio_track_override
 
         self.audio_output = QAudioOutput()
         self.player = QMediaPlayer()
@@ -151,17 +159,27 @@ class SubtitleViewer(QDialog):
 
     def _on_tracks_changed(self) -> None:
         """Select the Japanese audio track once QMediaPlayer enumerates tracks."""
-        if self._jp_audio_index is None:
+        if self._jp_audio_index is not None:
+            # ffprobe found JP, or user gave an override — honor it
+            track_count = len(self.player.audioTracks())
+            if self._jp_audio_index >= track_count:
+                logger.warning(
+                    f"Audio track index {self._jp_audio_index} out of range "
+                    f"(player reports {track_count} audio tracks)"
+                )
+                return
+            self.player.setActiveAudioTrack(self._jp_audio_index)
+            logger.info(f"Selected audio track {self._jp_audio_index} in mini-player")
             return
-        track_count = len(self.player.audioTracks())
-        if self._jp_audio_index >= track_count:
-            logger.warning(
-                f"Japanese audio index {self._jp_audio_index} out of range "
-                f"(player reports {track_count} audio tracks)"
-            )
-            return
-        self.player.setActiveAudioTrack(self._jp_audio_index)
-        logger.info(f"Selected Japanese audio track {self._jp_audio_index} in mini-player")
+
+        # Both override and ffprobe returned nothing — try Qt-side language metadata.
+        for i, track in enumerate(self.player.audioTracks()):
+            lang = track.value(QMediaMetaData.Key.Language)
+            if lang == QLocale.Language.Japanese:
+                self.player.setActiveAudioTrack(i)
+                logger.info(f"Selected Japanese audio track {i} via Qt metadata fallback")
+                return
+        # Qt also can't identify — leave QMediaPlayer's default (no action)
 
     def _on_play_pause(self) -> None:
         """Toggle play/pause."""
