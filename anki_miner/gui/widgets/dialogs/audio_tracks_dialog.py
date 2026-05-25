@@ -52,8 +52,10 @@ class AudioTracksDialog(QDialog):
         self.setMinimumWidth(400)
 
         # _result holds the audio_index to return, or None for Auto.
-        # Initialised to current_override so reject() leaves it unchanged.
-        self._result: int | None = current_override
+        # Initialised to None; multi-track variant sets it to current_override
+        # so reject() leaves it unchanged. Single/zero-track variants always
+        # return None (no meaningful override exists for degenerate track counts).
+        self._result: int | None = None
 
         layout = QVBoxLayout(self)
 
@@ -90,6 +92,7 @@ class AudioTracksDialog(QDialog):
         current_override: int | None,
         auto_detected: AudioStream | None,
     ) -> None:
+        self._result = current_override  # reject() leaves selection unchanged
         self._button_group = QButtonGroup(self)
         self._radio_map: dict[int, QRadioButton] = {}  # audio_index → radio
 
