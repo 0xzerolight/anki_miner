@@ -1,5 +1,6 @@
 """Tests for subtitle_viewer module."""
 
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -182,6 +183,8 @@ class TestAudioTrackSelection:
         viewer._on_tracks_changed()
 
         player.setActiveAudioTrack.assert_called_once_with(0)
+        for track in player.audioTracks.return_value:
+            track.value.assert_not_called()
 
     def test_qt_metadata_fallback_no_japanese_leaves_default(self, fake_media_classes):
         """When ffprobe and Qt metadata both fail, setActiveAudioTrack should not be called."""
@@ -197,10 +200,20 @@ class TestAudioTrackSelection:
 
         player.setActiveAudioTrack.assert_not_called()
 
+    def test_override_index_zero_selects_first_track(self, fake_media_classes):
+        """audio_track_override=0 is a valid first-track index, not a falsy 'no override' sentinel."""
+        with patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp:
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=0)
+        mock_find_jp.assert_not_called()
+        assert viewer._jp_audio_index == 0
+
+        player = fake_media_classes["player"]
+        player.audioTracks.return_value = [MagicMock(), MagicMock()]
+        viewer._on_tracks_changed()
+        player.setActiveAudioTrack.assert_called_once_with(0)
+
     def test_override_logs_in_first_branch_not_qt_branch(self, fake_media_classes, caplog):
         """Override path should log 'Selected audio track', not 'Qt metadata'."""
-        import logging
-
         with patch(f"{MODULE}.find_japanese_audio_stream", side_effect=AssertionError("should not call ffprobe")):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=1)
         player = fake_media_classes["player"]
