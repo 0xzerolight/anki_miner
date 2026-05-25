@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **Frequency filter now excludes unindexed words** (Issue #34): when `Max Frequency Rank` is set, words absent from the frequency list are filtered out instead of bypassing the cutoff. Previous "benefit of the doubt" behavior contradicted the GUI tooltip ("Only mine words within the top N most frequent") and produced uncommon words in mined decks even with strict caps. Set Max Frequency Rank back to 0 to restore the prior pass-everything behavior.
 
 ### Removed
 

@@ -83,7 +83,9 @@ class WordFilterService:
     ) -> list[TokenizedWord]:
         """Filter words by frequency rank (keep only top-N most common words).
 
-        Words without a frequency rank are always included (benefit of the doubt).
+        Words without a frequency rank are excluded: if the user opts into a
+        frequency cutoff, unindexed words are by definition not in the top N.
+        Fixes Issue #34.
 
         Args:
             words: List of words to filter.
@@ -96,7 +98,7 @@ class WordFilterService:
         if not max_rank or max_rank <= 0:
             return words
 
-        return [word for word in words if word.frequency_rank is None or word.frequency_rank <= max_rank]
+        return [word for word in words if word.frequency_rank is not None and word.frequency_rank <= max_rank]
 
     def filter_by_word_lists(
         self,
