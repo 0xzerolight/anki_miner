@@ -237,7 +237,23 @@ def test_zero_track_returns_none_even_with_override() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 11. Title tag appended
+# 11. Stale current_override falls back to None
+# ---------------------------------------------------------------------------
+
+
+def test_stale_current_override_falls_back_to_none() -> None:
+    s0 = _stream(0, language="jpn")
+    s1 = _stream(1, language="eng")
+
+    dialog = AudioTracksDialog([s0, s1], current_override=99, auto_detected=s0)
+
+    assert dialog.selected_override() is None
+    auto_radio = _radios(dialog)[0]
+    assert auto_radio.isChecked()
+
+
+# ---------------------------------------------------------------------------
+# 12. Title tag appended
 # ---------------------------------------------------------------------------
 
 

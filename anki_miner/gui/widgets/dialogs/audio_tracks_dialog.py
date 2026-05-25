@@ -56,6 +56,7 @@ class AudioTracksDialog(QDialog):
         # so reject() leaves it unchanged. Single/zero-track variants always
         # return None (no meaningful override exists for degenerate track counts).
         self._result: int | None = None
+        self._button_group: QButtonGroup | None = None
 
         layout = QVBoxLayout(self)
 
@@ -73,7 +74,6 @@ class AudioTracksDialog(QDialog):
     def _build_zero_track(self, layout: QVBoxLayout) -> None:
         layout.addWidget(QLabel("No audio tracks found in this file."))
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.accept)
         layout.addWidget(buttons)
 
@@ -81,7 +81,6 @@ class AudioTracksDialog(QDialog):
         layout.addWidget(QLabel("This file has only one audio track."))
         layout.addWidget(QLabel(_format_track_label(stream)))
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.accept)
         layout.addWidget(buttons)
 
@@ -92,7 +91,8 @@ class AudioTracksDialog(QDialog):
         current_override: int | None,
         auto_detected: AudioStream | None,
     ) -> None:
-        self._result = current_override  # reject() leaves selection unchanged
+        valid_indices = {s.audio_index for s in streams}
+        self._result = current_override if current_override in valid_indices else None
         self._button_group = QButtonGroup(self)
         self._radio_map: dict[int, QRadioButton] = {}  # audio_index → radio
 
@@ -137,8 +137,11 @@ class AudioTracksDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _on_accept(self) -> None:
-        checked_id = self._button_group.checkedId()
-        self._result = None if checked_id == _AUTO_BUTTON_ID else checked_id
+        if self._button_group is None:
+            self.accept()
+            return
+        button_id = self._button_group.checkedId()
+        self._result = None if button_id == _AUTO_BUTTON_ID else button_id
         self.accept()
 
     # ------------------------------------------------------------------
