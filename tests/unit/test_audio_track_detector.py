@@ -299,3 +299,13 @@ class TestListAudioStreams:
         with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
             result = list_audio_streams(video_file)
         assert result[0].language_tag == "jpn"
+
+    def test_ffprobe_command_uses_select_audio_streams(self, video_file):
+        stdout = _ffprobe_json([{"index": 0, "language": "jpn"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)) as mock_run:
+            list_audio_streams(video_file)
+        args = mock_run.call_args[0][0]
+        assert args[0] == "ffprobe"
+        assert "-select_streams" in args
+        assert args[args.index("-select_streams") + 1] == "a"
+        assert str(video_file) in args

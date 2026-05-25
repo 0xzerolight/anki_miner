@@ -84,14 +84,15 @@ def list_audio_streams(video_path: Path) -> list[AudioStream]:
     result: list[AudioStream] = []
 
     for audio_index, stream in enumerate(raw_streams):
-        global_index = stream.get("index")
-        if global_index is None:
+        try:
+            global_index = int(stream["index"])
+        except (KeyError, TypeError, ValueError):
             # audio_index slot is consumed but stream is skipped
             continue
 
         tags = stream.get("tags", {}) or {}
         lang_raw = tags.get("language")
-        language_tag = lang_raw.lower() if lang_raw is not None else None
+        language_tag = lang_raw.lower() if lang_raw else None
         title_tag = tags.get("title") or None
 
         codec = stream.get("codec_name") or None
@@ -109,7 +110,7 @@ def list_audio_streams(video_path: Path) -> list[AudioStream]:
 
         result.append(
             AudioStream(
-                global_index=int(global_index),
+                global_index=global_index,
                 audio_index=audio_index,
                 language_tag=language_tag,
                 title_tag=title_tag,
@@ -131,16 +132,15 @@ def find_japanese_audio_stream(video_file: Path) -> JapaneseAudioStream | None:
     streams = list_audio_streams(video_file)
 
     for stream in streams:
-        language = stream.language_tag or ""
-        if language in JAPANESE_LANGUAGE_CODES:
+        if stream.language_tag in JAPANESE_LANGUAGE_CODES:
             logger.info(
                 f"Found Japanese audio: global stream {stream.global_index}, "
-                f"audio track {stream.audio_index} (language: {language})"
+                f"audio track {stream.audio_index} (language: {stream.language_tag})"
             )
             return JapaneseAudioStream(
                 global_index=stream.global_index,
                 audio_index=stream.audio_index,
-                language_tag=language,
+                language_tag=stream.language_tag,
             )
 
     available_langs = [s.language_tag or "unknown" for s in streams]
