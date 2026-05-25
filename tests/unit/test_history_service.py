@@ -63,6 +63,16 @@ class TestInitialize:
         service.initialize()  # Should not raise
         assert db_path.exists()
 
+    def test_initialize_creates_indexes(self, tmp_path):
+        """Should create indexes on timestamp and series_name."""
+        db_path = tmp_path / "history.db"
+        service = HistoryService(db_path)
+        service.initialize()
+        with sqlite3.connect(str(db_path)) as conn:
+            indexes = {row[1] for row in conn.execute("PRAGMA index_list(mining_history)")}
+        assert "idx_history_timestamp" in indexes
+        assert "idx_history_series" in indexes
+
 
 # ---------------------------------------------------------------------------
 # TestRecordSession

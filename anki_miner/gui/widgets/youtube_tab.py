@@ -95,28 +95,38 @@ class YouTubeTab(QWidget):
     def __init__(
         self,
         config: AnkiMinerConfig,
-        processor: EpisodeProcessor,
+        processor: EpisodeProcessor | None,
         fetcher: YouTubeFetcherService,
         presenter: PresenterProtocol | None = None,
         parent: QWidget | None = None,
+        stats_service: object | None = None,
     ) -> None:
         """Initialize the tab.
 
         Args:
             config: Frozen application configuration.
-            processor: Episode processor (shared across tabs).
+            processor: Episode processor (shared across tabs). May be ``None``
+                so the tab can be constructed before the dictionary chain has
+                loaded; the first ``_start_run`` call builds one lazily.
             fetcher: YouTube fetcher service used for metadata probes and,
                 indirectly via ``processor.process_youtube_url``, downloads.
             presenter: Optional presenter for routing log messages.
             parent: Optional parent widget.
+            stats_service: Optional ``StatsService`` reused across lazy
+                processor rebuilds so YouTube mining sessions land in
+                analytics regardless of whether the processor was passed
+                in at construction or built on demand.
         """
         super().__init__(parent)
         self._config = config
         # Optional so release_dictionary_resources() can null it out and
         # _start_run rebuilds lazily on the next user click (Issue #30).
+        # Also None on startup-deferred init: app.py skips the eager
+        # create_episode_processor call so the window paints faster.
         self._processor: EpisodeProcessor | None = processor
         self._fetcher = fetcher
         self._presenter = presenter
+        self._stats_service = stats_service
 
         # Queue model + per-row widget map.
         self._queue: YouTubeQueue = YouTubeQueue()
@@ -339,11 +349,18 @@ class YouTubeTab(QWidget):
         if not ready_items:
             return
 
-        # Processor may have been released by Settings → Remove dictionary
-        # (release_dictionary_resources sets it to None to drop sqlite handles).
-        # Rebuild lazily here so the user doesn't have to restart the app.
+        # Processor may be None for two reasons: (a) Settings → Remove dictionary
+        # called release_dictionary_resources to drop sqlite handles, or (b)
+        # app.py deferred the eager create_episode_processor call so the window
+        # could paint faster on startup. Either way, rebuild lazily so the user
+        # doesn't have to restart the app — and pass stats_service through so
+        # mining sessions still land in analytics.
         if self._processor is None and self._presenter is not None:
-            self._processor = create_episode_processor(self._config, self._presenter)
+            self._processor = create_episode_processor(
+                self._config,
+                self._presenter,
+                stats_service=self._stats_service,  # type: ignore[arg-type]
+            )
         if self._processor is None:
             self.log_widget.append_warning("Mining unavailable — services not initialized.")
             return

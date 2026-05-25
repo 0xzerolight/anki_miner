@@ -401,23 +401,23 @@ class TestCreateCardsBatch:
 
         assert result == 3
 
-    def test_multiple_batches_seventy_five_items(self, test_config, make_tokenized_word, recording_progress):
-        """Should split 75 items into two batches (50 + 25) and sum results."""
+    def test_multiple_batches_one_fifty_items(self, test_config, make_tokenized_word, recording_progress):
+        """Should split 150 items into two batches (100 + 50) and sum results."""
         service = AnkiService(test_config)
-        items = self._make_word_data(make_tokenized_word, n=75)
+        items = self._make_word_data(make_tokenized_word, n=150)
 
-        # First batch: 50 items, all succeed
-        batch1_resp = _mock_response(result=list(range(50)))
-        # Second batch: 25 items, all succeed
-        batch2_resp = _mock_response(result=list(range(50, 75)))
+        # First batch: 100 items, all succeed
+        batch1_resp = _mock_response(result=list(range(100)))
+        # Second batch: 50 items, all succeed
+        batch2_resp = _mock_response(result=list(range(100, 150)))
 
         with patch(
             "anki_miner.services._ankiconnect.requests.post", side_effect=[batch1_resp, batch2_resp]
         ) as mock_post:
             result = service.create_cards_batch(items, recording_progress)
 
-        assert result == 75
-        # Exactly 2 batches (50 + 25), not more
+        assert result == 150
+        # Exactly 2 batches (100 + 50), not more
         assert mock_post.call_count == 2
 
     def test_counts_only_non_null_note_ids(self, test_config, make_tokenized_word):
