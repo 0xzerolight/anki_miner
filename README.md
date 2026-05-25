@@ -160,6 +160,8 @@ Sincere thanks to people who made exceptional contributions to the project:
 
 ★ **[StyraxBenzoin](https://github.com/StyraxBenzoin)** - Brilliant feature suggestions, new release testing, community building
 
+See [CONTRIBUTORS.md](CONTRIBUTORS.md) for everyone who has made any kind of contribution to the project.
+
 
 ## License
 
