@@ -1,3 +1,6 @@
 """Dialog widgets for GUI."""
 
-__all__ = ["ExportDialog"]
+from .audio_tracks_dialog import AudioTracksDialog
+from .export_dialog import ExportDialog
+
+__all__ = ["AudioTracksDialog", "ExportDialog"]
