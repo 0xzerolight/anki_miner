@@ -17,6 +17,7 @@ from anki_miner.utils import (
     list_audio_streams,
     safe_filename,
 )
+from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 
 logger = logging.getLogger(__name__)
 
@@ -399,7 +400,11 @@ class MediaExtractorService:
             audio_track_override,
             len(streams),
         )
-        return self._get_japanese_audio_stream(video_file)
+        # Reuse the streams list we already probed; don't re-run ffprobe.
+        for stream in streams:
+            if stream.language_tag in JAPANESE_LANGUAGE_CODES:
+                return stream.global_index
+        return None
 
     def _extract_audio(
         self,

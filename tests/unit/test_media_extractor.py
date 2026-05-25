@@ -1108,13 +1108,29 @@ class TestAudioTrackOverride:
     # 4. Override out of range falls back to JP auto; warning logged
     # ------------------------------------------------------------------
     def test_override_out_of_range_falls_back(self, service, video_file, tmp_path, caplog):
-        """When override audio_index doesn't exist, fall back to JP and log a warning."""
+        """When override audio_index doesn't exist, fall back to JP inline filter and log a warning.
+
+        find_japanese_audio_stream must NOT be called; the fallback reuses the already-cached
+        stream list and filters by JAPANESE_LANGUAGE_CODES directly.
+        """
         import logging
 
         output_path = tmp_path / "out.mp3"
         output_path.write_bytes(b"\xff\xfbfake")
 
-        streams = [_make_audio_stream(audio_index=0, global_index=1)]
+        # Stream has a Japanese language tag so the inline JP filter can pick it up.
+        from anki_miner.utils import AudioStream
+
+        jp_stream = AudioStream(
+            global_index=2,
+            audio_index=0,
+            language_tag="jpn",
+            title_tag=None,
+            codec="aac",
+            channels=2,
+            is_default=True,
+        )
+        streams = [jp_stream]
 
         mock_proc = MagicMock()
         mock_proc.returncode = 0
@@ -1125,10 +1141,6 @@ class TestAudioTrackOverride:
             patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
             caplog.at_level(logging.WARNING, logger="anki_miner.services.media_extractor"),
         ):
-            from anki_miner.utils.audio_track_detector import JapaneseAudioStream
-
-            mock_find_jp.return_value = JapaneseAudioStream(global_index=2, audio_index=0, language_tag="jpn")
-
             result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=99)
 
         assert result is True
@@ -1136,9 +1148,43 @@ class TestAudioTrackOverride:
         map_idx = cmd.index("-map")
         assert cmd[map_idx + 1] == "0:2"
         assert any("audio_track_override=99" in r.message for r in caplog.records)
+        # Fallback uses cached stream list inline — find_japanese_audio_stream must not be called.
+        mock_find_jp.assert_not_called()
 
     # ------------------------------------------------------------------
-    # 5. Both absent → 0:a:0 (existing behavior preserved)
+    # 5. Override=0 is a valid first-track index, not a falsy sentinel
+    # ------------------------------------------------------------------
+    def test_override_zero_is_valid_first_audio_track(self, service, video_file, tmp_path):
+        """audio_track_override=0 is a valid index (first audio track), not a falsy 'no override' value.
+
+        Guards against regressions where someone writes `if not audio_track_override:`
+        instead of `if audio_track_override is None:`.
+        """
+        output_path = tmp_path / "out.mp3"
+        output_path.write_bytes(b"\xff\xfbfake")
+
+        # One stream: audio_index=0 maps to global_index=3 (e.g. video + sub tracks before it).
+        streams = [_make_audio_stream(audio_index=0, global_index=3)]
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch(f"{MODULE}.list_audio_streams", return_value=streams),
+            patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp,
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+        ):
+            result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=0)
+
+        assert result is True
+        cmd = mock_run.call_args[0][0]
+        map_idx = cmd.index("-map")
+        assert cmd[map_idx + 1] == "0:3"
+        # Override is set (even though it's 0) — JP auto-detect must not be triggered.
+        mock_find_jp.assert_not_called()
+
+    # ------------------------------------------------------------------
+    # 7. Both absent → 0:a:0 (existing behavior preserved)
     # ------------------------------------------------------------------
     def test_both_absent_uses_first_stream(self, service, video_file, tmp_path):
         """When override is None and JP auto-detect returns None, use 0:a:0."""
@@ -1160,7 +1206,7 @@ class TestAudioTrackOverride:
         assert cmd[map_idx + 1] == "0:a:0"
 
     # ------------------------------------------------------------------
-    # 6. Cache hit: list_audio_streams called only once per file
+    # 8. Cache hit: list_audio_streams called only once per file
     # ------------------------------------------------------------------
     def test_stream_list_cached_across_calls(self, service, video_file):
         """_list_audio_streams_cached must call list_audio_streams only once per video file."""
@@ -1175,7 +1221,7 @@ class TestAudioTrackOverride:
         mock_list.assert_called_once_with(video_file)
 
     # ------------------------------------------------------------------
-    # 7. extract_media_batch forwards override to extract_media
+    # 9. extract_media_batch forwards override to extract_media
     # ------------------------------------------------------------------
     def test_extract_media_batch_forwards_override(self, service, video_file, make_tokenized_word, tmp_path):
         """extract_media_batch must pass audio_track_override to every extract_media call."""
