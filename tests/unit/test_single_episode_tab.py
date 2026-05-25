@@ -1,0 +1,271 @@
+"""Tests for SingleEpisodeTab audio track override wiring (Issue #35)."""
+
+from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+pytest.importorskip("PyQt6.QtWidgets")
+
+from PyQt6.QtWidgets import QApplication
+
+from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
+
+
+@pytest.fixture
+def qapp():
+    app = QApplication.instance() or QApplication([])
+    yield app
+
+
+@pytest.fixture
+def tab(qapp, test_config):
+    widget = SingleEpisodeTab(
+        config=test_config,
+        presenter=MagicMock(name="Presenter"),
+        progress_callback=MagicMock(name="ProgressCallback"),
+    )
+    yield widget
+    widget.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# 1. Initial state
+# ---------------------------------------------------------------------------
+
+
+def test_initial_audio_track_override_is_none(tab):
+    assert tab._audio_track_override is None
+
+
+# ---------------------------------------------------------------------------
+# 2. Tracks button exists
+# ---------------------------------------------------------------------------
+
+
+def test_tracks_button_exists(tab):
+    assert hasattr(tab, "tracks_button")
+    assert tab.tracks_button.text() == "Tracks"
+
+
+# ---------------------------------------------------------------------------
+# 3. Override resets on video path change
+# ---------------------------------------------------------------------------
+
+
+def test_override_resets_on_video_path_change(tab):
+    tab._audio_track_override = 2
+    tab.video_selector.path_changed.emit("/different/file.mkv")
+    assert tab._audio_track_override is None
+
+
+# ---------------------------------------------------------------------------
+# 4. Warning shown when no video selected
+# ---------------------------------------------------------------------------
+
+
+def test_tracks_clicked_warns_when_no_video(tab):
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams") as mock_list,
+        patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warn,
+    ):
+        tab.video_selector.get_path = MagicMock(return_value="")
+        tab._on_tracks_clicked()
+        mock_warn.assert_called_once()
+        mock_list.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# 5. Dialog opens; override stored on Accept
+# ---------------------------------------------------------------------------
+
+
+def test_tracks_clicked_stores_override_on_accept(tab, tmp_path):
+    from PyQt6.QtWidgets import QDialog
+
+    from anki_miner.utils.audio_track_detector import AudioStream, JapaneseAudioStream
+
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+
+    streams = [
+        AudioStream(
+            global_index=1, audio_index=0, language_tag="jpn", title_tag=None, codec="aac", channels=2, is_default=True
+        ),
+        AudioStream(
+            global_index=2, audio_index=1, language_tag="eng", title_tag=None, codec="aac", channels=2, is_default=False
+        ),
+    ]
+    auto_jp = JapaneseAudioStream(global_index=1, audio_index=0, language_tag="jpn")
+
+    mock_dialog_instance = MagicMock()
+    # Use the real DialogCode so the comparison in production code succeeds
+    mock_dialog_instance.exec.return_value = QDialog.DialogCode.Accepted
+    mock_dialog_instance.DialogCode = QDialog.DialogCode
+    mock_dialog_instance.selected_override.return_value = 1
+
+    mock_class = MagicMock(return_value=mock_dialog_instance)
+    mock_class.DialogCode = QDialog.DialogCode
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams", return_value=streams) as mock_list,
+        patch("anki_miner.gui.widgets.single_episode_tab.find_japanese_audio_stream", return_value=auto_jp),
+        patch("anki_miner.gui.widgets.single_episode_tab.AudioTracksDialog", mock_class),
+    ):
+        tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+        tab.video_selector.is_valid = MagicMock(return_value=True)
+        tab._on_tracks_clicked()
+
+    mock_list.assert_called_once()
+    mock_class.assert_called_once()
+    call_kwargs = mock_class.call_args[1]
+    assert call_kwargs["streams"] == streams
+    assert call_kwargs["current_override"] is None  # initial state
+    # auto_detected should be the stream matching auto_jp.audio_index (index 0)
+    assert call_kwargs["auto_detected"] == streams[0]
+    assert tab._audio_track_override == 1
+
+
+# ---------------------------------------------------------------------------
+# 6. Override unchanged on Cancel
+# ---------------------------------------------------------------------------
+
+
+def test_tracks_clicked_keeps_override_on_cancel(tab, tmp_path):
+    from PyQt6.QtWidgets import QDialog
+
+    from anki_miner.utils.audio_track_detector import AudioStream, JapaneseAudioStream
+
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+
+    streams = [
+        AudioStream(
+            global_index=1, audio_index=0, language_tag="jpn", title_tag=None, codec="aac", channels=2, is_default=True
+        ),
+        AudioStream(
+            global_index=2, audio_index=1, language_tag="eng", title_tag=None, codec="aac", channels=2, is_default=False
+        ),
+    ]
+    auto_jp = JapaneseAudioStream(global_index=1, audio_index=0, language_tag="jpn")
+
+    mock_dialog_instance = MagicMock()
+    # Rejected != Accepted, so override should not change
+    mock_dialog_instance.exec.return_value = QDialog.DialogCode.Rejected
+    mock_class = MagicMock(return_value=mock_dialog_instance)
+    mock_class.DialogCode = QDialog.DialogCode
+
+    tab._audio_track_override = 0
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams", return_value=streams),
+        patch("anki_miner.gui.widgets.single_episode_tab.find_japanese_audio_stream", return_value=auto_jp),
+        patch("anki_miner.gui.widgets.single_episode_tab.AudioTracksDialog", mock_class),
+    ):
+        tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+        tab.video_selector.is_valid = MagicMock(return_value=True)
+        tab._on_tracks_clicked()
+
+    assert tab._audio_track_override == 0
+
+
+# ---------------------------------------------------------------------------
+# 7. _start_processing passes override to EpisodeWorkerThread
+# ---------------------------------------------------------------------------
+
+
+def test_start_processing_passes_override_to_worker(tab, tmp_path):
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+
+    tab._audio_track_override = 1
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+
+    mock_worker = MagicMock(name="EpisodeWorkerThread")
+    mock_processor = MagicMock(name="EpisodeProcessor")
+
+    with (
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=mock_worker
+        ) as mock_worker_cls,
+        patch("anki_miner.gui.widgets.single_episode_tab.create_episode_processor", return_value=mock_processor),
+    ):
+        tab._start_processing(preview_mode=False)
+
+    mock_worker_cls.assert_called_once()
+    _, kwargs = mock_worker_cls.call_args
+    assert kwargs.get("audio_track_override") == 1
+
+
+# ---------------------------------------------------------------------------
+# 8. _on_timing_clicked passes override to SubtitleViewer
+# ---------------------------------------------------------------------------
+
+
+def test_timing_clicked_passes_override_to_subtitle_viewer(tab, tmp_path):
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+
+    tab._audio_track_override = 2
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+
+    # parse_raw_entries returns list[tuple[float, float, str]]
+    fake_entry = (0.0, 2.5, "テスト")
+    mock_viewer_instance = MagicMock()
+    mock_viewer_instance.exec.return_value = mock_viewer_instance.DialogCode.Rejected
+
+    mock_parser = MagicMock()
+    mock_parser.parse_raw_entries.return_value = [fake_entry]
+
+    with (
+        patch(
+            "anki_miner.gui.widgets.subtitle_viewer.SubtitleViewer", return_value=mock_viewer_instance
+        ) as mock_viewer_cls,
+        patch("anki_miner.services.subtitle_parser.SubtitleParserService", return_value=mock_parser),
+    ):
+        tab._on_timing_clicked()
+
+    mock_viewer_cls.assert_called_once()
+    _, kwargs = mock_viewer_cls.call_args
+    assert kwargs.get("audio_track_override") == 2
+
+
+# ---------------------------------------------------------------------------
+# 9. Override resets after process success
+# ---------------------------------------------------------------------------
+
+
+def test_override_resets_after_processing_finished(tab):
+    tab._audio_track_override = 1
+    # _on_processing_finished calls _restore_buttons, which expects the worker set up
+    tab.worker_thread = MagicMock(name="EpisodeWorkerThread")
+    tab.worker_thread.isRunning.return_value = False
+
+    result = MagicMock(name="ProcessingResult")
+    tab._on_processing_finished(result)
+    assert tab._audio_track_override is None
+
+
+# ---------------------------------------------------------------------------
+# 10. Override resets after process error
+# ---------------------------------------------------------------------------
+
+
+def test_override_resets_after_processing_error(tab):
+    tab._audio_track_override = 1
+    tab.worker_thread = MagicMock(name="EpisodeWorkerThread")
+    tab.worker_thread.isRunning.return_value = False
+
+    tab._on_processing_error("Something went wrong")
+    assert tab._audio_track_override is None
