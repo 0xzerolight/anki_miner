@@ -10,7 +10,13 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.models import MediaData, TokenizedWord
-from anki_miner.utils import ensure_directory, find_japanese_audio_stream, safe_filename
+from anki_miner.utils import (
+    AudioStream,
+    ensure_directory,
+    find_japanese_audio_stream,
+    list_audio_streams,
+    safe_filename,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +33,7 @@ class MediaExtractorService:
         self.config = config
         ensure_directory(config.media_temp_folder)
         self._audio_stream_cache: dict[Path, int | None] = {}
+        self._audio_stream_list_cache: dict[Path, list[AudioStream]] = {}
         self._cache_lock = threading.Lock()
         # Lazy, cached encoder-availability probe for animated screenshots.
         # Keyed by ffmpeg encoder name (e.g. "libsvtav1", "libwebp_anim").
@@ -38,6 +45,8 @@ class MediaExtractorService:
         video_file: Path,
         word: TokenizedWord,
         temp_folder: Path | None = None,
+        *,
+        audio_track_override: int | None = None,
     ) -> MediaData:
         """Extract screenshot and audio for a single word.
 
@@ -46,6 +55,8 @@ class MediaExtractorService:
             word: TokenizedWord with timing information
             temp_folder: Per-run temp directory to write output into; when
                 omitted, falls back to the config-level media_temp_folder.
+            audio_track_override: Optional 0-indexed audio track (audio_index) to use instead
+                of auto-detecting Japanese. None (default) preserves existing JP auto-detect.
 
         Returns:
             MediaData with paths to extracted files
@@ -66,7 +77,9 @@ class MediaExtractorService:
         screenshot_success = self._extract_screenshot(video_file, word.start_time, word.duration, screenshot_path)
 
         # Extract audio
-        audio_success = self._extract_audio(video_file, word.start_time, word.duration, audio_path)
+        audio_success = self._extract_audio(
+            video_file, word.start_time, word.duration, audio_path, audio_track_override
+        )
 
         return MediaData(
             screenshot_path=screenshot_path if screenshot_success else None,
@@ -82,6 +95,8 @@ class MediaExtractorService:
         progress_callback: ProgressCallback | None = None,
         cancelled_check: Callable[[], bool] | None = None,
         temp_folder: Path | None = None,
+        *,
+        audio_track_override: int | None = None,
     ) -> list[tuple[TokenizedWord, MediaData]]:
         """Extract media for multiple words in parallel.
 
@@ -92,6 +107,8 @@ class MediaExtractorService:
             cancelled_check: Optional callable returning True when the caller
                 wants in-flight work cancelled.
             temp_folder: Per-run temp directory forwarded to extract_media.
+            audio_track_override: Optional 0-indexed audio track (audio_index) to use instead
+                of auto-detecting Japanese. None (default) preserves existing JP auto-detect.
 
         Returns:
             List of (word, media_data) tuples (only includes words with successful extraction)
@@ -106,7 +123,10 @@ class MediaExtractorService:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all extraction jobs
             future_to_word = {
-                executor.submit(self.extract_media, video_file, word, temp_folder): word for word in words
+                executor.submit(
+                    self.extract_media, video_file, word, temp_folder, audio_track_override=audio_track_override
+                ): word
+                for word in words
             }
 
             # Collect results as they complete
@@ -342,12 +362,52 @@ class MediaExtractorService:
             self._audio_stream_cache[video_file] = global_index
         return global_index
 
+    def _list_audio_streams_cached(self, video_file: Path) -> list[AudioStream]:
+        """Return full audio stream list for *video_file*, probing once and caching.
+
+        Thread-safe under ``_cache_lock``.
+        """
+        with self._cache_lock:
+            if video_file in self._audio_stream_list_cache:
+                return self._audio_stream_list_cache[video_file]
+
+        streams = list_audio_streams(video_file)
+
+        with self._cache_lock:
+            self._audio_stream_list_cache[video_file] = streams
+        return streams
+
+    def _resolve_audio_track_global_index(self, video_file: Path, audio_track_override: int | None) -> int | None:
+        """Translate an optional *audio_track_override* (audio_index) to a ffprobe global index.
+
+        - If *audio_track_override* is ``None``, returns the JP auto-detect result.
+        - Otherwise looks up the stream with matching ``audio_index`` in the cached stream list
+          and returns its ``global_index``. Falls back to JP auto-detect (with a warning) when
+          no stream matches.
+        """
+        if audio_track_override is None:
+            return self._get_japanese_audio_stream(video_file)
+
+        streams = self._list_audio_streams_cached(video_file)
+        for stream in streams:
+            if stream.audio_index == audio_track_override:
+                return stream.global_index
+
+        logger.warning(
+            "audio_track_override=%d not found in stream list (got %d streams); "
+            "falling back to Japanese auto-detect",
+            audio_track_override,
+            len(streams),
+        )
+        return self._get_japanese_audio_stream(video_file)
+
     def _extract_audio(
         self,
         video_file: Path,
         start_time: float,
         duration: float,
         output_path: Path,
+        audio_track_override: int | None = None,
     ) -> bool:
         """Extract audio clip from video, preferring Japanese audio.
 
@@ -356,6 +416,8 @@ class MediaExtractorService:
             start_time: Start time in seconds
             duration: Duration in seconds
             output_path: Output path for audio
+            audio_track_override: Optional 0-indexed audio track (audio_index) to use instead
+                of auto-detecting Japanese. None (default) preserves existing JP auto-detect.
 
         Returns:
             True if successful, False otherwise
@@ -370,8 +432,8 @@ class MediaExtractorService:
         if not self._check_encoder_available(encoder):
             return False
 
-        # Detect Japanese audio stream
-        jp_stream = self._get_japanese_audio_stream(video_file)
+        # Resolve audio stream: honour override when set, else JP auto-detect.
+        global_index = self._resolve_audio_track_global_index(video_file, audio_track_override)
 
         # Build ffmpeg command
         cmd = [
@@ -385,10 +447,9 @@ class MediaExtractorService:
             str(video_file),
         ]
 
-        # Map to Japanese audio if found, otherwise use first audio stream
-        if jp_stream is not None:
-            cmd.extend(["-map", f"0:{jp_stream}"])
-            logger.debug(f"Using Japanese audio stream {jp_stream}")
+        if global_index is not None:
+            cmd.extend(["-map", f"0:{global_index}"])
+            logger.debug(f"Using audio stream {global_index}")
         else:
             cmd.extend(["-map", "0:a:0"])  # First audio stream
             logger.warning("No Japanese audio found, using first audio stream")

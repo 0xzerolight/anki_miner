@@ -368,6 +368,7 @@ class EpisodeProcessor:
         unknown_words: list[TokenizedWord],
         progress_callback: ProgressCallback | None,
         run_temp_folder: Path,
+        audio_track_override: int | None = None,
     ) -> list[tuple[TokenizedWord, MediaData]]:
         """Phase 3: extract media (screenshots + audio) for each unknown word."""
         self.presenter.show_info("Step 3/5 — Extracting media from video")
@@ -377,6 +378,7 @@ class EpisodeProcessor:
             progress_callback,
             cancelled_check=lambda: self._cancelled,
             temp_folder=run_temp_folder,
+            audio_track_override=audio_track_override,
         )
         return media_results
 
@@ -493,6 +495,7 @@ class EpisodeProcessor:
         cross_episode_counts: dict[str, int] | None = None,
         episode_name_override: str | None = None,
         series_name_override: str | None = None,
+        audio_track_override: int | None = None,
     ) -> ProcessingResult:
         """Process a single episode and create Anki cards.
 
@@ -517,6 +520,8 @@ class EpisodeProcessor:
             series_name_override: Optional override for the series identity
                 passed to stats_service. When ``None`` the identity is derived
                 from ``video_file.parent.name``.
+            audio_track_override: Optional 0-indexed audio track to extract instead of
+                auto-detecting Japanese. None (default) preserves existing JP auto-detect behavior.
 
         Returns:
             ProcessingResult with statistics.
@@ -557,7 +562,9 @@ class EpisodeProcessor:
                 self.presenter.show_word_preview(unknown_words)
                 return ctx.build_result()
 
-            media_results = self._phase3_extract(ctx, video_file, unknown_words, progress_callback, run_temp_folder)
+            media_results = self._phase3_extract(
+                ctx, video_file, unknown_words, progress_callback, run_temp_folder, audio_track_override
+            )
             if self._cancelled:
                 return self._cancelled_result_from_ctx(ctx)
             if not media_results:

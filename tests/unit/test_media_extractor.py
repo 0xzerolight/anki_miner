@@ -875,7 +875,7 @@ class TestExtractMediaBatch:
             make_tokenized_word(lemma="飲む", start_time=3.0),
         ]
 
-        def fake_extract(vf, word, temp_folder=None):
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
             # Create real files so has_any_media returns True
             ss = tmp_path / f"{word.lemma}.jpg"
             ss.write_bytes(b"\xff\xd8fake")
@@ -901,7 +901,7 @@ class TestExtractMediaBatch:
 
         call_count = 0
 
-        def fake_extract(vf, word, temp_folder=None):
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
             nonlocal call_count
             call_count += 1
             from anki_miner.models import MediaData
@@ -930,7 +930,7 @@ class TestExtractMediaBatch:
             make_tokenized_word(lemma="音声のみ", start_time=1.0),
         ]
 
-        def fake_extract(vf, word, temp_folder=None):
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
             from anki_miner.models import MediaData
 
             audio = service.config.media_temp_folder / "audio.mp3"
@@ -952,7 +952,7 @@ class TestExtractMediaBatch:
             make_tokenized_word(lemma="飲む", start_time=3.0),
         ]
 
-        def fake_extract(vf, word, temp_folder=None):
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
             from anki_miner.models import MediaData
 
             ss = tmp_path / f"{word.lemma}_prog.jpg"
@@ -976,7 +976,7 @@ class TestExtractMediaBatch:
             make_tokenized_word(lemma="悪い", start_time=3.0),
         ]
 
-        def fake_extract(vf, word, temp_folder=None):
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
             if word.lemma == "悪い":
                 raise RuntimeError("ffmpeg exploded")
             from anki_miner.models import MediaData
@@ -995,3 +995,201 @@ class TestExtractMediaBatch:
         assert len(recording_progress.errors) == 1
         assert recording_progress.errors[0][0] == "悪い"
         assert "ffmpeg exploded" in recording_progress.errors[0][1]
+
+
+# ---------------------------------------------------------------------------
+# Helper: import AudioStream from public API
+# ---------------------------------------------------------------------------
+from anki_miner.utils import AudioStream  # noqa: E402
+
+
+def _make_audio_stream(audio_index: int, global_index: int) -> AudioStream:
+    return AudioStream(
+        global_index=global_index,
+        audio_index=audio_index,
+        language_tag=None,
+        title_tag=None,
+        codec="aac",
+        channels=2,
+        is_default=(audio_index == 0),
+    )
+
+
+class TestAudioTrackOverride:
+    """Tests for the audio_track_override feature in MediaExtractorService."""
+
+    # ------------------------------------------------------------------
+    # 1. Override produces the correct -map arg
+    # ------------------------------------------------------------------
+    def test_override_produces_correct_map_arg(self, service, video_file, tmp_path):
+        """audio_track_override=1 should map to the global_index of audio_index=1."""
+        output_path = tmp_path / "out.mp3"
+        output_path.write_bytes(b"\xff\xfbfake")
+
+        streams = [
+            _make_audio_stream(audio_index=0, global_index=1),
+            _make_audio_stream(audio_index=1, global_index=2),
+            _make_audio_stream(audio_index=2, global_index=3),
+        ]
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch(f"{MODULE}.list_audio_streams", return_value=streams) as mock_list,
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+        ):
+            result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=1)
+
+        assert result is True
+        cmd = mock_run.call_args[0][0]
+        map_idx = cmd.index("-map")
+        assert cmd[map_idx + 1] == "0:2"
+        mock_list.assert_called_once_with(video_file)
+
+    # ------------------------------------------------------------------
+    # 2. Override=None preserves JP auto path; list_audio_streams NOT called
+    # ------------------------------------------------------------------
+    def test_override_none_uses_jp_auto_path(self, service, video_file, tmp_path):
+        """When override is None, JP auto-detect is used and list_audio_streams is not called."""
+        output_path = tmp_path / "out.mp3"
+        output_path.write_bytes(b"\xff\xfbfake")
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp,
+            patch(f"{MODULE}.list_audio_streams") as mock_list,
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+        ):
+            from anki_miner.utils.audio_track_detector import JapaneseAudioStream
+
+            mock_find_jp.return_value = JapaneseAudioStream(global_index=2, audio_index=0, language_tag="jpn")
+
+            result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=None)
+
+        assert result is True
+        cmd = mock_run.call_args[0][0]
+        map_idx = cmd.index("-map")
+        assert cmd[map_idx + 1] == "0:2"
+        mock_list.assert_not_called()
+
+    # ------------------------------------------------------------------
+    # 3. Override beats auto-detection; find_japanese_audio_stream NOT called
+    # ------------------------------------------------------------------
+    def test_override_beats_auto_detection(self, service, video_file, tmp_path):
+        """Override wins over JP auto-detect; find_japanese_audio_stream must not be called."""
+        output_path = tmp_path / "out.mp3"
+        output_path.write_bytes(b"\xff\xfbfake")
+
+        streams = [
+            _make_audio_stream(audio_index=0, global_index=1),
+            _make_audio_stream(audio_index=1, global_index=5),
+        ]
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp,
+            patch(f"{MODULE}.list_audio_streams", return_value=streams),
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+        ):
+            result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=1)
+
+        assert result is True
+        cmd = mock_run.call_args[0][0]
+        map_idx = cmd.index("-map")
+        assert cmd[map_idx + 1] == "0:5"
+        mock_find_jp.assert_not_called()
+
+    # ------------------------------------------------------------------
+    # 4. Override out of range falls back to JP auto; warning logged
+    # ------------------------------------------------------------------
+    def test_override_out_of_range_falls_back(self, service, video_file, tmp_path, caplog):
+        """When override audio_index doesn't exist, fall back to JP and log a warning."""
+        import logging
+
+        output_path = tmp_path / "out.mp3"
+        output_path.write_bytes(b"\xff\xfbfake")
+
+        streams = [_make_audio_stream(audio_index=0, global_index=1)]
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch(f"{MODULE}.list_audio_streams", return_value=streams),
+            patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp,
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.media_extractor"),
+        ):
+            from anki_miner.utils.audio_track_detector import JapaneseAudioStream
+
+            mock_find_jp.return_value = JapaneseAudioStream(global_index=2, audio_index=0, language_tag="jpn")
+
+            result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=99)
+
+        assert result is True
+        cmd = mock_run.call_args[0][0]
+        map_idx = cmd.index("-map")
+        assert cmd[map_idx + 1] == "0:2"
+        assert any("audio_track_override=99" in r.message for r in caplog.records)
+
+    # ------------------------------------------------------------------
+    # 5. Both absent → 0:a:0 (existing behavior preserved)
+    # ------------------------------------------------------------------
+    def test_both_absent_uses_first_stream(self, service, video_file, tmp_path):
+        """When override is None and JP auto-detect returns None, use 0:a:0."""
+        output_path = tmp_path / "out.mp3"
+        output_path.write_bytes(b"\xff\xfbfake")
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+        ):
+            result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=None)
+
+        assert result is True
+        cmd = mock_run.call_args[0][0]
+        map_idx = cmd.index("-map")
+        assert cmd[map_idx + 1] == "0:a:0"
+
+    # ------------------------------------------------------------------
+    # 6. Cache hit: list_audio_streams called only once per file
+    # ------------------------------------------------------------------
+    def test_stream_list_cached_across_calls(self, service, video_file):
+        """_list_audio_streams_cached must call list_audio_streams only once per video file."""
+        streams = [_make_audio_stream(audio_index=0, global_index=1)]
+
+        with patch(f"{MODULE}.list_audio_streams", return_value=streams) as mock_list:
+            first = service._list_audio_streams_cached(video_file)
+            second = service._list_audio_streams_cached(video_file)
+
+        assert first == streams
+        assert second == streams
+        mock_list.assert_called_once_with(video_file)
+
+    # ------------------------------------------------------------------
+    # 7. extract_media_batch forwards override to extract_media
+    # ------------------------------------------------------------------
+    def test_extract_media_batch_forwards_override(self, service, video_file, make_tokenized_word, tmp_path):
+        """extract_media_batch must pass audio_track_override to every extract_media call."""
+        words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
+
+        ss = tmp_path / "食べる_1000.jpg"
+        ss.write_bytes(b"\xff\xd8fake")
+        from anki_miner.models import MediaData
+
+        fake_media = MediaData(screenshot_path=ss, screenshot_filename=ss.name)
+
+        with patch.object(service, "extract_media", return_value=fake_media) as mock_em:
+            service.extract_media_batch(video_file, words, audio_track_override=2)
+
+        mock_em.assert_called_once()
+        _, kwargs = mock_em.call_args
+        assert kwargs.get("audio_track_override") == 2

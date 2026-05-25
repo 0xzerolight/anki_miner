@@ -120,7 +120,7 @@ class TestEpisodeProcessorCancel:
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = words
 
-        def extract_and_cancel(video, ws, cb, cancelled_check=None, temp_folder=None):
+        def extract_and_cancel(video, ws, cb, cancelled_check=None, temp_folder=None, **kwargs):
             processor.cancel()
             return [(words[0], media)]
 
@@ -232,7 +232,7 @@ class TestMediaExtractorBatchCancel:
 
         call_count = 0
 
-        def fake_extract(vf, word, temp_folder=None):
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
             nonlocal call_count
             call_count += 1
             ss = tmp_path / f"{word.lemma}_cancel.jpg"
@@ -261,7 +261,7 @@ class TestMediaExtractorBatchCancel:
             make_tokenized_word(lemma="飲む", start_time=3.0),
         ]
 
-        def fake_extract(vf, word, temp_folder=None):
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
             ss = tmp_path / f"{word.lemma}_all.jpg"
             ss.write_bytes(b"\xff\xd8fake")
             return MediaData(screenshot_path=ss, screenshot_filename=ss.name)
@@ -275,7 +275,7 @@ class TestMediaExtractorBatchCancel:
         """Should return empty list when cancelled immediately."""
         words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
 
-        def fake_extract(vf, word, temp_folder=None):
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
             ss = tmp_path / f"{word.lemma}_imm.jpg"
             ss.write_bytes(b"\xff\xd8fake")
             return MediaData(screenshot_path=ss, screenshot_filename=ss.name)
