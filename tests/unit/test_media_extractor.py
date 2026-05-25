@@ -1221,6 +1221,53 @@ class TestAudioTrackOverride:
         mock_list.assert_called_once_with(video_file)
 
     # ------------------------------------------------------------------
+    # 8b. invalidate_audio_stream_cache forces re-probe on next call
+    # ------------------------------------------------------------------
+    def test_invalidate_audio_stream_cache_forces_reprobe(self, service, video_file):
+        """After invalidation, the next _list_audio_streams_cached must re-probe.
+
+        Guards against cross-run staleness: the cache is populated within a
+        process_episode run (perf win) but the orchestrator calls
+        invalidate_audio_stream_cache at the start of each run so a file
+        replaced on disk between runs cannot leave the resolver matching
+        against stale ffprobe output.
+        """
+        streams = [_make_audio_stream(audio_index=0, global_index=1)]
+
+        with patch(f"{MODULE}.list_audio_streams", return_value=streams) as mock_list:
+            service._list_audio_streams_cached(video_file)
+            service._list_audio_streams_cached(video_file)
+            assert mock_list.call_count == 1
+
+            service.invalidate_audio_stream_cache(video_file)
+
+            service._list_audio_streams_cached(video_file)
+            assert mock_list.call_count == 2
+
+    def test_invalidate_audio_stream_cache_clears_all_when_path_none(self, service, video_file, tmp_path):
+        """Passing None clears every cached entry across all files."""
+        other_file = tmp_path / "other.mkv"
+        other_file.write_bytes(b"fake")
+        streams = [_make_audio_stream(audio_index=0, global_index=1)]
+
+        with patch(f"{MODULE}.list_audio_streams", return_value=streams) as mock_list:
+            service._list_audio_streams_cached(video_file)
+            service._list_audio_streams_cached(other_file)
+            assert mock_list.call_count == 2
+
+            service.invalidate_audio_stream_cache(None)
+
+            service._list_audio_streams_cached(video_file)
+            service._list_audio_streams_cached(other_file)
+            assert mock_list.call_count == 4
+
+    def test_invalidate_audio_stream_cache_unknown_path_is_noop(self, service, tmp_path):
+        """Invalidating a file never cached should not raise."""
+        ghost = tmp_path / "ghost.mkv"
+        # Must not raise.
+        service.invalidate_audio_stream_cache(ghost)
+
+    # ------------------------------------------------------------------
     # 9. extract_media_batch forwards override to extract_media
     # ------------------------------------------------------------------
     def test_extract_media_batch_forwards_override(self, service, video_file, make_tokenized_word, tmp_path):

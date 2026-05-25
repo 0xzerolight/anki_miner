@@ -1447,3 +1447,27 @@ class TestAudioTrackOverrideForwarding:
 
         call_kwargs = mock_services["media_extractor"].extract_media_batch.call_args[1]
         assert call_kwargs.get("audio_track_override") is None
+
+    def test_process_episode_invalidates_audio_stream_cache(self, processor, mock_services, tmp_path):
+        """process_episode must invalidate the per-file audio stream cache at run start.
+
+        Prevents cross-run staleness: if the user replaces a video file on
+        disk between runs, the resolver must re-probe rather than match
+        against stale ffprobe output cached from the previous run.
+        """
+        word = _make_word()
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        video = tmp_path / "ep01.mkv"
+        sub = tmp_path / "ep01.ass"
+
+        processor.process_episode(video, sub)
+
+        mock_services["media_extractor"].invalidate_audio_stream_cache.assert_called_once_with(video)
