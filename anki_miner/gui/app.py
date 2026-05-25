@@ -3,7 +3,7 @@
 import os
 import sys
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
@@ -12,10 +12,7 @@ from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.gui.utils.service_factory import (
-    create_episode_processor,
-    create_youtube_fetcher,
-)
+from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
@@ -114,9 +111,10 @@ def main():
     # Create main window
     window = MainWindow()
 
-    # Initialize stats service for analytics
+    # Initialize stats service for analytics. ``.load()`` opens the SQLite
+    # file; defer to after window.show() so the empty shell paints first
+    # and the user sees feedback while disk I/O finishes.
     stats_service = StatsService(window.get_config().stats_db_path)
-    stats_service.load()
 
     # Create per-tab presenters and progress callbacks to avoid cross-tab signal pollution
     episode_presenter = GUIPresenter(window)
@@ -148,19 +146,20 @@ def main():
         presenter.processing_result_signal.connect(window._on_processing_result)
         presenter.word_preview_signal.connect(window._on_word_preview)
 
-    # YouTube tab (uses its own presenter + shared stats service via processor)
+    # YouTube tab (uses its own presenter + shared stats service). The
+    # processor is built lazily on the first Mine click so the dictionary
+    # chain — which opens every installed dict's sqlite — does not block
+    # the initial window paint. ``stats_service`` is threaded through so
+    # mining sessions still land in analytics regardless of when the
+    # processor materializes.
     youtube_presenter = GUIPresenter(window)
     youtube_fetcher = create_youtube_fetcher(window.get_config())
-    youtube_processor = create_episode_processor(
-        window.get_config(),
-        youtube_presenter,
-        stats_service=stats_service,
-    )
     youtube_tab = YouTubeTab(
         config=window.get_config(),
-        processor=youtube_processor,
+        processor=None,
         fetcher=youtube_fetcher,
         presenter=youtube_presenter,
+        stats_service=stats_service,
     )
     window.tabs.addTab(youtube_tab, "YouTube")
 
@@ -203,8 +202,12 @@ def main():
     window.config_refreshed.connect(batch_tab.update_config)
     window.config_refreshed.connect(youtube_tab.update_config)
 
-    # Show window
+    # Show window first so the user sees the UI immediately; then run the
+    # deferred init (stats DB open) on the next event loop tick. The
+    # YouTube tab's episode processor is built even lazier — on first
+    # Mine click — because the dictionary chain dominates startup cost.
     window.show()
+    QTimer.singleShot(0, stats_service.load)
 
     # Run event loop
     sys.exit(app.exec())

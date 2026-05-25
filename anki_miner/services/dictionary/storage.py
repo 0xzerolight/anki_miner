@@ -13,12 +13,21 @@ block directory deletion).
 
 from __future__ import annotations
 
+import json
+import logging
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+logger = logging.getLogger(__name__)
+
 SCHEMA_VERSION = 2
+
+# Sidecar filename living next to each ``index.sqlite``. Holds the dictionary's
+# ``meta`` rows as JSON so ``DictionaryRegistry.load()`` can skip the SQLite
+# open on every app startup. Refreshed whenever ``write_meta`` runs.
+_META_SIDECAR = "meta.json"
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS entries (
@@ -103,7 +112,8 @@ def bulk_insert(db_path: Path, rows: Iterable[DictRow], batch_size: int = 5000) 
 
 
 def write_meta(db_path: Path, items: dict[str, str]) -> None:
-    """Upsert meta rows."""
+    """Upsert meta rows. Refreshes the ``meta.json`` sidecar so the next
+    ``read_meta_cached`` call avoids re-opening SQLite."""
     conn = sqlite3.connect(db_path)
     try:
         for key, value in items.items():
@@ -112,8 +122,10 @@ def write_meta(db_path: Path, items: dict[str, str]) -> None:
                 (key, value),
             )
         conn.commit()
+        full_meta = {row[0]: row[1] for row in conn.execute("SELECT key, value FROM meta")}
     finally:
         conn.close()
+    _write_meta_sidecar(db_path, full_meta)
 
 
 def read_meta(db_path: Path) -> dict[str, str]:
@@ -125,6 +137,43 @@ def read_meta(db_path: Path) -> dict[str, str]:
         return {row[0]: row[1] for row in conn.execute("SELECT key, value FROM meta")}
     finally:
         conn.close()
+
+
+def read_meta_cached(db_path: Path) -> dict[str, str]:
+    """Read meta rows via the ``meta.json`` sidecar when fresh.
+
+    Falls through to ``read_meta`` and rewrites the sidecar when:
+    * the sidecar is missing,
+    * ``index.sqlite`` is newer than the sidecar,
+    * the sidecar is unreadable / not valid JSON.
+
+    Used by ``DictionaryRegistry.load()`` to skip the SQLite open on startup
+    when nothing changed since the last run.
+    """
+    if not db_path.exists():
+        return {}
+    sidecar = db_path.parent / _META_SIDECAR
+    try:
+        if sidecar.is_file() and sidecar.stat().st_mtime >= db_path.stat().st_mtime:
+            data = json.loads(sidecar.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return {str(k): str(v) for k, v in data.items()}
+    except (OSError, json.JSONDecodeError) as e:
+        logger.debug("meta sidecar miss for %s: %s", db_path, e)
+
+    meta = read_meta(db_path)
+    _write_meta_sidecar(db_path, meta)
+    return meta
+
+
+def _write_meta_sidecar(db_path: Path, meta: dict[str, str]) -> None:
+    """Best-effort sidecar write. Cache misses are logged, not raised — the
+    next ``read_meta_cached`` call will simply fall back to ``read_meta``."""
+    sidecar = db_path.parent / _META_SIDECAR
+    try:
+        sidecar.write_text(json.dumps(meta), encoding="utf-8")
+    except OSError as e:  # pragma: no cover - defensive
+        logger.debug("Failed to write meta sidecar %s: %s", sidecar, e)
 
 
 def open_readonly(db_path: Path) -> sqlite3.Connection:

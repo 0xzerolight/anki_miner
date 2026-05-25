@@ -155,15 +155,19 @@ class TestParseSubtitleFile:
         token2 = _make_token("食べた", "動詞", lemma="食べる", kana="タベタ")
 
         mock_tagger = MagicMock()
-        # Extra entries for generate_furigana + generate_reading calls
-        # (expression + sentence, each twice) after token1's initial tokenize call
+        # Per-line: 1 initial tokenize + sentence_furigana + sentence_reading
+        # (hoisted out of the word loop). Per emitted word: expression_furigana
+        # + expression_reading. Line 1 emits a word → 5 tagger calls. Line 2
+        # dedup-skips after sentence-level work → 3 tagger calls. Total: 8.
         mock_tagger.side_effect = [
-            [token1],
-            [token1],
-            [token1],
-            [token1],
-            [token1],
-            [token2],
+            [token1],  # line 1: _iter_parsed_lines tokenize
+            [token1],  # line 1: sentence_furigana
+            [token1],  # line 1: sentence_reading
+            [token1],  # line 1: expression_furigana (mined)
+            [token1],  # line 1: expression_reading (mined)
+            [token2],  # line 2: _iter_parsed_lines tokenize
+            [token2],  # line 2: sentence_furigana
+            [token2],  # line 2: sentence_reading (then dedup skip)
         ]
 
         with (
@@ -201,6 +205,8 @@ class TestParseSubtitleFile:
         token2 = _make_token("学生", "名詞", lemma="学生X", kana="ガクセイ")
 
         mock_tagger = MagicMock()
+        # Each line emits a distinct word: 1 init + 2 sentence-level + 2
+        # expression-level = 5 tagger calls per line. Two lines → 10.
         mock_tagger.side_effect = [
             [token1],
             [token1],
@@ -250,6 +256,55 @@ class TestParseSubtitleFile:
         assert len(words) == 0
         mock_tagger.assert_not_called()
 
+    def test_sentence_furigana_computed_once_per_line(self, test_config, tmp_path):
+        """Regression: sentence_furigana / sentence_reading are line-level, not word-level.
+
+        Before the hoist fix, a line emitting N words called
+        ``generate_furigana(text)`` and ``generate_reading(text)`` N times each.
+        After the fix, each is called exactly once per line regardless of
+        word count. Guards against re-introducing the per-word redundant
+        MeCab pass.
+        """
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_line = MagicMock()
+        mock_line.text = "猫と犬と鳥"
+        mock_line.start = 1000
+        mock_line.end = 3000
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+
+        token1 = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        token2 = _make_token("犬", "名詞", lemma="犬", kana="イヌ")
+        token3 = _make_token("鳥", "名詞", lemma="鳥", kana="トリ")
+
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token1, token2, token3]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch(
+                "anki_miner.services.subtitle_parser.generate_furigana",
+                return_value="stub",
+            ) as mock_furigana,
+            patch(
+                "anki_miner.services.subtitle_parser.generate_reading",
+                return_value="stub",
+            ) as mock_reading,
+        ):
+            service = SubtitleParserService(test_config)
+            words = service.parse_subtitle_file(sub_file)
+
+        assert len(words) == 3
+        # Sentence-level: 1 call per line. Expression-level: 1 per emitted word.
+        sentence_furigana_calls = [c for c in mock_furigana.call_args_list if c.args[0] == "猫と犬と鳥"]
+        sentence_reading_calls = [c for c in mock_reading.call_args_list if c.args[0] == "猫と犬と鳥"]
+        assert len(sentence_furigana_calls) == 1
+        assert len(sentence_reading_calls) == 1
+
 
 class TestExpressionFuriganaSource:
     """ExpressionFurigana source is POS-aware (mirrors TokenizedWord.mined_form).
@@ -286,15 +341,19 @@ class TestExpressionFuriganaSource:
         """Noun token: expression furigana generated from surface."""
         token = _make_token("豪腕", "名詞", lemma="剛腕", kana="ゴウワン")
         mock_furigana = self._run_parse(test_config, tmp_path, "彼は豪腕の投手だ", token)
-        first_call_text = mock_furigana.call_args_list[0].args[0]
-        assert first_call_text == "豪腕"
+        # generate_furigana is called twice per emitted word: once for the
+        # hoisted sentence-level annotation, once for the expression itself.
+        called_texts = [c.args[0] for c in mock_furigana.call_args_list]
+        assert "豪腕" in called_texts  # expression uses surface
+        assert "剛腕" not in called_texts  # not the mis-lemma
 
     def test_verb_furigana_uses_lemma(self, test_config, tmp_path):
         """Verb token: expression furigana generated from lemma."""
         token = _make_token("破れ", "動詞", lemma="破れる", kana="ヤブレ")
         mock_furigana = self._run_parse(test_config, tmp_path, "胸のとこ破れそう", token)
-        first_call_text = mock_furigana.call_args_list[0].args[0]
-        assert first_call_text == "破れる"
+        called_texts = [c.args[0] for c in mock_furigana.call_args_list]
+        assert "破れる" in called_texts  # expression uses lemma
+        assert "破れ" not in called_texts  # not the surface form
 
 
 class TestShouldIncludeWord:

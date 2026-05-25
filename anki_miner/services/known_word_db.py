@@ -82,7 +82,11 @@ class KnownWordDB:
             after = self._count(conn)
             return after - before
 
-    def sync_with_anki(self, anki_vocabulary: set[str]) -> tuple[int, int]:
+    def sync_with_anki(
+        self,
+        anki_vocabulary: set[str],
+        existing: set[str] | None = None,
+    ) -> tuple[int, int]:
         """Differential sync: add words from Anki that are not yet in the DB.
 
         Words that are in the DB but no longer in Anki are NOT removed
@@ -90,14 +94,18 @@ class KnownWordDB:
 
         Args:
             anki_vocabulary: Current set of vocabulary from AnkiConnect.
+            existing: Pre-fetched current known set. When supplied, skips the
+                internal full-table scan — callers that already hold the set
+                (e.g. episode_processor filtering before sync) should pass it.
 
         Returns:
             Tuple of (newly_added_count, total_count).
         """
-        existing = self.get_known_words()
+        if existing is None:
+            existing = self.get_known_words()
         new_words = anki_vocabulary - existing
         added = self.add_words(new_words, source="anki")
-        return (added, self.word_count())
+        return (added, len(existing) + added)
 
     def word_count(self) -> int:
         """Return the total number of known words.

@@ -11,7 +11,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.dictionary_provider import DictionaryProvider
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
-from anki_miner.services.dictionary.storage import SCHEMA_VERSION, read_meta
+from anki_miner.services.dictionary.storage import SCHEMA_VERSION, read_meta_cached
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class DictionaryRegistry:
             if not db.exists():
                 continue
             try:
-                meta = read_meta(db)
+                meta = read_meta_cached(db)
             except sqlite3.DatabaseError as e:
                 logger.warning("Skipping corrupt dictionary %s: %s", child.name, e)
                 continue
