@@ -84,7 +84,7 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             "Max Frequency Rank",
             self.max_frequency_spinbox,
-            helper="Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words",
+            helper="Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words. Words missing from the frequency list are excluded.",
         )
 
         # Known Words Database section
