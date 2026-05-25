@@ -536,6 +536,13 @@ class EpisodeProcessor:
         run_temp_folder = self._allocate_run_temp_folder()
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
+        # Invalidate the per-file audio stream cache before extraction so that
+        # cross-run file replacement (re-encode, swap, restore) cannot strand
+        # the resolver on stale ffprobe output. Within this run the cache will
+        # repopulate on the first probe and protect against double-probes
+        # (the 2e0cc13 perf win).
+        self.media_extractor.invalidate_audio_stream_cache(video_file)
+
         try:
             all_words, line_index = self._phase1_parse(ctx, subtitle_file)
             if not all_words:
