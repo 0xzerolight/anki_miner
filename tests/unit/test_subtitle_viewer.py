@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtCore import QLocale
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
@@ -124,3 +125,89 @@ class TestAudioTrackSelection:
         viewer._on_tracks_changed()
 
         player.setActiveAudioTrack.assert_not_called()
+
+    # --- audio_track_override + Qt metadata fallback tests ---
+
+    def test_override_skips_ffprobe(self, fake_media_classes):
+        """When audio_track_override is set, ffprobe should not be called."""
+        with patch(
+            f"{MODULE}.find_japanese_audio_stream",
+            side_effect=AssertionError("ffprobe should not be called"),
+        ):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2)
+        assert viewer._jp_audio_index == 2
+
+    def test_override_used_in_on_tracks_changed(self, fake_media_classes):
+        """Override index should be passed to setActiveAudioTrack."""
+        with patch(f"{MODULE}.find_japanese_audio_stream", side_effect=AssertionError("should not call ffprobe")):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2)
+        player = fake_media_classes["player"]
+        player.audioTracks.return_value = [MagicMock(), MagicMock(), MagicMock()]
+
+        viewer._on_tracks_changed()
+
+        player.setActiveAudioTrack.assert_called_once_with(2)
+
+    def test_qt_metadata_fallback_finds_japanese(self, fake_media_classes):
+        """When ffprobe returns None and no override, Qt metadata should find Japanese track."""
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        player = fake_media_classes["player"]
+
+        track_en = MagicMock()
+        track_en.value.return_value = QLocale.Language.English
+        track_jp = MagicMock()
+        track_jp.value.return_value = QLocale.Language.Japanese
+        player.audioTracks.return_value = [track_en, track_jp, track_en]
+
+        viewer._on_tracks_changed()
+
+        player.setActiveAudioTrack.assert_called_once_with(1)
+
+    def test_qt_metadata_fallback_skipped_when_ffprobe_found_jp(self, fake_media_classes):
+        """When ffprobe found Japanese, Qt fallback should not run; wrong track not picked."""
+        with patch(
+            f"{MODULE}.find_japanese_audio_stream",
+            return_value=JapaneseAudioStream(global_index=0, audio_index=0, language_tag="jpn"),
+        ):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        player = fake_media_classes["player"]
+
+        # All tracks are English — if the Qt loop ran erroneously it would find nothing,
+        # but we primarily want to confirm setActiveAudioTrack is called with index 0 (ffprobe hit).
+        track_en = MagicMock()
+        track_en.value.return_value = QLocale.Language.English
+        player.audioTracks.return_value = [track_en, track_en]
+
+        viewer._on_tracks_changed()
+
+        player.setActiveAudioTrack.assert_called_once_with(0)
+
+    def test_qt_metadata_fallback_no_japanese_leaves_default(self, fake_media_classes):
+        """When ffprobe and Qt metadata both fail, setActiveAudioTrack should not be called."""
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        player = fake_media_classes["player"]
+
+        track_en = MagicMock()
+        track_en.value.return_value = QLocale.Language.English
+        player.audioTracks.return_value = [track_en, track_en]
+
+        viewer._on_tracks_changed()
+
+        player.setActiveAudioTrack.assert_not_called()
+
+    def test_override_logs_in_first_branch_not_qt_branch(self, fake_media_classes, caplog):
+        """Override path should log 'Selected audio track', not 'Qt metadata'."""
+        import logging
+
+        with patch(f"{MODULE}.find_japanese_audio_stream", side_effect=AssertionError("should not call ffprobe")):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=1)
+        player = fake_media_classes["player"]
+        player.audioTracks.return_value = [MagicMock(), MagicMock()]
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.gui.widgets.subtitle_viewer"):
+            viewer._on_tracks_changed()
+
+        assert any("Selected audio track" in r.message for r in caplog.records)
+        assert not any("Qt metadata" in r.message for r in caplog.records)
