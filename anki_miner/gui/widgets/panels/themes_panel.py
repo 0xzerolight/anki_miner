@@ -88,6 +88,12 @@ class ThemesPanel(QWidget):
         super().__init__(parent)
         self._themes_root = themes_root
         self._preview_baseline: str | None = None
+        # Star button registry — populated by _populate so favorite toggles
+        # can update one row in place instead of rebuilding the entire tree.
+        # Key → variant star button; key → (family_item, family_name, entries)
+        # for the tri-state family star.
+        self._star_buttons: dict[str, QToolButton] = {}
+        self._family_records: dict[str, tuple[QTreeWidgetItem, str, list[ThemeGroupEntry]]] = {}
 
         self._setup_ui()
         self._populate()
@@ -165,6 +171,8 @@ class ThemesPanel(QWidget):
         self.tree.blockSignals(True)
         try:
             self.tree.clear()
+            self._star_buttons.clear()
+            self._family_records.clear()
             for family_name, entries in groups:
                 if family_name is None:
                     # Standalone: render the single entry as a top-level row.
@@ -203,6 +211,7 @@ class ThemesPanel(QWidget):
                         family_item.addChild(child)
                         star = self._build_star_cell(entry.key, entry.key in favorites)
                         self.tree.setItemWidget(child, self.COL_STAR, star)
+                        self._family_records[entry.key] = (family_item, family_name, entries)
                         if entry.key == active:
                             self.tree.setCurrentItem(child)
                             active_inside = True
@@ -244,6 +253,9 @@ class ThemesPanel(QWidget):
         button.setToolTip("Click to add to / remove from favorites.")
         # `key` captured per-row via default arg, sidesteps closure-over-loop-var.
         button.clicked.connect(lambda _checked=False, k=key: self._toggle_favorite(k))
+        # Register so _refresh_favorite_state can update this row in place,
+        # avoiding a full tree rebuild on every star click.
+        self._star_buttons[key] = button
 
         # Button always fits the row (cell padding is zeroed by the scoped
         # QSS rule on `#themesPanelTree`). 1-px margin on each side keeps
@@ -383,12 +395,12 @@ class ThemesPanel(QWidget):
                     descendant.setText(self.COL_STATUS, "Active" if key == new_active_key else "")
 
     def _toggle_favorite(self, key: str) -> None:
-        """Star/unstar `key`, refresh the tree, notify listeners."""
+        """Star/unstar `key`, refresh the affected row, notify listeners."""
         if Theme.is_favorite(key):
             Theme.remove_favorite(key)
         else:
             Theme.add_favorite(key)
-        self._populate()
+        self._refresh_favorite_state(key)
         self.favorites_changed.emit()
         self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
 
@@ -410,9 +422,41 @@ class ThemesPanel(QWidget):
                 if k not in current_set:
                     new_favorites.append(k)
         Theme.set_favorites(new_favorites)
-        self._populate()
+        # Refresh every variant button; the family cell is rebuilt once below.
+        for key in keys:
+            self._refresh_variant_star(key)
+        self._refresh_family_star(keys[0] if keys else "")
         self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
         self.favorites_changed.emit()
+
+    def _refresh_favorite_state(self, key: str) -> None:
+        """Update the star button(s) affected by toggling ``key``.
+
+        Mutates the existing variant button and rebuilds only the family
+        star cell — avoids clearing the entire tree and recreating every
+        row widget, which is what the old `_populate()` path did and what
+        users were seeing as star-click lag.
+        """
+        self._refresh_variant_star(key)
+        self._refresh_family_star(key)
+
+    def _refresh_variant_star(self, key: str) -> None:
+        button = self._star_buttons.get(key)
+        if button is None:
+            return
+        is_fav = Theme.is_favorite(key)
+        button.setChecked(is_fav)
+        button.setText(_STAR_FILLED if is_fav else _STAR_OUTLINE)
+
+    def _refresh_family_star(self, key: str) -> None:
+        """Rebuild only the family star cell for the family containing ``key``."""
+        record = self._family_records.get(key)
+        if record is None:
+            return
+        family_item, family_name, entries = record
+        favorites = set(Theme.get_favorites())
+        new_cell = self._build_family_star_cell(family_name, entries, favorites)
+        self.tree.setItemWidget(family_item, self.COL_STAR, new_cell)
 
     def _open_themes_folder(self) -> None:
         """Open (creating if necessary) the user themes directory."""
