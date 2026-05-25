@@ -147,8 +147,8 @@ class TestWordFilterService:
             assert len(result) == 2
             assert all(w.frequency_rank <= 10000 for w in result)
 
-        def test_keeps_words_with_no_rank_data(self, test_config):
-            """Words without frequency data should pass through."""
+        def test_removes_words_with_no_rank_data(self, test_config):
+            """Words without frequency data should be excluded when a cutoff is active (Issue #34)."""
             service = WordFilterService(test_config)
             words = [
                 self._word_with_freq("の", 1),
@@ -156,7 +156,14 @@ class TestWordFilterService:
             ]
 
             result = service.filter_by_frequency(words, max_rank=5000)
-            assert len(result) == 2
+            assert len(result) == 1
+            assert result[0].lemma == "の"
+
+        def test_no_filtering_keeps_unranked_words(self, test_config):
+            """max_rank=0 disables filtering entirely; unranked words pass through."""
+            service = WordFilterService(test_config)
+            words = [self._word_with_freq("の", 1), create_word("不明")]
+            assert len(service.filter_by_frequency(words, max_rank=0)) == 2
 
         def test_no_filtering_when_max_rank_zero(self, test_config):
             """Should return all words when max_rank is 0."""
