@@ -147,12 +147,19 @@ Contributions are welcome — bug fixes, dictionary integrations, GUI polish, do
 
 - New here? Start with [CONTRIBUTING.md](CONTRIBUTING.md).
 - Architecture overview: [ARCHITECTURE.md](ARCHITECTURE.md).
-- Testing strategy: [docs/TESTING.md](TESTING.md).
+- Testing strategy: [TESTING.md](TESTING.md).
 - Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 - Security: [SECURITY.md](SECURITY.md).
 
 Bug reports and feature requests → [Issues](https://github.com/0xzerolight/anki_miner/issues).
 General questions and discussion → [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
+
+## Special Thanks
+
+Sincere thanks to people who made exceptional contributions to the project:
+
+★ **[StyraxBenzoin](https://github.com/StyraxBenzoin)** - Brilliant feature suggestions, new release testing, community building
+
 
 ## License
 
