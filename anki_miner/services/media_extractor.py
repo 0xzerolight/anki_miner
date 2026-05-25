@@ -363,6 +363,23 @@ class MediaExtractorService:
             self._audio_stream_cache[video_file] = global_index
         return global_index
 
+    def invalidate_audio_stream_cache(self, video_file: Path | None = None) -> None:
+        """Clear the per-file audio stream cache.
+
+        Pass a specific path to clear one entry; pass ``None`` to clear all.
+        The orchestrator calls this at the start of each ``process_episode``
+        run so cross-run file replacement (re-encode, swap, restore from
+        backup) cannot strand the resolver on stale ffprobe output. Within a
+        single run the cache still protects against double-probes.
+        """
+        with self._cache_lock:
+            if video_file is None:
+                self._audio_stream_list_cache.clear()
+                self._audio_stream_cache.clear()
+            else:
+                self._audio_stream_list_cache.pop(video_file, None)
+                self._audio_stream_cache.pop(video_file, None)
+
     def _list_audio_streams_cached(self, video_file: Path) -> list[AudioStream]:
         """Return full audio stream list for *video_file*, probing once and caching.
 
