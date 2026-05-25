@@ -1,6 +1,18 @@
 """Tests for subtitle_viewer module."""
 
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+from PyQt6.QtWidgets import QApplication
+
 from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
+from anki_miner.utils.audio_track_detector import JapaneseAudioStream
+
+MODULE = "anki_miner.gui.widgets.subtitle_viewer"
+
+# QApplication required for any Qt widget test.
+_app = QApplication.instance() or QApplication([])
 
 
 class TestFormatTime:
@@ -39,3 +51,76 @@ class TestFormatTime:
         """Should handle times over 60 minutes."""
         # 75 minutes = 4500000 ms
         assert SubtitleViewer._format_time(4500000) == "75:00"
+
+
+@pytest.fixture
+def fake_media_classes():
+    """Patch QMediaPlayer + QAudioOutput so construction skips backend media loading."""
+    with (
+        patch(f"{MODULE}.QMediaPlayer") as player_cls,
+        patch(f"{MODULE}.QAudioOutput") as audio_cls,
+    ):
+        player_instance = MagicMock()
+        player_instance.audioTracks.return_value = []
+        player_cls.return_value = player_instance
+        audio_cls.return_value = MagicMock()
+        yield {"player": player_instance, "player_cls": player_cls}
+
+
+class TestAudioTrackSelection:
+    """Test that the Japanese audio track is selected in the mini-player."""
+
+    def test_records_audio_index_when_japanese_found(self, fake_media_classes):
+        with patch(
+            f"{MODULE}.find_japanese_audio_stream",
+            return_value=JapaneseAudioStream(global_index=2, audio_index=1, language_tag="jpn"),
+        ):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        assert viewer._jp_audio_index == 1
+
+    def test_records_none_when_no_japanese_track(self, fake_media_classes):
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        assert viewer._jp_audio_index is None
+
+    def test_setup_media_connects_tracks_changed(self, fake_media_classes):
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+            SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        fake_media_classes["player"].tracksChanged.connect.assert_called()
+
+    def test_on_tracks_changed_selects_japanese_track(self, fake_media_classes):
+        with patch(
+            f"{MODULE}.find_japanese_audio_stream",
+            return_value=JapaneseAudioStream(global_index=2, audio_index=1, language_tag="jpn"),
+        ):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        player = fake_media_classes["player"]
+        player.audioTracks.return_value = [MagicMock(), MagicMock()]
+
+        viewer._on_tracks_changed()
+
+        player.setActiveAudioTrack.assert_called_once_with(1)
+
+    def test_on_tracks_changed_noop_when_no_japanese(self, fake_media_classes):
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        player = fake_media_classes["player"]
+        player.audioTracks.return_value = [MagicMock(), MagicMock()]
+
+        viewer._on_tracks_changed()
+
+        player.setActiveAudioTrack.assert_not_called()
+
+    def test_on_tracks_changed_bounds_check_skips_out_of_range(self, fake_media_classes):
+        with patch(
+            f"{MODULE}.find_japanese_audio_stream",
+            return_value=JapaneseAudioStream(global_index=5, audio_index=3, language_tag="jpn"),
+        ):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        player = fake_media_classes["player"]
+        # Player reports fewer tracks than ffprobe found.
+        player.audioTracks.return_value = [MagicMock()]
+
+        viewer._on_tracks_changed()
+
+        player.setActiveAudioTrack.assert_not_called()

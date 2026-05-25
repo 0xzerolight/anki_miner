@@ -1,5 +1,6 @@
 """Subtitle timing adjustment viewer with video playback."""
 
+import logging
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QUrl
@@ -14,6 +15,10 @@ from PyQt6.QtWidgets import (
     QSlider,
     QVBoxLayout,
 )
+
+from anki_miner.utils import find_japanese_audio_stream
+
+logger = logging.getLogger(__name__)
 
 
 class SubtitleViewer(QDialog):
@@ -41,6 +46,7 @@ class SubtitleViewer(QDialog):
         super().__init__(parent)
         self.subtitle_entries = subtitle_entries
         self._offset = initial_offset
+        self._jp_audio_index: int | None = None
 
         self.setWindowTitle("Subtitle Timing Viewer")
         self.setMinimumSize(720, 540)
@@ -127,16 +133,35 @@ class SubtitleViewer(QDialog):
         Args:
             video_path: Path to the video file
         """
+        jp_stream = find_japanese_audio_stream(video_path)
+        self._jp_audio_index = jp_stream.audio_index if jp_stream is not None else None
+
         self.audio_output = QAudioOutput()
         self.player = QMediaPlayer()
         self.player.setAudioOutput(self.audio_output)
         self.player.setVideoOutput(self.video_widget)
-        self.player.setSource(QUrl.fromLocalFile(str(video_path)))
 
         self.player.positionChanged.connect(self._on_position_changed)
         self.player.durationChanged.connect(self._on_duration_changed)
         self.player.playbackStateChanged.connect(self._on_playback_state_changed)
         self.player.errorOccurred.connect(self._on_media_error)
+        self.player.tracksChanged.connect(self._on_tracks_changed)
+
+        self.player.setSource(QUrl.fromLocalFile(str(video_path)))
+
+    def _on_tracks_changed(self) -> None:
+        """Select the Japanese audio track once QMediaPlayer enumerates tracks."""
+        if self._jp_audio_index is None:
+            return
+        track_count = len(self.player.audioTracks())
+        if self._jp_audio_index >= track_count:
+            logger.warning(
+                f"Japanese audio index {self._jp_audio_index} out of range "
+                f"(player reports {track_count} audio tracks)"
+            )
+            return
+        self.player.setActiveAudioTrack(self._jp_audio_index)
+        logger.info(f"Selected Japanese audio track {self._jp_audio_index} in mini-player")
 
     def _on_play_pause(self) -> None:
         """Toggle play/pause."""
