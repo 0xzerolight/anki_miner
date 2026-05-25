@@ -36,7 +36,8 @@ from anki_miner.gui.widgets.dialogs import AudioTracksDialog
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
-from anki_miner.utils import find_japanese_audio_stream, list_audio_streams
+from anki_miner.utils import list_audio_streams
+from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".m4v", ".mov"}
 SUBTITLE_EXTENSIONS = {".ass", ".srt", ".ssa"}
@@ -332,13 +333,10 @@ class SingleEpisodeTab(MiningTabBase):
             return
 
         # Resolve the auto-detected pick so the dialog can show it in the "Auto" radio.
-        auto_jp = find_japanese_audio_stream(video_file)
-        auto_stream = None
-        if auto_jp is not None:
-            for s in streams:
-                if s.audio_index == auto_jp.audio_index:
-                    auto_stream = s
-                    break
+        auto_stream = next(
+            (s for s in streams if s.language_tag in JAPANESE_LANGUAGE_CODES),
+            None,
+        )
 
         dialog = AudioTracksDialog(
             streams=streams,
@@ -446,6 +444,7 @@ class SingleEpisodeTab(MiningTabBase):
         self._is_processing = True
         self.preview_button.hide()
         self.process_button.hide()
+        self.timing_button.hide()
         self.tracks_button.hide()
         self.cancel_button.setText("\u25a0 Cancel")
         self.cancel_button.setEnabled(True)
@@ -533,6 +532,7 @@ class SingleEpisodeTab(MiningTabBase):
         self.cancel_button.hide()
         self.preview_button.show()
         self.process_button.show()
+        self.timing_button.show()
         self.tracks_button.show()
 
     def _on_processing_finished(self, result) -> None:

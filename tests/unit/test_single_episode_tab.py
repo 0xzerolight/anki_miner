@@ -84,7 +84,7 @@ def test_tracks_clicked_warns_when_no_video(tab):
 def test_tracks_clicked_stores_override_on_accept(tab, tmp_path):
     from PyQt6.QtWidgets import QDialog
 
-    from anki_miner.utils.audio_track_detector import AudioStream, JapaneseAudioStream
+    from anki_miner.utils.audio_track_detector import AudioStream
 
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
@@ -97,7 +97,6 @@ def test_tracks_clicked_stores_override_on_accept(tab, tmp_path):
             global_index=2, audio_index=1, language_tag="eng", title_tag=None, codec="aac", channels=2, is_default=False
         ),
     ]
-    auto_jp = JapaneseAudioStream(global_index=1, audio_index=0, language_tag="jpn")
 
     mock_dialog_instance = MagicMock()
     # Use the real DialogCode so the comparison in production code succeeds
@@ -110,7 +109,6 @@ def test_tracks_clicked_stores_override_on_accept(tab, tmp_path):
 
     with (
         patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams", return_value=streams) as mock_list,
-        patch("anki_miner.gui.widgets.single_episode_tab.find_japanese_audio_stream", return_value=auto_jp),
         patch("anki_miner.gui.widgets.single_episode_tab.AudioTracksDialog", mock_class),
     ):
         tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
@@ -122,7 +120,7 @@ def test_tracks_clicked_stores_override_on_accept(tab, tmp_path):
     call_kwargs = mock_class.call_args[1]
     assert call_kwargs["streams"] == streams
     assert call_kwargs["current_override"] is None  # initial state
-    # auto_detected should be the stream matching auto_jp.audio_index (index 0)
+    # auto_detected resolved inline: first stream with language_tag in JAPANESE_LANGUAGE_CODES
     assert call_kwargs["auto_detected"] == streams[0]
     assert tab._audio_track_override == 1
 
@@ -135,7 +133,7 @@ def test_tracks_clicked_stores_override_on_accept(tab, tmp_path):
 def test_tracks_clicked_keeps_override_on_cancel(tab, tmp_path):
     from PyQt6.QtWidgets import QDialog
 
-    from anki_miner.utils.audio_track_detector import AudioStream, JapaneseAudioStream
+    from anki_miner.utils.audio_track_detector import AudioStream
 
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
@@ -148,7 +146,6 @@ def test_tracks_clicked_keeps_override_on_cancel(tab, tmp_path):
             global_index=2, audio_index=1, language_tag="eng", title_tag=None, codec="aac", channels=2, is_default=False
         ),
     ]
-    auto_jp = JapaneseAudioStream(global_index=1, audio_index=0, language_tag="jpn")
 
     mock_dialog_instance = MagicMock()
     # Rejected != Accepted, so override should not change
@@ -160,7 +157,6 @@ def test_tracks_clicked_keeps_override_on_cancel(tab, tmp_path):
 
     with (
         patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams", return_value=streams),
-        patch("anki_miner.gui.widgets.single_episode_tab.find_japanese_audio_stream", return_value=auto_jp),
         patch("anki_miner.gui.widgets.single_episode_tab.AudioTracksDialog", mock_class),
     ):
         tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
@@ -225,14 +221,14 @@ def test_timing_clicked_passes_override_to_subtitle_viewer(tab, tmp_path):
     mock_viewer_instance = MagicMock()
     mock_viewer_instance.exec.return_value = mock_viewer_instance.DialogCode.Rejected
 
-    mock_parser = MagicMock()
-    mock_parser.parse_raw_entries.return_value = [fake_entry]
+    mock_parser_cls = MagicMock()
+    mock_parser_cls.return_value.parse_raw_entries.return_value = [fake_entry]
 
     with (
         patch(
             "anki_miner.gui.widgets.subtitle_viewer.SubtitleViewer", return_value=mock_viewer_instance
         ) as mock_viewer_cls,
-        patch("anki_miner.services.subtitle_parser.SubtitleParserService", return_value=mock_parser),
+        patch("anki_miner.services.subtitle_parser.SubtitleParserService", mock_parser_cls),
     ):
         tab._on_timing_clicked()
 
@@ -269,3 +265,78 @@ def test_override_resets_after_processing_error(tab):
 
     tab._on_processing_error("Something went wrong")
     assert tab._audio_track_override is None
+
+
+# ---------------------------------------------------------------------------
+# 11. Inline auto-stream lookup uses JAPANESE_LANGUAGE_CODES
+# ---------------------------------------------------------------------------
+
+
+def test_tracks_clicked_auto_detected_uses_inline_lookup(tab, tmp_path):
+    """auto_detected is resolved from the already-probed streams list, not a
+    second ffprobe call. A stream with language_tag='jpn' must be passed as
+    auto_detected; a stream with language_tag='eng' must not."""
+    from PyQt6.QtWidgets import QDialog
+
+    from anki_miner.utils.audio_track_detector import AudioStream
+
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+
+    jpn_stream = AudioStream(
+        global_index=1, audio_index=0, language_tag="jpn", title_tag=None, codec="aac", channels=2, is_default=False
+    )
+    eng_stream = AudioStream(
+        global_index=2, audio_index=1, language_tag="eng", title_tag=None, codec="aac", channels=2, is_default=True
+    )
+    streams = [jpn_stream, eng_stream]
+
+    mock_dialog_instance = MagicMock()
+    mock_dialog_instance.exec.return_value = QDialog.DialogCode.Rejected
+    mock_class = MagicMock(return_value=mock_dialog_instance)
+    mock_class.DialogCode = QDialog.DialogCode
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams", return_value=streams),
+        patch("anki_miner.gui.widgets.single_episode_tab.AudioTracksDialog", mock_class),
+    ):
+        tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+        tab.video_selector.is_valid = MagicMock(return_value=True)
+        tab._on_tracks_clicked()
+
+    call_kwargs = mock_class.call_args[1]
+    assert call_kwargs["auto_detected"] is jpn_stream
+
+
+# ---------------------------------------------------------------------------
+# 12. timing_button hidden during processing, shown on restore
+# ---------------------------------------------------------------------------
+
+
+def test_timing_button_hidden_during_processing_and_restored(tab, tmp_path):
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+
+    mock_worker = MagicMock(name="EpisodeWorkerThread")
+    mock_processor = MagicMock(name="EpisodeProcessor")
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=mock_worker),
+        patch("anki_miner.gui.widgets.single_episode_tab.create_episode_processor", return_value=mock_processor),
+    ):
+        tab._start_processing(preview_mode=False)
+
+    assert tab.timing_button.isHidden(), "timing_button should be hidden during processing"
+    assert tab.tracks_button.isHidden(), "tracks_button should be hidden during processing"
+
+    tab._restore_buttons()
+
+    assert not tab.timing_button.isHidden(), "timing_button should not be hidden after restore"
+    assert not tab.tracks_button.isHidden(), "tracks_button should not be hidden after restore"
