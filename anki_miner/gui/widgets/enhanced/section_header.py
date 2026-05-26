@@ -40,7 +40,7 @@ class SectionHeader(QWidget):
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         layout = QHBoxLayout()
-        layout.setContentsMargins(0, SPACING.xxs, 0, SPACING.xxs)
+        layout.setContentsMargins(0, SPACING.xxs, SPACING.xs, SPACING.xxs)
         layout.setSpacing(SPACING.sm)
 
         self.title_label = QLabel(self._title)

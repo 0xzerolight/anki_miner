@@ -550,6 +550,10 @@ class SingleEpisodeTab(MiningTabBase):
             self.recent_manager.add_entry(Path(video_path), Path(subtitle_path))
             self._refresh_recent_combo()
 
+        # Clear file selectors so the next run starts from a clean slate.
+        self.video_selector.clear()
+        self.subtitle_selector.clear()
+
         # Show result
         self.presenter.show_processing_result(result)
 
