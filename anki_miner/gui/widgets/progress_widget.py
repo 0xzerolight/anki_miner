@@ -159,7 +159,7 @@ class ProgressWidget(QWidget):
             maximum: Maximum progress value (default: 100)
         """
         self._total_items = maximum
-        self.progress_bar.setMaximum(maximum)
+        self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
         self.progress_bar.setFormat("%p%")
         self._start_time = None
