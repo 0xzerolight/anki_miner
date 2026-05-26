@@ -128,7 +128,7 @@ def test_dictionary_chain_default():
     assert isinstance(chain, tuple)
     assert chain == (
         ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
-        ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        ChainEntry(kind="jisho", dict_id=None, enabled=False),
     )
 
 

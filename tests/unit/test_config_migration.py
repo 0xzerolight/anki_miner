@@ -48,7 +48,7 @@ def test_legacy_use_offline_dict_stripped_and_default_chain_used(tmp_config: Pat
     loaded = GUIConfigManager.load_config()
     assert loaded.dictionary_chain == (
         ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
-        ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        ChainEntry(kind="jisho", dict_id=None, enabled=False),
     )
 
 
@@ -70,5 +70,5 @@ def test_legacy_use_offline_dict_false_is_stripped(tmp_config: Path):
     # Default chain has jmdict-english enabled; the legacy false flag is dropped.
     assert loaded.dictionary_chain == (
         ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
-        ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        ChainEntry(kind="jisho", dict_id=None, enabled=False),
     )

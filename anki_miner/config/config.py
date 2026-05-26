@@ -96,7 +96,7 @@ class AnkiMinerConfig:
     dictionary_chain: tuple["ChainEntry", ...] = field(
         default_factory=lambda: (
             ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=False),
         )
     )
     jmdict_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "JMdict_e")
