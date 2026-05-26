@@ -98,7 +98,7 @@ class _ChainRow(QWidget):
         layout.addWidget(name_label, 1)
 
         if stale:
-            self.stale_label = QLabel("<i> — re-import for new formatting</i>")
+            self.stale_label = QLabel("<i> — re-import to refresh</i>")
             self.stale_label.setStyleSheet("color: gray; font-size: 10px;")
             layout.addWidget(self.stale_label)
 
@@ -225,10 +225,12 @@ class DictionarySettingsPanel(FormPanel):
         buttons.addWidget(self._reimport_btn)
 
         self._up_btn = QPushButton("↑")
+        self._up_btn.setToolTip("Move up in priority")
         self._up_btn.clicked.connect(lambda: self.move_up(self._list.currentRow()))
         buttons.addWidget(self._up_btn)
 
         self._down_btn = QPushButton("↓")
+        self._down_btn.setToolTip("Move down in priority")
         self._down_btn.clicked.connect(lambda: self.move_down(self._list.currentRow()))
         buttons.addWidget(self._down_btn)
 
@@ -244,18 +246,17 @@ class DictionarySettingsPanel(FormPanel):
         self.pitch_accent_selector = FileSelector(
             label="", file_mode=True, placeholder="Select pitch accent file (CSV/TSV)..."
         )
-        self.pitch_accent_selector.setToolTip("Path to pitch accent data file (CSV or TSV)")
         self.add_field(
             "Pitch Accent File",
             self.pitch_accent_selector,
-            helper="CSV/TSV file with columns: reading, kanji, pattern",
+            helper="CSV/TSV with columns: reading, kanji, pattern.",
         )
         self.use_pitch_accent_checkbox = QCheckBox("Enable Pitch Accent")
-        self.use_pitch_accent_checkbox.setToolTip("Add pitch accent data to Anki cards")
+        self.use_pitch_accent_checkbox.setToolTip("Adds pitch patterns to cards.")
         self.add_field(
             "",
             self.use_pitch_accent_checkbox,
-            helper="Enable to look up and add pitch accent patterns to cards",
+            helper="Looks up and writes pitch patterns to mapped fields.",
         )
         self.add_stretch()
 

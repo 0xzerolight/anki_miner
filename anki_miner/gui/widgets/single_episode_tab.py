@@ -1,5 +1,6 @@
 """Single episode mining tab for GUI."""
 
+import logging
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -38,6 +39,8 @@ from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+
+logger = logging.getLogger(__name__)
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".m4v", ".mov"}
 SUBTITLE_EXTENSIONS = {".ass", ".srt", ".ssa"}
@@ -310,7 +313,7 @@ class SingleEpisodeTab(MiningTabBase):
         """Open the AudioTracksDialog for manual audio track override selection."""
         video_path = self.video_selector.get_path().strip()
         if not video_path:
-            QMessageBox.warning(self, "Missing Video File", "Please select a video file first.")
+            QMessageBox.warning(self, "Missing Video File", "Select a video file first.")
             return
         if not self.video_selector.is_valid():
             QMessageBox.warning(self, "File Not Found", f"Video file not found: {video_path}")
@@ -327,8 +330,7 @@ class SingleEpisodeTab(MiningTabBase):
             QMessageBox.information(
                 self,
                 "No Audio Tracks",
-                "Could not enumerate audio tracks in this file. The file may be missing audio, "
-                "ffprobe may be unavailable, or the file format may be unsupported.",
+                "No audio tracks detected. Check that ffprobe is installed and the file has audio.",
             )
             return
 
@@ -361,7 +363,7 @@ class SingleEpisodeTab(MiningTabBase):
         subtitle_path = self.subtitle_selector.get_path().strip()
 
         if not video_path or not subtitle_path:
-            QMessageBox.warning(self, "Missing Files", "Please select both video and subtitle files")
+            QMessageBox.warning(self, "Missing Files", "Select both video and subtitle files.")
             return
 
         if not self.video_selector.is_valid():
@@ -385,7 +387,8 @@ class SingleEpisodeTab(MiningTabBase):
             parser = SubtitleParserService(config_no_offset)
             entries = parser.parse_raw_entries(subtitle_file)
         except Exception as e:
-            QMessageBox.critical(self, "Parse Error", f"Failed to parse subtitles: {e}")
+            logger.error("Failed to parse subtitles: %s", e)
+            QMessageBox.critical(self, "Parse Error", "Failed to parse subtitles. Check the file format.")
             return
 
         if not entries:
@@ -419,7 +422,7 @@ class SingleEpisodeTab(MiningTabBase):
         subtitle_path = self.subtitle_selector.get_path().strip()
 
         if not video_path or not subtitle_path:
-            QMessageBox.warning(self, "Missing Files", "Please select both video and subtitle files")
+            QMessageBox.warning(self, "Missing Files", "Select both video and subtitle files.")
             return
 
         if not self.video_selector.is_valid():

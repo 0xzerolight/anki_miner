@@ -501,7 +501,7 @@ class BatchProcessingTab(MiningTabBase):
                 item.error_message = error_message
                 break
 
-        self.presenter.show_error(f"Error: {error_message}")
+        self.presenter.show_error(error_message)
 
     def _on_queue_finished(self, total_cards: int) -> None:
         """Called when entire queue finishes.
