@@ -511,6 +511,10 @@ class BatchProcessingTab(MiningTabBase):
         """
         self._restore_buttons()
 
+        # Reset progress bars to Ready state on any terminal path (cancel/success).
+        self.current_progress_widget.reset()
+        self.overall_progress_widget.reset()
+
         # Update queue stats
         self.queue_panel.update_stats()
 
@@ -522,7 +526,6 @@ class BatchProcessingTab(MiningTabBase):
         self.retry_button.setVisible(has_retryable)
 
         # Show summary
-        self.overall_progress_widget.set_status("Queue processing complete")
         failed = self.batch_queue.failed_count
         summary = f"Processed {self.batch_queue.total_items} anime series\n" f"Total cards created: {total_cards}"
         if failed > 0:
@@ -582,6 +585,10 @@ class BatchProcessingTab(MiningTabBase):
             results: List of processing results
         """
         self._restore_buttons()
+
+        # Reset progress bars to Ready state on any terminal path (cancel/success).
+        self.current_progress_widget.reset()
+        self.overall_progress_widget.reset()
 
         # Show summary
         total_cards = sum(r.cards_created for r in results)
