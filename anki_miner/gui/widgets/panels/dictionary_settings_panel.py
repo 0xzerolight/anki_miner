@@ -104,7 +104,10 @@ class _ChainRow(QWidget):
 
         if format_label:
             badge = QLabel(format_label)
-            badge.setStyleSheet("color: gray; font-size: 10px;")
+            if entry.kind == "jisho":
+                badge.setStyleSheet("color: #d97706; font-size: 10px;")
+            else:
+                badge.setStyleSheet("color: gray; font-size: 10px;")
             layout.addWidget(badge)
         if count:
             count_label = QLabel(f"{count:,} entries")
@@ -199,7 +202,12 @@ class DictionarySettingsPanel(FormPanel):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel("Active Dictionaries (top = highest priority)"))
+        layout.addWidget(
+            QLabel(
+                "Active Dictionaries — top entry fills the MainDefinition field. "
+                "Offline dictionaries are recommended; they're faster than Jisho."
+            )
+        )
 
         self._list = QListWidget()
         self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
@@ -409,7 +417,7 @@ class DictionarySettingsPanel(FormPanel):
                     count = meta.entry_count if meta else 0
                 else:
                     display = "Jisho (online fallback)"
-                    fmt = "online"
+                    fmt = "⚠ rate-limited, slower"
                     count = 0
                 stale = meta is not None and not meta.schema_ok
                 row = _ChainRow(entry, display, fmt, count, stale=stale)
