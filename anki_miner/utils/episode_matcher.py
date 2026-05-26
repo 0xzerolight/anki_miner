@@ -46,6 +46,12 @@ class EpisodeNumberExtractor:
         """
         filename = file_path.stem  # Remove extension
 
+        # Strip technical metadata that confuses episode-number regexes.
+        # Resolution tokens like "1280x720" otherwise get parsed as
+        # season=1280, episode=720 by the NxN pattern (Issue #36).
+        filename = re.sub(r"\d{3,4}[xX]\d{3,4}", "", filename)
+        filename = re.sub(r"\b\d{3,4}[pi]\b", "", filename, flags=re.IGNORECASE)
+
         for pattern, extractor in cls.PATTERNS:
             match = re.search(pattern, filename)
             if match:
