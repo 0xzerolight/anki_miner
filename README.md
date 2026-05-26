@@ -85,7 +85,7 @@ Tabs:
 - Anki cards with furigana, pitch accent, and word frequency.
 - **Bold the target word** in the sentence so it stands out on the card front.
 - **Glossary field** that combines every enabled dictionary into one card field, compatible with the Senren dictionary-toggle template.
-- Load any Yomitan dictionaries you like, reorder them, and add Jisho as an online fallback.
+- Load any Yomitan dictionaries you like, reorder them, and optionally enable Jisho as a slower, rate-limited online fallback (offline dictionaries are recommended for speed).
 - YouTube queue: paste a list of URLs, mine the whole list in one click.
 - Batch a folder of episode/subtitle pairs for unattended processing.
 - Review and edit the word list before any cards are created.
@@ -100,14 +100,14 @@ Tabs:
 1. **Read the subtitles** and split Japanese into individual words.
 2. **Filter** to content words you don't already know.
 3. **Grab a screenshot and audio clip** from the video for each line.
-4. **Look up definitions** in your configured dictionaries, falling back to Jisho online if needed.
+4. **Look up definitions** in your configured offline dictionaries, optionally falling back to Jisho online if enabled (slower, rate-limited).
 5. **Send the finished cards to Anki.**
 
 </details>
 
 ## Dictionaries
 
-Anki Miner looks up definitions through a **provider chain** you configure. Each lookup tries the providers in order; the first hit wins. Mix any number of offline Yomitan-format dictionaries with the Jisho online fallback, in any order.
+Anki Miner looks up definitions through a **provider chain** you configure. Each lookup tries the providers in order; the first hit wins. Load any number of offline Yomitan-format dictionaries — these are recommended for speed. Jisho is available as an online fallback but is disabled by default because every lookup waits ~0.5s on the API and slows mining substantially.
 
 Add a dictionary in **Settings → Add Dictionary…** by pointing at a Yomitan `.zip` archive. Drag entries to reorder the chain. Installed dictionaries are indexed once into `~/.anki_miner/dicts/<dict_id>/index.sqlite` and loaded on startup. Structured-content entries are rendered to HTML on import, so card definitions preserve the source dictionary's formatting (definition lists, examples, tags).
 
@@ -142,7 +142,7 @@ Anki Miner checks GitHub for new releases on startup (toggle in Settings). When 
 | "Deck not found"         | Create the deck in Anki or update the deck name in Settings.                     |
 | "Note type not found"    | Configure your note type's field names in Settings → Anki.                       |
 | "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
-| No definitions found     | Add a Yomitan dictionary in Settings → Add Dictionary…, or enable the Jisho fallback. |
+| No definitions found     | Add a Yomitan dictionary in Settings → Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |
 | Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.      |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI.                                      |
 
