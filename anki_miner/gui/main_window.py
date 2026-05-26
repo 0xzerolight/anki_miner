@@ -4,9 +4,17 @@ import logging
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
-from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QTabWidget, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QMessageBox,
+    QTabWidget,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig
@@ -251,13 +259,23 @@ class MainWindow(QMainWindow):
 
         help_menu.addSeparator()
 
-        report_action = help_menu.addAction("Report an Issue")
+        report_action = help_menu.addAction("Report a Bug / Suggest a Feature")
         assert report_action is not None
         report_action.triggered.connect(self._report_issue)
 
         check_updates_action = help_menu.addAction("Check for Updates")
         assert check_updates_action is not None
         check_updates_action.triggered.connect(self._check_for_updates)
+
+        # "Star on GitHub" button pinned to the top-right corner of the menu bar.
+        star_button = QToolButton(menu_bar)
+        star_button.setObjectName("github_star_button")
+        star_button.setText("⭐ Star on GitHub")
+        star_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        star_button.setAutoRaise(True)
+        star_button.setToolTip("Star the project on GitHub")
+        star_button.clicked.connect(self._open_github_repo)
+        menu_bar.setCornerWidget(star_button, Qt.Corner.TopRightCorner)
 
     def _setup_shortcuts(self) -> None:
         """Set up global keyboard shortcuts."""
@@ -321,6 +339,13 @@ class MainWindow(QMainWindow):
         from PyQt6.QtGui import QDesktopServices
 
         QDesktopServices.openUrl(QUrl("https://github.com/0xzerolight/anki_miner/issues"))
+
+    def _open_github_repo(self) -> None:
+        """Open the GitHub repository in the default browser."""
+        from PyQt6.QtCore import QUrl
+        from PyQt6.QtGui import QDesktopServices
+
+        QDesktopServices.openUrl(QUrl("https://github.com/0xzerolight/anki_miner"))
 
     def _create_desktop_shortcut(self) -> None:
         """Create a desktop shortcut via ShortcutService and report the result."""
