@@ -341,4 +341,4 @@ def test_reimport_all_release_refusal_blocks_workers(tab_for_reimport_all, monke
 
     stubbed_workers["yomitan_factory"].assert_not_called()
     stubbed_workers["jmdict_factory"].assert_not_called()
-    assert any(title == "Re-import blocked" for title, _ in warnings), warnings
+    assert any(title == "Re-import Blocked" for title, _ in warnings), warnings

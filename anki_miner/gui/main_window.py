@@ -52,7 +52,7 @@ _ABOUT_FEATURES: list[str] = [
 
 _ABOUT_SHORTCUTS: list[tuple[str, str]] = [
     ("Ctrl+1..5", "Switch tabs"),
-    ("Ctrl+T", "Cycle favourite themes"),
+    ("Ctrl+T", "Cycle favorite themes"),
     ("Ctrl+,", "Open Settings"),
     ("Ctrl+Shift+V", "Run system validation"),
     ("F1", "Show this help dialog"),
@@ -595,7 +595,7 @@ class MainWindow(QMainWindow):
         """Run system validation in background thread."""
         # Don't start a new validation if one is already running
         if self.validation_worker is not None and self.validation_worker.isRunning():
-            self.status_bar.set_operation("Validation already in progress", "info")
+            self.status_bar.set_operation("Validation already running", "info")
             return
 
         # Update status bar
@@ -641,7 +641,7 @@ class MainWindow(QMainWindow):
         self._jmdict_migration_worker.import_finished.connect(self._on_jmdict_migration_finished)
         self._jmdict_migration_worker.failed.connect(lambda err: logger.warning("JMdict migration failed: %s", err))
         logger.info("Starting one-time JMdict SQLite migration")
-        self.status_bar.set_operation("Migrating JMdict to SQLite in background…", "info")
+        self.status_bar.set_operation("Migrating JMdict to SQLite…", "info")
         self._jmdict_migration_worker.start()
 
     def _on_jmdict_migration_finished(self, dict_id: str, meta: dict) -> None:

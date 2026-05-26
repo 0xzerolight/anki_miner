@@ -34,14 +34,11 @@ class YouTubeSettingsPanel(FormPanel):
         self.cookies_browser_combo = QComboBox()
         for label, _value in _COOKIE_BROWSER_OPTIONS:
             self.cookies_browser_combo.addItem(label)
-        self.cookies_browser_combo.setToolTip(
-            "Use cookies from an installed browser to work around YouTube bot detection"
-        )
         self.add_field(
-            "Cookies from browser (YouTube bot-detection workaround)",
+            "Cookies from browser",
             self.cookies_browser_combo,
             helper=(
-                "Select a browser whose cookies yt-dlp should reuse. "
+                "Pick a browser whose cookies yt-dlp should reuse. "
                 "Leave as 'None' unless YouTube is blocking anonymous fetches."
             ),
         )
@@ -50,11 +47,10 @@ class YouTubeSettingsPanel(FormPanel):
         self.max_duration_spinbox = QSpinBox()
         self.max_duration_spinbox.setRange(1, 600)
         self.max_duration_spinbox.setSuffix(" minutes")
-        self.max_duration_spinbox.setToolTip("Videos longer than this will be rejected before fetching")
         self.add_field(
             "YouTube max duration",
             self.max_duration_spinbox,
-            helper="Videos longer than this duration are blocked from mining",
+            helper="Videos longer than this are rejected before fetching.",
         )
 
         self.add_stretch()

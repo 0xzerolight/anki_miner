@@ -123,8 +123,8 @@ class HeaderWidget(QWidget):
 
             tooltip_names = ", ".join(available.values())
             self.theme_combo.setToolTip(
-                "Active theme. Top-right shows favourites; pick 'All themes…' to manage them. "
-                f"(Ctrl+T cycles favourites). Installed: {tooltip_names}"
+                "Active theme. Top-right shows favorites; pick 'All themes…' to manage them. "
+                f"(Ctrl+T cycles favorites). Installed: {tooltip_names}"
             )
         finally:
             self.theme_combo.blockSignals(False)
