@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.4.7] - 2026-05-26
+
+### Added
+- **"Star on GitHub" button pinned to the menu bar corner**: a `⭐ Star on GitHub` `QToolButton` sits in the top-right corner of the main menu bar and opens the project repo in the default browser. Drive-by: Help → "Report an Issue" renamed to "Report a Bug / Suggest a Feature" so the feature-request flow is discoverable from the same menu.
+
+### Changed
+- **Jisho online fallback now disabled by default for new installs**: the default `dictionary_chain` ships with the JMdict offline entry enabled and the Jisho fallback **disabled**. The dictionary settings panel surfaces the trade-off in-line ("⚠ rate-limited, slower" badge; "Offline dictionaries are recommended; they're faster than Jisho.") to steer new users toward an offline-first setup. **No effect on existing users** — `gui_config.json` persists the per-user chain, so anyone who already had Jisho enabled keeps it. Re-enable from Settings → Dictionaries.
+- **Settings panel copy polished across every tab** (Anki, Dictionary, Filtering, Media, Queue, YouTube): redundant tooltips that duplicated the visible helper text were removed and helper text shortened to one declarative sentence per field. No functional changes.
+
+### Fixed
+- **Batch mining skipped words on files with resolution tokens in the filename** (Issue #36): `EpisodeNumberExtractor.extract_from_filename` ran its season/episode regexes against the raw stem, so tokens like `1280x720` parsed as `season=1280, episode=720` and `720p` parsed as episode `720`. The bogus episode number then collided with per-episode dedup state and silently dropped words from the batch when the Sentence Length Filter was active. Resolution patterns (`\d{3,4}[xX]\d{3,4}`, `\b\d{3,4}[pi]\b`) are now stripped from the stem before the episode-number patterns run.
+- **Batch progress bars stranded after cancel or success**: cancel and success paths in `BatchProcessingTab` left both `current_progress_widget` and `overall_progress_widget` displaying the final percentage instead of resetting to the Ready state. Both terminal paths now call `reset()` on both widgets before the summary dialog fires.
+- **Single Episode tab retained the previous run's file paths after Process**: this made it easy to accidentally re-mine the same files on the next click. `SingleEpisodeTab` now clears both `video_selector` and `subtitle_selector` after a successful run, so the next session starts from an empty form.
+- **`ProgressWidget.setMaximum(N)` propagated `N` to the underlying `QProgressBar`** even though the bar's format is `"%p%"` (percent), producing visually-broken progress on any non-100 maximum. The bar now stays on a 0–100 scale regardless of caller-supplied count; the total is still tracked internally on `_total_items` for ETA math.
+- **Section header right-edge clipping**: `SectionHeader` had a `0` right margin, so its trailing widget sat flush against the section frame. Bumped to `SPACING.xs` to match the left padding.
+
+### Maintenance
+- **GitHub Actions bumps** (Dependabot, gh-actions group): `actions/checkout` v4 → v6 and `actions/setup-node` v4 → v6 in `.github/workflows/contributors.yml`. No behavior change.
+
 ## [2.4.6] - 2026-05-25
 
 ### Added
