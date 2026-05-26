@@ -109,6 +109,47 @@ class TestEpisodeNumberExtractor:
 
             assert result.filename == "Test_S01E01.mp4"
 
+    class TestResolutionInFilename:
+        """Regression for Issue #36 — resolution must not be misread as season x episode."""
+
+        def test_ignores_1280x720_in_filename(self, tmp_path):
+            path = tmp_path / "[Coalgirls]_Show_01_(1280x720_Blu-ray_FLAC).ass"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 1
+            assert result.season_number is None
+
+        def test_ignores_1920x1080(self, tmp_path):
+            path = tmp_path / "Anime.S02E05.1920x1080.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.season_number == 2
+            assert result.episode_number == 5
+
+        def test_ignores_720p_marker(self, tmp_path):
+            path = tmp_path / "Show_03_720p.mp4"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 3
+
+        def test_ignores_1080p_marker(self, tmp_path):
+            path = tmp_path / "Show_07_1080p_BluRay.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 7
+
+        def test_still_matches_legitimate_NxN_season_episode(self, tmp_path):
+            path = tmp_path / "Friends_1x05.mp4"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.season_number == 1
+            assert result.episode_number == 5
+
 
 class TestEpisodeMatcher:
     """Tests for EpisodeMatcher class."""
@@ -207,6 +248,30 @@ class TestEpisodeMatcher:
         pairs = EpisodeMatcher.match_by_episode_number([video], [])
 
         assert pairs == []
+
+    def test_resolution_in_name_produces_distinct_pairs(self, tmp_path):
+        """Regression for Issue #36 — every episode must pair with its own subtitle,
+        not collapse onto subtitle 01 because the resolution tag fooled the matcher."""
+        video_dir = tmp_path / "videos"
+        video_dir.mkdir()
+        sub_dir = tmp_path / "subs"
+        sub_dir.mkdir()
+        vids, subs = [], []
+        for n in range(1, 6):
+            v = video_dir / f"Show_{n:02d}_(1280x720_BD).mkv"
+            v.touch()
+            vids.append(v)
+            s = sub_dir / f"Show_{n:02d}_(1280x720_BD).ass"
+            s.touch()
+            subs.append(s)
+
+        pairs = EpisodeMatcher.match_by_episode_number(vids, subs)
+
+        assert len(pairs) == 5
+        assert len({str(s) for _, s in pairs}) == 5
+        # Each video should pair with its corresponding subtitle.
+        for v, s in pairs:
+            assert v.stem == s.stem
 
     def test_handles_no_matches(self, tmp_path):
         """Should return empty list when no matches found."""
