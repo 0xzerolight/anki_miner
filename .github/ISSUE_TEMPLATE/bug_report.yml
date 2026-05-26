@@ -45,7 +45,7 @@ body:
     id: logs
     attributes:
       label: Logs / error output
-      description: Paste any relevant log output or error messages. Will be rendered as code.
+      description: Paste any relevant log output or error messages. e.g. Paste Activity Log if bug is related to card processing.
       render: shell
     validations:
       required: false
