@@ -55,11 +55,10 @@ class AnkiSettingsPanel(FormPanel):
         # AnkiConnect URL
         self.ankiconnect_url_input = QLineEdit()
         self.ankiconnect_url_input.setPlaceholderText("http://localhost:8765")
-        self.ankiconnect_url_input.setToolTip("URL of AnkiConnect API endpoint")
         self.add_field(
             "AnkiConnect URL",
             self.ankiconnect_url_input,
-            helper="Default is http://localhost:8765. Change if AnkiConnect is on a different port",
+            helper="Default http://localhost:8765. Change if AnkiConnect uses a different port.",
         )
 
         # Card tags
@@ -76,13 +75,12 @@ class AnkiSettingsPanel(FormPanel):
 
         self.test_connection_button = ModernButton("Test Connection", variant="secondary")
         self.test_connection_button.clicked.connect(self._on_test_connection)
-        self.test_connection_button.setToolTip("Test connection to AnkiConnect")
         button_layout.addWidget(self.test_connection_button)
 
         self.add_layout(button_layout)
 
         # General helper text
-        helper = QLabel("Make sure Anki is running with AnkiConnect installed")
+        helper = QLabel("Anki must be running with AnkiConnect installed.")
         helper.setObjectName("helper-text")
         helper.setWordWrap(True)
         self.add_widget(helper)
@@ -94,11 +92,11 @@ class AnkiSettingsPanel(FormPanel):
             label_text="Deck Name:",
             input_widget_name="deck_input",
             placeholder="Enter deck name...",
-            tooltip="Name of the Anki deck where cards will be created",
+            tooltip="",
             button_name="deck_sync_button",
             button_tooltip="Sync deck list from Anki",
             button_callback=self._on_deck_sync,
-            helper_text="Target deck where Anki cards will be created",
+            helper_text="Target deck for new cards.",
         )
 
         # Deck status
@@ -113,11 +111,11 @@ class AnkiSettingsPanel(FormPanel):
             label_text="Note Type:",
             input_widget_name="note_type_input",
             placeholder="Enter note type name...",
-            tooltip="Name of the Anki note type to use",
+            tooltip="",
             button_name="notetype_sync_button",
             button_tooltip="Sync note type list from Anki",
             button_callback=self._on_notetype_sync,
-            helper_text="Anki note type that contains your card fields",
+            helper_text="Anki note type whose fields you'll map below.",
         )
 
         # Note type status
@@ -153,97 +151,84 @@ class AnkiSettingsPanel(FormPanel):
         # Expression field (word)
         self.expression_field_input = QLineEdit()
         self.expression_field_input.setPlaceholderText("Expression")
-        self.expression_field_input.setToolTip("Anki field for the Japanese word/expression")
         self._add_simple_field(
             "Expression Field",
             self.expression_field_input,
-            "Anki field that stores the Japanese word",
+            "Stores the mined Japanese word.",
         )
 
         # Sentence field
         self.sentence_field_input = QLineEdit()
         self.sentence_field_input.setPlaceholderText("Sentence")
-        self.sentence_field_input.setToolTip("Anki field for the example sentence")
         self._add_simple_field(
             "Sentence Field",
             self.sentence_field_input,
-            "Anki field that stores the example sentence from the video",
+            "Stores the example sentence from the subtitle.",
         )
 
         # Definition field
         self.definition_field_input = QLineEdit()
         self.definition_field_input.setPlaceholderText("MainDefinition")
-        self.definition_field_input.setToolTip("Anki field for the word definition")
         self._add_simple_field(
             "Definition Field",
             self.definition_field_input,
-            "Anki field that stores the English definition",
+            "Stores the English definition from the dictionary chain.",
         )
 
-        # Glossary field (optional second definition field — populated with
-        # concatenated hits from all enabled dictionaries; Senren-toggle compatible).
+        # Glossary field (second definition slot — receives concatenated hits
+        # from every enabled dictionary; Senren-toggle compatible).
         self.glossary_field_input = QLineEdit()
         self.glossary_field_input.setPlaceholderText("Glossary")
-        self.glossary_field_input.setToolTip(
-            "Anki field that receives every enabled dictionary's hit concatenated as "
-            "Yomitan-format HTML. Leave blank to skip."
-        )
         self._add_simple_field(
             "Glossary Field",
             self.glossary_field_input,
-            "Optional. Receives multi-dictionary entries concatenated as Yomitan HTML.",
+            "Concatenated hits from every enabled dictionary as Yomitan HTML.",
         )
 
         # Picture field
         self.picture_field_input = QLineEdit()
         self.picture_field_input.setPlaceholderText("Picture")
-        self.picture_field_input.setToolTip("Anki field for the screenshot")
-        self._add_simple_field("Picture Field", self.picture_field_input, "Anki field that stores the video screenshot")
+        self._add_simple_field("Picture Field", self.picture_field_input, "Stores the screenshot.")
 
         # Audio field
         self.audio_field_input = QLineEdit()
         self.audio_field_input.setPlaceholderText("SentenceAudio")
-        self.audio_field_input.setToolTip("Anki field for the audio clip")
-        self._add_simple_field("Audio Field", self.audio_field_input, "Anki field that stores the sentence audio clip")
+        self._add_simple_field("Audio Field", self.audio_field_input, "Stores the sentence audio clip.")
 
         # Expression Furigana field
         self.expression_furigana_field_input = QLineEdit()
         self.expression_furigana_field_input.setPlaceholderText("ExpressionFurigana")
-        self.expression_furigana_field_input.setToolTip("Anki field for expression with furigana")
         self._add_simple_field(
             "Expression Furigana Field",
             self.expression_furigana_field_input,
-            "Anki field that stores the expression with furigana reading",
+            "Stores the expression with furigana readings.",
         )
 
         # Expression Reading field (plain kana)
         self.expression_reading_field_input = QLineEdit()
         self.expression_reading_field_input.setPlaceholderText("ExpressionReading")
-        self.expression_reading_field_input.setToolTip("Anki field for expression with plain kana reading")
         self._add_simple_field(
             "Expression Reading Field",
             self.expression_reading_field_input,
-            "Anki field that stores the expression as plain kana reading",
+            "Stores the expression as plain kana.",
         )
 
         # Sentence Furigana field
         self.sentence_furigana_field_input = QLineEdit()
         self.sentence_furigana_field_input.setPlaceholderText("SentenceFurigana")
-        self.sentence_furigana_field_input.setToolTip("Anki field for sentence with furigana")
         self._add_simple_field(
             "Sentence Furigana Field",
             self.sentence_furigana_field_input,
-            "Anki field that stores the sentence with furigana readings",
+            "Stores the sentence with furigana readings.",
         )
 
         # Sentence Reading field (plain kana)
         self.sentence_reading_field_input = QLineEdit()
         self.sentence_reading_field_input.setPlaceholderText("SentenceReading")
-        self.sentence_reading_field_input.setToolTip("Anki field for sentence with plain kana reading")
         self._add_simple_field(
             "Sentence Reading Field",
             self.sentence_reading_field_input,
-            "Anki field that stores the sentence as plain kana reading",
+            "Stores the sentence as plain kana.",
         )
 
         # Auxiliary Data Fields section
@@ -261,44 +246,38 @@ class AnkiSettingsPanel(FormPanel):
         # Pitch Position field
         self.pitch_position_field_input = QLineEdit()
         self.pitch_position_field_input.setPlaceholderText("PitchPosition")
-        self.pitch_position_field_input.setToolTip("Anki field for pitch accent position number")
         self._add_simple_field(
             "Pitch Position Field",
             self.pitch_position_field_input,
-            "Anki field that stores the numeric pitch drop position",
+            "Stores the numeric pitch drop position.",
         )
 
         # Pitch Category field
         self.pitch_category_field_input = QLineEdit()
         self.pitch_category_field_input.setPlaceholderText("PitchCategory")
-        self.pitch_category_field_input.setToolTip("Anki field for pitch accent category")
         self._add_simple_field(
             "Pitch Category Field",
             self.pitch_category_field_input,
-            "Anki field that stores the pitch category label",
+            "Stores the pitch category label.",
         )
 
         # Pitch Category format (jp vs romaji)
         self.pitch_category_format_combo = QComboBox()
         self.pitch_category_format_combo.addItem("Japanese (平板/頭高/中高/尾高/起伏)", "jp")
         self.pitch_category_format_combo.addItem("Romaji (heiban/atamadaka/nakadaka/odaka/kifuku)", "romaji")
-        self.pitch_category_format_combo.setToolTip(
-            "Output style for the pitch category label. Romaji matches Yomitan/Lapis CSS classes."
-        )
         self._add_simple_field(
             "Pitch Category Format",
             self.pitch_category_format_combo,
-            "Romaji for Yomitan/Lapis CSS, Japanese for legacy notes",
+            "Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.",
         )
 
         # Frequency field
         self.frequency_field_input = QLineEdit()
         self.frequency_field_input.setPlaceholderText("Frequency")
-        self.frequency_field_input.setToolTip("Anki field for word frequency rank")
         self._add_simple_field(
             "Frequency Field",
             self.frequency_field_input,
-            "Anki field that stores word frequency rank",
+            "Stores the word frequency rank.",
         )
 
     def _add_labeled_field_with_button(

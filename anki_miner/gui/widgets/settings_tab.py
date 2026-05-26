@@ -311,8 +311,7 @@ class SettingsTab(QWidget):
                 QMessageBox.warning(
                     self,
                     "Invalid Subtitle Regex",
-                    f"The subtitle regex filter is not a valid pattern:\n\n{e}\n\n"
-                    f"Fix the pattern or disable the filter before saving.",
+                    f"Pattern: {subtitle_regex}\n\nFix or disable the filter before saving.\n\nDetails: {e}",
                 )
                 return
 
@@ -414,7 +413,7 @@ class SettingsTab(QWidget):
         QMessageBox.information(
             self,
             "Settings Saved",
-            "Settings have been saved successfully",
+            "Settings saved.",
         )
 
     def _resolve_frequency_path(self) -> Path | None:
@@ -450,7 +449,7 @@ class SettingsTab(QWidget):
         if dest_csv.exists() and dest_csv.stat().st_size > 0:
             reply = QMessageBox.question(
                 self,
-                "Overwrite existing frequency list?",
+                "Overwrite Frequency List?",
                 f"{dest_csv} already exists and will be replaced.\n\nContinue with import?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
@@ -496,7 +495,7 @@ class SettingsTab(QWidget):
         if "err" in result_holder:
             err_msg = str(result_holder["err"])
             if "cancel" not in err_msg.lower():
-                QMessageBox.warning(self, "Frequency import failed", err_msg)
+                QMessageBox.warning(self, "Frequency Import Failed", err_msg)
             return None
 
         result = result_holder["ok"]
@@ -521,7 +520,7 @@ class SettingsTab(QWidget):
         reply = QMessageBox.question(
             self,
             "Reset Settings",
-            "Are you sure you want to reset all settings to defaults?",
+            "Reset all settings to defaults?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
@@ -534,7 +533,7 @@ class SettingsTab(QWidget):
             QMessageBox.information(
                 self,
                 "Settings Reset",
-                "Settings have been reset to defaults",
+                "Settings reset to defaults.",
             )
 
     def update_config(self, config: AnkiMinerConfig) -> None:
@@ -636,7 +635,7 @@ class SettingsTab(QWidget):
 
         def on_failed(err: str) -> None:
             dlg.close()
-            QMessageBox.warning(self, "Import failed", err)
+            QMessageBox.warning(self, "Import Failed", err)
             self._set_import_buttons_enabled(True)
 
         worker.progress.connect(on_progress)
@@ -661,7 +660,7 @@ class SettingsTab(QWidget):
         try:
             derived_id = derive_dict_id_from_zip(zip_path)
         except Exception as exc:  # noqa: BLE001 — surface every failure to GUI
-            QMessageBox.warning(self, "Invalid zip", str(exc))
+            QMessageBox.warning(self, "Invalid Zip", str(exc))
             return
 
         if derived_id != slot_id:
@@ -679,7 +678,7 @@ class SettingsTab(QWidget):
         if not self.dictionary_panel.request_resource_release():
             QMessageBox.warning(
                 self,
-                "Re-import blocked",
+                "Re-import Blocked",
                 "A mining run is in progress. Stop it before re-importing dictionaries.",
             )
             return
@@ -716,7 +715,7 @@ class SettingsTab(QWidget):
 
         def on_failed(err: str) -> None:
             dlg.close()
-            QMessageBox.warning(self, "Re-import failed", err)
+            QMessageBox.warning(self, "Re-import Failed", err)
             self._set_import_buttons_enabled(True)
 
         worker.progress.connect(on_progress)
@@ -749,7 +748,7 @@ class SettingsTab(QWidget):
         if not self.dictionary_panel.request_resource_release():
             QMessageBox.warning(
                 self,
-                "Re-import blocked",
+                "Re-import Blocked",
                 "A mining run is in progress. Stop it before re-importing dictionaries.",
             )
             return
@@ -781,7 +780,7 @@ class SettingsTab(QWidget):
 
         def on_failed(err: str) -> None:
             dlg.close()
-            QMessageBox.warning(self, "Reimport failed", err)
+            QMessageBox.warning(self, "Reimport Failed", err)
             self._set_import_buttons_enabled(True)
 
         worker.progress.connect(on_progress)
@@ -857,7 +856,7 @@ class SettingsTab(QWidget):
         if not self.dictionary_panel.request_resource_release():
             QMessageBox.warning(
                 self,
-                "Re-import blocked",
+                "Re-import Blocked",
                 "A mining run is in progress. Stop it before re-importing dictionaries.",
             )
             return

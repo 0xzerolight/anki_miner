@@ -218,13 +218,13 @@ class QueuePanel(QFrame):
     def _clear_queue(self) -> None:
         """Clear all items from the queue."""
         if not self.queue_item_widgets:
-            QMessageBox.information(self, "Empty Queue", "Queue is already empty")
+            QMessageBox.information(self, "Empty Queue", "Queue is already empty.")
             return
 
         reply = QMessageBox.question(
             self,
             "Clear Queue",
-            f"Remove all {len(self.queue_item_widgets)} series from queue?",
+            f"Remove all {len(self.queue_item_widgets)} series from the queue?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 

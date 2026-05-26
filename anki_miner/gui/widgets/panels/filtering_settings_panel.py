@@ -91,11 +91,10 @@ class FilteringSettingsPanel(FormPanel):
         self.add_section("Known Words Database")
 
         self.use_known_words_db_checkbox = QCheckBox("Use Local Known Words Database")
-        self.use_known_words_db_checkbox.setToolTip("Cache known words locally for faster startup")
         self.add_field(
             "",
             self.use_known_words_db_checkbox,
-            helper="Caches known words in a local SQLite database to avoid querying Anki on every run",
+            helper="Caches known words locally to skip the Anki query on every run.",
         )
 
         # Word Lists section
@@ -185,13 +184,10 @@ class FilteringSettingsPanel(FormPanel):
         self.add_section("Deduplication")
 
         self.deduplicate_sentences_checkbox = QCheckBox("Deduplicate by Sentence")
-        self.deduplicate_sentences_checkbox.setToolTip(
-            "Skip words that share an identical sentence with an already-selected word"
-        )
         self.add_field(
             "",
             self.deduplicate_sentences_checkbox,
-            helper="Skip words that share an identical sentence with an already-selected word",
+            helper="Skips duplicate example sentences.",
         )
 
         # i+1 Sentence Filter section
@@ -245,11 +241,10 @@ class FilteringSettingsPanel(FormPanel):
         self.max_sentence_chars_spinbox = QSpinBox()
         self.max_sentence_chars_spinbox.setRange(0, 1000)
         self.max_sentence_chars_spinbox.setSpecialValueText("No limit")
-        self.max_sentence_chars_spinbox.setToolTip("Maximum character count of the example sentence (0 = no limit)")
         self.add_field(
             "Max Sentence Characters",
             self.max_sentence_chars_spinbox,
-            helper="Drops cards whose sentence text exceeds this many characters. " "Set to 0 for no limit.",
+            helper="Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit.",
         )
 
         # Card Formatting section (Issue #20)

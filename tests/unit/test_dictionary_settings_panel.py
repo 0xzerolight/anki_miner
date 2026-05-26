@@ -301,7 +301,7 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, tmp_path):
     label_texts = [lbl.text() for lbl in labels]
     assert any(t.startswith("⚠ ") and "Stale Yomi" in t for t in label_texts)
     # italic suffix exists as one of the label texts
-    assert any("re-import for new formatting" in t for t in label_texts)
+    assert any("re-import to refresh" in t for t in label_texts)
 
     emitted: list[str] = []
     panel.reimport_dict_requested.connect(emitted.append)
@@ -374,7 +374,7 @@ def test_current_schema_row_has_no_stale_ui(qapp, tmp_path):
     labels = row.findChildren(QLabel)
     label_texts = [lbl.text() for lbl in labels]
     assert not any(t.startswith("⚠") for t in label_texts)
-    assert not any("re-import for new formatting" in t for t in label_texts)
+    assert not any("re-import to refresh" in t for t in label_texts)
 
 
 def test_global_button_labeled_reimport_all(qapp, tmp_path):

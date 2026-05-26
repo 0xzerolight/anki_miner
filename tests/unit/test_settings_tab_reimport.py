@@ -165,7 +165,7 @@ def test_resource_release_refusal_blocks_worker(tab, monkeypatch, stub_worker, t
 
     tab._on_reimport_dict_clicked("test-dict-v1")
 
-    assert any(title == "Re-import blocked" for title, _ in warnings), warnings
+    assert any(title == "Re-import Blocked" for title, _ in warnings), warnings
     stub_worker.assert_not_called()
 
 

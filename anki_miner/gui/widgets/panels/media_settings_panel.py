@@ -26,13 +26,10 @@ class MediaSettingsPanel(FormPanel):
         # Audio format (Issue #18)
         self.audio_format_combo = QComboBox()
         self.audio_format_combo.addItems(["mp3", "opus"])
-        self.audio_format_combo.setToolTip(
-            "Opus delivers higher quality than MP3 at low bitrates (~64 kbps). " "Requires ffmpeg with libopus support."
-        )
         self.add_field(
             "Audio Format",
             self.audio_format_combo,
-            helper="MP3: universal compatibility. Opus: smaller files at equivalent quality.",
+            helper="MP3: universal compatibility. Opus: smaller files at equivalent quality (needs ffmpeg with libopus).",
         )
 
         # Audio bitrate (Issue #18)
@@ -52,11 +49,10 @@ class MediaSettingsPanel(FormPanel):
         self.audio_padding_spinbox.setRange(0.0, 5.0)
         self.audio_padding_spinbox.setSingleStep(0.1)
         self.audio_padding_spinbox.setSuffix(" seconds")
-        self.audio_padding_spinbox.setToolTip("Extra time to include before and after audio clips")
         self.add_field(
             "Audio Padding",
             self.audio_padding_spinbox,
-            helper="Extra time to include before and after the subtitle timing",
+            helper="Extra padding before and after the subtitle timing.",
         )
 
         # Screenshot offset
@@ -64,21 +60,19 @@ class MediaSettingsPanel(FormPanel):
         self.screenshot_offset_spinbox.setRange(0.0, 10.0)
         self.screenshot_offset_spinbox.setSingleStep(0.1)
         self.screenshot_offset_spinbox.setSuffix(" seconds")
-        self.screenshot_offset_spinbox.setToolTip("Time offset for screenshot capture")
         self.add_field(
             "Screenshot Offset",
             self.screenshot_offset_spinbox,
-            helper="Time offset from subtitle start for screenshot capture",
+            helper="Offset from subtitle start when capturing the screenshot.",
         )
 
         # Max workers
         self.max_workers_spinbox = QSpinBox()
         self.max_workers_spinbox.setRange(1, 20)
-        self.max_workers_spinbox.setToolTip("Number of parallel workers for processing")
         self.add_field(
             "Max Parallel Workers",
             self.max_workers_spinbox,
-            helper="Higher values = faster processing but more CPU/memory usage",
+            helper="Higher = faster, but uses more CPU and memory.",
         )
 
         # Animated screenshot toggle
@@ -101,8 +95,7 @@ class MediaSettingsPanel(FormPanel):
         # Match audio duration toggle
         self.animated_match_audio_checkbox = QCheckBox("Match audio duration")
         self.animated_match_audio_checkbox.setToolTip(
-            "When enabled, the animated clip spans the same time range as the audio "
-            "clip (subtitle range plus audio padding on both sides). Overrides Clip Duration."
+            "Animated clip spans the audio clip's time range. Overrides Clip Duration."
         )
         self.add_field("Match Audio Duration", self.animated_match_audio_checkbox)
 
@@ -112,7 +105,7 @@ class MediaSettingsPanel(FormPanel):
         self.animated_duration_spinbox.setSingleStep(0.5)
         self.animated_duration_spinbox.setSuffix(" seconds")
         self.animated_duration_spinbox.setToolTip(
-            "Maximum clip length, capped by the subtitle duration. " "Ignored when 'Match Audio Duration' is enabled."
+            "Clip length, capped by subtitle duration. Ignored if Match Audio Duration is on."
         )
         self.add_field("Clip Duration", self.animated_duration_spinbox)
 

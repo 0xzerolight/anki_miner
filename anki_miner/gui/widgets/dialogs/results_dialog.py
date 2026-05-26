@@ -146,7 +146,7 @@ class ResultsDialog(EnhancedDialog):
         reply = QMessageBox.question(
             self,
             "Confirm Undo",
-            f"This will delete {count} cards from Anki.\n\nThis cannot be undone. Continue?",
+            f"Delete {count} cards from Anki? This cannot be undone.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -164,4 +164,4 @@ class ResultsDialog(EnhancedDialog):
         except Exception as e:
             self._undo_button.setEnabled(True)
             logger.error(f"Undo failed: {e}")
-            QMessageBox.critical(self, "Undo Failed", f"Failed to delete cards:\n{e}")
+            QMessageBox.critical(self, "Undo Failed", "Failed to delete cards. Check Anki is running.")
