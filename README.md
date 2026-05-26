@@ -5,8 +5,13 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-Contributor%20Covenant%203.0-blueviolet.svg)](CODE_OF_CONDUCT.md)
+[![GitHub stars](https://img.shields.io/github/stars/0xzerolight/anki_miner?style=social)](https://github.com/0xzerolight/anki_miner/stargazers)
 
 Turn native Japanese content into Anki vocabulary cards - with screenshots, sentence audio, furigana, pitch accent, and frequency data.
+
+
+Please leave a ⭐ star if Anki Miner helped you - it helps others find it.
+
 
 ## Showcase
 
