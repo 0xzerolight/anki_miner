@@ -2,24 +2,50 @@
 
 from __future__ import annotations
 
+import html
 from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt
+if TYPE_CHECKING:
+    from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
+
+from PyQt6.QtCore import QPoint, Qt, QTimer
 from PyQt6.QtGui import QColor, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
+    QApplication,
     QDialog,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMenu,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QTextBrowser,
     QVBoxLayout,
+    QWidget,
 )
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.models import TokenizedWord
+
+
+@dataclass(frozen=True)
+class CurationMediaContext:
+    """Media context for the word curation dialog's embedded player.
+
+    Carries the video source and pre-parsed subtitle entries so the dialog
+    can seek to the correct frame when the user focuses a word row.
+    """
+
+    video_file: Path | None
+    subtitle_entries: list[tuple[float, float, str]]  # parsed, offset-zeroed
+    offset: float = 0.0
+    audio_track_override: int | None = None
 
 
 class _NumericTableWidgetItem(QTableWidgetItem):
@@ -48,13 +74,23 @@ class WordCurationDialog(QDialog):
 
     Shows a table of words with checkboxes. Users can search/filter,
     select/deselect all, and confirm their selection.
+
+    When ``media_context`` is supplied and its video file exists, an embedded
+    ``SubtitlePlayerWidget`` is shown in the right pane so the user can preview
+    the scene for each word. When ``lookup_fn`` is supplied, a ``QTextBrowser``
+    below the player shows offline dictionary entries for the focused word.
+    Both panes are optional and backward-compatible; existing callers that pass
+    only ``words`` receive the same pure-table behaviour as before.
     """
 
     def __init__(
         self,
         words: list[TokenizedWord],
         parent=None,
+        *,
         mark_known_callback: Callable[[set[str]], int] | None = None,
+        media_context: CurationMediaContext | None = None,
+        lookup_fn: Callable[[str], list[tuple[str, str]]] | None = None,
     ):
         super().__init__(parent)
         self._words = words
@@ -64,30 +100,96 @@ class WordCurationDialog(QDialog):
         self._mark_known_callback = mark_known_callback
         # Mined forms the user marked as known this session (exposed for tests).
         self._marked_known: set[str] = set()
+        self._media_context = media_context
+        self._lookup_fn = lookup_fn
+
+        # Determine whether each optional pane should be shown.
+        ctx = media_context
+        self._show_player = ctx is not None and ctx.video_file is not None and ctx.video_file.exists()
+        self._show_dict = lookup_fn is not None
+
+        # Lookup result cache keyed by lemma (empty results are cached too).
+        self._lookup_cache: dict[str, list[tuple[str, str]]] = {}
+
+        # Debounce timer for row-focus changes (avoid hammering lookup on arrow-key scroll).
+        self._focus_timer = QTimer(self)
+        self._focus_timer.setSingleShot(True)
+        self._focus_timer.setInterval(120)
+        self._focus_timer.timeout.connect(self._on_focus_timer_fired)
+        self._pending_word: TokenizedWord | None = None
         self._setup_ui()
         self._populate_table()
         self._update_word_count()
+        self.finished.connect(self._stop_player)
+
+    # ------------------------------------------------------------------
+    # UI construction
+    # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
         self.setWindowTitle("Word Curation")
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
-        self.resize(1100, 700)
+        if self._show_player or self._show_dict:
+            self.resize(1500, 760)
+        else:
+            self.resize(1100, 700)
 
         layout = QVBoxLayout()
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.lg, SPACING.lg, SPACING.lg, SPACING.lg)
 
-        # Header
+        # Header (outside the splitter — always visible)
         header = QLabel("Select words for card creation")
         header.setFont(self._make_font(16, QFont.Weight.Bold))
         layout.addWidget(header)
+
+        # Build the left pane (controls + table)
+        left_pane = self._build_left_pane()
+
+        if self._show_player or self._show_dict:
+            # Horizontal splitter: left = word table, right = player + dict
+            h_splitter = QSplitter(Qt.Orientation.Horizontal)
+            h_splitter.addWidget(left_pane)
+
+            right_pane = self._build_right_pane()
+            h_splitter.addWidget(right_pane)
+
+            # Give the left pane slightly more space initially
+            h_splitter.setSizes([700, 800])
+            layout.addWidget(h_splitter, 1)
+        else:
+            layout.addWidget(left_pane, 1)
+
+        # Footer buttons (outside the splitter — always visible)
+        footer_layout = QHBoxLayout()
+        footer_layout.addStretch()
+
+        cancel_button = ModernButton("Cancel", variant="secondary")
+        cancel_button.clicked.connect(self.reject)
+        cancel_button.setMinimumWidth(100)
+        footer_layout.addWidget(cancel_button)
+
+        confirm_button = ModernButton("Confirm Selection", variant="primary")
+        confirm_button.clicked.connect(self.accept)
+        confirm_button.setMinimumWidth(140)
+        footer_layout.addWidget(confirm_button)
+
+        layout.addLayout(footer_layout)
+        self.setLayout(layout)
+        self._setup_shortcuts()
+
+    def _build_left_pane(self) -> QWidget:
+        """Build the left pane containing the search bar, bulk-action buttons, and table."""
+        container = QWidget()
+        vbox = QVBoxLayout(container)
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(SPACING.sm)
 
         # Controls row
         controls_layout = QHBoxLayout()
         controls_layout.setSpacing(SPACING.sm)
 
-        # Search bar
         search_label = QLabel("Search:")
         controls_layout.addWidget(search_label)
 
@@ -99,7 +201,6 @@ class WordCurationDialog(QDialog):
 
         controls_layout.addSpacing(16)
 
-        # Select All / Deselect All
         _bulk_tooltip = (
             "Acts on highlighted rows when 2 or more are selected "
             "(Ctrl+Click or Shift+Click to select). Otherwise acts on all visible rows."
@@ -128,12 +229,11 @@ class WordCurationDialog(QDialog):
 
         controls_layout.addStretch()
 
-        # Word count label
         self.word_count_label = QLabel()
         self.word_count_label.setFont(self._make_font(12, QFont.Weight.Medium))
         controls_layout.addWidget(self.word_count_label)
 
-        layout.addLayout(controls_layout)
+        vbox.addLayout(controls_layout)
 
         # Table
         self.table = QTableWidget()
@@ -162,26 +262,74 @@ class WordCurationDialog(QDialog):
 
         self.table.itemChanged.connect(self._on_item_changed)
 
-        layout.addWidget(self.table)
+        # Row-focus wiring — independent of checkbox state (itemSelectionChanged only).
+        if self._show_player or self._show_dict:
+            self.table.itemSelectionChanged.connect(self._on_row_focus_changed)
 
-        # Footer buttons
-        footer_layout = QHBoxLayout()
-        footer_layout.addStretch()
+        # Right-click context menu (always present; useful for #43)
+        self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self._on_table_context_menu)
 
-        cancel_button = ModernButton("Cancel", variant="secondary")
-        cancel_button.clicked.connect(self.reject)
-        cancel_button.setMinimumWidth(100)
-        footer_layout.addWidget(cancel_button)
+        vbox.addWidget(self.table)
+        return container
 
-        confirm_button = ModernButton("Confirm Selection", variant="primary")
-        confirm_button.clicked.connect(self.accept)
-        confirm_button.setMinimumWidth(140)
-        footer_layout.addWidget(confirm_button)
+    def _build_right_pane(self) -> QWidget:
+        """Build the right pane: player (top) + definition browser (bottom).
 
-        layout.addLayout(footer_layout)
+        Returns a vertical QSplitter when both panes are active, the bare
+        ``player_widget`` when only the player is enabled, or the bare
+        ``definition_view`` QTextBrowser when only the dictionary pane is
+        enabled.  In practice this method is only called when at least one
+        pane is enabled.
+        """
+        if self._show_player and self._show_dict:
+            # Vertical splitter: player on top, definitions below
+            v_splitter = QSplitter(Qt.Orientation.Vertical)
 
-        self.setLayout(layout)
-        self._setup_shortcuts()
+            self.player_widget = self._create_player_widget()
+            v_splitter.addWidget(self.player_widget)
+
+            self.definition_view = QTextBrowser()
+            self.definition_view.setReadOnly(True)
+            self.definition_view.setOpenExternalLinks(False)
+            v_splitter.addWidget(self.definition_view)
+
+            v_splitter.setSizes([480, 280])
+            return v_splitter
+
+        elif self._show_player:
+            self.player_widget = self._create_player_widget()
+            return self.player_widget
+
+        else:
+            # Only dict pane
+            self.definition_view = QTextBrowser()
+            self.definition_view.setReadOnly(True)
+            self.definition_view.setOpenExternalLinks(False)
+            return self.definition_view
+
+    def _create_player_widget(self) -> SubtitlePlayerWidget:
+        """Instantiate and configure the SubtitlePlayerWidget."""
+        # Import here to keep the module importable in headless test environments
+        # where Qt multimedia may not be available or needs patching.
+        from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
+
+        widget = SubtitlePlayerWidget(self)
+        ctx = self._media_context
+        assert ctx is not None  # guarded by self._show_player
+        # Offset is passed to set_source for subtitle overlay alignment only.
+        # Seek calls use raw word.start_time (video timeline); see _on_focus_timer_fired.
+        widget.set_source(
+            ctx.video_file,  # type: ignore[arg-type]  # existence checked in _setup_ui
+            ctx.subtitle_entries,
+            ctx.offset,
+            audio_track_override=ctx.audio_track_override,
+        )
+        return widget
+
+    # ------------------------------------------------------------------
+    # Keyboard shortcuts
+    # ------------------------------------------------------------------
 
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts for word curation."""
@@ -202,6 +350,10 @@ class WordCurationDialog(QDialog):
         # Enter/Return: Confirm selection
         enter_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Return), self.table)
         enter_shortcut.activated.connect(self.accept)
+
+    # ------------------------------------------------------------------
+    # Table helpers
+    # ------------------------------------------------------------------
 
     def _make_font(self, size: int, weight: QFont.Weight = QFont.Weight.Normal) -> QFont:
         font = QFont()
@@ -258,6 +410,10 @@ class WordCurationDialog(QDialog):
         item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
         return item
 
+    # ------------------------------------------------------------------
+    # Signal handlers — checkboxes and search
+    # ------------------------------------------------------------------
+
     def _on_item_changed(self, item: QTableWidgetItem) -> None:
         """Called when any table item changes (e.g. checkbox toggled)."""
         if item.column() == 0:
@@ -279,6 +435,115 @@ class WordCurationDialog(QDialog):
                     visible = True
                     break
             self.table.setRowHidden(row, not visible)
+
+    # ------------------------------------------------------------------
+    # Signal handlers — row focus → player + dictionary
+    # ------------------------------------------------------------------
+
+    def _on_row_focus_changed(self) -> None:
+        """Handle itemSelectionChanged — debounce and schedule _on_focus_timer_fired.
+
+        MUST NOT read or write checkbox state; checkbox changes are handled by
+        _on_item_changed (itemChanged signal) and kept independent.
+        """
+        current_row = self.table.currentRow()
+        if current_row < 0:
+            return
+
+        # Resolve focused row → original word via the col-0 UserRole index.
+        # The table is sortable, so visual row ≠ original word index.
+        check_item = self.table.item(current_row, 0)
+        if check_item is None:
+            return
+        original_index = check_item.data(Qt.ItemDataRole.UserRole)
+        if original_index is None or not (0 <= original_index < len(self._words)):
+            return
+
+        self._pending_word = self._words[original_index]
+        # (Re)start the debounce timer — rapid arrow-key scrolling only fires once.
+        self._focus_timer.start()
+
+    def _on_focus_timer_fired(self) -> None:
+        """Debounced handler: seek player + perform dictionary lookup."""
+        word = self._pending_word
+        if word is None:
+            return
+
+        # Player pane: seek to the word's offset-adjusted video position and pause
+        # (show the frame without autoplaying). word.start_time is already raw+offset
+        # from the mining parse; ctx.offset only aligns the subtitle overlay — see the
+        # set_source call in _create_player_widget.
+        if self._show_player and hasattr(self, "player_widget"):
+            self.player_widget.seek_seconds(word.start_time)
+            self.player_widget.pause()
+
+        # Dictionary pane: look up by lemma (definitions key on lemma, not mined_form).
+        if self._show_dict and hasattr(self, "definition_view"):
+            self._lookup_and_render(word.lemma)
+
+    def _lookup_and_render(self, lemma: str) -> None:
+        """Fetch definition entries for ``lemma`` (with cache) and render into the view."""
+        if lemma not in self._lookup_cache:
+            assert self._lookup_fn is not None  # guarded by self._show_dict
+            self._lookup_cache[lemma] = self._lookup_fn(lemma)
+
+        entries = self._lookup_cache[lemma]
+        if not entries:
+            escaped = html.escape(lemma)
+            self.definition_view.setHtml(f'<p style="color:gray">No offline dictionary entry for <b>{escaped}</b></p>')
+            return
+
+        parts: list[str] = []
+        for name, entry_html in entries:
+            escaped_name = html.escape(name)
+            parts.append(f'<p style="font-weight:bold">{escaped_name}</p>')
+            parts.append(entry_html)
+
+        self.definition_view.setHtml("".join(parts))
+
+    def _stop_player(self) -> None:
+        """Stop the embedded player when the dialog closes (any exit path)."""
+        if self._show_player and hasattr(self, "player_widget"):
+            self.player_widget.stop()
+
+    # ------------------------------------------------------------------
+    # Right-click context menu (#43)
+    # ------------------------------------------------------------------
+
+    def _on_table_context_menu(self, pos: QPoint) -> None:
+        """Show a context menu with copy actions for the focused row."""
+        row = self.table.rowAt(pos.y())
+        if row < 0:
+            return
+
+        check_item = self.table.item(row, 0)
+        if check_item is None:
+            return
+        original_index = check_item.data(Qt.ItemDataRole.UserRole)
+        if original_index is None or not (0 <= original_index < len(self._words)):
+            return
+
+        word = self._words[original_index]
+        menu = QMenu(self)
+
+        copy_lemma_action = menu.addAction("Copy lemma")
+        copy_sentence_action = menu.addAction("Copy sentence")
+
+        vp = self.table.viewport()
+        if vp is None:
+            return
+        action = menu.exec(vp.mapToGlobal(pos))
+        clipboard = QApplication.clipboard()
+        if clipboard is None:
+            return
+        if action == copy_lemma_action:
+            clipboard.setText(word.lemma)
+        elif action == copy_sentence_action:
+            clipboard.setText(word.sentence)
+
+    # ------------------------------------------------------------------
+    # Bulk-action helpers
+    # ------------------------------------------------------------------
 
     def _target_rows(self) -> list[int]:
         """Return rows for bulk actions: highlighted rows if 2+, else all visible.
