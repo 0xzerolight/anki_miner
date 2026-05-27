@@ -323,6 +323,35 @@ def test_build_finished_sums_cards_and_reports_coverage(qapp):
         worker._stop_patch.stop()
 
 
+def test_cancel_mid_build_does_not_emit_build_finished(qapp):
+    """A cancel during the build loop must NOT emit build_finished.
+
+    Otherwise the GUI would show a "build complete" summary for a partial,
+    cancelled run.
+    """
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    ep1 = _fake_processor(counts)
+    ep2 = _fake_processor(counts)
+    worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1"), _make_pair("ep2")]), processors=[base, ep1, ep2])
+
+    def cancel_during_ep1(*args, **kwargs):
+        worker.cancel()
+        return MagicMock(cards_created=1)
+
+    ep1.process_episode.side_effect = cancel_during_ep1
+    try:
+        finished = _collect(worker.build_finished)
+        worker.confirm()
+        worker.run()
+
+        # Build was cancelled mid-loop: no completion summary, and ep2 never ran.
+        assert finished == []
+        ep2.process_episode.assert_not_called()
+    finally:
+        worker._stop_patch.stop()
+
+
 def test_empty_episode_does_not_abort_build(qapp):
     """An episode yielding 0 cards (cancelled-empty curation result) does not stop the loop.
 
