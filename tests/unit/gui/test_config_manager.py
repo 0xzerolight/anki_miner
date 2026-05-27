@@ -138,3 +138,40 @@ class TestAnkiTagsRoundTrip:
 
         assert loaded.anki_tags == "auto-mined"
         assert loaded.anki_deck_name == "Legacy Deck"
+
+
+class TestCardStylingRoundTrip:
+    """Persistence of the Issue #44 card-styling fields through save/load."""
+
+    def test_save_and_load_preserves_card_styling(self, tmp_path, monkeypatch):
+        """Custom CSS and the default-stylesheet toggle must survive save/load."""
+        cfg_file = tmp_path / "gui_config.json"
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        css = '.yomitan-glossary { color: red; }\n[data-sc-content|="example-sentence"] { display: none; }'
+        config = replace(create_default_config(), use_default_card_stylesheet=False, custom_card_css=css)
+        GUIConfigManager.save_config(config)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.use_default_card_stylesheet is False
+        assert loaded.custom_card_css == css
+
+    def test_legacy_config_without_card_styling_uses_defaults(self, tmp_path, monkeypatch):
+        """A pre-Issue-#44 JSON file must load and fall back to the dataclass defaults."""
+        cfg_file = tmp_path / "gui_config.json"
+        cfg_file.write_text(
+            json.dumps(
+                {
+                    "anki_deck_name": "Legacy Deck",
+                    # Note: card-styling keys intentionally absent.
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.use_default_card_stylesheet is True
+        assert loaded.custom_card_css == ""

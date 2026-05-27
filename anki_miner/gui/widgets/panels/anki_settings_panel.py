@@ -4,7 +4,15 @@ from typing import Literal, cast
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QLineEdit, QWidget
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QWidget,
+)
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import FormPanel, StatusBadge, make_label_fit_text
@@ -32,6 +40,8 @@ class AnkiSettingsPanel(FormPanel):
     notetype_sync_requested = pyqtSignal()
     test_connection_requested = pyqtSignal()
     fetch_fields_requested = pyqtSignal()
+    apply_styling_requested = pyqtSignal()
+    remove_styling_requested = pyqtSignal()
 
     # Dynamically created by _add_labeled_field_with_button via setattr
     deck_input: QLineEdit
@@ -279,6 +289,59 @@ class AnkiSettingsPanel(FormPanel):
             self.frequency_field_input,
             "Stores the word frequency rank.",
         )
+
+        # Card Styling section (Issue #44)
+        self.add_section("Card Styling")
+
+        styling_helper = QLabel(
+            'Style the dictionary definitions on your cards. "Apply to Note Type" writes a '
+            "managed CSS block into the note type via AnkiConnect — it only touches its own "
+            'block, never your hand-written CSS, and "Remove" reverts it cleanly. Custom CSS '
+            "is appended after the bundled defaults; published Yomitan/Jitendex snippets work "
+            "verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries."
+        )
+        styling_helper.setObjectName("helper-text")
+        styling_helper.setWordWrap(True)
+        self.add_widget(styling_helper)
+
+        self.use_default_stylesheet_checkbox = QCheckBox("Use bundled default stylesheet")
+        self.use_default_stylesheet_checkbox.setToolTip(
+            "Include Anki Miner's built-in dictionary styling in the managed block."
+        )
+        self.add_widget(self.use_default_stylesheet_checkbox)
+
+        css_label = QLabel("Custom CSS:")
+        css_label.setObjectName("field-label")
+        make_label_fit_text(css_label)
+        self.add_widget(css_label)
+
+        self.custom_css_edit = QPlainTextEdit()
+        self.custom_css_edit.setPlaceholderText(
+            "/* Appended after the defaults. Example: */\n" '[data-sc-content|="example-sentence"] { display: none; }'
+        )
+        mono_font = QFont("monospace")
+        mono_font.setStyleHint(QFont.StyleHint.Monospace)
+        mono_font.setPixelSize(FONT_SIZES.small)
+        self.custom_css_edit.setFont(mono_font)
+        self.custom_css_edit.setMinimumHeight(120)
+        self.custom_css_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+        self.add_widget(self.custom_css_edit)
+
+        styling_button_layout = QHBoxLayout()
+        styling_button_layout.addStretch()
+        self.apply_styling_button = ModernButton("Apply to Note Type", variant="primary")
+        self.apply_styling_button.setToolTip("Write the managed CSS block into the note type via AnkiConnect")
+        self.apply_styling_button.clicked.connect(self._on_apply_styling)
+        styling_button_layout.addWidget(self.apply_styling_button)
+        self.remove_styling_button = ModernButton("Remove Anki Miner Styles", variant="secondary")
+        self.remove_styling_button.setToolTip("Strip Anki Miner's managed CSS block from the note type")
+        self.remove_styling_button.clicked.connect(self._on_remove_styling)
+        styling_button_layout.addWidget(self.remove_styling_button)
+        self.add_layout(styling_button_layout)
+
+        self.styling_status = QLabel()
+        self.styling_status.setObjectName("validation-status")
+        self.add_widget(self.styling_status)
 
     def _add_labeled_field_with_button(
         self,
@@ -560,3 +623,51 @@ class AnkiSettingsPanel(FormPanel):
         index = self.pitch_category_format_combo.findData(target)
         if index >= 0:
             self.pitch_category_format_combo.setCurrentIndex(index)
+
+    # === Card Styling (Issue #44) ===
+    def _on_apply_styling(self) -> None:
+        """Handle the Apply-to-note-type button click."""
+        self.set_styling_status(None, "Applying styles to note type...")
+        self.apply_styling_requested.emit()
+
+    def _on_remove_styling(self) -> None:
+        """Handle the Remove-styles button click."""
+        self.set_styling_status(None, "Removing styles from note type...")
+        self.remove_styling_requested.emit()
+
+    def set_styling_status(self, ok: bool | None, message: str = "") -> None:
+        """Update the card-styling status line (None=working, True=ok, False=error)."""
+        if ok is None:
+            self.styling_status.setText(message or "Working...")
+            self.styling_status.setProperty("status", "checking")
+        elif ok:
+            self.styling_status.setText(message or "Done")
+            self.styling_status.setProperty("status", "success")
+        else:
+            self.styling_status.setText(message or "Failed")
+            self.styling_status.setProperty("status", "error")
+
+        if style := self.styling_status.style():
+            style.unpolish(self.styling_status)
+            style.polish(self.styling_status)
+
+    def set_styling_buttons_enabled(self, enabled: bool) -> None:
+        """Enable/disable both styling action buttons (during an in-flight worker)."""
+        self.apply_styling_button.setEnabled(enabled)
+        self.remove_styling_button.setEnabled(enabled)
+
+    def get_use_default_stylesheet(self) -> bool:
+        """Return whether the bundled default stylesheet is enabled."""
+        return self.use_default_stylesheet_checkbox.isChecked()
+
+    def set_use_default_stylesheet(self, value: bool) -> None:
+        """Set the bundled-default-stylesheet checkbox."""
+        self.use_default_stylesheet_checkbox.setChecked(value)
+
+    def get_custom_css(self) -> str:
+        """Return the user's custom CSS text."""
+        return self.custom_css_edit.toPlainText()
+
+    def set_custom_css(self, value: str) -> None:
+        """Set the custom CSS editor contents."""
+        self.custom_css_edit.setPlainText(value)

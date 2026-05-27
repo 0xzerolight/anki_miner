@@ -35,6 +35,7 @@ from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWork
 from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
 from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
 from anki_miner.gui.workers.frequency_import_worker import FrequencyImportWorker
+from anki_miner.gui.workers.styling_worker import StylingWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
 from anki_miner.services.dictionary.registry import DictionaryRegistry
@@ -142,6 +143,8 @@ class SettingsTab(QWidget):
         self.anki_panel.notetype_sync_requested.connect(self.validation_requested.emit)
         self.anki_panel.test_connection_requested.connect(self.validation_requested.emit)
         self.anki_panel.fetch_fields_requested.connect(self._on_fetch_fields_requested)
+        self.anki_panel.apply_styling_requested.connect(self._on_apply_styling_requested)
+        self.anki_panel.remove_styling_requested.connect(self._on_remove_styling_requested)
 
         # Dictionary panel signals — wire Add/Reimport to import worker dialogs.
         self.dictionary_panel.add_dict_requested.connect(self._on_add_dict_clicked)
@@ -167,6 +170,8 @@ class SettingsTab(QWidget):
         self._fetch_fields_worker: FetchFieldsWorker | None = None
         # Same GC-safety rationale for the deck-list fetch worker.
         self._fetch_decks_worker: FetchDecksWorker | None = None
+        # And for the card-styling apply/remove worker (Issue #44).
+        self._styling_worker: StylingWorker | None = None
 
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts."""
@@ -204,6 +209,10 @@ class SettingsTab(QWidget):
 
         # Anki card field mappings
         self.anki_panel.set_card_fields(self.config.anki_fields)
+
+        # Card styling (Issue #44)
+        self.anki_panel.set_use_default_stylesheet(self.config.use_default_card_stylesheet)
+        self.anki_panel.set_custom_css(self.config.custom_card_css)
 
         # Media settings
         self.media_panel.audio_format_combo.setCurrentText(self.config.audio_format)
@@ -341,6 +350,9 @@ class SettingsTab(QWidget):
             anki_tags=self.anki_panel.anki_tags_input.text(),
             anki_fields=self.anki_panel.get_card_fields(),
             anki_word_field=self.anki_panel.get_card_fields().get("word", "Expression"),
+            # Card styling (Issue #44)
+            use_default_card_stylesheet=self.anki_panel.get_use_default_stylesheet(),
+            custom_card_css=self.anki_panel.get_custom_css(),
             # Media settings
             audio_format=self.media_panel.audio_format_combo.currentText(),
             audio_bitrate=self.media_panel.audio_bitrate_spinbox.value(),
@@ -1037,6 +1049,72 @@ class SettingsTab(QWidget):
         """Surface an unexpected worker exception via the note-type status line."""
         self.anki_panel.fetch_fields_button.setEnabled(True)
         self.anki_panel.set_notetype_status(False, message)
+
+    # === Card styling handlers (Issue #44) ===
+
+    def _on_apply_styling_requested(self) -> None:
+        """Apply the managed CSS block to the note type in a worker thread."""
+        self._start_styling_worker("apply")
+
+    def _on_remove_styling_requested(self) -> None:
+        """Strip the managed CSS block from the note type in a worker thread."""
+        self._start_styling_worker("remove")
+
+    def _start_styling_worker(self, mode: str) -> None:
+        """Read the note type's CSS, edit its managed block, and write it back.
+
+        Like :meth:`_on_fetch_fields_requested`, this reads the note type and
+        AnkiConnect URL straight from the panel inputs so the user can apply
+        without first hitting Save. The buttons are disabled for the duration to
+        prevent overlapping writes. Result lands on the main thread via
+        :meth:`_on_styling_finished` / :meth:`_on_styling_error`.
+        """
+        # Don't stack worker threads — first request wins until it completes.
+        if self._styling_worker is not None and self._styling_worker.isRunning():
+            return
+
+        note_type = self.anki_panel.note_type_input.text().strip()
+        if not note_type:
+            self.anki_panel.set_styling_status(False, "Enter a note type name before applying styles")
+            return
+
+        ankiconnect_url = self.anki_panel.ankiconnect_url_input.text().strip()
+        probe_config = replace(
+            self.config,
+            anki_note_type=note_type,
+            ankiconnect_url=ankiconnect_url or self.config.ankiconnect_url,
+        )
+
+        try:
+            service = AnkiService(probe_config)
+        except ValueError as e:
+            self.anki_panel.set_styling_status(False, f"Cannot build AnkiService: {e}")
+            return
+
+        self.anki_panel.set_styling_buttons_enabled(False)
+
+        worker = StylingWorker(
+            service,
+            mode="apply" if mode == "apply" else "remove",
+            use_default=self.anki_panel.get_use_default_stylesheet(),
+            custom_css=self.anki_panel.get_custom_css(),
+            note_type=note_type,
+            parent=self,
+        )
+        self._styling_worker = worker
+        worker.finished_ok.connect(self._on_styling_finished)
+        worker.error.connect(self._on_styling_error)
+        worker.start()
+
+    def _on_styling_finished(self, message: str) -> None:
+        """Re-enable the styling buttons and report success (main-thread slot)."""
+        self.anki_panel.set_styling_buttons_enabled(True)
+        self.anki_panel.set_styling_status(True, message)
+
+    def _on_styling_error(self, message: str) -> None:
+        """Re-enable the styling buttons and surface the failure (main-thread slot)."""
+        self.anki_panel.set_styling_buttons_enabled(True)
+        self.anki_panel.set_styling_status(False, message)
 
     # === Excluded decks handlers (Issue #38) ===
 
