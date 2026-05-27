@@ -124,6 +124,11 @@ class AnkiMinerConfig:
     # Known word database
     known_words_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "known_words.db")
     use_known_words_db: bool = False
+    # When True, the known-words subtraction in Phase 2 is skipped so ALL
+    # mineable words are mined regardless of Anki collection state. Used by
+    # the Deck Builder's "include everything" mode. Default False preserves
+    # the standard filter-against-known-vocab behaviour.
+    include_known_words: bool = False
 
     # Word list settings
     blacklist_path: Path | None = None

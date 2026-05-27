@@ -558,6 +558,127 @@ class TestKnownWordDBIntegration:
         assert merged_known == {"泳ぐ", "ラーメン"}
 
 
+class TestIncludeKnownWordsFlag:
+    """Tests for the include_known_words config flag (Deck Builder bypass)."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_include_known_words_true_bypasses_subtraction(self, test_config, mock_services, tmp_path):
+        """With include_known_words=True, filter_unknown is not called and all words pass through Phase 2."""
+        config = replace(test_config, include_known_words=True)
+
+        # Both words would normally be "known" — filter_unknown would drop them.
+        word1 = _make_word("食べる")
+        word2 = _make_word("走る", start_time=5.0)
+        media1, media2 = _make_media("taberu"), _make_media("hashiru")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        # Anki reports both words as already known.
+        mock_services["anki_service"].get_existing_vocabulary.return_value = {"食べる", "走る"}
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media1), (word2, media2)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. to run"]
+        mock_services["anki_service"].create_cards_batch.return_value = 2
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # filter_unknown must NOT have been called — known-words subtraction is bypassed.
+        mock_services["word_filter"].filter_unknown.assert_not_called()
+        # Both words reached Phase 3 (both got media extracted).
+        extract_call_args = mock_services["media_extractor"].extract_media_batch.call_args
+        words_sent_to_extract = extract_call_args[0][1]
+        assert len(words_sent_to_extract) == 2
+        assert result.new_words_found == 2
+        assert result.cards_created == 2
+
+    def test_include_known_words_true_with_known_db_bypasses_subtraction(self, test_config, mock_services, tmp_path):
+        """include_known_words=True also bypasses the known_word_db path (not just the bare Anki path)."""
+        config = replace(test_config, include_known_words=True)
+
+        word1 = _make_word("食べる")
+        word2 = _make_word("走る", start_time=5.0)
+        media1, media2 = _make_media("taberu"), _make_media("hashiru")
+
+        mock_known_db = MagicMock()
+        mock_known_db.is_available.return_value = True
+        mock_known_db.get_known_words.return_value = {"食べる", "走る"}
+        mock_known_db.sync_with_anki.return_value = (0, 2)
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = {"食べる", "走る"}
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media1), (word2, media2)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. to run"]
+        mock_services["anki_service"].create_cards_batch.return_value = 2
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            known_word_db=mock_known_db,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Neither the DB read nor filter_unknown should be called.
+        mock_known_db.get_known_words.assert_not_called()
+        mock_known_db.sync_with_anki.assert_not_called()
+        mock_services["word_filter"].filter_unknown.assert_not_called()
+        assert result.new_words_found == 2
+        assert result.cards_created == 2
+
+    def test_include_known_words_false_default_subtracts_known(self, test_config, mock_services, tmp_path):
+        """Default config (include_known_words=False) preserves the standard known-words filter."""
+        # test_config has include_known_words=False by default.
+        assert test_config.include_known_words is False
+
+        word1 = _make_word("食べる")
+        word2 = _make_word("走る", start_time=5.0)
+        media1 = _make_media("taberu")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        # Anki reports word2 as known; filter_unknown returns only word1.
+        mock_services["anki_service"].get_existing_vocabulary.return_value = {"走る"}
+        mock_services["word_filter"].filter_unknown.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media1)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # filter_unknown must have been called (standard path runs).
+        mock_services["word_filter"].filter_unknown.assert_called_once()
+        # Only word1 (unknown) reaches Phase 3.
+        words_sent_to_extract = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert words_sent_to_extract == [word1]
+        assert result.new_words_found == 1
+        assert result.cards_created == 1
+
+
 class TestWordListServiceIntegration:
     """Tests for EpisodeProcessor with word_list_service."""
 

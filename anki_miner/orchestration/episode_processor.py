@@ -237,27 +237,35 @@ class EpisodeProcessor:
 
         # Filter against existing vocabulary.
         self.presenter.show_info("Step 2/5 — Filtering against known vocabulary")
-        # User-curated ignore list (Issue #42): always applied, regardless of the
-        # use_known_words_db toggle. The DB object is always present now, but the
-        # file may not exist for users who never added a word — is_available guards.
-        user_words: set[str] = set()
-        if self.known_word_db and self.known_word_db.is_available():
-            user_words = self.known_word_db.get_words_by_source("user")
-
-        if self.config.use_known_words_db and self.known_word_db and self.known_word_db.is_available():
-            known_words = self.known_word_db.get_known_words()
-            # Sync with Anki to keep DB up to date. Pass the pre-fetched
-            # ``known_words`` so the DB skips its internal scan; merge the
-            # diff in-memory below to avoid a post-sync re-read.
-            anki_vocab = self.anki_service.get_existing_vocabulary()
-            added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
-            if added > 0:
-                self.presenter.show_info(f"Known word DB synced: {added} new words ({total} total)")
-                known_words = known_words | (anki_vocab - known_words)
+        if self.config.include_known_words:
+            # Deck Builder "include everything" mode: skip known-words subtraction
+            # entirely — including the Issue #42 user ignore list — and mine all
+            # words that passed POS/subtype filtering. Coverage-deck builds
+            # intentionally re-card words the user already knows.
+            unknown_words = all_words
         else:
-            known_words = self.anki_service.get_existing_vocabulary()
+            # User-curated ignore list (Issue #42): always applied on the normal
+            # mining path, regardless of the use_known_words_db toggle. The DB
+            # object is always present now, but the file may not exist for users
+            # who never added a word — is_available guards.
+            user_words: set[str] = set()
+            if self.known_word_db and self.known_word_db.is_available():
+                user_words = self.known_word_db.get_words_by_source("user")
 
-        unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
+            if self.config.use_known_words_db and self.known_word_db and self.known_word_db.is_available():
+                known_words = self.known_word_db.get_known_words()
+                # Sync with Anki to keep DB up to date. Pass the pre-fetched
+                # ``known_words`` so the DB skips its internal scan; merge the
+                # diff in-memory below to avoid a post-sync re-read.
+                anki_vocab = self.anki_service.get_existing_vocabulary()
+                added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
+                if added > 0:
+                    self.presenter.show_info(f"Known word DB synced: {added} new words ({total} total)")
+                    known_words = known_words | (anki_vocab - known_words)
+            else:
+                known_words = self.anki_service.get_existing_vocabulary()
+
+            unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
         self.presenter.show_success(f"{len(unknown_words)} new words to mine")
 
         # Comprehension percentage.
