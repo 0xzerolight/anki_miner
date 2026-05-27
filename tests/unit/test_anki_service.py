@@ -1900,3 +1900,49 @@ class TestModelStyling:
             pytest.raises(AnkiConnectionError),
         ):
             service.update_model_styling(".x{}")
+
+
+# ---------------------------------------------------------------------------
+# TestEnsureDeck
+# ---------------------------------------------------------------------------
+
+
+class TestEnsureDeck:
+    """Tests for AnkiService.ensure_deck."""
+
+    def test_issues_create_deck_action_with_correct_params(self, test_config):
+        """Should call createDeck with the deck name and the configured URL."""
+        service = AnkiService(test_config)
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            return_value=1234,
+        ) as mock_pa:
+            service.ensure_deck("Some Deck")
+
+        mock_pa.assert_called_once_with(
+            test_config.ankiconnect_url,
+            "createDeck",
+            params={"deck": "Some Deck"},
+            timeout=15,
+        )
+
+    def test_existing_deck_returns_id_and_does_not_raise(self, test_config):
+        """When AnkiConnect returns an existing deck id, ensure_deck must not raise."""
+        service = AnkiService(test_config)
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            return_value=9999,  # existing deck id
+        ):
+            service.ensure_deck("Existing Deck")  # must not raise
+
+    def test_anki_connection_error_propagates(self, test_config):
+        """Should raise AnkiConnectionError when post_action fails (e.g. Anki down)."""
+        service = AnkiService(test_config)
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=AnkiConnectionError("Cannot connect to AnkiConnect"),
+            ),
+            pytest.raises(AnkiConnectionError, match="Cannot connect"),
+        ):
+            service.ensure_deck("New Deck")
