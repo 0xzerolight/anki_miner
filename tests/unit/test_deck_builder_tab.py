@@ -254,6 +254,37 @@ def test_preview_clicked_coverage_mode_passes_float_value(tab, tmp_path):
     assert passed_request.value == 85.0
 
 
+def test_second_preview_cancels_lingering_worker(tab, tmp_path):
+    """A previewed-but-not-built worker is cancelled before a new preview starts."""
+    pairs = _make_pairs(tmp_path)
+    tab.deck_name_edit.setText("Deck")
+
+    worker1 = MagicMock(name="worker1")
+    worker2 = MagicMock(name="worker2")
+
+    with (
+        patch(
+            "anki_miner.gui.widgets.deck_builder_tab.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=pairs,
+        ),
+        patch(
+            "anki_miner.gui.widgets.deck_builder_tab.DeckBuilderWorker",
+            side_effect=[worker1, worker2],
+        ),
+    ):
+        tab.video_folder_selector.get_path = MagicMock(return_value=str(tmp_path))
+        tab.video_folder_selector.is_valid = MagicMock(return_value=True)
+        tab.subtitle_folder_selector.get_path = MagicMock(return_value=str(tmp_path))
+        tab.subtitle_folder_selector.is_valid = MagicMock(return_value=True)
+
+        tab._on_preview_clicked()  # creates worker1 (blocks on gate)
+        assert tab._worker is worker1
+        tab._on_preview_clicked()  # should cancel worker1, create worker2
+
+    worker1.cancel.assert_called_once()
+    assert tab._worker is worker2
+
+
 # ---------------------------------------------------------------------------
 # 5. _on_preview_clicked — validation failures (no worker started)
 # ---------------------------------------------------------------------------
