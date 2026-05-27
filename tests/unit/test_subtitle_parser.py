@@ -1619,3 +1619,262 @@ class TestSurfaceOffsetsAndBolding:
                 f"lemma_spans drift on {lemma_key!r}: "
                 f"slice={ll.line_text[span_start:span_end]!r}, surface={surface!r}"
             )
+
+
+# ---------------------------------------------------------------------------
+# count_lemmas — raw in-corpus occurrence counts
+# ---------------------------------------------------------------------------
+
+
+class TestCountLemmas:
+    """Tests for SubtitleParserService.count_lemmas.
+
+    Uses mocked tokenization (same style as the rest of this file) so the
+    tests are hermetic and fast — no MeCab process required.
+    """
+
+    def _make_service(self, test_config):
+        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+            return SubtitleParserService(test_config)
+
+    def _make_mock_subs(self, lines):
+        """Build a mock pysubs2 subtitle container from a list of mock-line dicts.
+
+        Each dict must have keys: text, start, end (milliseconds).
+        """
+        mock_lines = []
+        for spec in lines:
+            ml = MagicMock()
+            ml.text = spec["text"]
+            ml.start = spec["start"]
+            ml.end = spec["end"]
+            mock_lines.append(ml)
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter(mock_lines))
+        return mock_subs
+
+    # ------------------------------------------------------------------
+    # 1. Repeats counted (no dedup)
+    # ------------------------------------------------------------------
+
+    def test_counts_repeats_within_single_line(self, test_config, tmp_path):
+        """The same lemma tokenized twice on one line must be counted twice."""
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_subs = self._make_mock_subs([{"text": "食べる食べる", "start": 1000, "end": 3000}])
+
+        token = _make_token("食べる", "動詞", lemma="食べる", kana="タベル")
+        mock_tagger = MagicMock()
+        # _iter_parsed_lines calls tagger once per line
+        mock_tagger.return_value = [token, token]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            counts = service.count_lemmas(sub_file)
+
+        assert counts["食べる"] == 2
+
+    def test_counts_repeats_across_lines(self, test_config, tmp_path):
+        """A lemma appearing on two separate lines must have count = 2."""
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_subs = self._make_mock_subs(
+            [
+                {"text": "食べる", "start": 1000, "end": 3000},
+                {"text": "食べた", "start": 4000, "end": 6000},
+            ]
+        )
+
+        token1 = _make_token("食べる", "動詞", lemma="食べる", kana="タベル")
+        token2 = _make_token("食べた", "動詞", lemma="食べる", kana="タベタ")
+
+        mock_tagger = MagicMock()
+        mock_tagger.side_effect = [[token1], [token2]]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            counts = service.count_lemmas(sub_file)
+
+        # Both surface forms share the same lemma — must add up, not dedup.
+        assert counts["食べる"] == 2
+
+    def test_counts_multiple_distinct_lemmas(self, test_config, tmp_path):
+        """Multiple distinct content lemmas on one line each get their own count."""
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_subs = self._make_mock_subs([{"text": "猫と犬", "start": 1000, "end": 3000}])
+
+        neko = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        inu = _make_token("犬", "名詞", lemma="犬", kana="イヌ")
+
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [neko, inu]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            counts = service.count_lemmas(sub_file)
+
+        assert counts["猫"] == 1
+        assert counts["犬"] == 1
+
+    # ------------------------------------------------------------------
+    # 2. POS filtering: excluded tokens are NOT counted
+    # ------------------------------------------------------------------
+
+    def test_excludes_particles_same_as_mining(self, test_config, tmp_path):
+        """Particles (助詞) must not appear in the returned Counter."""
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_subs = self._make_mock_subs([{"text": "猫が走る", "start": 1000, "end": 3000}])
+
+        neko = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        ga = _make_token("が", "助詞", lemma="が", kana="ガ")
+        hashiru = _make_token("走る", "動詞", lemma="走る", kana="ハシル")
+
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [neko, ga, hashiru]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            counts = service.count_lemmas(sub_file)
+
+        assert "が" not in counts
+        assert counts["猫"] == 1
+        assert counts["走る"] == 1
+
+    def test_count_lemma_keys_match_parse_subtitle_file_lemmas(self, test_config, tmp_path):
+        """count_lemmas keys must be a superset of parse_subtitle_file lemmas.
+
+        parse_subtitle_file deduplicates, so its lemma set is a subset of
+        count_lemmas keys (same inclusion filter, just without counting repeats).
+        For a file with no repeated lemmas the two sets must be identical.
+        """
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        line_spec = [{"text": "事件を調べる", "start": 1000, "end": 3000}]
+        jiken = _make_token("事件", "名詞", lemma="事件", kana="ジケン")
+        wo = _make_token("を", "助詞", lemma="を", kana="ヲ")
+        shiraberu = _make_token("調べる", "動詞", lemma="調べる", kana="シラベル")
+
+        def _make_mocks():
+            mock_subs = self._make_mock_subs(line_spec)
+            mock_tagger = MagicMock()
+            # count_lemmas: 1 tagger call for tokenizing the line
+            # parse_subtitle_file: 1 tokenize + 2 sentence-level + 2 expression-level per word
+            # We reset side_effect for each call below.
+            return mock_subs, mock_tagger
+
+        # Run count_lemmas
+        mock_subs_a, mock_tagger_a = _make_mocks()
+        mock_tagger_a.return_value = [jiken, wo, shiraberu]
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs_a),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger_a),
+        ):
+            service_a = SubtitleParserService(test_config)
+            counts = service_a.count_lemmas(sub_file)
+
+        # Run parse_subtitle_file
+        mock_subs_b = self._make_mock_subs(line_spec)
+        mock_tagger_b = MagicMock()
+        mock_tagger_b.return_value = [jiken, wo, shiraberu]
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs_b),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger_b),
+        ):
+            service_b = SubtitleParserService(test_config)
+            words = service_b.parse_subtitle_file(sub_file)
+
+        mined_lemmas = {w.lemma for w in words}
+        # All mined lemmas must appear as keys in the counter.
+        assert mined_lemmas.issubset(set(counts.keys()))
+        # Grammar tokens must not be keys in either.
+        assert "を" not in counts
+        assert "を" not in mined_lemmas
+
+    # ------------------------------------------------------------------
+    # 3. Empty / content-free file → empty Counter
+    # ------------------------------------------------------------------
+
+    def test_empty_subtitle_file_returns_empty_counter(self, test_config, tmp_path):
+        """A subtitle file with no lines yields an empty Counter."""
+        sub_file = tmp_path / "empty.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([]))
+
+        mock_tagger = MagicMock()
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            counts = service.count_lemmas(sub_file)
+
+        assert counts == {}
+        assert isinstance(counts, dict)  # Counter is a dict subclass
+
+    def test_content_free_lines_return_empty_counter(self, test_config, tmp_path):
+        """Lines that clean to empty text (e.g. ASS formatting-only) yield empty Counter."""
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_subs = self._make_mock_subs([{"text": "{\\an8}", "start": 1000, "end": 3000}])
+        mock_tagger = MagicMock()
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.clean_subtitle_text", return_value=""),
+        ):
+            service = SubtitleParserService(test_config)
+            counts = service.count_lemmas(sub_file)
+
+        assert counts == {}
+        mock_tagger.assert_not_called()
+
+    def test_file_not_found_raises_subtitle_parse_error(self, test_config):
+        """Should propagate SubtitleParseError from _load_subs for missing file."""
+        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+            service = SubtitleParserService(test_config)
+
+        with pytest.raises(SubtitleParseError, match="not found"):
+            service.count_lemmas(Path("/nonexistent/file.srt"))
+
+    # ------------------------------------------------------------------
+    # 4. Real fugashi end-to-end smoke test
+    # ------------------------------------------------------------------
+
+    @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+    def test_real_fugashi_counts_repeats(self, tmp_path):
+        """Integration: real MeCab pipeline counts repeated lemmas without dedup."""
+        srt_file = tmp_path / "repeat.srt"
+        srt_file.write_text(
+            "1\n00:00:01,000 --> 00:00:03,000\n勉強する\n\n" "2\n00:00:04,000 --> 00:00:06,000\n また勉強した\n",
+            encoding="utf-8",
+        )
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        counts = service.count_lemmas(srt_file)
+
+        # 勉強 appears on both lines — must be counted twice.
+        assert counts["勉強"] >= 2
