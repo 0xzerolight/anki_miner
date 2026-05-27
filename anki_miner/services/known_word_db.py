@@ -59,6 +59,23 @@ class KnownWordDB:
             cursor = conn.execute("SELECT lemma FROM known_words")
             return {row[0] for row in cursor.fetchall()}
 
+    def get_words_by_source(self, source: str) -> set[str]:
+        """Return all lemmas stored under a given source label.
+
+        Used for the user-curated ignore list (Issue #42): ``source='user'``
+        words are applied on every mining run regardless of
+        ``config.use_known_words_db``.
+
+        Args:
+            source: Source label to filter on (e.g. 'anki', 'user').
+
+        Returns:
+            Set of lemma strings with the matching source.
+        """
+        with closing(sqlite3.connect(self._db_path)) as conn:
+            cursor = conn.execute("SELECT lemma FROM known_words WHERE source = ?", (source,))
+            return {row[0] for row in cursor.fetchall()}
+
     def add_words(self, words: set[str], source: str = "anki") -> int:
         """Bulk insert words into the database, ignoring duplicates.
 
@@ -107,22 +124,69 @@ class KnownWordDB:
         added = self.add_words(new_words, source="anki")
         return (added, len(existing) + added)
 
-    def clear(self) -> int:
-        """Delete all known words from the database.
+    def remove_words(self, words: set[str]) -> int:
+        """Delete specific words from the database (Issue #42).
+
+        Used by the Manage Known Words dialog to remove individual user-added
+        entries.
+
+        Args:
+            words: Set of lemma strings to remove.
+
+        Returns:
+            Number of rows actually removed.
+        """
+        if not words:
+            return 0
+
+        with closing(sqlite3.connect(self._db_path)) as conn:
+            before = self._count(conn)
+            conn.executemany("DELETE FROM known_words WHERE lemma = ?", [(w,) for w in words])
+            conn.commit()
+            after = self._count(conn)
+            return before - after
+
+    def clear(self, preserve_user: bool = False) -> int:
+        """Delete known words from the database.
 
         Used by the "Rebuild Known Words DB" action (Issue #38) so that deck
         exclusions take effect for users of the local cache: the additive
         ``sync_with_anki`` never removes words, so a previously-synced excluded
         deck would otherwise stay cached forever.
 
+        Args:
+            preserve_user: When True, keep ``source='user'`` rows (the curated
+                ignore list, Issue #42). Rebuild passes True so user-added words
+                survive a cache rebuild; the default False keeps the full-wipe
+                behaviour for any other caller.
+
         Returns:
             Number of rows removed.
         """
         with closing(sqlite3.connect(self._db_path)) as conn:
             before = self._count(conn)
-            conn.execute("DELETE FROM known_words")
+            if preserve_user:
+                conn.execute("DELETE FROM known_words WHERE source != 'user'")
+            else:
+                conn.execute("DELETE FROM known_words")
             conn.commit()
-            return before
+            after = self._count(conn)
+            return before - after
+
+    def clear_user(self) -> int:
+        """Delete only the user-curated ignore list (Issue #42).
+
+        Backs the "Reset User List" action in the Manage Known Words dialog.
+
+        Returns:
+            Number of ``source='user'`` rows removed.
+        """
+        with closing(sqlite3.connect(self._db_path)) as conn:
+            before = self._count(conn)
+            conn.execute("DELETE FROM known_words WHERE source = 'user'")
+            conn.commit()
+            after = self._count(conn)
+            return before - after
 
     def word_count(self) -> int:
         """Return the total number of known words.

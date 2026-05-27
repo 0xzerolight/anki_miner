@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QKeySequence, QShortcut
+from PyQt6.QtGui import QColor, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -48,9 +50,20 @@ class WordCurationDialog(QDialog):
     select/deselect all, and confirm their selection.
     """
 
-    def __init__(self, words: list[TokenizedWord], parent=None):
+    def __init__(
+        self,
+        words: list[TokenizedWord],
+        parent=None,
+        mark_known_callback: Callable[[set[str]], int] | None = None,
+    ):
         super().__init__(parent)
         self._words = words
+        # Callback invoked with the set of mined forms when the user adds rows to
+        # the local known/ignore list (Issue #42). Persisted immediately so the
+        # words stick even if the dialog is later cancelled.
+        self._mark_known_callback = mark_known_callback
+        # Mined forms the user marked as known this session (exposed for tests).
+        self._marked_known: set[str] = set()
         self._setup_ui()
         self._populate_table()
         self._update_word_count()
@@ -100,6 +113,18 @@ class WordCurationDialog(QDialog):
         self.deselect_all_button.clicked.connect(self._deselect_all)
         self.deselect_all_button.setToolTip(_bulk_tooltip)
         controls_layout.addWidget(self.deselect_all_button)
+
+        # Add to local known/ignore list (Issue #42). Acts on the highlighted
+        # rows, or the current row when nothing is highlighted — deliberately NOT
+        # all visible rows, to avoid ignoring the whole list by accident.
+        self.add_known_button = ModernButton("Add to Known Words", variant="secondary")
+        self.add_known_button.clicked.connect(self._on_add_to_known)
+        self.add_known_button.setToolTip(
+            "Permanently ignore the highlighted row(s) — adds them to your local "
+            "Known Words list so they are never mined again. Falls back to the "
+            "current row when none are highlighted."
+        )
+        controls_layout.addWidget(self.add_known_button)
 
         controls_layout.addStretch()
 
@@ -276,7 +301,7 @@ class WordCurationDialog(QDialog):
         self.table.blockSignals(True)
         for row in self._target_rows():
             item = self.table.item(row, 0)
-            if item:
+            if item and self._is_checkable(item):
                 item.setCheckState(Qt.CheckState.Checked)
         self.table.blockSignals(False)
         self._update_word_count()
@@ -286,10 +311,19 @@ class WordCurationDialog(QDialog):
         self.table.blockSignals(True)
         for row in self._target_rows():
             item = self.table.item(row, 0)
-            if item:
+            if item and self._is_checkable(item):
                 item.setCheckState(Qt.CheckState.Unchecked)
         self.table.blockSignals(False)
         self._update_word_count()
+
+    @staticmethod
+    def _is_checkable(item: QTableWidgetItem) -> bool:
+        """Whether a checkbox item still accepts toggling.
+
+        Rows added to the known/ignore list have their checkable flag stripped so
+        bulk actions and Space can't re-include them (Issue #42).
+        """
+        return bool(item.flags() & Qt.ItemFlag.ItemIsUserCheckable)
 
     def _toggle_selected_rows(self) -> None:
         """Toggle checkboxes for highlighted rows, or the current row when none.
@@ -310,7 +344,7 @@ class WordCurationDialog(QDialog):
                 return
             rows = [current]
 
-        items = [item for row in rows if (item := self.table.item(row, 0)) is not None]
+        items = [item for row in rows if (item := self.table.item(row, 0)) is not None and self._is_checkable(item)]
         if not items:
             return
         any_unchecked = any(item.checkState() != Qt.CheckState.Checked for item in items)
@@ -323,6 +357,74 @@ class WordCurationDialog(QDialog):
         self._update_word_count()
 
     _toggle_current_row = _toggle_selected_rows
+
+    def _known_target_rows(self) -> list[int]:
+        """Rows for "Add to Known Words": highlighted rows, else the current row.
+
+        Unlike :meth:`_target_rows`, this never falls back to every visible row —
+        ignoring an entire filtered list with one click would be too easy to
+        trigger by accident.
+        """
+        selection_model = self.table.selectionModel()
+        if selection_model is not None:
+            selected = sorted(
+                {index.row() for index in selection_model.selectedRows() if not self.table.isRowHidden(index.row())}
+            )
+            if selected:
+                return selected
+        current = self.table.currentRow()
+        if current >= 0 and not self.table.isRowHidden(current):
+            return [current]
+        return []
+
+    def _on_add_to_known(self) -> None:
+        """Add the target rows to the local known/ignore list (Issue #42).
+
+        Persists immediately via the callback, then strikes through and unchecks
+        the rows so they are excluded from this run and can't be re-checked.
+        """
+        rows = [row for row in self._known_target_rows() if self._row_is_active(row)]
+        if not rows:
+            return
+
+        forms: set[str] = set()
+        for row in rows:
+            word_item = self.table.item(row, 1)  # "Word (mined)" column
+            if word_item:
+                forms.add(word_item.text())
+        if not forms:
+            return
+
+        if self._mark_known_callback is not None:
+            self._mark_known_callback(forms)
+        self._marked_known |= forms
+
+        self.table.blockSignals(True)
+        for row in rows:
+            self._mark_row_known(row)
+        self.table.blockSignals(False)
+        self._update_word_count()
+
+    def _row_is_active(self, row: int) -> bool:
+        """Whether a row hasn't already been marked known (checkbox still toggles)."""
+        item = self.table.item(row, 0)
+        return item is not None and self._is_checkable(item)
+
+    def _mark_row_known(self, row: int) -> None:
+        """Visually mark a row as ignored: strikethrough, grey, unchecked, locked."""
+        check_item = self.table.item(row, 0)
+        if check_item:
+            check_item.setCheckState(Qt.CheckState.Unchecked)
+            # Strip the checkable flag so bulk actions / Space can't re-include it.
+            check_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        grey = QColor(128, 128, 128)
+        for col in range(1, self.table.columnCount()):
+            item = self.table.item(row, col)
+            if item:
+                font = item.font()
+                font.setStrikeOut(True)
+                item.setFont(font)
+                item.setForeground(grey)
 
     def _update_word_count(self) -> None:
         """Update the word count label."""

@@ -203,3 +203,74 @@ class TestClear:
         db = KnownWordDB(tmp_path / "known_words.db")
         db.initialize()
         assert db.clear() == 0
+
+    def test_clear_preserve_user_keeps_user_rows(self, tmp_path):
+        """clear(preserve_user=True) removes synced rows but keeps source='user' (Issue #42)."""
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"食べる", "飲む"}, source="anki")
+        db.add_words({"ラーメン"}, source="user")
+
+        removed = db.clear(preserve_user=True)
+
+        assert removed == 2
+        assert db.get_known_words() == {"ラーメン"}
+        assert db.get_words_by_source("user") == {"ラーメン"}
+
+
+class TestGetWordsBySource:
+    """Tests for get_words_by_source (Issue #42)."""
+
+    def test_returns_only_matching_source(self, tmp_path):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"食べる", "飲む"}, source="anki")
+        db.add_words({"ラーメン", "カレー"}, source="user")
+        assert db.get_words_by_source("user") == {"ラーメン", "カレー"}
+        assert db.get_words_by_source("anki") == {"食べる", "飲む"}
+
+    def test_empty_when_no_match(self, tmp_path):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"食べる"}, source="anki")
+        assert db.get_words_by_source("user") == set()
+
+
+class TestRemoveWords:
+    """Tests for remove_words (Issue #42)."""
+
+    def test_removes_and_returns_count(self, tmp_path):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"ラーメン", "カレー", "寿司"}, source="user")
+        removed = db.remove_words({"ラーメン", "カレー"})
+        assert removed == 2
+        assert db.get_known_words() == {"寿司"}
+
+    def test_ignores_unknown_words(self, tmp_path):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"寿司"}, source="user")
+        removed = db.remove_words({"存在しない"})
+        assert removed == 0
+        assert db.get_known_words() == {"寿司"}
+
+    def test_empty_set(self, tmp_path):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"寿司"}, source="user")
+        assert db.remove_words(set()) == 0
+
+
+class TestClearUser:
+    """Tests for clear_user (Issue #42)."""
+
+    def test_removes_only_user_rows(self, tmp_path):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"食べる"}, source="anki")
+        db.add_words({"ラーメン", "カレー"}, source="user")
+        removed = db.clear_user()
+        assert removed == 2
+        assert db.get_known_words() == {"食べる"}
+        assert db.get_words_by_source("user") == set()

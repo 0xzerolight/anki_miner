@@ -462,6 +462,7 @@ class TestKnownWordDBIntegration:
         mock_known_db = MagicMock()
         mock_known_db.is_available.return_value = True
         mock_known_db.get_known_words.return_value = {"走る"}
+        mock_known_db.get_words_by_source.return_value = set()
         mock_known_db.sync_with_anki.return_value = (1, 10)  # 1 added, 10 total
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
@@ -472,7 +473,7 @@ class TestKnownWordDBIntegration:
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
         processor = EpisodeProcessor(
-            config=test_config,
+            config=replace(test_config, use_known_words_db=True),
             presenter=NullPresenter(),
             known_word_db=mock_known_db,
             **mock_services,
@@ -500,6 +501,7 @@ class TestKnownWordDBIntegration:
         mock_known_db = MagicMock()
         mock_known_db.is_available.return_value = True
         mock_known_db.get_known_words.return_value = set()
+        mock_known_db.get_words_by_source.return_value = set()
         mock_known_db.sync_with_anki.return_value = (0, 0)
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
@@ -509,7 +511,7 @@ class TestKnownWordDBIntegration:
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
         processor = EpisodeProcessor(
-            config=test_config,
+            config=replace(test_config, use_known_words_db=True),
             presenter=NullPresenter(),
             known_word_db=mock_known_db,
             **mock_services,
@@ -518,6 +520,42 @@ class TestKnownWordDBIntegration:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         mock_known_db.add_words.assert_called_once_with({"食べる"}, source="mined")
+
+    def test_user_ignore_list_applied_when_cache_disabled(self, test_config, mock_services, tmp_path):
+        """source='user' words filter the candidate set even when use_known_words_db is off (Issue #42).
+
+        The sync path must NOT run (cache disabled), but the user ignore list is
+        still unioned into the set passed to ``filter_unknown``.
+        """
+        word1 = _make_word("食べる")
+        word2 = _make_word("ラーメン", pos="名詞", start_time=5.0)
+
+        mock_known_db = MagicMock()
+        mock_known_db.is_available.return_value = True
+        mock_known_db.get_words_by_source.return_value = {"ラーメン"}
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = {"泳ぐ"}
+        mock_services["word_filter"].filter_unknown.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = []
+        mock_services["anki_service"].create_cards_batch.return_value = 0
+
+        processor = EpisodeProcessor(
+            config=replace(test_config, use_known_words_db=False),
+            presenter=NullPresenter(),
+            known_word_db=mock_known_db,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Cache disabled → no sync, query Anki directly.
+        mock_known_db.sync_with_anki.assert_not_called()
+        mock_known_db.get_known_words.assert_not_called()
+        mock_known_db.get_words_by_source.assert_called_once_with("user")
+        # filter_unknown receives Anki vocab UNIONED with the user ignore list.
+        merged_known = mock_services["word_filter"].filter_unknown.call_args[0][1]
+        assert merged_known == {"泳ぐ", "ラーメン"}
 
 
 class TestWordListServiceIntegration:

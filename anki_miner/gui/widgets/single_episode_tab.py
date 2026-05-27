@@ -514,7 +514,7 @@ class SingleEpisodeTab(MiningTabBase):
         """Slot called on GUI thread when curation is needed."""
         from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 
-        dialog = WordCurationDialog(words, self)
+        dialog = WordCurationDialog(words, self, mark_known_callback=self._mark_known)
         if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
             self._curation_result = dialog.get_selected_words()
         else:

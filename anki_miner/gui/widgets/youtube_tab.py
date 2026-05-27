@@ -608,12 +608,24 @@ class YouTubeTab(QWidget):
         """Slot on the GUI thread that runs the curation dialog."""
         from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 
-        dialog = WordCurationDialog(words, self)
+        dialog = WordCurationDialog(words, self, mark_known_callback=self._mark_known)
         if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
             self._curation_result = dialog.get_selected_words()
         else:
             self._curation_result = []
         self._curation_event.set()
+
+    def _mark_known(self, forms: set[str]) -> int:
+        """Persist curator-selected forms to the local known/ignore list (Issue #42).
+
+        Writes immediately (source='user') so words persist even if the dialog is
+        cancelled. Builds the DB ad hoc from the config path.
+        """
+        from anki_miner.services.known_word_db import KnownWordDB
+
+        db = KnownWordDB(self._config.known_words_db_path)
+        db.initialize()
+        return db.add_words(forms, source="user")
 
     # ------------------------------------------------------------------
     # Lifecycle

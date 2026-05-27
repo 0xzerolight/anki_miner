@@ -80,3 +80,21 @@ class MiningTabBase(QWidget):
         """Accept any drag move whose dragEnter the subclass already accepted."""
         if event is not None:
             event.acceptProposedAction()
+
+    # ------------------------------------------------------------------
+    # Known/ignore list (Issue #42)
+    # ------------------------------------------------------------------
+
+    def _mark_known(self, forms: set[str]) -> int:
+        """Persist curator-selected forms to the local known/ignore list.
+
+        Passed as ``mark_known_callback`` to ``WordCurationDialog``. Writes
+        immediately (source='user') so the words persist even if the dialog is
+        cancelled. Builds the DB ad hoc from the config path — same pattern the
+        settings tab uses for the rebuild action.
+        """
+        from anki_miner.services.known_word_db import KnownWordDB
+
+        db = KnownWordDB(self.config.known_words_db_path)  # type: ignore[attr-defined]
+        db.initialize()
+        return db.add_words(forms, source="user")
