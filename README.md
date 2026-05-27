@@ -75,7 +75,7 @@ Anki must be running with AnkiConnect installed before mining starts.
 Tabs:
 
 - **Episode Mining**: mine one video/subtitle pair with file selectors and progress tracking.
-- **Batch Mining**: queue a folder of episode/subtitle pairs for sequential processing.
+- **Batch Mining**: queue a folder of episode/subtitle pairs for sequential processing. Files are paired by episode number, so each folder / queue item should hold a single show (use Multi-Anime Queue for mining multiple series at a time).
 - **YouTube**: paste one or more URLs, then mine the queue.
 - **Analytics**: history, series difficulty rankings, milestones, undo.
 - **Settings**: Anki, Media, Dictionary, Filtering, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.

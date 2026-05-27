@@ -278,9 +278,12 @@ class BatchProcessingTab(MiningTabBase):
                 self,
                 "No Pairs Found",
                 "No matching video/subtitle pairs found.\n\n"
-                "Ensure files have matching base names:\n"
+                "Files are paired by episode number, so point each folder at a "
+                "single show:\n"
                 "- episode_01.mp4 <-> episode_01.ass\n"
-                "- episode_02.mp4 <-> episode_02.ass",
+                "- episode_02.mp4 <-> episode_02.ass\n\n"
+                "Mixing multiple shows in one folder can mispair episodes that "
+                "share a number — add each show as its own queue item.",
             )
             return
 
