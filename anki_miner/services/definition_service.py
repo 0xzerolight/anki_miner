@@ -155,3 +155,29 @@ class DefinitionService:
         if progress_callback:
             progress_callback.on_complete()
         return results
+
+    def lookup_all_offline(self, word: str) -> list[tuple[str, str]]:
+        """Aggregate results from all available OFFLINE providers.
+
+        Returns a list of (provider_name, html) tuples for every offline
+        provider that returns a hit, in chain order. Online providers (e.g.
+        Jisho) are excluded to avoid blocking network I/O during interactive
+        in-app dictionary lookup.
+
+        Args:
+            word: Japanese word (typically lemma form).
+
+        Returns:
+            List of (provider_name, html) tuples, one per offline provider
+            that returned a hit, in provider chain order. Empty list if no
+            offline provider returns a hit.
+        """
+        self.ensure_loaded()
+        out: list[tuple[str, str]] = []
+        for p in self._providers:
+            if p.is_online or not p.is_available():
+                continue
+            html = p.lookup(word)
+            if html:
+                out.append((p.name, html))
+        return out

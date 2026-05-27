@@ -3,20 +3,16 @@
 import logging
 from pathlib import Path
 
-from PyQt6.QtCore import QLocale, Qt, QUrl
-from PyQt6.QtMultimedia import QAudioOutput, QMediaMetaData, QMediaPlayer
-from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import (
     QDialog,
     QDoubleSpinBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QSlider,
     QVBoxLayout,
 )
 
-from anki_miner.utils import find_japanese_audio_stream
+from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 
 logger = logging.getLogger(__name__)
 
@@ -48,60 +44,33 @@ class SubtitleViewer(QDialog):
                 auto-detecting Japanese. None preserves auto-detect.
         """
         super().__init__(parent)
-        self.subtitle_entries = subtitle_entries
         self._offset = initial_offset
-        self._jp_audio_index: int | None = None
-        self._audio_track_override = audio_track_override
 
         self.setWindowTitle("Subtitle Timing Viewer")
         self.setMinimumSize(720, 540)
         self.resize(800, 600)
 
-        self._setup_ui()
-        self._setup_media(video_path)
+        self._setup_ui(initial_offset)
+        self.player_widget.set_source(
+            video_path,
+            subtitle_entries,
+            initial_offset,
+            audio_track_override=audio_track_override,
+        )
 
-    def _setup_ui(self) -> None:
+    def _setup_ui(self, initial_offset: float) -> None:
         """Set up the user interface."""
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(8)
 
-        # Video widget
-        self.video_widget = QVideoWidget()
-        layout.addWidget(self.video_widget, 1)
-
-        # Subtitle overlay label
-        self.subtitle_label = QLabel()
-        self.subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.subtitle_label.setWordWrap(True)
-        self.subtitle_label.setStyleSheet(
-            "QLabel { background-color: rgba(0,0,0,180); color: white; "
-            "font-size: 18px; padding: 6px 12px; border-radius: 4px; }"
-        )
-        self.subtitle_label.setVisible(False)
-        layout.addWidget(self.subtitle_label)
-
-        # Position slider and time display
-        position_layout = QHBoxLayout()
-        self.position_slider = QSlider(Qt.Orientation.Horizontal)
-        self.position_slider.setRange(0, 0)
-        self.position_slider.sliderMoved.connect(self._on_slider_moved)
-
-        self.time_label = QLabel("00:00 / 00:00")
-        self.time_label.setMinimumWidth(100)
-
-        position_layout.addWidget(self.position_slider, 1)
-        position_layout.addWidget(self.time_label)
-        layout.addLayout(position_layout)
+        # Embedded player widget
+        self.player_widget = SubtitlePlayerWidget()
+        layout.addWidget(self.player_widget, 1)
 
         # Playback controls and offset
         controls_layout = QHBoxLayout()
         controls_layout.setSpacing(8)
-
-        self.play_button = QPushButton("Play")
-        self.play_button.setFixedWidth(80)
-        self.play_button.clicked.connect(self._on_play_pause)
-        controls_layout.addWidget(self.play_button)
 
         controls_layout.addStretch()
 
@@ -112,7 +81,7 @@ class SubtitleViewer(QDialog):
         self.offset_spinbox = QDoubleSpinBox()
         self.offset_spinbox.setRange(-60.0, 60.0)
         self.offset_spinbox.setSingleStep(0.1)
-        self.offset_spinbox.setValue(self._offset)
+        self.offset_spinbox.setValue(initial_offset)
         self.offset_spinbox.setSuffix(" s")
         self.offset_spinbox.setToolTip("Positive = subtitles later, Negative = subtitles earlier")
         self.offset_spinbox.valueChanged.connect(self._on_offset_changed)
@@ -132,114 +101,6 @@ class SubtitleViewer(QDialog):
         layout.addLayout(controls_layout)
         self.setLayout(layout)
 
-    def _setup_media(self, video_path: Path) -> None:
-        """Set up the media player.
-
-        Args:
-            video_path: Path to the video file
-        """
-        if self._audio_track_override is None:
-            jp_stream = find_japanese_audio_stream(video_path)
-            self._jp_audio_index = jp_stream.audio_index if jp_stream is not None else None
-        else:
-            self._jp_audio_index = self._audio_track_override
-
-        self.audio_output = QAudioOutput()
-        self.player = QMediaPlayer()
-        self.player.setAudioOutput(self.audio_output)
-        self.player.setVideoOutput(self.video_widget)
-
-        self.player.positionChanged.connect(self._on_position_changed)
-        self.player.durationChanged.connect(self._on_duration_changed)
-        self.player.playbackStateChanged.connect(self._on_playback_state_changed)
-        self.player.errorOccurred.connect(self._on_media_error)
-        self.player.tracksChanged.connect(self._on_tracks_changed)
-
-        self.player.setSource(QUrl.fromLocalFile(str(video_path)))
-
-    def _on_tracks_changed(self) -> None:
-        """Select the Japanese audio track once QMediaPlayer enumerates tracks."""
-        if self._jp_audio_index is not None:
-            # ffprobe found JP, or user gave an override — honor it
-            track_count = len(self.player.audioTracks())
-            if self._jp_audio_index >= track_count:
-                logger.warning(
-                    f"Audio track index {self._jp_audio_index} out of range "
-                    f"(player reports {track_count} audio tracks)"
-                )
-                return
-            self.player.setActiveAudioTrack(self._jp_audio_index)
-            logger.info(f"Selected audio track {self._jp_audio_index} in mini-player")
-            return
-
-        # Both override and ffprobe returned nothing — try Qt-side language metadata.
-        for i, track in enumerate(self.player.audioTracks()):
-            lang = track.value(QMediaMetaData.Key.Language)
-            if lang == QLocale.Language.Japanese:
-                self.player.setActiveAudioTrack(i)
-                logger.info(f"Selected Japanese audio track {i} via Qt metadata fallback")
-                return
-        # Qt also can't identify — leave QMediaPlayer's default (no action)
-
-    def _on_play_pause(self) -> None:
-        """Toggle play/pause."""
-        if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
-            self.player.pause()
-        else:
-            self.player.play()
-
-    def _on_playback_state_changed(self, state: QMediaPlayer.PlaybackState) -> None:
-        """Update play button text based on playback state.
-
-        Args:
-            state: Current playback state
-        """
-        if state == QMediaPlayer.PlaybackState.PlayingState:
-            self.play_button.setText("Pause")
-        else:
-            self.play_button.setText("Play")
-
-    def _on_media_error(self, error, error_string: str) -> None:
-        """Handle media player errors by showing message in subtitle label.
-
-        Args:
-            error: QMediaPlayer.Error enum value
-            error_string: Human-readable error description
-        """
-        self.subtitle_label.setText(f"Video error: {error_string}")
-        self.subtitle_label.setVisible(True)
-
-    def _on_position_changed(self, position: int) -> None:
-        """Handle media position change.
-
-        Args:
-            position: Current position in milliseconds
-        """
-        self.position_slider.setValue(position)
-
-        duration = self.player.duration()
-        self.time_label.setText(f"{self._format_time(position)} / {self._format_time(duration)}")
-
-        # Update subtitle display
-        current_seconds = position / 1000.0
-        self._update_subtitle(current_seconds)
-
-    def _on_duration_changed(self, duration: int) -> None:
-        """Handle media duration change.
-
-        Args:
-            duration: Total duration in milliseconds
-        """
-        self.position_slider.setRange(0, duration)
-
-    def _on_slider_moved(self, position: int) -> None:
-        """Handle slider manual move.
-
-        Args:
-            position: New position in milliseconds
-        """
-        self.player.setPosition(position)
-
     def _on_offset_changed(self, value: float) -> None:
         """Handle offset spinbox value change.
 
@@ -247,22 +108,7 @@ class SubtitleViewer(QDialog):
             value: New offset value in seconds
         """
         self._offset = value
-
-    def _update_subtitle(self, current_seconds: float) -> None:
-        """Update the subtitle label based on current playback position.
-
-        Args:
-            current_seconds: Current playback position in seconds
-        """
-        for start, end, text in self.subtitle_entries:
-            adjusted_start = start + self._offset
-            adjusted_end = end + self._offset
-            if adjusted_start <= current_seconds <= adjusted_end:
-                self.subtitle_label.setText(text)
-                self.subtitle_label.setVisible(True)
-                return
-
-        self.subtitle_label.setVisible(False)
+        self.player_widget.set_offset(value)
 
     def get_offset(self) -> float:
         """Get the currently selected offset.
@@ -272,34 +118,17 @@ class SubtitleViewer(QDialog):
         """
         return self._offset
 
-    @staticmethod
-    def _format_time(ms: int) -> str:
-        """Format milliseconds as MM:SS.
-
-        Args:
-            ms: Time in milliseconds
-
-        Returns:
-            Formatted time string
-        """
-        if ms < 0:
-            ms = 0
-        total_seconds = ms // 1000
-        minutes = total_seconds // 60
-        seconds = total_seconds % 60
-        return f"{minutes:02d}:{seconds:02d}"
-
     def closeEvent(self, event) -> None:
         """Stop media player on close."""
-        self.player.stop()
+        self.player_widget.stop()
         super().closeEvent(event)
 
     def reject(self) -> None:
         """Stop media player on reject."""
-        self.player.stop()
+        self.player_widget.stop()
         super().reject()
 
     def accept(self) -> None:
         """Stop media player on accept."""
-        self.player.stop()
+        self.player_widget.stop()
         super().accept()
