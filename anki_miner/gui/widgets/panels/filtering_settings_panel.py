@@ -45,10 +45,13 @@ class FilteringSettingsPanel(FormPanel):
             AnkiConnect to populate the "Add Deck…" picker.
         rebuild_known_words_requested: Emitted when the user asks to clear the
             local known-words cache.
+        manage_known_words_requested: Emitted when the user opens the Manage
+            Known Words dialog (Issue #42).
     """
 
     fetch_decks_requested = pyqtSignal()
     rebuild_known_words_requested = pyqtSignal()
+    manage_known_words_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialize the filtering settings panel."""
@@ -126,6 +129,16 @@ class FilteringSettingsPanel(FormPanel):
         )
         self.rebuild_known_words_button.clicked.connect(self.rebuild_known_words_requested.emit)
         rebuild_row.addWidget(self.rebuild_known_words_button)
+
+        # Manage the user-curated known/ignore list (Issue #42): view, remove,
+        # export, reset words added from the Word Curator.
+        self.manage_known_words_button = QPushButton("Manage Known Words…")
+        self.manage_known_words_button.setToolTip(
+            "View, remove, export, or reset the words you added to your local "
+            "known words list from the Word Curator."
+        )
+        self.manage_known_words_button.clicked.connect(self.manage_known_words_requested.emit)
+        rebuild_row.addWidget(self.manage_known_words_button)
         rebuild_row.addStretch()
         self.add_layout(rebuild_row)
 

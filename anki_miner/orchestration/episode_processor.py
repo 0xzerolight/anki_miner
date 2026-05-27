@@ -237,7 +237,14 @@ class EpisodeProcessor:
 
         # Filter against existing vocabulary.
         self.presenter.show_info("Step 2/5 — Filtering against known vocabulary")
+        # User-curated ignore list (Issue #42): always applied, regardless of the
+        # use_known_words_db toggle. The DB object is always present now, but the
+        # file may not exist for users who never added a word — is_available guards.
+        user_words: set[str] = set()
         if self.known_word_db and self.known_word_db.is_available():
+            user_words = self.known_word_db.get_words_by_source("user")
+
+        if self.config.use_known_words_db and self.known_word_db and self.known_word_db.is_available():
             known_words = self.known_word_db.get_known_words()
             # Sync with Anki to keep DB up to date. Pass the pre-fetched
             # ``known_words`` so the DB skips its internal scan; merge the
@@ -247,10 +254,10 @@ class EpisodeProcessor:
             if added > 0:
                 self.presenter.show_info(f"Known word DB synced: {added} new words ({total} total)")
                 known_words = known_words | (anki_vocab - known_words)
-            unknown_words = self.word_filter.filter_unknown(all_words, known_words)
         else:
-            existing_words = self.anki_service.get_existing_vocabulary()
-            unknown_words = self.word_filter.filter_unknown(all_words, existing_words)
+            known_words = self.anki_service.get_existing_vocabulary()
+
+        unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
         self.presenter.show_success(f"{len(unknown_words)} new words to mine")
 
         # Comprehension percentage.
