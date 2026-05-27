@@ -40,8 +40,56 @@ class TestInit:
             AnkiService(bad_config)
 
 
+class TestStripForDedup:
+    """Tests for the _strip_for_dedup helper (Anki dedup-key alignment)."""
+
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("食べる", "食べる"),
+            ("<b>食べる</b>", "食べる"),
+            ("<div>食べる</div>", "食べる"),
+            ('<span style="x">食べる</span>', "食べる"),
+            ("食べる&nbsp;", "食べる"),
+            ("A&amp;B", "A&B"),
+            ("[sound:foo.mp3]食べる", "食べる"),
+            ("  食べる  ", "食べる"),
+        ],
+    )
+    def test_normalizes_to_plain_key(self, raw, expected):
+        """HTML, media refs, entities, and whitespace collapse to the bare value."""
+        from anki_miner.services.anki_service import _strip_for_dedup
+
+        assert _strip_for_dedup(raw) == expected
+
+    def test_reading_furigana_brackets_preserved(self):
+        """Anki does NOT strip [reading] furigana, so neither do we — stays distinct."""
+        from anki_miner.services.anki_service import _strip_for_dedup
+
+        assert _strip_for_dedup("食べる[たべる]") == "食べる[たべる]"
+        assert _strip_for_dedup("食べる[たべる]") != _strip_for_dedup("食べる")
+
+
 class TestGetExistingVocabulary:
     """Tests for AnkiService.get_existing_vocabulary."""
+
+    def test_strips_markup_from_first_field(self, test_config):
+        """A markup-wrapped Expression must reduce to the plain word so the
+        filter matches it (otherwise it slips through and collides on add)."""
+        service = AnkiService(test_config)
+
+        find_resp = _mock_response(result=[1, 2])
+        notes_resp = _mock_response(
+            result=[
+                {"fields": {"word": {"value": "<b>食べる</b>"}}},
+                {"fields": {"word": {"value": "[sound:a.mp3]飲む"}}},
+            ]
+        )
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"食べる", "飲む"}
 
     def test_success_with_multiple_notes(self, test_config):
         """Should return a set of words from multiple notes."""
@@ -432,6 +480,60 @@ class TestCreateCardsBatch:
             result = service.create_cards_batch(items)
 
         assert result == 3
+
+    def test_top_level_duplicate_error_recovers_per_note(self, test_config, make_tokenized_word):
+        """A top-level duplicate error must not abort the run: retry per-note,
+        skip duplicates, create the rest, and report the skipped count."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=3)
+
+        # addNotes raises a top-level duplicate error; then per-note addNote:
+        # note 0 ok, note 1 duplicate (skipped), note 2 ok.
+        batch_dup = _mock_response(error=["cannot create note because it is a duplicate"])
+        note0 = _mock_response(result=100)
+        note1_dup = _mock_response(error="cannot create note because it is a duplicate")
+        note2 = _mock_response(result=102)
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[batch_dup, note0, note1_dup, note2],
+        ):
+            result = service.create_cards_batch(items)
+
+        assert result == 2
+        assert service.last_skipped_duplicates == 1
+        assert service.last_created_note_ids == [100, 102]
+
+    def test_non_duplicate_batch_error_propagates(self, test_config, make_tokenized_word):
+        """A non-duplicate addNotes error (e.g. missing deck) still aborts."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=2)
+
+        err_resp = _mock_response(error="deck was not found: Anki Miner")
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=err_resp),
+            pytest.raises(AnkiConnectionError, match="deck was not found"),
+        ):
+            service.create_cards_batch(items)
+
+    def test_non_duplicate_error_during_per_note_fallback_propagates(self, test_config, make_tokenized_word):
+        """If a non-duplicate error surfaces while recovering per-note, raise it."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=2)
+
+        batch_dup = _mock_response(error=["cannot create note because it is a duplicate"])
+        note0 = _mock_response(result=100)
+        note1_fatal = _mock_response(error="model was not found: Lapis")
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=[batch_dup, note0, note1_fatal],
+            ),
+            pytest.raises(AnkiConnectionError, match="model was not found"),
+        ):
+            service.create_cards_batch(items)
 
     def test_progress_callback_lifecycle(self, test_config, make_tokenized_word, recording_progress):
         """Should call on_start, on_progress, and on_complete in order."""
