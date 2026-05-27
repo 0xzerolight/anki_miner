@@ -249,6 +249,16 @@ class TestSelectCoveragePct:
         assert candidates == {"a"}
         assert preview.projected_coverage_pct == pytest.approx(90.0)
 
+    def test_coverage_zero_selects_nothing(self):
+        # 0% target is degenerate but must not select a lemma (no implicit first word).
+        counts: collections.Counter[str] = collections.Counter({"a": 50, "b": 30, "c": 20})
+        candidates, preview = select(counts, DeckSelectionMode.COVERAGE_PCT, 0.0, set())
+
+        assert candidates == set()
+        assert preview.candidate_count == 0
+        assert preview.projected_coverage_pct == pytest.approx(0.0)
+        assert preview.card_count == 0
+
     def test_coverage_just_under_threshold_adds_next(self):
         # a=79, b=21 total=100; target 80%; after a: 79% < 80 → add b → 100%
         counts: collections.Counter[str] = collections.Counter({"a": 79, "b": 21})
