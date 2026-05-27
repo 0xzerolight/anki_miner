@@ -181,3 +181,25 @@ class TestWordCount:
         assert db.word_count() == 3
         db.add_words({"食べる"})  # duplicate
         assert db.word_count() == 3
+
+
+class TestClear:
+    """Tests for KnownWordDB.clear (Issue #38)."""
+
+    def test_clear_empties_table_and_returns_count(self, tmp_path):
+        """clear() removes all rows and returns how many were removed."""
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"食べる", "飲む", "走る"})
+
+        removed = db.clear()
+
+        assert removed == 3
+        assert db.word_count() == 0
+        assert db.get_known_words() == set()
+
+    def test_clear_empty_db_returns_zero(self, tmp_path):
+        """Clearing an empty DB removes nothing."""
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        assert db.clear() == 0
