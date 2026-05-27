@@ -3,11 +3,15 @@
 import logging
 from pathlib import Path
 
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDoubleSpinBox,
     QHBoxLayout,
+    QInputDialog,
+    QLabel,
     QLineEdit,
+    QListWidget,
     QPushButton,
     QSpinBox,
     QWidget,
@@ -34,10 +38,23 @@ class FilteringSettingsPanel(FormPanel):
 
     Provides:
     - Word frequency filtering options
+    - Known-words database toggle, deck exclusions, and cache rebuild (Issue #38)
+
+    Signals:
+        fetch_decks_requested: Emitted when the deck list must be fetched from
+            AnkiConnect to populate the "Add Deck…" picker.
+        rebuild_known_words_requested: Emitted when the user asks to clear the
+            local known-words cache.
     """
+
+    fetch_decks_requested = pyqtSignal()
+    rebuild_known_words_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialize the filtering settings panel."""
+        # Deck names fetched from AnkiConnect, cached so re-opening the picker
+        # doesn't trigger another round-trip. Empty until the first fetch.
+        self._available_decks: list[str] = []
         super().__init__("Word Filtering", parent=parent)
         self._setup_fields()
         self._connect_validation()
@@ -96,6 +113,48 @@ class FilteringSettingsPanel(FormPanel):
             self.use_known_words_db_checkbox,
             helper="Caches known words locally to skip the Anki query on every run.",
         )
+
+        # Rebuild button: clears the local cache so deck exclusions take effect.
+        # The cache is additive (never removes), so a deck synced before being
+        # excluded would otherwise stay cached forever (Issue #38).
+        rebuild_row = QHBoxLayout()
+        self.rebuild_known_words_button = QPushButton("Rebuild Known Words DB")
+        self.rebuild_known_words_button.setToolTip(
+            "Clear the local known-words cache so it re-syncs from Anki on the "
+            "next run. Needed for deck exclusions below to take effect when the "
+            "local cache is enabled."
+        )
+        self.rebuild_known_words_button.clicked.connect(self.rebuild_known_words_requested.emit)
+        rebuild_row.addWidget(self.rebuild_known_words_button)
+        rebuild_row.addStretch()
+        self.add_layout(rebuild_row)
+
+        # Excluded decks (Issue #38)
+        self.add_section("Excluded Decks")
+
+        excluded_helper = QLabel(
+            "Words in these decks (and their subdecks) are NOT treated as already "
+            "known, so they stay mineable. Useful for kanji-shape decks like "
+            "Remembering The Kanji that don't teach vocabulary."
+        )
+        excluded_helper.setObjectName("helper-text")
+        excluded_helper.setWordWrap(True)
+        self.add_widget(excluded_helper)
+
+        self.excluded_decks_list = QListWidget()
+        self.excluded_decks_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.excluded_decks_list.setMaximumHeight(140)
+        self.add_widget(self.excluded_decks_list)
+
+        excluded_buttons = QHBoxLayout()
+        self.add_deck_button = QPushButton("Add Deck…")
+        self.add_deck_button.clicked.connect(self._on_add_deck_clicked)
+        self.remove_deck_button = QPushButton("Remove")
+        self.remove_deck_button.clicked.connect(self._on_remove_deck_clicked)
+        excluded_buttons.addWidget(self.add_deck_button)
+        excluded_buttons.addWidget(self.remove_deck_button)
+        excluded_buttons.addStretch()
+        self.add_layout(excluded_buttons)
 
         # Word Lists section
         self.add_section("Word Lists")
@@ -278,6 +337,66 @@ class FilteringSettingsPanel(FormPanel):
             return
         else:
             self.subtitle_regex_edit.setText(f"{current}|{pattern}")
+
+    # --- Excluded decks (Issue #38) ---
+
+    def _on_add_deck_clicked(self) -> None:
+        """Open the deck picker, fetching the deck list first if needed.
+
+        On the first click ``_available_decks`` is empty, so we request a fetch
+        and defer opening the picker until :meth:`set_available_decks` is called
+        with the result. Subsequent clicks reuse the cached list.
+        """
+        if not self._available_decks:
+            self.fetch_decks_requested.emit()
+            return
+        self._open_deck_picker()
+
+    def set_available_decks(self, decks: list[str]) -> None:
+        """Receive the fetched deck list and open the picker.
+
+        Called from the settings tab once the fetch worker finishes.
+        """
+        self._available_decks = list(decks)
+        self._open_deck_picker()
+
+    def _open_deck_picker(self) -> None:
+        """Prompt the user to pick a deck not already excluded."""
+        already = set(self._listed_decks())
+        choices = [d for d in self._available_decks if d not in already]
+        if not choices:
+            return
+        deck, ok = QInputDialog.getItem(
+            self,
+            "Exclude Deck",
+            "Deck to exclude from known-words detection:",
+            choices,
+            0,
+            False,
+        )
+        if ok and deck:
+            self.excluded_decks_list.addItem(deck)
+
+    def _on_remove_deck_clicked(self) -> None:
+        """Remove the currently selected excluded deck."""
+        row = self.excluded_decks_list.currentRow()
+        if row >= 0:
+            self.excluded_decks_list.takeItem(row)
+
+    def _listed_decks(self) -> list[str]:
+        """Return the deck names currently in the list widget."""
+        items = (self.excluded_decks_list.item(i) for i in range(self.excluded_decks_list.count()))
+        return [item.text() for item in items if item is not None]
+
+    def get_excluded_decks(self) -> tuple[str, ...]:
+        """Return the excluded deck names from the list widget."""
+        return tuple(self._listed_decks())
+
+    def set_excluded_decks(self, decks: tuple[str, ...]) -> None:
+        """Populate the list widget from config."""
+        self.excluded_decks_list.clear()
+        for deck in decks:
+            self.excluded_decks_list.addItem(deck)
 
     def _connect_validation(self) -> None:
         """Connect file selector signals to validation handlers."""

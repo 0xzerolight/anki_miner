@@ -107,6 +107,23 @@ class KnownWordDB:
         added = self.add_words(new_words, source="anki")
         return (added, len(existing) + added)
 
+    def clear(self) -> int:
+        """Delete all known words from the database.
+
+        Used by the "Rebuild Known Words DB" action (Issue #38) so that deck
+        exclusions take effect for users of the local cache: the additive
+        ``sync_with_anki`` never removes words, so a previously-synced excluded
+        deck would otherwise stay cached forever.
+
+        Returns:
+            Number of rows removed.
+        """
+        with closing(sqlite3.connect(self._db_path)) as conn:
+            before = self._count(conn)
+            conn.execute("DELETE FROM known_words")
+            conn.commit()
+            return before
+
     def word_count(self) -> int:
         """Return the total number of known words.
 

@@ -1645,3 +1645,79 @@ class TestExistingVocabCache:
 
         # No additional calls after the first population
         assert call_count_after_second == call_count_after_first
+
+
+# ---------------------------------------------------------------------------
+# TestExcludedDecks (Issue #38)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildVocabQuery:
+    """Tests for AnkiService._build_vocab_query."""
+
+    def test_no_exclusions_scans_whole_collection(self, test_config):
+        """With no excluded decks the query is the bare deck:* wildcard."""
+        service = AnkiService(test_config)
+        assert service._build_vocab_query() == "deck:*"
+
+    def test_single_exclusion_negated_and_quoted(self, test_config):
+        """An excluded deck is appended as a quoted, negated clause."""
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, excluded_decks=("Remembering The Kanji",)))
+        assert service._build_vocab_query() == 'deck:* -deck:"Remembering The Kanji"'
+
+    def test_multiple_exclusions_in_order(self, test_config):
+        """Each excluded deck gets its own negated clause."""
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, excluded_decks=("RTK", "Kanji Writing")))
+        assert service._build_vocab_query() == 'deck:* -deck:"RTK" -deck:"Kanji Writing"'
+
+    def test_quotes_and_backslashes_escaped(self, test_config):
+        """Deck names with quotes/backslashes must not break the query string."""
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, excluded_decks=('My "Quoted" Deck', "back\\slash")))
+        assert service._build_vocab_query() == 'deck:* -deck:"My \\"Quoted\\" Deck" -deck:"back\\\\slash"'
+
+
+class TestGetExistingVocabularyExcludesDecks:
+    """get_existing_vocabulary must pass the exclusion-aware query to findNotes."""
+
+    def test_findnotes_receives_built_query(self, test_config):
+        """The findNotes call uses the excluded-deck query, not a bare deck:*."""
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, excluded_decks=("RTK",)))
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[1], [{"fields": {"word": {"value": "食べる"}}}]],
+        ) as mock_pa:
+            result = service.get_existing_vocabulary()
+
+        assert result == {"食べる"}
+        first_call = mock_pa.call_args_list[0]
+        assert first_call.args[1] == "findNotes"
+        assert first_call.kwargs["params"] == {"query": 'deck:* -deck:"RTK"'}
+
+
+class TestGetDeckNames:
+    """Tests for AnkiService.get_deck_names."""
+
+    def test_returns_deck_list(self, test_config):
+        """Should return the deckNames result as a list."""
+        service = AnkiService(test_config)
+        resp = _mock_response(result=["Default", "RTK", "Mining"])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            assert service.get_deck_names() == ["Default", "RTK", "Mining"]
+
+    def test_connection_error_returns_empty(self, test_config):
+        """Should swallow AnkiConnectionError and return an empty list."""
+        service = AnkiService(test_config)
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=AnkiConnectionError("down"),
+        ):
+            assert service.get_deck_names() == []

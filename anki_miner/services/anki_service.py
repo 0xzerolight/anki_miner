@@ -133,10 +133,42 @@ class AnkiService:
             return []
         return list(result or [])
 
-    def get_existing_vocabulary(self) -> set[str]:
-        """Get all Japanese vocabulary words already in Anki across ALL decks.
+    def get_deck_names(self) -> list[str]:
+        """Get all deck names from AnkiConnect.
 
-        Queries the entire collection and extracts the first field from each note,
+        Returns:
+            List of deck names, or empty list on error.
+        """
+        try:
+            result = post_action(
+                self.config.ankiconnect_url,
+                "deckNames",
+                timeout=15,
+            )
+        except AnkiConnectionError:
+            return []
+        return list(result or [])
+
+    def _build_vocab_query(self) -> str:
+        """Build the findNotes query for known-words detection.
+
+        Starts from the whole collection (``deck:*``) and negates each excluded
+        deck (Issue #38). In Anki search, ``deck:"Name"`` matches the deck *and
+        its subdecks*, so a parent exclusion covers nested decks automatically.
+        Deck names are double-quoted; embedded backslashes and quotes are
+        escaped so names with spaces or quotes don't break the query.
+        """
+        query = "deck:*"
+        for deck in self.config.excluded_decks:
+            safe = deck.replace("\\", "\\\\").replace('"', '\\"')
+            query += f' -deck:"{safe}"'
+        return query
+
+    def get_existing_vocabulary(self) -> set[str]:
+        """Get all Japanese vocabulary words already in Anki.
+
+        Queries the collection (minus any ``config.excluded_decks``; see
+        :meth:`_build_vocab_query`) and extracts the first field from each note,
         which by Anki convention is always the expression/word being studied.
         Only words containing Japanese characters are included.
 
@@ -163,7 +195,7 @@ class AnkiService:
                 post_action(
                     self.config.ankiconnect_url,
                     "findNotes",
-                    params={"query": "deck:*"},
+                    params={"query": self._build_vocab_query()},
                     timeout=30,
                 )
                 or []

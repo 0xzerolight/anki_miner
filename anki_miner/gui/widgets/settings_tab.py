@@ -32,12 +32,14 @@ from anki_miner.gui.widgets.panels import (
     YouTubeSettingsPanel,
 )
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
+from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
 from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
 from anki_miner.gui.workers.frequency_import_worker import FrequencyImportWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.frequency import YomitanFreqImportResult
+from anki_miner.services.known_word_db import KnownWordDB
 
 
 class SettingsTab(QWidget):
@@ -150,6 +152,10 @@ class SettingsTab(QWidget):
         # doesn't reappear in gui_config.json on next launch (Issue #30).
         self.dictionary_panel.dictionary_removed.connect(self._on_save_clicked)
 
+        # Filtering panel: excluded-decks picker + known-words cache rebuild (Issue #38).
+        self.filtering_panel.fetch_decks_requested.connect(self._on_fetch_decks_requested)
+        self.filtering_panel.rebuild_known_words_requested.connect(self._on_rebuild_known_words)
+
         # Themes panel persists immediately on any change (live-preview model).
         self.themes_panel.state_changed.connect(self._on_theme_state_changed)
 
@@ -158,6 +164,8 @@ class SettingsTab(QWidget):
         # collected before run() completes — Qt logs "QThread: Destroyed
         # while thread is still running" and the result signal never fires.
         self._fetch_fields_worker: FetchFieldsWorker | None = None
+        # Same GC-safety rationale for the deck-list fetch worker.
+        self._fetch_decks_worker: FetchDecksWorker | None = None
 
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts."""
@@ -230,6 +238,7 @@ class SettingsTab(QWidget):
 
         # Known words database settings
         self.filtering_panel.use_known_words_db_checkbox.setChecked(self.config.use_known_words_db)
+        self.filtering_panel.set_excluded_decks(self.config.excluded_decks)
 
         # Word list settings
         if self.config.blacklist_path:
@@ -363,6 +372,7 @@ class SettingsTab(QWidget):
             max_frequency_rank=self.filtering_panel.max_frequency_spinbox.value(),
             # Known words database settings
             use_known_words_db=self.filtering_panel.use_known_words_db_checkbox.isChecked(),
+            excluded_decks=self.filtering_panel.get_excluded_decks(),
             # Word list settings
             blacklist_path=(
                 Path(self.filtering_panel.blacklist_selector.get_path())
@@ -1026,3 +1036,80 @@ class SettingsTab(QWidget):
         """Surface an unexpected worker exception via the note-type status line."""
         self.anki_panel.fetch_fields_button.setEnabled(True)
         self.anki_panel.set_notetype_status(False, message)
+
+    # === Excluded decks handlers (Issue #38) ===
+
+    def _on_fetch_decks_requested(self) -> None:
+        """Fetch the deck list from AnkiConnect to populate the exclude picker.
+
+        Uses the AnkiConnect URL currently shown in the Anki panel (not the
+        last-saved config) so the user can pick decks without hitting Save
+        first. The picker opens when results arrive via
+        :meth:`_on_fetch_decks_finished`.
+        """
+        if self._fetch_decks_worker is not None and self._fetch_decks_worker.isRunning():
+            return
+
+        ankiconnect_url = self.anki_panel.ankiconnect_url_input.text().strip()
+        probe_config = replace(self.config, ankiconnect_url=ankiconnect_url or self.config.ankiconnect_url)
+        try:
+            service = AnkiService(probe_config)
+        except ValueError as e:
+            QMessageBox.warning(self, "Add Deck", f"Cannot build AnkiService: {e}")
+            return
+
+        self.filtering_panel.add_deck_button.setEnabled(False)
+        worker = FetchDecksWorker(service, self)
+        self._fetch_decks_worker = worker
+        worker.result_ready.connect(self._on_fetch_decks_finished)
+        worker.error.connect(self._on_fetch_decks_error)
+        worker.start()
+
+    def _on_fetch_decks_finished(self, deck_names: list[str]) -> None:
+        """Hand the fetched deck list to the panel, which opens the picker."""
+        self.filtering_panel.add_deck_button.setEnabled(True)
+        if not deck_names:
+            QMessageBox.warning(
+                self,
+                "Add Deck",
+                "Could not fetch decks. Is Anki running with AnkiConnect?",
+            )
+            return
+        self.filtering_panel.set_available_decks(deck_names)
+
+    def _on_fetch_decks_error(self, message: str) -> None:
+        """Surface an unexpected deck-fetch worker exception."""
+        self.filtering_panel.add_deck_button.setEnabled(True)
+        QMessageBox.warning(self, "Add Deck", message)
+
+    def _on_rebuild_known_words(self) -> None:
+        """Clear the local known-words cache after user confirmation.
+
+        The cache is additive (see :class:`KnownWordDB`), so removing a deck's
+        words after it was already synced requires a full rebuild. The next
+        mining run re-syncs from Anki with the current exclusions applied.
+        """
+        confirm = QMessageBox.question(
+            self,
+            "Rebuild Known Words DB",
+            "Clear the local known-words cache? It will re-sync from Anki on the "
+            "next mining run, applying your current deck exclusions.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            db = KnownWordDB(self.config.known_words_db_path)
+            db.initialize()
+            removed = db.clear()
+        except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
+            QMessageBox.warning(self, "Rebuild Known Words DB", f"Could not clear the cache: {e}")
+            return
+
+        QMessageBox.information(
+            self,
+            "Rebuild Known Words DB",
+            f"Cleared {removed} cached word(s). The cache will rebuild on the next run.",
+        )

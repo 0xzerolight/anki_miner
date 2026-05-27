@@ -116,6 +116,26 @@ class TestThemeFavoritesRoundTrip:
         assert loaded.themes_root == custom_root
 
 
+class TestExcludedDecksRoundTrip:
+    """excluded_decks (Issue #38) survives a save→load JSON round-trip as a tuple."""
+
+    def test_excluded_decks_round_trip(self, isolated_config_file, fake_qsettings):
+        base = create_default_config()
+        from dataclasses import replace
+
+        new = replace(base, excluded_decks=("Remembering The Kanji", "Kanji Writing"))
+        GUIConfigManager.save_config(new)
+
+        loaded = GUIConfigManager.load_config()
+        # JSON stores a list; __post_init__ coerces it back to a tuple.
+        assert loaded.excluded_decks == ("Remembering The Kanji", "Kanji Writing")
+
+    def test_default_is_empty_tuple(self, isolated_config_file, fake_qsettings):
+        GUIConfigManager.save_config(create_default_config())
+        loaded = GUIConfigManager.load_config()
+        assert loaded.excluded_decks == ()
+
+
 # Silence the unused-import lint warning when config_manager isn't directly
 # referenced (the test reaches into PyQt6.QtCore to patch QSettings).
 _ = config_manager
