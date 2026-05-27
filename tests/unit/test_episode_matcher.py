@@ -273,6 +273,31 @@ class TestEpisodeMatcher:
         for v, s in pairs:
             assert v.stem == s.stem
 
+    def test_multiple_shows_same_episode_do_not_reuse_subtitle(self, tmp_path):
+        """Regression for Issue #39 — when several videos share an episode number
+        (multiple shows in one folder), each subtitle must be consumed at most once
+        instead of every video collapsing onto the first matching subtitle."""
+        video_dir = tmp_path / "videos"
+        video_dir.mkdir()
+        sub_dir = tmp_path / "subs"
+        sub_dir.mkdir()
+        vids, subs = [], []
+        for show in ("ShowA", "ShowB", "ShowC"):
+            v = video_dir / f"{show} - 01.mkv"
+            v.touch()
+            vids.append(v)
+            s = sub_dir / f"{show} - 01.srt"
+            s.touch()
+            subs.append(s)
+
+        pairs = EpisodeMatcher.match_by_episode_number(vids, subs)
+
+        assert len(pairs) == 3
+        # No subtitle is reused across pairs.
+        assert len({str(s) for _, s in pairs}) == 3
+        # Every video appears exactly once.
+        assert len({str(v) for v, _ in pairs}) == 3
+
     def test_handles_no_matches(self, tmp_path):
         """Should return empty list when no matches found."""
         video_dir = tmp_path / "videos"
