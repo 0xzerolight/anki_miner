@@ -345,3 +345,122 @@ class TestClose:
         service.close()  # must not raise
 
         assert p1.close.call_count == 2
+
+
+class TestLookupAllOffline:
+    """Tests for DefinitionService.lookup_all_offline — aggregate offline dicts."""
+
+    def test_returns_labeled_tuples_for_available_offline_hits(self, test_config):
+        """Offline providers that return hits are included as (name, html)."""
+        p1 = make_provider("Dict A", return_value="<div>A</div>")
+        p1.is_online = False
+        p2 = make_provider("Dict B", return_value="<div>B</div>")
+        p2.is_online = False
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        result = service.lookup_all_offline("word")
+
+        assert result == [("Dict A", "<div>A</div>"), ("Dict B", "<div>B</div>")]
+
+    def test_preserves_chain_order(self, test_config):
+        """Order of results matches the provider list order."""
+        p1 = make_provider("First", return_value="html1")
+        p1.is_online = False
+        p2 = make_provider("Second", return_value="html2")
+        p2.is_online = False
+        p3 = make_provider("Third", return_value="html3")
+        p3.is_online = False
+        service = DefinitionService(test_config, providers=[p1, p2, p3])
+
+        result = service.lookup_all_offline("x")
+
+        names = [name for name, _ in result]
+        assert names == ["First", "Second", "Third"]
+
+    def test_excludes_online_provider_even_with_hit(self, test_config):
+        """Online providers are skipped even if their lookup returns a hit."""
+        offline = make_provider("Off", return_value="<div>offline</div>")
+        offline.is_online = False
+        online = make_provider("Jisho", return_value="<div>online</div>")
+        online.is_online = True
+        service = DefinitionService(test_config, providers=[offline, online])
+
+        result = service.lookup_all_offline("x")
+
+        assert result == [("Off", "<div>offline</div>")]
+        offline.lookup.assert_called_once_with("x")
+        online.lookup.assert_not_called()
+
+    def test_skips_unavailable_offline_provider(self, test_config):
+        """Offline providers where is_available() is False are skipped."""
+        unavail = make_provider("Bad", available=False, return_value="<div>x</div>")
+        unavail.is_online = False
+        ok = make_provider("Good", available=True, return_value="<div>y</div>")
+        ok.is_online = False
+        service = DefinitionService(test_config, providers=[unavail, ok])
+
+        result = service.lookup_all_offline("word")
+
+        assert result == [("Good", "<div>y</div>")]
+        unavail.lookup.assert_not_called()
+
+    def test_skips_offline_providers_returning_none(self, test_config):
+        """Offline providers that return None are excluded."""
+        miss = make_provider("Empty", return_value=None)
+        miss.is_online = False
+        hit = make_provider("Full", return_value="<div>found</div>")
+        hit.is_online = False
+        service = DefinitionService(test_config, providers=[miss, hit])
+
+        result = service.lookup_all_offline("x")
+
+        assert result == [("Full", "<div>found</div>")]
+        miss.lookup.assert_called_once_with("x")
+        hit.lookup.assert_called_once_with("x")
+
+    def test_returns_empty_list_when_nothing_matches(self, test_config):
+        """Empty result list when all providers miss or are online."""
+        p1 = make_provider("Empty", return_value=None)
+        p1.is_online = False
+        p2 = make_provider("Online", return_value="<div>o</div>")
+        p2.is_online = True
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        result = service.lookup_all_offline("x")
+
+        assert result == []
+
+    def test_returns_empty_list_when_no_providers(self, test_config):
+        """Empty provider list returns empty list."""
+        service = DefinitionService(test_config, providers=[])
+
+        result = service.lookup_all_offline("x")
+
+        assert result == []
+
+    def test_calls_ensure_loaded(self, test_config):
+        """lookup_all_offline triggers ensure_loaded() before lookups."""
+        p1 = make_provider("A", return_value="hit")
+        p1.is_online = False
+        service = DefinitionService(test_config, providers=[p1])
+
+        service.lookup_all_offline("x")
+
+        p1.load.assert_called_once()
+
+    def test_mixed_online_offline_with_multiple_hits(self, test_config):
+        """Integration: multiple offline, one online; excludes online."""
+        off1 = make_provider("Off1", return_value="<div>1</div>")
+        off1.is_online = False
+        off2 = make_provider("Off2", return_value="<div>2</div>")
+        off2.is_online = False
+        online = make_provider("Jisho", return_value="<div>j</div>")
+        online.is_online = True
+        service = DefinitionService(test_config, providers=[off1, online, off2])
+
+        result = service.lookup_all_offline("word")
+
+        assert result == [("Off1", "<div>1</div>"), ("Off2", "<div>2</div>")]
+        off1.lookup.assert_called_once_with("word")
+        online.lookup.assert_not_called()
+        off2.lookup.assert_called_once_with("word")

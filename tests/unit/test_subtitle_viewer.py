@@ -1,66 +1,27 @@
 """Tests for subtitle_viewer module."""
 
-import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import QLocale
 from PyQt6.QtWidgets import QApplication
 
+from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
-from anki_miner.utils.audio_track_detector import JapaneseAudioStream
 
-MODULE = "anki_miner.gui.widgets.subtitle_viewer"
+# Patch targets now live in the player widget module.
+PLAYER_MODULE = "anki_miner.gui.widgets.subtitle_player_widget"
 
 # QApplication required for any Qt widget test.
 _app = QApplication.instance() or QApplication([])
 
 
-class TestFormatTime:
-    """Tests for SubtitleViewer._format_time static method."""
-
-    def test_zero_ms(self):
-        """Should format 0ms as 00:00."""
-        assert SubtitleViewer._format_time(0) == "00:00"
-
-    def test_one_second(self):
-        """Should format 1000ms as 00:01."""
-        assert SubtitleViewer._format_time(1000) == "00:01"
-
-    def test_one_minute(self):
-        """Should format 60000ms as 01:00."""
-        assert SubtitleViewer._format_time(60000) == "01:00"
-
-    def test_mixed_time(self):
-        """Should format 90500ms as 01:30."""
-        assert SubtitleViewer._format_time(90500) == "01:30"
-
-    def test_large_time(self):
-        """Should format large times correctly."""
-        # 25 minutes 13 seconds = 1513000 ms
-        assert SubtitleViewer._format_time(1513000) == "25:13"
-
-    def test_negative_ms(self):
-        """Should treat negative values as 00:00."""
-        assert SubtitleViewer._format_time(-1000) == "00:00"
-
-    def test_sub_second(self):
-        """Should truncate sub-second values."""
-        assert SubtitleViewer._format_time(999) == "00:00"
-
-    def test_over_one_hour(self):
-        """Should handle times over 60 minutes."""
-        # 75 minutes = 4500000 ms
-        assert SubtitleViewer._format_time(4500000) == "75:00"
-
-
 @pytest.fixture
 def fake_media_classes():
-    """Patch QMediaPlayer + QAudioOutput so construction skips backend media loading."""
+    """Patch QMediaPlayer + QAudioOutput in the player widget module."""
     with (
-        patch(f"{MODULE}.QMediaPlayer") as player_cls,
-        patch(f"{MODULE}.QAudioOutput") as audio_cls,
+        patch(f"{PLAYER_MODULE}.QMediaPlayer") as player_cls,
+        patch(f"{PLAYER_MODULE}.QAudioOutput") as audio_cls,
     ):
         player_instance = MagicMock()
         player_instance.audioTracks.return_value = []
@@ -69,158 +30,91 @@ def fake_media_classes():
         yield {"player": player_instance, "player_cls": player_cls}
 
 
-class TestAudioTrackSelection:
-    """Test that the Japanese audio track is selected in the mini-player."""
+class TestSubtitleViewerEmbeds:
+    """Test that SubtitleViewer correctly embeds SubtitlePlayerWidget."""
 
-    def test_records_audio_index_when_japanese_found(self, fake_media_classes):
+    def test_viewer_has_player_widget_attribute(self, fake_media_classes):
+        """SubtitleViewer should expose a player_widget attribute."""
+        with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        assert isinstance(viewer.player_widget, SubtitlePlayerWidget)
+
+    def test_viewer_calls_set_source_on_player_widget(self, fake_media_classes):
+        """SubtitleViewer.__init__ should call player_widget.set_source."""
+        entries = [(1.0, 2.0, "test")]
+        with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), entries, 0.5)
+        # set_source stores the entries and offset on the player widget
+        assert viewer.player_widget.subtitle_entries == entries
+        assert viewer.player_widget._offset == 0.5
+
+    def test_viewer_forwards_audio_track_override(self, fake_media_classes):
+        """SubtitleViewer should forward audio_track_override to set_source."""
         with patch(
-            f"{MODULE}.find_japanese_audio_stream",
-            return_value=JapaneseAudioStream(global_index=2, audio_index=1, language_tag="jpn"),
-        ):
-            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        assert viewer._jp_audio_index == 1
-
-    def test_records_none_when_no_japanese_track(self, fake_media_classes):
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
-            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        assert viewer._jp_audio_index is None
-
-    def test_setup_media_connects_tracks_changed(self, fake_media_classes):
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
-            SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        fake_media_classes["player"].tracksChanged.connect.assert_called()
-
-    def test_on_tracks_changed_selects_japanese_track(self, fake_media_classes):
-        with patch(
-            f"{MODULE}.find_japanese_audio_stream",
-            return_value=JapaneseAudioStream(global_index=2, audio_index=1, language_tag="jpn"),
-        ):
-            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        player = fake_media_classes["player"]
-        player.audioTracks.return_value = [MagicMock(), MagicMock()]
-
-        viewer._on_tracks_changed()
-
-        player.setActiveAudioTrack.assert_called_once_with(1)
-
-    def test_on_tracks_changed_noop_when_no_japanese(self, fake_media_classes):
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
-            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        player = fake_media_classes["player"]
-        player.audioTracks.return_value = [MagicMock(), MagicMock()]
-
-        viewer._on_tracks_changed()
-
-        player.setActiveAudioTrack.assert_not_called()
-
-    def test_on_tracks_changed_bounds_check_skips_out_of_range(self, fake_media_classes):
-        with patch(
-            f"{MODULE}.find_japanese_audio_stream",
-            return_value=JapaneseAudioStream(global_index=5, audio_index=3, language_tag="jpn"),
-        ):
-            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        player = fake_media_classes["player"]
-        # Player reports fewer tracks than ffprobe found.
-        player.audioTracks.return_value = [MagicMock()]
-
-        viewer._on_tracks_changed()
-
-        player.setActiveAudioTrack.assert_not_called()
-
-    # --- audio_track_override + Qt metadata fallback tests ---
-
-    def test_override_skips_ffprobe(self, fake_media_classes):
-        """When audio_track_override is set, ffprobe should not be called."""
-        with patch(
-            f"{MODULE}.find_japanese_audio_stream",
+            f"{PLAYER_MODULE}.find_japanese_audio_stream",
             side_effect=AssertionError("ffprobe should not be called"),
         ):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2)
-        assert viewer._jp_audio_index == 2
+        assert viewer.player_widget._jp_audio_index == 2
 
-    def test_override_used_in_on_tracks_changed(self, fake_media_classes):
-        """Override index should be passed to setActiveAudioTrack."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", side_effect=AssertionError("should not call ffprobe")):
-            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2)
-        player = fake_media_classes["player"]
-        player.audioTracks.return_value = [MagicMock(), MagicMock(), MagicMock()]
+    def test_viewer_delegates_all_args_to_set_source(self):
+        """SubtitleViewer.__init__ should pass video_path, entries, offset, and audio_track_override to set_source."""
+        video_path = Path("/tmp/test.mkv")
+        entries = [(1.0, 2.0, "hello")]
+        with patch.object(SubtitlePlayerWidget, "set_source") as mock_set_source:
+            SubtitleViewer(video_path, entries, 1.5, audio_track_override=3)
+        mock_set_source.assert_called_once_with(
+            video_path,
+            entries,
+            1.5,
+            audio_track_override=3,
+        )
 
-        viewer._on_tracks_changed()
 
-        player.setActiveAudioTrack.assert_called_once_with(2)
+class TestSubtitleViewerOffset:
+    """Tests for SubtitleViewer offset management."""
 
-    def test_qt_metadata_fallback_finds_japanese(self, fake_media_classes):
-        """When ffprobe returns None and no override, Qt metadata should find Japanese track."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+    def test_get_offset_returns_initial_value(self, fake_media_classes):
+        """get_offset() should return the initial offset passed to the constructor."""
+        with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 1.5)
+        assert viewer.get_offset() == 1.5
+
+    def test_offset_change_updates_get_offset(self, fake_media_classes):
+        """Changing the spinbox should update get_offset()."""
+        with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        player = fake_media_classes["player"]
+        viewer.offset_spinbox.setValue(2.5)
+        assert viewer.get_offset() == 2.5
 
-        track_en = MagicMock()
-        track_en.value.return_value = QLocale.Language.English
-        track_jp = MagicMock()
-        track_jp.value.return_value = QLocale.Language.Japanese
-        player.audioTracks.return_value = [track_en, track_jp, track_en]
-
-        viewer._on_tracks_changed()
-
-        player.setActiveAudioTrack.assert_called_once_with(1)
-
-    def test_qt_metadata_fallback_skipped_when_ffprobe_found_jp(self, fake_media_classes):
-        """When ffprobe found Japanese, Qt fallback should not run; wrong track not picked."""
-        with patch(
-            f"{MODULE}.find_japanese_audio_stream",
-            return_value=JapaneseAudioStream(global_index=0, audio_index=0, language_tag="jpn"),
-        ):
+    def test_offset_change_forwards_to_player_widget(self, fake_media_classes):
+        """Changing the spinbox should forward the new offset to player_widget."""
+        with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        player = fake_media_classes["player"]
+        viewer.offset_spinbox.setValue(1.0)
+        assert viewer.player_widget._offset == 1.0
 
-        # All tracks are English — if the Qt loop ran erroneously it would find nothing,
-        # but we primarily want to confirm setActiveAudioTrack is called with index 0 (ffprobe hit).
-        track_en = MagicMock()
-        track_en.value.return_value = QLocale.Language.English
-        player.audioTracks.return_value = [track_en, track_en]
 
-        viewer._on_tracks_changed()
+class TestSubtitleViewerStops:
+    """Tests that SubtitleViewer stops the player on close/accept/reject."""
 
-        player.setActiveAudioTrack.assert_called_once_with(0)
-        for track in player.audioTracks.return_value:
-            track.value.assert_not_called()
-
-    def test_qt_metadata_fallback_no_japanese_leaves_default(self, fake_media_classes):
-        """When ffprobe and Qt metadata both fail, setActiveAudioTrack should not be called."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+    def test_accept_stops_player(self, fake_media_classes):
+        """accept() should stop the player."""
+        with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        player = fake_media_classes["player"]
+        viewer.accept()
+        fake_media_classes["player"].stop.assert_called()
 
-        track_en = MagicMock()
-        track_en.value.return_value = QLocale.Language.English
-        player.audioTracks.return_value = [track_en, track_en]
+    def test_reject_stops_player(self, fake_media_classes):
+        """reject() should stop the player."""
+        with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        viewer.reject()
+        fake_media_classes["player"].stop.assert_called()
 
-        viewer._on_tracks_changed()
-
-        player.setActiveAudioTrack.assert_not_called()
-
-    def test_override_index_zero_selects_first_track(self, fake_media_classes):
-        """audio_track_override=0 is a valid first-track index, not a falsy 'no override' sentinel."""
-        with patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp:
-            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=0)
-        mock_find_jp.assert_not_called()
-        assert viewer._jp_audio_index == 0
-
-        player = fake_media_classes["player"]
-        player.audioTracks.return_value = [MagicMock(), MagicMock()]
-        viewer._on_tracks_changed()
-        player.setActiveAudioTrack.assert_called_once_with(0)
-
-    def test_override_logs_in_first_branch_not_qt_branch(self, fake_media_classes, caplog):
-        """Override path should log 'Selected audio track', not 'Qt metadata'."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", side_effect=AssertionError("should not call ffprobe")):
-            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=1)
-        player = fake_media_classes["player"]
-        player.audioTracks.return_value = [MagicMock(), MagicMock()]
-
-        with caplog.at_level(logging.INFO, logger="anki_miner.gui.widgets.subtitle_viewer"):
-            viewer._on_tracks_changed()
-
-        assert any("Selected audio track" in r.message for r in caplog.records)
-        assert not any("Qt metadata" in r.message for r in caplog.records)
+    def test_close_event_stops_player(self, fake_media_classes):
+        """closeEvent() should stop the player."""
+        with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
+            viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
+        viewer.close()
+        fake_media_classes["player"].stop.assert_called()
