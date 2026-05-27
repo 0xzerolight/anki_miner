@@ -148,7 +148,7 @@ def main():
     )
     window.tabs.addTab(deck_builder_tab, "Deck Builder")
 
-    # Connect both tab presenters to MainWindow status bar handlers
+    # Connect mining-tab presenters to MainWindow status bar handlers
     for presenter in (episode_presenter, batch_presenter, deck_builder_presenter):
         presenter.info_signal.connect(window._on_info_message)
         presenter.success_signal.connect(window._on_success_message)
