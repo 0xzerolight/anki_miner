@@ -244,6 +244,23 @@ class AnkiService:
             timeout=30,
         )
 
+    def ensure_deck(self, deck_name: str) -> None:
+        """Create the named deck in Anki via AnkiConnect.
+
+        Idempotent: if the deck already exists, AnkiConnect returns its
+        existing id without error — this method is safe to call unconditionally
+        before routing cards to a deck.
+
+        Raises:
+            AnkiConnectionError: On connection failure or AnkiConnect error.
+        """
+        post_action(
+            self.config.ankiconnect_url,
+            "createDeck",
+            params={"deck": deck_name},
+            timeout=15,
+        )
+
     def _build_vocab_query(self) -> str:
         """Build the findNotes query for known-words detection.
 
