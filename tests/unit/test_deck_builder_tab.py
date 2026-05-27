@@ -426,24 +426,48 @@ def test_cancel_clicked_calls_worker_cancel(tab):
     mock_worker.cancel.assert_called_once()
 
 
-def test_cancel_clicked_restores_buttons(tab):
+def test_cancel_clicked_shows_cancelling_state(tab):
+    """Cancel reflects an in-progress state; Preview stays disabled until the
+    worker's finished signal restores it (so a new run cannot reassign the
+    worker over a still-running thread)."""
+    mock_worker = MagicMock(name="DeckBuilderWorker")
+    tab._worker = mock_worker
+    # Mid-run: Preview disabled, Cancel enabled.
+    tab.preview_button.setEnabled(False)
+    tab.cancel_button.setEnabled(True)
+
+    tab._on_cancel_clicked()
+
+    assert not tab.cancel_button.isEnabled()
+    assert tab.cancel_button.text() == "Cancelling…"
+    # Preview is NOT restored here — that happens on worker.finished.
+    assert not tab.preview_button.isEnabled()
+
+
+def test_cancel_clicked_retains_worker_reference(tab):
+    """The worker reference is retained (not nulled) on cancel so the running
+    QThread is not garbage-collected mid-run; it is replaced on the next run."""
     mock_worker = MagicMock(name="DeckBuilderWorker")
     tab._worker = mock_worker
 
     tab._on_cancel_clicked()
+
+    assert tab._worker is mock_worker
+
+
+def test_restore_buttons_resets_cancelling_label(tab):
+    """_restore_buttons (the worker.finished handler) re-enables Preview and
+    resets the Cancel label."""
+    tab.preview_button.setEnabled(False)
+    tab.cancel_button.setText("Cancelling…")
+    tab.cancel_button.setEnabled(True)
+
+    tab._restore_buttons()
 
     assert tab.preview_button.isEnabled()
     assert not tab.build_button.isEnabled()
     assert not tab.cancel_button.isEnabled()
-
-
-def test_cancel_clicked_clears_worker_reference(tab):
-    mock_worker = MagicMock(name="DeckBuilderWorker")
-    tab._worker = mock_worker
-
-    tab._on_cancel_clicked()
-
-    assert tab._worker is None
+    assert tab.cancel_button.text() == "Cancel"
 
 
 # ---------------------------------------------------------------------------
@@ -468,7 +492,9 @@ def test_build_finished_restores_buttons(tab):
     assert not tab.cancel_button.isEnabled()
 
 
-def test_build_finished_clears_worker_reference(tab):
+def test_build_finished_retains_worker_reference(tab):
+    """The worker reference is retained until the next run replaces it (it is
+    not nulled mid-run, which would risk destroying a still-running QThread)."""
     mock_worker = MagicMock(name="DeckBuilderWorker")
     mock_worker.request = MagicMock()
     mock_worker.request.deck_name = "TestDeck"
@@ -476,7 +502,7 @@ def test_build_finished_clears_worker_reference(tab):
 
     tab._on_build_finished(200, 88.5)
 
-    assert tab._worker is None
+    assert tab._worker is mock_worker
 
 
 # ---------------------------------------------------------------------------
@@ -495,12 +521,15 @@ def test_error_restores_buttons(tab):
     assert not tab.cancel_button.isEnabled()
 
 
-def test_error_clears_worker_reference(tab):
-    tab._worker = MagicMock(name="DeckBuilderWorker")
+def test_error_retains_worker_reference(tab):
+    """The worker reference is retained on error (replaced on the next run),
+    avoiding destruction of a still-unwinding QThread."""
+    mock_worker = MagicMock(name="DeckBuilderWorker")
+    tab._worker = mock_worker
 
     tab._on_error("boom")
 
-    assert tab._worker is None
+    assert tab._worker is mock_worker
 
 
 # ---------------------------------------------------------------------------
