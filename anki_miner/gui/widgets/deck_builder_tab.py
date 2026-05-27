@@ -60,7 +60,7 @@ class DeckBuilderTab(MiningTabBase):
         self.progress_callback = progress_callback
         self.stats_service = stats_service
 
-        self._worker: DeckBuilderWorker | None = None
+        self.worker_thread: DeckBuilderWorker | None = None
         # Tracks the last value auto-filled from the video folder name so we can
         # distinguish "user typed something" from "still showing auto value".
         self._last_auto_deck_name: str = ""
@@ -372,31 +372,31 @@ class DeckBuilderTab(MiningTabBase):
         # flow Preview is disabled while a worker is gated or building, so this
         # is rarely hit — but if it is, disconnect the old worker's finished
         # handler first so its termination does not restore buttons mid-new-run.
-        if self._worker is not None:
+        if self.worker_thread is not None:
             with contextlib.suppress(TypeError, RuntimeError):
-                self._worker.finished.disconnect(self._restore_buttons)
-            self._worker.cancel()
+                self.worker_thread.finished.disconnect(self._restore_buttons)
+            self.worker_thread.cancel()
 
         self.log_widget.clear_log()
         self.log_widget.append_info("Analysing corpus…")
         self.preview_frame.hide()
         self._set_buttons_running()
 
-        self._worker = DeckBuilderWorker(
+        self.worker_thread = DeckBuilderWorker(
             request, self.config, self.presenter, self.progress_callback, self.stats_service
         )
-        self._worker.preview_ready.connect(self._on_preview_ready)
-        self._worker.item_started.connect(self._on_item_started)
-        self._worker.item_completed.connect(self._on_item_completed)
-        self._worker.build_finished.connect(self._on_build_finished)
-        self._worker.error.connect(self._on_error)
+        self.worker_thread.preview_ready.connect(self._on_preview_ready)
+        self.worker_thread.item_started.connect(self._on_item_started)
+        self.worker_thread.item_completed.connect(self._on_item_completed)
+        self.worker_thread.build_finished.connect(self._on_build_finished)
+        self.worker_thread.error.connect(self._on_error)
         # Restore buttons only when the QThread truly finishes. The worker
         # reference is NOT nulled in the terminal slots: dropping the only
         # reference while the QThread is still unwinding risks
         # "QThread: Destroyed while thread is still running". It is replaced on
         # the next preview instead.
-        self._worker.finished.connect(self._restore_buttons)
-        self._worker.start()
+        self.worker_thread.finished.connect(self._restore_buttons)
+        self.worker_thread.start()
 
     # ------------------------------------------------------------------
     # Slot: preview_ready (Phase 1 complete; worker blocked on gate)
@@ -427,13 +427,13 @@ class DeckBuilderTab(MiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_build_clicked(self) -> None:
-        if self._worker is None:
+        if self.worker_thread is None:
             return
         self.build_button.setEnabled(False)
         self.preview_button.setEnabled(False)
-        deck_name = self._worker.request.deck_name
+        deck_name = self.worker_thread.request.deck_name
         self.log_widget.append_info(f"Building deck '{deck_name}'…")
-        self._worker.confirm()
+        self.worker_thread.confirm()
 
     # ------------------------------------------------------------------
     # Slots: per-episode progress
@@ -451,7 +451,7 @@ class DeckBuilderTab(MiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_build_finished(self, total: int, coverage: float) -> None:
-        deck_name = self._worker.request.deck_name if self._worker else "deck"
+        deck_name = self.worker_thread.request.deck_name if self.worker_thread else "deck"
         # ``coverage`` is the Phase-1 projection over the candidate set (known
         # words count toward it); the actual card count can be lower when known
         # words are skipped or a definition lookup yields nothing, so this is
@@ -470,9 +470,9 @@ class DeckBuilderTab(MiningTabBase):
         # Request cancellation and reflect the in-progress state. Buttons are
         # restored by the worker's ``finished`` signal once the thread actually
         # ends — restoring Preview here would let a new run reassign
-        # ``self._worker`` over a still-running thread.
-        if self._worker is not None:
-            self._worker.cancel()
+        # ``self.worker_thread`` over a still-running thread.
+        if self.worker_thread is not None:
+            self.worker_thread.cancel()
         self.cancel_button.setText("Cancelling…")
         self.cancel_button.setEnabled(False)
         self.log_widget.append_warning("Cancelling…")
