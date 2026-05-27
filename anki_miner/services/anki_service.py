@@ -542,7 +542,9 @@ class AnkiService:
         if total_created > 0:
             self.invalidate_existing_vocabulary_cache()
         if skipped_duplicates > 0:
-            logger.info("Skipped %d note(s) already present in Anki (duplicates).", skipped_duplicates)
+            logger.info(
+                "Skipped %d note(s) Anki flagged as duplicates (existing card or same-batch).", skipped_duplicates
+            )
         if self.config.bold_target_in_sentence and word_data_list:
             logger.info(
                 "bold_target_in_sentence=on: precomputed bold used on %d/%d cards (escape fallback: %d)",
