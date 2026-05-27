@@ -155,12 +155,14 @@ class AnkiService:
         Starts from the whole collection (``deck:*``) and negates each excluded
         deck (Issue #38). In Anki search, ``deck:"Name"`` matches the deck *and
         its subdecks*, so a parent exclusion covers nested decks automatically.
-        Deck names are double-quoted; embedded backslashes and quotes are
-        escaped so names with spaces or quotes don't break the query.
+        Deck names are double-quoted; backslashes, quotes, and Anki's glob
+        metacharacters (``*`` = any run, ``_`` = any single char, which Anki
+        treats as wildcards even inside ``deck:"..."``) are escaped so a name
+        like ``Core_2k`` matches literally instead of over-excluding ``CoreX2k``.
         """
         query = "deck:*"
         for deck in self.config.excluded_decks:
-            safe = deck.replace("\\", "\\\\").replace('"', '\\"')
+            safe = deck.replace("\\", "\\\\").replace('"', '\\"').replace("*", "\\*").replace("_", "\\_")
             query += f' -deck:"{safe}"'
         return query
 

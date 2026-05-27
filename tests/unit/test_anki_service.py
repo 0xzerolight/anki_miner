@@ -1681,6 +1681,13 @@ class TestBuildVocabQuery:
         service = AnkiService(replace(test_config, excluded_decks=('My "Quoted" Deck', "back\\slash")))
         assert service._build_vocab_query() == 'deck:* -deck:"My \\"Quoted\\" Deck" -deck:"back\\\\slash"'
 
+    def test_glob_metachars_escaped(self, test_config):
+        """Deck names with Anki wildcards (_ , *) must be escaped to match literally."""
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, excluded_decks=("Core_2k", "Wild*Card")))
+        assert service._build_vocab_query() == 'deck:* -deck:"Core\\_2k" -deck:"Wild\\*Card"'
+
 
 class TestGetExistingVocabularyExcludesDecks:
     """get_existing_vocabulary must pass the exclusion-aware query to findNotes."""
