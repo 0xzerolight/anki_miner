@@ -485,7 +485,8 @@ class EpisodeProcessor:
         skipped_duplicates = self.anki_service.last_skipped_duplicates
         if isinstance(skipped_duplicates, int) and skipped_duplicates > 0:
             self.presenter.show_warning(
-                f"Skipped {skipped_duplicates} word(s) already in your Anki collection (duplicates)."
+                f"Skipped {skipped_duplicates} word(s) Anki flagged as duplicates "
+                f"(same Expression as an existing card or another word in this batch)."
             )
 
         # Add newly mined words to known word DB.
