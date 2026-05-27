@@ -52,6 +52,10 @@ class AnkiMinerConfig:
     )
     ankiconnect_url: str = "http://127.0.0.1:8765"
     anki_tags: str = "auto-mined"  # Whitespace-separated tags applied to every mined card; empty string means no tags
+    # Deck names excluded from known-words detection (Issue #38). Notes in these
+    # decks (and their subdecks) are dropped from the findNotes query, so their
+    # words are NOT treated as already-known. Empty tuple = scan the whole collection.
+    excluded_decks: tuple[str, ...] = field(default_factory=tuple)
 
     # Media extraction settings
     audio_padding: float = 0.3  # Seconds to add before/after subtitle timing
@@ -232,6 +236,9 @@ class AnkiMinerConfig:
         # so the frozen dataclass stays internally immutable.
         if isinstance(self.theme_favorites, list):
             object.__setattr__(self, "theme_favorites", tuple(self.theme_favorites))
+        # JSON round-trip yields a list for excluded_decks; coerce to tuple.
+        if isinstance(self.excluded_decks, list):
+            object.__setattr__(self, "excluded_decks", tuple(self.excluded_decks))
 
         # Keep anki_word_field in sync with anki_fields["word"]
         word_field_from_mapping = self.anki_fields.get("word", "")
