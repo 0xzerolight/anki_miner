@@ -1633,10 +1633,6 @@ class TestCountLemmas:
     tests are hermetic and fast — no MeCab process required.
     """
 
-    def _make_service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
-            return SubtitleParserService(test_config)
-
     def _make_mock_subs(self, lines):
         """Build a mock pysubs2 subtitle container from a list of mock-line dicts.
 
