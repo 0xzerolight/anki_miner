@@ -475,6 +475,11 @@ class EpisodeProcessor:
         created_note_ids = list(self.anki_service.last_created_note_ids)
 
         self.presenter.show_success(f"Successfully created {cards_created} cards")
+        skipped_duplicates = self.anki_service.last_skipped_duplicates
+        if isinstance(skipped_duplicates, int) and skipped_duplicates > 0:
+            self.presenter.show_warning(
+                f"Skipped {skipped_duplicates} word(s) already in your Anki collection (duplicates)."
+            )
 
         # Add newly mined words to known word DB.
         # Store mined_form so the local DB matches what Anki stores in the
