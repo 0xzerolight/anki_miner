@@ -148,6 +148,18 @@ class AnkiMinerConfig:
     # that was actually mined. See Issue #20.
     bold_target_in_sentence: bool = False
 
+    # Card styling (Issue #44). anki_miner emits definition HTML with its own
+    # class scheme (`.yomitan-glossary`, `gloss-sc-*`, `data-sc-*`), but ships no
+    # CSS — the look depends on the note type's card-template CSS. These fields
+    # back the Settings → Card Styling section, which pushes a managed CSS block
+    # into the configured note type via AnkiConnect `updateModelStyling`. UI/
+    # persistence only here — nothing is applied automatically during mining; the
+    # explicit "Apply to note type" button triggers it. `custom_card_css` is the
+    # user's own CSS (Yomitan/Jitendex snippets work verbatim) appended after the
+    # bundled default. Distinct from the app-UI `theme` fields below.
+    use_default_card_stylesheet: bool = True
+    custom_card_css: str = ""
+
     # Deduplication settings
     deduplicate_sentences: bool = True
 

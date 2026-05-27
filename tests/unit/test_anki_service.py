@@ -1830,3 +1830,73 @@ class TestGetDeckNames:
             side_effect=AnkiConnectionError("down"),
         ):
             assert service.get_deck_names() == []
+
+
+class TestModelStyling:
+    """Tests for AnkiService.get_model_styling / update_model_styling (Issue #44)."""
+
+    def test_get_returns_css(self, test_config):
+        service = AnkiService(test_config)
+        resp = _mock_response(result={"css": ".card{color:red}"})
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            assert service.get_model_styling() == ".card{color:red}"
+        payload = mock_post.call_args[1]["json"]
+        assert payload["action"] == "modelStyling"
+        assert payload["params"]["modelName"] == test_config.anki_note_type
+
+    def test_get_uses_explicit_model_name(self, test_config):
+        service = AnkiService(test_config)
+        resp = _mock_response(result={"css": ""})
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            service.get_model_styling("Lapis")
+        assert mock_post.call_args[1]["json"]["params"]["modelName"] == "Lapis"
+
+    def test_get_returns_empty_when_no_css_key(self, test_config):
+        """A response without a usable ``css`` value degrades to an empty string."""
+        service = AnkiService(test_config)
+        resp = _mock_response(result={})
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            assert service.get_model_styling() == ""
+
+    def test_get_propagates_connection_error(self, test_config):
+        """Unlike the swallowing fetch helpers, errors must propagate."""
+        service = AnkiService(test_config)
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=AnkiConnectionError("Is Anki running?"),
+            ),
+            pytest.raises(AnkiConnectionError),
+        ):
+            service.get_model_styling()
+
+    def test_get_propagates_missing_model_error(self, test_config):
+        """An AnkiConnect error payload (model not found) surfaces, not swallowed."""
+        service = AnkiService(test_config)
+        resp = _mock_response(error="model was not found: Lapis")
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            pytest.raises(AnkiConnectionError),
+        ):
+            service.get_model_styling("Lapis")
+
+    def test_update_sends_model_shape(self, test_config):
+        service = AnkiService(test_config)
+        resp = _mock_response(result=None)
+        css = ".yomitan-glossary{color:red}"
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            service.update_model_styling(css, "Lapis")
+        payload = mock_post.call_args[1]["json"]
+        assert payload["action"] == "updateModelStyling"
+        assert payload["params"]["model"] == {"name": "Lapis", "css": css}
+
+    def test_update_propagates_connection_error(self, test_config):
+        service = AnkiService(test_config)
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=AnkiConnectionError("down"),
+            ),
+            pytest.raises(AnkiConnectionError),
+        ):
+            service.update_model_styling(".x{}")

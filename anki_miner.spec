@@ -42,6 +42,12 @@ a = Analysis(
             os.path.join(project_root, "anki_miner", "gui", "resources"),
             os.path.join("anki_miner", "gui", "resources"),
         ),
+        # Bundled dictionary card stylesheet (Issue #44) — loaded at runtime via
+        # importlib.resources, so it must land at the same package path.
+        (
+            os.path.join(project_root, "anki_miner", "services", "dictionary", "resources"),
+            os.path.join("anki_miner", "services", "dictionary", "resources"),
+        ),
         # unidic-lite dictionary data (required by fugashi/MeCab)
         (unidic_data, "unidic_lite"),
     ],
