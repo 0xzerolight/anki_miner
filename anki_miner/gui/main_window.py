@@ -270,7 +270,7 @@ class MainWindow(QMainWindow):
         # "Star on GitHub" button pinned to the top-right corner of the menu bar.
         star_button = QToolButton(menu_bar)
         star_button.setObjectName("github_star_button")
-        star_button.setText("⭐ Star on GitHub")
+        star_button.setText("⭐ Star - help the project")
         star_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         star_button.setAutoRaise(True)
         star_button.setToolTip("Star the project on GitHub")

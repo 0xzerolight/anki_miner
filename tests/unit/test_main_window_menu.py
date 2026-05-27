@@ -85,13 +85,13 @@ def test_report_action_opens_issues_url(main_window, monkeypatch):
 
 
 def test_menu_bar_has_github_star_corner_widget(main_window):
-    """A QToolButton labelled 'Star on GitHub' sits in the top-right corner."""
+    """A QToolButton labelled 'Star - help the project' sits in the top-right corner."""
     menu_bar = main_window.menuBar()
     assert menu_bar is not None
 
     corner = menu_bar.cornerWidget(Qt.Corner.TopRightCorner)
     assert isinstance(corner, QToolButton), "Top-right corner should hold a QToolButton"
-    assert "Star on GitHub" in corner.text()
+    assert "Star - help the project" in corner.text()
     assert corner.toolTip() == "Star the project on GitHub"
     assert corner.autoRaise() is True
 
