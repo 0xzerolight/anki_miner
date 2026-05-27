@@ -15,6 +15,7 @@ from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
@@ -137,8 +138,18 @@ def main():
     )
     window.tabs.addTab(batch_tab, "Batch Mining")
 
+    deck_builder_presenter = GUIPresenter(window)
+    deck_builder_progress = GUIProgressCallback(window)
+    deck_builder_tab = DeckBuilderTab(
+        window.get_config(),
+        deck_builder_presenter,
+        deck_builder_progress,
+        stats_service=stats_service,
+    )
+    window.tabs.addTab(deck_builder_tab, "Deck Builder")
+
     # Connect both tab presenters to MainWindow status bar handlers
-    for presenter in (episode_presenter, batch_presenter):
+    for presenter in (episode_presenter, batch_presenter, deck_builder_presenter):
         presenter.info_signal.connect(window._on_info_message)
         presenter.success_signal.connect(window._on_success_message)
         presenter.warning_signal.connect(window._on_warning_message)
@@ -179,6 +190,7 @@ def main():
     settings_tab.config_changed.connect(window.update_config)
     settings_tab.config_changed.connect(episode_tab.update_config)
     settings_tab.config_changed.connect(batch_tab.update_config)
+    settings_tab.config_changed.connect(deck_builder_tab.update_config)
     settings_tab.config_changed.connect(youtube_tab.update_config)
     # Wire the Dictionary Settings panel's pre-remove hook so deleting a
     # dictionary closes cached sqlite handles across every tab first — Win11
@@ -200,6 +212,7 @@ def main():
     window.config_refreshed.connect(settings_tab.update_config)
     window.config_refreshed.connect(episode_tab.update_config)
     window.config_refreshed.connect(batch_tab.update_config)
+    window.config_refreshed.connect(deck_builder_tab.update_config)
     window.config_refreshed.connect(youtube_tab.update_config)
 
     # Show window first so the user sees the UI immediately; then run the
