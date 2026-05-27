@@ -192,6 +192,7 @@ def subtitle_pair(tmp_path) -> tuple[FilePair, FilePair]:
 
 
 def _collect(signal) -> list:
+    """Attach a list-appending slot to a signal and return the backing list."""
     received: list = []
     signal.connect(lambda *args: received.append(args if len(args) != 1 else args[0]))
     return received
@@ -483,8 +484,8 @@ class TestCollectionFilterToggle:
         all_notes = [note for cp in add_notes_calls for note in cp.get("notes", [])]
         mined_words = [note["fields"]["word"] for note in all_notes]
 
-        assert "走る" not in mined_words, f"filter ON: 走る is known and must not appear in cards, got: {mined_words}"
-        assert len(mined_words) == 2, f"filter ON: expected 2 cards (走る known), got {len(mined_words)}: {mined_words}"
+        assert "走る" not in mined_words, f"filter ON: 走る is known, must not be carded; got: {mined_words}"
+        assert len(mined_words) == 2, f"filter ON: expected 2 cards (走る known), got {len(mined_words)}"
 
     def test_filter_off_produces_more_cards_than_filter_on(self, qapp, base_config, subtitle_pair, tmp_path):
         """filter OFF produces strictly more cards than filter ON when a known word exists."""
