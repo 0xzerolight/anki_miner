@@ -106,16 +106,13 @@ class _FakeBatchTab(BatchProcessingTab):
 
 
 class _FakeDeckBuilderTab(DeckBuilderTab):
-    """Real DeckBuilderTab subclass that skips the heavy ``__init__``.
-
-    DeckBuilderTab stores its worker on ``_worker`` (not ``worker_thread``).
-    """
+    """Real DeckBuilderTab subclass that skips the heavy ``__init__``."""
 
     def __init__(self, *, worker_running: bool = False) -> None:
         from PyQt6.QtWidgets import QWidget
 
         QWidget.__init__(self)
-        self._worker: _FakeWorker | None = _FakeWorker(running=worker_running)
+        self.worker_thread: _FakeWorker | None = _FakeWorker(running=worker_running)
 
 
 def _trigger_close(window) -> MagicMock:
@@ -173,7 +170,7 @@ class TestCloseEventOtherTabs:
 
 
 class TestCloseEventDeckBuilderTab:
-    """Deck builder worker (held on ``_worker``) must also be torn down."""
+    """Deck builder worker (held on ``worker_thread``) must also be torn down."""
 
     def test_running_deck_builder_worker_cancelled(self, main_window):
         tab = _FakeDeckBuilderTab(worker_running=True)
@@ -183,8 +180,8 @@ class TestCloseEventDeckBuilderTab:
 
         # cancel() also opens the confirm gate, so a worker blocked awaiting
         # Build unblocks and exits cleanly before the window closes.
-        assert tab._worker.cancel_called
-        assert tab._worker.wait_called_with == 2000
+        assert tab.worker_thread.cancel_called
+        assert tab.worker_thread.wait_called_with == 2000
 
     def test_idle_deck_builder_worker_not_cancelled(self, main_window):
         tab = _FakeDeckBuilderTab(worker_running=False)
@@ -192,7 +189,7 @@ class TestCloseEventDeckBuilderTab:
 
         _trigger_close(main_window)
 
-        assert not tab._worker.cancel_called
+        assert not tab.worker_thread.cancel_called
 
 
 class TestCloseEventNoActiveWorkers:
