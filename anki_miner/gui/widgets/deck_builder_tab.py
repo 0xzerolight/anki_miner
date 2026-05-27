@@ -368,11 +368,10 @@ class DeckBuilderTab(MiningTabBase):
             collection_filter=self.collection_filter_checkbox.isChecked(),
         )
 
-        # Cancel any lingering worker from a previous preview-not-built run.
-        # Disconnect its finished handler first so its imminent termination
-        # does not restore buttons mid-new-run. The reference is dropped by the
-        # reassignment below (the lingering worker is blocked on its gate, so it
-        # returns immediately on cancel — it is not actively running).
+        # Defensive: cancel any lingering worker before replacing it. In normal
+        # flow Preview is disabled while a worker is gated or building, so this
+        # is rarely hit — but if it is, disconnect the old worker's finished
+        # handler first so its termination does not restore buttons mid-new-run.
         if self._worker is not None:
             with contextlib.suppress(TypeError, RuntimeError):
                 self._worker.finished.disconnect(self._restore_buttons)
@@ -453,8 +452,12 @@ class DeckBuilderTab(MiningTabBase):
 
     def _on_build_finished(self, total: int, coverage: float) -> None:
         deck_name = self._worker.request.deck_name if self._worker else "deck"
+        # ``coverage`` is the Phase-1 projection over the candidate set (known
+        # words count toward it); the actual card count can be lower when known
+        # words are skipped or a definition lookup yields nothing, so this is
+        # framed as a target rather than an achieved figure.
         self.log_widget.append_success(
-            f"Done! Created {total:,} cards (~{coverage:.1f}% coverage) in deck '{deck_name}'."
+            f"Done! Created {total:,} cards (~{coverage:.1f}% target coverage) in deck '{deck_name}'."
         )
         self.progress_widget.set_status("Build complete")
         self._restore_buttons()
