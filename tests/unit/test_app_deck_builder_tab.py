@@ -36,7 +36,12 @@ def _patch_heavy_init(monkeypatch, test_config):
 
 
 def _build_tabs(monkeypatch, test_config):
-    """Return (window, tab_titles, tabs_by_title) built by the app wiring."""
+    """Return (window, tab_titles, tabs_by_title) built by the app wiring.
+
+    NOTE: this helper shadows the tab-construction block in ``app.main`` to
+    avoid spinning up the full Qt event loop / ``sys.exit``. It must be kept in
+    sync with ``app.main`` when tabs are added or reordered.
+    """
     _patch_heavy_init(monkeypatch, test_config)
 
     from anki_miner.gui.main_window import MainWindow
