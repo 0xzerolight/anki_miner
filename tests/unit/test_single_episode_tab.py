@@ -228,7 +228,7 @@ def test_timing_clicked_passes_override_to_subtitle_viewer(tab, tmp_path):
         patch(
             "anki_miner.gui.widgets.subtitle_viewer.SubtitleViewer", return_value=mock_viewer_instance
         ) as mock_viewer_cls,
-        patch("anki_miner.services.subtitle_parser.SubtitleParserService", mock_parser_cls),
+        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
     ):
         tab._on_timing_clicked()
 
@@ -340,3 +340,150 @@ def test_timing_button_hidden_during_processing_and_restored(tab, tmp_path):
 
     assert not tab.timing_button.isHidden(), "timing_button should not be hidden after restore"
     assert not tab.tracks_button.isHidden(), "tracks_button should not be hidden after restore"
+
+
+# ---------------------------------------------------------------------------
+# 13. _on_curation_requested passes media_context and lookup_fn to dialog
+# ---------------------------------------------------------------------------
+
+
+def test_curation_requested_passes_media_context_and_lookup_fn(tab, tmp_path):
+    """Dialog receives a CurationMediaContext and lookup_fn when files are set
+    and a worker with a live processor is present."""
+    from PyQt6.QtWidgets import QDialog
+
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.offset_spinbox.setValue(1.5)
+
+    # Fake worker with processor.definition_service.lookup_all_offline
+    fake_lookup = MagicMock(name="lookup_all_offline")
+    fake_def_svc = MagicMock()
+    fake_def_svc.lookup_all_offline = fake_lookup
+    fake_proc = MagicMock()
+    fake_proc.definition_service = fake_def_svc
+    fake_worker = MagicMock()
+    fake_worker.processor = fake_proc
+    tab.worker_thread = fake_worker
+
+    fake_entry = (0.0, 2.5, "テスト")
+    mock_parser_cls = MagicMock()
+    mock_parser_cls.return_value.parse_raw_entries.return_value = [fake_entry]
+
+    mock_dialog_instance = MagicMock()
+    mock_dialog_instance.exec.return_value = QDialog.DialogCode.Accepted
+    mock_dialog_instance.DialogCode = QDialog.DialogCode
+    mock_dialog_instance.get_selected_words.return_value = []
+    mock_dialog_cls = MagicMock(return_value=mock_dialog_instance)
+    mock_dialog_cls.DialogCode = QDialog.DialogCode
+
+    words: list = []
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+        patch("anki_miner.gui.widgets.single_episode_tab.WordCurationDialog", mock_dialog_cls),
+    ):
+        tab._on_curation_requested(words)
+
+    mock_dialog_cls.assert_called_once()
+    call_args, call_kwargs = mock_dialog_cls.call_args
+    assert call_kwargs.get("lookup_fn") is fake_lookup
+    ctx = call_kwargs.get("media_context")
+    assert ctx is not None
+    assert ctx.video_file == fake_video
+    assert ctx.subtitle_entries == [fake_entry]
+    assert ctx.offset == pytest.approx(1.5)
+    assert ctx.audio_track_override == tab._audio_track_override
+    # Curation event must be set so the worker-thread mock can proceed
+    assert tab._curation_event.is_set()
+
+
+# ---------------------------------------------------------------------------
+# 14. Subtitle parse failure → media_context=None, dialog still constructed
+# ---------------------------------------------------------------------------
+
+
+def test_curation_requested_parse_error_passes_none_media_context(tab, tmp_path):
+    """When subtitle parsing raises, dialog is still called with media_context=None."""
+    from PyQt6.QtWidgets import QDialog
+
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+
+    # Parser raises on parse_raw_entries
+    mock_parser_cls = MagicMock()
+    mock_parser_cls.return_value.parse_raw_entries.side_effect = RuntimeError("bad file")
+
+    mock_dialog_instance = MagicMock()
+    mock_dialog_instance.exec.return_value = QDialog.DialogCode.Rejected
+    mock_dialog_instance.DialogCode = QDialog.DialogCode
+    mock_dialog_cls = MagicMock(return_value=mock_dialog_instance)
+    mock_dialog_cls.DialogCode = QDialog.DialogCode
+
+    tab.worker_thread = None  # no worker — lookup_fn will also be None
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.WordCurationDialog",
+            mock_dialog_cls,
+        ),
+    ):
+        tab._on_curation_requested([])
+
+    mock_dialog_cls.assert_called_once()
+    _, call_kwargs = mock_dialog_cls.call_args
+    assert call_kwargs.get("media_context") is None
+    assert call_kwargs.get("lookup_fn") is None
+    assert tab._curation_event.is_set()
+
+
+# ---------------------------------------------------------------------------
+# 15. worker_thread=None → lookup_fn=None
+# ---------------------------------------------------------------------------
+
+
+def test_curation_requested_no_worker_passes_none_lookup_fn(tab, tmp_path):
+    """When worker_thread is None, lookup_fn=None is passed regardless of files."""
+    from PyQt6.QtWidgets import QDialog
+
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.worker_thread = None
+
+    fake_entry = (0.0, 1.0, "日本語")
+    mock_parser_cls = MagicMock()
+    mock_parser_cls.return_value.parse_raw_entries.return_value = [fake_entry]
+
+    mock_dialog_instance = MagicMock()
+    mock_dialog_instance.exec.return_value = QDialog.DialogCode.Rejected
+    mock_dialog_instance.DialogCode = QDialog.DialogCode
+    mock_dialog_cls = MagicMock(return_value=mock_dialog_instance)
+    mock_dialog_cls.DialogCode = QDialog.DialogCode
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.WordCurationDialog",
+            mock_dialog_cls,
+        ),
+    ):
+        tab._on_curation_requested([])
+
+    _, call_kwargs = mock_dialog_cls.call_args
+    assert call_kwargs.get("lookup_fn") is None
+    assert tab._curation_event.is_set()

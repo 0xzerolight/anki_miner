@@ -34,9 +34,11 @@ from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import configure_expanding_container, make_label_fit_text
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 
@@ -378,8 +380,6 @@ class SingleEpisodeTab(MiningTabBase):
         subtitle_file = Path(subtitle_path)
 
         # Parse raw subtitle entries
-        from anki_miner.services.subtitle_parser import SubtitleParserService
-
         try:
             offset = self.offset_spinbox.value()
             # Parse with zero offset — SubtitleViewer handles offsetting itself
@@ -512,14 +512,49 @@ class SingleEpisodeTab(MiningTabBase):
 
     def _on_curation_requested(self, words: list) -> None:
         """Slot called on GUI thread when curation is needed."""
-        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+        # Build media context, mirroring _on_timing_clicked's offset-zeroed parse.
+        media_context: CurationMediaContext | None = None
+        video_path = self.video_selector.get_path().strip()
+        subtitle_path = self.subtitle_selector.get_path().strip()
+        if video_path and subtitle_path:
+            try:
+                offset = self.offset_spinbox.value()
+                config_no_offset = replace(self.config, subtitle_offset=0.0)
+                parser = SubtitleParserService(config_no_offset)
+                entries = parser.parse_raw_entries(Path(subtitle_path))
+                media_context = CurationMediaContext(
+                    video_file=Path(video_path),
+                    subtitle_entries=entries,
+                    offset=offset,
+                    audio_track_override=self._audio_track_override,
+                )
+            except Exception:
+                logger.exception("Failed to build media context for curation; proceeding without player")
+                media_context = None
 
-        dialog = WordCurationDialog(words, self, mark_known_callback=self._mark_known)
-        if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
-            self._curation_result = dialog.get_selected_words()
-        else:
-            self._curation_result = []
-        self._curation_event.set()  # Unblock the worker thread
+        # Build lookup function from the live worker's processor.
+        lookup_fn = None
+        if self.worker_thread is not None:
+            proc = getattr(self.worker_thread, "processor", None)
+            if proc is not None:
+                lookup_fn = proc.definition_service.lookup_all_offline
+
+        # finally guarantees the worker thread is unblocked even if dialog
+        # construction/exec raises — otherwise _curation_event.wait() hangs forever.
+        try:
+            dialog = WordCurationDialog(
+                words,
+                self,
+                mark_known_callback=self._mark_known,
+                media_context=media_context,
+                lookup_fn=lookup_fn,
+            )
+            if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
+                self._curation_result = dialog.get_selected_words()
+            else:
+                self._curation_result = []
+        finally:
+            self._curation_event.set()  # Unblock the worker thread
 
     def _on_cancel_clicked(self) -> None:
         """Handle cancel button click."""
