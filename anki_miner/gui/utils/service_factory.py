@@ -136,15 +136,20 @@ def create_services(config: AnkiMinerConfig) -> Services:
             load_result.warnings.append(f"Could not load frequency data: {e}")
             frequency_service = None
 
-    known_word_db = None
-    if config.use_known_words_db:
-        try:
-            known_word_db = KnownWordDB(config.known_words_db_path)
+    # Always construct the DB: the constructor is I/O-free and the user-curated
+    # ignore list (source='user', Issue #42) must be applied on every run even
+    # when use_known_words_db is off. Only eagerly initialize the file for the
+    # sync cache; the curator/Manage dialog initialize lazily on first write so
+    # users who never touch the feature get no empty file.
+    known_word_db: KnownWordDB | None = None
+    try:
+        known_word_db = KnownWordDB(config.known_words_db_path)
+        if config.use_known_words_db:
             known_word_db.initialize()
-        except Exception as e:
-            logger.warning(f"Could not initialize known word database: {e}")
-            load_result.warnings.append(f"Could not initialize known word database: {e}")
-            known_word_db = None
+    except Exception as e:
+        logger.warning(f"Could not initialize known word database: {e}")
+        load_result.warnings.append(f"Could not initialize known word database: {e}")
+        known_word_db = None
 
     word_list_service = None
     if config.use_blacklist or config.use_whitelist:

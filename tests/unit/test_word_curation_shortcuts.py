@@ -304,3 +304,67 @@ class TestFrequencyColumnSort:
         dlg.table.sortItems(5, Qt.SortOrder.AscendingOrder)
         texts = [dlg.table.item(r, 5).text() for r in range(dlg.table.rowCount())]
         assert texts == ["5", "50", "-"]
+
+
+class TestAddToKnownWords:
+    """Issue #42 — 'Add to Known Words' from the curator."""
+
+    def _dialog_with_callback(self):
+        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+
+        captured: list[set[str]] = []
+        dlg = WordCurationDialog(_make_words(3), mark_known_callback=lambda forms: captured.append(forms) or len(forms))
+        return dlg, captured
+
+    def test_calls_callback_with_mined_forms_of_selected_rows(self):
+        dlg, captured = self._dialog_with_callback()
+        mined = dlg.table.item(0, 1).text()
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        assert captured == [{mined}]
+        assert dlg._marked_known == {mined}
+
+    def test_marked_rows_are_unchecked_and_excluded(self):
+        dlg, _ = self._dialog_with_callback()
+        mined = dlg.table.item(0, 1).text()
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Unchecked
+        # Excluded from the run's selection.
+        assert mined not in {w.mined_form for w in dlg.get_selected_words()}
+
+    def test_marked_row_struck_through(self):
+        dlg, _ = self._dialog_with_callback()
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        assert dlg.table.item(0, 1).font().strikeOut() is True
+
+    def test_marked_row_cannot_be_rechecked_by_select_all(self):
+        dlg, _ = self._dialog_with_callback()
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        dlg._select_all()  # acts on all visible rows
+        assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Unchecked
+
+    def test_falls_back_to_current_row_when_no_selection(self):
+        dlg, captured = self._dialog_with_callback()
+        _select_rows(dlg, [])
+        dlg.table.setCurrentCell(1, 0)
+        mined = dlg.table.item(1, 1).text()
+        dlg._on_add_to_known()
+        assert captured == [{mined}]
+
+    def test_noop_without_target(self):
+        dlg, captured = self._dialog_with_callback()
+        _select_rows(dlg, [])
+        dlg.table.setCurrentCell(-1, -1)
+        dlg._on_add_to_known()
+        assert captured == []
+
+    def test_works_without_callback(self):
+        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+
+        dlg = WordCurationDialog(_make_words(3))
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()  # must not raise
+        assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Unchecked

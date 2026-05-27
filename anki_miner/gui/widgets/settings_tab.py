@@ -155,6 +155,7 @@ class SettingsTab(QWidget):
         # Filtering panel: excluded-decks picker + known-words cache rebuild (Issue #38).
         self.filtering_panel.fetch_decks_requested.connect(self._on_fetch_decks_requested)
         self.filtering_panel.rebuild_known_words_requested.connect(self._on_rebuild_known_words)
+        self.filtering_panel.manage_known_words_requested.connect(self._on_manage_known_words)
 
         # Themes panel persists immediately on any change (live-preview model).
         self.themes_panel.state_changed.connect(self._on_theme_state_changed)
@@ -1093,7 +1094,8 @@ class SettingsTab(QWidget):
             self,
             "Rebuild Known Words DB",
             "Clear the local known-words cache? It will re-sync from Anki on the "
-            "next mining run, applying your current deck exclusions.",
+            "next mining run, applying your current deck exclusions. Words you "
+            "added yourself from the Word Curator are kept.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -1103,7 +1105,9 @@ class SettingsTab(QWidget):
         try:
             db = KnownWordDB(self.config.known_words_db_path)
             db.initialize()
-            removed = db.clear()
+            # Preserve the user-curated ignore list (Issue #42); only the
+            # Anki-synced rows are rebuilt from Anki on the next run.
+            removed = db.clear(preserve_user=True)
         except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
             QMessageBox.warning(self, "Rebuild Known Words DB", f"Could not clear the cache: {e}")
             return
@@ -1113,3 +1117,13 @@ class SettingsTab(QWidget):
             "Rebuild Known Words DB",
             f"Cleared {removed} cached word(s). The cache will rebuild on the next run.",
         )
+
+    def _on_manage_known_words(self) -> None:
+        """Open the Manage Known Words dialog (Issue #42)."""
+        from anki_miner.gui.widgets.dialogs.known_words_dialog import KnownWordsManagerDialog
+
+        try:
+            db = KnownWordDB(self.config.known_words_db_path)
+            KnownWordsManagerDialog(db, self).exec()
+        except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
+            QMessageBox.warning(self, "Manage Known Words", f"Could not open the known words list: {e}")
