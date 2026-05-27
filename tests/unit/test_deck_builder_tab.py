@@ -278,11 +278,11 @@ def test_second_preview_cancels_lingering_worker(tab, tmp_path):
         tab.subtitle_folder_selector.is_valid = MagicMock(return_value=True)
 
         tab._on_preview_clicked()  # creates worker1 (blocks on gate)
-        assert tab._worker is worker1
+        assert tab.worker_thread is worker1
         tab._on_preview_clicked()  # should cancel worker1, create worker2
 
     worker1.cancel.assert_called_once()
-    assert tab._worker is worker2
+    assert tab.worker_thread is worker2
 
 
 # ---------------------------------------------------------------------------
@@ -392,7 +392,7 @@ def test_build_clicked_calls_worker_confirm(tab):
     mock_worker = MagicMock(name="DeckBuilderWorker")
     mock_worker.request = MagicMock()
     mock_worker.request.deck_name = "TestDeck"
-    tab._worker = mock_worker
+    tab.worker_thread = mock_worker
 
     tab._on_build_clicked()
 
@@ -403,7 +403,7 @@ def test_build_clicked_disables_build_and_preview(tab):
     mock_worker = MagicMock(name="DeckBuilderWorker")
     mock_worker.request = MagicMock()
     mock_worker.request.deck_name = "TestDeck"
-    tab._worker = mock_worker
+    tab.worker_thread = mock_worker
     tab.build_button.setEnabled(True)
 
     tab._on_build_clicked()
@@ -419,7 +419,7 @@ def test_build_clicked_disables_build_and_preview(tab):
 
 def test_cancel_clicked_calls_worker_cancel(tab):
     mock_worker = MagicMock(name="DeckBuilderWorker")
-    tab._worker = mock_worker
+    tab.worker_thread = mock_worker
 
     tab._on_cancel_clicked()
 
@@ -431,7 +431,7 @@ def test_cancel_clicked_shows_cancelling_state(tab):
     worker's finished signal restores it (so a new run cannot reassign the
     worker over a still-running thread)."""
     mock_worker = MagicMock(name="DeckBuilderWorker")
-    tab._worker = mock_worker
+    tab.worker_thread = mock_worker
     # Mid-run: Preview disabled, Cancel enabled.
     tab.preview_button.setEnabled(False)
     tab.cancel_button.setEnabled(True)
@@ -448,11 +448,11 @@ def test_cancel_clicked_retains_worker_reference(tab):
     """The worker reference is retained (not nulled) on cancel so the running
     QThread is not garbage-collected mid-run; it is replaced on the next run."""
     mock_worker = MagicMock(name="DeckBuilderWorker")
-    tab._worker = mock_worker
+    tab.worker_thread = mock_worker
 
     tab._on_cancel_clicked()
 
-    assert tab._worker is mock_worker
+    assert tab.worker_thread is mock_worker
 
 
 def test_restore_buttons_resets_cancelling_label(tab):
@@ -479,7 +479,7 @@ def test_build_finished_restores_buttons(tab):
     mock_worker = MagicMock(name="DeckBuilderWorker")
     mock_worker.request = MagicMock()
     mock_worker.request.deck_name = "TestDeck"
-    tab._worker = mock_worker
+    tab.worker_thread = mock_worker
     # Simulate mid-run state
     tab.build_button.setEnabled(False)
     tab.preview_button.setEnabled(False)
@@ -498,11 +498,11 @@ def test_build_finished_retains_worker_reference(tab):
     mock_worker = MagicMock(name="DeckBuilderWorker")
     mock_worker.request = MagicMock()
     mock_worker.request.deck_name = "TestDeck"
-    tab._worker = mock_worker
+    tab.worker_thread = mock_worker
 
     tab._on_build_finished(200, 88.5)
 
-    assert tab._worker is mock_worker
+    assert tab.worker_thread is mock_worker
 
 
 # ---------------------------------------------------------------------------
@@ -511,7 +511,7 @@ def test_build_finished_retains_worker_reference(tab):
 
 
 def test_error_restores_buttons(tab):
-    tab._worker = MagicMock(name="DeckBuilderWorker")
+    tab.worker_thread = MagicMock(name="DeckBuilderWorker")
     tab.preview_button.setEnabled(False)
     tab.cancel_button.setEnabled(True)
 
@@ -525,11 +525,11 @@ def test_error_retains_worker_reference(tab):
     """The worker reference is retained on error (replaced on the next run),
     avoiding destruction of a still-unwinding QThread."""
     mock_worker = MagicMock(name="DeckBuilderWorker")
-    tab._worker = mock_worker
+    tab.worker_thread = mock_worker
 
     tab._on_error("boom")
 
-    assert tab._worker is mock_worker
+    assert tab.worker_thread is mock_worker
 
 
 # ---------------------------------------------------------------------------

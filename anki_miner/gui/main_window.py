@@ -566,22 +566,14 @@ class MainWindow(QMainWindow):
             self._jmdict_migration_worker.wait(2000)
 
         # Cancel and wait for any processing workers in tabs
-        from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
-        from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
-        from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
         from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
         for i in range(self.tabs.count()):
             tab = self.tabs.widget(i)
-            # DeckBuilderTab holds its worker on `_worker`; the others use
-            # `worker_thread`. DeckBuilderWorker.cancel() also opens its confirm
-            # gate, so a worker blocked awaiting Build unblocks and exits.
-            if isinstance(tab, DeckBuilderTab):
-                worker = getattr(tab, "_worker", None)
-            elif isinstance(tab, SingleEpisodeTab | BatchProcessingTab | YouTubeTab):
-                worker = getattr(tab, "worker_thread", None)
-            else:
-                worker = None
+            # All mining tabs expose their worker on `worker_thread`.
+            # DeckBuilderWorker.cancel() also opens its confirm gate, so a worker
+            # blocked awaiting Build unblocks and exits.
+            worker = getattr(tab, "worker_thread", None)
             if worker and worker.isRunning():
                 worker.cancel()
                 worker.wait(2000)
