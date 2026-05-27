@@ -51,8 +51,9 @@ def select(
     Args:
         counts: Lemma → occurrence count for the full corpus.
         mode: Selection strategy (:class:`~anki_miner.models.deck_build.DeckSelectionMode`).
-        value: Interpreted as *N* (``TOP_N``) or target percentage 0–100
-            (``COVERAGE_PCT``); ignored for ``ALL``.
+        value: Interpreted as *N* (``TOP_N``, fractional parts truncated via
+            ``int()``) or target percentage 0–100 (``COVERAGE_PCT``); ignored
+            for ``ALL``.  ``TOP_N`` ≤ 0 and ``COVERAGE_PCT`` ≤ 0 select nothing.
         known_lemmas: Lemmas already in the user's Anki collection.
 
     Returns:
@@ -85,15 +86,20 @@ def select(
         n = int(value)
         candidate_set = set() if n <= 0 else set(ranked[:n])
 
-    else:  # COVERAGE_PCT
+    elif mode is DeckSelectionMode.COVERAGE_PCT:
         target = value / 100.0
-        cumulative = 0
         candidate_set = set()
-        for lemma in ranked:
-            cumulative += counts[lemma]
-            candidate_set.add(lemma)
-            if cumulative / total_tokens >= target:
-                break
+        if target > 0.0:
+            # Smallest prefix whose cumulative coverage reaches the target.
+            cumulative = 0
+            for lemma in ranked:
+                cumulative += counts[lemma]
+                candidate_set.add(lemma)
+                if cumulative / total_tokens >= target:
+                    break
+
+    else:  # pragma: no cover - exhaustiveness guard
+        raise ValueError(f"Unhandled selection mode: {mode!r}")
 
     candidate_count = len(candidate_set)
     projected_coverage_pct = (sum(counts[lemma] for lemma in candidate_set) / total_tokens) * 100.0
