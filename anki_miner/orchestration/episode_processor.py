@@ -236,14 +236,15 @@ class EpisodeProcessor:
             self.presenter.show_info(f"Frequency data: {ranked_count}/{len(all_words)} words ranked")
 
         # Filter against existing vocabulary.
-        self.presenter.show_info("Step 2/5 — Filtering against known vocabulary")
         if self.config.include_known_words:
             # Deck Builder "include everything" mode: skip known-words subtraction
             # entirely — including the Issue #42 user ignore list — and mine all
             # words that passed POS/subtype filtering. Coverage-deck builds
             # intentionally re-card words the user already knows.
+            self.presenter.show_info("Step 2/5 — Known-words filter bypassed (include everything mode)")
             unknown_words = all_words
         else:
+            self.presenter.show_info("Step 2/5 — Filtering against known vocabulary")
             # User-curated ignore list (Issue #42): always applied on the normal
             # mining path, regardless of the use_known_words_db toggle. The DB
             # object is always present now, but the file may not exist for users
