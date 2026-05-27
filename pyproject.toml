@@ -60,6 +60,12 @@ Documentation = "https://github.com/0xzerolight/anki_miner/blob/main/README.md"
 [tool.setuptools]
 include-package-data = true
 
+# Ship the bundled dictionary card stylesheet (Issue #44). It lives outside
+# gui/resources (which MANIFEST.in already covers), so declare it explicitly so
+# pip/pipx wheels include it. The PyInstaller bundle wires it via anki_miner.spec.
+[tool.setuptools.package-data]
+"anki_miner.services.dictionary.resources" = ["*.css"]
+
 [tool.setuptools.dynamic]
 version = {attr = "anki_miner.__version__"}
 

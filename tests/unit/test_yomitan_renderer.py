@@ -227,40 +227,48 @@ class TestStylePassthrough:
 
 
 class TestDataAttributes:
-    """Yomitan SC `data: {k: v}` must emit HTML data-* attrs (not class fragments)
-    so dictionary-supplied CSS hooks work as documented."""
+    """Yomitan SC `data: {k: v}` must emit HTML `data-sc-*` attrs (not class
+    fragments) so dictionary-supplied CSS hooks work as documented. The `sc-`
+    prefix matches Yomitan's own DOM, so published snippets like
+    `[data-sc-content|="example-sentence"]` apply verbatim."""
 
     def test_data_emits_data_attr(self):
         node = {"tag": "span", "content": "x", "data": {"content": "definition"}}
         out = structured_content_to_html(node)
-        assert 'data-content="definition"' in out
+        assert 'data-sc-content="definition"' in out
 
     def test_data_camel_key_kebabed(self):
         node = {"tag": "span", "content": "x", "data": {"sectionName": "pos"}}
         out = structured_content_to_html(node)
-        assert 'data-section-name="pos"' in out
+        assert 'data-sc-section-name="pos"' in out
 
     def test_data_value_with_whitespace_preserved(self):
         node = {"tag": "span", "content": "x", "data": {"key": "two words"}}
         out = structured_content_to_html(node)
-        assert 'data-key="two words"' in out
+        assert 'data-sc-key="two words"' in out
 
     def test_data_non_string_value_skipped(self):
         node = {"tag": "span", "content": "x", "data": {"key": ["list"]}}
         out = structured_content_to_html(node)
-        assert "data-" not in out
+        assert "data-sc-" not in out
         assert out == '<span class="gloss-sc-span">x</span>'
 
     def test_data_value_quote_escaped(self):
         node = {"tag": "span", "content": "x", "data": {"k": 'a"b'}}
         out = structured_content_to_html(node)
-        assert 'data-k="a&quot;b"' in out
+        assert 'data-sc-k="a&quot;b"' in out
 
     def test_data_invalid_key_dropped(self):
         node = {"tag": "span", "content": "x", "data": {"-bad": "v", "good": "v"}}
         out = structured_content_to_html(node)
-        assert "data--bad" not in out
-        assert 'data-good="v"' in out
+        assert "data-sc--bad" not in out
+        assert 'data-sc-good="v"' in out
+
+    def test_jitendex_example_sentence_hook_verbatim(self):
+        # The exact attribute the Jitendex "custom styles" wiki CSS targets.
+        node = {"tag": "div", "content": "例文", "data": {"content": "example-sentence"}}
+        out = structured_content_to_html(node)
+        assert 'data-sc-content="example-sentence"' in out
 
 
 class TestLangAttribute:

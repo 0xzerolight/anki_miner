@@ -191,6 +191,59 @@ class AnkiService:
             return []
         return list(result or [])
 
+    def get_model_styling(self, model_name: str | None = None) -> str:
+        """Return the note type's current card CSS via AnkiConnect ``modelStyling``.
+
+        Unlike the read-only fetch helpers that swallow errors and return a
+        neutral empty value, this lets :class:`AnkiConnectionError` propagate so
+        the caller (the Card Styling worker) can report a hard failure — Anki
+        down, or the configured note type not existing — honestly instead of
+        silently writing styling against a missing model.
+
+        Args:
+            model_name: Note type name. Uses ``config.anki_note_type`` if None.
+
+        Returns:
+            The note type's CSS, or an empty string if AnkiConnect responds but
+            reports no styling for the model.
+
+        Raises:
+            AnkiConnectionError: If AnkiConnect cannot be reached or returns an
+                error payload (e.g. the model was not found).
+        """
+        name = model_name or self.config.anki_note_type
+        result = post_action(
+            self.config.ankiconnect_url,
+            "modelStyling",
+            params={"modelName": name},
+            timeout=15,
+        )
+        if isinstance(result, dict):
+            return str(result.get("css", "") or "")
+        return ""
+
+    def update_model_styling(self, css: str, model_name: str | None = None) -> None:
+        """Push ``css`` into the note type's card styling via ``updateModelStyling``.
+
+        The CSS is sent verbatim as an opaque JSON string value — it must NOT be
+        HTML-escaped. Errors propagate (see :meth:`get_model_styling`).
+
+        Args:
+            css: The full styling string to write to the note type.
+            model_name: Note type name. Uses ``config.anki_note_type`` if None.
+
+        Raises:
+            AnkiConnectionError: If AnkiConnect cannot be reached or returns an
+                error payload (e.g. the model was not found).
+        """
+        name = model_name or self.config.anki_note_type
+        post_action(
+            self.config.ankiconnect_url,
+            "updateModelStyling",
+            params={"model": {"name": name, "css": css}},
+            timeout=30,
+        )
+
     def _build_vocab_query(self) -> str:
         """Build the findNotes query for known-words detection.
 

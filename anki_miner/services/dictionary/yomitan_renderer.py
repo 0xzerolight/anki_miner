@@ -506,7 +506,11 @@ def _render_attrs(node: dict[str, YomitanNode], tag: str) -> str:
     # `gloss-sc-span` (matching the fallback).
     parts.append(f'class="gloss-sc-{tag}"')
 
-    # data: {key: value} → data-key="value" HTML attrs (matches Yomitan spec).
+    # data: {key: value} → data-sc-key="value" HTML attrs. Yomitan's own DOM
+    # renders structured-content `data` entries under the `data-sc-` prefix
+    # (dataset key `sc<Key>`), and published dictionary CSS (e.g. the Jitendex
+    # "custom styles" snippets, `[data-sc-content|="example-sentence"]`) targets
+    # that prefix. Emitting it verbatim lets those snippets work unmodified.
     data = node.get("data")
     if isinstance(data, dict):
         for key, value in data.items():
@@ -515,7 +519,7 @@ def _render_attrs(node: dict[str, YomitanNode], tag: str) -> str:
             safe_key = _camel_to_kebab(key)
             if not _DATA_KEY_RE.match(safe_key):
                 continue
-            parts.append(f'data-{safe_key}="{escape(value, quote=True)}"')
+            parts.append(f'data-sc-{safe_key}="{escape(value, quote=True)}"')
 
     lang = node.get("lang")
     if isinstance(lang, str):
