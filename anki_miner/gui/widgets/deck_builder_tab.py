@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from pathlib import Path
 
@@ -218,7 +219,7 @@ class DeckBuilderTab(MiningTabBase):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.xs)
 
-        self.preview_button = ModernButton("Preview", variant="primary")
+        self.preview_button = ModernButton("Preview", variant="secondary")
         self.preview_button.setToolTip("Analyse the corpus and preview which words will be included")
 
         self.build_button = ModernButton("Build Deck", variant="primary")
@@ -367,10 +368,15 @@ class DeckBuilderTab(MiningTabBase):
             collection_filter=self.collection_filter_checkbox.isChecked(),
         )
 
-        # Cancel any lingering worker from a previous preview-not-built run
+        # Cancel any lingering worker from a previous preview-not-built run.
+        # Disconnect its finished handler first so its imminent termination
+        # does not restore buttons mid-new-run. The reference is dropped by the
+        # reassignment below (the lingering worker is blocked on its gate, so it
+        # returns immediately on cancel — it is not actively running).
         if self._worker is not None:
+            with contextlib.suppress(TypeError, RuntimeError):
+                self._worker.finished.disconnect(self._restore_buttons)
             self._worker.cancel()
-            self._worker = None
 
         self.log_widget.clear_log()
         self.log_widget.append_info("Analysing corpus…")
@@ -385,6 +391,12 @@ class DeckBuilderTab(MiningTabBase):
         self._worker.item_completed.connect(self._on_item_completed)
         self._worker.build_finished.connect(self._on_build_finished)
         self._worker.error.connect(self._on_error)
+        # Restore buttons only when the QThread truly finishes. The worker
+        # reference is NOT nulled in the terminal slots: dropping the only
+        # reference while the QThread is still unwinding risks
+        # "QThread: Destroyed while thread is still running". It is replaced on
+        # the next preview instead.
+        self._worker.finished.connect(self._restore_buttons)
         self._worker.start()
 
     # ------------------------------------------------------------------
@@ -446,18 +458,21 @@ class DeckBuilderTab(MiningTabBase):
         )
         self.progress_widget.set_status("Build complete")
         self._restore_buttons()
-        self._worker = None
 
     # ------------------------------------------------------------------
     # Slot: Cancel button
     # ------------------------------------------------------------------
 
     def _on_cancel_clicked(self) -> None:
+        # Request cancellation and reflect the in-progress state. Buttons are
+        # restored by the worker's ``finished`` signal once the thread actually
+        # ends — restoring Preview here would let a new run reassign
+        # ``self._worker`` over a still-running thread.
         if self._worker is not None:
             self._worker.cancel()
-        self.log_widget.append_warning("Cancelled.")
-        self._restore_buttons()
-        self._worker = None
+        self.cancel_button.setText("Cancelling…")
+        self.cancel_button.setEnabled(False)
+        self.log_widget.append_warning("Cancelling…")
 
     # ------------------------------------------------------------------
     # Slot: error (from worker)
@@ -466,7 +481,6 @@ class DeckBuilderTab(MiningTabBase):
     def _on_error(self, msg: str) -> None:
         self.log_widget.append_error(f"Error: {msg}")
         self._restore_buttons()
-        self._worker = None
 
     # ------------------------------------------------------------------
     # Progress slots required by MiningTabBase._wire_progress_callback
@@ -494,10 +508,11 @@ class DeckBuilderTab(MiningTabBase):
         self.cancel_button.setEnabled(True)
 
     def _restore_buttons(self) -> None:
-        """Re-enable Preview; disable Build + Cancel."""
+        """Re-enable Preview; disable Build + Cancel; reset Cancel label."""
         self.preview_button.setEnabled(True)
         self.build_button.setEnabled(False)
         self.cancel_button.setEnabled(False)
+        self.cancel_button.setText("Cancel")
 
     # ------------------------------------------------------------------
     # Config update
