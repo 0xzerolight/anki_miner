@@ -1,5 +1,6 @@
 """Service for parsing subtitles and extracting vocabulary."""
 
+import collections
 import logging
 import re
 from collections.abc import Iterator
@@ -381,6 +382,31 @@ class SubtitleParserService:
                 )
 
         return all_words, line_index
+
+    def count_lemmas(self, subtitle_file: Path) -> collections.Counter[str]:
+        """Return raw in-corpus lemma occurrence counts for a subtitle file.
+
+        Unlike ``parse_subtitle_file``, this method counts every occurrence of a
+        lemma (including repeats within and across lines) without deduplication.
+        The same word-inclusion rules as mining apply — only tokens that
+        ``_should_include_word`` accepts are counted.
+
+        Args:
+            subtitle_file: Path to subtitle file (.ass, .srt, .ssa)
+
+        Returns:
+            Counter mapping lemma → total occurrence count across all lines.
+
+        Raises:
+            SubtitleParseError: If subtitle file cannot be parsed
+        """
+        subs = self._load_subs(subtitle_file)
+        counts: collections.Counter[str] = collections.Counter()
+        for _text, merged_tokens, *_ in self._iter_parsed_lines(subs):
+            for token in merged_tokens:
+                if self._should_include_word(token):
+                    counts[self._extract_lemma(token)] += 1
+        return counts
 
     def _merge_compound_suffixes(self, tokens: list) -> list:
         """Run all compound-merge passes in dependency order.
