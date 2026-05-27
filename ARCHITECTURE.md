@@ -172,6 +172,13 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 - `collect_cross_episode_frequencies()` does a two-pass approach: first parses all subtitles, then counts word appearances across episodes
 - `process_folder()` iterates matched pairs sequentially
 
+**DeckBuilderWorker** (`gui/workers/deck_builder_worker.py`):
+Whole-anime deck mining in two phases separated by a GUI confirm gate.
+
+Phase 1 — aggregate + select: `SubtitleParserService.count_lemmas` is called on every subtitle in the request. The raw per-file counters are summed by `services.corpus_aggregator.aggregate` into a single corpus `Counter`. `select` then ranks lemmas by in-corpus frequency and picks a candidate set according to the mode (ALL, TOP_N, COVERAGE_PCT). Coverage is computed over in-corpus mineable-word token counts (the same POS-filter as mining applies), not `frequency.csv`. A `DeckBuildPreview` is emitted and the worker blocks on a `threading.Event` gate until the GUI calls `confirm()` or `reject()`.
+
+Phase 2 — build: `AnkiService.ensure_deck` creates the target deck if it does not exist (idempotent). For each episode pair, a fresh `EpisodeProcessor` is created via `dataclasses.replace(config, anki_deck_name=deck_name, include_known_words=not collection_filter)` — no production code other than the config field changes. A `curation_callback` closure keeps a word only if its lemma is in the selected set and has not already been carded in a previous episode (`carded: set[str]` shared across the loop). This enforces the cross-episode "card each lemma once" invariant without touching `EpisodeProcessor` internals. `episode_name_override` and `series_name_override` are set to the video stem and deck name respectively so history rows are distinct from regular episode-mining sessions.
+
 ## Configuration
 
 `AnkiMinerConfig` (`config/config.py`) is a frozen (immutable) dataclass with ~30 settings:
