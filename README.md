@@ -76,12 +76,14 @@ Tabs:
 
 - **Episode Mining**: mine one video/subtitle pair with file selectors and progress tracking.
 - **Batch Mining**: queue a folder of episode/subtitle pairs for sequential processing. Files are paired by episode number, so each folder / queue item should hold a single show (use Multi-Anime Queue for mining multiple series at a time).
+- **Deck Builder**: point at a folder of episode/subtitle pairs and mine the full series into one named deck. Lemmas are ranked by in-series frequency; pick how many to include (all, top N, or a coverage target) and preview before cards are created.
 - **YouTube**: paste one or more URLs, then mine the queue.
 - **Analytics**: history, series difficulty rankings, milestones, undo.
 - **Settings**: Anki, Media, Dictionary, Filtering, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
 
 ## Features
 
+- **Deck Builder**: point it at a folder with all episodes of a show and it mines the whole series into a single named deck, frequency-ordered, deduped across episodes. Inspired by the approach of jiten.moe / jpdb — free, using media you already have.
 - Anki cards with furigana, pitch accent, and word frequency.
 - **Bold the target word** in the sentence so it stands out on the card front.
 - **Glossary field** that combines every enabled dictionary into one card field, compatible with the Senren dictionary-toggle template.
