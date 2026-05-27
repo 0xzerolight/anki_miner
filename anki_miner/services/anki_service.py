@@ -4,6 +4,7 @@ import base64
 import html
 import logging
 import re
+import unicodedata
 from pathlib import Path
 
 import requests
@@ -29,6 +30,42 @@ _DICT_MEDIA_IMG_RE = re.compile(
     re.IGNORECASE,
 )
 _IMG_SRC_RE = re.compile(r'src="([^"]+)"', re.IGNORECASE)
+
+# Used to normalize a stored first-field value to the same key Anki dedups on.
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_SOUND_REF_RE = re.compile(r"\[(?:sound|anki:play[^\]]*):[^\]]*\]", re.IGNORECASE)
+
+
+def _strip_for_dedup(value: str) -> str:
+    """Normalize a field value to match Anki's HTML/media-stripped dedup key.
+
+    Anki computes a first-field duplicate checksum after stripping HTML tags and
+    media references (its ``strip_html_media``). Our known-words filter compares
+    the stored first field against ``mined_form`` — a plain string — so we must
+    strip the same way, or a pre-existing card whose Expression carries ``<b>``,
+    ``<div>``, ``&entity;`` markup, a ``[sound:...]`` ref, or stray whitespace
+    slips the filter and then collides at ``addNotes`` time (the AnkiConnect
+    "cannot create note because it is a duplicate" error).
+
+    Mirrors Anki deliberately: it strips HTML/media but NOT ``[reading]``
+    furigana brackets, so ``食べる[たべる]`` stays distinct from ``食べる`` here too.
+    """
+    text = _SOUND_REF_RE.sub("", value)
+    text = _HTML_TAG_RE.sub("", text)
+    text = html.unescape(text)
+    text = unicodedata.normalize("NFC", text)
+    return " ".join(text.split())
+
+
+def _is_duplicate_error(err: AnkiConnectionError) -> bool:
+    """True if an AnkiConnect error payload is (only) about duplicate notes.
+
+    Some AnkiConnect versions surface a duplicate as a top-level ``error`` on
+    ``addNotes`` (a string, or a single-element list) instead of a ``null`` slot
+    in the result array. We recover from those by retrying per-note; any other
+    error (missing deck/model, connection) must keep propagating.
+    """
+    return "duplicate" in str(err).lower()
 
 
 def _extract_dict_media_srcs(definition_html: str) -> list[str]:
@@ -97,6 +134,11 @@ class AnkiService:
         """
         self.config = config
         self.last_created_note_ids: list[int] = []
+        # Number of notes skipped as duplicates during the last
+        # create_cards_batch call (only counts the per-note recovery path; the
+        # common case where AnkiConnect returns a null slot is not attributable
+        # to a specific cause). Read by the pipeline to report skips.
+        self.last_skipped_duplicates: int = 0
         # Per-service-lifetime cache of dict-media filenames already shipped to
         # AnkiConnect this run. Avoids re-uploading the same accent SVG once
         # per card across a 5000-word batch.
@@ -231,9 +273,14 @@ class AnkiService:
                     fields = note.get("fields", {})
                     if not fields:
                         continue
-                    # First field is always the expression/word in Anki convention
+                    # First field is always the expression/word in Anki
+                    # convention. Normalize it the same way Anki dedups (strip
+                    # HTML/media, unescape, NFC) so a markup-wrapped Expression
+                    # matches the plain `mined_form` the filter compares against
+                    # — otherwise the word slips the filter and AnkiConnect
+                    # rejects it as a duplicate at addNotes time.
                     first_field = next(iter(fields))
-                    word = fields[first_field].get("value", "").strip()
+                    word = _strip_for_dedup(fields[first_field].get("value", ""))
                     if word and _JAPANESE_RE.search(word):
                         existing_words.add(word)
 
@@ -329,9 +376,12 @@ class AnkiService:
         """
         if not word_data_list:
             self.last_created_note_ids = []
+            self.last_skipped_duplicates = 0
             return 0
 
         self.last_created_note_ids = []
+        self.last_skipped_duplicates = 0
+        skipped_duplicates = 0
         all_created_ids: list[int] = []
 
         if progress_callback:
@@ -447,17 +497,31 @@ class AnkiService:
 
             # Send batch request. `post_action` raises `AnkiConnectionError`
             # for connection failures, transport errors, and AnkiConnect-side
-            # error payloads — propagate them; callers catch at the
-            # pipeline boundary.
-            note_ids = (
-                post_action(
-                    self.config.ankiconnect_url,
-                    "addNotes",
-                    params={"notes": notes},
-                    timeout=60,
+            # error payloads. Duplicates normally come back as a `null` slot in
+            # the result array (batch survives), but some AnkiConnect versions
+            # raise a top-level duplicate error for the whole batch — which used
+            # to abort the entire run with zero cards. Recover from that case by
+            # retrying per-note and skipping only the duplicates; any other
+            # error still propagates to the pipeline boundary.
+            try:
+                note_ids = (
+                    post_action(
+                        self.config.ankiconnect_url,
+                        "addNotes",
+                        params={"notes": notes},
+                        timeout=60,
+                    )
+                    or []
                 )
-                or []
-            )
+            except AnkiConnectionError as e:
+                if not _is_duplicate_error(e):
+                    raise
+                logger.warning(
+                    "addNotes reported a duplicate for the batch; retrying per-note "
+                    "and skipping duplicates already in your collection.",
+                )
+                note_ids, batch_skipped = self._add_notes_individually(notes)
+                skipped_duplicates += batch_skipped
 
             # Count successful creations (non-null IDs)
             batch_created = sum(1 for nid in note_ids if nid is not None)
@@ -474,8 +538,11 @@ class AnkiService:
             progress_callback.on_complete()
 
         self.last_created_note_ids = all_created_ids
+        self.last_skipped_duplicates = skipped_duplicates
         if total_created > 0:
             self.invalidate_existing_vocabulary_cache()
+        if skipped_duplicates > 0:
+            logger.info("Skipped %d note(s) already present in Anki (duplicates).", skipped_duplicates)
         if self.config.bold_target_in_sentence and word_data_list:
             logger.info(
                 "bold_target_in_sentence=on: precomputed bold used on %d/%d cards (escape fallback: %d)",
@@ -484,6 +551,34 @@ class AnkiService:
                 bold_fallback,
             )
         return total_created
+
+    def _add_notes_individually(self, notes: list[dict]) -> tuple[list[int | None], int]:
+        """Add notes one at a time, skipping any AnkiConnect rejects as duplicates.
+
+        Fallback for the case where ``addNotes`` raises a top-level duplicate
+        error for the whole batch instead of returning a ``null`` slot per
+        duplicate. Returns the per-note id list (``None`` for a skipped
+        duplicate) and the count of duplicates skipped. A non-duplicate error on
+        any note propagates so genuine failures (missing deck/model, connection
+        loss) are not silently swallowed.
+        """
+        results: list[int | None] = []
+        skipped = 0
+        for note in notes:
+            try:
+                note_id = post_action(
+                    self.config.ankiconnect_url,
+                    "addNote",
+                    params={"note": note},
+                    timeout=60,
+                )
+                results.append(note_id)
+            except AnkiConnectionError as e:
+                if not _is_duplicate_error(e):
+                    raise
+                results.append(None)
+                skipped += 1
+        return results, skipped
 
     def _store_media_files_batch(
         self,
