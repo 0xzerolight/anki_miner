@@ -164,6 +164,11 @@ class DeckBuilderWorker(CancellableWorker):
                 total += result.cards_created
                 self.item_completed.emit(name, result.cards_created)
 
+            # A mid-build cancel breaks out of the loop above; do NOT emit
+            # build_finished in that case — the GUI would otherwise show a
+            # "build complete" summary for a partial, cancelled run.
+            if self.check_cancelled():
+                return
             self.build_finished.emit(total, preview.projected_coverage_pct)
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
             self.error.emit(str(e))
