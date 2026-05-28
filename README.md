@@ -87,6 +87,9 @@ Tabs:
 - Anki cards with furigana, pitch accent, and word frequency.
 - **Bold the target word** in the sentence so it stands out on the card front.
 - **Glossary field** that combines every enabled dictionary into one card field, compatible with the Senren dictionary-toggle template.
+- **Word Curator with embedded video player** — hear each sentence before you decide, and see every enabled offline dictionary's hit side-by-side.
+- **Custom card styling** — generated cards render cleanly out of the box; no manual Anki note-type styling required.
+- **User-curated known-words list** — add words straight from the curator; they're skipped on every future run.
 - Load any Yomitan dictionaries you like, reorder them, and optionally enable Jisho as a slower, rate-limited online fallback (offline dictionaries are recommended for speed).
 - YouTube queue: paste a list of URLs, mine the whole list in one click.
 - Batch a folder of episode/subtitle pairs for unattended processing.
@@ -130,7 +133,7 @@ Custom themes: drop a JSON file matching the schema in `anki_miner/gui/resources
 
 Anki Miner looks up definitions through a **provider chain** you configure. Each lookup tries the providers in order; the first hit wins. Load any number of offline Yomitan-format dictionaries — these are recommended for speed. Jisho is available as an online fallback but is disabled by default because every lookup waits ~0.5s on the API and slows mining substantially.
 
-Add a dictionary in **Settings → Add Dictionary…** by pointing at a Yomitan `.zip` archive. Drag entries to reorder the chain. Installed dictionaries are indexed once into `~/.anki_miner/dicts/<dict_id>/index.sqlite` and loaded on startup. Structured-content entries are rendered to HTML on import, so card definitions preserve the source dictionary's formatting (definition lists, examples, tags).
+Add a dictionary in **Settings → Add Dictionary…** by pointing at a Yomitan `.zip` archive. Drag entries to reorder the chain. Installed dictionaries are indexed once into `~/.anki_miner/dicts/<dict_id>/index.sqlite` and loaded on startup. Structured-content entries are rendered to HTML on import, so card definitions preserve the source dictionary's formatting (definition lists, examples, tags). The dictionary folder location is configurable via **Settings → Dictionary → Dictionary Folder** — useful for keeping multi-GB Yomitan archives on a separate drive.
 
 **Recommended Japanese → English dictionaries** — both are JMdict-derived; pick whichever fits your cards, or load both and order them as you like:
 
