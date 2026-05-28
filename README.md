@@ -94,7 +94,25 @@ Tabs:
 - Audio in MP3 or Opus, at the bitrate you choose — Opus produces much smaller files for the same listening quality.
 - Animated screenshots in AVIF or WebP for cards that show a moment of motion instead of a still frame.
 - Analytics dashboard with history, undo, milestones, and series difficulty rankings.
-- Four built-in themes (Light, Dark, Sakura, Tokyo Night) with a favorites list, `Ctrl+T` to cycle, and custom themes from a JSON file.
+- 27 built-in themes (Catppuccin, Gruvbox, Nord, Tokyo Night, Rosé Pine, and more) with a favorites list, `Ctrl+T` to cycle, and custom themes from a JSON file. See the full list below.
+
+<details>
+<summary><strong>Built-in themes (27)</strong></summary>
+
+- **Ayu** — Light, Mirage, Dark
+- **Catppuccin** — Latte (light); Frappé, Macchiato, Mocha (dark)
+- **Everforest** — Light, Dark
+- **GitHub** — Light; Dark, Dark Dimmed
+- **Gruvbox** — Light Medium, Dark Medium
+- **Kanagawa** — Lotus (light), Wave (dark)
+- **Rosé Pine** — Dawn (light); Main, Moon (dark)
+- **Solarized** — Light, Dark
+- **Standalone** — Light, Dark, Sakura, Nord, One Dark, Tokyo Night
+
+Upstream attribution: [LICENSE-THEMES.md](LICENSE-THEMES.md). 
+Custom themes: drop a JSON file matching the schema in `anki_miner/gui/resources/styles/themes/` into your config dir. Or suggest in an Issue and it will be added for all users.
+
+</details>
 
 <details>
 <summary><strong>How It Works</strong></summary>
