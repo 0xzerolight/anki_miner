@@ -36,12 +36,14 @@ from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWork
 from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
 from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
 from anki_miner.gui.workers.frequency_import_worker import FrequencyImportWorker
+from anki_miner.gui.workers.pitch_import_worker import PitchImportWorker
 from anki_miner.gui.workers.styling_worker import StylingWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.frequency import YomitanFreqImportResult
 from anki_miner.services.known_word_db import KnownWordDB
+from anki_miner.services.pitch_accent import YomitanPitchImportResult
 
 
 class SettingsTab(QWidget):
@@ -71,6 +73,10 @@ class SettingsTab(QWidget):
         # would be destroyed mid-run if the worker fell out of scope before
         # joining. _resolve_frequency_path stores the active worker here.
         self._active_freq_worker: FrequencyImportWorker | None = None
+        # Same GC-safety rationale as the freq worker above; PitchImportWorker
+        # is a QThread and would be destroyed mid-run if the worker fell out
+        # of scope before joining. _resolve_pitch_accent_path stores it here.
+        self._active_pitch_worker: PitchImportWorker | None = None
         self._setup_ui()
         self._connect_signals()
         self._load_config()
@@ -356,13 +362,13 @@ class SettingsTab(QWidget):
                 )
                 return
 
-        # Build the candidate config from all panels FIRST, then run
-        # frequency-zip import LAST so any current or future pre-import
-        # validation step has a chance to abort before we mutate
-        # ~/.anki_miner/frequency.csv on disk. The import is the only
-        # side-effecting step in this method — once it runs there's no
-        # rollback short of re-importing the previous CSV.
-        # See review of commit 63ffcd9 finding #2.
+        # Build the candidate config from all panels FIRST, then run the
+        # pitch-zip and frequency-zip imports LAST so any current or future
+        # pre-import validation step has a chance to abort before we mutate
+        # ~/.anki_miner/pitch_accent.csv or ~/.anki_miner/frequency.csv on
+        # disk. The imports are the only side-effecting steps in this method
+        # — once they run there's no rollback short of re-importing the
+        # previous CSV. See review of commit 63ffcd9 finding #2.
         new_config = replace(
             self.config,
             # Anki settings
@@ -394,12 +400,10 @@ class SettingsTab(QWidget):
             # Dictionary storage folder (Issue #45). Validated above; reuse of
             # current value passes through unchanged.
             dicts_root=new_dicts_root,
-            # Pitch accent settings
-            pitch_accent_path=(
-                Path(self.dictionary_panel.pitch_accent_selector.get_path())
-                if self.dictionary_panel.pitch_accent_selector.get_path()
-                else Path("")
-            ),
+            # Pitch accent settings — pitch_accent_path is filled in below
+            # after _resolve_pitch_accent_path runs (last side-effect, see
+            # top of this method).
+            pitch_accent_path=self.config.pitch_accent_path,
             use_pitch_accent=self.dictionary_panel.use_pitch_accent_checkbox.isChecked(),
             pitch_category_format=self.anki_panel.get_pitch_category_format(),
             # Frequency settings — frequency_list_path is filled in below
@@ -446,10 +450,17 @@ class SettingsTab(QWidget):
             skipped_update_version=skipped_update_version,
         )
 
-        # Last side-effect before commit: import the Yomitan frequency zip
-        # if the user picked one. Any pre-import validation belongs ABOVE
-        # this call. None here means import failed OR was cancelled — abort
-        # the whole save (the user already saw the error dialog, if any).
+        # Last side-effects before commit: import the Yomitan pitch-accent
+        # zip and frequency zip if the user picked either. Any pre-import
+        # validation belongs ABOVE these calls. None here means an import
+        # failed OR was cancelled — abort the whole save (the user already
+        # saw the error dialog, if any). Pitch runs before frequency so
+        # neither side-effects until validation passes for both.
+        resolved_pitch_path = self._resolve_pitch_accent_path()
+        if resolved_pitch_path is None:
+            return
+        new_config = replace(new_config, pitch_accent_path=resolved_pitch_path)
+
         resolved_freq_path = self._resolve_frequency_path()
         if resolved_freq_path is None:
             return
@@ -463,6 +474,105 @@ class SettingsTab(QWidget):
             "Settings Saved",
             "Settings saved.",
         )
+
+    def _resolve_pitch_accent_path(self) -> Path | None:
+        """Resolve the user-picked pitch-accent path for persistence.
+
+        If the path points at a Yomitan-format pitch-accent zip, run the
+        importer in a background ``PitchImportWorker`` (driven by a modal
+        ``QProgressDialog`` + a local ``QEventLoop`` so this method stays
+        blocking for the caller) and return the materialized
+        ``pitch_accent.csv`` path. CSV/TSV paths pass through unchanged.
+
+        Returns:
+            * ``Path("")`` if no path is selected.
+            * The original CSV/TSV path if not a zip.
+            * The materialized CSV path on successful import.
+            * ``self.config.pitch_accent_path`` if the user declined to
+              overwrite an existing ``pitch_accent.csv`` (other settings still
+              save).
+            * ``None`` if the import failed or was cancelled (caller aborts
+              the whole save).
+        """
+        raw = self.dictionary_panel.pitch_accent_selector.get_path()
+        if not raw:
+            return Path("")
+        if not raw.lower().endswith(".zip"):
+            return Path(raw)
+
+        zip_path = Path(raw)
+        dest_csv = ANKI_MINER_HOME / "pitch_accent.csv"
+
+        # Overwrite guard. atomic_write_csv only protects against mid-write
+        # failures, not intentional clobbering of a user's existing CSV.
+        if dest_csv.exists() and dest_csv.stat().st_size > 0:
+            reply = QMessageBox.question(
+                self,
+                "Overwrite Pitch Accent File?",
+                f"{dest_csv} already exists and will be replaced.\n\nContinue with import?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                # User opted out of THIS setting; let the rest of the save
+                # commit with the existing pitch_accent_path unchanged.
+                return self.config.pitch_accent_path
+
+        dlg = QProgressDialog("Importing pitch accent dictionary…", "Cancel", 0, 100, self)
+        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+        dlg.show()
+
+        worker = PitchImportWorker(zip_path, dest_csv)
+        self._active_pitch_worker = worker  # keep alive across QThread lifetime
+
+        result_holder: dict[str, object] = {}
+        loop = QEventLoop(self)
+
+        def on_progress(cur: int, total: int, msg: str) -> None:
+            dlg.setMaximum(total)
+            dlg.setValue(cur)
+            dlg.setLabelText(msg)
+
+        def on_done(res: object) -> None:
+            result_holder["ok"] = res
+            loop.quit()
+
+        def on_failed(err: str) -> None:
+            result_holder["err"] = err
+            loop.quit()
+
+        worker.progress.connect(on_progress)
+        worker.import_finished.connect(on_done)
+        worker.failed.connect(on_failed)
+        dlg.canceled.connect(worker.cancel)
+
+        worker.start()
+        loop.exec()
+        dlg.close()
+        worker.wait()  # join thread before next save might construct a new worker
+
+        if "err" in result_holder:
+            err_msg = str(result_holder["err"])
+            if "cancel" not in err_msg.lower():
+                QMessageBox.warning(self, "Pitch Accent Import Failed", err_msg)
+            return None
+
+        result = result_holder["ok"]
+        assert isinstance(result, YomitanPitchImportResult)
+
+        # Reflect the imported path back into the UI so subsequent saves don't
+        # re-trigger the import every time the user clicks Save.
+        self.dictionary_panel.pitch_accent_selector.set_path(str(dest_csv))
+
+        skipped_note = (
+            f" (skipped {result.skipped_display_only:,} display-only entries)" if result.skipped_display_only else ""
+        )
+        QMessageBox.information(
+            self,
+            "Pitch accent dictionary imported",
+            f"Imported {result.entry_count:,} entries from '{result.source_name}'.{skipped_note}",
+        )
+        return dest_csv
 
     def _resolve_frequency_path(self) -> Path | None:
         """Resolve the user-picked frequency path for persistence.

@@ -298,12 +298,19 @@ class DictionarySettingsPanel(FormPanel):
         # Pitch accent section unchanged
         self.add_section("Pitch Accent")
         self.pitch_accent_selector = FileSelector(
-            label="", file_mode=True, placeholder="Select pitch accent file (CSV/TSV)..."
+            label="",
+            file_mode=True,
+            file_filter="Pitch accent (*.csv *.tsv *.txt *.zip);;All Files (*)",
+            placeholder="Select pitch accent CSV/TSV or Yomitan zip...",
         )
         self.add_field(
             "Pitch Accent File",
             self.pitch_accent_selector,
-            helper="CSV/TSV with columns: reading, kanji, pattern.",
+            helper=(
+                "CSV/TSV with columns (reading, kanji, pattern), or a "
+                "Yomitan-format pitch zip (e.g. Kanjium, NHK). Yomitan zips "
+                "are imported into ~/.anki_miner/pitch_accent.csv on Save."
+            ),
         )
         self.use_pitch_accent_checkbox = QCheckBox("Enable Pitch Accent")
         self.use_pitch_accent_checkbox.setToolTip("Adds pitch patterns to cards.")
