@@ -73,6 +73,9 @@ class DeckBuilderWorker(CancellableWorker):
         self.stats_service = stats_service
         self._confirm_event = threading.Event()
         self._confirmed = False
+        # The per-episode processor currently running in Phase 2. Set before
+        # each process_episode call so cancel() can propagate into it.
+        self._current_processor: EpisodeProcessor | None = None
 
     # ------------------------------------------------------------------ #
     # GUI-thread control surface
@@ -89,8 +92,17 @@ class DeckBuilderWorker(CancellableWorker):
         self._confirm_event.set()
 
     def cancel(self) -> None:
-        """Cancel the worker; also unblocks the confirm gate if waiting on it."""
+        """Cancel the worker, propagate to the active processor, unblock the gate.
+
+        Phase 2 polls ``check_cancelled()`` only between episodes, so a
+        mid-episode cancel would otherwise wait out the whole episode (ffmpeg
+        media extraction + lookups). Propagating into the current
+        ``EpisodeProcessor`` lets ``process_episode`` return promptly — it polls
+        ``self._cancelled`` at every phase boundary.
+        """
         super().cancel()
+        if self._current_processor is not None:
+            self._current_processor.cancel()
         # Wake run() if it is currently blocked on the gate so it can observe
         # the cancellation flag and return.
         self._confirm_event.set()
@@ -144,6 +156,10 @@ class DeckBuilderWorker(CancellableWorker):
                     allow_duplicate_cards=True,
                 )
                 proc = create_episode_processor(cfg, self.presenter, self.stats_service)
+                # Register as current BEFORE process_episode so a mid-call
+                # cancel() reaches this processor. The tiny window before this
+                # assignment is covered by the loop-top check_cancelled().
+                self._current_processor = proc
                 callback = self._make_curation_callback(selected, carded)
                 # Empty-curation pitfall: process_episode treats a curation_callback
                 # that returns [] as a cancellation and returns a cancelled-empty
