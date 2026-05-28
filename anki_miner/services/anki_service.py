@@ -556,14 +556,18 @@ class AnkiService:
                         if key in self.OPTIONAL_FIELD_KEYS and anki_field_name and value:
                             fields[anki_field_name] = html.escape(str(value))
 
-                notes.append(
-                    {
-                        "deckName": self.config.anki_deck_name,
-                        "modelName": self.config.anki_note_type,
-                        "fields": fields,
-                        "tags": self.config.anki_tags.split(),
-                    }
-                )
+                note: dict = {
+                    "deckName": self.config.anki_deck_name,
+                    "modelName": self.config.anki_note_type,
+                    "fields": fields,
+                    "tags": self.config.anki_tags.split(),
+                }
+                # Deck Builder: re-card words that already exist elsewhere in the
+                # collection. duplicateScope="deck" keeps cross-episode curation's
+                # single-carding meaningful within the new deck.
+                if self.config.allow_duplicate_cards:
+                    note["options"] = {"allowDuplicate": True, "duplicateScope": "deck"}
+                notes.append(note)
 
             # Send batch request. `post_action` raises `AnkiConnectionError`
             # for connection failures, transport errors, and AnkiConnect-side

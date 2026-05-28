@@ -129,6 +129,17 @@ class AnkiMinerConfig:
     # the Deck Builder's "include everything" mode. Default False preserves
     # the standard filter-against-known-vocab behaviour.
     include_known_words: bool = False
+    # Deck Builder "complete deck" mode. When True, the per-episode reduction
+    # filters (frequency rank, word lists, sentence dedup, cross-episode,
+    # i+1, sentence length) are skipped so the build matches the corpus
+    # preview exactly. Known-words subtraction is unaffected (see
+    # include_known_words). Default False preserves normal mining.
+    bypass_optional_filters: bool = False
+    # When True, notes are posted to AnkiConnect with
+    # options={"allowDuplicate": True, "duplicateScope": "deck"} so words
+    # already present elsewhere in the collection are still carded. Used by
+    # the Deck Builder. Default False preserves the standard dedup behaviour.
+    allow_duplicate_cards: bool = False
 
     # Word list settings
     blacklist_path: Path | None = None

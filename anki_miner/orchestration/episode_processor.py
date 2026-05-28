@@ -288,7 +288,7 @@ class EpisodeProcessor:
             )
 
         # Frequency rank cutoff.
-        if self.config.max_frequency_rank > 0:
+        if self.config.max_frequency_rank > 0 and not self.config.bypass_optional_filters:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_frequency(unknown_words, self.config.max_frequency_rank)
             filtered_out = before - len(unknown_words)
@@ -298,7 +298,7 @@ class EpisodeProcessor:
                 )
 
         # Word list (blacklist/whitelist) filter.
-        if self.word_list_service and self.word_list_service.is_available():
+        if self.word_list_service and self.word_list_service.is_available() and not self.config.bypass_optional_filters:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_word_lists(unknown_words, self.word_list_service)
             filtered_out = before - len(unknown_words)
@@ -307,7 +307,11 @@ class EpisodeProcessor:
 
         # Sentence deduplication. i+1 filter does its own sentence picking;
         # dedup would be a no-op (post-i+1 sentences are unique by construction).
-        if self.config.deduplicate_sentences and not self.config.use_i_plus_one_filter:
+        if (
+            self.config.deduplicate_sentences
+            and not self.config.use_i_plus_one_filter
+            and not self.config.bypass_optional_filters
+        ):
             before = len(unknown_words)
             unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
             deduped = before - len(unknown_words)
@@ -315,7 +319,11 @@ class EpisodeProcessor:
                 self.presenter.show_info(f"Sentence deduplication: removed {deduped} duplicate-sentence words")
 
         # Cross-episode frequency filter.
-        if cross_episode_counts is not None and self.config.min_episode_appearances > 1:
+        if (
+            cross_episode_counts is not None
+            and self.config.min_episode_appearances > 1
+            and not self.config.bypass_optional_filters
+        ):
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_episode_count(
                 unknown_words,
@@ -332,7 +340,7 @@ class EpisodeProcessor:
         # i+1 sentence filtering. Restricts mining to words with an i+1 example
         # sentence (exactly one mineable unknown). Rescans lines and may swap
         # the chosen sentence per word. Drops words with no i+1 coverage.
-        if self.config.use_i_plus_one_filter:
+        if self.config.use_i_plus_one_filter and not self.config.bypass_optional_filters:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_i_plus_one(unknown_words, line_index or [])
             kept = len(unknown_words)
@@ -344,8 +352,10 @@ class EpisodeProcessor:
         # Runs AFTER i+1 because filter_i_plus_one swaps each word's sentence
         # (and duration) to its chosen i+1 line — applying the cap before that
         # swap would be silently bypassed by the swap target.
-        if self.config.use_sentence_length_filter and (
-            self.config.max_sentence_duration_seconds > 0.0 or self.config.max_sentence_chars > 0
+        if (
+            self.config.use_sentence_length_filter
+            and not self.config.bypass_optional_filters
+            and (self.config.max_sentence_duration_seconds > 0.0 or self.config.max_sentence_chars > 0)
         ):
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_sentence_length(
