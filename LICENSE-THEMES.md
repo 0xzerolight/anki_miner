@@ -14,3 +14,4 @@ Color palettes ported from the following upstream projects. No upstream source c
 | Ayu | https://github.com/ayu-theme/ayu-colors | MIT | ayu-theme |
 | Everforest | https://github.com/sainnhe/everforest | MIT | sainnhe |
 | GitHub | https://github.com/primer/primitives | MIT | GitHub Inc. |
+| Dracula | https://github.com/dracula/dracula-theme | MIT | Dracula Theme |
