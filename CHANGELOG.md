@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.5.0] - 2026-05-28
+
+### Added
+- **Deck Builder tab** — point at a folder of episode/subtitle pairs and mine a whole show into one named deck, frequency-ordered, deduped across episodes (inspired by jiten.moe / jpdb but free, using media you already have). Two-phase flow: Phase 1 aggregates lemma counts across every subtitle in the folder via `SubtitleParserService.count_lemmas` + `corpus_aggregator.aggregate`, ranks them, and offers three selection modes — **ALL**, **TOP_N**, or **COVERAGE_PCT** (cumulative % of in-corpus mineable tokens, not `frequency.csv`). A preview dialog shows what will land; Phase 2 mines each episode into the chosen deck via fresh `EpisodeProcessor` instances (with `anki_deck_name` and `include_known_words` swapped in via `dataclasses.replace`) and a curation closure that drops anything outside the selected set or already carded in a previous episode. New `AnkiService.ensure_deck` makes target-deck creation idempotent. New data models: `DeckSelectionMode`, `DeckBuildRequest`, `DeckBuildPreview`. New config flag: `include_known_words` (default off — known words are still filtered out unless `collection_filter=False`).
+- **Word Curator: embedded video player + multi-dictionary lookup** (#41, #43). Each row in the curation dialog now exposes a `SubtitlePlayerWidget` that plays the source line in-place so you can hear the sentence before deciding. The lookup panel shows every enabled offline dictionary's hit side-by-side via `DefinitionService.lookup_all_offline`, not just the first-hit-wins result that lands on the card. Jisho online is excluded from this multi-lookup to keep curation interactive.
+- **Custom Anki card styling** (#44). Generated cards now ship with built-in styling for the standard fields. The template renders cleanly out of the box without manual Anki note-type customization.
+- **Local user-curated known-words list** (#42). The Word Curator now has an "Add to Known Words" action; words added this way are stored in `known_words.db` with `source='user'` and applied on every mining run regardless of `config.use_known_words_db`. Survives "Rebuild Known Words DB" (which now calls `clear(preserve_user=True)`). Reset via **Settings → Filtering → Manage Known Words → Reset User List**. Stored as `mined_form` (POS-aware: verbs/adjectives = lemma, nouns = surface) so the list rolls up against the in-process filter set cleanly.
+- **Yomitan pitch-accent zip importer**. Settings → Dictionary → Pitch Accent File now accepts a Yomitan-format pitch-accent zip in addition to raw CSV/TSV. Imports run on a background `PitchImportWorker` (`CancellableWorker` subclass) driven through a modal `QProgressDialog` so the GUI stays responsive and the import is cancellable. Result is written to `~/.anki_miner/pitch_accent.csv`; existing format paths are unchanged.
+- **Configurable dictionary store location** (#45). The folder that holds your installed dictionaries (`dicts_root`, defaulting to `~/.anki_miner/dicts/`) is now an explicit setting. Useful if you want to keep multi-gigabyte dictionary indexes on a different drive than the rest of `~/.anki_miner/`.
+- **Dracula and Alucard themes**, plus every previously-added theme exposed in the Themes panel (#48). Built-in theme count is now 29 across 10 families.
+- **Exclude specific Anki decks from known-word lookup** (#38). New filter under Settings → Filtering pulls excluded deck names through `AnkiService._build_vocab_query`, which negates each name in the underlying `findNotes` query. Anki's `deck:` matches subdecks, so a parent exclusion covers nested decks without an explicit `::*` clause. Notes that live in both an included and an excluded deck are excluded entirely (Anki's `-deck:` is note-level). Works for deck names containing `_` and `*` (escaping fixed).
+
+### Changed
+- **README** now documents the recommended **pitch accent** sources (Kanjium accent list as raw TSV; アクセント辞典v2 as a Yomitan zip) and **frequency list** sources (JPDB v2.2 Frequency Kana; BCCWJ SUW LUW Combined) with install paths into `~/.anki_miner/`.
+
+### Fixed
+- **Batch mining pairing error** (#39). The episode-number pairing path in `FilePairMatcher.find_pairs_by_episode_number` and `EpisodeMatcher.match_by_episode_number` now consumes each subtitle at most once (`used_subtitles` set), so a same-episode collision can't collapse every video onto the first subtitle.
+- **`addNotes` duplicate error aborting a batch**. AnkiConnect's batch endpoint surfaced a `duplicate` error when a candidate word was already in the deck and re-encountered later in the same session, killing the rest of the batch. Filter + dedup now share the cached existing-vocabulary set and drop the candidate client-side before AnkiConnect ever sees it.
+- **Deck-exclusion query broke on deck names with `_` or `*`**. The query builder now escapes Anki's wildcard characters before injecting them into `-deck:"…"` clauses.
+- **`DeckBuilderWorker` lifecycle on app close**. Closing the main window mid-build no longer leaks the worker; the worker is torn down on app close and `build_finished` is suppressed on cancel so the GUI doesn't try to render results from a half-built run. Coverage tooltip wording clarified.
+
+### Maintenance
+- Welcomed @BDubbB, @Joywinbarboza, and @chicorykvass to CONTRIBUTORS.md.
+- Star-on-GitHub button copy tightened for clarity.
+- DeckBuilderTab unified `worker_thread` attribute and added an integration test covering the second-preview-cancels-lingering-worker case.
+
 ## [2.4.7] - 2026-05-26
 
 ### Added

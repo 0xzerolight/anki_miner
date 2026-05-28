@@ -1,15 +1,15 @@
 # Testing
 
-Anki Miner has a substantial test suite — 1,200+ tests across unit and integration layers. This page documents how it is organized and how to run it.
+Anki Miner has a substantial test suite — ~1,400 tests across roughly 100 test files in unit and integration layers. This page documents how it is organized and how to run it.
 
 ## Layout
 
 ```
 tests/
 ├── conftest.py            # shared fixtures
-├── unit/                  # ~60 files, external services mocked
+├── unit/                  # ~100 files, external services mocked
 │   └── gui/               # widget tests with QT_QPA_PLATFORM=offscreen
-└── integration/           # 4 files, real adapters where possible
+└── integration/           # 6 files, real adapters where possible
 ```
 
 - **Unit tests** mock external services (AnkiConnect, ffmpeg, Jisho, yt-dlp). They should run fast and never touch the network.

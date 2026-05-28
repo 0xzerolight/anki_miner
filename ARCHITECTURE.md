@@ -222,6 +222,8 @@ Worker implementations:
 - `YouTubeProbeWorker` (`gui/workers/youtube_probe_worker.py`): short-lived QThread that calls `YouTubeFetcherService.probe_metadata` so the GUI stays responsive during network I/O.
 - `YouTubeQueueWorker` (`gui/workers/youtube_queue_worker.py`): `CancellableWorker` subclass that drives a list of `YouTubeQueueItem` through fetch + mine sequentially with retry-once on `YouTubeFetchError`. Per-attempt workspace allocation under `media_temp_folder/youtube/run-<uuid>/`.
 - `YouTubeQueueItemWidget` (`gui/widgets/youtube_queue_item_widget.py`): pure renderer for one `YouTubeQueueItem` in the queue list.
+- `PitchImportWorker` (`gui/workers/pitch_import_worker.py`): `CancellableWorker` that runs the Yomitan pitch-accent zip importer so the GUI stays responsive during a large import.
+- `DeckBuilderWorker` (`gui/workers/deck_builder_worker.py`): see Orchestration section.
 
 ### Signal Architecture
 
@@ -231,11 +233,11 @@ GUIPresenter does **not** explicitly inherit from `PresenterProtocol`. It satisf
 
 ### Theme System
 
-Theme singleton backed by JSON theme files in `gui/resources/styles/themes/`. Four built-in themes: Light, Dark, Sakura, and Tokyo Night. The `discover_themes()` function scans the themes directory at startup, validates each JSON file against a required color key schema (`REQUIRED_COLOR_KEYS`), and registers valid themes. A single `common.qss` stylesheet uses `${color-*}` variable substitution. The `Theme._substitute_variables()` method merges layout variables from `_variables.py` with color variables extracted from the active theme JSON. Custom themes can be added by dropping a valid JSON file into the themes directory. Theme preference is saved via `QSettings`.
+Theme singleton backed by JSON theme files in `gui/resources/styles/themes/`. 29 built-in themes across 10 families (Ayu, Catppuccin, Dracula, Everforest, GitHub, Gruvbox, Kanagawa, Rosé Pine, Solarized, Standalone). The `discover_themes()` function scans the themes directory at startup, validates each JSON file against a required color key schema (`REQUIRED_COLOR_KEYS`), and registers valid themes. A single `common.qss` stylesheet uses `${color-*}` variable substitution. The `Theme._substitute_variables()` method merges layout variables from `_variables.py` with color variables extracted from the active theme JSON. Custom themes can be added by dropping a valid JSON file into the themes directory. Theme preference is saved via `QSettings`.
 
 ### Dialogs
 
-- `WordCurationDialog`: user selects which discovered words to mine (cross-thread via a `threading.Event` bridge).
+- `WordCurationDialog`: user selects which discovered words to mine (cross-thread via a `threading.Event` bridge). Embeds `SubtitlePlayerWidget` per row for in-place audio playback, and renders multi-dictionary lookup via `DefinitionService.lookup_all_offline`.
 - `WordPreviewDialog`: preview discovered words.
 - `PairPreviewDialog`: preview video/subtitle file pairing.
 - `ResultsDialog`: summary of a mining session with undo option.
