@@ -138,6 +138,30 @@ Add a dictionary in **Settings → Add Dictionary…** by pointing at a Yomitan 
 
 Install via **Settings → Add Dictionary…** in either case.
 
+## Pitch accent & frequency data
+
+Anki Miner can attach pitch-accent patterns and frequency ranks to each card. Both are loaded from user-supplied files that live at `~/.anki_miner/pitch_accent.csv` and `~/.anki_miner/frequency.csv`. The Settings pickers accept either a raw CSV/TSV in the expected column shape or a Yomitan-format zip; Yomitan zips are converted to CSV automatically on Save.
+
+### Pitch accent
+
+Pick a source and drop it into **Settings → Dictionary → Pitch Accent File**:
+
+- **[Kanjium pitch dump](https://github.com/mifunetoshiro/kanjium)** - the canonical community pitch dataset as a raw CSV in `reading,kanji,pattern` form. Smallest install, works dropped straight into `~/.anki_miner/pitch_accent.csv`.
+- **Kanjium for Yomitan** - the same dataset packaged as a Yomitan zip. Grab it from the [Yomitan dictionary list](https://learnjapanese.moe/yomichan/#dictionaries) and point the picker at the `.zip`.
+- **[NHK 2016 pitch](https://github.com/MarvNC/yomitan-dictionaries)** - Yomitan zip with NHK-derived data, digraph notation, and nasal/devoice markers. Richer than Kanjium; optional.
+
+Install via **Settings → Dictionary → Pitch Accent File** - the picker accepts raw CSV/TSV or a Yomitan zip (auto-imported to `~/.anki_miner/pitch_accent.csv` on Save).
+
+### Frequency lists
+
+Pick a source and drop it into **Settings → Filtering → Frequency List File**:
+
+- **[JPDB v2](https://github.com/MarvNC/jpdb-freq-list)** - Yomitan zip, ~497k entries aggregated from anime, visual novels, novels, and J-drama. Good default for mixed media mining.
+- **[Anime & J-Drama](https://github.com/Kuuuube/yomitan-dictionaries)** - Yomitan zip, ~100k entries. Niche pick if you only mine anime or drama.
+- **[BCCWJ](https://github.com/Kuuuube/yomitan-dictionaries)** - Yomitan zip, ~536k entries from the Balanced Corpus of Contemporary Written Japanese. Complement for users also reading news or novels.
+
+Install via **Settings → Filtering → Frequency List File** - the picker accepts raw CSV/TSV or a Yomitan zip (auto-imported to `~/.anki_miner/frequency.csv` on Save).
+
 ## YouTube Mining
 
 Paste one or more URLs into the YouTube tab. Each row shows its title, length, and subtitle source as you add it; click **Mine** to process the whole list. Transient download errors are retried once before a row is marked failed. Cancel is safe at any point.
