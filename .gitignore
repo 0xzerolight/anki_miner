@@ -57,6 +57,12 @@ resources/
 !anki_miner/services/dictionary/resources/
 !anki_miner/services/dictionary/resources/__init__.py
 !anki_miner/services/dictionary/resources/*.css
+# Same for the GUI theme JSONs (Issue #27 family, #48 Dracula). Climb each
+# parent dir the broad resources/ rule excludes so themes/*.json can be tracked.
+!anki_miner/gui/resources/
+!anki_miner/gui/resources/styles/
+!anki_miner/gui/resources/styles/themes/
+!anki_miner/gui/resources/styles/themes/*.json
 TECH_DEBT_AUDIT.md
 
 # OS
