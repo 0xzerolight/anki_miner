@@ -625,6 +625,35 @@ class TestCreateCardsBatch:
         word_field_name = test_config.anki_fields["word"]
         assert note["fields"][word_field_name] == "破れる"
 
+    def test_allow_duplicate_cards_adds_options(self, test_config, make_tokenized_word):
+        """allow_duplicate_cards=True -> each note carries the AnkiConnect dup options."""
+        import dataclasses as _dc
+
+        config = _dc.replace(test_config, allow_duplicate_cards=True)
+        service = AnkiService(config)
+        word = make_tokenized_word(surface="猫", lemma="猫", sentence="猫だ。", pos="名詞")
+        media = MediaData()
+        resp = _mock_response(result=[1])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            service.create_cards_batch([CardPayload(word=word, media=media, definition="d")])
+
+        note = mock_post.call_args[1]["json"]["params"]["notes"][0]
+        assert note["options"] == {"allowDuplicate": True, "duplicateScope": "deck"}
+
+    def test_no_options_when_allow_duplicate_cards_off(self, test_config, make_tokenized_word):
+        """Default (allow_duplicate_cards=False) -> no options key, normal dedup."""
+        service = AnkiService(test_config)
+        word = make_tokenized_word(surface="猫", lemma="猫", sentence="猫だ。", pos="名詞")
+        media = MediaData()
+        resp = _mock_response(result=[1])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            service.create_cards_batch([CardPayload(word=word, media=media, definition="d")])
+
+        note = mock_post.call_args[1]["json"]["params"]["notes"][0]
+        assert "options" not in note
+
     def test_bolded_sentence_used_when_flag_on(self, test_config, make_tokenized_word):
         """When bold_target_in_sentence=True and precomputed forms exist, the
         Sentence and SentenceFurigana fields use those (Issue #20)."""

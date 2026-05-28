@@ -356,6 +356,33 @@ class TestOptionalServices:
         # Verify filter_by_frequency was called with the max_rank
         mock_services["word_filter"].filter_by_frequency.assert_called_once_with([word1, word2], 1000)
 
+    def test_bypass_optional_filters_skips_frequency(self, test_config, mock_services, tmp_path):
+        """Deck Builder: bypass_optional_filters=True skips the frequency cutoff."""
+        config = replace(test_config, max_frequency_rank=1000, bypass_optional_filters=True)
+
+        word1 = _make_word("食べる")
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup.return_value = 500
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_frequency.assert_not_called()
+
     def test_pitch_accent_populates_extra_fields(self, test_config, mock_services, tmp_path):
         """Pitch accent service should populate extra_fields in card data."""
         word = _make_word("食べる")
@@ -1489,6 +1516,20 @@ class TestIPlusOneFilter:
         )
         # Specifically: kept 1/2 (50%).
         assert "kept 1/2 words (50%)" in matched[0]
+
+    def test_bypass_optional_filters_skips_i_plus_one(self, test_config, mock_services, tmp_path):
+        """Deck Builder: bypass_optional_filters=True skips i+1 even when its flag is on."""
+        config = replace(test_config, use_i_plus_one_filter=True, bypass_optional_filters=True)
+        word = _make_word("食べる")
+        line = _make_line_lemmas(lemmas=("食べる",))
+
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = ([word], [line])
+        self._wire_happy_pipeline(mock_services, word, _make_media())
+
+        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_i_plus_one.assert_not_called()
 
 
 class TestGlossaryFetch:
