@@ -473,30 +473,9 @@ class SingleEpisodeTab(MiningTabBase):
         self.worker_thread.finished.connect(self._restore_buttons)
         self.worker_thread.start()
 
-    def _on_progress_start(self, total: int, description: str) -> None:
-        """Handle progress start signal.
-
-        Args:
-            total: Total number of items
-            description: Operation description
-        """
-        self._current_phase = description
-        self.progress_widget.set_determinate(total)
-        self.progress_widget.set_status(description)
-
-    def _on_progress_update(self, current: int, item_description: str) -> None:
-        """Handle progress update signal.
-
-        Args:
-            current: Current item number
-            item_description: Description of current item
-        """
-        self.progress_widget.set_value(current)
-        self.progress_widget.set_status(item_description)
-
-    def _on_progress_complete(self) -> None:
-        """Handle progress complete signal."""
-        self.progress_widget.set_status(f"{self._current_phase} \u2014 done" if self._current_phase else "Complete")
+    # Progress slots (_on_progress_start/update/complete) are inherited from
+    # MiningTabBase, which drives the single ``progress_widget`` via the
+    # percentage-scaled ``set_progress`` path.
 
     def _curation_bridge(self, words: list) -> list:
         """Thread-safe bridge: called from worker thread, shows dialog on GUI thread.

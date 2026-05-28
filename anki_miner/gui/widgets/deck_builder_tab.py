@@ -485,20 +485,10 @@ class DeckBuilderTab(MiningTabBase):
         self.log_widget.append_error(f"Error: {msg}")
         self._restore_buttons()
 
-    # ------------------------------------------------------------------
-    # Progress slots required by MiningTabBase._wire_progress_callback
-    # ------------------------------------------------------------------
-
-    def _on_progress_start(self, total: int, description: str) -> None:
-        self.progress_widget.set_determinate(total)
-        self.progress_widget.set_status(description)
-
-    def _on_progress_update(self, current: int, item_description: str) -> None:
-        self.progress_widget.set_value(current)
-        self.progress_widget.set_status(item_description)
-
-    def _on_progress_complete(self) -> None:
-        self.progress_widget.set_status("Complete")
+    # Progress slots (_on_progress_start/update/complete) are inherited from
+    # MiningTabBase — the percentage-scaled ``set_progress`` path. The old
+    # ``set_value(current)`` overrides clamped the bar to 100% past item 100
+    # (e.g. a 2,401-card build pinned at 100% during media extraction).
 
     # ------------------------------------------------------------------
     # Button-state helpers
