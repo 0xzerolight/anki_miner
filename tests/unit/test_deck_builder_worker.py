@@ -158,6 +158,9 @@ def test_build_ensures_deck_and_processes_each_pair(qapp):
             assert cfg.anki_deck_name == "My Deck"
             # collection_filter False -> include everything.
             assert cfg.include_known_words is True
+            # Deck Builder always bypasses reduction filters and allows dups.
+            assert cfg.bypass_optional_filters is True
+            assert cfg.allow_duplicate_cards is True
 
         # series/episode identity overrides routed.
         _, kwargs = ep1.process_episode.call_args
@@ -234,6 +237,9 @@ def test_collection_filter_true_fetches_known(qapp):
 
         cfg = factory.call_args_list[1].args[0]
         assert cfg.include_known_words is False
+        # Filter bypass / dup allowance are independent of the collection checkbox.
+        assert cfg.bypass_optional_filters is True
+        assert cfg.allow_duplicate_cards is True
     finally:
         worker._stop_patch.stop()
 

@@ -132,6 +132,16 @@ class DeckBuilderWorker(CancellableWorker):
                     #                          (include_known_words=False).
                     # collection_filter OFF -> mine everything (include_known_words=True).
                     include_known_words=not self.request.collection_filter,
+                    # Deck Builder is a complete-deck workflow: word selection is
+                    # owned by corpus_aggregator.select + the curation callback, so
+                    # the per-episode reduction filters (i+1, frequency, word lists,
+                    # sentence dedup/length) must NOT run — otherwise the build
+                    # diverges from the preview. Always on regardless of the
+                    # collection checkbox.
+                    bypass_optional_filters=True,
+                    # Re-card words that already exist elsewhere in the user's
+                    # collection so the deck is genuinely complete.
+                    allow_duplicate_cards=True,
                 )
                 proc = create_episode_processor(cfg, self.presenter, self.stats_service)
                 callback = self._make_curation_callback(selected, carded)
