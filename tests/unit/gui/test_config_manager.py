@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import replace
+from pathlib import Path
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.utils.config_manager import GUIConfigManager
@@ -175,3 +176,51 @@ class TestCardStylingRoundTrip:
 
         assert loaded.use_default_card_stylesheet is True
         assert loaded.custom_card_css == ""
+
+
+class TestDictsRootRoundTrip:
+    """Persistence of the Issue #45 dicts_root field through save/load."""
+
+    def test_save_and_load_preserves_dicts_root(self, tmp_path, monkeypatch):
+        """A non-default dicts_root must survive save/load as a Path object."""
+        cfg_file = tmp_path / "gui_config.json"
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        external = tmp_path / "external_ssd_dicts"
+        external.mkdir()
+
+        config = replace(create_default_config(), dicts_root=external)
+        GUIConfigManager.save_config(config)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert isinstance(loaded.dicts_root, Path)
+        assert loaded.dicts_root == external
+
+    def test_dicts_root_serialized_as_string(self, tmp_path, monkeypatch):
+        """The on-disk JSON must store dicts_root as a string so other readers
+        (e.g. external tools, manual edits) don't trip on a Path repr."""
+        cfg_file = tmp_path / "gui_config.json"
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        external = tmp_path / "elsewhere"
+        external.mkdir()
+        GUIConfigManager.save_config(replace(create_default_config(), dicts_root=external))
+
+        raw = json.loads(cfg_file.read_text(encoding="utf-8"))
+        assert raw["dicts_root"] == str(external)
+
+    def test_legacy_config_without_dicts_root_uses_default(self, tmp_path, monkeypatch):
+        """A pre-Issue-#45 JSON file must load and fall back to the dataclass default."""
+        cfg_file = tmp_path / "gui_config.json"
+        cfg_file.write_text(
+            json.dumps({"anki_deck_name": "Legacy Deck"}),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert isinstance(loaded.dicts_root, Path)
+        # Default is ANKI_MINER_HOME / "dicts"; just confirm it ends in "dicts".
+        assert loaded.dicts_root.name == "dicts"

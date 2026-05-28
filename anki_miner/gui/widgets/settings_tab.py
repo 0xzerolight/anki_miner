@@ -1,5 +1,6 @@
 """Settings tab with category organization using extracted panels."""
 
+import os
 import re
 from dataclasses import replace
 from pathlib import Path
@@ -318,6 +319,27 @@ class SettingsTab(QWidget):
         if now_enabled and not was_enabled:
             skipped_update_version = ""
 
+        # Validate dictionary storage folder (Issue #45). Only enforced when
+        # the user has changed the path — reuse-of-current always passes so a
+        # transiently-unavailable mount (external SSD) doesn't block other
+        # unrelated edits from saving.
+        new_dicts_root = self.dictionary_panel.get_dicts_root()
+        if new_dicts_root != self.config.dicts_root:
+            if not new_dicts_root.is_dir():
+                QMessageBox.warning(
+                    self,
+                    "Invalid dictionary folder",
+                    f"{new_dicts_root} is not a directory.\n\nPick an existing folder or click Reset to default.",
+                )
+                return
+            if not os.access(new_dicts_root, os.W_OK):
+                QMessageBox.warning(
+                    self,
+                    "Dictionary folder not writable",
+                    f"Cannot write to {new_dicts_root}.\n\nPick a folder you own.",
+                )
+                return
+
         # Validate subtitle regex filter before saving so we never persist a
         # pattern that crashes the parser. Only validate when the user has
         # enabled the filter; an unchecked invalid pattern is harmless.
@@ -369,6 +391,9 @@ class SettingsTab(QWidget):
             screenshot_animated_quality=self.media_panel.animated_quality_spinbox.value(),
             # Dictionary chain — chain is the single source of truth now
             dictionary_chain=self.dictionary_panel.get_chain(),
+            # Dictionary storage folder (Issue #45). Validated above; reuse of
+            # current value passes through unchanged.
+            dicts_root=new_dicts_root,
             # Pitch accent settings
             pitch_accent_path=(
                 Path(self.dictionary_panel.pitch_accent_selector.get_path())
