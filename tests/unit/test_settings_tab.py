@@ -227,3 +227,103 @@ class TestSentenceLengthFilterRoundTrip:
         assert received[0].use_sentence_length_filter is True
         assert received[0].max_sentence_duration_seconds == pytest.approx(7.5)
         assert received[0].max_sentence_chars == 60
+
+
+class TestDictsRootRoundTrip:
+    """Load/save round-trip for the Issue #45 dictionary storage folder picker."""
+
+    def test_loads_dicts_root_from_config(self, test_config: AnkiMinerConfig, tmp_path):
+        custom = tmp_path / "custom_dicts"
+        custom.mkdir()
+        cfg = replace(test_config, dicts_root=custom)
+        widget = SettingsTab(cfg)
+        try:
+            assert widget.dictionary_panel.get_dicts_root() == custom
+        finally:
+            widget.deleteLater()
+
+    def test_save_propagates_new_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+
+        starting = tmp_path / "starting"
+        starting.mkdir()
+        cfg = replace(test_config, dicts_root=starting)
+        widget = SettingsTab(cfg)
+        try:
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
+
+            new_root = tmp_path / "new_root"
+            new_root.mkdir()
+            widget.dictionary_panel.dicts_root_selector.set_path(str(new_root))
+
+            widget._on_save_clicked()
+
+            assert len(received) == 1
+            assert received[0].dicts_root == new_root
+        finally:
+            widget.deleteLater()
+
+    def test_save_rejects_nonexistent_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+        """Picking a path that vanished between selection and save must surface a
+        warning and abort — never write Path('') to the config."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        starting = tmp_path / "starting"
+        starting.mkdir()
+        cfg = replace(test_config, dicts_root=starting)
+        widget = SettingsTab(cfg)
+        try:
+            warnings: list[tuple] = []
+            monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: warnings.append(args) or 0)
+            monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
+
+            widget.dictionary_panel.dicts_root_selector.set_path(str(tmp_path / "does_not_exist"))
+            widget._on_save_clicked()
+
+            assert received == [], "save must abort when dicts_root is invalid"
+            assert warnings, "user must see a warning explaining the rejection"
+        finally:
+            widget.deleteLater()
+
+    def test_save_rejects_unwritable_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+        """A read-only directory must be rejected at Save so the user is not
+        silently committed to a path the importers can't write to."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        starting = tmp_path / "starting"
+        starting.mkdir()
+        readonly = tmp_path / "readonly"
+        readonly.mkdir()
+        cfg = replace(test_config, dicts_root=starting)
+        widget = SettingsTab(cfg)
+        try:
+            warnings: list[tuple] = []
+            monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: warnings.append(args) or 0)
+            monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+            # Force os.access to claim the path is not writable so the test is
+            # portable across CI runners that may ignore chmod (e.g. root in
+            # Docker, Windows ACLs). The validation logic only consults
+            # os.access — patching it covers the production code path.
+            import anki_miner.gui.widgets.settings_tab as st_mod
+
+            def _no_write(path, mode):
+                return str(path) != str(readonly)
+
+            monkeypatch.setattr(st_mod.os, "access", _no_write)
+
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
+
+            widget.dictionary_panel.dicts_root_selector.set_path(str(readonly))
+            widget._on_save_clicked()
+
+            assert received == [], "save must abort when dicts_root is not writable"
+            assert warnings, "user must see a warning explaining the rejection"
+        finally:
+            widget.deleteLater()

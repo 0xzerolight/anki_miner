@@ -808,3 +808,63 @@ def test_request_resource_release_proxies_callback_return(qapp, tmp_path):
 
     panel.set_release_callback(lambda: False)
     assert panel.request_resource_release() is False
+
+
+# === Issue #45: configurable dictionary storage path ===
+
+
+def test_dicts_root_selector_populated_from_constructor(qapp, tmp_path):
+    """The storage-folder selector must display the path passed to __init__
+    so the Settings tab reflects whatever dicts_root is on the live config."""
+    panel = DictionarySettingsPanel(tmp_path)
+    assert panel.dicts_root_selector.get_path() == str(tmp_path)
+
+
+def test_get_dicts_root_returns_selector_value(qapp, tmp_path):
+    """get_dicts_root reads from the selector so settings_tab sees the user's
+    in-progress pick (not the value the panel was constructed with)."""
+    panel = DictionarySettingsPanel(tmp_path)
+
+    new_path = tmp_path / "elsewhere"
+    new_path.mkdir()
+    panel.dicts_root_selector.set_path(str(new_path))
+
+    assert panel.get_dicts_root() == new_path
+
+
+def test_get_dicts_root_falls_back_to_internal_when_selector_empty(qapp, tmp_path):
+    """An empty selector must collapse to the panel's last-known _dicts_root,
+    never to Path('') — otherwise the save flow would silently rewrite the
+    storage root to the cwd."""
+    panel = DictionarySettingsPanel(tmp_path)
+    panel.dicts_root_selector.set_path("")
+
+    assert panel.get_dicts_root() == tmp_path
+
+
+def test_set_dicts_root_updates_selector(qapp, tmp_path):
+    """Updating dicts_root externally (e.g. config reload) must refresh the
+    visible field so the UI doesn't drift from the saved config."""
+    panel = DictionarySettingsPanel(tmp_path)
+
+    new_path = tmp_path / "new"
+    new_path.mkdir()
+    panel.set_dicts_root(new_path)
+
+    assert panel.dicts_root_selector.get_path() == str(new_path)
+    assert panel.get_dicts_root() == new_path
+
+
+def test_reset_dicts_root_button_restores_default(qapp, tmp_path):
+    """The Reset button must repopulate the selector with ANKI_MINER_HOME/dicts
+    so users can roll back a mistaken pick without restarting."""
+    from anki_miner.config.paths import ANKI_MINER_HOME
+
+    panel = DictionarySettingsPanel(tmp_path)
+    other = tmp_path / "other"
+    other.mkdir()
+    panel.dicts_root_selector.set_path(str(other))
+
+    panel._reset_dicts_root_btn.click()
+
+    assert panel.get_dicts_root() == ANKI_MINER_HOME / "dicts"

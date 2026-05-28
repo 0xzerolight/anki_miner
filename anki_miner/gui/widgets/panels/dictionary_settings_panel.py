@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import ChainEntry
+from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
@@ -176,7 +177,31 @@ class DictionarySettingsPanel(FormPanel):
         """Update the dicts root (e.g. after a config save) and invalidate caches."""
         self._dicts_root = dicts_root
         self._registry = None
+        # Keep the storage-folder selector in sync when config is reloaded
+        # externally (e.g. after Reset to Defaults or a programmatic
+        # update_config call). Guarded because _setup_fields runs after
+        # __init__'s call chain may invoke this method indirectly.
+        if hasattr(self, "dicts_root_selector"):
+            self.dicts_root_selector.set_path(str(dicts_root))
         self._rebuild_list()
+
+    def get_dicts_root(self) -> Path:
+        """Return the path currently displayed in the storage-folder selector.
+
+        Falls back to the panel's last-known ``_dicts_root`` when the selector
+        is empty so the save flow never accidentally collapses the field to
+        ``Path("")``.
+        """
+        raw = self.dicts_root_selector.get_path()
+        return Path(raw) if raw else self._dicts_root
+
+    def _on_reset_dicts_root(self) -> None:
+        """Reset the storage selector to the default ``ANKI_MINER_HOME / dicts``.
+
+        Only repopulates the visible field — the change isn't persisted until
+        the user clicks Save in the Settings tab.
+        """
+        self.dicts_root_selector.set_path(str(ANKI_MINER_HOME / "dicts"))
 
     def refresh_registry(self) -> None:
         """Force a registry rescan. Call after an import finishes."""
@@ -198,13 +223,42 @@ class DictionarySettingsPanel(FormPanel):
                 widget.reimport_button.setEnabled(enabled)
 
     def _setup_fields(self) -> None:
+        # Storage folder picker — first so it sits above the dictionary chain.
+        # Issue #45: lets users move ``dicts/`` off the home partition (e.g. to
+        # an external SSD) without manually symlinking ``~/.anki_miner/dicts``.
+        storage_container = QWidget()
+        storage_layout = QHBoxLayout(storage_container)
+        storage_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.dicts_root_selector = FileSelector(
+            label="",
+            file_mode=False,
+            placeholder="Select dictionary storage folder...",
+        )
+        self.dicts_root_selector.set_path(str(self._dicts_root))
+        storage_layout.addWidget(self.dicts_root_selector, 1)
+
+        self._reset_dicts_root_btn = QPushButton("Reset to default")
+        self._reset_dicts_root_btn.clicked.connect(self._on_reset_dicts_root)
+        storage_layout.addWidget(self._reset_dicts_root_btn)
+
+        self.add_field(
+            "Storage Folder",
+            storage_container,
+            helper=(
+                "Where indexed dictionaries are stored. Existing dictionaries at "
+                "the old location are not moved automatically."
+            ),
+        )
+
+        self.add_section("Active Dictionaries")
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
         layout.addWidget(
             QLabel(
-                "Active Dictionaries — top entry fills the MainDefinition field. "
+                "Top entry fills the MainDefinition field. "
                 "Offline dictionaries are recommended; they're faster than Jisho."
             )
         )
