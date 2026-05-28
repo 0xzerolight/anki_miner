@@ -146,9 +146,8 @@ Anki Miner can attach pitch-accent patterns and frequency ranks to each card. Bo
 
 Pick a source and drop it into **Settings → Dictionary → Pitch Accent File**:
 
-- **[Kanjium pitch dump](https://github.com/mifunetoshiro/kanjium)** - the canonical community pitch dataset as a raw CSV in `reading,kanji,pattern` form. Smallest install, works dropped straight into `~/.anki_miner/pitch_accent.csv`.
-- **Kanjium for Yomitan** - the same dataset packaged as a Yomitan zip. Grab it from the [Yomitan dictionary list](https://learnjapanese.moe/yomichan/#dictionaries) and point the picker at the `.zip`.
-- **[NHK 2016 pitch](https://github.com/MarvNC/yomitan-dictionaries)** - Yomitan zip with NHK-derived data, digraph notation, and nasal/devoice markers. Richer than Kanjium; optional.
+- **[Kanjium accent list](https://github.com/mifunetoshiro/kanjium)** - the community pitch dump as a raw TSV at `data/source_files/raw/accents.txt` (~124k entries, `kanji<TAB>reading<TAB>pattern`). Smallest install: rename to `pitch_accent.csv` and drop straight into `~/.anki_miner/`, no Yomitan import step needed.
+- **[アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries)** - TheMoeWay's "Recommended" pitch dictionary as a Yomitan zip; richer notation than Kanjium. Point the picker at the `.zip`.
 
 Install via **Settings → Dictionary → Pitch Accent File** - the picker accepts raw CSV/TSV or a Yomitan zip (auto-imported to `~/.anki_miner/pitch_accent.csv` on Save).
 
@@ -156,9 +155,8 @@ Install via **Settings → Dictionary → Pitch Accent File** - the picker accep
 
 Pick a source and drop it into **Settings → Filtering → Frequency List File**:
 
-- **[JPDB v2](https://github.com/MarvNC/jpdb-freq-list)** - Yomitan zip, ~497k entries aggregated from anime, visual novels, novels, and J-drama. Good default for mixed media mining.
-- **[Anime & J-Drama](https://github.com/Kuuuube/yomitan-dictionaries)** - Yomitan zip, ~100k entries. Niche pick if you only mine anime or drama.
-- **[BCCWJ](https://github.com/Kuuuube/yomitan-dictionaries)** - Yomitan zip, ~536k entries from the Balanced Corpus of Contemporary Written Japanese. Complement for users also reading news or novels.
+- **[JPDB v2.2 Frequency Kana](https://github.com/Kuuuube/yomitan-dictionaries)** - Kuuuube's "Recommended" frequency list and the real successor to JPDB v2. Good default for mixed media mining.
+- **[BCCWJ SUW LUW Combined](https://github.com/Kuuuube/yomitan-dictionaries)** - large balanced-corpus rank list from the Balanced Corpus of Contemporary Written Japanese. Complement for users also reading news or novels.
 
 Install via **Settings → Filtering → Frequency List File** - the picker accepts raw CSV/TSV or a Yomitan zip (auto-imported to `~/.anki_miner/frequency.csv` on Save).
 
