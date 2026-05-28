@@ -358,6 +358,37 @@ def test_cancel_mid_build_does_not_emit_build_finished(qapp):
         worker._stop_patch.stop()
 
 
+def test_cancel_mid_build_propagates_to_processor(qapp):
+    """A cancel during process_episode must propagate into the active processor.
+
+    Phase 2 only polls check_cancelled() between episodes, so without
+    propagation the current episode runs to completion (ffmpeg + lookups) and
+    the GUI's "Cancelling…" state never clears. The worker must call
+    proc.cancel() on the running EpisodeProcessor so process_episode returns
+    promptly.
+    """
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    ep1 = _fake_processor(counts)
+    ep2 = _fake_processor(counts)
+    worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1"), _make_pair("ep2")]), processors=[base, ep1, ep2])
+
+    def cancel_during_ep1(*args, **kwargs):
+        worker.cancel()
+        return MagicMock(cards_created=1)
+
+    ep1.process_episode.side_effect = cancel_during_ep1
+    try:
+        worker.confirm()
+        worker.run()
+
+        # The cancel reached the processor that was mining ep1.
+        ep1.cancel.assert_called_once()
+        ep2.process_episode.assert_not_called()
+    finally:
+        worker._stop_patch.stop()
+
+
 def test_empty_episode_does_not_abort_build(qapp):
     """An episode yielding 0 cards (cancelled-empty curation result) does not stop the loop.
 
