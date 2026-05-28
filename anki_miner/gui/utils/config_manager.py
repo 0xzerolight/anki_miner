@@ -265,6 +265,7 @@ class GUIConfigManager:
         path_keys = {
             "media_temp_folder",
             "jmdict_path",
+            "dicts_root",
             "pitch_accent_path",
             "frequency_list_path",
             "known_words_db_path",
