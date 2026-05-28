@@ -19,6 +19,7 @@ from anki_miner.exceptions import AnkiMinerException
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.models import CardPayload, MediaData, ProcessingResult, TokenizedWord
 from anki_miner.models.youtube import SubMode
+from anki_miner.orchestration.stage_weighted_progress import StageWeightedProgress
 from anki_miner.services import (
     AnkiService,
     DefinitionService,
@@ -601,8 +602,20 @@ class EpisodeProcessor:
                 self.presenter.show_word_preview(unknown_words)
                 return ctx.build_result()
 
+            # Wrap the raw callback so the bar reflects whole-episode progress
+            # instead of resetting 0->100 per stage. One weight per stage that
+            # reports progress, in firing order: extract, definitions,
+            # [glossaries if mapped], cards.
+            stage_progress = progress_callback
+            if progress_callback is not None:
+                stage_weights = [0.40, 0.25]  # extract, definitions
+                if self.config.anki_fields.get("glossary"):
+                    stage_weights.append(0.10)  # glossaries
+                stage_weights.append(0.25)  # cards
+                stage_progress = StageWeightedProgress(progress_callback, stage_weights)
+
             media_results = self._phase3_extract(
-                ctx, video_file, unknown_words, progress_callback, run_temp_folder, audio_track_override
+                ctx, video_file, unknown_words, stage_progress, run_temp_folder, audio_track_override
             )
             if self._cancelled:
                 return self._cancelled_result_from_ctx(ctx)
@@ -611,13 +624,15 @@ class EpisodeProcessor:
                 return ctx.build_result(errors=["Media extraction failed for all words"])
             self.presenter.show_success(f"Extracted media for {len(media_results)} words")
 
-            definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, progress_callback)
+            definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
             if self._cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
             cards_created, created_note_ids = self._phase5_create(
-                ctx, media_results, definitions, glossaries, pitch_data, progress_callback
+                ctx, media_results, definitions, glossaries, pitch_data, stage_progress
             )
+            if isinstance(stage_progress, StageWeightedProgress):
+                stage_progress.finish()
             result = ctx.build_result(cards_created=cards_created, card_ids=created_note_ids)
             self._record_session(ctx, result)
             return result
