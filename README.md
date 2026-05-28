@@ -94,13 +94,14 @@ Tabs:
 - Audio in MP3 or Opus, at the bitrate you choose — Opus produces much smaller files for the same listening quality.
 - Animated screenshots in AVIF or WebP for cards that show a moment of motion instead of a still frame.
 - Analytics dashboard with history, undo, milestones, and series difficulty rankings.
-- 27 built-in themes (Catppuccin, Gruvbox, Nord, Tokyo Night, Rosé Pine, and more) with a favorites list, `Ctrl+T` to cycle, and custom themes from a JSON file. See the full list below.
+- 29 built-in themes (Catppuccin, Gruvbox, Nord, Tokyo Night, Rosé Pine, Dracula, and more) with a favorites list, `Ctrl+T` to cycle, and custom themes from a JSON file. See the full list below.
 
 <details>
-<summary><strong>Built-in themes (27)</strong></summary>
+<summary><strong>Built-in themes (29)</strong></summary>
 
 - **Ayu** — Light, Mirage, Dark
 - **Catppuccin** — Latte (light); Frappé, Macchiato, Mocha (dark)
+- **Dracula** — Dracula, Alucard
 - **Everforest** — Light, Dark
 - **GitHub** — Light; Dark, Dark Dimmed
 - **Gruvbox** — Light Medium, Dark Medium
