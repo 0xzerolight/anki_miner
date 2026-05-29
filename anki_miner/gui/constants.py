@@ -34,8 +34,8 @@ SUBTITLE_FILE_FILTER = "Subtitle Files (*.ass *.srt *.ssa);;All Files (*)"
 # =============================================================================
 # SUBTITLE OFFSET RANGE
 # =============================================================================
-SUBTITLE_OFFSET_MIN = -60.0
-SUBTITLE_OFFSET_MAX = 60.0
+SUBTITLE_OFFSET_MIN = -300.0
+SUBTITLE_OFFSET_MAX = 300.0
 
 # =============================================================================
 # PATH DISPLAY
