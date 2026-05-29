@@ -33,7 +33,7 @@ External runtime dependencies:
 
 1. Fork the repo and create a branch from `main`. Branch names like `feat/...`, `fix/...`, or `docs/...` are appreciated but not required.
 2. Keep PRs focused — one feature or fix per PR.
-3. Pre-commit runs `black` and `ruff` on every commit; let it.
+3. Style (`black` + `ruff`) is auto-fixed on your PR by [pre-commit.ci](https://pre-commit.ci) — a bot pushes a fix commit if needed, so you don't have to run anything to pass CI. Installing the local hook (`pre-commit install`) is recommended for faster feedback but no longer required.
 4. Run the test suite. See [docs/TESTING.md](docs/TESTING.md).
 5. Add an entry under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md).
 6. Open the PR against `main`. The PR template will populate automatically.
