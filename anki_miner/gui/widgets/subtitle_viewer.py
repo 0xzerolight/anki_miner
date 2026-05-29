@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
+from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 
 logger = logging.getLogger(__name__)
@@ -79,7 +80,7 @@ class SubtitleViewer(QDialog):
         controls_layout.addWidget(offset_label)
 
         self.offset_spinbox = QDoubleSpinBox()
-        self.offset_spinbox.setRange(-60.0, 60.0)
+        self.offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
         self.offset_spinbox.setSingleStep(0.1)
         self.offset_spinbox.setValue(initial_offset)
         self.offset_spinbox.setSuffix(" s")
