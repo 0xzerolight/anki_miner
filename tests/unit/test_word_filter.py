@@ -247,6 +247,77 @@ class TestWordFilterService:
             result = service.filter_by_word_lists([], wls)
             assert result == []
 
+    class TestFilterByScriptType:
+        """Tests for filter_by_script_type method (Issue #57)."""
+
+        def test_excludes_hiragana_only(self, test_config):
+            """Hiragana-only words are dropped when the flag is set."""
+            service = WordFilterService(test_config)
+            words = [create_word("これ"), create_word("漢字"), create_word("コーヒー")]
+
+            result = service.filter_by_script_type(words, exclude_hiragana_only=True)
+
+            assert [w.lemma for w in result] == ["漢字", "コーヒー"]
+
+        def test_excludes_katakana_only(self, test_config):
+            """Katakana-only words (incl. prolonged mark) are dropped when set."""
+            service = WordFilterService(test_config)
+            words = [create_word("コーヒー"), create_word("漢字"), create_word("これ")]
+
+            result = service.filter_by_script_type(words, exclude_katakana_only=True)
+
+            assert [w.lemma for w in result] == ["漢字", "これ"]
+
+        def test_excludes_both_scripts(self, test_config):
+            """Both flags together drop all pure-kana words, keep mixed/kanji."""
+            service = WordFilterService(test_config)
+            words = [create_word("これ"), create_word("コーヒー"), create_word("漢字"), create_word("お茶")]
+
+            result = service.filter_by_script_type(words, exclude_hiragana_only=True, exclude_katakana_only=True)
+
+            assert [w.lemma for w in result] == ["漢字", "お茶"]
+
+        def test_no_flags_is_noop(self, test_config):
+            """With neither flag set, nothing is removed."""
+            service = WordFilterService(test_config)
+            words = [create_word("これ"), create_word("コーヒー"), create_word("漢字")]
+
+            result = service.filter_by_script_type(words)
+
+            assert len(result) == 3
+
+        def test_tests_mined_form_verb_uses_lemma(self, test_config):
+            """A verb is judged by its lemma (mined_form), not its surface.
+
+            Surface ぬすんだ is hiragana-only, but the verb mines as lemma 盗む
+            (has kanji) → kept under exclude_hiragana_only.
+            """
+            service = WordFilterService(test_config)
+            words = [create_word("盗む", surface="ぬすんだ", pos="動詞")]
+
+            result = service.filter_by_script_type(words, exclude_hiragana_only=True)
+
+            assert len(result) == 1
+
+        def test_tests_mined_form_noun_uses_surface(self, test_config):
+            """A noun is judged by its surface (mined_form).
+
+            Subtitle wrote 全部 as ぜんぶ; the noun mines as surface ぜんぶ
+            (hiragana) → dropped under exclude_hiragana_only even though the
+            lemma 全部 has kanji.
+            """
+            service = WordFilterService(test_config)
+            words = [create_word("全部", surface="ぜんぶ", pos="名詞")]
+
+            result = service.filter_by_script_type(words, exclude_hiragana_only=True)
+
+            assert result == []
+
+        def test_empty_list(self, test_config):
+            """Empty input yields empty output."""
+            service = WordFilterService(test_config)
+            assert service.filter_by_script_type([], exclude_hiragana_only=True) == []
+
     class TestDeduplicateBySentence:
         """Tests for deduplicate_by_sentence method."""
 
