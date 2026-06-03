@@ -273,6 +273,10 @@ class SettingsTab(QWidget):
         # Deduplication settings
         self.filtering_panel.deduplicate_sentences_checkbox.setChecked(self.config.deduplicate_sentences)
 
+        # Script-type filters (Issue #57)
+        self.filtering_panel.exclude_hiragana_only_checkbox.setChecked(self.config.exclude_hiragana_only_words)
+        self.filtering_panel.exclude_katakana_only_checkbox.setChecked(self.config.exclude_katakana_only_words)
+
         # i+1 sentence filter setting
         self.filtering_panel.use_i_plus_one_checkbox.setChecked(self.config.use_i_plus_one_filter)
 
@@ -434,6 +438,9 @@ class SettingsTab(QWidget):
             use_subtitle_regex_filter=use_subtitle_regex,
             # Deduplication settings
             deduplicate_sentences=self.filtering_panel.deduplicate_sentences_checkbox.isChecked(),
+            # Script-type filters (Issue #57)
+            exclude_hiragana_only_words=self.filtering_panel.exclude_hiragana_only_checkbox.isChecked(),
+            exclude_katakana_only_words=self.filtering_panel.exclude_katakana_only_checkbox.isChecked(),
             # i+1 sentence filter setting
             use_i_plus_one_filter=self.filtering_panel.use_i_plus_one_checkbox.isChecked(),
             # Sentence length filter (Issue #33)

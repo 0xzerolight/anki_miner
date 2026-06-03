@@ -262,6 +262,23 @@ class FilteringSettingsPanel(FormPanel):
             helper="Skips duplicate example sentences.",
         )
 
+        # Script Type section (Issue #57)
+        self.add_section("Script Type")
+
+        self.exclude_hiragana_only_checkbox = QCheckBox("Exclude Hiragana-Only Words")
+        self.add_field(
+            "",
+            self.exclude_hiragana_only_checkbox,
+            helper="Skip words written entirely in hiragana (e.g. する, これ). Focuses the deck on kanji vocabulary.",
+        )
+
+        self.exclude_katakana_only_checkbox = QCheckBox("Exclude Katakana-Only Words")
+        self.add_field(
+            "",
+            self.exclude_katakana_only_checkbox,
+            helper="Skip words written entirely in katakana (e.g. コーヒー). Drops most foreign loanwords.",
+        )
+
         # i+1 Sentence Filter section
         self.add_section("i+1 Sentence Filter")
 
