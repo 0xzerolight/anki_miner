@@ -2,8 +2,7 @@ name: Feature request
 description: Suggest a new feature or enhancement for Anki Miner.
 title: "[Feature]: "
 labels:
-  - enhancement
-  - needs-triage
+  - feature
 body:
   - type: markdown
     attributes:
