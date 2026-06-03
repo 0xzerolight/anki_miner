@@ -1,5 +1,7 @@
 """Worker thread for processing manually-paired video/subtitle files."""
 
+from collections.abc import Callable
+
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.presenters import GUIProgressCallback
@@ -20,6 +22,7 @@ class ManualPairWorkerThread(CancellableWorker):
         episode_processor: EpisodeProcessor,
         pairs,  # List[FilePair]
         progress_callback: GUIProgressCallback | None = None,
+        curation_callback: Callable[[list], list] | None = None,
         parent=None,
     ):
         """Initialize the manual pair worker thread.
@@ -28,12 +31,19 @@ class ManualPairWorkerThread(CancellableWorker):
             episode_processor: Episode processor for handling each pair
             pairs: List of FilePair objects to process
             progress_callback: Optional progress callback
+            curation_callback: Optional callback invoked per-pair for word curation
             parent: Optional parent QObject
         """
         super().__init__(parent)
         self.episode_processor = episode_processor
         self.pairs = pairs
         self.progress_callback = progress_callback
+        self.curation_callback = curation_callback
+        # Published per-pair so the GUI bridge can build the dialog's media context.
+        self._curation_processor = episode_processor
+        self._curation_video = None
+        self._curation_subtitle = None
+        self._curation_offset = 0.0
 
     def cancel(self) -> None:
         """Cancel processing, propagating to the processor."""
@@ -58,11 +68,18 @@ class ManualPairWorkerThread(CancellableWorker):
 
                 # Process this pair
                 try:
+                    # Mirror BatchQueueWorkerThread's _curation_* attrs so the GUI
+                    # bridge reads one attribute name across both batch workers.
+                    self._curation_processor = self.episode_processor
+                    self._curation_video = pair.video
+                    self._curation_subtitle = pair.subtitle
+                    self._curation_offset = self.episode_processor.config.subtitle_offset
                     result = self.episode_processor.process_episode(
                         pair.video,
                         pair.subtitle,
                         preview_mode=False,
                         progress_callback=None,  # Don't nest progress callbacks
+                        curation_callback=self.curation_callback,
                     )
                     results.append(result)
 

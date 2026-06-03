@@ -1,6 +1,8 @@
 """Worker thread for processing batch queue of multiple folder pairs."""
 
+from collections.abc import Callable
 from dataclasses import replace
+from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 
@@ -32,6 +34,7 @@ class BatchQueueWorkerThread(CancellableWorker):
         presenter: GUIPresenter,
         progress_callback: GUIProgressCallback | None = None,
         stats_service=None,
+        curation_callback: Callable[[list], list] | None = None,
         parent=None,
     ):
         """Initialize the batch queue worker thread.
@@ -42,6 +45,7 @@ class BatchQueueWorkerThread(CancellableWorker):
             presenter: GUI presenter for output
             progress_callback: Optional progress callback for updates
             stats_service: Optional statistics recording service
+            curation_callback: Optional callable forwarded to process_episode for word curation
             parent: Optional parent QObject
         """
         super().__init__(parent)
@@ -51,6 +55,13 @@ class BatchQueueWorkerThread(CancellableWorker):
         self.progress_callback = progress_callback
         self.stats_service = stats_service
         self._current_processor: EpisodeProcessor | None = None
+        self.curation_callback = curation_callback
+        # Published per-pair for the GUI curation bridge (mirrors ManualPairWorkerThread's
+        # _curation_* attrs so BatchProcessingTab reads one attribute name across both workers).
+        self._curation_processor: EpisodeProcessor | None = None
+        self._curation_video: Path | None = None
+        self._curation_subtitle: Path | None = None
+        self._curation_offset: float = 0.0
 
     def cancel(self) -> None:
         """Cancel processing, propagating to the current processor."""
@@ -95,11 +106,16 @@ class BatchQueueWorkerThread(CancellableWorker):
                     if self.check_cancelled():
                         break
 
+                    self._curation_processor = episode_processor
+                    self._curation_video = pair.video
+                    self._curation_subtitle = pair.subtitle
+                    self._curation_offset = item.subtitle_offset
                     result = episode_processor.process_episode(
                         pair.video,
                         pair.subtitle,
                         preview_mode=False,
                         progress_callback=self.progress_callback,
+                        curation_callback=self.curation_callback,
                     )
                     cards_for_item += result.cards_created
 

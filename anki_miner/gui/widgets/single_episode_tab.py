@@ -1,11 +1,11 @@
 """Single episode mining tab for GUI."""
 
 import logging
-import threading
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -34,7 +34,7 @@ from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import configure_expanding_container, make_label_fit_text
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog
-from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
@@ -54,9 +54,6 @@ class SingleEpisodeTab(MiningTabBase):
     This tab allows users to select a video and subtitle file, adjust subtitle
     offset, and process the episode to mine vocabulary and create Anki cards.
     """
-
-    # Signal for cross-thread curation: emitted from worker, handled on GUI thread
-    _curation_requested = pyqtSignal(list)
 
     def __init__(
         self,
@@ -86,10 +83,7 @@ class SingleEpisodeTab(MiningTabBase):
         self.recent_manager = RecentFilesManager()
         self._audio_track_override: int | None = None
 
-        # Curation bridge: allows worker thread to show dialog on GUI thread
-        self._curation_event = threading.Event()
-        self._curation_result: list = []
-        self._curation_requested.connect(self._on_curation_requested)
+        self._init_curation_bridge()
 
         # Connect progress callback signals via shared base.
         self._wire_progress_callback(self.progress_callback)
@@ -483,21 +477,10 @@ class SingleEpisodeTab(MiningTabBase):
     # MiningTabBase, which drives the single ``progress_widget`` via the
     # percentage-scaled ``set_progress`` path.
 
-    def _curation_bridge(self, words: list) -> list:
-        """Thread-safe bridge: called from worker thread, shows dialog on GUI thread.
-
-        Emits a signal to the GUI thread, then blocks until the user completes
-        the curation dialog. Returns the user's selected words.
-        """
-        self._curation_event.clear()
-        self._curation_result = []
-        self._curation_requested.emit(words)
-        self._curation_event.wait()  # Block worker thread until dialog completes
-        return self._curation_result
-
-    def _on_curation_requested(self, words: list) -> None:
-        """Slot called on GUI thread when curation is needed."""
-        # Build media context, mirroring _on_timing_clicked's offset-zeroed parse.
+    def _build_curation_context(
+        self,
+    ) -> tuple[CurationMediaContext | None, Callable[[str], list[tuple[str, str]]] | None]:
+        """Build (media_context, lookup_fn) from this tab's selectors + live worker."""
         media_context: CurationMediaContext | None = None
         video_path = self.video_selector.get_path().strip()
         subtitle_path = self.subtitle_selector.get_path().strip()
@@ -517,32 +500,16 @@ class SingleEpisodeTab(MiningTabBase):
                 logger.exception("Failed to build media context for curation; proceeding without player")
                 media_context = None
 
-        # Build lookup function from the live worker's processor.
         lookup_fn = None
         if self.worker_thread is not None:
             proc = getattr(self.worker_thread, "processor", None)
             if proc is not None:
                 lookup_fn = proc.definition_service.lookup_all_offline
-
-        # finally guarantees the worker thread is unblocked even if dialog
-        # construction/exec raises — otherwise _curation_event.wait() hangs forever.
-        try:
-            dialog = WordCurationDialog(
-                words,
-                self,
-                mark_known_callback=self._mark_known,
-                media_context=media_context,
-                lookup_fn=lookup_fn,
-            )
-            if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
-                self._curation_result = dialog.get_selected_words()
-            else:
-                self._curation_result = []
-        finally:
-            self._curation_event.set()  # Unblock the worker thread
+        return media_context, lookup_fn
 
     def _on_cancel_clicked(self) -> None:
         """Handle cancel button click."""
+        self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
             self.worker_thread.cancel()
         self.cancel_button.setText("Cancelling...")
