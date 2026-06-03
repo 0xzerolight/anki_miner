@@ -141,6 +141,14 @@ class AnkiMinerConfig:
     # the Deck Builder. Default False preserves the standard dedup behaviour.
     allow_duplicate_cards: bool = False
 
+    # Script-type filters (Issue #57). When set, words whose card form
+    # (mined_form) is written entirely in one kana script are dropped before
+    # card creation. Useful for a kanji-focused deck / discarding katakana
+    # loanwords. Both default False (no behaviour change). Gated by
+    # bypass_optional_filters like the other optional reduction filters.
+    exclude_hiragana_only_words: bool = False
+    exclude_katakana_only_words: bool = False
+
     # Word list settings
     blacklist_path: Path | None = None
     whitelist_path: Path | None = None
