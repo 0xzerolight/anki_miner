@@ -599,7 +599,7 @@ class WordCurationDialog(QDialog):
         """Whether a checkbox item still accepts toggling.
 
         Rows added to the known/ignore list have their checkable flag stripped so
-        bulk actions and Space can't re-include them (Issue #42).
+        bulk actions and the S toggle key can't re-include them (Issue #42).
         """
         return bool(item.flags() & Qt.ItemFlag.ItemIsUserCheckable)
 
@@ -608,7 +608,8 @@ class WordCurationDialog(QDialog):
 
         If any target row is unchecked, all flip to Checked; otherwise all flip
         to Unchecked. Falls back to the focused row when the selection is empty
-        so Space on a single-cursor view still toggles that one row.
+        so the S key on a single-cursor view still toggles that one row
+        (Space is now play/pause — Issue #55).
         """
         selection_model = self.table.selectionModel()
         rows: list[int] = []

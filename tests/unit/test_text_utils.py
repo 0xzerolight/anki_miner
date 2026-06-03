@@ -324,3 +324,17 @@ class TestIsKatakanaOnly:
 
     def test_empty_string_false(self):
         assert is_katakana_only("") is False
+
+    def test_halfwidth_katakana_counts(self):
+        # Halfwidth katakana (U+FF66–U+FF9F) including the halfwidth prolonged
+        # mark ｰ and voiced sound mark ﾞ must qualify (Issue #57 review gap).
+        assert is_katakana_only("ｺｰﾋｰ") is True
+        assert is_katakana_only("ｺｰﾋﾞｰ") is True
+        assert is_katakana_only("ﾛﾎﾞｯﾄ") is True
+
+    def test_mixed_fullwidth_and_halfwidth_katakana(self):
+        assert is_katakana_only("コーヒーｺｰﾋｰ") is True
+
+    def test_fullwidth_latin_is_false(self):
+        # Fullwidth latin (ＡＢＣ) is not katakana.
+        assert is_katakana_only("ＡＢＣ") is False
