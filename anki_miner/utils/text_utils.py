@@ -257,3 +257,23 @@ def extract_japanese_text(text: str) -> str:
         ):
             japanese_chars.append(char)
     return "".join(japanese_chars)
+
+
+def is_hiragana_only(text: str) -> bool:
+    """Return True iff ``text`` is non-empty and every character is hiragana.
+
+    Hiragana block is U+3040–U+309F. Empty strings and any text containing a
+    kanji, katakana, digit, romaji, or punctuation character return False (so
+    such words are kept by the script-type filter).
+    """
+    return bool(text) and all("぀" <= char <= "ゟ" for char in text)
+
+
+def is_katakana_only(text: str) -> bool:
+    """Return True iff ``text`` is non-empty and every character is katakana.
+
+    Katakana block is U+30A0–U+30FF, which includes the prolonged sound mark
+    ー (U+30FC) and middle dot ・ (U+30FB), so コーヒー and ロボット・X count as
+    katakana-only. Empty strings or any non-katakana character return False.
+    """
+    return bool(text) and all("゠" <= char <= "ヿ" for char in text)
