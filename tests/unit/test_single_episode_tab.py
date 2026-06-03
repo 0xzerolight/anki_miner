@@ -50,6 +50,18 @@ def test_tracks_button_exists(tab):
 
 
 # ---------------------------------------------------------------------------
+# 2b. Recent-files combo does not drive horizontal overflow (Issue #56)
+# ---------------------------------------------------------------------------
+
+
+def test_recent_combo_does_not_drive_horizontal_overflow(tab):
+    long_item = "[Group] Very Long Release Name - 01 (1080p) [DEADBEEF].mkv + Very Long Release Name - 01.srt"
+    tab.recent_combo.addItem(long_item)
+    # Bounded minimum width: combo must be able to shrink, not pin the layout wide.
+    assert tab.recent_combo.minimumSizeHint().width() < 300
+
+
+# ---------------------------------------------------------------------------
 # 3. Override resets on video path change
 # ---------------------------------------------------------------------------
 

@@ -245,6 +245,12 @@ class SingleEpisodeTab(MiningTabBase):
         recent_layout.addWidget(recent_label)
 
         self.recent_combo = QComboBox()
+        # Bound the combo's minimum width so long recent-file names cannot drive
+        # the file-selection card (and the Expanding progress bar/log) wider than
+        # the window (Issue #56). The default AdjustToContentsOnFirstShow makes
+        # minimumSizeHint content-driven, pinning the layout to the widest item.
+        self.recent_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.recent_combo.setMinimumContentsLength(20)
         self.recent_combo.addItem("Select recent file pair...")
         self.recent_combo.currentIndexChanged.connect(self._on_recent_selected)
         recent_layout.addWidget(self.recent_combo, 1)
