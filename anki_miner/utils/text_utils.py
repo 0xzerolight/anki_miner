@@ -269,11 +269,23 @@ def is_hiragana_only(text: str) -> bool:
     return bool(text) and all("぀" <= char <= "ゟ" for char in text)
 
 
+def _is_katakana_char(char: str) -> bool:
+    """True iff ``char`` is fullwidth or halfwidth katakana.
+
+    Fullwidth block U+30A0–U+30FF includes the prolonged sound mark ー (U+30FC)
+    and middle dot ・ (U+30FB). Halfwidth block U+FF66–U+FF9F covers the
+    halfwidth katakana letters, the halfwidth prolonged mark ｰ (U+FF70) and the
+    halfwidth voiced/semi-voiced sound marks ﾞ ﾟ (U+FF9E–U+FF9F), so a loanword
+    typed in halfwidth such as ｺｰﾋﾞｰ counts as katakana too (Issue #57 review).
+    """
+    return "゠" <= char <= "ヿ" or "ｦ" <= char <= "ﾟ"
+
+
 def is_katakana_only(text: str) -> bool:
     """Return True iff ``text`` is non-empty and every character is katakana.
 
-    Katakana block is U+30A0–U+30FF, which includes the prolonged sound mark
-    ー (U+30FC) and middle dot ・ (U+30FB), so コーヒー and ロボット・X count as
-    katakana-only. Empty strings or any non-katakana character return False.
+    Counts both fullwidth (U+30A0–U+30FF) and halfwidth (U+FF66–U+FF9F)
+    katakana, so コーヒー, ロボット・X and the halfwidth ｺｰﾋﾞｰ all qualify.
+    Empty strings or any non-katakana character return False.
     """
-    return bool(text) and all("゠" <= char <= "ヿ" for char in text)
+    return bool(text) and all(_is_katakana_char(char) for char in text)

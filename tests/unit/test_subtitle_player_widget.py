@@ -275,6 +275,40 @@ class TestTogglePlayPause:
         widget.toggle_play_pause()  # should not raise
 
 
+class TestPlaybackStateLabel:
+    """Tests for the play-button label state machine (Issue #55 review gap).
+
+    The button text must be driven by the actual playbackState signal, not
+    toggled manually, so an end-of-media stop resets it to "Play" on its own.
+    Uses the real QMediaPlayer enum (no media-class patch) so the handler's
+    ``state == PlayingState`` comparison resolves against real enum members.
+    """
+
+    def test_label_shows_pause_when_playing(self):
+        from PyQt6.QtMultimedia import QMediaPlayer
+
+        widget = SubtitlePlayerWidget()
+        widget._on_playback_state_changed(QMediaPlayer.PlaybackState.PlayingState)
+        assert widget.play_button.text() == "Pause"
+
+    def test_label_shows_play_when_paused(self):
+        from PyQt6.QtMultimedia import QMediaPlayer
+
+        widget = SubtitlePlayerWidget()
+        widget.play_button.setText("Pause")
+        widget._on_playback_state_changed(QMediaPlayer.PlaybackState.PausedState)
+        assert widget.play_button.text() == "Play"
+
+    def test_label_resets_to_play_on_end_of_media_stop(self):
+        """End-of-media transitions to StoppedState — label must reset to Play."""
+        from PyQt6.QtMultimedia import QMediaPlayer
+
+        widget = SubtitlePlayerWidget()
+        widget.play_button.setText("Pause")
+        widget._on_playback_state_changed(QMediaPlayer.PlaybackState.StoppedState)
+        assert widget.play_button.text() == "Play"
+
+
 class TestAudioTrackSelection:
     """Test that the Japanese audio track is selected in the player widget."""
 
