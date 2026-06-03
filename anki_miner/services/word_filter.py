@@ -12,6 +12,7 @@ from anki_miner.utils import wrap_target_furigana, wrap_target_plain
 
 if TYPE_CHECKING:
     from anki_miner.services.word_list_service import WordListService
+    from anki_miner.services.wordset_service import WordsetService
 
 
 def _normalize_sentence(text: str) -> str:
@@ -122,6 +123,35 @@ class WordFilterService:
         result = []
         for word in words:
             if word_list_service.is_whitelisted(word.lemma) or not word_list_service.is_blacklisted(word.lemma):
+                result.append(word)
+        return result
+
+    def filter_by_wordsets(
+        self,
+        words: list[TokenizedWord],
+        wordset_service: WordsetService,
+        word_list_service: WordListService | None = None,
+    ) -> list[TokenizedWord]:
+        """Drop words on any enabled name wordset (Issue #59).
+
+        Matches ``word.lemma`` against the bundled proper-noun sets, the
+        same key ``filter_by_word_lists`` uses. The user whitelist, when
+        provided, short-circuits the drop so an explicitly-wanted name is
+        kept.
+
+        Args:
+            words: Words to filter.
+            wordset_service: Loaded union of enabled name wordsets.
+            word_list_service: Optional user blacklist/whitelist service;
+                a whitelisted lemma is always kept.
+
+        Returns:
+            Filtered list of words.
+        """
+        result = []
+        for word in words:
+            whitelisted = word_list_service is not None and word_list_service.is_whitelisted(word.lemma)
+            if whitelisted or not wordset_service.is_excluded(word.lemma):
                 result.append(word)
         return result
 
