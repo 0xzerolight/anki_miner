@@ -9,10 +9,15 @@ genuinely shared scaffolding and leaves slot bodies to the subclasses via duck t
 
 from __future__ import annotations
 
+import threading
+from collections.abc import Callable
+
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
 from PyQt6.QtWidgets import QWidget
 
 from anki_miner.gui.presenters import GUIProgressCallback
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 
 
 class MiningTabBase(QWidget):
@@ -32,6 +37,9 @@ class MiningTabBase(QWidget):
     overrides the three progress slots. Subclasses still provide ``dragEnterEvent``
     and ``dropEvent`` via duck typing.
     """
+
+    # Worker→GUI curation bridge (shared by SingleEpisodeTab and BatchProcessingTab).
+    _curation_requested = pyqtSignal(list)
 
     # ------------------------------------------------------------------
     # Progress callback wiring
@@ -127,3 +135,70 @@ class MiningTabBase(QWidget):
         db = KnownWordDB(self.config.known_words_db_path)  # type: ignore[attr-defined]
         db.initialize()
         return db.add_words(forms, source="user")
+
+    # ------------------------------------------------------------------
+    # Word curation bridge (Issue #60)
+    # ------------------------------------------------------------------
+
+    def _init_curation_bridge(self) -> None:
+        """Set up the worker→GUI curation bridge. Call once from subclass ``__init__``."""
+        self._curation_event = threading.Event()
+        self._curation_result: list = []
+        self._active_curation_dialog: WordCurationDialog | None = None
+        self._curation_requested.connect(self._on_curation_requested)
+
+    def _curation_bridge(self, words: list) -> list:
+        """Called ON THE WORKER THREAD: emit to the GUI thread, block until the dialog completes.
+
+        Passed as ``curation_callback`` to ``process_episode``. Returns the user's
+        selected words (empty list ⇒ the orchestrator skips card creation for this episode).
+        """
+        self._curation_event.clear()
+        self._curation_result = []
+        self._curation_requested.emit(words)
+        self._curation_event.wait()  # Block worker until the GUI sets the event.
+        return self._curation_result
+
+    def _build_curation_context(
+        self,
+    ) -> tuple[CurationMediaContext | None, Callable[[str], list[tuple[str, str]]] | None]:
+        """Override to supply ``(media_context, lookup_fn)`` for the dialog.
+
+        Default returns ``(None, None)`` → a plain table-only popup. Subclasses
+        override with their own media/lookup sourcing.
+        """
+        return None, None
+
+    def _on_curation_requested(self, words: list) -> None:
+        """GUI-thread slot: build context, exec the dialog, ALWAYS release the worker.
+
+        The ``finally`` guarantees ``_curation_event`` is set even if dialog
+        construction/exec raises — otherwise ``_curation_bridge`` hangs forever.
+        """
+        media_context, lookup_fn = self._build_curation_context()
+        try:
+            dialog = WordCurationDialog(
+                words,
+                self,
+                mark_known_callback=self._mark_known,
+                media_context=media_context,
+                lookup_fn=lookup_fn,
+            )
+            self._active_curation_dialog = dialog
+            if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
+                self._curation_result = dialog.get_selected_words()
+            else:
+                self._curation_result = []
+        finally:
+            self._active_curation_dialog = None
+            self._curation_event.set()
+
+    def _cancel_active_curation_dialog(self) -> None:
+        """Reject any open curation dialog so the worker doesn't hang on cancel.
+
+        Call from each tab's ``_on_cancel_clicked``. ``reject()`` triggers the
+        dialog's exec to return Rejected, whose ``finally`` sets the event and the
+        worker resumes with an empty selection → orchestrator returns a cancelled result.
+        """
+        if self._active_curation_dialog is not None:
+            self._active_curation_dialog.reject()
