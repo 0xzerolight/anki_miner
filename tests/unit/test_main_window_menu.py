@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtWidgets import QApplication, QToolButton
+from PyQt6.QtWidgets import QApplication, QToolButton, QWidget
 
 from anki_miner.config import AnkiMinerConfig
 
@@ -60,40 +60,60 @@ def _help_menu(window):
     raise AssertionError("Help menu not found on menu bar")
 
 
-def test_report_action_label_mentions_bug_and_feature(main_window):
-    """The Help menu entry advertises both bug reports and feature requests."""
+def _corner_container(window):
+    """Return the QWidget pinned to the menu bar's top-right corner."""
+    menu_bar = window.menuBar()
+    assert menu_bar is not None
+    corner = menu_bar.cornerWidget(Qt.Corner.TopRightCorner)
+    assert isinstance(corner, QWidget), "Top-right corner should hold a container QWidget"
+    return corner
+
+
+def test_report_removed_from_help_menu(main_window):
+    """The Report item no longer lives on the Help menu."""
     help_menu = _help_menu(main_window)
-    action = _find_action(help_menu, "Report a Bug / Suggest a Feature")
-    assert action is not None, "Expected renamed Report action on Help menu"
-    # Old label must be gone.
+    assert _find_action(help_menu, "Report a Bug / Suggest a Feature") is None
     assert _find_action(help_menu, "Report an Issue") is None
+    # Help retains About + Check for Updates.
+    assert _find_action(help_menu, "About Anki Miner") is not None
+    assert _find_action(help_menu, "Check for Updates") is not None
 
 
-def test_report_action_opens_issues_url(main_window, monkeypatch):
-    """Triggering the Report action opens the /issues page via QDesktopServices."""
+def test_corner_has_report_and_star_buttons(main_window):
+    """The corner container holds a Report button and the Star button."""
+    container = _corner_container(main_window)
+    report = container.findChild(QToolButton, "report_issue_button")
+    star = container.findChild(QToolButton, "github_star_button")
+    assert report is not None, "Report button missing from corner container"
+    assert star is not None, "Star button missing from corner container"
+    assert report.text() == "Report a Bug / Suggest a Feature"
+    assert "Star - help the project" in star.text()
+    assert report.autoRaise() is True
+    assert star.autoRaise() is True
+
+
+def test_report_button_opens_issues_url(main_window, monkeypatch):
+    """Clicking the Report button opens the /issues page via QDesktopServices."""
     captured: list[QUrl] = []
     from PyQt6.QtGui import QDesktopServices
 
     monkeypatch.setattr(QDesktopServices, "openUrl", lambda url: captured.append(url) or True)
 
-    action = _find_action(_help_menu(main_window), "Report a Bug / Suggest a Feature")
-    assert action is not None
-    action.trigger()
+    report = _corner_container(main_window).findChild(QToolButton, "report_issue_button")
+    assert report is not None
+    report.click()
 
     assert len(captured) == 1
     assert captured[0].toString() == "https://github.com/0xzerolight/anki_miner/issues"
 
 
-def test_menu_bar_has_github_star_corner_widget(main_window):
-    """A QToolButton labelled 'Star - help the project' sits in the top-right corner."""
-    menu_bar = main_window.menuBar()
-    assert menu_bar is not None
-
-    corner = menu_bar.cornerWidget(Qt.Corner.TopRightCorner)
-    assert isinstance(corner, QToolButton), "Top-right corner should hold a QToolButton"
-    assert "Star - help the project" in corner.text()
-    assert corner.toolTip() == "Star the project on GitHub"
-    assert corner.autoRaise() is True
+def test_star_button_in_corner_container(main_window):
+    """A QToolButton labelled 'Star - help the project' sits in the corner container."""
+    star = _corner_container(main_window).findChild(QToolButton, "github_star_button")
+    assert star is not None
+    assert "Star - help the project" in star.text()
+    assert star.toolTip() == "Star the project on GitHub"
+    assert star.autoRaise() is True
 
 
 def test_star_button_opens_repo_url(main_window, monkeypatch):
@@ -103,11 +123,9 @@ def test_star_button_opens_repo_url(main_window, monkeypatch):
 
     monkeypatch.setattr(QDesktopServices, "openUrl", lambda url: captured.append(url) or True)
 
-    menu_bar = main_window.menuBar()
-    assert menu_bar is not None
-    corner = menu_bar.cornerWidget(Qt.Corner.TopRightCorner)
-    assert isinstance(corner, QToolButton)
-    corner.click()
+    star = _corner_container(main_window).findChild(QToolButton, "github_star_button")
+    assert star is not None
+    star.click()
 
     assert len(captured) == 1
     assert captured[0].toString() == "https://github.com/0xzerolight/anki_miner"
