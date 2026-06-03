@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import LineLemmas, TokenizedWord
-from anki_miner.utils import wrap_target_furigana, wrap_target_plain
+from anki_miner.utils import is_hiragana_only, is_katakana_only, wrap_target_furigana, wrap_target_plain
 
 if TYPE_CHECKING:
     from anki_miner.services.word_list_service import WordListService
@@ -123,6 +123,39 @@ class WordFilterService:
         for word in words:
             if word_list_service.is_whitelisted(word.lemma) or not word_list_service.is_blacklisted(word.lemma):
                 result.append(word)
+        return result
+
+    def filter_by_script_type(
+        self,
+        words: list[TokenizedWord],
+        exclude_hiragana_only: bool = False,
+        exclude_katakana_only: bool = False,
+    ) -> list[TokenizedWord]:
+        """Drop words whose card form is written entirely in a single kana script.
+
+        The test is applied to ``word.mined_form`` — the exact text that becomes
+        the card's Expression field (POS-aware: verbs/adjectives use the lemma,
+        nouns and everything else use the surface). So 全部 written in the
+        subtitle as ぜんぶ is excluded when ``exclude_hiragana_only`` is set, and
+        katakana loanwords like コーヒー are excluded when ``exclude_katakana_only``
+        is set. Mixed kana+kanji forms are never matched and are kept.
+
+        Args:
+            words: Words to filter.
+            exclude_hiragana_only: Drop words whose mined form is all hiragana.
+            exclude_katakana_only: Drop words whose mined form is all katakana.
+
+        Returns:
+            Filtered list of words.
+        """
+        result = []
+        for word in words:
+            form = word.mined_form
+            if exclude_hiragana_only and is_hiragana_only(form):
+                continue
+            if exclude_katakana_only and is_katakana_only(form):
+                continue
+            result.append(word)
         return result
 
     def deduplicate_by_sentence(

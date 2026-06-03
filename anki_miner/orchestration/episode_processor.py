@@ -306,6 +306,25 @@ class EpisodeProcessor:
             if filtered_out > 0:
                 self.presenter.show_info(f"Word list filter: removed {filtered_out} words")
 
+        # Script-type filter (hiragana-only / katakana-only). Issue #57.
+        if (
+            self.config.exclude_hiragana_only_words or self.config.exclude_katakana_only_words
+        ) and not self.config.bypass_optional_filters:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_script_type(
+                unknown_words,
+                exclude_hiragana_only=self.config.exclude_hiragana_only_words,
+                exclude_katakana_only=self.config.exclude_katakana_only_words,
+            )
+            removed = before - len(unknown_words)
+            if removed > 0:
+                kinds = []
+                if self.config.exclude_hiragana_only_words:
+                    kinds.append("hiragana-only")
+                if self.config.exclude_katakana_only_words:
+                    kinds.append("katakana-only")
+                self.presenter.show_info(f"Script-type filter: removed {removed} {'/'.join(kinds)} words")
+
         # Sentence deduplication. i+1 filter does its own sentence picking;
         # dedup would be a no-op (post-i+1 sentences are unique by construction).
         if (

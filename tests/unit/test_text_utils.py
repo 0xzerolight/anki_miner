@@ -7,6 +7,8 @@ from anki_miner.utils.text_utils import (
     extract_japanese_text,
     generate_furigana,
     generate_reading,
+    is_hiragana_only,
+    is_katakana_only,
     katakana_to_hiragana,
 )
 
@@ -274,3 +276,51 @@ class TestGenerateReading:
         token = _make_mock_token("真竹", kana="マダケ")
         tagger = MagicMock(return_value=[token])
         assert generate_reading("真竹", tagger) == "まだけ"
+
+
+class TestIsHiraganaOnly:
+    """Tests for is_hiragana_only (Issue #57)."""
+
+    def test_pure_hiragana(self):
+        assert is_hiragana_only("これ") is True
+        assert is_hiragana_only("する") is True
+
+    def test_pure_katakana_is_false(self):
+        assert is_hiragana_only("コーヒー") is False
+
+    def test_mixed_kana_kanji_is_false(self):
+        assert is_hiragana_only("お茶") is False
+
+    def test_kanji_is_false(self):
+        assert is_hiragana_only("漢字") is False
+
+    def test_romaji_and_digits_false(self):
+        assert is_hiragana_only("abc") is False
+        assert is_hiragana_only("123") is False
+
+    def test_empty_string_false(self):
+        assert is_hiragana_only("") is False
+
+
+class TestIsKatakanaOnly:
+    """Tests for is_katakana_only (Issue #57)."""
+
+    def test_pure_katakana(self):
+        assert is_katakana_only("カタカナ") is True
+
+    def test_prolonged_mark_counts(self):
+        # ー (U+30FC) and ・ (U+30FB) are within the katakana block.
+        assert is_katakana_only("コーヒー") is True
+        assert is_katakana_only("ロボット・X") is False  # X is romaji
+
+    def test_pure_hiragana_is_false(self):
+        assert is_katakana_only("これ") is False
+
+    def test_mixed_kana_kanji_is_false(self):
+        assert is_katakana_only("お茶") is False
+
+    def test_kanji_is_false(self):
+        assert is_katakana_only("漢字") is False
+
+    def test_empty_string_false(self):
+        assert is_katakana_only("") is False
