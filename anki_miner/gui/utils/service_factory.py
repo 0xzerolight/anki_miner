@@ -17,6 +17,7 @@ from anki_miner.services.stats_service import StatsService
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
+from anki_miner.services.wordset_service import WordsetService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ class Services:
     frequency_service: FrequencyService | None
     known_word_db: KnownWordDB | None
     word_list_service: WordListService | None
+    wordset_service: WordsetService | None
     youtube_fetcher: YouTubeFetcherService
     load_result: ServiceLoadResult
 
@@ -164,6 +166,20 @@ def create_services(config: AnkiMinerConfig) -> Services:
             load_result.warnings.append(f"Could not load word lists: {e}")
             word_list_service = None
 
+    wordset_service = None
+    if config.excluded_wordsets:
+        try:
+            wordset_service = WordsetService(enabled_ids=config.excluded_wordsets)
+            wordset_service.load()
+            if wordset_service.is_available():
+                load_result.info.append(f"Name wordsets loaded: {len(config.excluded_wordsets)} set(s) enabled")
+            else:
+                wordset_service = None
+        except Exception as e:
+            logger.warning(f"Could not load name wordsets: {e}")
+            load_result.warnings.append(f"Could not load name wordsets: {e}")
+            wordset_service = None
+
     return Services(
         subtitle_parser=subtitle_parser,
         word_filter=word_filter,
@@ -174,6 +190,7 @@ def create_services(config: AnkiMinerConfig) -> Services:
         frequency_service=frequency_service,
         known_word_db=known_word_db,
         word_list_service=word_list_service,
+        wordset_service=wordset_service,
         youtube_fetcher=youtube_fetcher,
         load_result=load_result,
     )
@@ -214,6 +231,7 @@ def create_episode_processor(
         frequency_service=services.frequency_service,
         known_word_db=services.known_word_db,
         word_list_service=services.word_list_service,
+        wordset_service=services.wordset_service,
         stats_service=stats_service,
         youtube_fetcher=services.youtube_fetcher,
     )

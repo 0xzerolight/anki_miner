@@ -756,6 +756,116 @@ class TestWordListServiceIntegration:
         assert result.cards_created == 1
 
 
+class TestWordsetServiceIntegration:
+    """Tests for EpisodeProcessor with wordset_service (Issue #59)."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_wordset_service_filters_words(self, test_config, mock_services, tmp_path):
+        """Wordset service should drop matched proper nouns via filter_by_wordsets."""
+        word1 = _make_word("食べる")
+        word2 = _make_word("田中", start_time=5.0)
+        media = _make_media()
+
+        mock_ws = MagicMock()
+        mock_ws.is_available.return_value = True
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
+        # filter_by_wordsets removes word2 (the surname)
+        mock_services["word_filter"].filter_by_wordsets.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            wordset_service=mock_ws,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # filter_by_wordsets called with both words + the wordset service + word_list_service (None)
+        mock_services["word_filter"].filter_by_wordsets.assert_called_once_with([word1, word2], mock_ws, None)
+        assert result.cards_created == 1
+
+    def test_bypass_optional_filters_skips_wordset_filter(self, test_config, mock_services, tmp_path):
+        """Deck Builder bypass_optional_filters=True must skip the wordset filter."""
+        config = replace(test_config, bypass_optional_filters=True)
+
+        word1 = _make_word("食べる")
+        mock_ws = MagicMock()
+        mock_ws.is_available.return_value = True
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            wordset_service=mock_ws,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_wordsets.assert_not_called()
+
+    def test_wordset_filter_passes_word_list_service_for_whitelist(self, test_config, mock_services, tmp_path):
+        """filter_by_wordsets receives the word_list_service so whitelist can rescue words."""
+        word1 = _make_word("田中")
+        media = _make_media()
+
+        mock_ws = MagicMock()
+        mock_ws.is_available.return_value = True
+
+        mock_wls = MagicMock()
+        mock_wls.is_available.return_value = True
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1]
+        mock_services["word_filter"].filter_by_word_lists.return_value = [word1]
+        mock_services["word_filter"].filter_by_wordsets.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["surname def"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            wordset_service=mock_ws,
+            word_list_service=mock_wls,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Verify filter_by_wordsets was called with the word_list_service (for whitelist rescue)
+        mock_services["word_filter"].filter_by_wordsets.assert_called_once_with([word1], mock_ws, mock_wls)
+
+
 class TestCrossEpisodeFiltering:
     """Tests for cross-episode frequency filtering."""
 

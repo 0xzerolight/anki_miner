@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from anki_miner.services.pitch_accent_service import PitchAccentService
     from anki_miner.services.stats_service import StatsService
     from anki_miner.services.word_list_service import WordListService
+    from anki_miner.services.wordset_service import WordsetService
     from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 
 
@@ -110,6 +111,7 @@ class EpisodeProcessor:
         frequency_service: FrequencyService | None = None,
         known_word_db: KnownWordDB | None = None,
         word_list_service: WordListService | None = None,
+        wordset_service: WordsetService | None = None,
         stats_service: StatsService | None = None,
         youtube_fetcher: YouTubeFetcherService | None = None,
     ):
@@ -127,6 +129,7 @@ class EpisodeProcessor:
             frequency_service: Optional word frequency lookup service
             known_word_db: Optional local known word database
             word_list_service: Optional word blacklist/whitelist service
+            wordset_service: Optional bundled name wordset filter service (Issue #59)
             stats_service: Optional statistics recording service
             youtube_fetcher: Optional YouTube fetcher service. Required for
                 ``process_youtube_url``; unused by ``process_episode``.
@@ -142,6 +145,7 @@ class EpisodeProcessor:
         self.frequency_service = frequency_service
         self.known_word_db = known_word_db
         self.word_list_service = word_list_service
+        self.wordset_service = wordset_service
         self.stats_service = stats_service
         self._youtube_fetcher = youtube_fetcher
         self._cancelled = False
@@ -305,6 +309,19 @@ class EpisodeProcessor:
             filtered_out = before - len(unknown_words)
             if filtered_out > 0:
                 self.presenter.show_info(f"Word list filter: removed {filtered_out} words")
+
+        # Name wordset filter (Issue #59). Drops proper nouns (people/place
+        # names) that slipped past the 固有名詞 POS filter because unidic-lite
+        # mistagged them. Whitelist still rescues. Gated like neighbors so the
+        # Deck Builder corpus preview (bypass_optional_filters) stays in parity.
+        if self.wordset_service and self.wordset_service.is_available() and not self.config.bypass_optional_filters:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_wordsets(
+                unknown_words, self.wordset_service, self.word_list_service
+            )
+            filtered_out = before - len(unknown_words)
+            if filtered_out > 0:
+                self.presenter.show_info(f"Name wordset filter: removed {filtered_out} words")
 
         # Sentence deduplication. i+1 filter does its own sentence picking;
         # dedup would be a no-op (post-i+1 sentences are unique by construction).
