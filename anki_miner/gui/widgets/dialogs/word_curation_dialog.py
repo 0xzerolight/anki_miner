@@ -333,9 +333,17 @@ class WordCurationDialog(QDialog):
 
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts for word curation."""
-        # Space: Toggle checkbox of selected rows (or current row if none selected)
+        # Space: Play/pause the player (Issue #55). Scoped to the table so it doesn't
+        # swallow spaces typed in the Search box.
         space_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Space), self.table)
-        space_shortcut.activated.connect(self._toggle_selected_rows)
+        space_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        space_shortcut.activated.connect(self._toggle_play_pause)
+
+        # S: Toggle checkbox of selected rows (or current row if none selected).
+        # Relocated off Space, which is now play/pause (Issue #55).
+        toggle_shortcut = QShortcut(QKeySequence(Qt.Key.Key_S), self.table)
+        toggle_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        toggle_shortcut.activated.connect(self._toggle_selected_rows)
 
         # Ctrl+A: Select all words (scoped to table so it doesn't override text selection in search)
         select_all_shortcut = QShortcut(QKeySequence("Ctrl+A"), self.table)
@@ -350,6 +358,11 @@ class WordCurationDialog(QDialog):
         # Enter/Return: Confirm selection
         enter_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Return), self.table)
         enter_shortcut.activated.connect(self.accept)
+
+    def _toggle_play_pause(self) -> None:
+        """Space: toggle player play/pause (no-op when the player pane is hidden)."""
+        if self._show_player and hasattr(self, "player_widget"):
+            self.player_widget.toggle_play_pause()
 
     # ------------------------------------------------------------------
     # Table helpers

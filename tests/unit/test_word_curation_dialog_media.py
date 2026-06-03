@@ -205,6 +205,35 @@ class TestPlayerSeek:
         mock_player.seek_seconds.assert_called_once_with(expected_time)
 
 
+def _find_table_shortcut(dialog: WordCurationDialog, key_str: str):
+    """Find a QShortcut registered on the table by its key sequence (Issue #55)."""
+    from PyQt6.QtGui import QKeySequence, QShortcut
+
+    for sc in dialog.table.findChildren(QShortcut):
+        if sc.key() == QKeySequence(key_str):
+            return sc
+    return None
+
+
+class TestPlayPauseHotkey:
+    """Issue #55 — Space toggles the player; the dialog routes it to the widget."""
+
+    def test_space_shortcut_toggles_player(self, words, existing_video):
+        ctx = _make_media_context(video_file=existing_video)
+        dlg, mock_player = _build_dialog_with_mock_player(words, ctx)
+
+        shortcut = _find_table_shortcut(dlg, "Space")
+        assert shortcut is not None
+        shortcut.activated.emit()
+
+        mock_player.toggle_play_pause.assert_called_once()
+
+    def test_toggle_play_pause_noop_without_player(self, words):
+        """Dict/table-only dialog: _toggle_play_pause must not raise."""
+        dlg = WordCurationDialog(words)
+        dlg._toggle_play_pause()  # no player pane → no-op
+
+
 # ---------------------------------------------------------------------------
 # 3. Dictionary lookup and caching
 # ---------------------------------------------------------------------------
