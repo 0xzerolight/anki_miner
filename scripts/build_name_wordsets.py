@@ -47,6 +47,13 @@ logger = logging.getLogger(__name__)
 #   &product;   → "product name"
 #   &organization; → "organization name"
 #   &work;      → "work of art, literature, music, etc. name"
+#
+# Other JMnedict name types (e.g. "unclassified name", "railway station",
+# "character", "deity", "event", "group", "mythology", "ship name", ...) are
+# intentionally NOT mapped and are dropped: they fall outside the four buckets
+# this feature ships. The largest are "unclassified name" (~130k, genuinely
+# unclassifiable) and "railway station" (~8k). If a future maintainer wants
+# stations excluded as places, add "railway station": "place-names" here.
 TYPE_TO_BUCKET: dict[str, str] = {
     "family or surname": "surnames",
     "place name": "place-names",
