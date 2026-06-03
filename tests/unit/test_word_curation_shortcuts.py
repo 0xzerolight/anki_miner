@@ -262,10 +262,38 @@ class TestPlayPauseAndToggleKeys:
         assert len(dialog.get_selected_words()) == 2
 
     def test_space_does_not_toggle_checkbox(self, dialog):
-        """Space no longer touches checkboxes (it's play/pause now)."""
+        """A real Space keypress must not toggle the checkbox (it's play/pause now).
+
+        Uses QTest.keyClick to drive the actual Qt key-dispatch + shortcut
+        interception path, not shortcut.activated.emit() — only a real keypress
+        can catch a regression where the Space shortcut is removed and Qt's
+        built-in QTableWidget Space-to-toggle fires on the checkable cell.
+        """
+        from PyQt6.QtCore import Qt as QtCore_Qt
+        from PyQt6.QtTest import QTest
+
+        dialog.show()
+        QApplication.setActiveWindow(dialog)
+        dialog.table.setFocus()
         dialog.table.setCurrentCell(0, 0)
+        assert dialog.table.item(0, 0).checkState() == QtCore_Qt.CheckState.Checked
+
+        QTest.keyClick(dialog.table, QtCore_Qt.Key.Key_Space)
+
+        assert dialog.table.item(0, 0).checkState() == QtCore_Qt.CheckState.Checked
+        assert len(dialog.get_selected_words()) == 3
+        dialog.hide()
+
+    def test_space_shortcut_wired_to_play_pause(self, dialog):
+        """The Space shortcut exists and triggers play/pause without error.
+
+        Guards the wiring deterministically even in headless environments where
+        synthetic keyClick shortcut delivery can be unreliable.
+        """
         shortcut = _find_table_shortcut(dialog, "Space")
         assert shortcut is not None
+        # _toggle_play_pause is a no-op when the player pane is hidden; emitting
+        # must not toggle any checkbox.
         shortcut.activated.emit()
         assert len(dialog.get_selected_words()) == 3
 
