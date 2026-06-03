@@ -2,7 +2,4 @@ blank_issues_enabled: false
 contact_links:
   - name: Question or general discussion
     url: https://github.com/0xzerolight/anki_miner/discussions
-    about: Ask a question or chat about the project. Use the templates below for bugs and feature requests.
-  - name: Report a security vulnerability
-    url: https://github.com/0xzerolight/anki_miner/security/advisories/new
-    about: Please report privately, not as a public issue.
+    about: Ask a question or chat about the project. For bugs and feature requests, use the issue templates above.

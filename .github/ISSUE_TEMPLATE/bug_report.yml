@@ -3,7 +3,6 @@ description: Report a bug to help improve Anki Miner.
 title: "[Bug]: "
 labels:
   - bug
-  - needs-triage
 body:
   - type: markdown
     attributes:
@@ -34,10 +33,36 @@ body:
       required: true
 
   - type: input
+    id: version
+    attributes:
+      label: Anki Miner version
+      description: Shown in Help → About. e.g. 2.5.0.
+      placeholder: 2.5.0
+    validations:
+      required: true
+
+  - type: input
     id: os
     attributes:
       label: Operating system
       description: e.g. Ubuntu 24.04, macOS 15.2, Windows 11.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Install method
+      description: How did you install Anki Miner?
+      options:
+        - pip
+        - pipx
+        - AppImage (Linux)
+        - .deb (Linux)
+        - Windows installer (.exe)
+        - macOS bundle
+        - Run from source
+        - Other
     validations:
       required: true
 
