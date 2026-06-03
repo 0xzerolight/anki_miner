@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE JMnedict [
+  <!ENTITY surname "family or surname">
+  <!ENTITY place "place name">
+  <!ENTITY masc "male given name or forename">
+  <!ENTITY fem "female given name or forename">
+  <!ENTITY company "company name">
+]>
+<JMnedict>
+  <entry><k_ele><keb>田中</keb></k_ele><trans><name_type>&surname;</name_type><trans_det>Tanaka</trans_det></trans></entry>
+  <entry><k_ele><keb>渋谷</keb></k_ele><trans><name_type>&place;</name_type><trans_det>Shibuya</trans_det></trans></entry>
+  <entry><k_ele><keb>太郎</keb></k_ele><trans><name_type>&masc;</name_type><trans_det>Tarou</trans_det></trans></entry>
+  <entry><k_ele><keb>ソニー</keb></k_ele><trans><name_type>&company;</name_type><trans_det>Sony</trans_det></trans></entry>
+  <entry><k_ele><keb>春</keb></k_ele><trans><name_type>&fem;</name_type><trans_det>Haru</trans_det></trans></entry>
+</JMnedict>
