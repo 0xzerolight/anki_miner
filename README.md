@@ -142,6 +142,8 @@ Add a dictionary in **Settings → Add Dictionary…** by pointing at a Yomitan 
 
 Install via **Settings → Add Dictionary…** in either case.
 
+The bundled name wordsets used for proper-noun filtering (given names, surnames, place names, org/product names) are derived from [JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html), part of the JMdict/EDICT project (EDRDG), CC BY-SA 4.0.
+
 ## Pitch accent & frequency data
 
 Anki Miner can attach pitch-accent patterns and frequency ranks to each card. Both are loaded from user-supplied files that live at `~/.anki_miner/pitch_accent.csv` and `~/.anki_miner/frequency.csv`. The Settings pickers accept either a raw CSV/TSV in the expected column shape or a Yomitan-format zip; Yomitan zips are converted to CSV automatically on Save.

@@ -89,6 +89,10 @@ class AnkiMinerConfig:
             "固有名詞",
         ]
     )
+    # Enabled name-wordset IDs (Issue #59). Each ID maps to a bundled
+    # plain-text proper-noun list under gui/resources/wordsets/<id>.txt.
+    # Words on any enabled set are dropped from mining unless whitelisted.
+    excluded_wordsets: tuple[str, ...] = field(default_factory=tuple)
 
     # Dictionary settings
     #
@@ -275,6 +279,9 @@ class AnkiMinerConfig:
         # JSON round-trip yields a list for excluded_decks; coerce to tuple.
         if isinstance(self.excluded_decks, list):
             object.__setattr__(self, "excluded_decks", tuple(self.excluded_decks))
+        # JSON round-trip yields a list for excluded_wordsets; coerce to tuple.
+        if isinstance(self.excluded_wordsets, list):
+            object.__setattr__(self, "excluded_wordsets", tuple(self.excluded_wordsets))
 
         # Keep anki_word_field in sync with anki_fields["word"]
         word_field_from_mapping = self.anki_fields.get("word", "")
