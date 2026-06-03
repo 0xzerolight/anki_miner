@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -25,15 +29,20 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.panels import QueuePanel
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models.batch_queue import QueueItemStatus
+from anki_miner.services.subtitle_parser import SubtitleParserService
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
     from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
+
+
+logger = logging.getLogger(__name__)
 
 
 class BatchProcessingTab(MiningTabBase):
@@ -80,6 +89,9 @@ class BatchProcessingTab(MiningTabBase):
         # Connect progress callback signals via shared base.
         self._wire_progress_callback(self.progress_callback)
 
+        # Worker→GUI word-curation bridge (Issue #60).
+        self._init_curation_bridge()
+
         self._setup_ui()
 
         # Enable drag-and-drop on the tab (subclass implements dragEnter/drop filtering).
@@ -107,6 +119,12 @@ class BatchProcessingTab(MiningTabBase):
         self.queue_panel = QueuePanel()
         self.queue_panel.process_requested.connect(self._process_queue)
         layout.addWidget(self.queue_panel, 1)  # Give it stretch factor
+
+        # Issue #60: opt-in per-episode word curation popup (default off).
+        self.review_words_checkbox = QCheckBox("Review words before mining")
+        self.review_words_checkbox.setChecked(False)
+        self.review_words_checkbox.setToolTip("Show the word-selection popup for each episode before creating cards")
+        layout.addWidget(self.review_words_checkbox)
 
         # Overall Progress (for queue processing)
         overall_progress_header = QLabel("Overall Progress")
@@ -333,7 +351,13 @@ class BatchProcessingTab(MiningTabBase):
         # Process each pair sequentially in worker thread
         from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
 
-        self.worker_thread = ManualPairWorkerThread(episode_processor, pairs, self.progress_callback)
+        curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
+        self.worker_thread = ManualPairWorkerThread(
+            episode_processor,
+            pairs,
+            self.progress_callback,
+            curation_callback=curation_cb,
+        )
 
         self.worker_thread.result_ready.connect(self._on_processing_finished)
         self.worker_thread.error.connect(self._on_processing_error)
@@ -361,12 +385,14 @@ class BatchProcessingTab(MiningTabBase):
         """Create and start the queue worker thread."""
         from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
 
+        curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
         self.worker_thread = BatchQueueWorkerThread(
             self.batch_queue,
             self.config,
             self.presenter,
             self.progress_callback,
             stats_service=self.stats_service,
+            curation_callback=curation_cb,
         )
 
         self.worker_thread.queue_started.connect(self._on_queue_started)
@@ -376,6 +402,42 @@ class BatchProcessingTab(MiningTabBase):
         self.worker_thread.queue_finished.connect(self._on_queue_finished)
 
         self.worker_thread.start()
+
+    def _build_curation_context(
+        self,
+    ) -> tuple[CurationMediaContext | None, Callable[[str], list[tuple[str, str]]] | None]:
+        """Build (media_context, lookup_fn) from the live worker's current pair.
+
+        The worker is blocked in ``_curation_event.wait()`` while this runs, so
+        reading its ``_curation_*`` attributes is race-free.
+        """
+        w = self.worker_thread
+        if w is None:
+            return None, None
+
+        lookup_fn = None
+        proc = getattr(w, "_curation_processor", None)
+        if proc is not None:
+            lookup_fn = proc.definition_service.lookup_all_offline
+
+        media_context: CurationMediaContext | None = None
+        video = getattr(w, "_curation_video", None)
+        subtitle = getattr(w, "_curation_subtitle", None)
+        if video is not None and subtitle is not None:
+            try:
+                config_no_offset = replace(self.config, subtitle_offset=0.0)
+                parser = SubtitleParserService(config_no_offset)
+                entries = parser.parse_raw_entries(Path(subtitle))
+                media_context = CurationMediaContext(
+                    video_file=Path(video),
+                    subtitle_entries=entries,
+                    offset=getattr(w, "_curation_offset", 0.0),
+                    audio_track_override=None,
+                )
+            except Exception:
+                logger.exception("Failed to build media context for curation; proceeding without player")
+                media_context = None
+        return media_context, lookup_fn
 
     def _process_queue(self) -> None:
         """Process all items in queue."""
@@ -433,6 +495,8 @@ class BatchProcessingTab(MiningTabBase):
 
     def _on_cancel_clicked(self) -> None:
         """Handle cancel button click."""
+        # Release any open curation dialog first so the worker doesn't hang (Issue #60).
+        self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
             self.worker_thread.cancel()
         self.cancel_button.setText("Cancelling...")
