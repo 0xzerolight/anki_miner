@@ -397,7 +397,7 @@ def test_curation_requested_passes_media_context_and_lookup_fn(tab, tmp_path):
     words: list = []
     with (
         patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
-        patch("anki_miner.gui.widgets.single_episode_tab.WordCurationDialog", mock_dialog_cls),
+        patch("anki_miner.gui.widgets._mining_tab_base.WordCurationDialog", mock_dialog_cls),
     ):
         tab._on_curation_requested(words)
 
@@ -446,7 +446,7 @@ def test_curation_requested_parse_error_passes_none_media_context(tab, tmp_path)
     with (
         patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
         patch(
-            "anki_miner.gui.widgets.single_episode_tab.WordCurationDialog",
+            "anki_miner.gui.widgets._mining_tab_base.WordCurationDialog",
             mock_dialog_cls,
         ),
     ):
@@ -490,7 +490,7 @@ def test_curation_requested_no_worker_passes_none_lookup_fn(tab, tmp_path):
     with (
         patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
         patch(
-            "anki_miner.gui.widgets.single_episode_tab.WordCurationDialog",
+            "anki_miner.gui.widgets._mining_tab_base.WordCurationDialog",
             mock_dialog_cls,
         ),
     ):
