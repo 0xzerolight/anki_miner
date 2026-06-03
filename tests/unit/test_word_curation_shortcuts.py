@@ -238,6 +238,38 @@ class TestMultiRowSelection:
         assert states[2] == Qt.CheckState.Unchecked
 
 
+def _find_table_shortcut(dialog, key_str):
+    """Find a QShortcut registered on the table by its key sequence (Issue #55)."""
+    from PyQt6.QtGui import QKeySequence, QShortcut
+
+    for sc in dialog.table.findChildren(QShortcut):
+        if sc.key() == QKeySequence(key_str):
+            return sc
+    return None
+
+
+class TestPlayPauseAndToggleKeys:
+    """Issue #55 — S becomes the checkbox-toggle key; Space is repurposed."""
+
+    def test_s_shortcut_registered(self, dialog):
+        assert _find_table_shortcut(dialog, "S") is not None
+
+    def test_s_key_toggles_current_row_checkbox(self, dialog):
+        dialog.table.setCurrentCell(0, 0)
+        shortcut = _find_table_shortcut(dialog, "S")
+        assert shortcut is not None
+        shortcut.activated.emit()
+        assert len(dialog.get_selected_words()) == 2
+
+    def test_space_does_not_toggle_checkbox(self, dialog):
+        """Space no longer touches checkboxes (it's play/pause now)."""
+        dialog.table.setCurrentCell(0, 0)
+        shortcut = _find_table_shortcut(dialog, "Space")
+        assert shortcut is not None
+        shortcut.activated.emit()
+        assert len(dialog.get_selected_words()) == 3
+
+
 class TestFrequencyColumnSort:
     """Issue #6 regression — frequency column must sort numerically, not lexically."""
 

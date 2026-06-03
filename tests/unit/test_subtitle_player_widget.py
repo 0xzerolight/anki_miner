@@ -238,6 +238,43 @@ class TestPlayPauseStop:
         widget.stop()  # should not raise
 
 
+class TestTogglePlayPause:
+    """Tests for the public toggle_play_pause() control (Issue #55)."""
+
+    def test_toggle_pauses_when_playing(self, fake_media_classes):
+        """When playing, toggle should pause."""
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+            widget = SubtitlePlayerWidget()
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+        player = fake_media_classes["player"]
+        player_cls = fake_media_classes["player_cls"]
+        player.playbackState.return_value = player_cls.PlaybackState.PlayingState
+
+        widget.toggle_play_pause()
+
+        player.pause.assert_called_once()
+        player.play.assert_not_called()
+
+    def test_toggle_plays_when_not_playing(self, fake_media_classes):
+        """When paused/stopped, toggle should play."""
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+            widget = SubtitlePlayerWidget()
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+        player = fake_media_classes["player"]
+        player_cls = fake_media_classes["player_cls"]
+        player.playbackState.return_value = player_cls.PlaybackState.PausedState
+
+        widget.toggle_play_pause()
+
+        player.play.assert_called_once()
+        player.pause.assert_not_called()
+
+    def test_toggle_without_player_does_not_raise(self):
+        """toggle_play_pause() before set_source must be a no-op."""
+        widget = SubtitlePlayerWidget()
+        widget.toggle_play_pause()  # should not raise
+
+
 class TestAudioTrackSelection:
     """Test that the Japanese audio track is selected in the player widget."""
 
