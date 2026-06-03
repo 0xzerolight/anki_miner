@@ -78,7 +78,7 @@ class SubtitlePlayerWidget(QWidget):
         controls_layout = QHBoxLayout()
         self.play_button = QPushButton("Play")
         self.play_button.setFixedWidth(80)
-        self.play_button.clicked.connect(self._on_play_pause)
+        self.play_button.clicked.connect(self.toggle_play_pause)
         controls_layout.addWidget(self.play_button)
         controls_layout.addStretch()
         layout.addLayout(controls_layout)
@@ -176,6 +176,15 @@ class SubtitlePlayerWidget(QWidget):
         if self.player is not None:
             self.player.stop()
 
+    def toggle_play_pause(self) -> None:
+        """Toggle play/pause (no-op if no source has been loaded)."""
+        if self.player is None:
+            return
+        if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            self.player.pause()
+        else:
+            self.player.play()
+
     # ------------------------------------------------------------------
     # Internal signal handlers
     # ------------------------------------------------------------------
@@ -205,15 +214,6 @@ class SubtitlePlayerWidget(QWidget):
                 logger.info(f"Selected Japanese audio track {i} via Qt metadata fallback")
                 return
         # Qt also can't identify — leave QMediaPlayer's default (no action)
-
-    def _on_play_pause(self) -> None:
-        """Toggle play/pause."""
-        if self.player is None:
-            return
-        if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
-            self.player.pause()
-        else:
-            self.player.play()
 
     def _on_playback_state_changed(self, state: QMediaPlayer.PlaybackState) -> None:
         """Update play button text based on playback state.
