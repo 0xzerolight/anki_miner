@@ -1,0 +1,7 @@
+# Anki Miner name wordset
+# id: surnames
+# label: Surnames
+# source: JMnedict (EDRDG) — CC BY-SA 4.0
+# count: 2
+田中
+鈴木

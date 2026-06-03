@@ -256,6 +256,7 @@ class SettingsTab(QWidget):
         # Known words database settings
         self.filtering_panel.use_known_words_db_checkbox.setChecked(self.config.use_known_words_db)
         self.filtering_panel.set_excluded_decks(self.config.excluded_decks)
+        self.filtering_panel.set_excluded_wordsets(self.config.excluded_wordsets)
 
         # Word list settings
         if self.config.blacklist_path:
@@ -419,6 +420,7 @@ class SettingsTab(QWidget):
             # Known words database settings
             use_known_words_db=self.filtering_panel.use_known_words_db_checkbox.isChecked(),
             excluded_decks=self.filtering_panel.get_excluded_decks(),
+            excluded_wordsets=self.filtering_panel.get_excluded_wordsets(),
             # Word list settings
             blacklist_path=(
                 Path(self.filtering_panel.blacklist_selector.get_path())

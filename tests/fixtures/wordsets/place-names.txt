@@ -1,0 +1,6 @@
+# Anki Miner name wordset
+# id: place-names
+# label: Place names
+# source: JMnedict (EDRDG) — CC BY-SA 4.0
+# count: 1
+渋谷
