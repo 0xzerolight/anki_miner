@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
+from anki_miner.services.wordset_service import load_wordset_catalog
 
 logger = logging.getLogger(__name__)
 
@@ -199,6 +200,29 @@ class FilteringSettingsPanel(FormPanel):
             self.use_whitelist_checkbox,
             helper="Always include words found in the whitelist file",
         )
+
+        # Name Wordsets section (Issue #59). Bundled proper-noun lists derived
+        # from JMnedict; checking one excludes those names from mining. Catches
+        # names unidic-lite mistags as common nouns (the POS filter only drops
+        # proper nouns the parser actually recognizes as 固有名詞).
+        self.add_section("Name Wordsets")
+
+        wordsets_helper = QLabel(
+            "Exclude bundled lists of Japanese proper nouns (people and place "
+            "names) from mining. Useful for anime that drop lots of character "
+            "and place names. A name you actually want is rescued by the "
+            "whitelist above."
+        )
+        wordsets_helper.setObjectName("helper-text")
+        wordsets_helper.setWordWrap(True)
+        self.add_widget(wordsets_helper)
+
+        self.wordset_checkboxes: dict[str, QCheckBox] = {}
+        for info in load_wordset_catalog():
+            cb = QCheckBox(f"{info.label} ({info.count:,})")
+            cb.setToolTip(f"Exclude the bundled '{info.label}' wordset ({info.count:,} entries) from mining.")
+            self.wordset_checkboxes[info.id] = cb
+            self.add_field("", cb, helper="")
 
         # Subtitle Text Filtering section (Issue #8)
         self.add_section("Subtitle Text Filtering")
@@ -410,6 +434,18 @@ class FilteringSettingsPanel(FormPanel):
         self.excluded_decks_list.clear()
         for deck in decks:
             self.excluded_decks_list.addItem(deck)
+
+    # --- Name Wordsets (Issue #59) ---
+
+    def get_excluded_wordsets(self) -> tuple[str, ...]:
+        """Return the IDs of the checked name wordsets, in catalog order."""
+        return tuple(set_id for set_id, cb in self.wordset_checkboxes.items() if cb.isChecked())
+
+    def set_excluded_wordsets(self, ids: tuple[str, ...]) -> None:
+        """Check the wordset boxes whose IDs are in ``ids``."""
+        wanted = set(ids)
+        for set_id, cb in self.wordset_checkboxes.items():
+            cb.setChecked(set_id in wanted)
 
     def _connect_validation(self) -> None:
         """Connect file selector signals to validation handlers."""
