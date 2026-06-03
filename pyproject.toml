@@ -47,6 +47,9 @@ dev = [
     "ruff>=0.1.0",
     "types-requests>=2.28.0",
     "pre-commit>=3.0.0",
+    # Build-time only: scripts/build_name_wordsets.py parses JMnedict's
+    # entity-laden XML (Issue #59). Not a runtime dependency.
+    "lxml>=4.9.0",
 ]
 
 [project.scripts]

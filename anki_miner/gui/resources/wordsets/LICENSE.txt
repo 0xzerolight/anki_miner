@@ -1,0 +1,5 @@
+The bundled name wordsets are derived from JMnedict, part of the JMdict/EDICT
+project, property of the Electronic Dictionary Research and Development Group
+(EDRDG), used under the Creative Commons Attribution-ShareAlike 4.0 licence.
+See https://www.edrdg.org/edrdg/licence.html and
+https://www.edrdg.org/enamdict/enamdict_doc.html

@@ -136,6 +136,26 @@ class TestExcludedDecksRoundTrip:
         assert loaded.excluded_decks == ()
 
 
+class TestExcludedWordsetsRoundTrip:
+    """excluded_wordsets (Issue #59) survives a save→load JSON round-trip as a tuple."""
+
+    def test_excluded_wordsets_round_trip(self, isolated_config_file, fake_qsettings):
+        base = create_default_config()
+        from dataclasses import replace
+
+        new = replace(base, excluded_wordsets=("surnames", "place-names"))
+        GUIConfigManager.save_config(new)
+
+        loaded = GUIConfigManager.load_config()
+        # JSON stores a list; __post_init__ coerces it back to a tuple.
+        assert loaded.excluded_wordsets == ("surnames", "place-names")
+
+    def test_default_is_empty_tuple(self, isolated_config_file, fake_qsettings):
+        GUIConfigManager.save_config(create_default_config())
+        loaded = GUIConfigManager.load_config()
+        assert loaded.excluded_wordsets == ()
+
+
 # Silence the unused-import lint warning when config_manager isn't directly
 # referenced (the test reaches into PyQt6.QtCore to patch QSettings).
 _ = config_manager
