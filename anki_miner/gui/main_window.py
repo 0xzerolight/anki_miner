@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
+    QHBoxLayout,
     QMainWindow,
     QMessageBox,
     QTabWidget,
@@ -259,23 +260,39 @@ class MainWindow(QMainWindow):
 
         help_menu.addSeparator()
 
-        report_action = help_menu.addAction("Report a Bug / Suggest a Feature")
-        assert report_action is not None
-        report_action.triggered.connect(self._report_issue)
-
         check_updates_action = help_menu.addAction("Check for Updates")
         assert check_updates_action is not None
         check_updates_action.triggered.connect(self._check_for_updates)
 
-        # "Star on GitHub" button pinned to the top-right corner of the menu bar.
-        star_button = QToolButton(menu_bar)
+        # Top-right corner of the menu bar holds a small button bar. A QMenuBar
+        # allows only one corner widget per corner, so both buttons live inside
+        # a container QWidget laid out horizontally.
+        corner_widget = QWidget(menu_bar)
+        corner_layout = QHBoxLayout(corner_widget)
+        corner_layout.setContentsMargins(0, 0, 0, 0)
+        corner_layout.setSpacing(0)
+
+        # "Report a Bug / Suggest a Feature" button (moved out of the Help menu).
+        report_button = QToolButton(corner_widget)
+        report_button.setObjectName("report_issue_button")
+        report_button.setText("Report a Bug / Suggest a Feature")
+        report_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        report_button.setAutoRaise(True)
+        report_button.setToolTip("Report a bug or suggest a feature on GitHub")
+        report_button.clicked.connect(self._report_issue)
+        corner_layout.addWidget(report_button)
+
+        # "Star on GitHub" button.
+        star_button = QToolButton(corner_widget)
         star_button.setObjectName("github_star_button")
         star_button.setText("⭐ Star - help the project")
         star_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         star_button.setAutoRaise(True)
         star_button.setToolTip("Star the project on GitHub")
         star_button.clicked.connect(self._open_github_repo)
-        menu_bar.setCornerWidget(star_button, Qt.Corner.TopRightCorner)
+        corner_layout.addWidget(star_button)
+
+        menu_bar.setCornerWidget(corner_widget, Qt.Corner.TopRightCorner)
 
     def _setup_shortcuts(self) -> None:
         """Set up global keyboard shortcuts."""
