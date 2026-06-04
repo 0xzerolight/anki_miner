@@ -9,6 +9,8 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.services.subtitle_parser import SubtitleParserService
+from anki_miner.utils import generate_furigana, generate_reading
+from anki_miner.utils.text_utils import wrap_target_furigana
 
 # --- Helpers for building mock MeCab tokens ---
 
@@ -38,18 +40,35 @@ def _make_token_no_feature(surface):
     return token
 
 
+class CountingSpy:
+    """Callable tagger wrapper that records every text argument it receives.
+
+    Delegates each call to the real tagger so results are identical to
+    production.  Used by T2 call-count tests to assert that each subtitle
+    line triggers exactly one ``tagger(text)`` call.
+    """
+
+    def __init__(self, real_tagger):
+        self.real_tagger = real_tagger
+        self.calls: list[str] = []
+
+    def __call__(self, text: str):
+        self.calls.append(text)
+        return self.real_tagger(text)
+
+
 class TestParseSubtitleFile:
     """Tests for parse_subtitle_file method."""
 
     def test_file_not_found_raises_subtitle_parse_error(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             service = SubtitleParserService(test_config)
 
         with pytest.raises(SubtitleParseError, match="not found"):
             service.parse_subtitle_file(Path("/nonexistent/file.ass"))
 
     def test_parse_failure_raises_subtitle_parse_error(self, test_config, tmp_path):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             service = SubtitleParserService(test_config)
 
         bad_file = tmp_path / "bad.ass"
@@ -85,7 +104,7 @@ class TestParseSubtitleFile:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             words = service.parse_subtitle_file(sub_file)
@@ -123,7 +142,7 @@ class TestParseSubtitleFile:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(config)
             words = service.parse_subtitle_file(sub_file)
@@ -155,24 +174,20 @@ class TestParseSubtitleFile:
         token2 = _make_token("食べた", "動詞", lemma="食べる", kana="タベタ")
 
         mock_tagger = MagicMock()
-        # Per-line: 1 initial tokenize + sentence_furigana + sentence_reading
-        # (hoisted out of the word loop). Per emitted word: expression_furigana
-        # + expression_reading. Line 1 emits a word → 5 tagger calls. Line 2
-        # dedup-skips after sentence-level work → 3 tagger calls. Total: 8.
+        # T2: sentence-level furigana/reading use raw_tokens (no extra tagger
+        # calls). Per-line: 1 tokenize. Per emitted word: expression_furigana
+        # + expression_reading. Line 1 emits a word → 3 tagger calls. Line 2
+        # dedup-skips after tokenize → 1 tagger call. Total: 4.
         mock_tagger.side_effect = [
             [token1],  # line 1: _iter_parsed_lines tokenize
-            [token1],  # line 1: sentence_furigana
-            [token1],  # line 1: sentence_reading
             [token1],  # line 1: expression_furigana (mined)
             [token1],  # line 1: expression_reading (mined)
-            [token2],  # line 2: _iter_parsed_lines tokenize
-            [token2],  # line 2: sentence_furigana
-            [token2],  # line 2: sentence_reading (then dedup skip)
+            [token2],  # line 2: _iter_parsed_lines tokenize (then dedup skip)
         ]
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             words = service.parse_subtitle_file(sub_file)
@@ -205,24 +220,20 @@ class TestParseSubtitleFile:
         token2 = _make_token("学生", "名詞", lemma="学生X", kana="ガクセイ")
 
         mock_tagger = MagicMock()
-        # Each line emits a distinct word: 1 init + 2 sentence-level + 2
-        # expression-level = 5 tagger calls per line. Two lines → 10.
+        # T2: sentence-level calls use raw_tokens. Each line: 1 tokenize + 2
+        # expression-level = 3 tagger calls. Two lines → 6.
         mock_tagger.side_effect = [
-            [token1],
-            [token1],
-            [token1],
-            [token1],
-            [token1],
-            [token2],
-            [token2],
-            [token2],
-            [token2],
-            [token2],
+            [token1],  # line 1: tokenize
+            [token1],  # line 1: expression_furigana (mined)
+            [token1],  # line 1: expression_reading (mined)
+            [token2],  # line 2: tokenize
+            [token2],  # line 2: expression_furigana (mined)
+            [token2],  # line 2: expression_reading (mined)
         ]
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             words = service.parse_subtitle_file(sub_file)
@@ -247,7 +258,7 @@ class TestParseSubtitleFile:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.subtitle_parser.clean_subtitle_text", return_value=""),
         ):
             service = SubtitleParserService(test_config)
@@ -259,11 +270,13 @@ class TestParseSubtitleFile:
     def test_sentence_furigana_computed_once_per_line(self, test_config, tmp_path):
         """Regression: sentence_furigana / sentence_reading are line-level, not word-level.
 
-        Before the hoist fix, a line emitting N words called
-        ``generate_furigana(text)`` and ``generate_reading(text)`` N times each.
-        After the fix, each is called exactly once per line regardless of
-        word count. Guards against re-introducing the per-word redundant
-        MeCab pass.
+        T2: sentence-level annotation uses generate_furigana_from_tokens /
+        generate_reading_from_tokens (no extra tagger calls). The tagger is
+        called exactly ONCE per non-empty line (the _iter_parsed_lines call)
+        regardless of how many words are emitted from that line. Per-word
+        generate_furigana(mined) calls pass a single-word string, not the full
+        sentence text. Guards against re-introducing per-word redundant
+        MeCab passes.
         """
         sub_file = tmp_path / "test.ass"
         sub_file.write_text("placeholder", encoding="utf-8")
@@ -285,25 +298,18 @@ class TestParseSubtitleFile:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
-            patch(
-                "anki_miner.services.subtitle_parser.generate_furigana",
-                return_value="stub",
-            ) as mock_furigana,
-            patch(
-                "anki_miner.services.subtitle_parser.generate_reading",
-                return_value="stub",
-            ) as mock_reading,
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             words = service.parse_subtitle_file(sub_file)
 
         assert len(words) == 3
-        # Sentence-level: 1 call per line. Expression-level: 1 per emitted word.
-        sentence_furigana_calls = [c for c in mock_furigana.call_args_list if c.args[0] == "猫と犬と鳥"]
-        sentence_reading_calls = [c for c in mock_reading.call_args_list if c.args[0] == "猫と犬と鳥"]
-        assert len(sentence_furigana_calls) == 1
-        assert len(sentence_reading_calls) == 1
+        # T2: tagger called only for tokenize (1 per line) + expression-level
+        # (1 per emitted word × 2 for furigana+reading). 1 + 3×2 = 7 total.
+        # Critically, the tagger is called only ONCE with the full sentence
+        # text (the _iter_parsed_lines tokenize call).
+        full_line_calls = [c for c in mock_tagger.call_args_list if c.args and c.args[0] == "猫と犬と鳥"]
+        assert len(full_line_calls) == 1, f"Expected exactly 1 full-sentence tagger call; got {len(full_line_calls)}"
 
 
 class TestExpressionFuriganaSource:
@@ -327,7 +333,7 @@ class TestExpressionFuriganaSource:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch(
                 "anki_miner.services.subtitle_parser.generate_furigana",
                 return_value="stub",
@@ -341,8 +347,8 @@ class TestExpressionFuriganaSource:
         """Noun token: expression furigana generated from surface."""
         token = _make_token("豪腕", "名詞", lemma="剛腕", kana="ゴウワン")
         mock_furigana = self._run_parse(test_config, tmp_path, "彼は豪腕の投手だ", token)
-        # generate_furigana is called twice per emitted word: once for the
-        # hoisted sentence-level annotation, once for the expression itself.
+        # T2: sentence-level uses generate_furigana_from_tokens, not generate_furigana.
+        # generate_furigana is called once for the expression only.
         called_texts = [c.args[0] for c in mock_furigana.call_args_list]
         assert "豪腕" in called_texts  # expression uses surface
         assert "剛腕" not in called_texts  # not the mis-lemma
@@ -361,7 +367,7 @@ class TestShouldIncludeWord:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     def test_excludes_empty_surface(self, service):
@@ -483,7 +489,7 @@ class TestExtractLemma:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     def test_returns_lemma(self, service):
@@ -509,7 +515,7 @@ class TestExtractReading:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     def test_returns_kana(self, service):
@@ -538,7 +544,7 @@ class TestParseRawEntries:
         mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
 
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = SubtitleParserService(test_config)
@@ -569,7 +575,7 @@ class TestParseRawEntries:
         mock_subs.__iter__ = MagicMock(return_value=iter([line1, line2]))
 
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = SubtitleParserService(test_config)
@@ -580,7 +586,7 @@ class TestParseRawEntries:
 
     def test_file_not_found_raises_error(self, test_config):
         """Should raise SubtitleParseError for missing file."""
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             service = SubtitleParserService(test_config)
 
         with pytest.raises(SubtitleParseError, match="not found"):
@@ -603,7 +609,7 @@ class TestParseRawEntries:
         mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
 
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = SubtitleParserService(config)
@@ -620,7 +626,7 @@ class TestCompoundReassembly:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     @pytest.mark.parametrize(
@@ -729,7 +735,7 @@ class TestPrefixCompounds:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     @pytest.mark.parametrize(
@@ -822,7 +828,7 @@ class TestVerbNominalizers:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     @pytest.mark.parametrize(
@@ -1079,15 +1085,10 @@ class TestParseSubtitleFileWithIndex:
         content = _make_token("勉強", "名詞", pos2="普通名詞", lemma="勉強")
 
         mock_tagger = MagicMock()
-        # First call tokenizes the line; subsequent calls feed generate_furigana /
-        # generate_reading (sentence-level once, then per-word twice for 勉強).
-        # Returning [proper, content] for the sentence-level calls is fine
-        # because those generators just walk tokens; the assertion below only
-        # cares about the lemma set in the index.
+        # T2: sentence-level furigana/reading use raw_tokens (no extra tagger
+        # calls). 1 tokenize + 2 expression-level for the emitted 勉強 word.
         mock_tagger.side_effect = [
             [proper, content],  # tokenize
-            [proper, content],  # generate_furigana(text)
-            [proper, content],  # generate_reading(text)
             [content],  # generate_furigana(surface='勉強')
             [content],  # generate_reading(surface='勉強')
         ]
@@ -1095,7 +1096,7 @@ class TestParseSubtitleFileWithIndex:
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(config)
             _, index = service.parse_subtitle_file_with_index(sub_file)
@@ -1142,10 +1143,9 @@ class TestParseSubtitleFileWithIndex:
 
         content = _make_token("勉強", "名詞", pos2="普通名詞", lemma="勉強")
         mock_tagger = MagicMock()
+        # T2: sentence-level uses raw_tokens. 1 tokenize + 2 expression-level.
         mock_tagger.side_effect = [
             [content],  # tokenize good_line
-            [content],  # generate_furigana(text)
-            [content],  # generate_reading(text)
             [content],  # generate_furigana(surface)
             [content],  # generate_reading(surface)
         ]
@@ -1153,7 +1153,7 @@ class TestParseSubtitleFileWithIndex:
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(config)
             _, index = service.parse_subtitle_file_with_index(sub_file)
@@ -1163,11 +1163,13 @@ class TestParseSubtitleFileWithIndex:
         assert index[0].line_text == "勉強する"
 
     def test_line_index_sentence_furigana_computed_once_per_line(self, tmp_path):
-        """Perf invariant: generate_furigana for the sentence is called once per line.
+        """Perf invariant: the tagger is called exactly once per non-empty line.
 
-        Legacy parse_subtitle_file calls generate_furigana(text) once per
-        emitted word. The new method must collapse that to ONE call per line —
-        otherwise the per-line index path is no cheaper than the legacy one.
+        T2: sentence-level annotation uses generate_furigana_from_tokens /
+        generate_reading_from_tokens with the already-parsed raw_tokens, so no
+        extra tagger calls are made for sentence-level work. The tagger is
+        called exactly ONCE per non-empty line (the _iter_parsed_lines tokenize)
+        regardless of how many words are emitted or whether i+1 index is built.
         """
         srt = self._write_srt(
             tmp_path / "ep.srt",
@@ -1179,28 +1181,32 @@ class TestParseSubtitleFileWithIndex:
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
         service = SubtitleParserService(config)
 
-        # Wrap the real generators so call counts are recorded but real text
-        # comes out — the test asserts on call patterns, not return values.
-        with (
-            patch(
-                "anki_miner.services.subtitle_parser.generate_furigana",
-                wraps=__import__("anki_miner.utils", fromlist=["generate_furigana"]).generate_furigana,
-            ) as mock_furi,
-            patch(
-                "anki_miner.services.subtitle_parser.generate_reading",
-                wraps=__import__("anki_miner.utils", fromlist=["generate_reading"]).generate_reading,
-            ) as mock_read,
-        ):
-            service.parse_subtitle_file_with_index(srt)
+        # Wrap the real tagger so call counts are recorded but real tokens
+        # come out — the test asserts on call patterns, not return values.
+        real_tagger = service.tagger
 
-        # Count calls where the first positional arg is the FULL line text
-        # (i.e. sentence-level calls, not per-word surface calls).
+        class SpyTagger:
+            def __init__(self):
+                self.calls: list[str] = []
+
+            def __call__(self, text: str):
+                self.calls.append(text)
+                return real_tagger(text)
+
+        spy = SpyTagger()
+        service.tagger = spy
+
+        service.parse_subtitle_file_with_index(srt)
+
         line_texts = {"学校で勉強する事件", "また勉強する"}
-        sentence_furi_calls = [c for c in mock_furi.call_args_list if c.args and c.args[0] in line_texts]
-        sentence_read_calls = [c for c in mock_read.call_args_list if c.args and c.args[0] in line_texts]
-        # One sentence-level call per line, period.
-        assert len(sentence_furi_calls) == 2
-        assert len(sentence_read_calls) == 2
+        # Each full-sentence tagger call is exactly 1 per non-empty line
+        # (the _iter_parsed_lines tokenize). Per-word expression calls pass
+        # a single mined form, not the full sentence text.
+        full_sentence_calls = [t for t in spy.calls if t in line_texts]
+        assert len(full_sentence_calls) == 2, (
+            f"Expected 1 tagger call per non-empty line (2 total); "
+            f"got {len(full_sentence_calls)} full-sentence calls out of {len(spy.calls)} total"
+        )
 
     def test_line_index_with_subtitle_regex_filter(self, tmp_path):
         """Issue #8 interaction: line_text and lemmas must reflect POST-filter text."""
@@ -1218,10 +1224,9 @@ class TestParseSubtitleFileWithIndex:
         # After regex strip "(田中) " is removed; only "勉強する" reaches tokenize.
         content = _make_token("勉強", "名詞", pos2="普通名詞", lemma="勉強")
         mock_tagger = MagicMock()
+        # T2: sentence-level uses raw_tokens. 1 tokenize + 2 expression-level.
         mock_tagger.side_effect = [
             [content],  # tokenize post-filter "勉強する"
-            [content],  # generate_furigana(text)
-            [content],  # generate_reading(text)
             [content],  # generate_furigana(surface)
             [content],  # generate_reading(surface)
         ]
@@ -1234,7 +1239,7 @@ class TestParseSubtitleFileWithIndex:
         )
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(config)
             _, index = service.parse_subtitle_file_with_index(sub_file)
@@ -1283,7 +1288,7 @@ class TestSubtitleRegexFilter:
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) 今日はいい天気", 0, 2000)])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = self._build_raw_service(config)
@@ -1301,7 +1306,7 @@ class TestSubtitleRegexFilter:
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) 今日はいい天気", 0, 2000)])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = self._build_raw_service(config)
@@ -1325,7 +1330,7 @@ class TestSubtitleRegexFilter:
             ],
         )
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = self._build_raw_service(config)
@@ -1346,7 +1351,7 @@ class TestSubtitleRegexFilter:
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) こんにちは", 0, 2000)])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = self._build_raw_service(config)
@@ -1366,7 +1371,7 @@ class TestSubtitleRegexFilter:
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("テスト", 0, 1000)])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
             caplog.at_level("WARNING"),
         ):
@@ -1390,7 +1395,7 @@ class TestSubtitleRegexFilter:
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(全部消える)", 0, 2000)])
         mock_tagger = MagicMock(return_value=[])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = SubtitleParserService(config)
@@ -1412,7 +1417,7 @@ class TestSubtitleRegexFilter:
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) [足音] ♪歌う♪ こんにちは", 0, 2000)])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = self._build_raw_service(config)
@@ -1667,7 +1672,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             counts = service.count_lemmas(sub_file)
@@ -1694,7 +1699,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             counts = service.count_lemmas(sub_file)
@@ -1717,7 +1722,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             counts = service.count_lemmas(sub_file)
@@ -1745,7 +1750,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             counts = service.count_lemmas(sub_file)
@@ -1760,6 +1765,10 @@ class TestCountLemmas:
         parse_subtitle_file deduplicates, so its lemma set is a subset of
         count_lemmas keys (same inclusion filter, just without counting repeats).
         For a file with no repeated lemmas the two sets must be identical.
+
+        With the shared-tagger singleton, service_a and service_b share one
+        tagger instance.  The same mock is reused for both phases; the
+        behavioral assertions are unchanged.
         """
         sub_file = tmp_path / "test.srt"
         sub_file.write_text("placeholder", encoding="utf-8")
@@ -1769,31 +1778,24 @@ class TestCountLemmas:
         wo = _make_token("を", "助詞", lemma="を", kana="ヲ")
         shiraberu = _make_token("調べる", "動詞", lemma="調べる", kana="シラベル")
 
-        def _make_mocks():
-            mock_subs = self._make_mock_subs(line_spec)
-            mock_tagger = MagicMock()
-            # count_lemmas: 1 tagger call for tokenizing the line
-            # parse_subtitle_file: 1 tokenize + 2 sentence-level + 2 expression-level per word
-            # We reset side_effect for each call below.
-            return mock_subs, mock_tagger
+        # Single shared tagger mock — both service instances get it via the singleton.
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [jiken, wo, shiraberu]
 
         # Run count_lemmas
-        mock_subs_a, mock_tagger_a = _make_mocks()
-        mock_tagger_a.return_value = [jiken, wo, shiraberu]
+        mock_subs_a = self._make_mock_subs(line_spec)
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs_a),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger_a),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service_a = SubtitleParserService(test_config)
             counts = service_a.count_lemmas(sub_file)
 
         # Run parse_subtitle_file
         mock_subs_b = self._make_mock_subs(line_spec)
-        mock_tagger_b = MagicMock()
-        mock_tagger_b.return_value = [jiken, wo, shiraberu]
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs_b),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger_b),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service_b = SubtitleParserService(test_config)
             words = service_b.parse_subtitle_file(sub_file)
@@ -1821,7 +1823,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             counts = service.count_lemmas(sub_file)
@@ -1839,7 +1841,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.subtitle_parser.clean_subtitle_text", return_value=""),
         ):
             service = SubtitleParserService(test_config)
@@ -1850,7 +1852,7 @@ class TestCountLemmas:
 
     def test_file_not_found_raises_subtitle_parse_error(self, test_config):
         """Should propagate SubtitleParseError from _load_subs for missing file."""
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             service = SubtitleParserService(test_config)
 
         with pytest.raises(SubtitleParseError, match="not found"):
@@ -1874,3 +1876,148 @@ class TestCountLemmas:
 
         # 勉強 appears on both lines — must be counted twice.
         assert counts["勉強"] >= 2
+
+
+# ---------------------------------------------------------------------------
+# T2 perf tests — tokenize-once regression guard
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestT2TokenizeOnce:
+    """T2 regression guard: each subtitle line is tokenized exactly once.
+
+    Two tests:
+    (a) Output-equivalence: threading raw_tokens through _from_tokens helpers
+        must produce byte-identical output to the original text-based calls.
+    (b) Call-count proof: the tagger is called exactly once per non-empty line
+        for both parse_subtitle_file and parse_subtitle_file_with_index.
+    """
+
+    def _write_multi_line_srt(self, path: Path) -> Path:
+        path.write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\n"
+            "彼は刑務所で爆発的な事件を起こした\n"
+            "\n"
+            "2\n00:00:06,000 --> 00:00:10,000\n"
+            "学校で勉強する\n"
+            "\n"
+            "3\n00:00:11,000 --> 00:00:15,000\n"
+            "また勉強した\n",
+            encoding="utf-8",
+        )
+        return path
+
+    # ------------------------------------------------------------------ #
+    # (a) Output-equivalence                                               #
+    # ------------------------------------------------------------------ #
+
+    def test_output_equivalence_parse_subtitle_file(self, tmp_path):
+        """parse_subtitle_file: raw_tokens path produces byte-identical furigana/reading."""
+        srt = self._write_multi_line_srt(tmp_path / "equiv.srt")
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            bold_target_in_sentence=True,
+        )
+        service = SubtitleParserService(config)
+        words = service.parse_subtitle_file(srt)
+
+        assert words, "expected at least one mined word from the fixture"
+        for w in words:
+            expected_furi = generate_furigana(w.sentence, service.tagger)
+            expected_read = generate_reading(w.sentence, service.tagger)
+            expected_bold = wrap_target_furigana(w.sentence, service.tagger, w.surface_start, w.surface_end)
+            assert w.sentence_furigana == expected_furi, (
+                f"sentence_furigana mismatch for {w.surface!r}: " f"{w.sentence_furigana!r} != {expected_furi!r}"
+            )
+            assert w.sentence_reading == expected_read, (
+                f"sentence_reading mismatch for {w.surface!r}: " f"{w.sentence_reading!r} != {expected_read!r}"
+            )
+            assert w.sentence_furigana_bolded == expected_bold, (
+                f"sentence_furigana_bolded mismatch for {w.surface!r}: "
+                f"{w.sentence_furigana_bolded!r} != {expected_bold!r}"
+            )
+
+    def test_output_equivalence_parse_subtitle_file_with_index(self, tmp_path):
+        """parse_subtitle_file_with_index: raw_tokens path produces byte-identical output
+        and all_words matches parse_subtitle_file exactly."""
+        srt = self._write_multi_line_srt(tmp_path / "equiv2.srt")
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            bold_target_in_sentence=True,
+        )
+        service = SubtitleParserService(config)
+        legacy = service.parse_subtitle_file(srt)
+        new_words, _ = service.parse_subtitle_file_with_index(srt)
+
+        # all_words from both methods must be identical.
+        assert [w.lemma for w in legacy] == [w.lemma for w in new_words]
+        assert [w.sentence_furigana for w in legacy] == [w.sentence_furigana for w in new_words]
+        assert [w.sentence_reading for w in legacy] == [w.sentence_reading for w in new_words]
+        assert [w.sentence_furigana_bolded for w in legacy] == [w.sentence_furigana_bolded for w in new_words]
+
+        # Each word's fields must also match the reference text-based calls.
+        assert new_words, "expected at least one mined word from the fixture"
+        for w in new_words:
+            expected_furi = generate_furigana(w.sentence, service.tagger)
+            expected_read = generate_reading(w.sentence, service.tagger)
+            expected_bold = wrap_target_furigana(w.sentence, service.tagger, w.surface_start, w.surface_end)
+            assert w.sentence_furigana == expected_furi
+            assert w.sentence_reading == expected_read
+            assert w.sentence_furigana_bolded == expected_bold
+
+    # ------------------------------------------------------------------ #
+    # (b) Call-count proof (fails before T2, passes after)               #
+    # ------------------------------------------------------------------ #
+
+    def test_tagger_called_once_per_line_parse_subtitle_file(self, tmp_path):
+        """parse_subtitle_file: tagger is called exactly once per non-empty line.
+
+        Before T2 each full-sentence text triggered 3 tagger calls (tokenize +
+        sentence_furigana + sentence_reading). After T2 it is exactly 1.
+        Per-word expression calls pass a single mined form (never the full
+        sentence text), so they don't match the full-line filter.
+        """
+        srt = self._write_multi_line_srt(tmp_path / "count.srt")
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+
+        real_tagger = service.tagger
+        line_texts = [
+            "彼は刑務所で爆発的な事件を起こした",
+            "学校で勉強する",
+            "また勉強した",
+        ]
+
+        spy = CountingSpy(real_tagger)
+        service.tagger = spy
+        service.parse_subtitle_file(srt)
+
+        for line_text in line_texts:
+            count = spy.calls.count(line_text)
+            assert count == 1, (
+                f"Expected exactly 1 tagger call for line {line_text!r}; got {count}. " f"All calls: {spy.calls}"
+            )
+
+    def test_tagger_called_once_per_line_parse_subtitle_file_with_index(self, tmp_path):
+        """parse_subtitle_file_with_index: tagger is called exactly once per non-empty line."""
+        srt = self._write_multi_line_srt(tmp_path / "count2.srt")
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+
+        real_tagger = service.tagger
+        line_texts = [
+            "彼は刑務所で爆発的な事件を起こした",
+            "学校で勉強する",
+            "また勉強した",
+        ]
+
+        spy = CountingSpy(real_tagger)
+        service.tagger = spy
+        service.parse_subtitle_file_with_index(srt)
+
+        for line_text in line_texts:
+            count = spy.calls.count(line_text)
+            assert count == 1, (
+                f"Expected exactly 1 tagger call for line {line_text!r}; got {count}. " f"All calls: {spy.calls}"
+            )
