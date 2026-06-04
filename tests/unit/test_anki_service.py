@@ -1382,20 +1382,24 @@ class TestDictMediaUpload:
         word = make_tokenized_word()
         media = MediaData()
 
-        store_resp = _mock_response(result=None)
+        # multi sub-result for one file, then addNotes result
+        multi_resp = _mock_response(result=["test-dict__svg-accent_X.svg"])
         create_resp = _mock_response(result=[12345])
 
         with patch(
-            "anki_miner.services._ankiconnect.requests.post", side_effect=[store_resp, create_resp]
+            "anki_miner.services._ankiconnect.requests.post", side_effect=[multi_resp, create_resp]
         ) as mock_post:
             service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
 
-        # First call is storeMediaFile for the dict asset
-        store_call = mock_post.call_args_list[0]
-        store_payload = store_call[1]["json"]
-        assert store_payload["action"] == "storeMediaFile"
-        assert store_payload["params"]["filename"] == "test-dict__svg-accent_X.svg"
-        assert base64.b64decode(store_payload["params"]["data"]) == b"<svg/>"
+        # First call is a multi POST containing one storeMediaFile action
+        multi_call = mock_post.call_args_list[0]
+        multi_payload = multi_call[1]["json"]
+        assert multi_payload["action"] == "multi"
+        actions = multi_payload["params"]["actions"]
+        assert len(actions) == 1
+        assert actions[0]["action"] == "storeMediaFile"
+        assert actions[0]["params"]["filename"] == "test-dict__svg-accent_X.svg"
+        assert base64.b64decode(actions[0]["params"]["data"]) == b"<svg/>"
 
     def test_uploaded_files_cached_across_calls(self, test_config, temp_dir, make_tokenized_word):
         """Same SVG referenced by many cards should upload once, not many times."""
@@ -1406,20 +1410,22 @@ class TestDictMediaUpload:
         word = make_tokenized_word()
         media = MediaData()
 
-        store_resp = _mock_response(result=None)
+        # First call: multi (one storeMediaFile action) + addNotes;
+        # second and third calls: only addNotes (cache hit → no multi).
+        multi_resp = _mock_response(result=["test-dict__svg-accent_X.svg"])
         create_resp = _mock_response(result=[12345])
 
         with patch(
             "anki_miner.services._ankiconnect.requests.post",
-            side_effect=[store_resp, create_resp, create_resp, create_resp],
+            side_effect=[multi_resp, create_resp, create_resp, create_resp],
         ) as mock_post:
             service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
             service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
             service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
 
-        # Three card creations + exactly one media upload.
-        store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
-        assert len(store_calls) == 1
+        # Three card creations + exactly one multi upload (for one file).
+        multi_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "multi"]
+        assert len(multi_calls) == 1
 
     def test_missing_file_on_disk_is_logged_and_cached(self, test_config, temp_dir, make_tokenized_word, caplog):
         from dataclasses import replace
@@ -1483,20 +1489,125 @@ class TestDictMediaUpload:
         ]
         word_data_list = [CardPayload(word=word, media=media, definition=d) for d in defs]
 
-        store_resp = _mock_response(result=None)
+        # One multi POST with two actions (both unique files in one chunk),
+        # then the addNotes POST.
+        multi_resp = _mock_response(result=["d1__svg-accent_X.svg", "d1__second.svg"])
         create_resp = _mock_response(result=[1, 2, 3])
 
         with patch(
             "anki_miner.services._ankiconnect.requests.post",
-            side_effect=[store_resp, store_resp, create_resp],
+            side_effect=[multi_resp, create_resp],
         ) as mock_post:
             service.create_cards_batch(word_data_list)
 
-        store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
-        # Exactly the two unique files, despite three card-level references.
-        assert len(store_calls) == 2
-        names = {c[1]["json"]["params"]["filename"] for c in store_calls}
+        # Exactly one multi POST containing exactly two storeMediaFile actions.
+        multi_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "multi"]
+        assert len(multi_calls) == 1
+        actions = multi_calls[0][1]["json"]["params"]["actions"]
+        assert len(actions) == 2
+        names = {a["params"]["filename"] for a in actions}
         assert names == {"d1__svg-accent_X.svg", "d1__second.svg"}
+
+    def test_dict_media_uploaded_via_multi_once(self, test_config, temp_dir, make_tokenized_word):
+        """Two cards referencing the SAME dict-media src → exactly one upload action in one multi POST."""
+        config = self._make_config_with_dict_media(test_config, temp_dir / "dicts")
+        service = AnkiService(config)
+
+        src = "test-dict__svg-accent_X.svg"
+        definition = f'<img class="anki-miner-dict-media" src="{src}">'
+        word = make_tokenized_word()
+        media = MediaData()
+
+        # multi response: one sub-result for the single deduplicated action
+        multi_resp = _mock_response(result=[src])
+        create_resp = _mock_response(result=[1, 2])
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[multi_resp, create_resp],
+        ) as mock_post:
+            service.create_cards_batch(
+                [
+                    CardPayload(word=word, media=media, definition=definition),
+                    CardPayload(word=make_tokenized_word(lemma="word2"), media=media, definition=definition),
+                ]
+            )
+
+        # Exactly one multi POST with exactly one storeMediaFile action
+        multi_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "multi"]
+        assert len(multi_calls) == 1
+        actions = multi_calls[0][1]["json"]["params"]["actions"]
+        assert len(actions) == 1
+        assert actions[0]["action"] == "storeMediaFile"
+        assert actions[0]["params"]["filename"] == src
+        # Cached after upload
+        assert src in service._dict_media_uploaded
+
+    def test_missing_on_disk_is_cached_and_warned_not_retried(self, test_config, temp_dir, make_tokenized_word, caplog):
+        """A src missing on disk: warning logged, cached to avoid retry, other srcs still upload."""
+        from dataclasses import replace
+
+        dicts_root = temp_dir / "dicts"
+        media_dir = dicts_root / "d1" / "media"
+        media_dir.mkdir(parents=True)
+        (media_dir / "present.svg").write_bytes(b"<svg/>")
+
+        config = replace(test_config, dicts_root=dicts_root)
+        service = AnkiService(config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        defs = [
+            '<img class="anki-miner-dict-media" src="d1__missing.svg">',
+            '<img class="anki-miner-dict-media" src="d1__present.svg">',
+        ]
+        word_data_list = [CardPayload(word=word, media=media, definition=d) for d in defs]
+
+        # Only one upload action (for the present file); no action for missing
+        multi_resp = _mock_response(result=["d1__present.svg"])
+        create_resp = _mock_response(result=[1, 2])
+
+        with (
+            caplog.at_level(logging.WARNING),
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=[multi_resp, create_resp],
+            ),
+        ):
+            service.create_cards_batch(word_data_list)
+
+        # Warning issued for the missing file
+        assert any("Dict media file missing" in r.message for r in caplog.records)
+        # Missing file cached (so it is not retried)
+        assert "d1__missing.svg" in service._dict_media_uploaded
+        # Present file also cached
+        assert "d1__present.svg" in service._dict_media_uploaded
+
+    def test_same_src_across_two_batch_calls_not_reuploaded(self, test_config, temp_dir, make_tokenized_word):
+        """Same src in two separate create_cards_batch calls → second call skips the upload."""
+        config = self._make_config_with_dict_media(test_config, temp_dir / "dicts")
+        service = AnkiService(config)
+
+        src = "test-dict__svg-accent_X.svg"
+        definition = f'<img class="anki-miner-dict-media" src="{src}">'
+        word = make_tokenized_word()
+        media = MediaData()
+
+        # First call: multi (one action) + addNotes
+        multi_resp = _mock_response(result=[src])
+        create_resp = _mock_response(result=[12345])
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[multi_resp, create_resp, create_resp],
+        ) as mock_post:
+            service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
+            # Second call: cache hit → no multi, only addNotes
+            service.create_cards_batch([CardPayload(word=word, media=media, definition=definition)])
+
+        multi_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "multi"]
+        # Only one multi POST across both batch calls
+        assert len(multi_calls) == 1
 
 
 class TestAnkiTagsConfig:
@@ -1728,11 +1839,12 @@ class TestGlossaryFieldRouting:
             "</div>"
         )
 
-        store_resp = _mock_response(result=None)
+        # multi sub-result for one file, then addNotes result
+        multi_resp = _mock_response(result=["test-dict__svg-pitch_X.svg"])
         create_resp = _mock_response(result=[123])
 
         with patch(
-            "anki_miner.services._ankiconnect.requests.post", side_effect=[store_resp, create_resp]
+            "anki_miner.services._ankiconnect.requests.post", side_effect=[multi_resp, create_resp]
         ) as mock_post:
             result = service.create_cards_batch(
                 [
@@ -1746,9 +1858,11 @@ class TestGlossaryFieldRouting:
             )
 
         assert result == 1
-        store_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "storeMediaFile"]
-        assert len(store_calls) == 1
-        assert store_calls[0][1]["json"]["params"]["filename"] == "test-dict__svg-pitch_X.svg"
+        multi_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "multi"]
+        assert len(multi_calls) == 1
+        actions = multi_calls[0][1]["json"]["params"]["actions"]
+        assert len(actions) == 1
+        assert actions[0]["params"]["filename"] == "test-dict__svg-pitch_X.svg"
 
     def test_no_glossary_in_extra_fields_does_not_crash(self, test_config, make_tokenized_word):
         """extra_fields without a glossary key must still work fine."""
