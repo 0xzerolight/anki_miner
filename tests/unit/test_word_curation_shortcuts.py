@@ -112,19 +112,25 @@ class TestWordCurationDialogSelection:
         assert "3 of 3" in dialog.word_count_label.text()
 
 
+def _apply_search(dialog, text: str) -> None:
+    """Helper: set search text and run the filter synchronously (bypasses debounce)."""
+    dialog.search_input.setText(text)
+    dialog._apply_search()
+
+
 class TestWordCurationDialogSearch:
     """Tests for search/filter functionality."""
 
     def test_search_filters_visible_rows(self, dialog):
         """Search should hide non-matching rows."""
-        dialog._on_search_changed("食べる")
+        _apply_search(dialog, "食べる")
         visible_count = sum(1 for r in range(dialog.table.rowCount()) if not dialog.table.isRowHidden(r))
         assert visible_count == 1
 
     def test_clear_search_shows_all_rows(self, dialog):
         """Clearing search should show all rows."""
-        dialog._on_search_changed("食べる")
-        dialog._on_search_changed("")
+        _apply_search(dialog, "食べる")
+        _apply_search(dialog, "")
         visible_count = sum(1 for r in range(dialog.table.rowCount()) if not dialog.table.isRowHidden(r))
         assert visible_count == 3
 
@@ -133,11 +139,11 @@ class TestWordCurationDialogSearch:
         # First deselect all
         dialog._deselect_all()
         # Then filter to show only one word
-        dialog._on_search_changed("食べる")
+        _apply_search(dialog, "食べる")
         # Select all (should only select the visible one)
         dialog._select_all()
         # Clear search to see all
-        dialog._on_search_changed("")
+        _apply_search(dialog, "")
 
         selected = dialog.get_selected_words()
         assert len(selected) == 1
@@ -225,11 +231,11 @@ class TestMultiRowSelection:
         """Hidden rows in the selection must not be acted on by bulk handlers."""
         dialog._deselect_all()
         # Hide rows 1 and 2 by searching for the lemma in row 0.
-        dialog._on_search_changed("食べる")
+        _apply_search(dialog, "食べる")
         # Highlight every row (incl. hidden) and run Select All.
         _select_rows(dialog, [0, 1, 2])
         dialog._select_all()
-        dialog._on_search_changed("")
+        _apply_search(dialog, "")
 
         states = [dialog.table.item(row, 0).checkState() for row in range(dialog.table.rowCount())]
         # Only the visible row (0 -> "食べる") should have been checked.
