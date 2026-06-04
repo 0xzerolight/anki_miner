@@ -98,7 +98,32 @@ class TestYouTubeConfig:
         assert config.youtube_max_duration_s == 7200
         assert config.youtube_max_height == 720
         assert config.youtube_cookies_from_browser is None
+        assert config.youtube_cookies_file is None
         assert config.youtube_ffmpeg_location is None
+
+    def test_cookies_file_coerced_from_string(self, temp_dir):
+        """youtube_cookies_file should be coerced to Path when passed as str."""
+        cookies_path = str(temp_dir / "cookies.txt")
+        config = AnkiMinerConfig(youtube_cookies_file=cookies_path)
+        assert isinstance(config.youtube_cookies_file, Path)
+        assert config.youtube_cookies_file == Path(cookies_path)
+
+    def test_cookies_file_empty_string_becomes_none(self):
+        """An empty youtube_cookies_file string should normalize to None."""
+        config = AnkiMinerConfig(youtube_cookies_file="")
+        assert config.youtube_cookies_file is None
+
+    def test_cookies_file_stays_none_when_unset(self):
+        """youtube_cookies_file should remain None when not provided."""
+        config = AnkiMinerConfig()
+        assert config.youtube_cookies_file is None
+
+    def test_cookies_file_accepts_path(self, temp_dir):
+        """youtube_cookies_file should accept a Path object directly."""
+        cookies_path = temp_dir / "cookies.txt"
+        config = AnkiMinerConfig(youtube_cookies_file=cookies_path)
+        assert isinstance(config.youtube_cookies_file, Path)
+        assert config.youtube_cookies_file == cookies_path
 
     def test_ffmpeg_location_coerced_from_string(self, temp_dir):
         """youtube_ffmpeg_location should be coerced to Path when passed as str."""
