@@ -89,3 +89,56 @@ def test_field_with_helper_no_label_does_not_create_container():
     # above) and that no extra plain QWidget children exist beyond the panel itself.
     containers = [c for c in panel.findChildren(QWidget) if type(c) is QWidget and c is not panel]
     assert len(containers) == 0, f"Unexpected plain QWidget containers found: {containers}"
+
+
+# ---------------------------------------------------------------------------
+# Density / spacing tests (Task B)
+# ---------------------------------------------------------------------------
+
+from PyQt6.QtGui import QFont  # noqa: E402
+
+from anki_miner.gui.resources.styles import FONT_SIZES, SPACING  # noqa: E402
+
+
+def test_form_layout_spacing_is_xs():
+    """_new_form_layout must use SPACING.xs (8) between form rows."""
+    panel = FormPanel("Spacing Test")
+    # _form_layout is the initial form layout created during _setup_ui
+    assert panel._form_layout.spacing() == SPACING.xs
+
+
+def test_main_layout_spacing_is_xs():
+    """_setup_ui must set main layout spacing to SPACING.xs (8)."""
+    panel = FormPanel("Spacing Test")
+    assert panel.main_layout.spacing() == SPACING.xs
+
+
+def test_section_heading_font_pixelsize_is_body_sm():
+    """add_section heading QLabel must use FONT_SIZES.body_sm (13) pixel size."""
+    panel = FormPanel("Section Test")
+    panel.add_section("My Section")
+
+    # Find the QLabel added for the section heading (not the panel title)
+    heading = None
+    for label in panel.findChildren(QLabel):
+        if label.text() == "My Section":
+            heading = label
+            break
+
+    assert heading is not None, "Section heading QLabel not found"
+    assert heading.font().pixelSize() == FONT_SIZES.body_sm
+
+
+def test_section_heading_font_weight_is_demibold():
+    """add_section heading QLabel must keep DemiBold weight."""
+    panel = FormPanel("Section Test")
+    panel.add_section("My Section")
+
+    heading = None
+    for label in panel.findChildren(QLabel):
+        if label.text() == "My Section":
+            heading = label
+            break
+
+    assert heading is not None, "Section heading QLabel not found"
+    assert heading.font().weight() == QFont.Weight.DemiBold
