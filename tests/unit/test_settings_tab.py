@@ -49,6 +49,10 @@ class TestYouTubePanelValueHelpers:
             ("chrome", "Chrome"),
             ("chromium", "Chromium"),
             ("edge", "Edge"),
+            ("brave", "Brave"),
+            ("opera", "Opera"),
+            ("vivaldi", "Vivaldi"),
+            ("safari", "Safari"),
         ],
     )
     def test_set_and_get_cookies_browser(self, value, expected_label):
@@ -63,8 +67,33 @@ class TestYouTubePanelValueHelpers:
     def test_unknown_cookie_value_falls_back_to_none(self):
         panel = YouTubeSettingsPanel()
         try:
-            panel.set_cookies_from_browser("opera")  # type: ignore[arg-type]
+            panel.set_cookies_from_browser("netscape")  # type: ignore[arg-type]
             assert panel.get_cookies_from_browser() is None
+        finally:
+            panel.deleteLater()
+
+    def test_set_and_get_cookies_file_round_trip(self, tmp_path):
+        panel = YouTubeSettingsPanel()
+        try:
+            cookies = tmp_path / "cookies.txt"
+            panel.set_cookies_file(cookies)
+            assert panel.get_cookies_file() == str(cookies)
+        finally:
+            panel.deleteLater()
+
+    def test_cookies_file_defaults_to_empty(self):
+        panel = YouTubeSettingsPanel()
+        try:
+            assert panel.get_cookies_file() == ""
+        finally:
+            panel.deleteLater()
+
+    def test_set_cookies_file_none_clears_field(self, tmp_path):
+        panel = YouTubeSettingsPanel()
+        try:
+            panel.set_cookies_file(tmp_path / "cookies.txt")
+            panel.set_cookies_file(None)
+            assert panel.get_cookies_file() == ""
         finally:
             panel.deleteLater()
 
@@ -125,6 +154,62 @@ class TestSettingsTabRoundTrip:
             assert widget.youtube_panel.max_duration_spinbox.value() == 30
         finally:
             widget.deleteLater()
+
+    def test_load_config_reflects_cookies_file(self, test_config, tmp_path):
+        cookies = tmp_path / "cookies.txt"
+        cfg = replace(test_config, youtube_cookies_file=cookies)
+        widget = SettingsTab(cfg)
+        try:
+            assert widget.youtube_panel.get_cookies_file() == str(cookies)
+        finally:
+            widget.deleteLater()
+
+    def test_save_emits_cookies_file_as_path(self, tab, monkeypatch, tmp_path):
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+        cookies = tmp_path / "cookies.txt"
+        cookies.write_text("# Netscape HTTP Cookie File\n")
+
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+        tab.youtube_panel.set_cookies_file(cookies)
+
+        tab._on_save_clicked()
+
+        assert len(received) == 1
+        assert received[0].youtube_cookies_file == cookies
+
+    def test_save_empty_cookies_file_is_none(self, tab, monkeypatch):
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+        tab.youtube_panel.set_cookies_file("")
+
+        tab._on_save_clicked()
+
+        assert len(received) == 1
+        assert received[0].youtube_cookies_file is None
+
+    def test_save_blocks_on_missing_cookies_file(self, tab, monkeypatch, tmp_path):
+        from PyQt6.QtWidgets import QMessageBox
+
+        warnings: list[tuple] = []
+        monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+        monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(a))
+
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+        # A path that does not exist must block the save.
+        tab.youtube_panel.set_cookies_file(tmp_path / "does-not-exist.txt")
+
+        tab._on_save_clicked()
+
+        assert warnings, "expected a warning dialog for the missing cookies file"
+        assert received == [], "config must not be emitted when validation fails"
 
 
 class TestIPlusOneFilterRoundTrip:

@@ -232,6 +232,7 @@ class AnkiMinerConfig:
     youtube_max_duration_s: int = 7200
     youtube_max_height: int = 720
     youtube_cookies_from_browser: str | None = None
+    youtube_cookies_file: Path | None = None
     youtube_ffmpeg_location: Path | None = None
 
     # --- Bundled media tooling ---
@@ -271,6 +272,12 @@ class AnkiMinerConfig:
             object.__setattr__(self, "stats_db_path", Path(self.stats_db_path))
         if isinstance(self.history_db_path, str):
             object.__setattr__(self, "history_db_path", Path(self.history_db_path))
+        if isinstance(self.youtube_cookies_file, str):
+            object.__setattr__(
+                self,
+                "youtube_cookies_file",
+                Path(self.youtube_cookies_file) if self.youtube_cookies_file else None,
+            )
         if isinstance(self.youtube_ffmpeg_location, str):
             object.__setattr__(
                 self,

@@ -89,8 +89,7 @@ class YouTubeFetcherService:
             "--dump-single-json",
             "--no-playlist",
         ]
-        if self._config.youtube_cookies_from_browser:
-            cmd.extend(["--cookies-from-browser", self._config.youtube_cookies_from_browser])
+        cmd.extend(self._cookie_args())
         cmd.append(url)
 
         try:
@@ -347,14 +346,26 @@ class YouTubeFetcherService:
             ]
         )
 
-        if self._config.youtube_cookies_from_browser:
-            cmd.extend(["--cookies-from-browser", self._config.youtube_cookies_from_browser])
+        cmd.extend(self._cookie_args())
         ffmpeg_location = self._effective_ffmpeg_location()
         if ffmpeg_location is not None:
             cmd.extend(["--ffmpeg-location", ffmpeg_location])
 
         cmd.append(url)
         return cmd
+
+    def _cookie_args(self) -> list[str]:
+        """yt-dlp cookie flags.
+
+        A cookies file (``--cookies``) takes precedence over the browser
+        dropdown (``--cookies-from-browser``); the two flags are mutually
+        exclusive — yt-dlp errors if both are passed.
+        """
+        if self._config.youtube_cookies_file:
+            return ["--cookies", str(self._config.youtube_cookies_file)]
+        if self._config.youtube_cookies_from_browser:
+            return ["--cookies-from-browser", self._config.youtube_cookies_from_browser]
+        return []
 
     @staticmethod
     def _is_postprocess_line(line: str) -> bool:
@@ -366,7 +377,10 @@ class YouTubeFetcherService:
         joined_lower = "\n".join(tail).lower()
 
         if ("sign in" in joined_lower and "confirm" in joined_lower) or ("sign in to confirm" in joined_lower):
-            raise BotDetectionError("YouTube requires login. Set Cookies → Browser in Settings " "and retry.")
+            raise BotDetectionError(
+                "YouTube requires login. In Settings → YouTube, set Cookies from "
+                "browser, or point Cookies file at an exported cookies.txt, then retry."
+            )
 
         if "database is locked" in joined_lower or "database locked" in joined_lower:
             browser = self._config.youtube_cookies_from_browser or "the browser"
@@ -374,8 +388,8 @@ class YouTubeFetcherService:
             if sys.platform.startswith("linux") and ("profile" in joined_lower and "not found" in joined_lower):
                 msg += (
                     " If you installed Firefox via Flatpak or Snap, use the "
-                    "system-package Firefox instead or pass a cookies file "
-                    "directly."
+                    "system-package Firefox instead, or set Cookies file in "
+                    "Settings → YouTube to an exported cookies.txt."
                 )
             raise CookieDatabaseLockedError(msg)
 

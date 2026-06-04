@@ -291,6 +291,7 @@ class SettingsTab(QWidget):
 
         # YouTube settings
         self.youtube_panel.set_cookies_from_browser(self.config.youtube_cookies_from_browser)
+        self.youtube_panel.set_cookies_file(self.config.youtube_cookies_file)
         self.youtube_panel.set_max_duration_seconds(self.config.youtube_max_duration_s)
 
         # Update settings
@@ -350,6 +351,18 @@ class SettingsTab(QWidget):
                     f"Cannot write to {new_dicts_root}.\n\nPick a folder you own.",
                 )
                 return
+
+        # Validate the YouTube cookies file (Issue #62). yt-dlp would otherwise
+        # fail mid-fetch with a cryptic message; catch a bad path up front.
+        # An empty field is valid (no cookies file).
+        cookies_file = self.youtube_panel.get_cookies_file()
+        if cookies_file and not Path(cookies_file).is_file():
+            QMessageBox.warning(
+                self,
+                "Cookies file not found",
+                f"{cookies_file} is not a file.\n\nPick an exported cookies.txt or clear the field.",
+            )
+            return
 
         # Validate subtitle regex filter before saving so we never persist a
         # pattern that crashes the parser. Only validate when the user has
@@ -453,6 +466,9 @@ class SettingsTab(QWidget):
             bold_target_in_sentence=self.filtering_panel.bold_target_in_sentence_checkbox.isChecked(),
             # YouTube settings
             youtube_cookies_from_browser=self.youtube_panel.get_cookies_from_browser(),
+            youtube_cookies_file=(
+                Path(self.youtube_panel.get_cookies_file()) if self.youtube_panel.get_cookies_file() else None
+            ),
             youtube_max_duration_s=self.youtube_panel.get_max_duration_seconds(),
             # Update settings
             check_for_updates=now_enabled,
