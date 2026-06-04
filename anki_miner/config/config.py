@@ -234,6 +234,13 @@ class AnkiMinerConfig:
     youtube_cookies_from_browser: str | None = None
     youtube_ffmpeg_location: Path | None = None
 
+    # --- Bundled media tooling ---
+    # Optional explicit overrides for the ffmpeg/ffprobe executables. When unset,
+    # anki_miner.utils.ffmpeg_resolver falls back to a bundled binary (frozen
+    # distributable) or the bare literal on PATH.
+    ffmpeg_location: Path | None = None
+    ffprobe_location: Path | None = None
+
     # Theme settings (UI state — persisted via gui_config.json).
     # `theme_favorites` is the curated list that drives the top-right combo;
     # the active `theme` does not need to be in favorites.
@@ -269,6 +276,18 @@ class AnkiMinerConfig:
                 self,
                 "youtube_ffmpeg_location",
                 Path(self.youtube_ffmpeg_location) if self.youtube_ffmpeg_location else None,
+            )
+        if isinstance(self.ffmpeg_location, str):
+            object.__setattr__(
+                self,
+                "ffmpeg_location",
+                Path(self.ffmpeg_location) if self.ffmpeg_location else None,
+            )
+        if isinstance(self.ffprobe_location, str):
+            object.__setattr__(
+                self,
+                "ffprobe_location",
+                Path(self.ffprobe_location) if self.ffprobe_location else None,
             )
         if isinstance(self.themes_root, str):
             object.__setattr__(self, "themes_root", Path(self.themes_root))
