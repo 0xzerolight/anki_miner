@@ -2123,3 +2123,129 @@ class TestCountLemmas:
 
         # 勉強 appears on both lines — must be counted twice.
         assert counts["勉強"] >= 2
+
+
+class TestPerFileLineCache:
+    """Tests for the per-file tokenization cache (Task 5).
+
+    The cache must make a second parse of the SAME unchanged file skip MeCab,
+    while an mtime change forces a fresh re-tokenization. Output must remain
+    byte-identical to an uncached parse.
+    """
+
+    @staticmethod
+    def _make_mock_subs(lines):
+        mock_lines = []
+        for spec in lines:
+            ml = MagicMock()
+            ml.text = spec["text"]
+            ml.start = spec["start"]
+            ml.end = spec["end"]
+            mock_lines.append(ml)
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(side_effect=lambda: iter(mock_lines))
+        return mock_subs
+
+    def test_iter_parsed_lines_cached_by_mtime(self, test_config, tmp_path):
+        """Second parse of an unchanged file must not re-invoke the tagger.
+
+        After an mtime bump the file is re-tokenized.
+        """
+        import os
+
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        line_spec = [{"text": "猫と犬", "start": 1000, "end": 3000}]
+
+        neko = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        inu = _make_token("犬", "名詞", lemma="犬", kana="イヌ")
+
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [neko, inu]
+
+        # Stable mtime so the first two parses share a cache key.
+        os.utime(sub_file, (1000, 1000))
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                return_value=self._make_mock_subs(line_spec),
+            ) as mock_load,
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+
+            first = service.count_lemmas(sub_file)
+            calls_after_first = mock_tagger.call_count
+            load_after_first = mock_load.call_count
+
+            # Second parse, file unchanged: cache HIT, no tagger / load.
+            second = service.count_lemmas(sub_file)
+
+        # One tagger call per line (1 line) total across both parses.
+        assert calls_after_first == 1
+        assert mock_tagger.call_count == 1
+        assert mock_load.call_count == load_after_first  # no reload on hit
+        # Byte-identical result from the cached pass.
+        assert first == second
+
+        # Now bump the mtime -> cache MISS -> re-tokenize.
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                return_value=self._make_mock_subs(line_spec),
+            ) as mock_load2,
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+        ):
+            os.utime(sub_file, (2000, 2000))
+            third = service.count_lemmas(sub_file)
+
+        assert mock_tagger.call_count == 2  # re-tokenized
+        assert mock_load2.call_count == 1
+        assert third == first
+
+    def test_count_lemmas_and_parse_share_cache(self, test_config, tmp_path):
+        """count_lemmas then parse_subtitle_file on one instance hits the cache.
+
+        Total tagger calls must equal the number of lines (one tokenize pass),
+        NOT 2x lines. The deck-builder double-parse is exactly this pattern.
+        """
+        import os
+
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+        os.utime(sub_file, (1000, 1000))
+
+        line_spec = [
+            {"text": "猫", "start": 1000, "end": 3000},
+            {"text": "犬", "start": 4000, "end": 6000},
+        ]
+        neko = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        inu = _make_token("犬", "名詞", lemma="犬", kana="イヌ")
+
+        mock_tagger = MagicMock()
+        # Two lines -> two distinct tokenize results on the cache-fill pass.
+        # generate_furigana/reading/wrap_* also call the tagger; isolate the
+        # _iter_parsed_lines tokenize count by stubbing those helpers.
+        mock_tagger.side_effect = [[neko], [inu]]
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                return_value=self._make_mock_subs(line_spec),
+            ),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value="fg"),
+            patch("anki_miner.services.subtitle_parser.generate_reading", return_value="rd"),
+        ):
+            service = SubtitleParserService(test_config)
+
+            counts = service.count_lemmas(sub_file)
+            words = service.parse_subtitle_file(sub_file)
+
+        # Exactly two tokenize calls (one per line), shared across both methods.
+        assert mock_tagger.call_count == 2
+        assert counts["猫"] == 1
+        assert counts["犬"] == 1
+        assert {w.lemma for w in words} == {"猫", "犬"}
