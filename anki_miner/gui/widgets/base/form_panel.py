@@ -176,7 +176,7 @@ class FormPanel(QFrame):
         self._active_form_layout = self._new_form_layout()
         self._main_layout.addLayout(self._active_form_layout)
 
-    def add_spacing(self, size: int = 8) -> None:
+    def add_spacing(self, size: int = SPACING.xs) -> None:
         """Add vertical spacing.
 
         Args:
