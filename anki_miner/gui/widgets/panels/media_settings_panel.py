@@ -37,11 +37,10 @@ class MediaSettingsPanel(FormPanel):
         self.audio_bitrate_spinbox.setRange(32, 320)
         self.audio_bitrate_spinbox.setSingleStep(16)
         self.audio_bitrate_spinbox.setSuffix(" kbps")
-        self.audio_bitrate_spinbox.setToolTip("Higher = better quality, larger files")
         self.add_field(
             "Audio Bitrate",
             self.audio_bitrate_spinbox,
-            helper="64-96 kbps Opus or 128-192 kbps MP3 are good defaults.",
+            helper="Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.",
         )
 
         # Audio padding
