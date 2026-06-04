@@ -114,7 +114,7 @@ class FormPanel(QFrame):
         Args:
             label: Field label text
             widget: Input widget
-            helper: Optional helper text below the field
+            helper: Optional tooltip text shown on hover over the field
 
         Returns:
             The widget that was added (for chaining)
