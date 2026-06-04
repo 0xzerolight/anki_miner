@@ -540,7 +540,8 @@ class SingleEpisodeTab(MiningTabBase):
         video_path = self.video_selector.get_path().strip()
         subtitle_path = self.subtitle_selector.get_path().strip()
         if video_path and subtitle_path:
-            self.recent_manager.add_entry(Path(video_path), Path(subtitle_path))
+            offset = self.offset_spinbox.value()
+            self.recent_manager.add_entry(Path(video_path), Path(subtitle_path), offset)
             self._refresh_recent_combo()
 
         # Clear file selectors so the next run starts from a clean slate.
@@ -600,6 +601,7 @@ class SingleEpisodeTab(MiningTabBase):
         if entry:
             self.video_selector.set_path(entry["video"])
             self.subtitle_selector.set_path(entry["subtitle"])
+            self.offset_spinbox.setValue(entry.get("subtitle_offset", 0.0))
 
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept drag if files have video or subtitle extensions."""

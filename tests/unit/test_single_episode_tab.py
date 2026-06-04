@@ -593,3 +593,46 @@ def test_curation_requested_no_worker_passes_none_lookup_fn(tab, tmp_path):
     _, call_kwargs = mock_dialog_cls.call_args
     assert call_kwargs.get("lookup_fn") is None
     assert tab._curation_event.is_set()
+
+
+# ---------------------------------------------------------------------------
+# 12. Subtitle offset persists with recent file pairs (Issue #61)
+# ---------------------------------------------------------------------------
+
+
+def test_processing_finished_saves_offset_to_recent(tab):
+    tab.worker_thread = MagicMock(name="EpisodeWorkerThread")
+    tab.worker_thread.isRunning.return_value = False
+    tab.recent_manager = MagicMock(name="RecentFilesManager")
+    tab.recent_manager.get_recent.return_value = []
+    tab.video_selector.set_path("/video/ep01.mkv")
+    tab.subtitle_selector.set_path("/subs/ep01.ass")
+    tab.offset_spinbox.setValue(3.5)
+
+    tab._on_processing_finished(MagicMock(name="ProcessingResult"))
+
+    args, _ = tab.recent_manager.add_entry.call_args
+    # add_entry(Path(video), Path(subtitle), offset)
+    assert args[2] == pytest.approx(3.5)
+
+
+def test_recent_selection_restores_offset(tab):
+    entry = {"video": "/video/ep01.mkv", "subtitle": "/subs/ep01.ass", "subtitle_offset": -2.0}
+    tab.recent_combo.addItem("ep01", userData=entry)
+    index = tab.recent_combo.count() - 1
+
+    tab._on_recent_selected(index)
+
+    assert tab.offset_spinbox.value() == pytest.approx(-2.0)
+
+
+def test_recent_selection_legacy_entry_resets_offset_to_zero(tab):
+    """A recent entry saved before the offset field existed restores 0.0."""
+    tab.offset_spinbox.setValue(4.0)
+    entry = {"video": "/video/ep01.mkv", "subtitle": "/subs/ep01.ass"}  # no subtitle_offset
+    tab.recent_combo.addItem("ep01", userData=entry)
+    index = tab.recent_combo.count() - 1
+
+    tab._on_recent_selected(index)
+
+    assert tab.offset_spinbox.value() == pytest.approx(0.0)

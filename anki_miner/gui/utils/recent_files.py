@@ -22,7 +22,7 @@ class RecentFilesManager:
         self._max_items = max_items
         self._file_path = ANKI_MINER_HOME / "recent_files.json"
 
-    def add_entry(self, video_path: Path, subtitle_path: Path) -> None:
+    def add_entry(self, video_path: Path, subtitle_path: Path, subtitle_offset: float = 0.0) -> None:
         """Add a video/subtitle pair to recent files.
 
         Deduplicates by (video, subtitle) pair. If the pair already exists,
@@ -31,6 +31,8 @@ class RecentFilesManager:
         Args:
             video_path: Path to the video file.
             subtitle_path: Path to the subtitle file.
+            subtitle_offset: Subtitle timing offset in seconds, restored when the
+                pair is re-selected. Defaults to 0.0.
         """
         entries = self._load()
 
@@ -45,6 +47,7 @@ class RecentFilesManager:
             {
                 "video": video_str,
                 "subtitle": subtitle_str,
+                "subtitle_offset": float(subtitle_offset),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
@@ -58,7 +61,7 @@ class RecentFilesManager:
         """Get the list of recent file pairs.
 
         Returns:
-            List of dicts with keys: video, subtitle, timestamp.
+            List of dicts with keys: video, subtitle, subtitle_offset, timestamp.
             Ordered most recent first.
         """
         return self._load()
