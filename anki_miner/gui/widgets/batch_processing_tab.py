@@ -36,6 +36,7 @@ from anki_miner.gui.widgets.panels import QueuePanel
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models.batch_queue import QueueItemStatus
 from anki_miner.services.subtitle_parser import SubtitleParserService
+from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
@@ -433,6 +434,7 @@ class BatchProcessingTab(MiningTabBase):
                     subtitle_entries=entries,
                     offset=getattr(w, "_curation_offset", 0.0),
                     audio_track_override=None,
+                    ffprobe_cmd=resolve_ffprobe(self.config),
                 )
             except Exception:
                 logger.exception("Failed to build media context for curation; proceeding without player")
