@@ -1,4 +1,4 @@
-# Anki Miner
+# <p align="center">Anki Miner</p>
 
 [![CI](https://github.com/0xzerolight/anki_miner/actions/workflows/ci.yml/badge.svg)](https://github.com/0xzerolight/anki_miner/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/anki-miner.svg)](https://pypi.org/project/anki-miner/)
