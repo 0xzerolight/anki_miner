@@ -22,7 +22,7 @@ body:
     id: solution
     attributes:
       label: Proposed solution
-      description: How would you like this to work? Sketches, UI ideas, API shape — all welcome.
+      description: How would you like this to work?
     validations:
       required: false
 

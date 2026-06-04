@@ -129,42 +129,22 @@ Custom themes: drop a JSON file matching the schema in `anki_miner/gui/resources
 
 </details>
 
-## Dictionaries
+## Recommended Resources
 
-Anki Miner looks up definitions through a **provider chain** you configure. Each lookup tries the providers in order; the first hit wins. Load any number of offline Yomitan-format dictionaries — these are recommended for speed. Jisho is available as an online fallback but is disabled by default because every lookup waits ~0.5s on the API and slows mining substantially.
+None of these ship with Anki Miner — load the ones you want, all free. Definitions are looked up through a **provider chain** (first hit wins); Jisho is a slower, rate-limited online fallback, off by default.
 
-Add a dictionary in **Settings → Add Dictionary…** by pointing at a Yomitan `.zip` archive. Drag entries to reorder the chain. Installed dictionaries are indexed once into `~/.anki_miner/dicts/<dict_id>/index.sqlite` and loaded on startup. Structured-content entries are rendered to HTML on import, so card definitions preserve the source dictionary's formatting (definition lists, examples, tags). The dictionary folder location is configurable via **Settings → Dictionary → Dictionary Folder** — useful for keeping multi-GB Yomitan archives on a separate drive.
+| Type | Resource | What you get | Download | Add via |
+|------|----------|--------------|----------|---------|
+| Dictionary | [Jitendex](https://jitendex.org/) | JMdict successor; structured formatting, examples, tags | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Add Dictionary… |
+| Dictionary | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | Plain glosses; smaller, faster to index | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Add Dictionary… |
+| Pitch ★ | [Kanjium](https://github.com/mifunetoshiro/kanjium) | ~124k patterns; drop-in TSV, no import step | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Dictionary → Pitch Accent File |
+| Pitch | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | Richer NHK notation | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Dictionary → Pitch Accent File |
+| Frequency | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | All-round default for media | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Filtering → Frequency List File |
+| Frequency | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | Balanced corpus; pairs well with news/novels | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Filtering → Frequency List File |
 
-**Recommended Japanese → English dictionaries** — both are JMdict-derived; pick whichever fits your cards, or load both and order them as you like:
+★ recommended default for pitch. Dictionaries are indexed once into `~/.anki_miner/dicts/` (drag to reorder the chain); the pitch and frequency pickers accept a raw CSV/TSV or a Yomitan zip, auto-converted to `~/.anki_miner/pitch_accent.csv` / `frequency.csv` on Save.
 
-- **[Jitendex](https://github.com/Jitendex/Jitendex)** — modern JMdict successor with structured-content formatting, example sentences, and richer tags. Best for visually rich cards. Grab the Yomitan archive from the [Jitendex releases page](https://github.com/Jitendex/Jitendex/releases).
-- **[JMdict](https://www.edrdg.org/jmdict/edict.html)** — the original community JMdict project. Plain-text glosses, smaller index, faster to add. Yomitan builds are available from the [Yomitan dictionary list](https://learnjapanese.moe/yomichan/#dictionaries) or you can rebuild from the EDRDG source.
-
-Install via **Settings → Add Dictionary…** in either case.
-
-The bundled name wordsets used for proper-noun filtering (given names, surnames, place names, org/product names) are derived from [JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html), part of the JMdict/EDICT project (EDRDG), CC BY-SA 4.0.
-
-## Pitch accent & frequency data
-
-Anki Miner can attach pitch-accent patterns and frequency ranks to each card. Both are loaded from user-supplied files that live at `~/.anki_miner/pitch_accent.csv` and `~/.anki_miner/frequency.csv`. The Settings pickers accept either a raw CSV/TSV in the expected column shape or a Yomitan-format zip; Yomitan zips are converted to CSV automatically on Save.
-
-### Pitch accent
-
-Pick a source and drop it into **Settings → Dictionary → Pitch Accent File**:
-
-- **[Kanjium accent list](https://github.com/mifunetoshiro/kanjium)** - the community pitch dump as a raw TSV at `data/source_files/raw/accents.txt` (~124k entries, `kanji<TAB>reading<TAB>pattern`). Smallest install: rename to `pitch_accent.csv` and drop straight into `~/.anki_miner/`, no Yomitan import step needed.
-- **[アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries)** - TheMoeWay's "Recommended" pitch dictionary as a Yomitan zip; richer notation than Kanjium. Point the picker at the `.zip`.
-
-Install via **Settings → Dictionary → Pitch Accent File** - the picker accepts raw CSV/TSV or a Yomitan zip (auto-imported to `~/.anki_miner/pitch_accent.csv` on Save).
-
-### Frequency lists
-
-Pick a source and drop it into **Settings → Filtering → Frequency List File**:
-
-- **[JPDB v2.2 Frequency Kana](https://github.com/Kuuuube/yomitan-dictionaries)** - Kuuuube's "Recommended" frequency list and the real successor to JPDB v2. Good default for mixed media mining.
-- **[BCCWJ SUW LUW Combined](https://github.com/Kuuuube/yomitan-dictionaries)** - large balanced-corpus rank list from the Balanced Corpus of Contemporary Written Japanese. Complement for users also reading news or novels.
-
-Install via **Settings → Filtering → Frequency List File** - the picker accepts raw CSV/TSV or a Yomitan zip (auto-imported to `~/.anki_miner/frequency.csv` on Save).
+Proper-noun filtering uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html) (JMdict/EDICT project, EDRDG, CC BY-SA 4.0).
 
 ## YouTube Mining
 
