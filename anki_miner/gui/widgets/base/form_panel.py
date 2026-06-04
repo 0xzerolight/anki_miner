@@ -123,42 +123,12 @@ class FormPanel(QFrame):
         field_label = self._create_field_label(label)
 
         if helper:
-            # Create container for widget + helper
-            container = QWidget()
-            container_layout = QVBoxLayout()
-            container_layout.setContentsMargins(0, 0, 0, 0)
-            container_layout.setSpacing(SPACING.xs)  # More spacing between widget and helper
+            widget.setToolTip(helper)
 
-            container_layout.addWidget(widget)
-
-            helper_label = QLabel(helper)
-            # QLabel defaults to AutoText, which renders strings containing
-            # angle brackets (e.g. ``<b>{cloze-body}</b>`` in the bold-target
-            # helper) as HTML. Helpers are descriptive copy, never rich text,
-            # so force PlainText so users see the literal markup. Issue #20.
-            helper_label.setTextFormat(Qt.TextFormat.PlainText)
-            helper_label.setObjectName("helper-text")
-            helper_font = QFont()
-            helper_font.setPixelSize(FONT_SIZES.small)
-            helper_label.setFont(helper_font)
-            helper_label.setWordWrap(True)
-            container_layout.addWidget(helper_label)
-
-            container.setLayout(container_layout)
-            # Allow container to expand vertically for multi-line helper text
-            container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-            if field_label is None:
-                # No label - widget spans full width
-                self._active_form_layout.addRow(container)
-            else:
-                self._active_form_layout.addRow(field_label, container)
+        if field_label is None:
+            self._active_form_layout.addRow(widget)
         else:
-            if field_label is None:
-                # No label - widget spans full width
-                self._active_form_layout.addRow(widget)
-            else:
-                self._active_form_layout.addRow(field_label, widget)
+            self._active_form_layout.addRow(field_label, widget)
 
         return widget
 
