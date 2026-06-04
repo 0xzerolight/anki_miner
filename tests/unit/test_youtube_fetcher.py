@@ -356,6 +356,84 @@ class TestFetchVideoCommand:
         assert cmd[cmd.index("--ffmpeg-location") + 1] == str(fake_ffmpeg)
 
 
+class TestFetchVideoResolverFallback:
+    """When ``youtube_ffmpeg_location`` is unset, the fetcher falls back to
+    ``resolve_ffmpeg`` so frozen builds use the bundled binary instead of
+    relying on yt-dlp's PATH lookup."""
+
+    @staticmethod
+    def _capture_popen(captured: dict[str, Any]) -> Any:
+        def fake_popen(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            captured["cmd"] = cmd
+            return _FakePopen(lines=[], returncode=0)
+
+        return fake_popen
+
+    def test_resolver_absolute_file_used_without_path_ffmpeg(self, yt_config: AnkiMinerConfig, tmp_path: Path) -> None:
+        # youtube_ffmpeg_location unset, but ffmpeg_location override resolves to a
+        # real file. Preflight must pass with NO ffmpeg on PATH, and the resolved
+        # path must be passed to yt-dlp.
+        from anki_miner.utils import ffmpeg_resolver
+
+        resolved_ffmpeg = tmp_path / "bundled-ffmpeg"
+        resolved_ffmpeg.write_text("#!/bin/sh\n")
+        cfg = replace(yt_config, youtube_ffmpeg_location=None, ffmpeg_location=resolved_ffmpeg)
+        svc = YouTubeFetcherService(cfg)
+        _make_happy_outputs(tmp_path)
+        captured: dict[str, Any] = {}
+
+        ffmpeg_resolver._clear_cache()
+        try:
+            with (
+                patch("anki_miner.services.youtube_fetcher.shutil.which", return_value=None),
+                patch("subprocess.Popen", side_effect=self._capture_popen(captured)),
+            ):
+                svc.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        finally:
+            ffmpeg_resolver._clear_cache()
+
+        cmd = captured["cmd"]
+        assert "--ffmpeg-location" in cmd
+        assert cmd[cmd.index("--ffmpeg-location") + 1] == str(resolved_ffmpeg)
+
+    def test_resolver_bare_literal_path_missing_raises(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        # Resolver returns bare "ffmpeg" (no override, not frozen) and PATH has no
+        # ffmpeg -> preflight raises, mirroring the historical behavior.
+        from anki_miner.utils import ffmpeg_resolver
+
+        ffmpeg_resolver._clear_cache()
+        try:
+            with (
+                patch("anki_miner.services.youtube_fetcher.shutil.which", return_value=None),
+                pytest.raises(FfmpegNotFoundError),
+            ):
+                service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        finally:
+            ffmpeg_resolver._clear_cache()
+
+    def test_resolver_bare_literal_no_ffmpeg_location_flag(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        # Resolver returns bare "ffmpeg" but PATH has ffmpeg -> preflight OK and NO
+        # --ffmpeg-location is added (yt-dlp uses PATH as before).
+        from anki_miner.utils import ffmpeg_resolver
+
+        _make_happy_outputs(tmp_path)
+        captured: dict[str, Any] = {}
+
+        ffmpeg_resolver._clear_cache()
+        try:
+            with (
+                patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+                patch("subprocess.Popen", side_effect=self._capture_popen(captured)),
+            ):
+                service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        finally:
+            ffmpeg_resolver._clear_cache()
+
+        assert "--ffmpeg-location" not in captured["cmd"]
+
+
 class TestFetchVideoProgress:
     def test_progress_parse_with_total(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
