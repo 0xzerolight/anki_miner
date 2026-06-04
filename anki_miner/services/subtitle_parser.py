@@ -160,7 +160,8 @@ class SubtitleParserService:
         ``_should_include_word`` themselves so the index path and mining path
         share identical token selection logic).
 
-        Per-file cache: keyed by resolved path → (mtime, line-state list). On a
+        Per-file cache: keyed by resolved path → (mtime, line-state list); only
+        the most-recently-parsed file is retained (bounded to one entry). On a
         cache HIT for the same path+mtime the subtitle file is neither reloaded
         nor re-tokenized — the stored line-state (the very tuples a fresh parse
         would yield, including ``_SyntheticToken``s) is replayed. An mtime
@@ -212,8 +213,14 @@ class SubtitleParserService:
 
         # mtime is None only when stat() failed, in which case _load_subs above
         # already raised, so this assignment is reachable only with a real mtime.
+        #
+        # Bound the cache to the current file only. Cross-phase reuse (Deck
+        # Builder Phase 1 -> Phase 2) re-parses the SAME file back-to-back, so
+        # keeping prior files' tokenized line-state would grow the cache
+        # unbounded across a many-episode build with no hit benefit. Replacing
+        # the dict evicts the previous file as the new one is committed.
         if mtime is not None:
-            self._line_cache[key] = (mtime, line_states)
+            self._line_cache = {key: (mtime, line_states)}
 
     def parse_raw_entries(self, subtitle_file: Path) -> list[tuple[float, float, str]]:
         """Parse subtitle file and return raw timing entries without tokenization.
