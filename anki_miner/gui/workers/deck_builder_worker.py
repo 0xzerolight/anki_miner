@@ -156,6 +156,17 @@ class DeckBuilderWorker(CancellableWorker):
                     allow_duplicate_cards=True,
                 )
                 proc = create_episode_processor(cfg, self.presenter, self.stats_service)
+                # Cross-phase tokenization cache: reuse the Phase-1 parser whose
+                # per-file line cache was filled by aggregate() → count_lemmas
+                # above, so Phase 2's parse_subtitle_file* hits the cache instead
+                # of re-running MeCab over every file a second time. Safe because
+                # SubtitleParserService reads only subtitle_offset /
+                # bold_target_in_sentence / allowed_pos / excluded_subtypes /
+                # the regex-filter fields — none of which the Phase-2 cfg changes
+                # (it only overrides anki_deck_name / include_known_words /
+                # bypass_optional_filters / allow_duplicate_cards). Parse output
+                # is therefore byte-identical to a freshly-constructed parser.
+                proc.subtitle_parser = base.subtitle_parser
                 # Register as current BEFORE process_episode so a mid-call
                 # cancel() reaches this processor. The tiny window before this
                 # assignment is covered by the loop-top check_cancelled().

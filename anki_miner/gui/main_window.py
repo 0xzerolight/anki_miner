@@ -193,6 +193,11 @@ class MainWindow(QMainWindow):
         self._jmdict_migration_worker = None
         self._maybe_migrate_jmdict()
 
+        # Best-effort cache prewarm worker, scheduled by ``app.main()`` after
+        # the first paint. Held here so the QThread isn't GC'd mid-run and so
+        # ``closeEvent`` can wait for it; cleared once it finishes.
+        self._prewarm_worker = None
+
         # Post-update confirmation: if last_known_version differs from the
         # currently running __version__, show a one-shot info dialog. Save the
         # new version BEFORE showing the dialog so a crash mid-dialog doesn't
@@ -594,6 +599,13 @@ class MainWindow(QMainWindow):
         if self._jmdict_migration_worker and self._jmdict_migration_worker.isRunning():
             self._jmdict_migration_worker.cancel()
             self._jmdict_migration_worker.wait(2000)
+
+        # Wait for the best-effort prewarm worker if still running. It has no
+        # cancel hook (it's a short, uninterruptible cache warm) so we join it
+        # without timeout — a bounded wait(2000) could expire on a slow
+        # dicts_root and let Qt destroy a still-running QThread (crash on exit).
+        if self._prewarm_worker is not None and self._prewarm_worker.isRunning():
+            self._prewarm_worker.wait()
 
         # Cancel and wait for any processing workers in tabs
         from anki_miner.gui.widgets.youtube_tab import YouTubeTab

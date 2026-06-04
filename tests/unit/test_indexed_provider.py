@@ -272,6 +272,74 @@ class TestIndexedDictProvider:
         assert '<li class="gloss-item">eat</li>' in result[0]
 
 
+class TestIndexedDictProviderLookupMany:
+    """lookup_many must produce byte-identical HTML to lookup per word."""
+
+    def _seed(self, db_path: Path):
+        _seed_db(
+            db_path,
+            [
+                DictRow(
+                    term="食べる",
+                    reading="たべる",
+                    content='<li class="gloss-item">eat</li>',
+                    tags="v1 expr",
+                    sequence=1,
+                ),
+                DictRow(
+                    term="橋", reading="はし", content='<li class="gloss-item">bridge</li>', tags="n common", sequence=2
+                ),
+                DictRow(
+                    term="箸",
+                    reading="はし",
+                    content='<li class="gloss-item">chopsticks</li><li class="gloss-item">eating sticks</li>',
+                    tags="common food",
+                    sequence=3,
+                ),
+            ]
+            # word with >5 hits to lock LIMIT 5 + ordering
+            + [
+                DictRow(
+                    term="多", reading="おおい", content=f'<li class="gloss-item">m{i}</li>', tags="n", sequence=10 + i
+                )
+                for i in range(7)
+            ],
+        )
+
+    def test_byte_identical_to_single_lookup(self, tmp_path: Path):
+        db = tmp_path / "test.sqlite"
+        self._seed(db)
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        words = ["食べる", "たべる", "はし", "多", "missing"]
+        batch = provider.lookup_many(words)
+        for w in words:
+            assert batch[w] == provider.lookup(w), f"HTML mismatch for {w!r}"
+
+    def test_miss_is_none(self, tmp_path: Path):
+        db = tmp_path / "test.sqlite"
+        self._seed(db)
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+        assert provider.lookup_many(["missing"])["missing"] is None
+
+    def test_unloaded_provider_returns_none_for_all(self, tmp_path: Path):
+        db = tmp_path / "test.sqlite"
+        self._seed(db)
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        # not loaded
+        res = provider.lookup_many(["食べる", "はし"])
+        assert res == {"食べる": None, "はし": None}
+
+    def test_empty_list(self, tmp_path: Path):
+        db = tmp_path / "test.sqlite"
+        self._seed(db)
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+        assert provider.lookup_many([]) == {}
+
+
 def test_indexed_provider_is_offline(tmp_path):
     db_path = tmp_path / "dummy.sqlite"
     provider = IndexedDictProvider(dict_id="x", db_path=db_path)
