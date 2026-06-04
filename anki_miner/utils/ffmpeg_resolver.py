@@ -15,6 +15,7 @@ non-frozen / no-override case is intentional: it preserves the historical behavi
 that existing subprocess tests assert (``cmd[0] == "ffmpeg"``).
 """
 
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -63,10 +64,13 @@ def _compute(base: str, override: Any, frozen: bool, meipass: str | None) -> str
         if override_path.is_file():
             return str(override_path)
 
-    # 2. Bundled binary inside the frozen distributable.
+    # 2. Bundled binary inside the frozen distributable. Require the executable
+    #    bit (POSIX) so a present-but-non-exec bundle falls through to PATH
+    #    instead of being returned and failing later at subprocess time. X_OK is
+    #    meaningless on Windows, so skip the check there.
     if frozen and meipass is not None:
         bundled = Path(meipass) / "bin" / _bundled_name(base)
-        if bundled.is_file():
+        if bundled.is_file() and (sys.platform == "win32" or os.access(bundled, os.X_OK)):
             return str(bundled)
 
     # 3. PATH fallback — bare literal.

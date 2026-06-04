@@ -272,7 +272,9 @@ class TestValidationService:
             """Frozen bundle with a bundled binary under _MEIPASS → [bundled]."""
             bin_dir = tmp_path / "bin"
             bin_dir.mkdir()
-            (bin_dir / "ffmpeg").write_text("#!/bin/sh\n")
+            bundled = bin_dir / "ffmpeg"
+            bundled.write_text("#!/bin/sh\n")
+            bundled.chmod(0o755)  # resolver requires the exec bit on POSIX
 
             monkeypatch.setattr(sys, "frozen", True, raising=False)
             monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)

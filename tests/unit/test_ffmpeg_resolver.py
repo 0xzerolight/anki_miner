@@ -41,12 +41,28 @@ class TestResolveFfmpeg:
         bin_dir.mkdir()
         bundled = bin_dir / "ffmpeg"
         bundled.write_text("#!/bin/sh\n")
+        bundled.chmod(0o755)
 
         monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", True, raising=False)
         monkeypatch.setattr(ffmpeg_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
         monkeypatch.setattr(ffmpeg_resolver.sys, "platform", "linux")
 
         assert resolve_ffmpeg(base_config) == str(bundled)
+
+    def test_bundled_non_executable_falls_through(self, base_config, tmp_path, monkeypatch):
+        # A present-but-non-executable bundle must fall through to PATH rather
+        # than be returned and fail later at subprocess time.
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        bundled = bin_dir / "ffmpeg"
+        bundled.write_text("#!/bin/sh\n")
+        bundled.chmod(0o644)
+
+        monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(ffmpeg_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(ffmpeg_resolver.sys, "platform", "linux")
+
+        assert resolve_ffmpeg(base_config) == "ffmpeg"
 
     def test_bundled_windows_exe_name(self, base_config, tmp_path, monkeypatch):
         bin_dir = tmp_path / "bin"
@@ -107,6 +123,7 @@ class TestResolveFfprobe:
         bin_dir.mkdir()
         bundled = bin_dir / "ffprobe"
         bundled.write_text("#!/bin/sh\n")
+        bundled.chmod(0o755)
 
         monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", True, raising=False)
         monkeypatch.setattr(ffmpeg_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
@@ -156,6 +173,7 @@ class TestCaching:
         bin_dir.mkdir()
         bundled = bin_dir / "ffmpeg"
         bundled.write_text("#!/bin/sh\n")
+        bundled.chmod(0o755)
         monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", True, raising=False)
         monkeypatch.setattr(ffmpeg_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
         monkeypatch.setattr(ffmpeg_resolver.sys, "platform", "linux")
