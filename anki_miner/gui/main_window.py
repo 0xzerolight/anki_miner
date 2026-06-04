@@ -588,10 +588,11 @@ class MainWindow(QMainWindow):
             self._jmdict_migration_worker.wait(2000)
 
         # Wait for the best-effort prewarm worker if still running. It has no
-        # cancel hook (it's a short, uninterruptible cache warm) so we just
-        # join it briefly to avoid Qt destroying a running QThread.
+        # cancel hook (it's a short, uninterruptible cache warm) so we join it
+        # without timeout — a bounded wait(2000) could expire on a slow
+        # dicts_root and let Qt destroy a still-running QThread (crash on exit).
         if self._prewarm_worker is not None and self._prewarm_worker.isRunning():
-            self._prewarm_worker.wait(2000)
+            self._prewarm_worker.wait()
 
         # Cancel and wait for any processing workers in tabs
         from anki_miner.gui.widgets.youtube_tab import YouTubeTab

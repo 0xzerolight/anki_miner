@@ -48,10 +48,15 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 """
 
+# Explicit ``, id`` tiebreak makes single-word ordering fully deterministic
+# (rows with equal ``(term=?)`` priority and equal/NULL ``sequence`` would
+# otherwise come back in unspecified query-plan order). This is what the batch
+# ``lookup_many`` path reproduces with its final ``row_id`` sort, so keeping the
+# tiebreak here guarantees ``lookup`` and ``lookup_many`` agree.
 _LOOKUP_SQL = (
     "SELECT content, tags FROM entries "
     "WHERE term = ? OR reading = ? "
-    "ORDER BY (term = ?) DESC, sequence "
+    "ORDER BY (term = ?) DESC, sequence, id "
     "LIMIT 5"
 )
 
