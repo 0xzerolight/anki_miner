@@ -264,11 +264,7 @@ class WordCurationDialog(QDialog):
             header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
             header_view.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
 
-        v_header = self.table.verticalHeader()
-        if v_header:
-            v_header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-            v_header.setDefaultSectionSize(32)
-            v_header.setMinimumSectionSize(28)
+        self._apply_fixed_row_height()
 
         self.table.itemChanged.connect(self._on_item_changed)
 
@@ -384,18 +380,22 @@ class WordCurationDialog(QDialog):
         font.setWeight(weight)
         return font
 
+    def _apply_fixed_row_height(self) -> None:
+        """Set Fixed resize mode with standard row dimensions on the vertical header."""
+        vh = self.table.verticalHeader()
+        if vh:
+            vh.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+            vh.setDefaultSectionSize(32)
+            vh.setMinimumSectionSize(28)
+
     def _populate_table(self) -> None:
         """Fill the table with words, all checked by default."""
         self.table.setSortingEnabled(False)
         self.table.blockSignals(True)
         self.table.setRowCount(len(self._words))
-        # Qt resets vertical-header section modes when setRowCount is called,
-        # so re-apply Fixed row height here to guarantee it survives populate.
-        v_header = self.table.verticalHeader()
-        if v_header:
-            v_header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-            v_header.setDefaultSectionSize(32)
-            v_header.setMinimumSectionSize(28)
+        # Some Qt versions reset vertical-header section modes on setRowCount;
+        # re-applying is cheap insurance.
+        self._apply_fixed_row_height()
 
         for row, word in enumerate(self._words):
             # Checkbox column
