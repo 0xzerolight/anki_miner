@@ -75,6 +75,34 @@ class SubtitleParserService:
                     e,
                 )
                 self._filter_pattern = None
+        # Per-parse memo caches; reset at the top of each parse_* call so
+        # a second invocation with a different file never sees stale entries.
+        self._fg_cache: dict[str, str] = {}
+        self._rd_cache: dict[str, str] = {}
+        self._bold_cache: dict[tuple[str, int, int], str] = {}
+
+    # ------------------------------------------------------------------
+    # Per-parse memoization helpers
+    # ------------------------------------------------------------------
+
+    def _furigana(self, s: str) -> str:
+        """Return generate_furigana(s, tagger), memoized within the current parse pass."""
+        if s not in self._fg_cache:
+            self._fg_cache[s] = generate_furigana(s, self.tagger)
+        return self._fg_cache[s]
+
+    def _reading(self, s: str) -> str:
+        """Return generate_reading(s, tagger), memoized within the current parse pass."""
+        if s not in self._rd_cache:
+            self._rd_cache[s] = generate_reading(s, self.tagger)
+        return self._rd_cache[s]
+
+    def _bold(self, text: str, start: int, end: int) -> str:
+        """Return wrap_target_furigana(text, tagger, start, end), memoized within the current parse pass."""
+        key = (text, start, end)
+        if key not in self._bold_cache:
+            self._bold_cache[key] = wrap_target_furigana(text, self.tagger, start, end)
+        return self._bold_cache[key]
 
     def _apply_text_filter(self, text: str) -> str:
         """Apply the configured regex filter to a subtitle line.
@@ -164,6 +192,12 @@ class SubtitleParserService:
         Raises:
             SubtitleParseError: If subtitle file cannot be parsed
         """
+        # Reset per-parse memo caches so a second call on the same instance
+        # does not serve entries from a previous parse run.
+        self._fg_cache = {}
+        self._rd_cache = {}
+        self._bold_cache = {}
+
         subs = self._load_subs(subtitle_file)
 
         all_words: list[TokenizedWord] = []
@@ -175,8 +209,8 @@ class SubtitleParserService:
             # ``parse_subtitle_file_with_index`` already follows this pattern;
             # hoisting here brings the i+1-OFF path to parity and eliminates
             # 2N redundant MeCab passes per line (N = words emitted).
-            sentence_furigana = generate_furigana(text, self.tagger)
-            sentence_reading = generate_reading(text, self.tagger)
+            sentence_furigana = self._furigana(text)
+            sentence_reading = self._reading(text)
 
             # Locate each token's char span via ``str.find`` from a running
             # cursor. MeCab silently drops whitespace from the token stream,
@@ -216,12 +250,12 @@ class SubtitleParserService:
                 # TokenizedWord.mined_form for the trade-off).
                 pos = word_token.feature.pos1
                 mined = lemma if pos in ("動詞", "形容詞") else surface
-                expression_furigana = generate_furigana(mined, self.tagger)
-                expression_reading = generate_reading(mined, self.tagger)
+                expression_furigana = self._furigana(mined)
+                expression_reading = self._reading(mined)
 
                 if self.config.bold_target_in_sentence:
                     sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
-                    sentence_furigana_bolded = wrap_target_furigana(text, self.tagger, tok_start, tok_end)
+                    sentence_furigana_bolded = self._bold(text, tok_start, tok_end)
                 else:
                     sentence_bolded = ""
                     sentence_furigana_bolded = ""
@@ -274,6 +308,11 @@ class SubtitleParserService:
         Raises:
             SubtitleParseError: If subtitle file cannot be parsed
         """
+        # Reset per-parse memo caches; see parse_subtitle_file for rationale.
+        self._fg_cache = {}
+        self._rd_cache = {}
+        self._bold_cache = {}
+
         subs = self._load_subs(subtitle_file)
 
         all_words: list[TokenizedWord] = []
@@ -316,8 +355,8 @@ class SubtitleParserService:
                 continue
 
             # Compute sentence-level furigana/reading ONCE for this line.
-            sentence_furigana = generate_furigana(text, self.tagger)
-            sentence_reading = generate_reading(text, self.tagger)
+            sentence_furigana = self._furigana(text)
+            sentence_reading = self._reading(text)
 
             line_index.append(
                 LineLemmas(
@@ -350,12 +389,12 @@ class SubtitleParserService:
                 # (lemma for verbs/adjectives, surface for nouns).
                 pos = word_token.feature.pos1
                 mined = lemma if pos in ("動詞", "形容詞") else surface
-                expression_furigana = generate_furigana(mined, self.tagger)
-                expression_reading = generate_reading(mined, self.tagger)
+                expression_furigana = self._furigana(mined)
+                expression_reading = self._reading(mined)
 
                 if self.config.bold_target_in_sentence:
                     sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
-                    sentence_furigana_bolded = wrap_target_furigana(text, self.tagger, tok_start, tok_end)
+                    sentence_furigana_bolded = self._bold(text, tok_start, tok_end)
                 else:
                     sentence_bolded = ""
                     sentence_furigana_bolded = ""
