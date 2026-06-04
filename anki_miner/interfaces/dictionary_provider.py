@@ -50,3 +50,14 @@ class DictionaryProvider(Protocol):
             HTML-formatted definition string, or None if not found.
         """
         ...
+
+    # NOTE: ``lookup_many`` is an OPTIONAL batch fast-path. It is intentionally
+    # NOT part of the required Protocol surface — online providers (e.g. Jisho)
+    # cannot batch and do not implement it. Consumers MUST probe for it at
+    # runtime (``callable(getattr(provider, "lookup_many", None))``) and fall
+    # back to per-word ``lookup`` when absent. An implementer's contract:
+    #
+    #     def lookup_many(self, words: list[str]) -> dict[str, str | None]:
+    #         """Batch variant of ``lookup``. The result for every word MUST be
+    #         byte-identical to ``lookup(word)``. Returns a dict keyed by every
+    #         requested word; a miss maps to None."""

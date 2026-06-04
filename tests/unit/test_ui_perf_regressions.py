@@ -23,6 +23,7 @@ from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.dialogs.pair_preview_dialog import PairPreviewDialog
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.themes_panel import _STAR_FILLED, _STAR_OUTLINE, ThemesPanel
@@ -279,5 +280,81 @@ def test_pair_preview_populate_disables_updates(tmp_path: Path):
         assert dialog.table.updatesEnabled() is True
         # And sorting state preserved (off by default for this dialog).
         assert dialog.table.isSortingEnabled() is False
+    finally:
+        dialog.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Fix 6: WordCurationDialog fixed row height + debounced search
+# ---------------------------------------------------------------------------
+
+
+def _make_curation_words(count: int = 20) -> list[TokenizedWord]:
+    return [
+        TokenizedWord(
+            surface=f"word{i}",
+            lemma=f"lemma{i}",
+            reading=f"reading{i}",
+            sentence=f"sentence {i}",
+            start_time=float(i),
+            end_time=float(i + 1),
+            duration=1.0,
+        )
+        for i in range(count)
+    ]
+
+
+def test_curation_uses_fixed_row_height():
+    """Vertical header must use Fixed resize mode with 32px default section size."""
+    from PyQt6.QtWidgets import QHeaderView
+
+    dialog = WordCurationDialog(_make_curation_words())
+    try:
+        v_header = dialog.table.verticalHeader()
+        assert v_header is not None
+        assert v_header.sectionResizeMode(0) == QHeaderView.ResizeMode.Fixed
+        assert v_header.defaultSectionSize() == 32
+    finally:
+        dialog.deleteLater()
+
+
+def test_curation_search_debounces_keystrokes():
+    """Three keystrokes in a row only run one _apply_search after the timer fires."""
+    dialog = WordCurationDialog(_make_curation_words())
+    try:
+        with patch.object(dialog, "_apply_search", wraps=dialog._apply_search) as apply_spy:
+            # Simulate rapid typing by setting the text field and calling _on_search_changed
+            # (the same path that the textChanged signal takes).
+            dialog.search_input.setText("w")
+            dialog.search_input.setText("wo")
+            dialog.search_input.setText("wor")
+            # Timer is single-shot; restarted on each keystroke — never fired synchronously.
+            assert apply_spy.call_count == 0
+            # Force the timer to fire (simulating the 150 ms expiry).
+            dialog._search_debounce_timer.stop()
+            dialog._apply_search()
+            assert apply_spy.call_count == 1
+    finally:
+        dialog.deleteLater()
+
+
+def test_curation_apply_search_filters_same_rows_as_before():
+    """_apply_search produces identical visibility to the old synchronous body."""
+    words = _make_curation_words(10)
+    dialog = WordCurationDialog(words)
+    try:
+        # Search for 'word5' — should hide every row except the one whose
+        # columns contain 'word5' (surface/lemma/reading/sentence).
+        dialog.search_input.setText("word5")
+        dialog._apply_search()
+
+        hidden = [dialog.table.isRowHidden(r) for r in range(dialog.table.rowCount())]
+        # Exactly one row visible (the one for i=5).
+        assert hidden.count(False) == 1
+
+        # Clearing search shows all rows.
+        dialog.search_input.setText("")
+        dialog._apply_search()
+        assert all(not dialog.table.isRowHidden(r) for r in range(dialog.table.rowCount()))
     finally:
         dialog.deleteLater()

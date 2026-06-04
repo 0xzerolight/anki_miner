@@ -48,10 +48,15 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 """
 
+# Explicit ``, id`` tiebreak makes single-word ordering fully deterministic
+# (rows with equal ``(term=?)`` priority and equal/NULL ``sequence`` would
+# otherwise come back in unspecified query-plan order). This is what the batch
+# ``lookup_many`` path reproduces with its final ``row_id`` sort, so keeping the
+# tiebreak here guarantees ``lookup`` and ``lookup_many`` agree.
 _LOOKUP_SQL = (
     "SELECT content, tags FROM entries "
     "WHERE term = ? OR reading = ? "
-    "ORDER BY (term = ?) DESC, sequence "
+    "ORDER BY (term = ?) DESC, sequence, id "
     "LIMIT 5"
 )
 
@@ -194,3 +199,79 @@ def lookup(conn: sqlite3.Connection, word: str) -> list[tuple[str, str]]:
     """Return up to 5 (content, tags) pairs matching word (term or reading)."""
     rows = conn.execute(_LOOKUP_SQL, (word, word, word)).fetchall()
     return [(row[0], row[1]) for row in rows]
+
+
+# sqlite's default SQLITE_MAX_VARIABLE_NUMBER is 999. lookup_many binds each
+# word twice (term IN + reading IN), so a single chunk may use at most
+# 2 * _BIND_CHUNK variables. Keep the product comfortably under the cap.
+_BIND_CHUNK = 450
+
+
+def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tuple[str, str]]]:
+    """Batch variant of :func:`lookup`.
+
+    Runs ONE query per chunk (``WHERE term IN (...) OR reading IN (...)``)
+    instead of one query per word, then reproduces ``_LOOKUP_SQL``'s ordering
+    and ``LIMIT 5`` in Python so each per-word result is byte-identical,
+    row-for-row, to ``lookup(conn, word)``.
+
+    Returns a dict keyed by every requested word (duplicates collapse). A word
+    with no matches maps to ``[]``, mirroring ``lookup``'s empty-result case.
+    """
+    # Preserve first-seen order; collapse duplicate requests to one bucket.
+    unique: list[str] = []
+    seen: set[str] = set()
+    for w in words:
+        if w not in seen:
+            seen.add(w)
+            unique.append(w)
+
+    result: dict[str, list[tuple[str, str]]] = {w: [] for w in unique}
+    if not unique:
+        return result
+
+    for start in range(0, len(unique), _BIND_CHUNK):
+        chunk = unique[start : start + _BIND_CHUNK]
+        placeholders = ", ".join("?" for _ in chunk)
+        sql = (
+            "SELECT id, term, reading, content, tags, sequence FROM entries "
+            f"WHERE term IN ({placeholders}) OR reading IN ({placeholders})"
+        )
+        rows = conn.execute(sql, (*chunk, *chunk)).fetchall()
+
+        # Bucket each fetched row to every requested word it can satisfy. A row
+        # may match one word by term and a different word by reading. Each entry
+        # carries the sort keys that reproduce _LOOKUP_SQL's
+        # "ORDER BY (term=?) DESC, sequence", plus a final ``id`` tiebreak:
+        #   * term_priority: 0 when this row's term equals the word (DESC puts
+        #     term matches first), else 1.
+        #   * _seq_key(sequence): NULL-aware ascending sequence tiebreak.
+        #   * row_id: SQLite resolves equal (term_priority, sequence) ties by
+        #     rowid ascending under the single-word query's MULTI-INDEX OR plan;
+        #     replaying it here keeps lookup_many byte-identical to lookup.
+        chunk_set = set(chunk)
+        buckets: dict[str, list[tuple[int, tuple[int, int], int, str, str]]] = {w: [] for w in chunk}
+        for row_id, term, reading, content, tags, sequence in rows:
+            tags_val = tags if tags is not None else ""
+            seq_key = _seq_key(sequence)
+            # A row satisfies a word via term OR reading. _LOOKUP_SQL's
+            # ``term=? OR reading=?`` returns each row ONCE per word even when
+            # both columns match, so de-dup the (term, reading) pair here.
+            for w in {term, reading}:
+                if w is not None and w in chunk_set:
+                    term_priority = 0 if term == w else 1
+                    buckets[w].append((term_priority, seq_key, row_id, content, tags_val))
+
+        for w, entries in buckets.items():
+            entries.sort(key=lambda e: (e[0], e[1], e[2]))
+            result[w] = [(content, tags) for _p, _s, _id, content, tags in entries[:5]]
+
+    return result
+
+
+# Sort key mirroring SQLite "ORDER BY sequence": NULL sorts before any value.
+# (is_not_null, value) where NULL -> (0, 0) sorts ahead of any integer.
+def _seq_key(sequence: int | None) -> tuple[int, int]:
+    if sequence is None:
+        return (0, 0)
+    return (1, sequence)

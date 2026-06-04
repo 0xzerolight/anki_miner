@@ -118,6 +118,14 @@ class WordCurationDialog(QDialog):
         self._focus_timer.setInterval(120)
         self._focus_timer.timeout.connect(self._on_focus_timer_fired)
         self._pending_word: TokenizedWord | None = None
+
+        # Debounce search keystrokes so a fast typist doesn't run setRowHidden
+        # N times for N characters typed.  150 ms matches WordPreviewDialog.
+        self._search_debounce_timer = QTimer(self)
+        self._search_debounce_timer.setSingleShot(True)
+        self._search_debounce_timer.setInterval(150)
+        self._search_debounce_timer.timeout.connect(self._apply_search)
+
         self._setup_ui()
         self._populate_table()
         self._update_word_count()
@@ -257,9 +265,7 @@ class WordCurationDialog(QDialog):
             header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
             header_view.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
 
-        v_header = self.table.verticalHeader()
-        if v_header:
-            v_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self._apply_fixed_row_height()
 
         self.table.itemChanged.connect(self._on_item_changed)
 
@@ -376,11 +382,22 @@ class WordCurationDialog(QDialog):
         font.setWeight(weight)
         return font
 
+    def _apply_fixed_row_height(self) -> None:
+        """Set Fixed resize mode with standard row dimensions on the vertical header."""
+        vh = self.table.verticalHeader()
+        if vh:
+            vh.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+            vh.setDefaultSectionSize(32)
+            vh.setMinimumSectionSize(28)
+
     def _populate_table(self) -> None:
         """Fill the table with words, all checked by default."""
         self.table.setSortingEnabled(False)
         self.table.blockSignals(True)
         self.table.setRowCount(len(self._words))
+        # Some Qt versions reset vertical-header section modes on setRowCount;
+        # re-applying is cheap insurance.
+        self._apply_fixed_row_height()
 
         for row, word in enumerate(self._words):
             # Checkbox column
@@ -434,8 +451,22 @@ class WordCurationDialog(QDialog):
         if item.column() == 0:
             self._update_word_count()
 
-    def _on_search_changed(self, text: str) -> None:
-        """Filter visible rows based on search text."""
+    def _on_search_changed(self, _text: str) -> None:
+        """Restart the debounce timer on each keystroke.
+
+        The actual row-visibility update runs in :meth:`_apply_search` after
+        the 150 ms single-shot timer fires, so rapid typing collapses into one
+        pass over the table instead of one per character.
+        """
+        self._search_debounce_timer.start()
+
+    def _apply_search(self) -> None:
+        """Filter visible rows based on the current search input text.
+
+        Reads :attr:`search_input` directly (not the signal argument) so this
+        method can be called both by the debounce timer and directly in tests.
+        """
+        text = self.search_input.text()
         text_lower = text.lower()
         for row in range(self.table.rowCount()):
             if not text:
