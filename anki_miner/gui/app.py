@@ -222,6 +222,26 @@ def main():
     window.show()
     QTimer.singleShot(0, stats_service.load)
 
+    # Pre-warm MeCab (fugashi/unidic-lite) and the dictionary chain off the GUI
+    # thread, scheduled on the next event-loop tick so it never blocks the
+    # first paint. The first Mine builds these on the GUI thread today, freezing
+    # the UI for seconds; warming the process/OS caches in the background makes
+    # that first real Mine materially faster. This is pure best-effort: the
+    # worker discards everything it builds (it never shares the warmed Tagger or
+    # any sqlite connection — both are unsafe across threads), so clicking Mine
+    # before it finishes simply takes today's cold path with no shared state.
+    # Keep a reference on the window so the QThread isn't GC'd mid-run; the
+    # built-in ``finished`` signal clears it once warming completes.
+    def _start_prewarm() -> None:
+        from anki_miner.gui.workers.prewarm_worker import PrewarmWorker
+
+        worker = PrewarmWorker(window.get_config())
+        window._prewarm_worker = worker
+        worker.finished.connect(lambda: setattr(window, "_prewarm_worker", None))
+        worker.start()
+
+    QTimer.singleShot(0, _start_prewarm)
+
     # Run event loop
     sys.exit(app.exec())
 
