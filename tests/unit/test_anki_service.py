@@ -882,6 +882,70 @@ class TestStoreMediaFilesBatch:
         assert "clip.mp3" in stored
         assert "bad.jpg" not in stored
 
+    def test_length_mismatch_logs_warning(self, test_config, make_tokenized_word, tmp_path, caplog):
+        """A chunk where post_multi returns fewer results than actions should log a warning."""
+        service = AnkiService(test_config)
+
+        word = make_tokenized_word()
+        ss_path = tmp_path / "shot.jpg"
+        ss_path.write_bytes(b"data")
+        au_path = tmp_path / "clip.mp3"
+        au_path.write_bytes(b"data")
+
+        media = MediaData(
+            screenshot_path=ss_path,
+            audio_path=au_path,
+            screenshot_filename="shot.jpg",
+            audio_filename="clip.mp3",
+        )
+
+        # Return only one result for two actions — deliberate mismatch
+        resp = _mock_response(result=["shot.jpg"])
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_service"),
+        ):
+            stored = service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
+
+        assert any("silently skipped" in r.message for r in caplog.records)
+        # Only the one result that came back should be counted
+        assert "shot.jpg" in stored
+        assert "clip.mp3" not in stored
+
+
+# ---------------------------------------------------------------------------
+# TestPostMultiErrors
+# ---------------------------------------------------------------------------
+
+
+class TestPostMultiErrors:
+    """Direct error-path tests for post_multi (mirrors post_action error tests)."""
+
+    def test_top_level_error_raises_anki_connection_error(self):
+        """A top-level ``{"error": ...}`` from the multi envelope should raise AnkiConnectionError."""
+        from anki_miner.services._ankiconnect import post_multi
+
+        resp = _mock_response(error="multi envelope rejected")
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            pytest.raises(AnkiConnectionError, match="multi envelope rejected"),
+        ):
+            post_multi("http://localhost:8765", [{"action": "noop", "version": 6, "params": {}}])
+
+    def test_connection_error_raises_with_is_anki_running_message(self):
+        """A ``ConnectionError`` from requests should raise AnkiConnectionError with the standard message."""
+        from anki_miner.services._ankiconnect import post_multi
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=requests.exceptions.ConnectionError("refused"),
+            ),
+            pytest.raises(AnkiConnectionError, match="Is Anki running"),
+        ):
+            post_multi("http://localhost:8765", [{"action": "noop", "version": 6, "params": {}}])
+
 
 # ---------------------------------------------------------------------------
 # TestOptionalFields
