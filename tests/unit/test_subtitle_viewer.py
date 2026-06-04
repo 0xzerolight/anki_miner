@@ -58,7 +58,7 @@ class TestSubtitleViewerEmbeds:
         assert viewer.player_widget._jp_audio_index == 2
 
     def test_viewer_delegates_all_args_to_set_source(self):
-        """SubtitleViewer.__init__ should pass video_path, entries, offset, and audio_track_override to set_source."""
+        """SubtitleViewer.__init__ should pass video_path, entries, offset, audio_track_override, ffprobe_cmd."""
         video_path = Path("/tmp/test.mkv")
         entries = [(1.0, 2.0, "hello")]
         with patch.object(SubtitlePlayerWidget, "set_source") as mock_set_source:
@@ -68,6 +68,21 @@ class TestSubtitleViewerEmbeds:
             entries,
             1.5,
             audio_track_override=3,
+            ffprobe_cmd="ffprobe",
+        )
+
+    def test_viewer_forwards_ffprobe_cmd_to_set_source(self):
+        """SubtitleViewer should forward an explicit ffprobe_cmd to player_widget.set_source."""
+        video_path = Path("/tmp/test.mkv")
+        entries = [(1.0, 2.0, "hello")]
+        with patch.object(SubtitlePlayerWidget, "set_source") as mock_set_source:
+            SubtitleViewer(video_path, entries, 0.0, ffprobe_cmd="/custom/ffprobe")
+        mock_set_source.assert_called_once_with(
+            video_path,
+            entries,
+            0.0,
+            audio_track_override=None,
+            ffprobe_cmd="/custom/ffprobe",
         )
 
 

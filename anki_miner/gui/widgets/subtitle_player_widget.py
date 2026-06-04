@@ -92,6 +92,7 @@ class SubtitlePlayerWidget(QWidget):
         offset: float = 0.0,
         *,
         audio_track_override: int | None = None,
+        ffprobe_cmd: str = "ffprobe",
     ) -> None:
         """Load a video source and configure subtitle playback.
 
@@ -103,6 +104,8 @@ class SubtitlePlayerWidget(QWidget):
             offset: Initial subtitle timing offset in seconds.
             audio_track_override: Optional 0-indexed audio track to force instead of
                 auto-detecting Japanese. None preserves auto-detect.
+            ffprobe_cmd: ffprobe executable path/literal used for audio-track auto-detection.
+                Defaults to the bare ``"ffprobe"`` literal (PATH lookup).
         """
         # Stop and fully tear down any existing player before re-initialising
         if self.player is not None:
@@ -122,7 +125,7 @@ class SubtitlePlayerWidget(QWidget):
         self._audio_track_override = audio_track_override
 
         if audio_track_override is None:
-            jp_stream = find_japanese_audio_stream(video_path)
+            jp_stream = find_japanese_audio_stream(video_path, ffprobe_cmd=ffprobe_cmd)
             self._jp_audio_index = jp_stream.audio_index if jp_stream is not None else None
         else:
             self._jp_audio_index = audio_track_override
