@@ -41,6 +41,7 @@ from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 
 logger = logging.getLogger(__name__)
 
@@ -326,7 +327,7 @@ class SingleEpisodeTab(MiningTabBase):
         # Probe (cached transparently by MediaExtractorService is per-extractor; here
         # we probe directly for the dialog). Each click probes fresh — cheap for
         # typical anime files (<1s).
-        streams = list_audio_streams(video_file)
+        streams = list_audio_streams(video_file, ffprobe_cmd=resolve_ffprobe(self.config))
 
         if not streams:
             QMessageBox.information(

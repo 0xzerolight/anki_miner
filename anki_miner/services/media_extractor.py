@@ -18,6 +18,7 @@ from anki_miner.utils import (
     safe_filename,
 )
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +205,7 @@ class MediaExtractorService:
         screenshot_time = start_time + min(self.config.screenshot_offset, duration / 2)
 
         cmd = [
-            "ffmpeg",
+            resolve_ffmpeg(self.config),
             "-y",  # Overwrite output
             "-ss",
             str(screenshot_time),
@@ -244,7 +245,7 @@ class MediaExtractorService:
                 return cached
             try:
                 proc = subprocess.run(
-                    ["ffmpeg", "-hide_banner", "-encoders"],
+                    [resolve_ffmpeg(self.config), "-hide_banner", "-encoders"],
                     capture_output=True,
                     timeout=15,
                     text=True,
@@ -300,7 +301,7 @@ class MediaExtractorService:
         quality = int(self.config.screenshot_animated_quality)
 
         cmd: list[str] = [
-            "ffmpeg",
+            resolve_ffmpeg(self.config),
             "-y",
             "-ss",
             str(clip_start),
@@ -356,7 +357,7 @@ class MediaExtractorService:
             if video_file in self._audio_stream_cache:
                 return self._audio_stream_cache[video_file]
 
-        result = find_japanese_audio_stream(video_file)
+        result = find_japanese_audio_stream(video_file, ffprobe_cmd=resolve_ffprobe(self.config))
         global_index = result.global_index if result is not None else None
 
         with self._cache_lock:
@@ -389,7 +390,7 @@ class MediaExtractorService:
             if video_file in self._audio_stream_list_cache:
                 return self._audio_stream_list_cache[video_file]
 
-        streams = list_audio_streams(video_file)
+        streams = list_audio_streams(video_file, ffprobe_cmd=resolve_ffprobe(self.config))
 
         with self._cache_lock:
             self._audio_stream_list_cache[video_file] = streams
@@ -459,7 +460,7 @@ class MediaExtractorService:
 
         # Build ffmpeg command
         cmd = [
-            "ffmpeg",
+            resolve_ffmpeg(self.config),
             "-y",
             "-ss",
             str(audio_start),
