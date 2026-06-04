@@ -2,7 +2,11 @@
 
 from unittest.mock import MagicMock, PropertyMock
 
-from anki_miner.utils.text_utils import wrap_target_furigana, wrap_target_plain
+from anki_miner.utils.text_utils import (
+    wrap_target_furigana,
+    wrap_target_furigana_from_tokens,
+    wrap_target_plain,
+)
 
 
 def _make_mock_token(surface, kana=None, has_feature=True):
@@ -198,3 +202,62 @@ class TestWrapTargetFurigana:
         end = start + len("王国")
         out = wrap_target_furigana(text, tagger, start, end)
         assert out == "スウェーデンや <b>王国[おうこく]</b>です。"
+
+
+class TestWrapTargetFuriganaFromTokensEquivalence:
+    """wrap_target_furigana_from_tokens must be byte-identical to wrap_target_furigana."""
+
+    # Each entry: (text, tokens, start, end)
+    CORPUS = [
+        # Valid span — kanji target mid-sentence
+        (
+            "スウェーデンや王国です。",
+            [
+                _make_mock_token("スウェーデン", kana="スウェーデン"),
+                _make_mock_token("や", kana="ヤ"),
+                _make_mock_token("王国", kana="オウコク"),
+                _make_mock_token("です", kana="デス"),
+                _make_mock_token("。", kana="。"),
+            ],
+            "スウェーデンや王国です。".index("王国"),
+            "スウェーデンや王国です。".index("王国") + len("王国"),
+        ),
+        # Valid span — target at start
+        (
+            "王国です",
+            [
+                _make_mock_token("王国", kana="オウコク"),
+                _make_mock_token("です", kana="デス"),
+            ],
+            0,
+            2,
+        ),
+        # Valid span — sentence with internal space (Issue #31)
+        (
+            "なんで 素直に",
+            [
+                _make_mock_token("なんで", kana="ナンデ"),
+                _make_mock_token("素直", kana="スナオ"),
+                _make_mock_token("に", kana="ニ"),
+            ],
+            "なんで 素直に".index("素直"),
+            "なんで 素直に".index("素直") + len("素直"),
+        ),
+        # Invalid span — fallback path
+        (
+            "王国です",
+            [
+                _make_mock_token("王国", kana="オウコク"),
+                _make_mock_token("です", kana="デス"),
+            ],
+            -1,
+            2,
+        ),
+    ]
+
+    def test_equivalence(self):
+        for text, tokens, start, end in self.CORPUS:
+            tagger = MagicMock(return_value=tokens)
+            expected = wrap_target_furigana(text, tagger, start, end)
+            actual = wrap_target_furigana_from_tokens(text, tokens, start, end)
+            assert actual == expected, f"Mismatch for {text!r} [{start}:{end}]: {actual!r} != {expected!r}"

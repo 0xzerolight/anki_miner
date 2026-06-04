@@ -106,7 +106,7 @@ class TestEpisodePipeline:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.media_extractor.subprocess.run", return_value=mock_proc),
             patch("anki_miner.services.media_extractor.ensure_directory"),
             patch("anki_miner.services.dictionary.providers.jisho_provider.requests.get") as mock_get,
@@ -177,7 +177,7 @@ class TestEpisodePipeline:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.media_extractor.subprocess.run") as mock_subprocess,
             patch("anki_miner.services.media_extractor.ensure_directory"),
             patch("anki_miner.services.anki_service.requests.post", return_value=find_resp),
@@ -240,7 +240,7 @@ class TestEpisodePipeline:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.media_extractor.subprocess.run") as mock_subprocess,
             patch("anki_miner.services.media_extractor.ensure_directory"),
             patch(
