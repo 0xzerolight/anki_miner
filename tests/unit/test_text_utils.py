@@ -6,7 +6,9 @@ from anki_miner.utils.text_utils import (
     clean_subtitle_text,
     extract_japanese_text,
     generate_furigana,
+    generate_furigana_from_tokens,
     generate_reading,
+    generate_reading_from_tokens,
     is_hiragana_only,
     is_katakana_only,
     katakana_to_hiragana,
@@ -338,3 +340,108 @@ class TestIsKatakanaOnly:
     def test_fullwidth_latin_is_false(self):
         # Fullwidth latin (ＡＢＣ) is not katakana.
         assert is_katakana_only("ＡＢＣ") is False
+
+
+# ---------------------------------------------------------------------------
+# Equivalence tests: *_from_tokens variants must match the wrapper functions
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateFuriganaFromTokensEquivalence:
+    """generate_furigana_from_tokens must be byte-identical to generate_furigana."""
+
+    CORPUS = [
+        # (text, tokens)
+        (
+            "王国",
+            [_make_mock_token("王国", kana="オウコク")],
+        ),
+        (
+            "です",
+            [_make_mock_token("です", kana="デス")],
+        ),
+        (
+            "コーヒー",
+            [_make_mock_token("コーヒー", kana="コーヒー")],
+        ),
+        (
+            "スウェーデンやオランダは王国です。",
+            [
+                _make_mock_token("スウェーデン", kana="スウェーデン"),
+                _make_mock_token("や", kana="ヤ"),
+                _make_mock_token("オランダ", kana="オランダ"),
+                _make_mock_token("は", kana="ハ"),
+                _make_mock_token("王国", kana="オウコク"),
+                _make_mock_token("です", kana="デス"),
+                _make_mock_token("。", kana="。"),
+            ],
+        ),
+        (
+            "無償",
+            [_make_mock_token("無償", kana="ムショウ")],
+        ),
+        (
+            "謎",
+            [_make_mock_token("謎", has_feature=False)],
+        ),
+        (
+            "",
+            [],
+        ),
+    ]
+
+    def test_equivalence(self):
+        for text, tokens in self.CORPUS:
+            tagger = MagicMock(return_value=tokens)
+            expected = generate_furigana(text, tagger)
+            # tagger has already been called once; reset so the wrapper call works
+            tagger.reset_mock()
+            tagger.return_value = tokens
+            actual = generate_furigana_from_tokens(iter(tokens))
+            assert actual == expected, f"Mismatch for {text!r}: {actual!r} != {expected!r}"
+
+
+class TestGenerateReadingFromTokensEquivalence:
+    """generate_reading_from_tokens must be byte-identical to generate_reading."""
+
+    CORPUS = [
+        (
+            "王国",
+            [_make_mock_token("王国", kana="オウコク")],
+        ),
+        (
+            "食べる",
+            [_make_mock_token("食べる", kana="タベル")],
+        ),
+        (
+            "コーヒー",
+            [_make_mock_token("コーヒー", kana="コーヒー")],
+        ),
+        (
+            "私は猫です。",
+            [
+                _make_mock_token("私", kana="ワタシ"),
+                _make_mock_token("は", kana="ハ"),
+                _make_mock_token("猫", kana="ネコ"),
+                _make_mock_token("です", kana="デス"),
+                _make_mock_token("。", kana=None),
+            ],
+        ),
+        (
+            "謎",
+            [_make_mock_token("謎", has_feature=False)],
+        ),
+        (
+            "",
+            [],
+        ),
+    ]
+
+    def test_equivalence(self):
+        for text, tokens in self.CORPUS:
+            tagger = MagicMock(return_value=tokens)
+            expected = generate_reading(text, tagger)
+            tagger.reset_mock()
+            tagger.return_value = tokens
+            actual = generate_reading_from_tokens(iter(tokens))
+            assert actual == expected, f"Mismatch for {text!r}: {actual!r} != {expected!r}"

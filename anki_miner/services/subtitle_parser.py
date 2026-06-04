@@ -6,19 +6,24 @@ import re
 from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
-import fugashi
 import pysubs2
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
+from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
     clean_subtitle_text,
     generate_furigana,
     generate_reading,
-    wrap_target_furigana,
     wrap_target_plain,
+)
+from anki_miner.utils.text_utils import (
+    generate_furigana_from_tokens,
+    generate_reading_from_tokens,
+    wrap_target_furigana_from_tokens,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,7 +66,13 @@ class SubtitleParserService:
             config: Configuration for parsing
         """
         self.config = config
-        self.tagger = fugashi.Tagger()
+        # Shared process-wide tagger (see services/tagger.py for the single-flight
+        # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
+        # the first SubtitleParserService before prewarm_tagger() finishes; worst
+        # case is the same wait they'd incur anyway, no correctness impact. GUI-
+        # thread call sites that only call parse_raw_entries never tokenize, so
+        # they don't race the worker thread's .parse() calls on this shared tagger.
+        self.tagger = get_shared_tagger()
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
             try:
@@ -101,12 +112,14 @@ class SubtitleParserService:
         except Exception as e:
             raise SubtitleParseError(f"Failed to parse subtitle file: {e}") from e
 
-    def _iter_parsed_lines(self, subs) -> Iterator[tuple[str, list, float, float, float]]:
+    def _iter_parsed_lines(self, subs) -> Iterator[tuple[str, list[Any], list[Any], float, float, float]]:
         """Yield post-tokenize per-line state for every non-empty subtitle line.
 
-        Yields ``(text, merged_tokens, start_time, end_time, duration)``.
-        ``text`` is the cleaned + regex-filtered line; ``merged_tokens`` is the
-        full output of ``_merge_compound_suffixes`` (callers apply
+        Yields ``(text, raw_tokens, merged_tokens, start_time, end_time, duration)``.
+        ``text`` is the cleaned + regex-filtered line; ``raw_tokens`` is the
+        direct output of ``self.tagger(text)`` (used by ``_from_tokens`` helpers
+        so the sentence is tokenized only once); ``merged_tokens`` is the full
+        output of ``_merge_compound_suffixes`` (callers apply
         ``_should_include_word`` themselves so the index path and mining path
         share identical token selection logic).
         """
@@ -124,7 +137,7 @@ class SubtitleParserService:
             raw_tokens = list(self.tagger(text))
             merged_tokens = self._merge_compound_suffixes(raw_tokens)
 
-            yield text, merged_tokens, start_time, end_time, duration
+            yield text, raw_tokens, merged_tokens, start_time, end_time, duration
 
     def parse_raw_entries(self, subtitle_file: Path) -> list[tuple[float, float, str]]:
         """Parse subtitle file and return raw timing entries without tokenization.
@@ -169,14 +182,14 @@ class SubtitleParserService:
         all_words: list[TokenizedWord] = []
         seen_lemmas: set[str] = set()  # Track unique words by dictionary form (lemma).
 
-        for text, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
+        for text, raw_tokens, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
             # Sentence-level furigana/reading depend only on ``text`` — compute
             # once per line and share across every word emitted from this line.
-            # ``parse_subtitle_file_with_index`` already follows this pattern;
-            # hoisting here brings the i+1-OFF path to parity and eliminates
-            # 2N redundant MeCab passes per line (N = words emitted).
-            sentence_furigana = generate_furigana(text, self.tagger)
-            sentence_reading = generate_reading(text, self.tagger)
+            # Use raw_tokens (pre-merge tagger output) so the sentence is
+            # tokenized only once per line. raw_tokens == tagger(text) so
+            # output is byte-identical to generate_furigana(text, self.tagger).
+            sentence_furigana = generate_furigana_from_tokens(raw_tokens)
+            sentence_reading = generate_reading_from_tokens(raw_tokens)
 
             # Locate each token's char span via ``str.find`` from a running
             # cursor. MeCab silently drops whitespace from the token stream,
@@ -221,7 +234,7 @@ class SubtitleParserService:
 
                 if self.config.bold_target_in_sentence:
                     sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
-                    sentence_furigana_bolded = wrap_target_furigana(text, self.tagger, tok_start, tok_end)
+                    sentence_furigana_bolded = wrap_target_furigana_from_tokens(text, raw_tokens, tok_start, tok_end)
                 else:
                     sentence_bolded = ""
                     sentence_furigana_bolded = ""
@@ -280,7 +293,7 @@ class SubtitleParserService:
         line_index: list[LineLemmas] = []
         seen_lemmas: set[str] = set()
 
-        for text, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
+        for text, raw_tokens, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
             # First pass: collect every content-word lemma on this line.
             # _should_include_word handles particle/aux/proper-noun filtering.
             # We also record (surface, start, end) for the FIRST occurrence
@@ -315,9 +328,10 @@ class SubtitleParserService:
             if not line_lemmas:
                 continue
 
-            # Compute sentence-level furigana/reading ONCE for this line.
-            sentence_furigana = generate_furigana(text, self.tagger)
-            sentence_reading = generate_reading(text, self.tagger)
+            # Compute sentence-level furigana/reading ONCE for this line using
+            # the already-parsed raw_tokens (tokenized at the top of the loop).
+            sentence_furigana = generate_furigana_from_tokens(raw_tokens)
+            sentence_reading = generate_reading_from_tokens(raw_tokens)
 
             line_index.append(
                 LineLemmas(
@@ -355,7 +369,7 @@ class SubtitleParserService:
 
                 if self.config.bold_target_in_sentence:
                     sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
-                    sentence_furigana_bolded = wrap_target_furigana(text, self.tagger, tok_start, tok_end)
+                    sentence_furigana_bolded = wrap_target_furigana_from_tokens(text, raw_tokens, tok_start, tok_end)
                 else:
                     sentence_bolded = ""
                     sentence_furigana_bolded = ""
@@ -402,7 +416,7 @@ class SubtitleParserService:
         """
         subs = self._load_subs(subtitle_file)
         counts: collections.Counter[str] = collections.Counter()
-        for _text, merged_tokens, *_ in self._iter_parsed_lines(subs):
+        for _text, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subs):
             for token in merged_tokens:
                 if self._should_include_word(token):
                     counts[self._extract_lemma(token)] += 1
