@@ -219,7 +219,7 @@ class FilteringSettingsPanel(FormPanel):
             cb = QCheckBox(f"{info.label} ({info.count:,})")
             cb.setToolTip(f"Exclude the bundled '{info.label}' wordset ({info.count:,} entries) from mining.")
             self.wordset_checkboxes[info.id] = cb
-            self.add_field("", cb, helper="")
+            self.add_field("", cb)
 
         # Subtitle Text Filtering section (Issue #8)
         self.add_section("Subtitle Text Filtering")
@@ -329,7 +329,8 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             "Max Sentence Duration",
             self.max_sentence_duration_spinbox,
-            helper="Drops cards whose subtitle line is longer than this. " "Set to 0 for no limit.",
+            helper="Drops cards whose example sentence audio is longer than this many seconds. "
+            "Set to 0 for no limit.",
         )
 
         self.max_sentence_chars_spinbox = QSpinBox()
