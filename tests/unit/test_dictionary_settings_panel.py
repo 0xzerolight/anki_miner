@@ -66,6 +66,13 @@ def test_panel_renders_default_chain(qapp, monkeypatch, tmp_path):
     assert chain[1].kind == "jisho"
 
 
+def test_pitch_checkbox_tooltip_is_helper_text(qapp, tmp_path):
+    # After the helper->tooltip migration the redundant explicit setToolTip
+    # was removed so the richer add_field helper is the single tooltip.
+    panel = DictionarySettingsPanel(tmp_path)
+    assert panel.use_pitch_accent_checkbox.toolTip() == "Looks up and writes pitch patterns to mapped fields."
+
+
 def test_reorder_moves_entry_up(qapp, monkeypatch, tmp_path):
     panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(

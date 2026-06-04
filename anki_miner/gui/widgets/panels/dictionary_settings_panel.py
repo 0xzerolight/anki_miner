@@ -313,7 +313,6 @@ class DictionarySettingsPanel(FormPanel):
             ),
         )
         self.use_pitch_accent_checkbox = QCheckBox("Enable Pitch Accent")
-        self.use_pitch_accent_checkbox.setToolTip("Adds pitch patterns to cards.")
         self.add_field(
             "",
             self.use_pitch_accent_checkbox,

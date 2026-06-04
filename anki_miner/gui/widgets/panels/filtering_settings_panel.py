@@ -77,7 +77,6 @@ class FilteringSettingsPanel(FormPanel):
             file_filter="Frequency list (*.csv *.tsv *.txt *.zip);;All Files (*)",
             placeholder="Select frequency list CSV/TSV or Yomitan zip...",
         )
-        self.frequency_selector.setToolTip("CSV/TSV file or Yomitan-format frequency zip")
         self.add_field(
             "Frequency List File",
             self.frequency_selector,
@@ -90,7 +89,6 @@ class FilteringSettingsPanel(FormPanel):
 
         # Use frequency data checkbox
         self.use_frequency_checkbox = QCheckBox("Enable Frequency Data")
-        self.use_frequency_checkbox.setToolTip("Attach word frequency ranks to cards")
         self.add_field(
             "",
             self.use_frequency_checkbox,
@@ -101,7 +99,6 @@ class FilteringSettingsPanel(FormPanel):
         self.max_frequency_spinbox = QSpinBox()
         self.max_frequency_spinbox.setRange(0, 100000)
         self.max_frequency_spinbox.setSpecialValueText("No limit")
-        self.max_frequency_spinbox.setToolTip("Only mine words within the top N most frequent (0 = no limit)")
         self.add_field(
             "Max Frequency Rank",
             self.max_frequency_spinbox,
@@ -222,31 +219,28 @@ class FilteringSettingsPanel(FormPanel):
             cb = QCheckBox(f"{info.label} ({info.count:,})")
             cb.setToolTip(f"Exclude the bundled '{info.label}' wordset ({info.count:,} entries) from mining.")
             self.wordset_checkboxes[info.id] = cb
-            self.add_field("", cb, helper="")
+            self.add_field("", cb)
 
         # Subtitle Text Filtering section (Issue #8)
         self.add_section("Subtitle Text Filtering")
 
         self.subtitle_regex_edit = QLineEdit()
         self.subtitle_regex_edit.setPlaceholderText(r"e.g. \([^)]*\)|\[[^\]]*\]")
-        self.subtitle_regex_edit.setToolTip(
-            "Python regex applied to each subtitle line before tokenization. "
-            "Combine alternatives with |. Test patterns at https://regex101.com."
-        )
         self.add_field(
             "Regex Filter",
             self.subtitle_regex_edit,
-            helper="Patterns matched in subtitle text are removed (or replaced) before mining. "
-            "Useful for stripping speaker names like (Tanaka) or sound descriptions like [door].",
+            helper="Python regex matched in subtitle text and removed (or replaced) before mining. "
+            "Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. "
+            "Combine alternatives with |. Test patterns at https://regex101.com.",
         )
 
         self.subtitle_replacement_edit = QLineEdit()
         self.subtitle_replacement_edit.setPlaceholderText("(empty = delete match)")
-        self.subtitle_replacement_edit.setToolTip("Text inserted in place of each match. Empty deletes the match.")
         self.add_field(
             "Replacement",
             self.subtitle_replacement_edit,
-            helper="Use Python backreferences (\\1 \\2) for capture groups. "
+            helper="Text inserted in place of each match (empty deletes the match). "
+            "Use Python backreferences (\\1 \\2) for capture groups. "
             "Note: NOT $1 $2 syntax like asbplayer; translate when copying patterns.",
         )
 
@@ -311,15 +305,9 @@ class FilteringSettingsPanel(FormPanel):
             "Only create cards for words that appear in a sentence with exactly ONE "
             "unknown word (the i+1 / immersion learning concept). Drops words whose "
             "only examples contain multiple unknowns, so expect significantly fewer "
-            "cards per episode."
+            "cards per episode. Overrides sentence deduplication when enabled."
         )
-        self.add_field(
-            "",
-            self.use_i_plus_one_checkbox,
-            helper="Keep only words with at least one example sentence where they are "
-            "the sole unknown. Trades card volume for sentence comprehensibility. "
-            "Overrides sentence deduplication when enabled.",
-        )
+        self.add_field("", self.use_i_plus_one_checkbox)
 
         # Sentence Length section (Issue #33)
         self.add_section("Sentence Length")
@@ -328,13 +316,9 @@ class FilteringSettingsPanel(FormPanel):
         self.use_sentence_length_checkbox.setToolTip(
             "Drop words whose example sentence exceeds the audio-duration "
             "or character caps below. Either cap set to 0 means no limit "
-            "for that dimension."
+            "for that dimension. Reduces deck size and speeds up reviews."
         )
-        self.add_field(
-            "",
-            self.use_sentence_length_checkbox,
-            helper="Skip cards with long example sentences to reduce deck " "size and speed up reviews.",
-        )
+        self.add_field("", self.use_sentence_length_checkbox)
 
         self.max_sentence_duration_spinbox = QDoubleSpinBox()
         self.max_sentence_duration_spinbox.setRange(0.0, 600.0)
@@ -342,13 +326,11 @@ class FilteringSettingsPanel(FormPanel):
         self.max_sentence_duration_spinbox.setSingleStep(0.5)
         self.max_sentence_duration_spinbox.setSuffix(" s")
         self.max_sentence_duration_spinbox.setSpecialValueText("No limit")
-        self.max_sentence_duration_spinbox.setToolTip(
-            "Maximum audio length of the example sentence in seconds " "(0 = no limit)"
-        )
         self.add_field(
             "Max Sentence Duration",
             self.max_sentence_duration_spinbox,
-            helper="Drops cards whose subtitle line is longer than this. " "Set to 0 for no limit.",
+            helper="Drops cards whose example sentence audio is longer than this many seconds. "
+            "Set to 0 for no limit.",
         )
 
         self.max_sentence_chars_spinbox = QSpinBox()
@@ -373,11 +355,7 @@ class FilteringSettingsPanel(FormPanel):
             "mined morpheme, so duplicated surfaces in a sentence only bold "
             "the actually-mined occurrence."
         )
-        self.add_field(
-            "",
-            self.bold_target_in_sentence_checkbox,
-            helper="Wraps mined word in <b>...</b> in Sentence and SentenceFurigana fields.",
-        )
+        self.add_field("", self.bold_target_in_sentence_checkbox)
 
         self.add_stretch()
 
