@@ -34,6 +34,30 @@ class TestRecentFilesManager:
         assert entries[0]["subtitle"] == "/subs/ep01.ass"
         assert "timestamp" in entries[0]
 
+    def test_add_entry_stores_subtitle_offset(self, manager):
+        manager.add_entry(Path("/video/ep01.mkv"), Path("/subs/ep01.ass"), subtitle_offset=2.5)
+
+        entries = manager.get_recent()
+        assert entries[0]["subtitle_offset"] == 2.5
+
+    def test_add_entry_defaults_offset_to_zero(self, manager):
+        manager.add_entry(Path("/video/ep01.mkv"), Path("/subs/ep01.ass"))
+
+        entries = manager.get_recent()
+        assert entries[0]["subtitle_offset"] == 0.0
+
+    def test_legacy_entry_without_offset_still_loads(self, manager):
+        """An entry persisted before the offset field existed must still load."""
+        manager._file_path.parent.mkdir(parents=True, exist_ok=True)
+        manager._file_path.write_text(
+            '[{"video": "/v.mkv", "subtitle": "/s.ass", "timestamp": "2026-01-01T00:00:00+00:00"}]',
+            encoding="utf-8",
+        )
+
+        entries = manager.get_recent()
+        assert len(entries) == 1
+        assert entries[0]["video"] == "/v.mkv"
+
     def test_most_recent_first(self, manager):
         manager.add_entry(Path("/video/ep01.mkv"), Path("/subs/ep01.ass"))
         manager.add_entry(Path("/video/ep02.mkv"), Path("/subs/ep02.ass"))
