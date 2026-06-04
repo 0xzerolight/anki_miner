@@ -14,6 +14,15 @@ from anki_miner.gui.widgets.panels.media_settings_panel import MediaSettingsPane
 _app = QApplication.instance() or QApplication([])
 
 
+def test_audio_bitrate_tooltip_merges_helper_and_old_tooltip():
+    # The redundant explicit setToolTip was folded into the add_field helper
+    # during the helper->tooltip migration; the merged text is the one tooltip.
+    panel = MediaSettingsPanel()
+    assert panel.audio_bitrate_spinbox.toolTip() == (
+        "Higher = better quality, larger files. " "64-96 kbps Opus or 128-192 kbps MP3 are good defaults."
+    )
+
+
 def test_match_audio_toggle_disables_duration_spinbox():
     """Ticking match-audio while the feature is on disables the duration spinbox."""
     panel = MediaSettingsPanel()
