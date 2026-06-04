@@ -170,6 +170,36 @@ def test_build_ensures_deck_and_processes_each_pair(qapp):
         worker._stop_patch.stop()
 
 
+def test_phase2_reuses_base_parser_for_cross_phase_cache(qapp):
+    """Each Phase-2 processor must reuse the Phase-1 base processor's parser.
+
+    The per-file tokenization cache is filled in Phase 1 (aggregate →
+    count_lemmas) on ``base.subtitle_parser``. For the cache to HIT in Phase 2,
+    the per-episode processor must parse through that SAME parser instance, not
+    its own freshly-constructed one. We assert the worker rebinds each episode
+    processor's ``subtitle_parser`` to ``base.subtitle_parser`` before mining.
+    """
+    counts = collections.Counter({"a": 1, "b": 1})
+    base = _fake_processor(counts)
+    ep1 = _fake_processor(counts)
+    ep2 = _fake_processor(counts)
+    # Distinct sentinel so the assertion can't pass by coincidence.
+    base_parser = base.subtitle_parser
+    assert ep1.subtitle_parser is not base_parser
+    assert ep2.subtitle_parser is not base_parser
+
+    worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1"), _make_pair("ep2")]), processors=[base, ep1, ep2])
+    try:
+        worker.confirm()
+        worker.run()
+
+        # After the build, every per-episode processor shares the base parser.
+        assert ep1.subtitle_parser is base_parser
+        assert ep2.subtitle_parser is base_parser
+    finally:
+        worker._stop_patch.stop()
+
+
 def test_cross_episode_dedup(qapp):
     """A selected lemma is carded only at its first occurrence across episodes."""
     # Corpus has lemma 'a' (selected via ALL). Two episodes both contain 'a'.
