@@ -55,3 +55,14 @@ def test_sentence_length_tooltip_mentions_review_rationale():
     tip = panel.use_sentence_length_checkbox.toolTip()
     assert "no limit" in tip.lower()
     assert "reviews" in tip.lower()
+
+
+def test_max_sentence_duration_tooltip_describes_seconds_not_chars():
+    # The field is an audio-duration spinbox (suffix " s"); its helper must
+    # describe seconds of audio, not character length (the prior helper wrongly
+    # said "subtitle line is longer than this").
+    panel = FilteringSettingsPanel()
+    tip = panel.max_sentence_duration_spinbox.toolTip()
+    assert "seconds" in tip.lower()
+    assert "audio" in tip.lower()
+    assert "subtitle line is longer" not in tip.lower()
