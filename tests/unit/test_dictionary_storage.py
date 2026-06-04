@@ -11,6 +11,7 @@ from anki_miner.services.dictionary.storage import (
     bulk_insert,
     create_index,
     lookup,
+    lookup_many,
     open_readonly,
     read_meta,
     read_meta_cached,
@@ -200,6 +201,153 @@ class TestBulkInsertAndLookup:
             assert results[0][1] == ""
         finally:
             conn.close()
+
+
+class TestLookupMany:
+    """lookup_many must reproduce lookup() per word, row-for-row."""
+
+    def _seed(self, db_path: Path) -> None:
+        create_index(db_path)
+        rows = [
+            DictRow(term="食べる", reading="たべる", content="<div>to eat</div>", tags="v1", sequence=1),
+            DictRow(term="飲む", reading="のむ", content="<div>to drink</div>", tags="v5m", sequence=2),
+            # homograph reading は し
+            DictRow(term="橋", reading="はし", content="<div>bridge</div>", sequence=3),
+            DictRow(term="箸", reading="はし", content="<div>chopsticks</div>", sequence=4),
+            # term-vs-reading priority
+            DictRow(term="A", reading="ほし", content="<div>reading-match</div>", sequence=5),
+            DictRow(term="ほし", reading=None, content="<div>term-match</div>", sequence=6),
+        ]
+        # word with >5 matches to exercise LIMIT 5 + ordering
+        for i in range(8):
+            rows.append(DictRow(term="多", reading="おおい", content=f"<div>many-{i}</div>", sequence=100 + i))
+        bulk_insert(db_path, rows)
+
+    def test_matches_lookup_per_word(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        self._seed(db_path)
+        words = ["食べる", "たべる", "飲む", "はし", "ほし", "多", "missing"]
+
+        conn = open_readonly(db_path)
+        try:
+            batch = lookup_many(conn, words)
+            for w in words:
+                assert batch[w] == lookup(conn, w), f"mismatch for {w!r}"
+        finally:
+            conn.close()
+
+    def test_limit_5_enforced(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        self._seed(db_path)
+        conn = open_readonly(db_path)
+        try:
+            assert len(lookup_many(conn, ["多"])["多"]) == 5
+        finally:
+            conn.close()
+
+    def test_term_priority_over_reading(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        self._seed(db_path)
+        conn = open_readonly(db_path)
+        try:
+            assert lookup_many(conn, ["ほし"])["ほし"][0] == ("<div>term-match</div>", "")
+        finally:
+            conn.close()
+
+    def test_every_requested_word_present(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        self._seed(db_path)
+        conn = open_readonly(db_path)
+        try:
+            res = lookup_many(conn, ["食べる", "missing", "飲む"])
+            assert set(res.keys()) == {"食べる", "missing", "飲む"}
+            assert res["missing"] == []
+        finally:
+            conn.close()
+
+    def test_empty_word_list(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        self._seed(db_path)
+        conn = open_readonly(db_path)
+        try:
+            assert lookup_many(conn, []) == {}
+        finally:
+            conn.close()
+
+    def test_chunking_over_999_bind_cap(self, tmp_path: Path):
+        """A word list large enough to force >1 chunk still matches per-word lookup."""
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        rows = [DictRow(term=f"w{i}", reading=None, content=f"<div>{i}</div>", sequence=i) for i in range(600)]
+        bulk_insert(db_path, rows)
+        words = [f"w{i}" for i in range(600)] + ["nope"]
+
+        conn = open_readonly(db_path)
+        try:
+            batch = lookup_many(conn, words)
+            for w in words:
+                assert batch[w] == lookup(conn, w)
+        finally:
+            conn.close()
+
+    def test_duplicate_words_in_request(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        self._seed(db_path)
+        conn = open_readonly(db_path)
+        try:
+            res = lookup_many(conn, ["飲む", "飲む"])
+            assert res["飲む"] == lookup(conn, "飲む")
+        finally:
+            conn.close()
+
+    def test_dual_match_row_counted_once(self, tmp_path: Path):
+        """A row whose term and reading both equal the word appears ONCE,
+        matching _LOOKUP_SQL's ``term=? OR reading=?``."""
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        bulk_insert(db_path, [DictRow(term="はし", reading="はし", content="<div>x</div>", sequence=1)])
+        conn = open_readonly(db_path)
+        try:
+            assert lookup_many(conn, ["はし"])["はし"] == lookup(conn, "はし")
+            assert len(lookup_many(conn, ["はし"])["はし"]) == 1
+        finally:
+            conn.close()
+
+    def test_fuzz_matches_lookup(self, tmp_path: Path):
+        """Randomized stress: NULL sequences, duplicate sequences, term/reading
+        collisions, and dual-match rows. lookup_many must equal lookup per word
+        for every trial (locks the rowid tiebreak + LIMIT 5 ordering)."""
+        import random
+
+        terms = ["はし", "橋", "箸", "端", "ほし", "星"]
+        for trial in range(40):
+            random.seed(trial)
+            db_path = tmp_path / f"fuzz_{trial}.sqlite"
+            create_index(db_path)
+            rows = []
+            for i in range(random.randint(0, 50)):
+                seq = random.choice([None, 1, 1, 2, 2, 3])
+                term = random.choice(terms)
+                reading = random.choice([term, "はし", "ほし", None])
+                rows.append(
+                    DictRow(
+                        term=term,
+                        reading=reading,
+                        content=f"C{trial}_{i}",
+                        tags=random.choice(["t", "", "a b"]),
+                        sequence=seq,
+                    )
+                )
+            random.shuffle(rows)
+            bulk_insert(db_path, rows)
+            conn = open_readonly(db_path)
+            try:
+                words = terms + ["はし", "ほし", "nope"]
+                batch = lookup_many(conn, words)
+                for w in words:
+                    assert batch[w] == lookup(conn, w), f"trial {trial} word {w!r}"
+            finally:
+                conn.close()
 
 
 class TestMeta:
