@@ -305,7 +305,7 @@ class FilteringSettingsPanel(FormPanel):
             "Only create cards for words that appear in a sentence with exactly ONE "
             "unknown word (the i+1 / immersion learning concept). Drops words whose "
             "only examples contain multiple unknowns, so expect significantly fewer "
-            "cards per episode."
+            "cards per episode. Overrides sentence deduplication when enabled."
         )
         self.add_field("", self.use_i_plus_one_checkbox)
 
@@ -316,7 +316,7 @@ class FilteringSettingsPanel(FormPanel):
         self.use_sentence_length_checkbox.setToolTip(
             "Drop words whose example sentence exceeds the audio-duration "
             "or character caps below. Either cap set to 0 means no limit "
-            "for that dimension."
+            "for that dimension. Reduces deck size and speeds up reviews."
         )
         self.add_field("", self.use_sentence_length_checkbox)
 
