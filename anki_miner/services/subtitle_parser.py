@@ -75,15 +75,29 @@ class SubtitleParserService:
                     e,
                 )
                 self._filter_pattern = None
-        # Per-parse memo caches; reset at the top of each parse_* call so
-        # a second invocation with a different file never sees stale entries.
+        # Per-parse memo caches; initialised here with type annotations so
+        # mypy knows the shapes; reset at the top of each parse_* call via
+        # _reset_caches() so a second invocation never sees stale entries.
         self._fg_cache: dict[str, str] = {}
         self._rd_cache: dict[str, str] = {}
         self._bold_cache: dict[tuple[str, int, int], str] = {}
+        self._reset_caches()
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
     # ------------------------------------------------------------------
+
+    def _reset_caches(self) -> None:
+        """Assign fresh empty dicts to all three per-parse memo caches.
+
+        Called at the start of every public parse_* entry-point so a second
+        invocation on the same service instance never serves entries from a
+        previous parse run.  Also called from ``__init__`` so the shapes are
+        initialised in exactly one place.
+        """
+        self._fg_cache = {}
+        self._rd_cache = {}
+        self._bold_cache = {}
 
     def _furigana(self, s: str) -> str:
         """Return generate_furigana(s, tagger), memoized within the current parse pass."""
@@ -194,9 +208,7 @@ class SubtitleParserService:
         """
         # Reset per-parse memo caches so a second call on the same instance
         # does not serve entries from a previous parse run.
-        self._fg_cache = {}
-        self._rd_cache = {}
-        self._bold_cache = {}
+        self._reset_caches()
 
         subs = self._load_subs(subtitle_file)
 
@@ -309,9 +321,7 @@ class SubtitleParserService:
             SubtitleParseError: If subtitle file cannot be parsed
         """
         # Reset per-parse memo caches; see parse_subtitle_file for rationale.
-        self._fg_cache = {}
-        self._rd_cache = {}
-        self._bold_cache = {}
+        self._reset_caches()
 
         subs = self._load_subs(subtitle_file)
 
