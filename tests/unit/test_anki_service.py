@@ -744,17 +744,21 @@ class TestStoreMediaFilesBatch:
             audio_filename="clip.mp3",
         )
 
-        resp = _mock_response(result="ok")
+        # multi response: two sub-results (one per file)
+        resp = _mock_response(result=["shot.jpg", "clip.mp3"])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
+            stored = service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
 
-        # Two calls: one for screenshot, one for audio
-        assert mock_post.call_count == 2
+        # One batched POST via multi action
+        assert mock_post.call_count == 1
+        payload = mock_post.call_args[1]["json"]
+        assert payload["action"] == "multi"
 
-        filenames_sent = [call[1]["json"]["params"]["filename"] for call in mock_post.call_args_list]
+        filenames_sent = [a["params"]["filename"] for a in payload["params"]["actions"]]
         assert "shot.jpg" in filenames_sent
         assert "clip.mp3" in filenames_sent
+        assert stored == {"shot.jpg", "clip.mp3"}
 
     def test_skips_nonexistent_paths(self, test_config, make_tokenized_word, tmp_path):
         """Should not attempt to store files when paths do not exist on disk."""
@@ -796,6 +800,87 @@ class TestStoreMediaFilesBatch:
         ):
             # Should not raise
             service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
+
+    def test_store_media_files_uses_multi_action(self, test_config, make_tokenized_word, tmp_path):
+        """Should POST a single multi action for all files, returning all filenames in stored."""
+        service = AnkiService(test_config)
+
+        items = []
+        for i in range(3):
+            word = make_tokenized_word(lemma=f"word_{i}")
+            ss_path = tmp_path / f"shot_{i}.jpg"
+            ss_path.write_bytes(b"screenshot-data")
+            au_path = tmp_path / f"clip_{i}.mp3"
+            au_path.write_bytes(b"audio-data")
+            media = MediaData(
+                screenshot_path=ss_path,
+                audio_path=au_path,
+                screenshot_filename=f"shot_{i}.jpg",
+                audio_filename=f"clip_{i}.mp3",
+            )
+            items.append(CardPayload(word=word, media=media, definition=f"def_{i}"))
+
+        # 3 cards × 2 files = 6 sub-results (all successful: no error key)
+        multi_resp = _mock_response(
+            result=["shot_0.jpg", "shot_1.jpg", "shot_2.jpg", "clip_0.mp3", "clip_1.mp3", "clip_2.mp3"]
+        )
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=multi_resp) as mock_post:
+            stored = service._store_media_files_batch(items)
+
+        # One POST (all 6 files fit in a single chunk of ≤50)
+        assert mock_post.call_count == 1
+        payload = mock_post.call_args[1]["json"]
+        assert payload["action"] == "multi"
+        assert len(payload["params"]["actions"]) == 6
+
+        # All filenames returned in stored set
+        expected = {f"shot_{i}.jpg" for i in range(3)} | {f"clip_{i}.mp3" for i in range(3)}
+        assert stored == expected
+
+    def test_store_media_partial_failure_excludes_failed_filename(self, test_config, make_tokenized_word, tmp_path):
+        """A sub-result with an error key should exclude that filename from stored."""
+        service = AnkiService(test_config)
+
+        word = make_tokenized_word()
+        ss_path = tmp_path / "shot.jpg"
+        ss_path.write_bytes(b"screenshot-data")
+        au_path = tmp_path / "clip.mp3"
+        au_path.write_bytes(b"audio-data")
+        bad_path = tmp_path / "bad.jpg"
+        bad_path.write_bytes(b"bad-data")
+
+        items = [
+            CardPayload(
+                word=word,
+                media=MediaData(
+                    screenshot_path=ss_path,
+                    audio_path=au_path,
+                    screenshot_filename="shot.jpg",
+                    audio_filename="clip.mp3",
+                ),
+                definition="def",
+            ),
+            CardPayload(
+                word=make_tokenized_word(lemma="word2"),
+                media=MediaData(
+                    screenshot_path=bad_path,
+                    screenshot_filename="bad.jpg",
+                ),
+                definition="def2",
+            ),
+        ]
+
+        # sub-results: shot.jpg ok, clip.mp3 ok, bad.jpg has error
+        multi_result = ["shot.jpg", "clip.mp3", {"error": "failed to store bad.jpg"}]
+        multi_resp = _mock_response(result=multi_result)
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=multi_resp):
+            stored = service._store_media_files_batch(items)
+
+        assert "shot.jpg" in stored
+        assert "clip.mp3" in stored
+        assert "bad.jpg" not in stored
 
 
 # ---------------------------------------------------------------------------

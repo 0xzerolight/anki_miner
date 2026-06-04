@@ -43,3 +43,42 @@ def post_action(
     if result.get("error"):
         raise AnkiConnectionError(f"AnkiConnect error in '{action}': {result['error']}")
     return result.get("result")
+
+
+def post_multi(
+    ankiconnect_url: str,
+    actions: list[dict],
+    timeout: int = 30,
+) -> list[Any]:
+    """Send a ``multi`` envelope to AnkiConnect and return per-action results.
+
+    Per-sub-action errors are returned in the list as-is (dicts with an
+    ``"error"`` key); only top-level transport / AnkiConnect failures raise.
+
+    Args:
+        ankiconnect_url: AnkiConnect endpoint, typically ``http://localhost:8765``.
+        actions: List of action dicts, each shaped like
+            ``{"action": "...", "version": 6, "params": {...}}``.
+        timeout: Request timeout in seconds.
+
+    Returns:
+        List of per-action results in the same order as ``actions``.
+
+    Raises:
+        AnkiConnectionError: on connection failure, HTTP/JSON parse failure,
+            or a top-level AnkiConnect error on the ``multi`` envelope itself.
+    """
+    try:
+        response = requests.post(
+            ankiconnect_url,
+            json={"action": "multi", "version": 6, "params": {"actions": actions}},
+            timeout=timeout,
+        )
+        result = response.json()
+    except requests.exceptions.ConnectionError as e:
+        raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
+    except (requests.RequestException, ValueError) as e:
+        raise AnkiConnectionError(f"AnkiConnect call 'multi' failed: {e}") from e
+    if result.get("error"):
+        raise AnkiConnectionError(f"AnkiConnect error in 'multi': {result['error']}")
+    return result.get("result") or []
