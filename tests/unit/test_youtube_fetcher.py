@@ -79,6 +79,7 @@ def yt_config(tmp_path: Path) -> AnkiMinerConfig:
         youtube_max_duration_s=3600,
         youtube_max_height=720,
         youtube_cookies_from_browser=None,
+        youtube_cookies_file=None,
         youtube_ffmpeg_location=None,
     )
 
@@ -201,6 +202,40 @@ class TestProbeMetadata:
         cmd = args[0]
         assert "--cookies-from-browser" in cmd
         assert cmd[cmd.index("--cookies-from-browser") + 1] == "firefox"
+
+    def test_probe_uses_cookies_file(self, yt_config: AnkiMinerConfig, tmp_path: Path) -> None:
+        cookies = tmp_path / "cookies.txt"
+        cfg = replace(yt_config, youtube_cookies_file=cookies)
+        svc = YouTubeFetcherService(cfg)
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            svc.probe_metadata("https://youtu.be/abc123")
+        args, _ = mrun.call_args
+        cmd = args[0]
+        assert "--cookies" in cmd
+        assert cmd[cmd.index("--cookies") + 1] == str(cookies)
+
+    def test_probe_cookies_file_takes_precedence_over_browser(self, yt_config: AnkiMinerConfig, tmp_path: Path) -> None:
+        cookies = tmp_path / "cookies.txt"
+        cfg = replace(yt_config, youtube_cookies_file=cookies, youtube_cookies_from_browser="firefox")
+        svc = YouTubeFetcherService(cfg)
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            svc.probe_metadata("https://youtu.be/abc123")
+        args, _ = mrun.call_args
+        cmd = args[0]
+        assert "--cookies" in cmd
+        assert cmd[cmd.index("--cookies") + 1] == str(cookies)
+        assert "--cookies-from-browser" not in cmd
+
+    def test_probe_no_cookie_flags_when_unset(self, service: YouTubeFetcherService) -> None:
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_metadata("https://youtu.be/abc123")
+        args, _ = mrun.call_args
+        cmd = args[0]
+        assert "--cookies" not in cmd
+        assert "--cookies-from-browser" not in cmd
 
 
 # ---------------------------------------------------------------------------
@@ -336,6 +371,49 @@ class TestFetchVideoCommand:
         cmd = captured["cmd"]
         assert "--cookies-from-browser" in cmd
         assert cmd[cmd.index("--cookies-from-browser") + 1] == "firefox"
+
+    def test_cookies_file_in_cmd(self, yt_config: AnkiMinerConfig, tmp_path: Path) -> None:
+        cookies = tmp_path / "cookies.txt"
+        cfg = replace(yt_config, youtube_cookies_file=cookies)
+        svc = YouTubeFetcherService(cfg)
+        _make_happy_outputs(tmp_path)
+        captured: dict[str, Any] = {}
+
+        def fake_popen(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            captured["cmd"] = cmd
+            return _FakePopen(lines=[], returncode=0)
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", side_effect=fake_popen),
+        ):
+            svc.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        cmd = captured["cmd"]
+        assert "--cookies" in cmd
+        assert cmd[cmd.index("--cookies") + 1] == str(cookies)
+
+    def test_cookies_file_takes_precedence_over_browser_in_cmd(
+        self, yt_config: AnkiMinerConfig, tmp_path: Path
+    ) -> None:
+        cookies = tmp_path / "cookies.txt"
+        cfg = replace(yt_config, youtube_cookies_file=cookies, youtube_cookies_from_browser="firefox")
+        svc = YouTubeFetcherService(cfg)
+        _make_happy_outputs(tmp_path)
+        captured: dict[str, Any] = {}
+
+        def fake_popen(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            captured["cmd"] = cmd
+            return _FakePopen(lines=[], returncode=0)
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", side_effect=fake_popen),
+        ):
+            svc.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        cmd = captured["cmd"]
+        assert "--cookies" in cmd
+        assert cmd[cmd.index("--cookies") + 1] == str(cookies)
+        assert "--cookies-from-browser" not in cmd
 
     def test_ffmpeg_location_in_cmd(self, yt_config: AnkiMinerConfig, tmp_path: Path) -> None:
         fake_ffmpeg = tmp_path / "my-ffmpeg"

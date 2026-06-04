@@ -3,15 +3,21 @@
 from PyQt6.QtWidgets import QComboBox, QSpinBox
 
 from anki_miner.gui.widgets.base import FormPanel
+from anki_miner.gui.widgets.enhanced import FileSelector
 
 # Ordered pairs of (display label, config value) for the browser dropdown.
 # The sentinel "None" label maps to a Python ``None`` value in the config.
+# Values are passed verbatim to yt-dlp's ``--cookies-from-browser`` flag.
 _COOKIE_BROWSER_OPTIONS: list[tuple[str, str | None]] = [
     ("None", None),
     ("Firefox", "firefox"),
     ("Chrome", "chrome"),
     ("Chromium", "chromium"),
     ("Edge", "edge"),
+    ("Brave", "brave"),
+    ("Opera", "opera"),
+    ("Vivaldi", "vivaldi"),
+    ("Safari", "safari"),
 ]
 
 
@@ -40,6 +46,24 @@ class YouTubeSettingsPanel(FormPanel):
             helper=(
                 "Pick a browser whose cookies yt-dlp should reuse. "
                 "Leave as 'None' unless YouTube is blocking anonymous fetches."
+            ),
+        )
+
+        # Cookies file (overrides the browser dropdown above)
+        self.cookies_file_selector = FileSelector(
+            label="",
+            file_mode=True,
+            file_filter="Cookies file (*.txt);;All Files (*)",
+            placeholder="Optional: path to an exported cookies.txt...",
+        )
+        self.add_field(
+            "Cookies file",
+            self.cookies_file_selector,
+            helper=(
+                "Optional. Overrides the browser dropdown above. Export a Netscape "
+                "cookies.txt with a 'Get cookies.txt LOCALLY' browser extension — works "
+                "with ANY browser (Safari, Brave, Arc...). Keep the file private; it "
+                "holds your YouTube login."
             ),
         )
 
@@ -76,6 +100,14 @@ class YouTubeSettingsPanel(FormPanel):
         if 0 <= index < len(_COOKIE_BROWSER_OPTIONS):
             return _COOKIE_BROWSER_OPTIONS[index][1]
         return None
+
+    def set_cookies_file(self, value: object) -> None:
+        """Populate the cookies-file field from a config value (Path/str/None)."""
+        self.cookies_file_selector.set_path(str(value) if value else "")
+
+    def get_cookies_file(self) -> str:
+        """Return the cookies-file path text (empty string when unset)."""
+        return self.cookies_file_selector.get_path().strip()
 
     def set_max_duration_seconds(self, seconds: int) -> None:
         """Set the spinbox from a seconds value, rounding up to the next minute."""
