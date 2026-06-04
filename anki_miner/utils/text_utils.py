@@ -2,6 +2,8 @@
 
 import html
 import re
+from collections.abc import Iterable
+from typing import Any
 
 
 def clean_subtitle_text(text: str) -> str:
@@ -39,30 +41,31 @@ def katakana_to_hiragana(text: str) -> str:
     """
     result = []
     for ch in text:
-        if "\u30a1" <= ch <= "\u30f6":
+        if "ァ" <= ch <= "ヶ":
             result.append(chr(ord(ch) - 0x60))
         else:
             result.append(ch)
     return "".join(result)
 
 
-def generate_furigana(text: str, tagger) -> str:
-    """Generate furigana-annotated text using MeCab tokenization.
+def generate_furigana_from_tokens(tokens: Iterable[Any]) -> str:
+    """Generate furigana-annotated text from an already-parsed token iterable.
 
-    Tokenizes the text and adds bracketed readings to kanji-containing tokens.
-    Uses the standard Anki furigana format: kanji[reading].
+    Iterates ``tokens`` and adds bracketed readings to kanji-containing tokens
+    using the standard Anki furigana format: ``kanji[reading]``.
 
     Args:
-        text: Japanese text to annotate
-        tagger: A fugashi.Tagger instance
+        tokens: Iterable of duck-typed MeCab tokens.  Each token must expose
+            ``.surface`` (str) and optionally ``.feature.kana`` (str or None).
+            Compatible with real ``fugashi`` tokens and ``_SyntheticToken``.
 
     Returns:
-        Furigana-annotated string, e.g. "王国[おうこく]です。"
+        Furigana-annotated string, e.g. ``"王国[おうこく]です。"``.
     """
     result = []
-    for token in tagger(text):
+    for token in tokens:
         surface = token.surface
-        has_kanji = any("\u4e00" <= c <= "\u9fff" for c in surface)
+        has_kanji = any("一" <= c <= "鿿" for c in surface)
         if not has_kanji:
             result.append(surface)
             continue
@@ -84,6 +87,52 @@ def generate_furigana(text: str, tagger) -> str:
     return "".join(result)
 
 
+def generate_furigana(text: str, tagger) -> str:
+    """Generate furigana-annotated text using MeCab tokenization.
+
+    Tokenizes the text and adds bracketed readings to kanji-containing tokens.
+    Uses the standard Anki furigana format: kanji[reading].
+
+    Args:
+        text: Japanese text to annotate
+        tagger: A fugashi.Tagger instance
+
+    Returns:
+        Furigana-annotated string, e.g. "王国[おうこく]です。"
+    """
+    return generate_furigana_from_tokens(tagger(text))
+
+
+def generate_reading_from_tokens(tokens: Iterable[Any]) -> str:
+    """Generate plain-kana reading from an already-parsed token iterable.
+
+    Concatenates each token's kana feature (converted to hiragana) without
+    bracket annotations or kanji surface forms. Tokens without a usable kana
+    feature fall back to the surface form so punctuation and unknown tokens
+    pass through unchanged.
+
+    Args:
+        tokens: Iterable of duck-typed MeCab tokens.  Each token must expose
+            ``.surface`` (str) and optionally ``.feature.kana`` (str or None).
+            Compatible with real ``fugashi`` tokens and ``_SyntheticToken``.
+
+    Returns:
+        Plain hiragana reading, e.g. ``"おうこくです。"`` for ``"王国です。"``.
+    """
+    result = []
+    for token in tokens:
+        surface = token.surface
+        try:
+            kana = token.feature.kana
+        except AttributeError:
+            kana = None
+        if kana:
+            result.append(katakana_to_hiragana(kana))
+        else:
+            result.append(surface)
+    return "".join(result)
+
+
 def generate_reading(text: str, tagger) -> str:
     """Generate plain-kana reading of text (Yomitan ``{reading}`` style).
 
@@ -99,18 +148,7 @@ def generate_reading(text: str, tagger) -> str:
     Returns:
         Plain hiragana reading, e.g. ``"おうこくです。"`` for ``"王国です。"``.
     """
-    result = []
-    for token in tagger(text):
-        surface = token.surface
-        try:
-            kana = token.feature.kana
-        except AttributeError:
-            kana = None
-        if kana:
-            result.append(katakana_to_hiragana(kana))
-        else:
-            result.append(surface)
-    return "".join(result)
+    return generate_reading_from_tokens(tagger(text))
 
 
 def wrap_target_plain(sentence: str, start: int, end: int) -> str:
@@ -137,34 +175,38 @@ def wrap_target_plain(sentence: str, start: int, end: int) -> str:
     return f"{prefix}<b>{body}</b>{suffix}"
 
 
-def wrap_target_furigana(text: str, tagger, start: int, end: int) -> str:
-    """Generate furigana-annotated text with the target morpheme wrapped in ``<b>``.
+def wrap_target_furigana_from_tokens(text: str, tokens: Iterable[Any], start: int, end: int) -> str:
+    """Generate furigana-annotated text with the target morpheme bolded, from pre-parsed tokens.
 
-    Walks fugashi tokens over ``text`` and locates each token's char span
-    via :py:meth:`str.find` from a running cursor — MeCab silently drops
+    Iterates ``tokens`` and locates each token's char span via
+    :py:meth:`str.find` from a running cursor — MeCab silently drops
     whitespace from the token stream, so naive ``cursor += len(surface)``
     walking drifts and misaligns the bold window when ``text`` contains
-    spaces (Issue #31, parallel to the Issue #20 fix in
-    ``subtitle_parser.py``). Each token contributes either its surface
-    or a ``surface[kana]`` annotation. Tokens whose raw-text span is
-    fully contained in ``[start, end)`` are emitted inside a single
-    contiguous ``<b>...</b>`` run; surrounding tokens are emitted outside.
+    spaces (Issue #31). Each token contributes either its surface or a
+    ``surface[kana]`` annotation. Tokens whose raw-text span is fully
+    contained in ``[start, end)`` are emitted inside a single contiguous
+    ``<b>...</b>`` run; surrounding tokens are emitted outside.
 
-    Matches the formatting rules of :func:`generate_furigana` so the
-    bolded form is interchangeable with the regular one.
+    Matches the formatting rules of :func:`generate_furigana_from_tokens` so
+    the bolded form is interchangeable with the regular one.
 
     Args:
-        text: Raw subtitle line text.
-        tagger: A fugashi.Tagger instance.
+        text: Raw subtitle line text.  Required for ``str.find``-based cursor
+            offset tracking; the token loop iterates ``tokens``, not ``text``.
+        tokens: Iterable of duck-typed MeCab tokens.  Each token must expose
+            ``.surface`` (str) and optionally ``.feature.kana`` (str or None).
+            Compatible with real ``fugashi`` tokens and ``_SyntheticToken``.
+            Must be re-iterable (e.g. a ``list``) when the fallback path is
+            possible, since the invalid-offset branch re-uses the same object.
         start: Inclusive raw-text offset of the target morpheme.
         end: Exclusive raw-text offset of the target morpheme.
 
     Returns:
         Furigana-annotated text with the target morpheme bolded. If the
-        offsets are invalid, falls back to :func:`generate_furigana`.
+        offsets are invalid, falls back to :func:`generate_furigana_from_tokens`.
     """
     if start < 0 or end <= start or end > len(text):
-        return generate_furigana(text, tagger)
+        return generate_furigana_from_tokens(tokens)
 
     pre: list[str] = []
     body: list[str] = []
@@ -172,7 +214,7 @@ def wrap_target_furigana(text: str, tagger, start: int, end: int) -> str:
     cursor = 0
     out_has_content = False  # Matches generate_furigana's "prefix = ' ' if result else ''" rule
 
-    for token in tagger(text):
+    for token in tokens:
         surface = token.surface
         # Issue #31: locate the token's actual position in ``text`` rather
         # than concatenating surface lengths, so whitespace between tokens
@@ -237,6 +279,35 @@ def wrap_target_furigana(text: str, tagger, start: int, end: int) -> str:
     return f"{pre_s}<b>{body_s}</b>{post_s}"
 
 
+def wrap_target_furigana(text: str, tagger, start: int, end: int) -> str:
+    """Generate furigana-annotated text with the target morpheme wrapped in ``<b>``.
+
+    Walks fugashi tokens over ``text`` and locates each token's char span
+    via :py:meth:`str.find` from a running cursor — MeCab silently drops
+    whitespace from the token stream, so naive ``cursor += len(surface)``
+    walking drifts and misaligns the bold window when ``text`` contains
+    spaces (Issue #31, parallel to the Issue #20 fix in
+    ``subtitle_parser.py``). Each token contributes either its surface
+    or a ``surface[kana]`` annotation. Tokens whose raw-text span is
+    fully contained in ``[start, end)`` are emitted inside a single
+    contiguous ``<b>...</b>`` run; surrounding tokens are emitted outside.
+
+    Matches the formatting rules of :func:`generate_furigana` so the
+    bolded form is interchangeable with the regular one.
+
+    Args:
+        text: Raw subtitle line text.
+        tagger: A fugashi.Tagger instance.
+        start: Inclusive raw-text offset of the target morpheme.
+        end: Exclusive raw-text offset of the target morpheme.
+
+    Returns:
+        Furigana-annotated text with the target morpheme bolded. If the
+        offsets are invalid, falls back to :func:`generate_furigana`.
+    """
+    return wrap_target_furigana_from_tokens(text, tagger(text), start, end)
+
+
 def extract_japanese_text(text: str) -> str:
     """Extract only Japanese characters from text.
 
@@ -250,9 +321,9 @@ def extract_japanese_text(text: str) -> str:
     japanese_chars = []
     for char in text:
         if (
-            "\u3040" <= char <= "\u309f"  # Hiragana
-            or "\u30a0" <= char <= "\u30ff"  # Katakana
-            or "\u4e00" <= char <= "\u9fff"  # Kanji
+            "぀" <= char <= "ゟ"  # Hiragana
+            or "゠" <= char <= "ヿ"  # Katakana
+            or "一" <= char <= "鿿"  # Kanji
             or char in "。、！？ー・"
         ):
             japanese_chars.append(char)
