@@ -559,6 +559,51 @@ class TestFuriganaMemoization:
         assert calls_first >= 1, "First parse (with_index) did not call generate_furigana"
         assert calls_second >= 1, "Second parse (with_index) did not call generate_furigana — cache not reset"
 
+    # ------------------------------------------------------------------
+    # 4. _bold / _bold_cache path: identical (text, start, end) → wrap_target_furigana called once
+    # ------------------------------------------------------------------
+
+    def test_bold_cache_memoized(self, test_config, tmp_path):
+        """Two tokens with the same (text, start, end) key → wrap_target_furigana called at most once.
+
+        We set bold_target_in_sentence=True so the _bold() path is active, then
+        arrange two subtitle lines whose cleaned text and token span are identical.
+        The second hit must be served from _bold_cache without calling
+        wrap_target_furigana again.
+        """
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        # Both lines have the same text "猫" and the same token ("猫" at offset 0..1).
+        # Line dedup (seen_lemmas) would normally drop the second word globally, but
+        # the _bold() call happens *before* the dedup check, so without a cache
+        # wrap_target_furigana would be called once per line.
+        two_same_lines = self._make_subs_two_lines("猫", "猫")
+        token_neko = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token_neko]
+
+        config_bold = AnkiMinerConfig(bold_target_in_sentence=True)
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=two_same_lines),
+            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value="猫[ねこ]"),
+            patch("anki_miner.services.subtitle_parser.generate_reading", return_value="ねこ"),
+            patch(
+                "anki_miner.services.subtitle_parser.wrap_target_furigana",
+                return_value="<b>猫[ねこ]</b>",
+            ) as mock_wtf,
+        ):
+            service = SubtitleParserService(config_bold)
+            service.parse_subtitle_file(sub_file)
+
+        # The identical key ("猫", 0, 1) must hit the cache on the second line.
+        bold_calls = [c for c in mock_wtf.call_args_list if c.args[0] == "猫"]
+        assert (
+            len(bold_calls) <= 1
+        ), f"wrap_target_furigana('猫', ...) called {len(bold_calls)} times; expected ≤ 1 (memoized)"
+
 
 class TestShouldIncludeWord:
     """Tests for _should_include_word method."""
