@@ -242,6 +242,21 @@ jobs:
       - name: Build .deb package (Linux)
         if: runner.os == 'Linux'
         run: |
+          # The .deb relies on system ffmpeg (licenses/ffmpeg/README.md), so it
+          # must NOT ship the bundled GPL ffmpeg the PyInstaller tree carries.
+          # Stage a copy with ffmpeg/ffprobe stripped and package from it; the
+          # AppImage (built above) and tarball (built below) keep their ffmpeg.
+          rm -rf dist/deb-stage
+          cp -a dist/AnkiMiner dist/deb-stage
+          # Strip both onedir layouts: _internal/bin/ (recent PyInstaller) and bin/.
+          rm -f dist/deb-stage/_internal/bin/ffmpeg dist/deb-stage/_internal/bin/ffprobe
+          rm -f dist/deb-stage/bin/ffmpeg dist/deb-stage/bin/ffprobe
+          # Fail closed if a layout change left a bundled ffmpeg in the stage tree.
+          if find dist/deb-stage -type f -name 'ffmpeg' -o -type f -name 'ffprobe' | grep -q .; then
+            echo "::error::Bundled ffmpeg/ffprobe still present in deb stage tree — GPL would ship in the .deb"
+            find dist/deb-stage -type f \( -name 'ffmpeg' -o -name 'ffprobe' \)
+            exit 1
+          fi
           VERSION=${{ steps.version.outputs.version }} ./nfpm package \
             --config packaging/nfpm.yaml \
             --packager deb \
