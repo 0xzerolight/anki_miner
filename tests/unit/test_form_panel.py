@@ -6,8 +6,10 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QApplication, QCheckBox, QLabel, QWidget
 
+from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base.form_panel import FormPanel
 
 _app = QApplication.instance() or QApplication([])
@@ -95,9 +97,13 @@ def test_field_with_helper_no_label_does_not_create_container():
 # Density / spacing tests (Task B)
 # ---------------------------------------------------------------------------
 
-from PyQt6.QtGui import QFont  # noqa: E402
 
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING  # noqa: E402
+def _find_section_label(panel: FormPanel, text: str) -> QLabel | None:
+    """Return the first QLabel child whose text matches *text*, or None."""
+    for label in panel.findChildren(QLabel):
+        if label.text() == text:
+            return label
+    return None
 
 
 def test_form_layout_spacing_is_xs():
@@ -118,13 +124,7 @@ def test_section_heading_font_pixelsize_is_body_sm():
     panel = FormPanel("Section Test")
     panel.add_section("My Section")
 
-    # Find the QLabel added for the section heading (not the panel title)
-    heading = None
-    for label in panel.findChildren(QLabel):
-        if label.text() == "My Section":
-            heading = label
-            break
-
+    heading = _find_section_label(panel, "My Section")
     assert heading is not None, "Section heading QLabel not found"
     assert heading.font().pixelSize() == FONT_SIZES.body_sm
 
@@ -134,11 +134,6 @@ def test_section_heading_font_weight_is_demibold():
     panel = FormPanel("Section Test")
     panel.add_section("My Section")
 
-    heading = None
-    for label in panel.findChildren(QLabel):
-        if label.text() == "My Section":
-            heading = label
-            break
-
+    heading = _find_section_label(panel, "My Section")
     assert heading is not None, "Section heading QLabel not found"
     assert heading.font().weight() == QFont.Weight.DemiBold
