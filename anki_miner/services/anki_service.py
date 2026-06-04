@@ -13,7 +13,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.models import CardPayload
-from anki_miner.services._ankiconnect import post_action
+from anki_miner.services._ankiconnect import post_action, post_multi
 from anki_miner.services.dictionary.yomitan_renderer import DICT_MEDIA_CLASS
 
 logger = logging.getLogger(__name__)
@@ -660,7 +660,13 @@ class AnkiService:
         self,
         word_data_list: list[CardPayload],
     ) -> set[str]:
-        """Store all media files in Anki collection.
+        """Store all media files in Anki collection via batched ``multi`` POSTs.
+
+        Collects all readable (filename, base64-data) pairs, deduplicates by
+        filename, then sends them in chunks of up to ``_MEDIA_BATCH_CHUNK``
+        actions per ``multi`` call.  Files that cannot be read (OSError) are
+        logged and skipped.  Per-sub-action AnkiConnect errors (sub-result with
+        an ``"error"`` key) exclude that filename from the returned set.
 
         Args:
             word_data_list: List of CardPayload objects whose media should be uploaded
@@ -668,42 +674,77 @@ class AnkiService:
         Returns:
             Set of filenames that were successfully stored
         """
+        media_batch_chunk = 50
+
+        # Build (filename → action) mapping, deduped by filename (last writer
+        # wins, matching the old set-based dedup semantics).
+        actions_by_filename: dict[str, dict] = {}
+        for item in word_data_list:
+            media = item.media
+            for filename, src_path in [
+                (media.screenshot_filename, media.screenshot_path),
+                (media.audio_filename, media.audio_path),
+            ]:
+                if not filename or not src_path or not src_path.exists():
+                    continue
+                action = self._build_store_media_action(filename, src_path)
+                if action is not None:
+                    actions_by_filename[filename] = action
+
+        if not actions_by_filename:
+            return set()
+
+        filenames = list(actions_by_filename.keys())
+        actions = list(actions_by_filename.values())
+
         stored: set[str] = set()
-        batch_size = 50
-
-        for i in range(0, len(word_data_list), batch_size):
-            batch = word_data_list[i : i + batch_size]
-
-            for item in batch:
-                media = item.media
-                for filename, src_path in [
-                    (media.screenshot_filename, media.screenshot_path),
-                    (media.audio_filename, media.audio_path),
-                ]:
-                    if filename and src_path and src_path.exists() and self._store_one_media(filename, src_path):
+        try:
+            for chunk_start in range(0, len(actions), media_batch_chunk):
+                chunk_filenames = filenames[chunk_start : chunk_start + media_batch_chunk]
+                chunk_actions = actions[chunk_start : chunk_start + media_batch_chunk]
+                sub_results = post_multi(self.config.ankiconnect_url, chunk_actions, timeout=30)
+                for filename, sub_result in zip(chunk_filenames, sub_results, strict=False):
+                    if not (isinstance(sub_result, dict) and sub_result.get("error")):
                         stored.add(filename)
+        except (AnkiConnectionError, OSError) as e:
+            logger.warning(f"Failed to store media files batch: {e}")
 
         return stored
+
+    def _build_store_media_action(self, filename: str, src_path: Path) -> dict | None:
+        """Build a ``storeMediaFile`` action dict for use in a ``multi`` envelope.
+
+        Returns ``None`` and logs a warning if the file cannot be read.
+        """
+        try:
+            with open(src_path, "rb") as f:
+                data_base64 = base64.b64encode(f.read()).decode("utf-8")
+        except OSError as e:
+            logger.warning(f"Failed to read media file {filename}: {e}")
+            return None
+        return {
+            "action": "storeMediaFile",
+            "version": 6,
+            "params": {"filename": filename, "data": data_base64},
+        }
 
     def _store_one_media(self, filename: str, src_path: Path) -> bool:
         """Upload one media file via AnkiConnect. Returns True on success.
 
         On failure (file read error, AnkiConnect error), logs and returns False.
         """
+        action = self._build_store_media_action(filename, src_path)
+        if action is None:
+            return False
         try:
-            with open(src_path, "rb") as f:
-                data_base64 = base64.b64encode(f.read()).decode("utf-8")
             post_action(
                 self.config.ankiconnect_url,
                 "storeMediaFile",
-                params={
-                    "filename": filename,
-                    "data": data_base64,
-                },
+                params=action["params"],
                 timeout=30,
             )
             return True
-        except (AnkiConnectionError, OSError) as e:
+        except AnkiConnectionError as e:
             logger.warning(f"Failed to store media file {filename}: {e}")
             return False
 
