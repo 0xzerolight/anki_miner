@@ -27,6 +27,7 @@ from anki_miner.exceptions.youtube import (
 )
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube import FetchedMedia, SubMode, VideoInfo
+from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 
 logger = logging.getLogger(__name__)
 
@@ -272,12 +273,38 @@ class YouTubeFetcherService:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    def _effective_ffmpeg_location(self) -> str | None:
+        """Resolve the ffmpeg path to hand yt-dlp, or None to rely on PATH.
+
+        Precedence:
+        1. ``youtube_ffmpeg_location`` explicit override (existence is validated
+           separately in :meth:`_preflight_ffmpeg`).
+        2. ``resolve_ffmpeg(config)`` — picks up the bundled binary in frozen
+           builds (or a ``ffmpeg_location`` override). Returned only when it is a
+           real absolute file; the bare literal ``"ffmpeg"`` means "use PATH".
+
+        Returns:
+            An absolute file path string, or ``None`` to let yt-dlp do its own
+            PATH lookup.
+        """
+        loc = self._config.youtube_ffmpeg_location
+        if loc is not None:
+            return str(loc)
+        resolved = resolve_ffmpeg(self._config)
+        if resolved != "ffmpeg" and Path(resolved).is_file():
+            return resolved
+        return None
+
     def _preflight_ffmpeg(self) -> None:
         loc = self._config.youtube_ffmpeg_location
         if loc is not None:
             p = Path(loc)
             if not (p.exists() and p.is_file()):
                 raise FfmpegNotFoundError(f"Configured ffmpeg location does not exist: {p}")
+            return
+        # No explicit override: a bundled/resolved absolute binary satisfies the
+        # preflight; otherwise fall back to the historical PATH check.
+        if self._effective_ffmpeg_location() is not None:
             return
         if shutil.which("ffmpeg") is None:
             raise FfmpegNotFoundError(
@@ -322,8 +349,9 @@ class YouTubeFetcherService:
 
         if self._config.youtube_cookies_from_browser:
             cmd.extend(["--cookies-from-browser", self._config.youtube_cookies_from_browser])
-        if self._config.youtube_ffmpeg_location:
-            cmd.extend(["--ffmpeg-location", str(self._config.youtube_ffmpeg_location)])
+        ffmpeg_location = self._effective_ffmpeg_location()
+        if ffmpeg_location is not None:
+            cmd.extend(["--ffmpeg-location", ffmpeg_location])
 
         cmd.append(url)
         return cmd

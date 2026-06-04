@@ -46,6 +46,7 @@ class CurationMediaContext:
     subtitle_entries: list[tuple[float, float, str]]  # parsed, offset-zeroed
     offset: float = 0.0
     audio_track_override: int | None = None
+    ffprobe_cmd: str = "ffprobe"  # resolved ffprobe path/literal for audio-track auto-detection
 
 
 class _NumericTableWidgetItem(QTableWidgetItem):
@@ -324,6 +325,7 @@ class WordCurationDialog(QDialog):
             ctx.subtitle_entries,
             ctx.offset,
             audio_track_override=ctx.audio_track_override,
+            ffprobe_cmd=ctx.ffprobe_cmd,
         )
         return widget
 
