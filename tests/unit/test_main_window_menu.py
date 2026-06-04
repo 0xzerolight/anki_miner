@@ -129,3 +129,15 @@ def test_star_button_opens_repo_url(main_window, monkeypatch):
 
     assert len(captured) == 1
     assert captured[0].toString() == "https://github.com/0xzerolight/anki_miner"
+
+
+def test_about_html_credits_bundled_ffmpeg():
+    """The About dialog body credits the bundled GPLv3 FFmpeg build with a link."""
+    from anki_miner.gui.main_window import _build_about_html
+
+    html = _build_about_html("9.9.9")
+    assert "9.9.9" in html
+    assert "FFmpeg" in html
+    assert "GPLv3" in html
+    assert "https://ffmpeg.org" in html
+    assert "licenses/ffmpeg/" in html

@@ -1,6 +1,7 @@
 """Tests for validation_service module."""
 
 import subprocess
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -216,6 +217,140 @@ class TestValidationService:
                 side_effect=RuntimeError("something broke"),
             ):
                 success, message = service._check_ffmpeg()
+
+            assert success is False
+            assert "Unexpected error" in message
+
+    class TestCheckFfmpegClassification:
+        """Bundled/system/custom classification of the ffmpeg success message."""
+
+        def setup_method(self):
+            from anki_miner.utils import ffmpeg_resolver
+
+            ffmpeg_resolver._clear_cache()
+
+        def teardown_method(self):
+            from anki_miner.utils import ffmpeg_resolver
+
+            ffmpeg_resolver._clear_cache()
+
+        def test_system_path_suffix(self, test_config):
+            """No override + not frozen → resolves to bare literal → [system PATH]."""
+            service = ValidationService(test_config)
+
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_result.stdout = "ffmpeg version 5.0"
+
+            with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result):
+                success, message = service._check_ffmpeg()
+
+            assert success is True
+            assert "[system PATH]" in message
+
+        def test_custom_path_suffix(self, test_config, tmp_path):
+            """An existing ffmpeg_location override → absolute path → [custom path]."""
+            from dataclasses import replace
+
+            fake_ffmpeg = tmp_path / "ffmpeg"
+            fake_ffmpeg.write_text("#!/bin/sh\n")
+            config = replace(test_config, ffmpeg_location=fake_ffmpeg)
+            service = ValidationService(config)
+
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_result.stdout = "ffmpeg version 5.0"
+
+            with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result):
+                success, message = service._check_ffmpeg()
+
+            assert success is True
+            assert "[custom path]" in message
+            assert "[system PATH]" not in message
+
+        def test_bundled_suffix(self, test_config, tmp_path, monkeypatch):
+            """Frozen bundle with a bundled binary under _MEIPASS → [bundled]."""
+            bin_dir = tmp_path / "bin"
+            bin_dir.mkdir()
+            bundled = bin_dir / "ffmpeg"
+            bundled.write_text("#!/bin/sh\n")
+            bundled.chmod(0o755)  # resolver requires the exec bit on POSIX
+
+            monkeypatch.setattr(sys, "frozen", True, raising=False)
+            monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+
+            service = ValidationService(test_config)
+
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_result.stdout = "ffmpeg version 5.0"
+
+            with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result):
+                success, message = service._check_ffmpeg()
+
+            assert success is True
+            assert "[bundled]" in message
+
+    class TestCheckFfprobe:
+        """Tests for _check_ffprobe method (mirrors _check_ffmpeg)."""
+
+        def test_success(self, test_config):
+            service = ValidationService(test_config)
+
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_result.stdout = "ffprobe version 5.0"
+
+            with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result):
+                success, message = service._check_ffprobe()
+
+            assert success is True
+            assert "ffprobe version" in message
+
+        def test_not_found(self, test_config):
+            service = ValidationService(test_config)
+
+            with patch(
+                "anki_miner.services.validation_service.subprocess.run",
+                side_effect=FileNotFoundError(),
+            ):
+                success, message = service._check_ffprobe()
+
+            assert success is False
+            assert "not found" in message
+
+        def test_timeout(self, test_config):
+            service = ValidationService(test_config)
+
+            with patch(
+                "anki_miner.services.validation_service.subprocess.run",
+                side_effect=subprocess.TimeoutExpired("ffprobe", 10),
+            ):
+                success, message = service._check_ffprobe()
+
+            assert success is False
+            assert "timed out" in message
+
+        def test_non_zero_exit(self, test_config):
+            service = ValidationService(test_config)
+
+            mock_result = MagicMock()
+            mock_result.returncode = 1
+
+            with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result):
+                success, message = service._check_ffprobe()
+
+            assert success is False
+            assert "non-zero" in message
+
+        def test_generic_exception(self, test_config):
+            service = ValidationService(test_config)
+
+            with patch(
+                "anki_miner.services.validation_service.subprocess.run",
+                side_effect=RuntimeError("something broke"),
+            ):
+                success, message = service._check_ffprobe()
 
             assert success is False
             assert "Unexpected error" in message
@@ -490,6 +625,63 @@ class TestValidationService:
             assert result.ffmpeg_ok is False
             assert result.ankiconnect_ok is True
             assert any(i.component == "ffmpeg" for i in result.issues)
+            # ffprobe shares the patched subprocess.run, so it fails too and is
+            # reported as its own ERROR-severity component.
+            assert result.ffprobe_ok is False
+            assert any(i.component == "ffprobe" and i.severity == "ERROR" for i in result.issues)
+
+        def test_ffprobe_failure_only(self, test_config):
+            """ffprobe failing alone is surfaced as an ERROR and flips all_passed."""
+            service = ValidationService(test_config)
+
+            anki_resp = MagicMock()
+            anki_resp.status_code = 200
+            anki_resp.json.return_value = {"result": 6, "error": None}
+
+            deck_resp = MagicMock()
+            deck_resp.json.return_value = {"result": [test_config.anki_deck_name], "error": None}
+
+            model_resp = MagicMock()
+            model_resp.json.return_value = {"result": [test_config.anki_note_type], "error": None}
+
+            field_resp = MagicMock()
+            field_resp.json.return_value = {
+                "result": list({v for v in test_config.anki_fields.values() if v}),
+                "error": None,
+            }
+
+            dispatch = {
+                "version": anki_resp,
+                "deckNames": deck_resp,
+                "modelNames": model_resp,
+                "modelFieldNames": field_resp,
+            }
+
+            def mock_post(url, **kwargs):
+                action = kwargs.get("json", {}).get("action", "")
+                return dispatch.get(action, MagicMock())
+
+            ok_result = MagicMock()
+            ok_result.returncode = 0
+            ok_result.stdout = "version 6.0"
+
+            def mock_run(cmd, **kwargs):
+                # cmd[0] is the resolved ffmpeg/ffprobe literal; fail only ffprobe.
+                if "ffprobe" in cmd[0]:
+                    raise FileNotFoundError()
+                return ok_result
+
+            with (
+                patch("anki_miner.services._ankiconnect.requests.post", side_effect=mock_post),
+                patch("anki_miner.services.validation_service.subprocess.run", side_effect=mock_run),
+            ):
+                result = service.validate_setup()
+
+            assert result.ffmpeg_ok is True
+            assert result.ffprobe_ok is False
+            assert result.all_passed is False
+            assert any(i.component == "ffprobe" and i.severity == "ERROR" for i in result.issues)
+            assert not any(i.component == "ffmpeg" for i in result.issues)
 
     class TestCheckFieldNamesExist:
         """Tests for _check_field_names_exist method."""
@@ -585,6 +777,11 @@ class TestOptionalResourceWarnings:
         monkeypatch.setattr(
             validation_service.ValidationService,
             "_check_ffmpeg",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_ffprobe",
             lambda self: (True, "ok"),
         )
         monkeypatch.setattr(

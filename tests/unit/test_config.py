@@ -119,6 +119,32 @@ class TestYouTubeConfig:
         assert isinstance(config.youtube_ffmpeg_location, Path)
         assert config.youtube_ffmpeg_location == ffmpeg_path
 
+    def test_bundled_tooling_locations_default_none(self):
+        """ffmpeg_location/ffprobe_location default to None."""
+        config = AnkiMinerConfig()
+        assert config.ffmpeg_location is None
+        assert config.ffprobe_location is None
+
+    def test_ffmpeg_ffprobe_location_coerced_from_string(self, temp_dir):
+        """ffmpeg_location/ffprobe_location are coerced to Path when passed as str."""
+        config = AnkiMinerConfig(
+            ffmpeg_location=str(temp_dir / "ffmpeg"),
+            ffprobe_location=str(temp_dir / "ffprobe"),
+        )
+        assert isinstance(config.ffmpeg_location, Path)
+        assert config.ffmpeg_location == temp_dir / "ffmpeg"
+        assert isinstance(config.ffprobe_location, Path)
+        assert config.ffprobe_location == temp_dir / "ffprobe"
+
+    def test_ffmpeg_ffprobe_location_accept_path(self, temp_dir):
+        """ffmpeg_location/ffprobe_location accept Path objects directly."""
+        config = AnkiMinerConfig(
+            ffmpeg_location=temp_dir / "ffmpeg",
+            ffprobe_location=temp_dir / "ffprobe",
+        )
+        assert config.ffmpeg_location == temp_dir / "ffmpeg"
+        assert config.ffprobe_location == temp_dir / "ffprobe"
+
 
 def test_dictionary_chain_default():
     from anki_miner.config import AnkiMinerConfig, ChainEntry

@@ -56,6 +56,7 @@ class ValidationResult:
     deck_exists: bool
     note_type_exists: bool
     issues: list[ValidationIssue] = field(default_factory=list)
+    ffprobe_ok: bool = True
 
     @property
     def all_passed(self) -> bool:
@@ -64,6 +65,7 @@ class ValidationResult:
             [
                 self.ankiconnect_ok,
                 self.ffmpeg_ok,
+                self.ffprobe_ok,
                 self.deck_exists,
                 self.note_type_exists,
             ]

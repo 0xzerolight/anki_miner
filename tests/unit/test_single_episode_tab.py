@@ -179,6 +179,45 @@ def test_tracks_clicked_keeps_override_on_cancel(tab, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# 7. Tracks probe passes the resolved ffprobe binary
+# ---------------------------------------------------------------------------
+
+
+def test_tracks_clicked_passes_resolved_ffprobe(qapp, test_config, tmp_path):
+    import dataclasses
+
+    from anki_miner.utils import ffmpeg_resolver
+
+    fake_ffprobe = tmp_path / "my_ffprobe"
+    fake_ffprobe.write_text("#!/bin/sh\n")
+    cfg = dataclasses.replace(test_config, ffprobe_location=str(fake_ffprobe))
+
+    widget = SingleEpisodeTab(
+        config=cfg,
+        presenter=MagicMock(name="Presenter"),
+        progress_callback=MagicMock(name="ProgressCallback"),
+    )
+    try:
+        ffmpeg_resolver._clear_cache()
+        fake_video = tmp_path / "ep01.mkv"
+        fake_video.touch()
+
+        with (
+            patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams", return_value=[]) as mock_list,
+            patch("PyQt6.QtWidgets.QMessageBox.information"),
+        ):
+            widget.video_selector.get_path = MagicMock(return_value=str(fake_video))
+            widget.video_selector.is_valid = MagicMock(return_value=True)
+            widget._on_tracks_clicked()
+
+        _, kwargs = mock_list.call_args
+        assert kwargs.get("ffprobe_cmd") == str(fake_ffprobe)
+    finally:
+        ffmpeg_resolver._clear_cache()
+        widget.deleteLater()
+
+
+# ---------------------------------------------------------------------------
 # 7. _start_processing passes override to EpisodeWorkerThread
 # ---------------------------------------------------------------------------
 
@@ -410,8 +449,63 @@ def test_curation_requested_passes_media_context_and_lookup_fn(tab, tmp_path):
     assert ctx.subtitle_entries == [fake_entry]
     assert ctx.offset == pytest.approx(1.5)
     assert ctx.audio_track_override == tab._audio_track_override
+    # Default config has no ffprobe override → bare literal forwarded into the context.
+    assert ctx.ffprobe_cmd == "ffprobe"
     # Curation event must be set so the worker-thread mock can proceed
     assert tab._curation_event.is_set()
+
+
+def test_curation_media_context_uses_resolved_ffprobe(qapp, test_config, tmp_path):
+    """CurationMediaContext carries the resolved ffprobe path when config overrides it."""
+    import dataclasses
+
+    from PyQt6.QtWidgets import QDialog
+
+    from anki_miner.utils import ffmpeg_resolver
+
+    fake_ffprobe = tmp_path / "my_ffprobe"
+    fake_ffprobe.write_text("#!/bin/sh\n")
+    cfg = dataclasses.replace(test_config, ffprobe_location=str(fake_ffprobe))
+
+    tab = SingleEpisodeTab(
+        config=cfg,
+        presenter=MagicMock(name="Presenter"),
+        progress_callback=MagicMock(name="ProgressCallback"),
+    )
+    try:
+        ffmpeg_resolver._clear_cache()
+        tab._init_worker_thread = MagicMock()
+
+        fake_video = tmp_path / "ep01.mkv"
+        fake_video.touch()
+        fake_subs = tmp_path / "ep01.ass"
+        fake_subs.touch()
+        tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+        tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+
+        fake_entry = (0.0, 2.5, "テスト")
+        mock_parser_cls = MagicMock()
+        mock_parser_cls.return_value.parse_raw_entries.return_value = [fake_entry]
+
+        mock_dialog_instance = MagicMock()
+        mock_dialog_instance.exec.return_value = QDialog.DialogCode.Rejected
+        mock_dialog_instance.DialogCode = QDialog.DialogCode
+        mock_dialog_cls = MagicMock(return_value=mock_dialog_instance)
+        mock_dialog_cls.DialogCode = QDialog.DialogCode
+
+        with (
+            patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+            patch("anki_miner.gui.widgets._mining_tab_base.WordCurationDialog", mock_dialog_cls),
+        ):
+            tab._on_curation_requested([])
+
+        _, call_kwargs = mock_dialog_cls.call_args
+        ctx = call_kwargs.get("media_context")
+        assert ctx is not None
+        assert ctx.ffprobe_cmd == str(fake_ffprobe)
+    finally:
+        ffmpeg_resolver._clear_cache()
+        tab.deleteLater()
 
 
 # ---------------------------------------------------------------------------

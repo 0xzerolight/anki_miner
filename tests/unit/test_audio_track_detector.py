@@ -309,3 +309,27 @@ class TestListAudioStreams:
         assert "-select_streams" in args
         assert args[args.index("-select_streams") + 1] == "a"
         assert str(video_file) in args
+
+    def test_default_ffprobe_cmd_is_bare_literal(self, video_file):
+        stdout = _ffprobe_json([{"index": 0, "language": "jpn"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)) as mock_run:
+            list_audio_streams(video_file)
+        assert mock_run.call_args[0][0][0] == "ffprobe"
+
+    def test_custom_ffprobe_cmd_becomes_cmd0(self, video_file):
+        stdout = _ffprobe_json([{"index": 0, "language": "jpn"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)) as mock_run:
+            list_audio_streams(video_file, ffprobe_cmd="/custom/ffprobe")
+        args = mock_run.call_args[0][0]
+        assert args[0] == "/custom/ffprobe"
+        # Remaining args unchanged.
+        assert "-select_streams" in args
+        assert str(video_file) in args
+
+
+class TestFindJapaneseFfprobeCmd:
+    def test_find_japanese_forwards_custom_ffprobe_cmd(self, video_file):
+        stdout = _ffprobe_json([{"index": 0, "language": "jpn"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)) as mock_run:
+            find_japanese_audio_stream(video_file, ffprobe_cmd="/custom/ffprobe")
+        assert mock_run.call_args[0][0][0] == "/custom/ffprobe"

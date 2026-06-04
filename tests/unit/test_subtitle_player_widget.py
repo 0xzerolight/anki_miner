@@ -99,6 +99,28 @@ class TestSetSource:
             widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
         assert widget._jp_audio_index is None
 
+    def test_set_source_forwards_ffprobe_cmd(self, fake_media_classes):
+        """set_source should forward ffprobe_cmd to find_japanese_audio_stream."""
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None) as mock_find:
+            widget = SubtitlePlayerWidget()
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0, ffprobe_cmd="/custom/ffprobe")
+        mock_find.assert_called_once_with(Path("/tmp/fake.mkv"), ffprobe_cmd="/custom/ffprobe")
+
+    def test_set_source_defaults_ffprobe_cmd_literal(self, fake_media_classes):
+        """set_source should default ffprobe_cmd to the bare 'ffprobe' literal."""
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None) as mock_find:
+            widget = SubtitlePlayerWidget()
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+        mock_find.assert_called_once_with(Path("/tmp/fake.mkv"), ffprobe_cmd="ffprobe")
+
+    def test_set_source_override_skips_ffprobe(self, fake_media_classes):
+        """With an audio_track_override, ffprobe (and ffprobe_cmd) is never invoked."""
+        with patch(f"{MODULE}.find_japanese_audio_stream") as mock_find:
+            widget = SubtitlePlayerWidget()
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2, ffprobe_cmd="/custom/ffprobe")
+        mock_find.assert_not_called()
+        assert widget._jp_audio_index == 2
+
     def test_set_source_connects_tracks_changed(self, fake_media_classes):
         """set_source should connect the tracksChanged signal."""
         with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):

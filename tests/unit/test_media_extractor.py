@@ -1045,7 +1045,7 @@ class TestAudioTrackOverride:
         cmd = mock_run.call_args[0][0]
         map_idx = cmd.index("-map")
         assert cmd[map_idx + 1] == "0:2"
-        mock_list.assert_called_once_with(video_file)
+        mock_list.assert_called_once_with(video_file, ffprobe_cmd="ffprobe")
 
     # ------------------------------------------------------------------
     # 2. Override=None preserves JP auto path; list_audio_streams NOT called
@@ -1218,7 +1218,7 @@ class TestAudioTrackOverride:
 
         assert first == streams
         assert second == streams
-        mock_list.assert_called_once_with(video_file)
+        mock_list.assert_called_once_with(video_file, ffprobe_cmd="ffprobe")
 
     # ------------------------------------------------------------------
     # 8b. invalidate_audio_stream_cache forces re-probe on next call
@@ -1286,3 +1286,109 @@ class TestAudioTrackOverride:
         mock_em.assert_called_once()
         _, kwargs = mock_em.call_args
         assert kwargs.get("audio_track_override") == 2
+
+
+class TestFfmpegResolverWiring:
+    """The media extractor routes ffmpeg/ffprobe through the resolver.
+
+    In dev/tests (non-frozen, no override) the resolver returns the bare
+    literal, so the default-config cases below assert ``cmd[0] == "ffmpeg"``.
+    A config override pointing at a real file must surface at ``cmd[0]``.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _clear_resolver_cache(self):
+        """The resolver caches by (name, override, frozen, meipass); reset per test."""
+        from anki_miner.utils import ffmpeg_resolver
+
+        ffmpeg_resolver._clear_cache()
+        yield
+        ffmpeg_resolver._clear_cache()
+
+    def test_static_screenshot_uses_config_override(self, test_config, video_file, tmp_path):
+        """When config.ffmpeg_location is a real file, it becomes cmd[0]."""
+        fake_ffmpeg = tmp_path / "my_ffmpeg"
+        fake_ffmpeg.write_text("#!/bin/sh\n")
+        cfg = dataclasses.replace(test_config, ffmpeg_location=str(fake_ffmpeg))
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+
+        output_path = tmp_path / "shot.jpg"
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            svc._extract_screenshot(video_file, 1.0, 2.0, output_path)
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == str(fake_ffmpeg)
+
+    def test_audio_uses_config_override(self, test_config, video_file, tmp_path):
+        """Audio extraction command cmd[0] honours config.ffmpeg_location."""
+        fake_ffmpeg = tmp_path / "my_ffmpeg"
+        fake_ffmpeg.write_text("#!/bin/sh\n")
+        cfg = dataclasses.replace(test_config, ffmpeg_location=str(fake_ffmpeg))
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+        svc._animated_encoder_ok["libmp3lame"] = True
+        svc._animated_encoder_ok["libopus"] = True
+
+        output_path = tmp_path / "clip.mp3"
+        output_path.write_bytes(b"\xff\xfbfake-mp3")
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch.object(svc, "_get_japanese_audio_stream", return_value=None),
+        ):
+            svc._extract_audio(video_file, 1.0, 2.0, output_path)
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == str(fake_ffmpeg)
+
+    def test_encoder_probe_uses_config_override(self, test_config, tmp_path):
+        """_check_encoder_available probe cmd[0] honours config.ffmpeg_location."""
+        fake_ffmpeg = tmp_path / "my_ffmpeg"
+        fake_ffmpeg.write_text("#!/bin/sh\n")
+        cfg = dataclasses.replace(test_config, ffmpeg_location=str(fake_ffmpeg))
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = "libmp3lame"
+        with patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run:
+            assert svc._check_encoder_available("libmp3lame") is True
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == str(fake_ffmpeg)
+
+    def test_list_audio_streams_cached_passes_resolved_ffprobe(self, test_config, video_file, tmp_path):
+        """_list_audio_streams_cached forwards ffprobe_cmd=resolve_ffprobe(config)."""
+        fake_ffprobe = tmp_path / "my_ffprobe"
+        fake_ffprobe.write_text("#!/bin/sh\n")
+        cfg = dataclasses.replace(test_config, ffprobe_location=str(fake_ffprobe))
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+
+        with patch(f"{MODULE}.list_audio_streams", return_value=[]) as mock_list:
+            svc._list_audio_streams_cached(video_file)
+
+        _, kwargs = mock_list.call_args
+        assert kwargs.get("ffprobe_cmd") == str(fake_ffprobe)
+
+    def test_get_japanese_audio_stream_passes_resolved_ffprobe(self, test_config, video_file, tmp_path):
+        """_get_japanese_audio_stream forwards ffprobe_cmd=resolve_ffprobe(config)."""
+        fake_ffprobe = tmp_path / "my_ffprobe"
+        fake_ffprobe.write_text("#!/bin/sh\n")
+        cfg = dataclasses.replace(test_config, ffprobe_location=str(fake_ffprobe))
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None) as mock_find:
+            svc._get_japanese_audio_stream(video_file)
+
+        _, kwargs = mock_find.call_args
+        assert kwargs.get("ffprobe_cmd") == str(fake_ffprobe)

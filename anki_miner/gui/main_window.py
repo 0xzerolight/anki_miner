@@ -60,6 +60,46 @@ _ABOUT_SHORTCUTS: list[tuple[str, str]] = [
 ]
 
 
+def _build_about_html(version: str) -> str:
+    """Build the About dialog's rich-text HTML for the given version string.
+
+    Kept as a module-level helper (not inlined into ``_show_about``) so it can be
+    asserted on in tests without popping a modal ``QMessageBox``.
+    """
+    features_html = "".join(f"            <li>{f}</li>\n" for f in _ABOUT_FEATURES)
+    shortcuts_html = "".join(f"            <li><b>{key}:</b> {desc}</li>\n" for key, desc in _ABOUT_SHORTCUTS)
+    return f"""
+        <h2>Anki Miner</h2>
+        <p><b>Version:</b> {version}</p>
+        <p><b>Description:</b> Turn Immersion Into Vocabulary</p>
+        <br>
+        <p>Anki Miner helps you create Japanese vocabulary flashcards from video content.</p>
+        <p>Extract words with screenshots, audio, and definitions directly to Anki.</p>
+        <br>
+        <p><b>Features:</b></p>
+        <ul>
+{features_html}        </ul>
+        <br>
+        <p><b>Keyboard Shortcuts:</b></p>
+        <ul>
+{shortcuts_html}        </ul>
+        <br>
+        <p><b>Requirements:</b></p>
+        <ul>
+            <li>Anki with AnkiConnect add-on</li>
+            <li>ffmpeg for media extraction</li>
+            <li>MeCab for Japanese tokenization</li>
+        </ul>
+        <br>
+        <p><b>Bundled software:</b></p>
+        <p>Downloadable builds bundle <a href="https://ffmpeg.org">FFmpeg</a>
+        (GPLv3) for media extraction. License text and source offer:
+        <code>licenses/ffmpeg/</code>.</p>
+        <br>
+        <p>Created for Japanese learners</p>
+        """
+
+
 def _needs_jmdict_migration(xml_path: Path, dicts_root: Path, chain: tuple | None = None) -> bool:
     """Return True iff we should auto-trigger the JMdict → SQLite migration.
 
@@ -385,34 +425,7 @@ class MainWindow(QMainWindow):
 
     def _show_about(self) -> None:
         """Show the About dialog."""
-        features_html = "".join(f"            <li>{f}</li>\n" for f in _ABOUT_FEATURES)
-        shortcuts_html = "".join(f"            <li><b>{key}:</b> {desc}</li>\n" for key, desc in _ABOUT_SHORTCUTS)
-        about_text = f"""
-        <h2>Anki Miner</h2>
-        <p><b>Version:</b> {__version__}</p>
-        <p><b>Description:</b> Turn Immersion Into Vocabulary</p>
-        <br>
-        <p>Anki Miner helps you create Japanese vocabulary flashcards from video content.</p>
-        <p>Extract words with screenshots, audio, and definitions directly to Anki.</p>
-        <br>
-        <p><b>Features:</b></p>
-        <ul>
-{features_html}        </ul>
-        <br>
-        <p><b>Keyboard Shortcuts:</b></p>
-        <ul>
-{shortcuts_html}        </ul>
-        <br>
-        <p><b>Requirements:</b></p>
-        <ul>
-            <li>Anki with AnkiConnect add-on</li>
-            <li>ffmpeg for media extraction</li>
-            <li>MeCab for Japanese tokenization</li>
-        </ul>
-        <br>
-        <p>Created for Japanese learners</p>
-        """
-        QMessageBox.about(self, "About Anki Miner", about_text)
+        QMessageBox.about(self, "About Anki Miner", _build_about_html(__version__))
 
     def _connect_presenter_signals(self) -> None:
         """Connect presenter signals to UI update slots."""

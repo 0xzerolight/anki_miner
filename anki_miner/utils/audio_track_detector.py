@@ -43,7 +43,7 @@ class JapaneseAudioStream:
     language_tag: str
 
 
-def list_audio_streams(video_path: Path) -> list[AudioStream]:
+def list_audio_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> list[AudioStream]:
     """Probe a video file with ffprobe and return all audio streams.
 
     Returns an empty list if ffprobe fails, times out, raises an OSError,
@@ -51,9 +51,14 @@ def list_audio_streams(video_path: Path) -> list[AudioStream]:
     the top-level ``index`` field are skipped, but still consume an
     ``audio_index`` slot (preserving parity with the original enumeration
     behavior).
+
+    ``ffprobe_cmd`` is the executable to invoke (``cmd[0]``); it defaults to the
+    bare ``"ffprobe"`` literal so direct callers are unaffected. Config-bearing
+    callers should pass ``resolve_ffprobe(config)`` so frozen bundles use the
+    bundled binary.
     """
     cmd = [
-        "ffprobe",
+        ffprobe_cmd,
         "-v",
         "quiet",
         "-print_format",
@@ -123,13 +128,16 @@ def list_audio_streams(video_path: Path) -> list[AudioStream]:
     return result
 
 
-def find_japanese_audio_stream(video_file: Path) -> JapaneseAudioStream | None:
+def find_japanese_audio_stream(video_file: Path, ffprobe_cmd: str = "ffprobe") -> JapaneseAudioStream | None:
     """Probe a video file with ffprobe and return its Japanese audio stream.
 
     Returns None if ffprobe fails, returns malformed JSON, or no audio stream
     has a Japanese language tag.
+
+    ``ffprobe_cmd`` is forwarded to :func:`list_audio_streams`; defaults to the
+    bare ``"ffprobe"`` literal so direct callers are unaffected.
     """
-    streams = list_audio_streams(video_file)
+    streams = list_audio_streams(video_file, ffprobe_cmd=ffprobe_cmd)
 
     for stream in streams:
         if stream.language_tag in JAPANESE_LANGUAGE_CODES:

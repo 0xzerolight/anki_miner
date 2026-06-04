@@ -1,6 +1,7 @@
 """Service for validating system setup and dependencies."""
 
 import subprocess
+import sys
 
 import requests
 
@@ -9,6 +10,24 @@ from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.models import ValidationIssue, ValidationResult
 from anki_miner.services._ankiconnect import post_action
 from anki_miner.utils import ensure_directory
+from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
+
+
+def _classify_resolved(base: str, resolved: str) -> str:
+    """Classify a resolved ffmpeg/ffprobe path for the success message.
+
+    Returns a short bracketed suffix describing where the binary came from:
+
+    - ``[system PATH]`` — the resolver returned the bare literal (PATH lookup).
+    - ``[bundled]`` — the resolved path lives under the frozen ``sys._MEIPASS``.
+    - ``[custom path]`` — an explicit config override / any other absolute path.
+    """
+    if resolved == base:
+        return "[system PATH]"
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass is not None and resolved.startswith(str(meipass)):
+        return "[bundled]"
+    return "[custom path]"
 
 
 class ValidationService:
@@ -53,6 +72,17 @@ class ValidationService:
                     component="ffmpeg",
                     severity="ERROR",
                     message=ffmpeg_msg,
+                )
+            )
+
+        # Check ffprobe (audio-track detection depends on it)
+        ffprobe_ok, ffprobe_msg = self._check_ffprobe()
+        if not ffprobe_ok:
+            issues.append(
+                ValidationIssue(
+                    component="ffprobe",
+                    severity="ERROR",
+                    message=ffprobe_msg,
                 )
             )
 
@@ -161,6 +191,7 @@ class ValidationService:
         return ValidationResult(
             ankiconnect_ok=ankiconnect_ok,
             ffmpeg_ok=ffmpeg_ok,
+            ffprobe_ok=ffprobe_ok,
             deck_exists=deck_ok,
             note_type_exists=note_type_ok,
             issues=issues,
@@ -192,12 +223,17 @@ class ValidationService:
     def _check_ffmpeg(self) -> tuple[bool, str]:
         """Check if ffmpeg is installed and accessible.
 
+        Routes through ``resolve_ffmpeg`` so a frozen bundle validates the
+        bundled binary (not whatever happens to be on PATH) and the success
+        message reports whether the resolved binary is bundled / system / custom.
+
         Returns:
             Tuple of (success, message)
         """
+        ffmpeg = resolve_ffmpeg(self.config)
         try:
             result = subprocess.run(
-                ["ffmpeg", "-version"],
+                [ffmpeg, "-version"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -208,12 +244,44 @@ class ValidationService:
 
             # Extract version from first line
             version_line = result.stdout.split("\n")[0] if result.stdout else "unknown"
-            return True, version_line
+            return True, f"{version_line} {_classify_resolved('ffmpeg', ffmpeg)}"
 
         except FileNotFoundError:
             return False, "ffmpeg not found. Install it and ensure it's in PATH"
         except subprocess.TimeoutExpired:
             return False, "ffmpeg check timed out"
+        except Exception as e:
+            return False, f"Unexpected error: {e}"
+
+    def _check_ffprobe(self) -> tuple[bool, str]:
+        """Check if ffprobe is installed and accessible.
+
+        Mirrors ``_check_ffmpeg`` but resolves and probes ffprobe, which the
+        audio-track detection depends on. Routes through ``resolve_ffprobe`` so
+        a frozen bundle validates the bundled binary.
+
+        Returns:
+            Tuple of (success, message)
+        """
+        ffprobe = resolve_ffprobe(self.config)
+        try:
+            result = subprocess.run(
+                [ffprobe, "-version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            if result.returncode != 0:
+                return False, "ffprobe returned non-zero exit code"
+
+            version_line = result.stdout.split("\n")[0] if result.stdout else "unknown"
+            return True, f"{version_line} {_classify_resolved('ffprobe', ffprobe)}"
+
+        except FileNotFoundError:
+            return False, "ffprobe not found. Install it and ensure it's in PATH"
+        except subprocess.TimeoutExpired:
+            return False, "ffprobe check timed out"
         except Exception as e:
             return False, f"Unexpected error: {e}"
 

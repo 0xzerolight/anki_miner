@@ -57,6 +57,88 @@ jobs:
           fi
           echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
 
+      # ---------------------------------------------------------------------
+      # Fetch a full static GPL ffmpeg build per-OS and flatten ffmpeg/ffprobe
+      # into vendor/ffmpeg/ at the repo root BEFORE PyInstaller runs. The spec
+      # (anki_miner.spec) globs vendor/ffmpeg/ and bundles whatever it finds at
+      # sys._MEIPASS/bin/ — the runtime resolver's lookup path. URLs are pinned
+      # to immutable assets and every download is SHA256-verified for
+      # reproducibility/supply-chain safety. These are GPL builds (NOT minimal):
+      # they ship libmp3lame, libopus, libsvtav1, and libwebp/libwebp_anim,
+      # which the bundled smoke step below asserts.
+      # ---------------------------------------------------------------------
+      - name: Fetch static ffmpeg (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # BtbN/FFmpeg-Builds, pinned to an immutable dated autobuild tag.
+          URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-06-02-14-20/ffmpeg-n8.1.1-9-g58d4114d36-linux64-gpl-8.1.tar.xz"
+          SHA256="2c83e8cbaad6cd8474e58d59a1b9da999bc45f246e268ab5060921718f7f45e6"
+          curl -fL "$URL" -o ffmpeg-dl.tar.xz
+          echo "${SHA256}  ffmpeg-dl.tar.xz" | sha256sum -c -
+          mkdir -p vendor/ffmpeg extracted
+          tar -xf ffmpeg-dl.tar.xz -C extracted
+          cp "$(find extracted -type f -path '*/bin/ffmpeg' | head -1)" vendor/ffmpeg/ffmpeg
+          cp "$(find extracted -type f -path '*/bin/ffprobe' | head -1)" vendor/ffmpeg/ffprobe
+          chmod +x vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe
+          rm -rf extracted ffmpeg-dl.tar.xz
+          echo "Bundled ffmpeg landed in vendor/ffmpeg/:"
+          ls -la vendor/ffmpeg/
+
+      - name: Fetch static ffmpeg (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # osxexperts.net arm64-native static builds (BtbN ships no macOS asset;
+          # evermeet.cx is Intel-only). ffmpeg/ffprobe are SEPARATE downloads.
+          # WARNING: these URLs are NOT version-pinned (ffmpeg81arm.zip is
+          # overwritten when a new ffmpeg minor ships), so the hard-coded SHA256
+          # below will hard-fail this step the day osxexperts updates the asset.
+          # That is intentional fail-closed behavior: a checksum mismatch must
+          # block the release until a maintainer re-pins the hash (and, ideally,
+          # mirrors the asset to a release we control). Do not relax to soft-verify.
+          FFMPEG_URL="https://www.osxexperts.net/ffmpeg81arm.zip"
+          FFMPEG_SHA256="ebb82529562b71170807bbc6b0e7eb4f0b13af8cbb0e085bb9e8f6fe709598ad"
+          FFPROBE_URL="https://www.osxexperts.net/ffprobe81arm.zip"
+          FFPROBE_SHA256="a6640a77d38a6f0527c5b597e599cb36a3427a6931444ed80bc62542421950a1"
+          mkdir -p vendor/ffmpeg
+          curl -fL "$FFMPEG_URL" -o ffmpeg.zip
+          curl -fL "$FFPROBE_URL" -o ffprobe.zip
+          echo "${FFMPEG_SHA256}  ffmpeg.zip" | shasum -a 256 -c -
+          echo "${FFPROBE_SHA256}  ffprobe.zip" | shasum -a 256 -c -
+          unzip -oj ffmpeg.zip ffmpeg -d vendor/ffmpeg
+          unzip -oj ffprobe.zip ffprobe -d vendor/ffmpeg
+          chmod +x vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe
+          rm -f ffmpeg.zip ffprobe.zip
+          echo "Bundled ffmpeg landed in vendor/ffmpeg/:"
+          ls -la vendor/ffmpeg/
+
+      - name: Fetch static ffmpeg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          # BtbN/FFmpeg-Builds, pinned to an immutable dated autobuild tag.
+          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-06-02-14-20/ffmpeg-n8.1.1-9-g58d4114d36-win64-gpl-8.1.zip"
+          $sha256 = "cf992c84e59809fab3a2077fd6a48796b10fef9e10a95cbbbe2b96d3b756b950"
+          curl.exe -fL $url -o ffmpeg-dl.zip
+          $actual = (Get-FileHash ffmpeg-dl.zip -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $sha256) {
+            Write-Error "SHA256 mismatch for ffmpeg-dl.zip: expected $sha256 got $actual"
+            exit 1
+          }
+          New-Item -ItemType Directory -Force -Path vendor\ffmpeg | Out-Null
+          Expand-Archive -Path ffmpeg-dl.zip -DestinationPath extracted -Force
+          $ff = Get-ChildItem -Path extracted -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          $fp = Get-ChildItem -Path extracted -Recurse -Filter ffprobe.exe | Select-Object -First 1
+          Copy-Item $ff.FullName vendor\ffmpeg\ffmpeg.exe -Force
+          Copy-Item $fp.FullName vendor\ffmpeg\ffprobe.exe -Force
+          Remove-Item -Recurse -Force extracted, ffmpeg-dl.zip
+          Write-Host "Bundled ffmpeg landed in vendor/ffmpeg/:"
+          Get-ChildItem vendor\ffmpeg
+
       - name: Build with PyInstaller
         run: pyinstaller anki_miner.spec
 
@@ -84,6 +166,62 @@ jobs:
             exit 1
           }
 
+      # Assert the bundled ffmpeg actually landed in the dist tree AND has the
+      # encoders the app requires (libmp3lame/libopus/libsvtav1/libwebp). This
+      # is NOT continue-on-error: a wrong/minimal ffmpeg build must hard-fail
+      # the release here rather than ship a binary that silently can't encode.
+      # The binary lives under sys._MEIPASS/bin/ — for PyInstaller onedir that
+      # is dist/AnkiMiner/_internal/bin/ (recent PyInstaller) or
+      # dist/AnkiMiner/bin/ (older). Glob for it instead of hard-coding so a
+      # PyInstaller layout bump doesn't silently skip the check.
+      - name: Bundled ffmpeg encoder smoke (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          FF=$(find dist/AnkiMiner -type f -name ffmpeg | head -1)
+          if [ -z "$FF" ]; then
+            echo "::error::Bundled ffmpeg not found under dist/AnkiMiner — spec did not bundle vendor/ffmpeg/"
+            find dist/AnkiMiner -maxdepth 3 -name 'ffmpeg*' -o -maxdepth 3 -name 'bin' -type d || true
+            exit 1
+          fi
+          echo "Found bundled ffmpeg: $FF"
+          chmod +x "$FF" || true
+          ENC=$("$FF" -hide_banner -encoders 2>/dev/null)
+          MISSING=""
+          for e in libmp3lame libopus libsvtav1 libwebp; do
+            if ! echo "$ENC" | grep -q "$e"; then
+              MISSING="$MISSING $e"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::Bundled ffmpeg is missing required encoder(s):$MISSING"
+            exit 1
+          fi
+          echo "BUNDLED_FFMPEG_ENCODERS_PASS: libmp3lame libopus libsvtav1 libwebp"
+
+      - name: Bundled ffmpeg encoder smoke (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ff = Get-ChildItem -Path dist\AnkiMiner -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          if (-not $ff) {
+            Write-Error "Bundled ffmpeg.exe not found under dist\AnkiMiner — spec did not bundle vendor/ffmpeg/"
+            exit 1
+          }
+          Write-Host "Found bundled ffmpeg: $($ff.FullName)"
+          $enc = & $ff.FullName -hide_banner -encoders 2>$null | Out-String
+          $missing = @()
+          foreach ($e in @("libmp3lame", "libopus", "libsvtav1", "libwebp")) {
+            if ($enc -notmatch [regex]::Escape($e)) { $missing += $e }
+          }
+          if ($missing.Count -gt 0) {
+            Write-Error "Bundled ffmpeg is missing required encoder(s): $($missing -join ' ')"
+            exit 1
+          }
+          Write-Host "BUNDLED_FFMPEG_ENCODERS_PASS: libmp3lame libopus libsvtav1 libwebp"
+
       - name: Build Windows installer
         if: runner.os == 'Windows'
         run: iscc /DAppVersion=${{ steps.version.outputs.version }} packaging\innosetup\anki_miner.iss
@@ -104,6 +242,21 @@ jobs:
       - name: Build .deb package (Linux)
         if: runner.os == 'Linux'
         run: |
+          # The .deb relies on system ffmpeg (licenses/ffmpeg/README.md), so it
+          # must NOT ship the bundled GPL ffmpeg the PyInstaller tree carries.
+          # Stage a copy with ffmpeg/ffprobe stripped and package from it; the
+          # AppImage (built above) and tarball (built below) keep their ffmpeg.
+          rm -rf dist/deb-stage
+          cp -a dist/AnkiMiner dist/deb-stage
+          # Strip both onedir layouts: _internal/bin/ (recent PyInstaller) and bin/.
+          rm -f dist/deb-stage/_internal/bin/ffmpeg dist/deb-stage/_internal/bin/ffprobe
+          rm -f dist/deb-stage/bin/ffmpeg dist/deb-stage/bin/ffprobe
+          # Fail closed if a layout change left a bundled ffmpeg in the stage tree.
+          if find dist/deb-stage -type f -name 'ffmpeg' -o -type f -name 'ffprobe' | grep -q .; then
+            echo "::error::Bundled ffmpeg/ffprobe still present in deb stage tree — GPL would ship in the .deb"
+            find dist/deb-stage -type f \( -name 'ffmpeg' -o -name 'ffprobe' \)
+            exit 1
+          fi
           VERSION=${{ steps.version.outputs.version }} ./nfpm package \
             --config packaging/nfpm.yaml \
             --packager deb \

@@ -41,6 +41,7 @@ from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 
 logger = logging.getLogger(__name__)
 
@@ -326,7 +327,7 @@ class SingleEpisodeTab(MiningTabBase):
         # Probe (cached transparently by MediaExtractorService is per-extractor; here
         # we probe directly for the dialog). Each click probes fresh — cheap for
         # typical anime files (<1s).
-        streams = list_audio_streams(video_file)
+        streams = list_audio_streams(video_file, ffprobe_cmd=resolve_ffprobe(self.config))
 
         if not streams:
             QMessageBox.information(
@@ -404,6 +405,7 @@ class SingleEpisodeTab(MiningTabBase):
             initial_offset=offset,
             parent=self,
             audio_track_override=self._audio_track_override,
+            ffprobe_cmd=resolve_ffprobe(self.config),
         )
         if viewer.exec() == SubtitleViewer.DialogCode.Accepted:
             self.offset_spinbox.setValue(viewer.get_offset())
@@ -495,6 +497,7 @@ class SingleEpisodeTab(MiningTabBase):
                     subtitle_entries=entries,
                     offset=offset,
                     audio_track_override=self._audio_track_override,
+                    ffprobe_cmd=resolve_ffprobe(self.config),
                 )
             except Exception:
                 logger.exception("Failed to build media context for curation; proceeding without player")
