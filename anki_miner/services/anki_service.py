@@ -409,30 +409,72 @@ class AnkiService:
             return False
         return True
 
-    def _upload_dict_media(self, definition_html: str | None) -> None:
-        """Ship any dict-media files referenced in `definition_html` to Anki.
+    def _upload_dict_media_batch(self, word_data_list: list["CardPayload"]) -> None:
+        """Batch-upload all dict-media assets referenced across the whole card batch.
 
-        Walks `<img class="anki-miner-dict-media" src="X">` tags, resolves each
-        src back to a file under ``config.dicts_root/<dict_id>/media/``, and
-        uploads via storeMediaFile. Results are cached so the same SVG is sent
-        at most once per AnkiService lifetime.
+        Scans each item's ``definition`` and ``extra_fields["glossary"]`` for
+        ``<img class="anki-miner-dict-media" src="…">`` tags, collects the union
+        of un-uploaded srcs, resolves each to a file path, and ships them via
+        chunked ``multi`` POSTs (reusing ``_build_store_media_action``).
+
+        Missing-on-disk srcs are logged as warnings and added to
+        ``_dict_media_uploaded`` so they are not retried on every card (identical
+        to the old per-card behavior). Each src that is sent successfully is also
+        added to the cache.
         """
-        if not definition_html:
+        # Collect un-uploaded srcs across the whole batch (ordered, deduped).
+        seen: set[str] = set()
+        all_srcs: list[str] = []
+        for item in word_data_list:
+            for html_field in (
+                item.definition,
+                item.extra_fields.get("glossary") if item.extra_fields else None,
+            ):
+                if not isinstance(html_field, str):
+                    continue
+                for src in _extract_dict_media_srcs(html_field):
+                    if src not in self._dict_media_uploaded and src not in seen:
+                        seen.add(src)
+                        all_srcs.append(src)
+
+        if not all_srcs:
             return
-        srcs = _extract_dict_media_srcs(definition_html)
-        for src in srcs:
-            if src in self._dict_media_uploaded:
-                continue
+
+        # Resolve each src; cache missing ones now so we don't retry.
+        srcs_to_upload: list[str] = []
+        actions: list[dict] = []
+        for src in all_srcs:
             file_path = _resolve_dict_media_path(src, self.config.dicts_root)
             if file_path is None:
                 logger.warning("Dict media file missing on disk: %s", src)
                 # Cache anyway so we don't retry every card.
                 self._dict_media_uploaded.add(src)
                 continue
-            if self.store_media_file(src, file_path):
-                self._dict_media_uploaded.add(src)
-            else:
-                logger.warning("Failed to store dict media file: %s", src)
+            action = self._build_store_media_action(src, file_path)
+            if action is not None:
+                srcs_to_upload.append(src)
+                actions.append(action)
+
+        if not actions:
+            return
+
+        # Chunked multi POSTs — mirrors _store_media_files_batch structure.
+        try:
+            for chunk_start in range(0, len(actions), _MEDIA_BATCH_CHUNK):
+                chunk_srcs = srcs_to_upload[chunk_start : chunk_start + _MEDIA_BATCH_CHUNK]
+                chunk_actions = actions[chunk_start : chunk_start + _MEDIA_BATCH_CHUNK]
+                sub_results = post_multi(self.config.ankiconnect_url, chunk_actions, timeout=30)
+                if len(sub_results) != len(chunk_actions):
+                    logger.warning(
+                        "post_multi returned %d results for %d dict-media actions; some files may be silently skipped",
+                        len(sub_results),
+                        len(chunk_actions),
+                    )
+                for src, sub_result in zip(chunk_srcs, sub_results, strict=False):
+                    if not (isinstance(sub_result, dict) and sub_result.get("error")):
+                        self._dict_media_uploaded.add(src)
+        except (AnkiConnectionError, OSError) as e:
+            logger.warning("Failed to batch-upload dict media files: %s", e)
 
     def create_cards_batch(
         self,
@@ -465,12 +507,10 @@ class AnkiService:
         stored_files = self._store_media_files_batch(word_data_list)
 
         # Ship dict-bundled assets referenced by any definition or glossary in
-        # the batch. Done up-front so storeMediaFile races finish before notes
-        # reference the filenames; AnkiConnect serializes per-connection, safe.
-        for item in word_data_list:
-            self._upload_dict_media(item.definition)
-            if item.extra_fields and isinstance(item.extra_fields.get("glossary"), str):
-                self._upload_dict_media(item.extra_fields["glossary"])
+        # the batch via a single batched multi pass. Done up-front so uploads
+        # finish before notes reference the filenames; AnkiConnect serializes
+        # per-connection, safe.
+        self._upload_dict_media_batch(word_data_list)
 
         # Then create notes in batches. AnkiConnect accepts arbitrary array
         # sizes; 100 cuts round-trips ~2x vs 50 with no observed errors on a
