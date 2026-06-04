@@ -53,7 +53,7 @@ class FormPanel(QFrame):
         # Main layout
         self._main_layout = QVBoxLayout()
         self._main_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
-        self._main_layout.setSpacing(SPACING.sm)
+        self._main_layout.setSpacing(SPACING.xs)
 
         # Header
         header_layout = QHBoxLayout()
@@ -87,7 +87,7 @@ class FormPanel(QFrame):
     def _new_form_layout(self) -> QFormLayout:
         """Build a QFormLayout configured to match panel conventions."""
         layout = QFormLayout()
-        layout.setSpacing(SPACING.sm)
+        layout.setSpacing(SPACING.xs)
         layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
         return layout
@@ -160,11 +160,11 @@ class FormPanel(QFrame):
             title: Section title
         """
         # Add spacing before section
-        self._main_layout.addSpacing(8)
+        self._main_layout.addSpacing(SPACING.xxs)
 
         section_label = QLabel(title)
         section_font = QFont()
-        section_font.setPixelSize(FONT_SIZES.body)
+        section_font.setPixelSize(FONT_SIZES.body_sm)
         section_font.setWeight(QFont.Weight.DemiBold)
         section_label.setFont(section_font)
 
