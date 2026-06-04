@@ -7,8 +7,13 @@ from anki_miner.services.definition_service import DefinitionService
 
 
 def make_provider(name="Test", available=True, return_value=None, load_raises=None):
-    """Create a mock DictionaryProvider with configurable behavior."""
-    p = MagicMock()
+    """Create a mock DictionaryProvider with configurable behavior.
+
+    Specced to the per-word Protocol surface only (no ``lookup_many``) so the
+    batch fast-path treats these as legacy/online providers and falls back to
+    per-word ``lookup`` — matching the assertions in these tests.
+    """
+    p = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load", "close"])
     p.name = name
     p.is_online = False  # default; tests override as needed
     p.is_available.return_value = available
@@ -194,6 +199,88 @@ class TestGetDefinitionsBatch:
         results = service.get_definitions_batch(["a", "b"])
 
         assert results == ["first-only", "second-result"]
+
+
+def make_batch_provider(name="Batch", available=True, table=None):
+    """Mock provider supporting lookup_many. ``table`` maps word -> html|None."""
+    table = table or {}
+    p = MagicMock()
+    p.name = name
+    p.is_online = False
+    p.is_available.return_value = available
+    p.load.return_value = True
+    p.lookup.side_effect = lambda w: table.get(w)
+    p.lookup_many.side_effect = lambda words: {w: table.get(w) for w in words}
+    return p
+
+
+class TestGetDefinitionsBatchFastPath:
+    """Batch fast-path via lookup_many — preserves first-hit-wins semantics."""
+
+    def test_first_hit_wins_skips_second_provider_for_resolved_word(self, test_config):
+        p1 = make_batch_provider("A", table={"x": "from A"})
+        p2 = make_batch_provider("B", table={"x": "from B", "y": "from B"})
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        results = service.get_definitions_batch(["x", "y"])
+
+        assert results == ["from A", "from B"]
+        # p2.lookup_many must be called only for the still-unfilled word(s), not "x"
+        p2.lookup_many.assert_called_once()
+        called_with = p2.lookup_many.call_args[0][0]
+        assert "x" not in called_with
+        assert "y" in called_with
+
+    def test_result_matches_per_word_get_definition(self, test_config):
+        p1 = make_batch_provider("A", table={"a": "A-a", "c": "A-c"})
+        p2 = make_batch_provider("B", table={"b": "B-b", "c": "B-c-shadowed"})
+        words = ["a", "b", "c", "d"]
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        batch = service.get_definitions_batch(words)
+        per_word = [DefinitionService(test_config, providers=[p1, p2]).get_definition(w) for w in words]
+        assert batch == per_word
+        assert batch == ["A-a", "B-b", "A-c", None]
+
+    def test_word_absent_from_all_providers_is_none(self, test_config):
+        p1 = make_batch_provider("A", table={})
+        p2 = make_batch_provider("B", table={})
+        service = DefinitionService(test_config, providers=[p1, p2])
+        assert service.get_definitions_batch(["nope"]) == [None]
+
+    def test_falls_back_to_per_word_for_provider_without_lookup_many(self, test_config):
+        # provider without lookup_many (Jisho-like)
+        legacy = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load"])
+        legacy.name = "Legacy"
+        legacy.is_online = False
+        legacy.is_available.return_value = True
+        legacy.load.return_value = True
+        legacy.lookup.side_effect = lambda w: {"y": "legacy-y"}.get(w)
+
+        p1 = make_batch_provider("A", table={"x": "A-x"})
+        service = DefinitionService(test_config, providers=[p1, legacy])
+
+        results = service.get_definitions_batch(["x", "y"])
+        assert results == ["A-x", "legacy-y"]
+        # legacy queried per-word only for the unfilled "y", never "x"
+        legacy.lookup.assert_called_once_with("y")
+
+    def test_unavailable_batch_provider_skipped(self, test_config):
+        p1 = make_batch_provider("A", available=False, table={"x": "A-x"})
+        p2 = make_batch_provider("B", table={"x": "B-x"})
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        assert service.get_definitions_batch(["x"]) == ["B-x"]
+        p1.lookup_many.assert_not_called()
+
+    def test_preserves_order_and_progress(self, test_config, recording_progress):
+        p = make_batch_provider("M", table={"a": "def-a", "b": None})
+        service = DefinitionService(test_config, providers=[p])
+
+        results = service.get_definitions_batch(["a", "b"], progress_callback=recording_progress)
+        assert results == ["def-a", None]
+        assert recording_progress.starts[0] == (2, "Fetching definitions")
+        assert recording_progress.completes == 1
 
 
 class TestConfigStored:

@@ -86,6 +86,49 @@ class SubtitleParserService:
                     e,
                 )
                 self._filter_pattern = None
+        # Per-parse memo caches; initialised here with type annotations so
+        # mypy knows the shapes; reset at the top of each parse_* call via
+        # _reset_caches() so a second invocation never sees stale entries.
+        self._fg_cache: dict[str, str] = {}
+        self._rd_cache: dict[str, str] = {}
+        self._reset_caches()
+        # Per-FILE tokenization cache (distinct lifetime from the per-parse memo
+        # caches above): resolved path -> (mtime, list of line-state tuples).
+        # Filled on the first _iter_parsed_lines pass over a file and reused by
+        # any later pass over the SAME path+mtime (e.g. the Deck Builder's
+        # count_lemmas → parse_subtitle_file double-parse). Survives across
+        # parse_* calls; an mtime change invalidates the entry. _reset_caches()
+        # does NOT touch this — it is not a per-parse cache.
+        self._line_cache: dict[Path, tuple[float, list[tuple[str, list, list, float, float, float]]]] = {}
+
+    # ------------------------------------------------------------------
+    # Per-parse memoization helpers
+    # ------------------------------------------------------------------
+
+    def _reset_caches(self) -> None:
+        """Assign fresh empty dicts to the per-parse memo caches.
+
+        Called at the start of every public parse_* entry-point so a second
+        invocation on the same service instance never serves entries from a
+        previous parse run.  Also called from ``__init__`` so the shapes are
+        initialised in exactly one place. Only the expression (``mined``) path
+        still memoizes furigana/reading; sentence + bold furigana now reuse the
+        per-line ``raw_tokens`` directly via the ``*_from_tokens`` helpers.
+        """
+        self._fg_cache = {}
+        self._rd_cache = {}
+
+    def _furigana(self, s: str) -> str:
+        """Return generate_furigana(s, tagger), memoized within the current parse pass."""
+        if s not in self._fg_cache:
+            self._fg_cache[s] = generate_furigana(s, self.tagger)
+        return self._fg_cache[s]
+
+    def _reading(self, s: str) -> str:
+        """Return generate_reading(s, tagger), memoized within the current parse pass."""
+        if s not in self._rd_cache:
+            self._rd_cache[s] = generate_reading(s, self.tagger)
+        return self._rd_cache[s]
 
     def _apply_text_filter(self, text: str) -> str:
         """Apply the configured regex filter to a subtitle line.
@@ -112,7 +155,9 @@ class SubtitleParserService:
         except Exception as e:
             raise SubtitleParseError(f"Failed to parse subtitle file: {e}") from e
 
-    def _iter_parsed_lines(self, subs) -> Iterator[tuple[str, list[Any], list[Any], float, float, float]]:
+    def _iter_parsed_lines(
+        self, subtitle_file: Path
+    ) -> Iterator[tuple[str, list[Any], list[Any], float, float, float]]:
         """Yield post-tokenize per-line state for every non-empty subtitle line.
 
         Yields ``(text, raw_tokens, merged_tokens, start_time, end_time, duration)``.
@@ -122,7 +167,40 @@ class SubtitleParserService:
         output of ``_merge_compound_suffixes`` (callers apply
         ``_should_include_word`` themselves so the index path and mining path
         share identical token selection logic).
+
+        Per-file cache: keyed by resolved path → (mtime, line-state list); only
+        the most-recently-parsed file is retained (bounded to one entry). On a
+        cache HIT for the same path+mtime the subtitle file is neither reloaded
+        nor re-tokenized — the stored line-state (the very tuples a fresh parse
+        would yield, including ``_SyntheticToken``s) is replayed. An mtime
+        mismatch (file edited between passes) invalidates the entry and forces a
+        fresh load + tokenize, preserving today's behaviour. Consumers MUST NOT
+        mutate the yielded ``merged_tokens`` lists/tokens, as they are shared
+        across passes; current consumers only read them.
         """
+        key = subtitle_file.resolve()
+        try:
+            mtime = subtitle_file.stat().st_mtime
+        except OSError:
+            # Can't stat (e.g. missing file): fall through to _load_subs, which
+            # raises the normalized SubtitleParseError. Bypass the cache.
+            mtime = None
+
+        if mtime is not None:
+            cached = self._line_cache.get(key)
+            if cached is not None and cached[0] == mtime:
+                yield from cached[1]
+                return
+
+        subs = self._load_subs(subtitle_file)
+
+        # Tokenize lazily and yield each line as it is produced — preserving the
+        # exact interleaving of tokenizer calls with any per-word tagger work a
+        # consumer does between iterations (real fugashi is stateless, but tests
+        # mock it with an order-sensitive side_effect). The cache entry is only
+        # committed once the generator is fully consumed, so a consumer that
+        # abandons iteration early does not leave a truncated entry.
+        line_states: list[tuple[str, list, list, float, float, float]] = []
         for line in subs:
             text = self._apply_text_filter(clean_subtitle_text(line.text))
             if not text:
@@ -137,7 +215,20 @@ class SubtitleParserService:
             raw_tokens = list(self.tagger(text))
             merged_tokens = self._merge_compound_suffixes(raw_tokens)
 
-            yield text, raw_tokens, merged_tokens, start_time, end_time, duration
+            line_state = (text, raw_tokens, merged_tokens, start_time, end_time, duration)
+            line_states.append(line_state)
+            yield line_state
+
+        # mtime is None only when stat() failed, in which case _load_subs above
+        # already raised, so this assignment is reachable only with a real mtime.
+        #
+        # Bound the cache to the current file only. Cross-phase reuse (Deck
+        # Builder Phase 1 -> Phase 2) re-parses the SAME file back-to-back, so
+        # keeping prior files' tokenized line-state would grow the cache
+        # unbounded across a many-episode build with no hit benefit. Replacing
+        # the dict evicts the previous file as the new one is committed.
+        if mtime is not None:
+            self._line_cache = {key: (mtime, line_states)}
 
     def parse_raw_entries(self, subtitle_file: Path) -> list[tuple[float, float, str]]:
         """Parse subtitle file and return raw timing entries without tokenization.
@@ -177,12 +268,14 @@ class SubtitleParserService:
         Raises:
             SubtitleParseError: If subtitle file cannot be parsed
         """
-        subs = self._load_subs(subtitle_file)
+        # Reset per-parse memo caches so a second call on the same instance
+        # does not serve entries from a previous parse run.
+        self._reset_caches()
 
         all_words: list[TokenizedWord] = []
         seen_lemmas: set[str] = set()  # Track unique words by dictionary form (lemma).
 
-        for text, raw_tokens, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
+        for text, raw_tokens, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subtitle_file):
             # Sentence-level furigana/reading depend only on ``text`` — compute
             # once per line and share across every word emitted from this line.
             # Use raw_tokens (pre-merge tagger output) so the sentence is
@@ -229,8 +322,8 @@ class SubtitleParserService:
                 # TokenizedWord.mined_form for the trade-off).
                 pos = word_token.feature.pos1
                 mined = lemma if pos in ("動詞", "形容詞") else surface
-                expression_furigana = generate_furigana(mined, self.tagger)
-                expression_reading = generate_reading(mined, self.tagger)
+                expression_furigana = self._furigana(mined)
+                expression_reading = self._reading(mined)
 
                 if self.config.bold_target_in_sentence:
                     sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
@@ -287,13 +380,14 @@ class SubtitleParserService:
         Raises:
             SubtitleParseError: If subtitle file cannot be parsed
         """
-        subs = self._load_subs(subtitle_file)
+        # Reset per-parse memo caches; see parse_subtitle_file for rationale.
+        self._reset_caches()
 
         all_words: list[TokenizedWord] = []
         line_index: list[LineLemmas] = []
         seen_lemmas: set[str] = set()
 
-        for text, raw_tokens, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subs):
+        for text, raw_tokens, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subtitle_file):
             # First pass: collect every content-word lemma on this line.
             # _should_include_word handles particle/aux/proper-noun filtering.
             # We also record (surface, start, end) for the FIRST occurrence
@@ -364,8 +458,8 @@ class SubtitleParserService:
                 # (lemma for verbs/adjectives, surface for nouns).
                 pos = word_token.feature.pos1
                 mined = lemma if pos in ("動詞", "形容詞") else surface
-                expression_furigana = generate_furigana(mined, self.tagger)
-                expression_reading = generate_reading(mined, self.tagger)
+                expression_furigana = self._furigana(mined)
+                expression_reading = self._reading(mined)
 
                 if self.config.bold_target_in_sentence:
                     sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
@@ -414,9 +508,8 @@ class SubtitleParserService:
         Raises:
             SubtitleParseError: If subtitle file cannot be parsed
         """
-        subs = self._load_subs(subtitle_file)
         counts: collections.Counter[str] = collections.Counter()
-        for _text, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subs):
+        for _text, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
             for token in merged_tokens:
                 if self._should_include_word(token):
                     counts[self._extract_lemma(token)] += 1

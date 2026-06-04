@@ -77,12 +77,56 @@ class DefinitionService:
         words: list[str],
         progress_callback: ProgressCallback | None = None,
     ) -> list[str | None]:
+        """Resolve definitions for a list of words, preserving first-hit-wins.
+
+        Fast path: providers exposing the optional ``lookup_many`` batch method
+        are queried ONCE for the still-unfilled words (one IN-clause SQLite
+        query per dictionary instead of one query per word). Words an earlier
+        provider resolves are removed from the remaining set BEFORE the next
+        provider is consulted, so chain semantics are identical to walking
+        ``get_definition`` per word. Providers without ``lookup_many`` (e.g. the
+        online Jisho fallback) are consulted per-word for the remaining words.
+        """
         if progress_callback:
             progress_callback.on_start(len(words), "Fetching definitions")
 
+        self.ensure_loaded()
+
+        # Resolve over the chain into a per-word map keyed by the FIRST seen
+        # occurrence — duplicates collapse to one lookup, mirroring the chain.
+        resolved: dict[str, str | None] = {}
+        remaining = list(dict.fromkeys(words))  # de-dup, preserve order
+
+        for provider in self._providers:
+            if not remaining:
+                break
+            if not provider.is_available():
+                continue
+            batch_fn = getattr(provider, "lookup_many", None)
+            if callable(batch_fn):
+                hits = batch_fn(remaining)
+                still_remaining: list[str] = []
+                for word in remaining:
+                    result = hits.get(word)
+                    if result:
+                        resolved[word] = result
+                    else:
+                        still_remaining.append(word)
+                remaining = still_remaining
+            else:
+                # Per-word fallback for providers lacking the batch method.
+                still_remaining = []
+                for word in remaining:
+                    result = provider.lookup(word)
+                    if result:
+                        resolved[word] = result
+                    else:
+                        still_remaining.append(word)
+                remaining = still_remaining
+
         results: list[str | None] = []
         for i, word in enumerate(words, 1):
-            definition = self.get_definition(word)
+            definition = resolved.get(word)
             results.append(definition)
             if progress_callback:
                 if definition:

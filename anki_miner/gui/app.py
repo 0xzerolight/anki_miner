@@ -20,7 +20,6 @@ from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.services.stats_service import StatsService
-from anki_miner.services.tagger import prewarm_tagger
 
 
 def _scrub_pyinstaller_env() -> None:
@@ -222,11 +221,26 @@ def main():
     # Mine click — because the dictionary chain dominates startup cost.
     window.show()
     QTimer.singleShot(0, stats_service.load)
-    # Pre-warm the shared MeCab tagger on a daemon thread so the unidic
-    # dictionary (~2-3 s) loads in the background while the user selects files.
-    # By the time "Mine" is clicked the tagger is already built and the first
-    # mining run does not freeze.
-    prewarm_tagger()
+
+    # Pre-warm the shared MeCab tagger (get_shared_tagger) AND the dictionary
+    # chain off the GUI thread, scheduled on the next event-loop tick so it
+    # never blocks the first paint. The first Mine builds these on the GUI
+    # thread today, freezing the UI for seconds; warming them in the background
+    # makes that first real Mine materially faster. The worker warms the SHARED
+    # tagger singleton that mining reuses (it builds its own sqlite connections
+    # for the dict chain and discards those — connections are unsafe across
+    # threads). Best-effort: clicking Mine before it finishes simply takes
+    # today's cold path. Keep a reference on the window so the QThread isn't
+    # GC'd mid-run; the built-in ``finished`` signal clears it once done.
+    def _start_prewarm() -> None:
+        from anki_miner.gui.workers.prewarm_worker import PrewarmWorker
+
+        worker = PrewarmWorker(window.get_config())
+        window._prewarm_worker = worker
+        worker.finished.connect(lambda: setattr(window, "_prewarm_worker", None))
+        worker.start()
+
+    QTimer.singleShot(0, _start_prewarm)
 
     # Run event loop
     sys.exit(app.exec())

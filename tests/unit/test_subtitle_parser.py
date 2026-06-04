@@ -362,6 +362,215 @@ class TestExpressionFuriganaSource:
         assert "破れ" not in called_texts  # not the surface form
 
 
+class TestFuriganaMemoization:
+    """Per-parse memoization of generate_furigana / generate_reading / wrap_target_furigana.
+
+    Task 4: identical input strings within one parse pass must be tagged at most once.
+    Cache must reset between separate parse_subtitle_file calls.
+    """
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _make_subs_single_line(self, text: str, start: int = 1000, end: int = 3000):
+        mock_line = MagicMock()
+        mock_line.text = text
+        mock_line.start = start
+        mock_line.end = end
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        return mock_subs
+
+    def _make_subs_two_lines(self, text1: str, text2: str):
+        def _line(text, start, end):
+            m = MagicMock()
+            m.text = text
+            m.start = start
+            m.end = end
+            return m
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([_line(text1, 1000, 3000), _line(text2, 4000, 6000)]))
+        return mock_subs
+
+    # ------------------------------------------------------------------
+    # 1. Repeated mined form across lines → generate_furigana called once
+    # ------------------------------------------------------------------
+
+    def test_repeated_expression_furigana_memoized(self, test_config, tmp_path):
+        """Same mined form on two lines → generate_furigana called once for that string.
+
+        Both lines have the same verb with lemma 食べる (mined form = lemma for verbs).
+        The global lemma dedup means only line-1's word is emitted into all_words,
+        but without caching, line-2's word would still trigger generate_furigana("食べる")
+        before the dedup check discards it.  With the cache the call is served from
+        _fg_cache and generate_furigana itself is not invoked a second time.
+
+        We patch both generate_furigana AND generate_reading (and the tagger, to
+        avoid StopIteration from the mock) so the only actual calls observed in
+        mock_fg.call_args_list come from the parser's own invocations — not from
+        nested tagger usage inside the real util functions.
+        """
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        # Two lines; both tokenize to the same verb with lemma 食べる.
+        # Distinct sentence text ensures sentence-level calls don't accidentally
+        # match "食べる" and inflate the expression-level count.
+        taberux2_subs = self._make_subs_two_lines("食べる", "また食べる")
+        token_taberu = _make_token("食べる", "動詞", lemma="食べる", kana="タベル")
+        mock_tagger = MagicMock()
+        # All tagger calls return [token_taberu]; we only care about generate_furigana calls.
+        mock_tagger.return_value = [token_taberu]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=taberux2_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value="食べる[たべる]") as mock_fg,
+            patch("anki_miner.services.subtitle_parser.generate_reading", return_value="たべる"),
+        ):
+            service = SubtitleParserService(test_config)
+            words = service.parse_subtitle_file(sub_file)
+
+        # The mined form for a verb is its lemma: "食べる".
+        # With the cache, generate_furigana("食べる", ...) must be called at most once.
+        expression_calls = [c for c in mock_fg.call_args_list if c.args[0] == "食べる"]
+        assert (
+            len(expression_calls) <= 1
+        ), f"generate_furigana('食べる') called {len(expression_calls)} times; expected ≤ 1 (memoized)"
+        # Sanity: at least one word should have been emitted.
+        assert len(words) >= 1
+
+    # ------------------------------------------------------------------
+    # 2. Cache reset between two separate parse_subtitle_file calls
+    # ------------------------------------------------------------------
+
+    def test_cache_reset_between_parse_calls(self, test_config, tmp_path):
+        """generate_furigana must be re-invoked on a second parse_subtitle_file call.
+
+        The per-parse cache must be cleared at the start of each call so a
+        second parse (possibly with a different file) is not served stale
+        entries from the first parse.
+        """
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        token = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+
+        def make_mock_subs():
+            mock_line = MagicMock()
+            mock_line.text = "猫"
+            mock_line.start = 1000
+            mock_line.end = 3000
+            ms = MagicMock()
+            ms.__iter__ = MagicMock(return_value=iter([mock_line]))
+            return ms
+
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token]
+
+        fg_call_counts: list[int] = []
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", side_effect=lambda _: make_mock_subs()),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value="stub") as mock_fg,
+            patch("anki_miner.services.subtitle_parser.generate_reading", return_value="stub"),
+        ):
+            service = SubtitleParserService(test_config)
+
+            # First parse
+            service.parse_subtitle_file(sub_file)
+            fg_call_counts.append(mock_fg.call_count)
+
+            # Second parse — cache must be reset, so generate_furigana is called again
+            service.parse_subtitle_file(sub_file)
+            fg_call_counts.append(mock_fg.call_count)
+
+        calls_first = fg_call_counts[0]
+        calls_second = fg_call_counts[1] - fg_call_counts[0]
+
+        # Each parse must produce at least one generate_furigana call (sentence + expression level).
+        assert calls_first >= 1, "First parse did not call generate_furigana"
+        assert calls_second >= 1, "Second parse did not call generate_furigana — cache was NOT reset"
+
+    # ------------------------------------------------------------------
+    # 3. Same assertions for parse_subtitle_file_with_index
+    # ------------------------------------------------------------------
+
+    def test_repeated_expression_furigana_memoized_with_index(self, test_config, tmp_path):
+        """Same mined form on two lines → generate_furigana called once (with_index path)."""
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        taberux2_subs = self._make_subs_two_lines("食べる", "また食べる")
+        token_taberu = _make_token("食べる", "動詞", lemma="食べる", kana="タベル")
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token_taberu]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=taberux2_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value="食べる[たべる]") as mock_fg,
+            patch("anki_miner.services.subtitle_parser.generate_reading", return_value="たべる"),
+        ):
+            service = SubtitleParserService(test_config)
+            words, index = service.parse_subtitle_file_with_index(sub_file)
+
+        expression_calls = [c for c in mock_fg.call_args_list if c.args[0] == "食べる"]
+        assert (
+            len(expression_calls) <= 1
+        ), f"generate_furigana('食べる') called {len(expression_calls)} times; expected ≤ 1"
+        assert len(words) >= 1
+
+    def test_cache_reset_between_parse_with_index_calls(self, test_config, tmp_path):
+        """Cache reset between two parse_subtitle_file_with_index calls."""
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        token = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+
+        def make_mock_subs():
+            mock_line = MagicMock()
+            mock_line.text = "猫"
+            mock_line.start = 1000
+            mock_line.end = 3000
+            ms = MagicMock()
+            ms.__iter__ = MagicMock(return_value=iter([mock_line]))
+            return ms
+
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token]
+
+        fg_call_counts: list[int] = []
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", side_effect=lambda _: make_mock_subs()),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value="stub") as mock_fg,
+            patch("anki_miner.services.subtitle_parser.generate_reading", return_value="stub"),
+        ):
+            service = SubtitleParserService(test_config)
+
+            service.parse_subtitle_file_with_index(sub_file)
+            fg_call_counts.append(mock_fg.call_count)
+
+            service.parse_subtitle_file_with_index(sub_file)
+            fg_call_counts.append(mock_fg.call_count)
+
+        calls_first = fg_call_counts[0]
+        calls_second = fg_call_counts[1] - fg_call_counts[0]
+
+        assert calls_first >= 1, "First parse (with_index) did not call generate_furigana"
+        assert calls_second >= 1, "Second parse (with_index) did not call generate_furigana — cache not reset"
+
+    # Note: the bold-furigana memoization test (_bold_cache) was removed when the
+    # tokenize-once merge replaced the re-tokenizing _bold() path with the
+    # token-based wrap_target_furigana_from_tokens (zero extra MeCab passes), so
+    # there is no longer a _bold_cache to exercise.
+
+
 class TestShouldIncludeWord:
     """Tests for _should_include_word method."""
 
@@ -2021,3 +2230,129 @@ class TestT2TokenizeOnce:
             assert count == 1, (
                 f"Expected exactly 1 tagger call for line {line_text!r}; got {count}. " f"All calls: {spy.calls}"
             )
+
+
+class TestPerFileLineCache:
+    """Tests for the per-file tokenization cache (Task 5).
+
+    The cache must make a second parse of the SAME unchanged file skip MeCab,
+    while an mtime change forces a fresh re-tokenization. Output must remain
+    byte-identical to an uncached parse.
+    """
+
+    @staticmethod
+    def _make_mock_subs(lines):
+        mock_lines = []
+        for spec in lines:
+            ml = MagicMock()
+            ml.text = spec["text"]
+            ml.start = spec["start"]
+            ml.end = spec["end"]
+            mock_lines.append(ml)
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(side_effect=lambda: iter(mock_lines))
+        return mock_subs
+
+    def test_iter_parsed_lines_cached_by_mtime(self, test_config, tmp_path):
+        """Second parse of an unchanged file must not re-invoke the tagger.
+
+        After an mtime bump the file is re-tokenized.
+        """
+        import os
+
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        line_spec = [{"text": "猫と犬", "start": 1000, "end": 3000}]
+
+        neko = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        inu = _make_token("犬", "名詞", lemma="犬", kana="イヌ")
+
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [neko, inu]
+
+        # Stable mtime so the first two parses share a cache key.
+        os.utime(sub_file, (1000, 1000))
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                return_value=self._make_mock_subs(line_spec),
+            ) as mock_load,
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+
+            first = service.count_lemmas(sub_file)
+            calls_after_first = mock_tagger.call_count
+            load_after_first = mock_load.call_count
+
+            # Second parse, file unchanged: cache HIT, no tagger / load.
+            second = service.count_lemmas(sub_file)
+
+        # One tagger call per line (1 line) total across both parses.
+        assert calls_after_first == 1
+        assert mock_tagger.call_count == 1
+        assert mock_load.call_count == load_after_first  # no reload on hit
+        # Byte-identical result from the cached pass.
+        assert first == second
+
+        # Now bump the mtime -> cache MISS -> re-tokenize.
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                return_value=self._make_mock_subs(line_spec),
+            ) as mock_load2,
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            os.utime(sub_file, (2000, 2000))
+            third = service.count_lemmas(sub_file)
+
+        assert mock_tagger.call_count == 2  # re-tokenized
+        assert mock_load2.call_count == 1
+        assert third == first
+
+    def test_count_lemmas_and_parse_share_cache(self, test_config, tmp_path):
+        """count_lemmas then parse_subtitle_file on one instance hits the cache.
+
+        Total tagger calls must equal the number of lines (one tokenize pass),
+        NOT 2x lines. The deck-builder double-parse is exactly this pattern.
+        """
+        import os
+
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+        os.utime(sub_file, (1000, 1000))
+
+        line_spec = [
+            {"text": "猫", "start": 1000, "end": 3000},
+            {"text": "犬", "start": 4000, "end": 6000},
+        ]
+        neko = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        inu = _make_token("犬", "名詞", lemma="犬", kana="イヌ")
+
+        mock_tagger = MagicMock()
+        # Two lines -> two distinct tokenize results on the cache-fill pass.
+        # generate_furigana/reading/wrap_* also call the tagger; isolate the
+        # _iter_parsed_lines tokenize count by stubbing those helpers.
+        mock_tagger.side_effect = [[neko], [inu]]
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                return_value=self._make_mock_subs(line_spec),
+            ),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value="fg"),
+            patch("anki_miner.services.subtitle_parser.generate_reading", return_value="rd"),
+        ):
+            service = SubtitleParserService(test_config)
+
+            counts = service.count_lemmas(sub_file)
+            words = service.parse_subtitle_file(sub_file)
+
+        # Exactly two tokenize calls (one per line), shared across both methods.
+        assert mock_tagger.call_count == 2
+        assert counts["猫"] == 1
+        assert counts["犬"] == 1
+        assert {w.lemma for w in words} == {"猫", "犬"}
