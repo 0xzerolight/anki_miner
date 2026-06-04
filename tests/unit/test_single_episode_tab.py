@@ -179,6 +179,45 @@ def test_tracks_clicked_keeps_override_on_cancel(tab, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# 7. Tracks probe passes the resolved ffprobe binary
+# ---------------------------------------------------------------------------
+
+
+def test_tracks_clicked_passes_resolved_ffprobe(qapp, test_config, tmp_path):
+    import dataclasses
+
+    from anki_miner.utils import ffmpeg_resolver
+
+    fake_ffprobe = tmp_path / "my_ffprobe"
+    fake_ffprobe.write_text("#!/bin/sh\n")
+    cfg = dataclasses.replace(test_config, ffprobe_location=str(fake_ffprobe))
+
+    widget = SingleEpisodeTab(
+        config=cfg,
+        presenter=MagicMock(name="Presenter"),
+        progress_callback=MagicMock(name="ProgressCallback"),
+    )
+    try:
+        ffmpeg_resolver._clear_cache()
+        fake_video = tmp_path / "ep01.mkv"
+        fake_video.touch()
+
+        with (
+            patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams", return_value=[]) as mock_list,
+            patch("PyQt6.QtWidgets.QMessageBox.information"),
+        ):
+            widget.video_selector.get_path = MagicMock(return_value=str(fake_video))
+            widget.video_selector.is_valid = MagicMock(return_value=True)
+            widget._on_tracks_clicked()
+
+        _, kwargs = mock_list.call_args
+        assert kwargs.get("ffprobe_cmd") == str(fake_ffprobe)
+    finally:
+        ffmpeg_resolver._clear_cache()
+        widget.deleteLater()
+
+
+# ---------------------------------------------------------------------------
 # 7. _start_processing passes override to EpisodeWorkerThread
 # ---------------------------------------------------------------------------
 
