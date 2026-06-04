@@ -12,12 +12,18 @@ priority: "optional"
 
 overrides:
   deb:
-    recommends:
+    # The .deb does NOT bundle ffmpeg (see licenses/ffmpeg/README.md); it is a
+    # hard runtime requirement satisfied by the system / PATH, so depends (not
+    # recommends). The release workflow strips the bundled ffmpeg into the
+    # deb-stage tree referenced below before packaging.
+    depends:
       - ffmpeg
 
 contents:
-  # Install the PyInstaller bundle to /opt/anki-miner/
-  - src: dist/AnkiMiner/
+  # Install the PyInstaller bundle to /opt/anki-miner/. Source is dist/deb-stage/
+  # — a copy of dist/AnkiMiner/ with the bundled GPL ffmpeg/ffprobe removed (the
+  # deb relies on system ffmpeg). The AppImage and tarball still bundle ffmpeg.
+  - src: dist/deb-stage/
     dst: /opt/anki-miner/
     type: tree
 
