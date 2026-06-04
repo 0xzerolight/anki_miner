@@ -33,6 +33,10 @@ _IMG_SRC_RE = re.compile(r'src="([^"]+)"', re.IGNORECASE)
 
 # Used to normalize a stored first-field value to the same key Anki dedups on.
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+# Media uploads are base64-heavy; a smaller chunk than the 100-note addNotes
+# batch keeps individual request payloads manageable.
+_MEDIA_BATCH_CHUNK = 50
 _SOUND_REF_RE = re.compile(r"\[(?:sound|anki:play[^\]]*):[^\]]*\]", re.IGNORECASE)
 
 
@@ -674,8 +678,6 @@ class AnkiService:
         Returns:
             Set of filenames that were successfully stored
         """
-        media_batch_chunk = 50
-
         # Build (filename → action) mapping, deduped by filename (last writer
         # wins, matching the old set-based dedup semantics).
         actions_by_filename: dict[str, dict] = {}
@@ -699,10 +701,16 @@ class AnkiService:
 
         stored: set[str] = set()
         try:
-            for chunk_start in range(0, len(actions), media_batch_chunk):
-                chunk_filenames = filenames[chunk_start : chunk_start + media_batch_chunk]
-                chunk_actions = actions[chunk_start : chunk_start + media_batch_chunk]
+            for chunk_start in range(0, len(actions), _MEDIA_BATCH_CHUNK):
+                chunk_filenames = filenames[chunk_start : chunk_start + _MEDIA_BATCH_CHUNK]
+                chunk_actions = actions[chunk_start : chunk_start + _MEDIA_BATCH_CHUNK]
                 sub_results = post_multi(self.config.ankiconnect_url, chunk_actions, timeout=30)
+                if len(sub_results) != len(chunk_actions):
+                    logger.warning(
+                        "post_multi returned %d results for %d actions; some files may be silently skipped",
+                        len(sub_results),
+                        len(chunk_actions),
+                    )
                 for filename, sub_result in zip(chunk_filenames, sub_results, strict=False):
                     if not (isinstance(sub_result, dict) and sub_result.get("error")):
                         stored.add(filename)
@@ -727,26 +735,6 @@ class AnkiService:
             "version": 6,
             "params": {"filename": filename, "data": data_base64},
         }
-
-    def _store_one_media(self, filename: str, src_path: Path) -> bool:
-        """Upload one media file via AnkiConnect. Returns True on success.
-
-        On failure (file read error, AnkiConnect error), logs and returns False.
-        """
-        action = self._build_store_media_action(filename, src_path)
-        if action is None:
-            return False
-        try:
-            post_action(
-                self.config.ankiconnect_url,
-                "storeMediaFile",
-                params=action["params"],
-                timeout=30,
-            )
-            return True
-        except AnkiConnectionError as e:
-            logger.warning(f"Failed to store media file {filename}: {e}")
-            return False
 
     def delete_notes(self, note_ids: list[int]) -> int:
         """Delete notes from Anki by their IDs.
