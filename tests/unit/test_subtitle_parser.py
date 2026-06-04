@@ -61,14 +61,14 @@ class TestParseSubtitleFile:
     """Tests for parse_subtitle_file method."""
 
     def test_file_not_found_raises_subtitle_parse_error(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             service = SubtitleParserService(test_config)
 
         with pytest.raises(SubtitleParseError, match="not found"):
             service.parse_subtitle_file(Path("/nonexistent/file.ass"))
 
     def test_parse_failure_raises_subtitle_parse_error(self, test_config, tmp_path):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             service = SubtitleParserService(test_config)
 
         bad_file = tmp_path / "bad.ass"
@@ -104,7 +104,7 @@ class TestParseSubtitleFile:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             words = service.parse_subtitle_file(sub_file)
@@ -142,7 +142,7 @@ class TestParseSubtitleFile:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(config)
             words = service.parse_subtitle_file(sub_file)
@@ -187,7 +187,7 @@ class TestParseSubtitleFile:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             words = service.parse_subtitle_file(sub_file)
@@ -233,7 +233,7 @@ class TestParseSubtitleFile:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             words = service.parse_subtitle_file(sub_file)
@@ -258,7 +258,7 @@ class TestParseSubtitleFile:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.subtitle_parser.clean_subtitle_text", return_value=""),
         ):
             service = SubtitleParserService(test_config)
@@ -298,7 +298,7 @@ class TestParseSubtitleFile:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             words = service.parse_subtitle_file(sub_file)
@@ -333,7 +333,7 @@ class TestExpressionFuriganaSource:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch(
                 "anki_miner.services.subtitle_parser.generate_furigana",
                 return_value="stub",
@@ -367,7 +367,7 @@ class TestShouldIncludeWord:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     def test_excludes_empty_surface(self, service):
@@ -489,7 +489,7 @@ class TestExtractLemma:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     def test_returns_lemma(self, service):
@@ -515,7 +515,7 @@ class TestExtractReading:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     def test_returns_kana(self, service):
@@ -544,7 +544,7 @@ class TestParseRawEntries:
         mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
 
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = SubtitleParserService(test_config)
@@ -575,7 +575,7 @@ class TestParseRawEntries:
         mock_subs.__iter__ = MagicMock(return_value=iter([line1, line2]))
 
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = SubtitleParserService(test_config)
@@ -586,7 +586,7 @@ class TestParseRawEntries:
 
     def test_file_not_found_raises_error(self, test_config):
         """Should raise SubtitleParseError for missing file."""
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             service = SubtitleParserService(test_config)
 
         with pytest.raises(SubtitleParseError, match="not found"):
@@ -609,7 +609,7 @@ class TestParseRawEntries:
         mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
 
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = SubtitleParserService(config)
@@ -626,7 +626,7 @@ class TestCompoundReassembly:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     @pytest.mark.parametrize(
@@ -735,7 +735,7 @@ class TestPrefixCompounds:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     @pytest.mark.parametrize(
@@ -828,7 +828,7 @@ class TestVerbNominalizers:
 
     @pytest.fixture
     def service(self, test_config):
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             return SubtitleParserService(test_config)
 
     @pytest.mark.parametrize(
@@ -1096,7 +1096,7 @@ class TestParseSubtitleFileWithIndex:
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(config)
             _, index = service.parse_subtitle_file_with_index(sub_file)
@@ -1153,7 +1153,7 @@ class TestParseSubtitleFileWithIndex:
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(config)
             _, index = service.parse_subtitle_file_with_index(sub_file)
@@ -1239,7 +1239,7 @@ class TestParseSubtitleFileWithIndex:
         )
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(config)
             _, index = service.parse_subtitle_file_with_index(sub_file)
@@ -1288,7 +1288,7 @@ class TestSubtitleRegexFilter:
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) 今日はいい天気", 0, 2000)])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = self._build_raw_service(config)
@@ -1306,7 +1306,7 @@ class TestSubtitleRegexFilter:
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) 今日はいい天気", 0, 2000)])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = self._build_raw_service(config)
@@ -1330,7 +1330,7 @@ class TestSubtitleRegexFilter:
             ],
         )
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = self._build_raw_service(config)
@@ -1351,7 +1351,7 @@ class TestSubtitleRegexFilter:
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) こんにちは", 0, 2000)])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = self._build_raw_service(config)
@@ -1371,7 +1371,7 @@ class TestSubtitleRegexFilter:
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("テスト", 0, 1000)])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
             caplog.at_level("WARNING"),
         ):
@@ -1395,7 +1395,7 @@ class TestSubtitleRegexFilter:
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(全部消える)", 0, 2000)])
         mock_tagger = MagicMock(return_value=[])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = SubtitleParserService(config)
@@ -1417,7 +1417,7 @@ class TestSubtitleRegexFilter:
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) [足音] ♪歌う♪ こんにちは", 0, 2000)])
         with (
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger"),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
         ):
             service = self._build_raw_service(config)
@@ -1672,7 +1672,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             counts = service.count_lemmas(sub_file)
@@ -1699,7 +1699,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             counts = service.count_lemmas(sub_file)
@@ -1722,7 +1722,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             counts = service.count_lemmas(sub_file)
@@ -1750,7 +1750,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             counts = service.count_lemmas(sub_file)
@@ -1765,6 +1765,10 @@ class TestCountLemmas:
         parse_subtitle_file deduplicates, so its lemma set is a subset of
         count_lemmas keys (same inclusion filter, just without counting repeats).
         For a file with no repeated lemmas the two sets must be identical.
+
+        With the shared-tagger singleton, service_a and service_b share one
+        tagger instance.  The same mock is reused for both phases; the
+        behavioral assertions are unchanged.
         """
         sub_file = tmp_path / "test.srt"
         sub_file.write_text("placeholder", encoding="utf-8")
@@ -1774,31 +1778,24 @@ class TestCountLemmas:
         wo = _make_token("を", "助詞", lemma="を", kana="ヲ")
         shiraberu = _make_token("調べる", "動詞", lemma="調べる", kana="シラベル")
 
-        def _make_mocks():
-            mock_subs = self._make_mock_subs(line_spec)
-            mock_tagger = MagicMock()
-            # count_lemmas: 1 tagger call for tokenizing the line
-            # parse_subtitle_file: 1 tokenize + 2 sentence-level + 2 expression-level per word
-            # We reset side_effect for each call below.
-            return mock_subs, mock_tagger
+        # Single shared tagger mock — both service instances get it via the singleton.
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [jiken, wo, shiraberu]
 
         # Run count_lemmas
-        mock_subs_a, mock_tagger_a = _make_mocks()
-        mock_tagger_a.return_value = [jiken, wo, shiraberu]
+        mock_subs_a = self._make_mock_subs(line_spec)
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs_a),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger_a),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service_a = SubtitleParserService(test_config)
             counts = service_a.count_lemmas(sub_file)
 
         # Run parse_subtitle_file
         mock_subs_b = self._make_mock_subs(line_spec)
-        mock_tagger_b = MagicMock()
-        mock_tagger_b.return_value = [jiken, wo, shiraberu]
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs_b),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger_b),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service_b = SubtitleParserService(test_config)
             words = service_b.parse_subtitle_file(sub_file)
@@ -1826,7 +1823,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
         ):
             service = SubtitleParserService(test_config)
             counts = service.count_lemmas(sub_file)
@@ -1844,7 +1841,7 @@ class TestCountLemmas:
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.fugashi.Tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.subtitle_parser.clean_subtitle_text", return_value=""),
         ):
             service = SubtitleParserService(test_config)
@@ -1855,7 +1852,7 @@ class TestCountLemmas:
 
     def test_file_not_found_raises_subtitle_parse_error(self, test_config):
         """Should propagate SubtitleParseError from _load_subs for missing file."""
-        with patch("anki_miner.services.subtitle_parser.fugashi.Tagger"):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             service = SubtitleParserService(test_config)
 
         with pytest.raises(SubtitleParseError, match="not found"):

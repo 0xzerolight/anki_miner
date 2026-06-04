@@ -8,12 +8,12 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-import fugashi
 import pysubs2
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
+from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
     clean_subtitle_text,
     generate_furigana,
@@ -66,7 +66,7 @@ class SubtitleParserService:
             config: Configuration for parsing
         """
         self.config = config
-        self.tagger = fugashi.Tagger()
+        self.tagger = get_shared_tagger()
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
             try:
