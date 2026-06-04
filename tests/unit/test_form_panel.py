@@ -6,19 +6,11 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication, QCheckBox, QLabel
+from PyQt6.QtWidgets import QApplication, QCheckBox, QLabel, QWidget
 
 from anki_miner.gui.widgets.base.form_panel import FormPanel
 
 _app = QApplication.instance() or QApplication([])
-
-
-def _find_helper_label(panel: FormPanel, text_contains: str) -> QLabel | None:
-    """Locate the QLabel whose text contains a substring."""
-    for label in panel.findChildren(QLabel):
-        if text_contains in label.text():
-            return label
-    return None
 
 
 def _find_helper_text_label(panel: FormPanel) -> QLabel | None:
@@ -88,8 +80,6 @@ def test_field_with_helper_returns_widget():
 
 def test_field_with_helper_no_label_does_not_create_container():
     """When label is empty and helper is set, no container QWidget should wrap the input."""
-    from PyQt6.QtWidgets import QWidget
-
     panel = FormPanel("Test Panel")
     widget = QCheckBox()
     panel.add_field("", widget, helper="Some help")
