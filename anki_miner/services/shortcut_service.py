@@ -6,6 +6,7 @@ CLI-driven `create-shortcut` command with a pure service the GUI can call.
 """
 
 import contextlib
+import os
 import shutil
 import subprocess
 import sys
@@ -50,6 +51,15 @@ class ShortcutService:
     @staticmethod
     def _find_executable() -> Path | None:
         """Locate the anki_miner_gui executable (or frozen binary)."""
+        # AppImage runtime sets APPIMAGE to the real .appimage path before Python
+        # starts. sys.executable inside an AppImage is the ephemeral /tmp/.mount_*
+        # FUSE path that vanishes when the app closes, so the APPIMAGE check MUST
+        # come before the sys.frozen branch — otherwise the desktop entry's Exec
+        # points at a mount that no longer exists on the next launch. Mirrors
+        # update_checker._detect_target().
+        appimage = os.environ.get("APPIMAGE")
+        if appimage:
+            return Path(appimage).resolve()
         if getattr(sys, "frozen", False):
             return Path(sys.executable).resolve()
 
