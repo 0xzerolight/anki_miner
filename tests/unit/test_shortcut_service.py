@@ -62,7 +62,8 @@ class TestShortcutExists:
 
 
 class TestFindExecutable:
-    def test_uses_sys_executable_when_frozen(self, tmp_path):
+    def test_uses_sys_executable_when_frozen(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("APPIMAGE", raising=False)
         fake_exe = tmp_path / "anki_miner_gui"
         fake_exe.touch()
 
@@ -72,6 +73,24 @@ class TestFindExecutable:
         ):
             result = ShortcutService._find_executable()
         assert result == fake_exe.resolve()
+
+    def test_uses_appimage_env_when_set(self, tmp_path, monkeypatch):
+        """Inside an AppImage, Exec must point at the real .appimage file, not the
+        ephemeral /tmp/.mount_* FUSE path in sys.executable (regression for the
+        broken-launcher bug)."""
+        real_appimage = tmp_path / "AnkiMiner-2.5.0-Linux-x86_64.appimage"
+        real_appimage.touch()
+        mount_exe = tmp_path / ".mount_AnkiMiNXXXXXX" / "usr" / "bin" / "AnkiMiner"
+
+        monkeypatch.setenv("APPIMAGE", str(real_appimage))
+        with (
+            patch.object(sys, "executable", str(mount_exe)),
+            patch.object(sys, "frozen", True, create=True),
+        ):
+            result = ShortcutService._find_executable()
+
+        assert result == real_appimage.resolve()
+        assert result != mount_exe.resolve()
 
     def test_finds_via_path_when_not_frozen(self, tmp_path):
         fake_exe = tmp_path / "anki_miner_gui"
