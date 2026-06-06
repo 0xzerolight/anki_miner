@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.widgets.base import field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
 
@@ -158,15 +159,18 @@ class QueuePanel(QFrame):
 
         layout = QVBoxLayout()
 
+        # Shared label-column width so every labeled row lines up.
+        label_w = field_label_width("Anime Folder:", "Subtitle Folder:", "Subtitle Offset:")
+
         # Anime folder selector
-        anime_selector = FileSelector(label="Anime Folder:", file_mode=False)
+        anime_selector = FileSelector(label="Anime Folder:", file_mode=False, label_width=label_w)
         current_anime, _ = widget.get_folders()
         if current_anime:
             anime_selector.set_path(str(current_anime))
         layout.addWidget(anime_selector)
 
         # Subtitle folder selector
-        subtitle_selector = FileSelector(label="Subtitle Folder:", file_mode=False)
+        subtitle_selector = FileSelector(label="Subtitle Folder:", file_mode=False, label_width=label_w)
         _, current_subtitle = widget.get_folders()
         if current_subtitle:
             subtitle_selector.set_path(str(current_subtitle))
@@ -176,6 +180,7 @@ class QueuePanel(QFrame):
         offset_layout = QHBoxLayout()
         offset_label = QLabel("Subtitle Offset:")
         offset_label.setObjectName("field-label")
+        offset_label.setFixedWidth(label_w)
         offset_spinbox = QDoubleSpinBox()
         offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
         offset_spinbox.setSingleStep(0.5)

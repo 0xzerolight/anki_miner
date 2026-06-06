@@ -29,6 +29,7 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from anki_miner.gui.widgets.base import field_label_width
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -212,12 +213,19 @@ class BatchProcessingTab(MiningTabBase):
         header = SectionHeader(title="Quick Processing")
         layout.addWidget(header)
 
+        # Shared label-column width so both folder rows line up.
+        label_w = field_label_width("Anime Folder:", "Subtitle Folder:")
+
         # Anime folder selector
-        self.anime_folder_selector = FileSelector(label="Anime Folder:", file_mode=False, file_filter="")
+        self.anime_folder_selector = FileSelector(
+            label="Anime Folder:", file_mode=False, file_filter="", label_width=label_w
+        )
         layout.addWidget(self.anime_folder_selector)
 
         # Subtitle folder selector
-        self.subtitle_folder_selector = FileSelector(label="Subtitle Folder:", file_mode=False, file_filter="")
+        self.subtitle_folder_selector = FileSelector(
+            label="Subtitle Folder:", file_mode=False, file_filter="", label_width=label_w
+        )
         layout.addWidget(self.subtitle_folder_selector)
 
         # Action buttons

@@ -154,3 +154,51 @@ def find_japanese_audio_stream(video_file: Path, ffprobe_cmd: str = "ffprobe") -
     available_langs = [s.language_tag or "unknown" for s in streams]
     logger.warning(f"No Japanese audio found in {video_file}. Available languages: {available_langs}")
     return None
+
+
+def get_primary_video_codec(video_file: Path, ffprobe_cmd: str = "ffprobe") -> str | None:
+    """Return the codec_name of the first video stream (lowercased), or None.
+
+    Returns None on any ffprobe failure (timeout, OSError, non-zero exit,
+    malformed JSON), or when the file has no video stream / no ``codec_name``.
+    Callers treat None as "assume supported" so a probe failure never disables
+    an otherwise-working preview.
+
+    ``ffprobe_cmd`` is the executable to invoke; defaults to the bare
+    ``"ffprobe"`` literal. Config-bearing callers should pass
+    ``resolve_ffprobe(config)`` so frozen bundles use the bundled binary.
+    """
+    cmd = [
+        ffprobe_cmd,
+        "-v",
+        "quiet",
+        "-print_format",
+        "json",
+        "-show_streams",
+        "-select_streams",
+        "v:0",
+        str(video_file),
+    ]
+
+    try:
+        proc = subprocess.run(cmd, capture_output=True, timeout=30, text=True)
+    except (subprocess.SubprocessError, OSError) as e:
+        logger.warning(f"Error probing video codec for {video_file}: {e}")
+        return None
+
+    if proc.returncode != 0:
+        logger.warning(f"ffprobe failed for {video_file}: {proc.stderr}")
+        return None
+
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError as e:
+        logger.warning(f"ffprobe returned malformed JSON for {video_file}: {e}")
+        return None
+
+    streams = data.get("streams", [])
+    if not streams:
+        return None
+
+    codec = streams[0].get("codec_name")
+    return codec.lower() if codec else None
