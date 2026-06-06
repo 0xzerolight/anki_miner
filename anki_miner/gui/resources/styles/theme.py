@@ -68,6 +68,17 @@ REQUIRED_COLOR_KEYS = frozenset(
     ]
 )
 
+# Font scale bounds (inclusive).  Shared by initialize() and set_font_scale()
+# so the two clamping sites can never drift apart.
+FONT_SCALE_MIN: float = 1.0
+FONT_SCALE_MAX: float = 2.0
+
+
+def _clamp_font_scale(scale: float) -> float:
+    """Return *scale* clamped to [FONT_SCALE_MIN, FONT_SCALE_MAX]."""
+    return max(FONT_SCALE_MIN, min(FONT_SCALE_MAX, scale))
+
+
 # Source marker for built-in themes shipped with the package.
 SOURCE_SHIPPED = "shipped"
 # Source marker for themes from ~/.anki_miner/themes/ (or wherever themes_root points).
@@ -278,7 +289,7 @@ class Theme:
         cls._user_dir = user_dir
         cls._shipped_dir_override = shipped_dir
         cls._state_listener = state_listener
-        cls._font_scale = max(1.0, min(2.0, font_scale))
+        cls._font_scale = _clamp_font_scale(font_scale)
         # Theme JSONs may have changed (user dir swap, test reset); drop the
         # compiled-stylesheet cache so the next apply rebuilds from current
         # color values. The raw QSS template never changes at runtime, so
@@ -405,7 +416,7 @@ class Theme:
                 with the updated scale. Callers are responsible for calling
                 apply_to_app to repaint the live application.
         """
-        clamped = max(1.0, min(2.0, scale))
+        clamped = _clamp_font_scale(scale)
         if clamped == cls._font_scale:
             return
         cls._font_scale = clamped
