@@ -68,6 +68,14 @@ def test_set_progress_advances_smoothly_episode_by_episode(widget):
     assert actual == expected
 
 
+def test_progress_bar_text_hidden(widget):
+    """No centered X/100 text painted on the bar, in any state."""
+    assert widget.progress_bar.isTextVisible() is False
+    widget.set_determinate(12)
+    widget.set_progress(1, 12, "Episode 1")
+    assert widget.progress_bar.isTextVisible() is False
+
+
 def test_reset_restores_default_state(widget):
     widget.set_determinate(7)
     widget.set_progress(3, 7, "Mid")
