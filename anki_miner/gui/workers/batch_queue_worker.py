@@ -34,7 +34,7 @@ class BatchQueueWorkerThread(CancellableWorker):
         presenter: GUIPresenter,
         progress_callback: GUIProgressCallback | None = None,
         stats_service=None,
-        curation_callback: Callable[[list], list] | None = None,
+        curation_callback: Callable[[list], list | None] | None = None,
         parent=None,
     ):
         """Initialize the batch queue worker thread.

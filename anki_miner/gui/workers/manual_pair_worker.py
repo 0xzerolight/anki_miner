@@ -22,7 +22,7 @@ class ManualPairWorkerThread(CancellableWorker):
         episode_processor: EpisodeProcessor,
         pairs,  # List[FilePair]
         progress_callback: GUIProgressCallback | None = None,
-        curation_callback: Callable[[list], list] | None = None,
+        curation_callback: Callable[[list], list | None] | None = None,
         parent=None,
     ):
         """Initialize the manual pair worker thread.

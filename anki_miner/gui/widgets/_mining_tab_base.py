@@ -143,18 +143,28 @@ class MiningTabBase(QWidget):
     def _init_curation_bridge(self) -> None:
         """Set up the worker→GUI curation bridge. Call once from subclass ``__init__``."""
         self._curation_event = threading.Event()
-        self._curation_result: list = []
+        # None ⇒ the user cancelled/rejected (orchestrator returns a cancelled
+        # result); [] ⇒ confirmed with nothing selected (completed, 0 cards).
+        self._curation_result: list | None = None
         self._active_curation_dialog: WordCurationDialog | None = None
+        # Set when the user cancels. Covers the window between the worker
+        # emitting _curation_requested and the queued GUI slot running: if
+        # cancel lands in that gap the dialog doesn't exist yet, so rejecting
+        # it is a no-op and the slot would otherwise still pop a dialog.
+        self._curation_cancelled = False
         self._curation_requested.connect(self._on_curation_requested)
 
-    def _curation_bridge(self, words: list) -> list:
+    def _curation_bridge(self, words: list) -> list | None:
         """Called ON THE WORKER THREAD: emit to the GUI thread, block until the dialog completes.
 
-        Passed as ``curation_callback`` to ``process_episode``. Returns the user's
-        selected words (empty list ⇒ the orchestrator skips card creation for this episode).
+        Passed as ``curation_callback`` to ``process_episode``. Returns the
+        user's selected words; an empty list means "confirmed with nothing
+        selected" (completed, zero cards), and ``None`` means the user
+        cancelled/rejected the dialog (orchestrator returns a cancelled result).
         """
         self._curation_event.clear()
-        self._curation_result = []
+        self._curation_result = None
+        self._curation_cancelled = False
         self._curation_requested.emit(words)
         self._curation_event.wait()  # Block worker until the GUI sets the event.
         return self._curation_result
@@ -175,6 +185,12 @@ class MiningTabBase(QWidget):
         The ``finally`` guarantees ``_curation_event`` is set even if dialog
         construction/exec raises — otherwise ``_curation_bridge`` hangs forever.
         """
+        if self._curation_cancelled:
+            # Cancel landed before this slot ran; release the worker as
+            # cancelled (None) instead of popping a dialog the user must dismiss.
+            self._curation_result = None
+            self._curation_event.set()
+            return
         media_context, lookup_fn = self._build_curation_context()
         try:
             dialog = WordCurationDialog(
@@ -186,9 +202,11 @@ class MiningTabBase(QWidget):
             )
             self._active_curation_dialog = dialog
             if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
+                # Accepted: the selection (possibly empty) is the result.
                 self._curation_result = dialog.get_selected_words()
             else:
-                self._curation_result = []
+                # Rejected/cancelled: None ⇒ cancelled result downstream.
+                self._curation_result = None
         finally:
             self._active_curation_dialog = None
             self._curation_event.set()
@@ -199,6 +217,9 @@ class MiningTabBase(QWidget):
         Call from each tab's ``_on_cancel_clicked``. ``reject()`` triggers the
         dialog's exec to return Rejected, whose ``finally`` sets the event and the
         worker resumes with an empty selection → orchestrator returns a cancelled result.
+        Also sets ``_curation_cancelled`` so a cancel that arrives before the
+        dialog is built is remembered by :meth:`_on_curation_requested`.
         """
+        self._curation_cancelled = True
         if self._active_curation_dialog is not None:
             self._active_curation_dialog.reject()

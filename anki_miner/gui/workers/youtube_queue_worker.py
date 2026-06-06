@@ -104,7 +104,7 @@ class YouTubeQueueWorker(CancellableWorker):
         processor: EpisodeProcessor,
         config: AnkiMinerConfig,
         items: list[YouTubeQueueItem],
-        curation_callback: Callable[[list], list] | None,
+        curation_callback: Callable[[list], list | None] | None,
         preview_mode: bool,
         parent=None,
     ) -> None:

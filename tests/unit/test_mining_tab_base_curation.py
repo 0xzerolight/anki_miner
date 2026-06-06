@@ -114,7 +114,8 @@ def test_cancel_during_active_dialog_releases_worker(qapp):
 
     The fake dialog's exec spins the event loop (like a real modal) until a
     scheduled _cancel_active_curation_dialog rejects it; the worker then resumes
-    with an empty selection — the orchestrator's cancelled-result contract.
+    with ``None`` — the orchestrator's cancelled-result contract (distinct from
+    an empty list, which means "confirmed with nothing selected").
     """
     tab = _Bare()
     tab._init_curation_bridge()
@@ -149,4 +150,4 @@ def test_cancel_during_active_dialog_releases_worker(qapp):
     worker.wait()
 
     assert state["thread"] is qapp.thread()
-    assert worker.result == []  # cancelled → empty selection
+    assert worker.result is None  # cancelled → None (distinct from empty selection)

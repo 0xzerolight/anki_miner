@@ -30,7 +30,7 @@ class EpisodeWorkerThread(CancellableWorker):
         subtitle_file: Path,
         preview_mode: bool,
         progress_callback: GUIProgressCallback,
-        curation_callback: Callable[[list], list] | None = None,
+        curation_callback: Callable[[list], list | None] | None = None,
         parent=None,
         *,
         audio_track_override: int | None = None,
