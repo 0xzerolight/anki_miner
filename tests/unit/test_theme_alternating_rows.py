@@ -13,6 +13,7 @@ These tests pin both pieces of the fix so a future refactor that drops either
 one surfaces in CI instead of in a user-reported screenshot.
 """
 
+import pytest
 from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import QApplication
 
@@ -20,6 +21,18 @@ from anki_miner.gui.resources.styles.theme import Theme
 
 # QApplication instance needed to exercise apply_to_app.
 _app = QApplication.instance() or QApplication([])
+
+
+@pytest.fixture(autouse=True)
+def _clear_app_stylesheet():
+    """``Theme.apply_to_app`` sets a stylesheet on the shared QApplication.
+    Clear it in teardown so it does not leak into later tests that read widget
+    font metrics / row heights.
+    """
+    yield
+    app = QApplication.instance()
+    if isinstance(app, QApplication):
+        app.setStyleSheet("")
 
 
 class TestAlternatingRowStylesheet:
