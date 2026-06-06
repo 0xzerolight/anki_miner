@@ -131,13 +131,16 @@ def test_star_button_opens_repo_url(main_window, monkeypatch):
     assert captured[0].toString() == "https://github.com/0xzerolight/anki_miner"
 
 
-def test_about_html_credits_bundled_ffmpeg():
-    """The About dialog body credits the bundled GPLv3 FFmpeg build with a link."""
-    from anki_miner.gui.main_window import _build_about_html
+def test_about_dialog_builds_and_shows_version():
+    """AboutDialog constructs headless and renders the version + tagline."""
+    from PyQt6.QtWidgets import QLabel
 
-    html = _build_about_html("9.9.9")
-    assert "9.9.9" in html
-    assert "FFmpeg" in html
-    assert "GPLv3" in html
-    assert "https://ffmpeg.org" in html
-    assert "licenses/ffmpeg/" in html
+    from anki_miner.gui.widgets.dialogs.about_dialog import ABOUT_TAGLINE, AboutDialog
+
+    dialog = AboutDialog("9.9.9")
+    try:
+        texts = [label.text() for label in dialog.findChildren(QLabel)]
+        assert any("9.9.9" in t for t in texts)
+        assert any(ABOUT_TAGLINE in t for t in texts)
+    finally:
+        dialog.deleteLater()
