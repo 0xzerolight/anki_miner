@@ -17,7 +17,7 @@ import pytest
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import create_default_config
-from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
+from anki_miner.gui.resources.styles.theme import FONT_SCALE_MAX, FONT_SCALE_MIN, REQUIRED_COLOR_KEYS, Theme
 from anki_miner.gui.widgets.panels.themes_panel import FONT_SCALE_PRESETS, ThemesPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
@@ -88,6 +88,10 @@ class TestComboPopulation:
         for i, p in enumerate(FONT_SCALE_PRESETS):
             assert combo.itemText(i) == f"{p}%"
             assert combo.itemData(i) == p
+
+
+def test_presets_within_clamp_range() -> None:
+    assert all(FONT_SCALE_MIN * 100 <= p <= FONT_SCALE_MAX * 100 for p in FONT_SCALE_PRESETS)
 
 
 class TestApplyPath:
@@ -180,7 +184,7 @@ class TestSettingsTabForwarding:
         tab = SettingsTab(config)
         try:
             combo = tab.themes_panel.font_scale_combo
-            idx = combo.findData(160 if 160 in FONT_SCALE_PRESETS else 150)
+            idx = combo.findData(150)
             combo.setCurrentIndex(idx)
             tab.themes_panel._on_font_scale_selected(idx)
             assert tab.config.ui_font_scale == pytest.approx(combo.itemData(idx) / 100.0)
