@@ -1414,6 +1414,42 @@ class TestProcessYoutubeUrl:
         assert len(seen) == 1
         assert [w.lemma for w in seen[0]] == ["食べる"]
 
+    def test_curation_returning_none_is_cancelled(self, test_config, mock_services, tmp_path):
+        """Curation callback returning None ⇒ cancelled result, no cards."""
+        processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+            curation_callback=lambda words: None,
+        )
+
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
+        assert result.cards_created == 0
+        assert "Processing cancelled by user" in result.errors
+
+    def test_curation_returning_empty_list_is_completed_zero_cards(self, test_config, mock_services, tmp_path):
+        """Curation callback returning [] (confirmed, nothing selected) ⇒
+        completed run with zero cards — NOT a cancellation."""
+        processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+            curation_callback=lambda words: [],
+        )
+
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
+        assert result.cards_created == 0
+        assert result.new_words_found == 0
+        assert "Processing cancelled by user" not in result.errors
+
     def test_preview_mode_true_forwarded_to_process_episode(self, test_config, mock_services, tmp_path):
         """preview_mode=True short-circuits before card creation."""
         processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
