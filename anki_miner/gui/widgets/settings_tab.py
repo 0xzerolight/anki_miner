@@ -169,6 +169,7 @@ class SettingsTab(QWidget):
 
         # Themes panel persists immediately on any change (live-preview model).
         self.themes_panel.state_changed.connect(self._on_theme_state_changed)
+        self.themes_panel.font_scale_changed.connect(self._on_font_scale_changed)
 
         # Hold a reference to the fetch-fields worker across its lifetime.
         # Without this attribute, a freshly-spawned QThread can be garbage
@@ -319,6 +320,18 @@ class SettingsTab(QWidget):
         persists to ``gui_config.json`` without duplicate logic.
         """
         self.config = replace(self.config, theme=active, theme_favorites=tuple(favorites))
+        self.config_changed.emit(self.config)
+
+    def _on_font_scale_changed(self, scale: float) -> None:
+        """Fold the Themes panel font-scale change into the config and persist.
+
+        Mirrors :meth:`_on_theme_state_changed`: the Themes panel writes
+        through Theme directly (live preview); this slot reflects the new
+        scale into ``self.config`` and re-emits so the existing
+        ``config_changed`` → ``MainWindow.update_config`` chain persists
+        ``ui_font_scale`` to ``gui_config.json``.
+        """
+        self.config = replace(self.config, ui_font_scale=scale)
         self.config_changed.emit(self.config)
 
     def _on_save_clicked(self) -> None:
