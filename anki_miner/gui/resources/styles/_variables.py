@@ -70,7 +70,10 @@ def get_variable_dict(font_scale: float = 1.0) -> dict[str, str]:
     Variable names follow the pattern: category-name (e.g., spacing-md, font-size-h1)
 
     Args:
-        font_scale: Multiplier applied to font-size-* entries only. Must be >= 1.0.
+        font_scale: Multiplier applied to font-size-* entries only. Callers are
+            responsible for passing a value already clamped to an acceptable range
+            (clamping lives in ``Theme``). Values below 1.0 will shrink fonts; the
+            only floor enforced here is 1px per font-size entry.
             Default 1.0 produces identical output to the unscaled baseline.
 
     Returns:
