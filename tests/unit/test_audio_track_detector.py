@@ -11,6 +11,7 @@ from anki_miner.utils.audio_track_detector import (
     AudioStream,
     JapaneseAudioStream,
     find_japanese_audio_stream,
+    get_primary_video_codec,
     list_audio_streams,
 )
 
@@ -333,3 +334,59 @@ class TestFindJapaneseFfprobeCmd:
         with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)) as mock_run:
             find_japanese_audio_stream(video_file, ffprobe_cmd="/custom/ffprobe")
         assert mock_run.call_args[0][0][0] == "/custom/ffprobe"
+
+
+def _video_json(codec_name) -> str:
+    """Build an ffprobe JSON payload for a single video stream.
+
+    ``codec_name`` of None omits the field; otherwise it's set verbatim.
+    """
+    stream: dict = {"index": 0, "codec_type": "video"}
+    if codec_name is not None:
+        stream["codec_name"] = codec_name
+    return json.dumps({"streams": [stream]})
+
+
+class TestGetPrimaryVideoCodec:
+    def test_av1_returned_lowercase(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=_video_json("av1"))):
+            assert get_primary_video_codec(video_file) == "av1"
+
+    def test_uppercase_codec_normalized(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=_video_json("AV1"))):
+            assert get_primary_video_codec(video_file) == "av1"
+
+    def test_h264_returned(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=_video_json("h264"))):
+            assert get_primary_video_codec(video_file) == "h264"
+
+    def test_no_streams_returns_none(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout='{"streams": []}')):
+            assert get_primary_video_codec(video_file) is None
+
+    def test_missing_codec_name_returns_none(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=_video_json(None))):
+            assert get_primary_video_codec(video_file) is None
+
+    def test_nonzero_returncode_returns_none(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(returncode=1, stderr="boom")):
+            assert get_primary_video_codec(video_file) is None
+
+    def test_subprocess_error_returns_none(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", side_effect=subprocess.TimeoutExpired("ffprobe", 30)):
+            assert get_primary_video_codec(video_file) is None
+
+    def test_os_error_returns_none(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", side_effect=FileNotFoundError("ffprobe missing")):
+            assert get_primary_video_codec(video_file) is None
+
+    def test_malformed_json_returns_none(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout="not json{")):
+            assert get_primary_video_codec(video_file) is None
+
+    def test_forwards_custom_ffprobe_cmd_and_selects_video_stream(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=_video_json("av1"))) as mock_run:
+            get_primary_video_codec(video_file, ffprobe_cmd="/custom/ffprobe")
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == "/custom/ffprobe"
+        assert "v:0" in cmd  # selects the first video stream
