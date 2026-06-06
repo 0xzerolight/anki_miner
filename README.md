@@ -1,16 +1,20 @@
 # <p align="center">Anki Miner</p>
 
-[![CI](https://github.com/0xzerolight/anki_miner/actions/workflows/ci.yml/badge.svg)](https://github.com/0xzerolight/anki_miner/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/anki-miner.svg)](https://pypi.org/project/anki-miner/)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-Contributor%20Covenant%203.0-blueviolet.svg)](CODE_OF_CONDUCT.md)
-[![GitHub stars](https://img.shields.io/github/stars/0xzerolight/anki_miner?style=social)](https://github.com/0xzerolight/anki_miner/stargazers)
+<p align="center">
+<a href="https://pypi.org/project/anki-miner/"><img src="https://img.shields.io/pypi/v/anki-miner.svg" alt="PyPI version"></a>
+<a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
+<a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
+<a href="https://github.com/0xzerolight/anki_miner/releases/latest"><img src="https://img.shields.io/github/downloads/0xzerolight/anki_miner/total.svg" alt="GitHub downloads"></a>
+<a href="https://github.com/0xzerolight/anki_miner/stargazers"><img src="https://img.shields.io/github/stars/0xzerolight/anki_miner?style=social" alt="GitHub stars"></a>
+</p>
 
+<p align="center">
 Turn native Japanese content into Anki vocabulary cards - with screenshots, sentence audio, furigana, pitch accent, and frequency data.
+</p>
 
-
+<p align="center">
 Please leave a ⭐ star if Anki Miner helped you - it helps others find it.
+</p>
 
 
 ## Showcase
