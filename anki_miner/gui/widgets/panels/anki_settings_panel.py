@@ -60,8 +60,6 @@ class AnkiSettingsPanel(FormPanel):
         self.connection_status = StatusBadge("AnkiConnect", status="checking", clickable=False)
         self.add_widget(self.connection_status)
 
-        self.add_spacing(SPACING.xs)
-
         # AnkiConnect URL
         self.ankiconnect_url_input = QLineEdit()
         self.ankiconnect_url_input.setPlaceholderText("http://localhost:8765")
@@ -84,22 +82,15 @@ class AnkiSettingsPanel(FormPanel):
         button_layout.addStretch()
 
         self.test_connection_button = ModernButton("Test Connection", variant="secondary")
+        self.test_connection_button.setToolTip("Anki must be running with AnkiConnect installed.")
         self.test_connection_button.clicked.connect(self._on_test_connection)
         button_layout.addWidget(self.test_connection_button)
 
         self.add_layout(button_layout)
 
-        # General helper text
-        helper = QLabel("Anki must be running with AnkiConnect installed.")
-        helper.setObjectName("helper-text")
-        helper.setWordWrap(True)
-        self.add_widget(helper)
-
-        self.add_spacing(SPACING.sm)
-
         # Deck name with sync button
         self._add_labeled_field_with_button(
-            label_text="Deck Name:",
+            label_text="Deck Name",
             input_widget_name="deck_input",
             placeholder="Enter deck name...",
             tooltip="",
@@ -114,11 +105,9 @@ class AnkiSettingsPanel(FormPanel):
         self.deck_status.setObjectName("validation-status")
         self.add_widget(self.deck_status)
 
-        self.add_spacing(SPACING.xs)
-
         # Note type with sync button
         self._add_labeled_field_with_button(
-            label_text="Note Type:",
+            label_text="Note Type",
             input_widget_name="note_type_input",
             placeholder="Enter note type name...",
             tooltip="",
@@ -133,16 +122,11 @@ class AnkiSettingsPanel(FormPanel):
         self.notetype_status.setObjectName("validation-status")
         self.add_widget(self.notetype_status)
 
-        self.add_spacing(SPACING.sm)
-
         # Card Field Mappings section
         self.add_section("Card Field Mappings")
 
         # Helper text for card fields
-        card_fields_helper = QLabel(
-            "Map your data to Anki note fields. Field names must match your note type exactly. "
-            "Leave a field empty to skip it during card creation."
-        )
+        card_fields_helper = QLabel("Map data to note fields (names must match exactly). Blank = skip.")
         card_fields_helper.setObjectName("helper-text")
         card_fields_helper.setWordWrap(True)
         self.add_widget(card_fields_helper)
@@ -156,99 +140,87 @@ class AnkiSettingsPanel(FormPanel):
         fetch_layout.addWidget(self.fetch_fields_button)
         self.add_layout(fetch_layout)
 
-        self.add_spacing(SPACING.xs)
-
         # Expression field (word)
         self.expression_field_input = QLineEdit()
         self.expression_field_input.setPlaceholderText("Expression")
-        self._add_simple_field(
-            "Expression Field",
-            self.expression_field_input,
-            "Stores the mined Japanese word.",
-        )
+        self.add_field("Expression Field", self.expression_field_input, helper="Stores the mined Japanese word.")
 
         # Sentence field
         self.sentence_field_input = QLineEdit()
         self.sentence_field_input.setPlaceholderText("Sentence")
-        self._add_simple_field(
-            "Sentence Field",
-            self.sentence_field_input,
-            "Stores the example sentence from the subtitle.",
+        self.add_field(
+            "Sentence Field", self.sentence_field_input, helper="Stores the example sentence from the subtitle."
         )
 
         # Definition field
         self.definition_field_input = QLineEdit()
         self.definition_field_input.setPlaceholderText("MainDefinition")
-        self._add_simple_field(
+        self.add_field(
             "Definition Field",
             self.definition_field_input,
-            "Stores the English definition from the dictionary chain.",
+            helper="Stores the English definition from the dictionary chain.",
         )
 
         # Glossary field (second definition slot — receives concatenated hits
         # from every enabled dictionary; Senren-toggle compatible).
         self.glossary_field_input = QLineEdit()
         self.glossary_field_input.setPlaceholderText("Glossary")
-        self._add_simple_field(
+        self.add_field(
             "Glossary Field",
             self.glossary_field_input,
-            "Concatenated hits from every enabled dictionary as Yomitan HTML.",
+            helper="Concatenated hits from every enabled dictionary as Yomitan HTML.",
         )
 
         # Picture field
         self.picture_field_input = QLineEdit()
         self.picture_field_input.setPlaceholderText("Picture")
-        self._add_simple_field("Picture Field", self.picture_field_input, "Stores the screenshot.")
+        self.add_field("Picture Field", self.picture_field_input, helper="Stores the screenshot.")
 
         # Audio field
         self.audio_field_input = QLineEdit()
         self.audio_field_input.setPlaceholderText("SentenceAudio")
-        self._add_simple_field("Audio Field", self.audio_field_input, "Stores the sentence audio clip.")
+        self.add_field("Audio Field", self.audio_field_input, helper="Stores the sentence audio clip.")
 
         # Expression Furigana field
         self.expression_furigana_field_input = QLineEdit()
         self.expression_furigana_field_input.setPlaceholderText("ExpressionFurigana")
-        self._add_simple_field(
+        self.add_field(
             "Expression Furigana Field",
             self.expression_furigana_field_input,
-            "Stores the expression with furigana readings.",
+            helper="Stores the expression with furigana readings.",
         )
 
         # Expression Reading field (plain kana)
         self.expression_reading_field_input = QLineEdit()
         self.expression_reading_field_input.setPlaceholderText("ExpressionReading")
-        self._add_simple_field(
+        self.add_field(
             "Expression Reading Field",
             self.expression_reading_field_input,
-            "Stores the expression as plain kana.",
+            helper="Stores the expression as plain kana.",
         )
 
         # Sentence Furigana field
         self.sentence_furigana_field_input = QLineEdit()
         self.sentence_furigana_field_input.setPlaceholderText("SentenceFurigana")
-        self._add_simple_field(
+        self.add_field(
             "Sentence Furigana Field",
             self.sentence_furigana_field_input,
-            "Stores the sentence with furigana readings.",
+            helper="Stores the sentence with furigana readings.",
         )
 
         # Sentence Reading field (plain kana)
         self.sentence_reading_field_input = QLineEdit()
         self.sentence_reading_field_input.setPlaceholderText("SentenceReading")
-        self._add_simple_field(
+        self.add_field(
             "Sentence Reading Field",
             self.sentence_reading_field_input,
-            "Stores the sentence as plain kana.",
+            helper="Stores the sentence as plain kana.",
         )
 
         # Auxiliary Data Fields section
         self.add_section("Auxiliary Data Fields")
 
-        auxiliary_helper = QLabel(
-            "These fields require auxiliary data files (pitch_accent.csv, frequency.csv) "
-            "in ~/.anki_miner/. Map them to your Anki note type's matching fields, "
-            "or leave blank to skip."
-        )
+        auxiliary_helper = QLabel("Need pitch_accent.csv / frequency.csv in ~/.anki_miner/. Blank = skip.")
         auxiliary_helper.setObjectName("helper-text")
         auxiliary_helper.setWordWrap(True)
         self.add_widget(auxiliary_helper)
@@ -256,49 +228,40 @@ class AnkiSettingsPanel(FormPanel):
         # Pitch Position field
         self.pitch_position_field_input = QLineEdit()
         self.pitch_position_field_input.setPlaceholderText("PitchPosition")
-        self._add_simple_field(
+        self.add_field(
             "Pitch Position Field",
             self.pitch_position_field_input,
-            "Stores the numeric pitch drop position.",
+            helper="Stores the numeric pitch drop position.",
         )
 
         # Pitch Category field
         self.pitch_category_field_input = QLineEdit()
         self.pitch_category_field_input.setPlaceholderText("PitchCategory")
-        self._add_simple_field(
-            "Pitch Category Field",
-            self.pitch_category_field_input,
-            "Stores the pitch category label.",
+        self.add_field(
+            "Pitch Category Field", self.pitch_category_field_input, helper="Stores the pitch category label."
         )
 
         # Pitch Category format (jp vs romaji)
         self.pitch_category_format_combo = QComboBox()
         self.pitch_category_format_combo.addItem("Japanese (平板/頭高/中高/尾高/起伏)", "jp")
         self.pitch_category_format_combo.addItem("Romaji (heiban/atamadaka/nakadaka/odaka/kifuku)", "romaji")
-        self._add_simple_field(
+        self.add_field(
             "Pitch Category Format",
             self.pitch_category_format_combo,
-            "Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.",
+            helper="Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.",
         )
 
         # Frequency field
         self.frequency_field_input = QLineEdit()
         self.frequency_field_input.setPlaceholderText("Frequency")
-        self._add_simple_field(
-            "Frequency Field",
-            self.frequency_field_input,
-            "Stores the word frequency rank.",
-        )
+        self.add_field("Frequency Field", self.frequency_field_input, helper="Stores the word frequency rank.")
 
         # Card Styling section (Issue #44)
         self.add_section("Card Styling")
 
         styling_helper = QLabel(
-            'Style the dictionary definitions on your cards. "Apply to Note Type" writes a '
-            "managed CSS block into the note type via AnkiConnect — it only touches its own "
-            'block, never your hand-written CSS, and "Remove" reverts it cleanly. Custom CSS '
-            "is appended after the bundled defaults; published Yomitan/Jitendex snippets work "
-            "verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries."
+            '"Apply to Note Type" writes a managed CSS block via AnkiConnect (never touches your own CSS; '
+            '"Remove" reverts cleanly). Custom CSS is appended after the bundled defaults.'
         )
         styling_helper.setObjectName("helper-text")
         styling_helper.setWordWrap(True)
@@ -322,6 +285,10 @@ class AnkiSettingsPanel(FormPanel):
         mono_font = QFont("monospace")
         mono_font.setStyleHint(QFont.StyleHint.Monospace)
         mono_font.setPixelSize(FONT_SIZES.small)
+        self.custom_css_edit.setToolTip(
+            "Published Yomitan/Jitendex snippets work verbatim. "
+            "Re-import a dictionary to refresh its data-sc-* hooks on older entries."
+        )
         self.custom_css_edit.setFont(mono_font)
         self.custom_css_edit.setMinimumHeight(120)
         self.custom_css_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
@@ -354,33 +321,33 @@ class AnkiSettingsPanel(FormPanel):
         button_callback,
         helper_text: str = "",
     ) -> None:
-        """Add a labeled field with an inline button.
+        """Add a labeled input + inline sync button as a single compact form row.
+
+        The input and button are wrapped in a container widget so the whole pair
+        sits in one ``add_field`` row (label beside control), matching the other
+        densified settings panels. Helper text becomes the field's hover tooltip.
 
         Args:
-            label_text: Label text (including colon)
+            label_text: Label text (no colon; ``add_field`` appends it)
             input_widget_name: Attribute name for the input widget
             placeholder: Placeholder text for input
             tooltip: Tooltip for input
             button_name: Attribute name for the button
             button_tooltip: Tooltip for button
             button_callback: Callback for button click
-            helper_text: Optional helper text below the field
+            helper_text: Optional helper text shown as a tooltip on the field
         """
-        # Label
-        label = QLabel(label_text)
-        label.setObjectName("field-label")
-        make_label_fit_text(label)
-        self.add_widget(label)
-
         # Container for input + button
-        container = QHBoxLayout()
-        container.setSpacing(SPACING.xs)
+        container = QWidget()
+        row = QHBoxLayout(container)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(SPACING.xs)
 
         # Input
         input_widget = QLineEdit()
         input_widget.setPlaceholderText(placeholder)
         input_widget.setToolTip(tooltip)
-        container.addWidget(input_widget, 1)
+        row.addWidget(input_widget, 1)
         setattr(self, input_widget_name, input_widget)
 
         # Sync button
@@ -388,47 +355,10 @@ class AnkiSettingsPanel(FormPanel):
         sync_button.clicked.connect(button_callback)
         sync_button.setToolTip(button_tooltip)
         sync_button.setMaximumWidth(40)
-        container.addWidget(sync_button)
+        row.addWidget(sync_button)
         setattr(self, button_name, sync_button)
 
-        self.add_layout(container)
-
-        # Helper text
-        if helper_text:
-            helper = QLabel(helper_text)
-            helper.setObjectName("helper-text")
-            helper.setWordWrap(True)
-            helper_font = QFont()
-            helper_font.setPixelSize(FONT_SIZES.small)
-            helper.setFont(helper_font)
-            self.add_widget(helper)
-
-    def _add_simple_field(self, label_text: str, input_widget: QWidget, helper_text: str = "") -> None:
-        """Add a simple labeled field to the main layout.
-
-        Args:
-            label_text: Label text (will add colon automatically)
-            input_widget: The QLineEdit widget to add
-            helper_text: Optional helper text below the field
-        """
-        # Label
-        label = QLabel(f"{label_text}:")
-        label.setObjectName("field-label")
-        make_label_fit_text(label)
-        self.add_widget(label)
-
-        # Input widget
-        self.add_widget(input_widget)
-
-        # Helper text
-        if helper_text:
-            helper = QLabel(helper_text)
-            helper.setObjectName("helper-text")
-            helper.setWordWrap(True)
-            helper_font = QFont()
-            helper_font.setPixelSize(FONT_SIZES.small)
-            helper.setFont(helper_font)
-            self.add_widget(helper)
+        self.add_field(label_text, container, helper=helper_text)
 
     def _on_deck_sync(self) -> None:
         """Handle deck sync button click."""
