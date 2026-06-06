@@ -7,6 +7,32 @@ rather than using fixed dimensions.
 from PyQt6.QtWidgets import QLabel, QSizePolicy, QWidget
 
 
+def field_label_width(*texts: str) -> int:
+    """Compute a shared column width for a group of ``field-label`` labels.
+
+    Returns the widest preferred width across ``texts`` when each is rendered
+    as a ``#field-label`` QLabel, so callers can give every labeled row in a
+    section the same label-column width and keep their input fields aligned.
+
+    Each candidate label is polished with ``ensurePolished()`` so the QSS
+    padding on ``#field-label`` is included in ``sizeHint()`` regardless of
+    whether the real widgets have been added to the widget tree yet.
+
+    Args:
+        *texts: The label texts that will share the column.
+
+    Returns:
+        The maximum required width in pixels, or 0 when no texts are given.
+    """
+    width = 0
+    for text in texts:
+        label = QLabel(text)
+        label.setObjectName("field-label")
+        label.ensurePolished()
+        width = max(width, label.sizeHint().width())
+    return width
+
+
 def make_label_fit_text(label: QLabel) -> None:
     """Make a label only as wide as its text content.
 
