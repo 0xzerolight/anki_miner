@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QSlider,
     QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -38,7 +39,12 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.resources.styles.theme import Theme, ThemeGroupEntry
+from anki_miner.gui.resources.styles.theme import (
+    FONT_SCALE_MAX,
+    FONT_SCALE_MIN,
+    Theme,
+    ThemeGroupEntry,
+)
 from anki_miner.gui.widgets.enhanced import ModernButton
 
 logger = logging.getLogger(__name__)
@@ -71,6 +77,7 @@ class ThemesPanel(QWidget):
 
     state_changed = pyqtSignal(str, tuple)
     favorites_changed = pyqtSignal()
+    font_scale_changed = pyqtSignal(float)
 
     # Column indices for clarity.
     COL_NAME = 0  # tree expander + name
@@ -94,9 +101,15 @@ class ThemesPanel(QWidget):
         # for the tri-state family star.
         self._star_buttons: dict[str, QToolButton] = {}
         self._family_records: dict[str, tuple[QTreeWidgetItem, str, list[ThemeGroupEntry]]] = {}
+        # True while the text-size slider handle is held down with the mouse.
+        # During a drag we only update the percentage label (cheap) and defer
+        # the expensive full-app restyle to sliderReleased. Keyboard/page
+        # steps don't set this flag, so they apply immediately on valueChanged.
+        self._slider_pressed = False
 
         self._setup_ui()
         self._populate()
+        self._sync_font_scale_slider()
 
     # ---- UI construction -------------------------------------------------
 
@@ -112,6 +125,34 @@ class ThemesPanel(QWidget):
         intro.setWordWrap(True)
         intro.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(intro)
+
+        # Text size (global UI font scale) row. The slider is in whole
+        # percent (100–200%); apply maps it to a float scale [1.0, 2.0].
+        font_row = QHBoxLayout()
+        font_row.setSpacing(SPACING.sm)
+
+        font_label = QLabel("Text size")
+        font_label.setToolTip("Scale all UI text. Applies live across the app.")
+        font_row.addWidget(font_label)
+
+        self.font_scale_slider = QSlider(Qt.Orientation.Horizontal)
+        self.font_scale_slider.setObjectName("fontScaleSlider")
+        self.font_scale_slider.setMinimum(round(FONT_SCALE_MIN * 100))
+        self.font_scale_slider.setMaximum(round(FONT_SCALE_MAX * 100))
+        self.font_scale_slider.setSingleStep(10)
+        self.font_scale_slider.setPageStep(10)
+        self.font_scale_slider.setToolTip("Scale all UI text. Applies live across the app.")
+        self.font_scale_slider.valueChanged.connect(self._on_font_scale_value_changed)
+        self.font_scale_slider.sliderPressed.connect(self._on_font_scale_pressed)
+        self.font_scale_slider.sliderReleased.connect(self._on_font_scale_released)
+        font_row.addWidget(self.font_scale_slider, 1)
+
+        self.font_scale_label = QLabel("100%")
+        self.font_scale_label.setMinimumWidth(48)
+        self.font_scale_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        font_row.addWidget(self.font_scale_label)
+
+        layout.addLayout(font_row)
 
         self.tree = QTreeWidget(self)
         # objectName lets common.qss scope styling overrides to just this tree
@@ -482,3 +523,52 @@ class ThemesPanel(QWidget):
         app = QApplication.instance()
         if isinstance(app, QApplication):
             Theme.apply_to_app(app, mode)
+
+    # ---- Text size (font scale) -----------------------------------------
+
+    def _sync_font_scale_slider(self) -> None:
+        """Set the slider + label from the current Theme font scale.
+
+        Signals are blocked so syncing from Theme state never re-triggers an
+        apply/emit (mirrors how ``_populate`` blocks the tree's signals).
+        """
+        value = round(Theme.get_font_scale() * 100)
+        self.font_scale_slider.blockSignals(True)
+        try:
+            self.font_scale_slider.setValue(value)
+        finally:
+            self.font_scale_slider.blockSignals(False)
+        self.font_scale_label.setText(f"{value}%")
+
+    def _on_font_scale_pressed(self) -> None:
+        """Mark the slider as being dragged so valueChanged defers the apply."""
+        self._slider_pressed = True
+
+    def _on_font_scale_released(self) -> None:
+        """End of a mouse drag — apply the slider's final value once."""
+        self._slider_pressed = False
+        self._apply_font_scale(self.font_scale_slider.value())
+
+    def _on_font_scale_value_changed(self, value: int) -> None:
+        """Track the percentage label live; apply only when not mid-drag.
+
+        During a mouse drag (``_slider_pressed``) we update only the cheap
+        label and let ``_on_font_scale_released`` do the single expensive
+        restyle. Keyboard arrows / page steps don't set the pressed flag, so
+        they apply immediately here.
+        """
+        self.font_scale_label.setText(f"{value}%")
+        if not self._slider_pressed:
+            self._apply_font_scale(value)
+
+    def _apply_font_scale(self, value: int) -> None:
+        """Apply ``value`` percent as the global UI font scale and persist.
+
+        Restyles the whole app (so text rescales live) then emits
+        ``font_scale_changed`` so the settings tab can fold the new scale into
+        the config and persist it.
+        """
+        scale = value / 100.0
+        Theme.set_font_scale(scale)
+        self._apply_to_app(Theme.get_current_mode())
+        self.font_scale_changed.emit(scale)
