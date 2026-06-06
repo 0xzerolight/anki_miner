@@ -71,10 +71,14 @@ class PrewarmWorker(QThread):
         sqlite handles close) when this method returns.
         """
         try:
-            # Build + warm the SHARED tagger singleton (the one mining reuses)
-            # by running it once on a tiny string. Do NOT discard it.
-            tagger = get_shared_tagger()
-            tagger("ウォームアップ")
+            # Build the SHARED tagger singleton (the one mining reuses); this
+            # loads unidic-lite, the dominant first-use cost. Do NOT discard it.
+            # We deliberately do NOT run a warm `.parse()` here: a MeCab tagger
+            # is not safe for concurrent `.parse()` on one instance, and a parse
+            # on this background thread could race a mining worker's parse on the
+            # same singleton if the user clicks Mine during prewarm (see the
+            # single-flight note in services/tagger.py).
+            get_shared_tagger()
 
             # Warm the sqlite page cache / meta sidecars for the configured
             # dictionary chain, then discard everything (no shared connections).
