@@ -281,7 +281,7 @@ class Theme:
                 replaces the auto-detected package shipped dir. A non-existent
                 path disables shipped themes (useful for test isolation).
             font_scale: Global font scale multiplier for QSS font-size
-                variables. Clamped to [1.0, 2.0]. Default 1.0 (no scaling).
+                variables. Clamped to [0.5, 2.0]. Default 1.0 (no scaling).
         """
         cls._instance = None
         cls._current_mode = active
@@ -411,7 +411,7 @@ class Theme:
         """Set the global font scale multiplier and invalidate the QSS cache.
 
         Args:
-            scale: New font scale. Clamped to [1.0, 2.0]. The compiled-QSS
+            scale: New font scale. Clamped to [0.5, 2.0]. The compiled-QSS
                 cache is cleared so the next get_stylesheet call recompiles
                 with the updated scale. Callers are responsible for calling
                 apply_to_app to repaint the live application.
