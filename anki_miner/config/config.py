@@ -248,6 +248,9 @@ class AnkiMinerConfig:
     theme: str = "light"
     theme_favorites: tuple[str, ...] = ("light", "dark")
     themes_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "themes")
+    # Global UI font scale factor. Applied to all QSS ${font-size-*} variables.
+    # Clamped to [1.0, 2.0] in __post_init__; values outside the range are silently clamped.
+    ui_font_scale: float = 1.0
 
     def __post_init__(self):
         """Convert string paths to Path objects if needed."""
@@ -308,6 +311,9 @@ class AnkiMinerConfig:
         # JSON round-trip yields a list for excluded_wordsets; coerce to tuple.
         if isinstance(self.excluded_wordsets, list):
             object.__setattr__(self, "excluded_wordsets", tuple(self.excluded_wordsets))
+
+        # Clamp ui_font_scale to [1.0, 2.0]
+        object.__setattr__(self, "ui_font_scale", max(1.0, min(2.0, float(self.ui_font_scale))))
 
         # Keep anki_word_field in sync with anki_fields["word"]
         word_field_from_mapping = self.anki_fields.get("word", "")
