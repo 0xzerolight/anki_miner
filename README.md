@@ -19,13 +19,13 @@ Please leave a ⭐ star if Anki Miner helped you - it helps others find it.
 
 ## Showcase
 
-![Anki Miner Showcase](gifs/anki_miner_showcase.png)
+![Anki Miner Showcase](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/anki_miner_showcase.png)
 
 ### Example cards
 
-| | | |
-|---|---|---|
-| ![Cowboy Bebop](gifs/cowboy_bebop.gif) | ![Frieren](gifs/frieren.gif) | ![Steins;Gate](gifs/steins;gate.gif) |
+| ![いちゃいちゃ](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/いちゃいちゃ.gif) | ![ホント](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/ホント.gif) | ![代](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/代.gif) |
+|:--:|:--:|:--:|
+| 🔊 [with sound](https://github.com/0xzerolight/anki_miner/blob/main/gifs/いちゃいちゃ.mp4) | 🔊 [with sound](https://github.com/0xzerolight/anki_miner/blob/main/gifs/ホント.mp4) | 🔊 [with sound](https://github.com/0xzerolight/anki_miner/blob/main/gifs/代.mp4) |
 
 ## Installation
 
