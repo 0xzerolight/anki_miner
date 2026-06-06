@@ -312,8 +312,8 @@ class AnkiMinerConfig:
         if isinstance(self.excluded_wordsets, list):
             object.__setattr__(self, "excluded_wordsets", tuple(self.excluded_wordsets))
 
-        # Clamp ui_font_scale to [1.0, 2.0]
-        object.__setattr__(self, "ui_font_scale", max(1.0, min(2.0, float(self.ui_font_scale))))
+        # Clamp ui_font_scale to [0.5, 2.0]
+        object.__setattr__(self, "ui_font_scale", max(0.5, min(2.0, float(self.ui_font_scale))))
 
         # Keep anki_word_field in sync with anki_fields["word"]
         word_field_from_mapping = self.anki_fields.get("word", "")

@@ -46,12 +46,17 @@ class TestSetFontScale:
     def test_clamp_below_min(self):
         _reset()
         Theme.set_font_scale(0.1)
-        assert Theme.get_font_scale() == 1.0
+        assert Theme.get_font_scale() == 0.5
+
+    def test_sub_one_scale_unchanged(self):
+        _reset()
+        Theme.set_font_scale(0.75)
+        assert Theme.get_font_scale() == 0.75
 
     def test_clamp_at_exact_bounds(self):
         _reset()
-        Theme.set_font_scale(1.0)
-        assert Theme.get_font_scale() == 1.0
+        Theme.set_font_scale(0.5)
+        assert Theme.get_font_scale() == 0.5
         Theme.set_font_scale(2.0)
         assert Theme.get_font_scale() == 2.0
 
@@ -78,8 +83,12 @@ class TestInitializeFontScale:
         assert Theme.get_font_scale() == 2.0
 
     def test_initialize_clamps_below_min(self):
+        Theme.initialize(active="light", favorites=("light", "dark"), font_scale=0.1)
+        assert Theme.get_font_scale() == 0.5
+
+    def test_initialize_accepts_min_boundary(self):
         Theme.initialize(active="light", favorites=("light", "dark"), font_scale=0.5)
-        assert Theme.get_font_scale() == 1.0
+        assert Theme.get_font_scale() == 0.5
 
 
 class TestStylesheetScaling:

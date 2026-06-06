@@ -70,7 +70,7 @@ REQUIRED_COLOR_KEYS = frozenset(
 
 # Font scale bounds (inclusive).  Shared by initialize() and set_font_scale()
 # so the two clamping sites can never drift apart.
-FONT_SCALE_MIN: float = 1.0
+FONT_SCALE_MIN: float = 0.5
 FONT_SCALE_MAX: float = 2.0
 
 
