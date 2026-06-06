@@ -25,6 +25,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from anki_miner.gui.widgets.base import field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -73,6 +74,15 @@ class DeckBuilderTab(MiningTabBase):
     # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
+        # Shared label-column width so every labeled row across both cards
+        # lines its input field up at the same x.
+        self._label_w = field_label_width(
+            "Anime Video Folder:",
+            "Subtitle Folder:",
+            "Deck Name:",
+            "Word Selection:",
+        )
+
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
@@ -115,6 +125,7 @@ class DeckBuilderTab(MiningTabBase):
             label="Anime Video Folder:",
             file_mode=False,
             placeholder="Select folder with video files…",
+            label_width=self._label_w,
         )
         layout.addWidget(self.video_folder_selector)
 
@@ -122,6 +133,7 @@ class DeckBuilderTab(MiningTabBase):
             label="Subtitle Folder:",
             file_mode=False,
             placeholder="Select folder with subtitle files…",
+            label_width=self._label_w,
         )
         layout.addWidget(self.subtitle_folder_selector)
 
@@ -145,7 +157,7 @@ class DeckBuilderTab(MiningTabBase):
         deck_row.setSpacing(SPACING.xs)
         deck_label = QLabel("Deck Name:")
         deck_label.setObjectName("field-label")
-        deck_label.setMinimumWidth(120)
+        deck_label.setFixedWidth(self._label_w)
         deck_row.addWidget(deck_label)
         self.deck_name_edit = QLineEdit()
         self.deck_name_edit.setPlaceholderText("Enter deck name…")
@@ -157,7 +169,7 @@ class DeckBuilderTab(MiningTabBase):
         mode_row.setSpacing(SPACING.xs)
         mode_label = QLabel("Word Selection:")
         mode_label.setObjectName("field-label")
-        mode_label.setMinimumWidth(120)
+        mode_label.setFixedWidth(self._label_w)
         mode_row.addWidget(mode_label)
         self.mode_combo = QComboBox()
         self.mode_combo.addItem("All vocabulary", userData=DeckSelectionMode.ALL)
@@ -170,7 +182,7 @@ class DeckBuilderTab(MiningTabBase):
         # Value inputs (one per relevant mode; only one visible at a time)
         value_row = QHBoxLayout()
         value_row.setSpacing(SPACING.xs)
-        value_row.addSpacing(120 + SPACING.xs)  # align under the combo
+        value_row.addSpacing(self._label_w + SPACING.xs)  # align under the combo
 
         self.top_n_spinbox = QSpinBox()
         self.top_n_spinbox.setRange(1, 100_000)
