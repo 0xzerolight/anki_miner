@@ -167,10 +167,18 @@ class WordFilterService:
     ) -> list[TokenizedWord]:
         """Drop words on any enabled name wordset (Issue #59).
 
-        Matches ``word.lemma`` against the bundled proper-noun sets, the
-        same key ``filter_by_word_lists`` uses. The user whitelist, when
-        provided, short-circuits the drop so an explicitly-wanted name is
-        kept.
+        Matches ``word.mined_form`` against the bundled proper-noun sets.
+        The wordset data is JMnedict surface (``keb``) forms, and names are
+        nouns whose card Expression is ``mined_form`` (= surface), so the
+        exclusion key must be ``mined_form`` for parity with card creation,
+        AnkiConnect dedup, the existing-vocab filter, and the script-type
+        filter. (Keying on ``lemma`` here let a name slip through whenever
+        unidic's noun lemma diverged from its surface form.)
+
+        The user whitelist, when provided, short-circuits the drop. It stays
+        keyed on ``word.lemma`` to match ``WordListService``'s documented
+        convention (users enter dictionary forms in their list files), the
+        same key ``filter_by_word_lists`` uses.
 
         Args:
             words: Words to filter.
@@ -184,7 +192,7 @@ class WordFilterService:
         result = []
         for word in words:
             whitelisted = word_list_service is not None and word_list_service.is_whitelisted(word.lemma)
-            if whitelisted or not wordset_service.is_excluded(word.lemma):
+            if whitelisted or not wordset_service.is_excluded(word.mined_form):
                 result.append(word)
         return result
 
