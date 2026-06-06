@@ -1,6 +1,12 @@
 """Utility functions for Anki Miner."""
 
-from .audio_track_detector import AudioStream, JapaneseAudioStream, find_japanese_audio_stream, list_audio_streams
+from .audio_track_detector import (
+    AudioStream,
+    JapaneseAudioStream,
+    find_japanese_audio_stream,
+    get_primary_video_codec,
+    list_audio_streams,
+)
 from .file_utils import cleanup_temp_files, ensure_directory, safe_filename
 from .sort_utils import natural_sort_key
 from .text_utils import (
@@ -23,6 +29,7 @@ __all__ = [
     "clean_subtitle_text",
     "extract_japanese_text",
     "find_japanese_audio_stream",
+    "get_primary_video_codec",
     "generate_furigana",
     "generate_reading",
     "is_hiragana_only",
