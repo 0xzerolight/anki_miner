@@ -249,7 +249,7 @@ class AnkiMinerConfig:
     theme_favorites: tuple[str, ...] = ("light", "dark")
     themes_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "themes")
     # Global UI font scale factor. Applied to all QSS ${font-size-*} variables.
-    # Clamped to [1.0, 2.0] in __post_init__; values outside the range are silently clamped.
+    # Clamped to [0.5, 2.0] in __post_init__; values outside the range are silently clamped.
     ui_font_scale: float = 1.0
 
     def __post_init__(self):
