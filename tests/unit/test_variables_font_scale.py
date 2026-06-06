@@ -75,3 +75,14 @@ class TestGetVariableDictFloor:
         for key, val in d.items():
             if key.startswith("font-size-"):
                 assert int(val) >= 1, f"{key}={val} dropped below 1px"
+
+    def test_sub_one_scale_stays_at_least_1px(self):
+        # scale=0.5 must shrink fonts but never below the 1px floor.
+        d = get_variable_dict(0.5)
+        for key, val in d.items():
+            if key.startswith("font-size-"):
+                assert int(val) >= 1, f"{key}={val} dropped below 1px at scale=0.5"
+
+    def test_sub_one_scale_shrinks_body(self):
+        # round(14 * 0.5) == 7
+        assert get_variable_dict(0.5)["font-size-body"] == "7"
