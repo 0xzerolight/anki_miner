@@ -408,9 +408,6 @@ class WordCurationDialog(QDialog):
         self.table.setSortingEnabled(False)
         self.table.blockSignals(True)
         self.table.setRowCount(len(self._words))
-        # Some Qt versions reset vertical-header section modes on setRowCount;
-        # re-applying is cheap insurance.
-        self._apply_fixed_row_height()
 
         for row, word in enumerate(self._words):
             # Checkbox column
@@ -449,6 +446,11 @@ class WordCurationDialog(QDialog):
 
         self.table.blockSignals(False)
         self.table.setSortingEnabled(True)
+
+        # Re-apply AFTER sorting is re-enabled: re-enabling sorting resets the
+        # vertical-header resize mode to Interactive, which drops the scaled
+        # Fixed row height. Re-applying here keeps it in effect.
+        self._apply_fixed_row_height()
 
     def _make_readonly_item(self, text: str) -> QTableWidgetItem:
         item = QTableWidgetItem(text)
