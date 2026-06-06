@@ -26,11 +26,11 @@ from PyQt6.QtCore import Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import QCursor, QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
+    QComboBox,
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QSlider,
     QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -40,8 +40,6 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import (
-    FONT_SCALE_MAX,
-    FONT_SCALE_MIN,
     Theme,
     ThemeGroupEntry,
 )
@@ -62,6 +60,13 @@ _STAR_OUTLINE = "☆"
 # Color used for the dimmed (partial) family star. Same glyph as filled,
 # lower alpha — reads as "some but not all variants favorited".
 _FAMILY_STAR_PARTIAL_OPACITY = 0.45
+
+# Discrete UI font-scale presets (whole percents) offered in the Text size
+# dropdown. All values sit inside the [0.5, 2.0] clamp range. A dropdown is
+# used instead of a slider because QComboBox is styled (common.qss) and clearly
+# visible, whereas the bare QSlider had no QSS and rendered near-invisible
+# (Issue #63).
+FONT_SCALE_PRESETS = (50, 75, 100, 125, 150, 175, 200)
 
 
 class ThemesPanel(QWidget):
@@ -101,15 +106,10 @@ class ThemesPanel(QWidget):
         # for the tri-state family star.
         self._star_buttons: dict[str, QToolButton] = {}
         self._family_records: dict[str, tuple[QTreeWidgetItem, str, list[ThemeGroupEntry]]] = {}
-        # True while the text-size slider handle is held down with the mouse.
-        # During a drag we only update the percentage label (cheap) and defer
-        # the expensive full-app restyle to sliderReleased. Keyboard/page
-        # steps don't set this flag, so they apply immediately on valueChanged.
-        self._slider_pressed = False
 
         self._setup_ui()
         self._populate()
-        self._sync_font_scale_slider()
+        self._sync_font_scale_combo()
 
     # ---- UI construction -------------------------------------------------
 
@@ -126,8 +126,8 @@ class ThemesPanel(QWidget):
         intro.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(intro)
 
-        # Text size (global UI font scale) row. The slider is in whole
-        # percent (100–200%); apply maps it to a float scale [1.0, 2.0].
+        # Text size (global UI font scale) row. A styled QComboBox of discrete
+        # percent presets; apply maps the selected percent to a float scale.
         font_row = QHBoxLayout()
         font_row.setSpacing(SPACING.sm)
 
@@ -135,22 +135,20 @@ class ThemesPanel(QWidget):
         font_label.setToolTip("Scale all UI text. Applies live across the app.")
         font_row.addWidget(font_label)
 
-        self.font_scale_slider = QSlider(Qt.Orientation.Horizontal)
-        self.font_scale_slider.setObjectName("fontScaleSlider")
-        self.font_scale_slider.setMinimum(round(FONT_SCALE_MIN * 100))
-        self.font_scale_slider.setMaximum(round(FONT_SCALE_MAX * 100))
-        self.font_scale_slider.setSingleStep(10)
-        self.font_scale_slider.setPageStep(10)
-        self.font_scale_slider.setToolTip("Scale all UI text. Applies live across the app.")
-        self.font_scale_slider.valueChanged.connect(self._on_font_scale_value_changed)
-        self.font_scale_slider.sliderPressed.connect(self._on_font_scale_pressed)
-        self.font_scale_slider.sliderReleased.connect(self._on_font_scale_released)
-        font_row.addWidget(self.font_scale_slider, 1)
+        self.font_scale_combo = QComboBox()
+        self.font_scale_combo.setObjectName("fontScaleCombo")
+        self.font_scale_combo.setToolTip("Scale all UI text. Applies live across the app.")
+        for p in FONT_SCALE_PRESETS:
+            self.font_scale_combo.addItem(f"{p}%", p)
+        # `activated` fires only on user interaction; `currentIndexChanged`
+        # would also fire on the programmatic setCurrentIndex in
+        # _sync_font_scale_combo, re-triggering the expensive apply.
+        self.font_scale_combo.activated.connect(self._on_font_scale_selected)
+        font_row.addWidget(self.font_scale_combo)
 
-        self.font_scale_label = QLabel("100%")
-        self.font_scale_label.setMinimumWidth(48)
-        self.font_scale_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        font_row.addWidget(self.font_scale_label)
+        # Trailing stretch keeps the combo left-aligned next to its label
+        # rather than spanning the full row width.
+        font_row.addStretch(1)
 
         layout.addLayout(font_row)
 
@@ -526,40 +524,35 @@ class ThemesPanel(QWidget):
 
     # ---- Text size (font scale) -----------------------------------------
 
-    def _sync_font_scale_slider(self) -> None:
-        """Set the slider + label from the current Theme font scale.
+    def _sync_font_scale_combo(self) -> None:
+        """Select the combo entry matching the current Theme font scale.
 
         Signals are blocked so syncing from Theme state never re-triggers an
-        apply/emit (mirrors how ``_populate`` blocks the tree's signals).
+        apply/emit (mirrors how ``_populate`` blocks the tree's signals). This
+        is belt-and-suspenders given we connect ``activated`` (user-only), but
+        keeps parity with the prior slider-sync pattern.
+
+        A legacy custom scale that is not one of ``FONT_SCALE_PRESETS`` snaps
+        the display to the nearest preset.
         """
         value = round(Theme.get_font_scale() * 100)
-        self.font_scale_slider.blockSignals(True)
+        idx = self._nearest_preset_index(value)
+        self.font_scale_combo.blockSignals(True)
         try:
-            self.font_scale_slider.setValue(value)
+            self.font_scale_combo.setCurrentIndex(idx)
         finally:
-            self.font_scale_slider.blockSignals(False)
-        self.font_scale_label.setText(f"{value}%")
+            self.font_scale_combo.blockSignals(False)
 
-    def _on_font_scale_pressed(self) -> None:
-        """Mark the slider as being dragged so valueChanged defers the apply."""
-        self._slider_pressed = True
+    def _nearest_preset_index(self, value: int) -> int:
+        """Return the index of the preset closest to ``value`` percent."""
+        return min(range(len(FONT_SCALE_PRESETS)), key=lambda i: abs(FONT_SCALE_PRESETS[i] - value))
 
-    def _on_font_scale_released(self) -> None:
-        """End of a mouse drag — apply the slider's final value once."""
-        self._slider_pressed = False
-        self._apply_font_scale(self.font_scale_slider.value())
-
-    def _on_font_scale_value_changed(self, value: int) -> None:
-        """Track the percentage label live; apply only when not mid-drag.
-
-        During a mouse drag (``_slider_pressed``) we update only the cheap
-        label and let ``_on_font_scale_released`` do the single expensive
-        restyle. Keyboard arrows / page steps don't set the pressed flag, so
-        they apply immediately here.
-        """
-        self.font_scale_label.setText(f"{value}%")
-        if not self._slider_pressed:
-            self._apply_font_scale(value)
+    def _on_font_scale_selected(self, index: int) -> None:
+        """Apply the preset the user picked from the dropdown."""
+        percent = self.font_scale_combo.itemData(index)
+        if percent is None:
+            return
+        self._apply_font_scale(int(percent))
 
     def _apply_font_scale(self, value: int) -> None:
         """Apply ``value`` percent as the global UI font scale and persist.
@@ -567,8 +560,22 @@ class ThemesPanel(QWidget):
         Restyles the whole app (so text rescales live) then emits
         ``font_scale_changed`` so the settings tab can fold the new scale into
         the config and persist it.
+
+        The restyle repolishes the entire widget tree synchronously on the GUI
+        thread (a multi-second freeze for large trees). We can't avoid that
+        cost, so we show a busy cursor while it runs and pump events once so
+        the cursor actually paints before the blocking work begins.
         """
         scale = value / 100.0
-        Theme.set_font_scale(scale)
-        self._apply_to_app(Theme.get_current_mode())
+        app = QApplication.instance()
+        app = app if isinstance(app, QApplication) else None
+        if app is not None:
+            app.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
+            app.processEvents()  # let the cursor paint before the blocking restyle
+        try:
+            Theme.set_font_scale(scale)
+            self._apply_to_app(Theme.get_current_mode())
+        finally:
+            if app is not None:
+                app.restoreOverrideCursor()
         self.font_scale_changed.emit(scale)

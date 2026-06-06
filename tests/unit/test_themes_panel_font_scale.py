@@ -1,9 +1,10 @@
 """Tests for the Text size (UI font scale) control on the ThemesPanel.
 
-Covers the slider/label sync, the apply-on-release vs apply-on-keyboard
-behavior, and the settings_tab forwarding slot that folds the scale into the
-config. Theme font scale is reset to 1.0 in teardown so state does not leak
-into other tests sharing the Theme singleton.
+Covers the combo population, the apply-on-selection path, the read-only sync
+from Theme state, nearest-preset snapping for legacy custom scales, and the
+settings_tab forwarding slot that folds the scale into the config. Theme font
+scale is reset to 1.0 in teardown so state does not leak into other tests
+sharing the Theme singleton.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
-from anki_miner.gui.widgets.panels.themes_panel import ThemesPanel
+from anki_miner.gui.widgets.panels.themes_panel import FONT_SCALE_PRESETS, ThemesPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
@@ -32,12 +33,12 @@ def _reset_app_font_scale_state():
     """Reset the Theme scale AND clear any enlarged stylesheet the apply path
     left on the shared QApplication.
 
-    The font-scale apply path (slider release / keyboard step) runs
-    ``Theme.apply_to_app`` → ``app.setStyleSheet(<enlarged QSS>)`` on the
-    process-wide QApplication. Resetting only ``set_font_scale(1.0)`` leaves the
-    enlarged stylesheet applied, distorting widget font metrics / row heights in
-    later tests. Clear it here so every test in this module restores a clean
-    slate even if the body raises.
+    The font-scale apply path runs ``Theme.apply_to_app`` →
+    ``app.setStyleSheet(<enlarged QSS>)`` on the process-wide QApplication.
+    Resetting only ``set_font_scale(1.0)`` leaves the enlarged stylesheet
+    applied, distorting widget font metrics / row heights in later tests.
+    Clear it here so every test in this module restores a clean slate even if
+    the body raises.
     """
     yield
     Theme.set_font_scale(1.0)
@@ -73,72 +74,84 @@ def panel(qapp, themes_dir: Path):
     Theme.set_font_scale(1.0)
 
 
+def _index_for_percent(panel: ThemesPanel, percent: int) -> int:
+    return panel.font_scale_combo.findData(percent)
+
+
+class TestComboPopulation:
+    def test_combo_exists_with_object_name(self, panel: ThemesPanel) -> None:
+        assert panel.font_scale_combo.objectName() == "fontScaleCombo"
+
+    def test_combo_has_exactly_the_presets(self, panel: ThemesPanel) -> None:
+        combo = panel.font_scale_combo
+        assert combo.count() == len(FONT_SCALE_PRESETS)
+        for i, p in enumerate(FONT_SCALE_PRESETS):
+            assert combo.itemText(i) == f"{p}%"
+            assert combo.itemData(i) == p
+
+
 class TestApplyPath:
-    def test_release_applies_and_emits(self, panel: ThemesPanel) -> None:
+    @pytest.mark.parametrize(
+        ("percent", "expected_scale"),
+        [(50, 0.5), (100, 1.0), (125, 1.25), (200, 2.0)],
+    )
+    def test_selecting_preset_applies_and_emits(self, panel: ThemesPanel, percent: int, expected_scale: float) -> None:
         captured: list[float] = []
         panel.font_scale_changed.connect(captured.append)
 
-        # Simulate a mouse drag: press, drag to 150 (label-only, no apply),
-        # release (single apply).
-        panel.font_scale_slider.sliderPressed.emit()
-        panel.font_scale_slider.setValue(150)
-        assert panel.font_scale_label.text() == "150%"
-        # Mid-drag: Theme scale is untouched, nothing emitted yet.
-        assert Theme.get_font_scale() == 1.0
-        assert captured == []
+        idx = _index_for_percent(panel, percent)
+        panel.font_scale_combo.setCurrentIndex(idx)
+        panel._on_font_scale_selected(idx)
 
-        panel.font_scale_slider.sliderReleased.emit()
-        assert Theme.get_font_scale() == 1.5
-        assert captured == [1.5]
+        assert Theme.get_font_scale() == pytest.approx(expected_scale)
+        assert captured == [pytest.approx(expected_scale)]
 
-    def test_keyboard_style_change_applies_immediately(self, panel: ThemesPanel) -> None:
-        # No press → a value change (e.g. keyboard arrow / page step) applies
-        # immediately without waiting for a release.
+    def test_activated_signal_drives_apply(self, panel: ThemesPanel) -> None:
         captured: list[float] = []
         panel.font_scale_changed.connect(captured.append)
 
-        panel.font_scale_slider.setValue(180)
-        assert Theme.get_font_scale() == pytest.approx(1.8)
-        assert panel.font_scale_label.text() == "180%"
-        assert captured == [pytest.approx(1.8)]
+        idx = _index_for_percent(panel, 150)
+        panel.font_scale_combo.activated.emit(idx)
+
+        assert Theme.get_font_scale() == pytest.approx(1.5)
+        assert captured == [pytest.approx(1.5)]
 
 
 class TestSyncFromTheme:
-    def test_sync_sets_slider_and_label_without_emitting(self, panel: ThemesPanel) -> None:
+    def test_sync_selects_index_without_emitting(self, panel: ThemesPanel) -> None:
         Theme.set_font_scale(2.0)
         captured: list[float] = []
         panel.font_scale_changed.connect(captured.append)
 
-        panel._sync_font_scale_slider()
+        panel._sync_font_scale_combo()
 
-        assert panel.font_scale_slider.value() == 200
-        assert panel.font_scale_label.text() == "200%"
+        assert panel.font_scale_combo.currentData() == 200
         # Signals are blocked during sync — no spurious apply/emit.
         assert captured == []
         # And Theme scale is unchanged (sync reads, never writes).
         assert Theme.get_font_scale() == 2.0
+
+    def test_legacy_non_preset_scale_snaps_to_nearest(self, panel: ThemesPanel) -> None:
+        # A legacy custom scale of 1.3 (130%) is not a preset; the display
+        # snaps to the nearest preset (125%) and must not emit.
+        Theme.set_font_scale(1.3)
+        captured: list[float] = []
+        panel.font_scale_changed.connect(captured.append)
+
+        panel._sync_font_scale_combo()
+
+        assert panel.font_scale_combo.currentData() == 125
+        assert captured == []
+        assert Theme.get_font_scale() == 1.3
 
     def test_initial_value_reflects_theme(self, qapp, themes_dir: Path) -> None:
         Theme.initialize(active="light", favorites=("light",), shipped_dir=themes_dir)
         Theme.set_font_scale(1.5)
         try:
             p = ThemesPanel(themes_dir)
-            assert p.font_scale_slider.value() == 150
-            assert p.font_scale_label.text() == "150%"
+            assert p.font_scale_combo.currentData() == 150
         finally:
             Theme.set_font_scale(1.0)
-
-
-class TestLabelTracksDuringDrag:
-    def test_label_tracks_apply_deferred(self, panel: ThemesPanel) -> None:
-        panel.font_scale_slider.sliderPressed.emit()
-        panel.font_scale_slider.setValue(120)
-        assert panel.font_scale_label.text() == "120%"
-        # Apply is deferred until release: Theme scale stays at baseline.
-        assert Theme.get_font_scale() == 1.0
-        panel.font_scale_slider.setValue(170)
-        assert panel.font_scale_label.text() == "170%"
-        assert Theme.get_font_scale() == 1.0
 
 
 class TestSettingsTabForwarding:
@@ -161,12 +174,15 @@ class TestSettingsTabForwarding:
             Theme.set_font_scale(1.0)
 
     def test_panel_signal_flows_into_config(self, qapp, themes_dir: Path) -> None:
-        # End-to-end: panel apply → settings_tab slot → config mutated.
+        # End-to-end: panel selection → settings_tab slot → config mutated.
         Theme.initialize(active="light", favorites=("light",), shipped_dir=themes_dir)
         config = replace(create_default_config(), themes_root=themes_dir)
         tab = SettingsTab(config)
         try:
-            tab.themes_panel.font_scale_slider.setValue(160)  # keyboard-style apply
-            assert tab.config.ui_font_scale == pytest.approx(1.6)
+            combo = tab.themes_panel.font_scale_combo
+            idx = combo.findData(160 if 160 in FONT_SCALE_PRESETS else 150)
+            combo.setCurrentIndex(idx)
+            tab.themes_panel._on_font_scale_selected(idx)
+            assert tab.config.ui_font_scale == pytest.approx(combo.itemData(idx) / 100.0)
         finally:
             Theme.set_font_scale(1.0)
