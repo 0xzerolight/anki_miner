@@ -39,65 +39,6 @@ from anki_miner.services.anki_service import AnkiService
 
 logger = logging.getLogger(__name__)
 
-_ABOUT_FEATURES: list[str] = [
-    "Single episode mining with preview",
-    "Batch processing for entire series",
-    "YouTube URL mining (yt-dlp powered)",
-    "Automatic media extraction (screenshots & audio)",
-    "Dictionary definitions from JMdict",
-    "Frequency filtering to focus on common words",
-    "Mining analytics and progress tracking",
-    "Customizable theme system with user-installable themes",
-]
-
-_ABOUT_SHORTCUTS: list[tuple[str, str]] = [
-    ("Ctrl+1..5", "Switch tabs"),
-    ("Ctrl+T", "Cycle favorite themes"),
-    ("Ctrl+,", "Open Settings"),
-    ("Ctrl+Shift+V", "Run system validation"),
-    ("F1", "Show this help dialog"),
-]
-
-
-def _build_about_html(version: str) -> str:
-    """Build the About dialog's rich-text HTML for the given version string.
-
-    Kept as a module-level helper (not inlined into ``_show_about``) so it can be
-    asserted on in tests without popping a modal ``QMessageBox``.
-    """
-    features_html = "".join(f"            <li>{f}</li>\n" for f in _ABOUT_FEATURES)
-    shortcuts_html = "".join(f"            <li><b>{key}:</b> {desc}</li>\n" for key, desc in _ABOUT_SHORTCUTS)
-    return f"""
-        <h2>Anki Miner</h2>
-        <p><b>Version:</b> {version}</p>
-        <p><b>Description:</b> Turn Immersion Into Vocabulary</p>
-        <br>
-        <p>Anki Miner helps you create Japanese vocabulary flashcards from video content.</p>
-        <p>Extract words with screenshots, audio, and definitions directly to Anki.</p>
-        <br>
-        <p><b>Features:</b></p>
-        <ul>
-{features_html}        </ul>
-        <br>
-        <p><b>Keyboard Shortcuts:</b></p>
-        <ul>
-{shortcuts_html}        </ul>
-        <br>
-        <p><b>Requirements:</b></p>
-        <ul>
-            <li>Anki with AnkiConnect add-on</li>
-            <li>ffmpeg for media extraction</li>
-            <li>MeCab for Japanese tokenization</li>
-        </ul>
-        <br>
-        <p><b>Bundled software:</b></p>
-        <p>Downloadable builds bundle <a href="https://ffmpeg.org">FFmpeg</a>
-        (GPLv3) for media extraction. License text and source offer:
-        <code>licenses/ffmpeg/</code>.</p>
-        <br>
-        <p>Created for Japanese learners</p>
-        """
-
 
 def _needs_jmdict_migration(xml_path: Path, dicts_root: Path, chain: tuple | None = None) -> bool:
     """Return True iff we should auto-trigger the JMdict → SQLite migration.
@@ -443,7 +384,9 @@ class MainWindow(QMainWindow):
 
     def _show_about(self) -> None:
         """Show the About dialog."""
-        QMessageBox.about(self, "About Anki Miner", _build_about_html(__version__))
+        from anki_miner.gui.widgets.dialogs.about_dialog import AboutDialog
+
+        AboutDialog(__version__, self).exec()
 
     def _connect_presenter_signals(self) -> None:
         """Connect presenter signals to UI update slots."""
