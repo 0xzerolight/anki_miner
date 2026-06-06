@@ -40,20 +40,6 @@ def _scrub_pyinstaller_env() -> None:
             os.environ.pop(var, None)
 
 
-def _configure_qt_multimedia() -> None:
-    """Force Qt's FFmpeg backend to software video decoding.
-
-    Qt's ffmpeg multimedia backend defaults to attempting CUDA/hw decode.
-    On machines without a hardware AV1 decode path this fails per-frame,
-    flooding stderr and leaving the in-app preview blank for AV1 sources.
-    An empty device-type list disables all hw decode backends -> software
-    fallback. Preview clips are short, so software AV1 decode is fine.
-    setdefault() lets advanced users override (e.g. re-enable a working
-    hw path) from the environment.
-    """
-    os.environ.setdefault("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", ",")
-
-
 def _run_bundled_smoke() -> int:
     """Env-var-gated smoke path for PyInstaller bundle validation.
 
@@ -98,9 +84,6 @@ def main():
     # bundling without spinning up a display.
     if os.environ.get("ANKI_MINER_SMOKE") == "youtube":
         sys.exit(_run_bundled_smoke())
-
-    # Force software video decode in the preview player before any Qt init.
-    _configure_qt_multimedia()
 
     # Enable high DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
