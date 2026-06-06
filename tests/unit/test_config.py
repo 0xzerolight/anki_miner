@@ -223,3 +223,37 @@ def test_sentence_length_filter_defaults():
     assert cfg.use_sentence_length_filter is False
     assert cfg.max_sentence_duration_seconds == 0.0
     assert cfg.max_sentence_chars == 0
+
+
+class TestUiFontScale:
+    """Tests for the ui_font_scale config field (Issue #63)."""
+
+    def test_default_is_1_0(self):
+        """ui_font_scale must default to 1.0."""
+        cfg = AnkiMinerConfig()
+        assert cfg.ui_font_scale == 1.0
+
+    def test_below_min_clamps_to_1_0(self):
+        """Values below 1.0 must be clamped to 1.0."""
+        cfg = AnkiMinerConfig(ui_font_scale=0.5)
+        assert cfg.ui_font_scale == 1.0
+
+    def test_above_max_clamps_to_2_0(self):
+        """Values above 2.0 must be clamped to 2.0."""
+        cfg = AnkiMinerConfig(ui_font_scale=3.0)
+        assert cfg.ui_font_scale == 2.0
+
+    def test_in_range_value_unchanged(self):
+        """A value within [1.0, 2.0] must be stored as-is."""
+        cfg = AnkiMinerConfig(ui_font_scale=1.5)
+        assert cfg.ui_font_scale == 1.5
+
+    def test_min_boundary_unchanged(self):
+        """Exactly 1.0 must not be altered."""
+        cfg = AnkiMinerConfig(ui_font_scale=1.0)
+        assert cfg.ui_font_scale == 1.0
+
+    def test_max_boundary_unchanged(self):
+        """Exactly 2.0 must not be altered."""
+        cfg = AnkiMinerConfig(ui_font_scale=2.0)
+        assert cfg.ui_font_scale == 2.0
