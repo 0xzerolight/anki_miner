@@ -64,22 +64,26 @@ FONT_SIZES = FontSizes()
 BORDER_RADIUS = BorderRadius()
 
 
-def get_variable_dict() -> dict[str, str]:
+def get_variable_dict(font_scale: float = 1.0) -> dict[str, str]:
     """Get all design variables as a dictionary for QSS substitution.
 
     Variable names follow the pattern: category-name (e.g., spacing-md, font-size-h1)
+
+    Args:
+        font_scale: Multiplier applied to font-size-* entries only. Must be >= 1.0.
+            Default 1.0 produces identical output to the unscaled baseline.
 
     Returns:
         Dictionary mapping variable names to their pixel values (as strings)
     """
     variables = {}
 
-    # Spacing variables
+    # Spacing variables (unaffected by font_scale)
     for field in ["xxs", "xs", "sm", "md", "lg", "xl", "xxl"]:
         value = getattr(SPACING, field)
         variables[f"spacing-{field}"] = str(value)
 
-    # Font size variables
+    # Font size variables (scaled by font_scale)
     font_fields = [
         "h1",
         "h2",
@@ -104,9 +108,10 @@ def get_variable_dict() -> dict[str, str]:
     ]
     for field, attr in zip(font_fields, font_attrs, strict=True):
         value = getattr(FONT_SIZES, attr)
-        variables[f"font-size-{field}"] = str(value)
+        scaled = max(1, round(value * font_scale))
+        variables[f"font-size-{field}"] = str(scaled)
 
-    # Border radius variables
+    # Border radius variables (unaffected by font_scale)
     for field in ["small", "default", "large", "pill"]:
         value = getattr(BORDER_RADIUS, field)
         variables[f"border-radius-{field}"] = str(value)
