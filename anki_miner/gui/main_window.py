@@ -20,7 +20,6 @@ from PyQt6.QtWidgets import (
 from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import (
-    TAB_SETTINGS,
     WINDOW_DEFAULT_HEIGHT,
     WINDOW_DEFAULT_WIDTH,
     WINDOW_MIN_HEIGHT,
@@ -381,16 +380,30 @@ class MainWindow(QMainWindow):
         if new_mode != self.config.theme:
             self.update_config(replace(self.config, theme=new_mode))
 
+    def _settings_tab_index(self) -> int:
+        """Locate the Settings tab by capability (self-healing against tab reorder)."""
+        for i in range(self.tabs.count()):
+            if hasattr(self.tabs.widget(i), "open_themes_subtab"):
+                return i
+        for i in range(self.tabs.count()):  # fallback by label
+            if self.tabs.tabText(i) == "Settings":
+                return i
+        return -1
+
     def _open_settings(self) -> None:
         """Open the Settings tab."""
-        self.tabs.setCurrentIndex(TAB_SETTINGS)
+        idx = self._settings_tab_index()
+        if idx >= 0:
+            self.tabs.setCurrentIndex(idx)
 
     def _open_theme_settings(self) -> None:
         """Switch to Settings → Themes (triggered by 'All themes…' sentinel)."""
-        self.tabs.setCurrentIndex(TAB_SETTINGS)
-        # The Settings tab widget was registered by app.py at TAB_SETTINGS;
-        # call through to its convenience method to land on the right sub-tab.
-        settings_widget = self.tabs.widget(TAB_SETTINGS)
+        idx = self._settings_tab_index()
+        if idx < 0:
+            return
+        self.tabs.setCurrentIndex(idx)
+        # Call through to the Settings tab's convenience method to land on the right sub-tab.
+        settings_widget = self.tabs.widget(idx)
         open_subtab = getattr(settings_widget, "open_themes_subtab", None)
         if callable(open_subtab):
             open_subtab()
