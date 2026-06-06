@@ -4,9 +4,53 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## UNRELEASED
+## [Unreleased]
 
-Subtitle offset ranges are now wider (300 seconds).
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+
+## [2.6.0] - 2026-06-06
+
+### Added
+- **Bundled ffmpeg/ffprobe in standalone builds.** Windows installer/zip, macOS tarball, and Linux AppImage/tarball now ship ffmpeg + ffprobe — no separate ffmpeg install required. A new resolver (`ffmpeg_location` / `ffprobe_location` config fields) prefers explicit paths, then bundled binaries, then PATH. The `.deb` deliberately ships **without** bundled ffmpeg (GPL) and uses system ffmpeg. PyPI/`pipx` and source installs still need ffmpeg on PATH.
+- **Text Size (UI font scale) control** (#63). Settings → Themes now has a Text Size dropdown that scales the whole UI — QSS font variables, curator row height, dialog fonts, and the subtitle overlay — via the new `ui_font_scale` config field (range 0.5–2.0).
+- **Custom cookies for YouTube mining** (#62). Pull cookies from a browser profile or point at a cookies file to mine age-restricted / bot-gated videos.
+- **Hiragana-only and katakana-only word exclusion filters** (#57). Optional filters under Settings → Filtering drop kana-only words (default off).
+- **Word-curation popup in batch mining** (#60). The per-episode curation dialog (previously single-episode only) is now an opt-in step in batch runs, with per-item subtitle offset forwarded.
+- **Bundled name wordsets from JMnedict** (#59). Proper-noun filtering ships with name wordsets generated from JMnedict; per-wordset checkboxes in the filtering panel control which are excluded (`excluded_wordsets`). Exclusion is matched on each word's mined surface form, so names are caught even when the dictionary lemma diverges from the surface.
+- **Word Curator play/pause** (#55). The per-row embedded player gained a play/pause toggle.
+- **Recent-file pairing remembers the subtitle offset** (#61). Re-selecting a recent video/subtitle pair restores its saved offset.
+- **Wider subtitle offset range.** The offset control now spans ±300 seconds.
+- **Bug/feature report moved to a top-bar button** for discoverability.
+
+### Changed
+- **Performance sweep.** Subtitle lines are tokenized once and threaded through the parser; MeCab and the dictionary chain pre-warm off the GUI thread after first paint; dictionary lookups batch via an IN-clause; `storeMediaFile`/media uploads batch through AnkiConnect multi; furigana/reading are memoized within a parse pass; Deck Builder caches per-file tokenization to avoid a double-parse; the Word Curator uses fixed-row height + debounced search.
+- **Settings panels densified.** Tighter spacing and section headings across Anki/Dictionary/Filtering/Media/Queue/YouTube; duplicate tooltips removed.
+
+### Fixed
+- **AV1 in-app preview disabled** instead of spamming decode/CUDA errors; AV1 media still mines normally — only the in-app preview is skipped. Video preview now forces software decode.
+- **Horizontal overflow of UI elements in the Episode Mining tab** (#56).
+- **AppImage desktop shortcut broken on relaunch.**
+- **"All Themes" button mapped to the wrong tab.**
+- **Progress bar percentage glitch removed**; folder/file path bars equalized across tabs.
+- **Max Sentence Duration tooltip corrected.**
+- **"About Anki Miner" dialog improved.**
+- **Word-curation cancel / empty-selection handling.** Cancelling a curation prompt no longer leaves a stray dialog to dismiss, and confirming with nothing selected is now recorded as a completed (zero-card) run rather than a cancellation — so batch status and stats stay accurate.
+- GPL ffmpeg kept out of the `.deb`; resolver hardened (deterministic lookup order, bounded cache, prewarm join).
+
+### Maintenance
+- ffmpeg GPL license, written source offer, and About-dialog attribution added for the bundled binaries.
+- CI fetches static ffmpeg per-OS and asserts bundled encoders (`libmp3lame`, `libopus`, `libsvtav1`, `libwebp`, `libwebp_anim`) in the release smoke test.
+- Restored the dedicated CI lint job (ruff + black) so formatting is gated on PRs, not just the local pre-commit hook.
+- pre-commit now runs black + `ruff --fix`.
+- README showcase refreshed (retimed card GIFs, honest MP4 download links), recommended resources updated.
+- Welcomed @sman68634 to CONTRIBUTORS.md.
 
 
 ## [2.5.0] - 2026-05-28

@@ -184,9 +184,11 @@ Phase 2 — build: `AnkiService.ensure_deck` creates the target deck if it does 
 `AnkiMinerConfig` (`config/config.py`) is a frozen (immutable) dataclass with ~30 settings:
 
 - **Anki:** deck name, note type, field mappings, AnkiConnect URL
-- **Media:** audio padding, screenshot offset, temp folder, subtitle offset
-- **Filtering:** min word length, allowed POS tags, excluded subtypes, deduplication
+- **Media:** audio padding, screenshot offset, temp folder, subtitle offset (range ±300s), `ffmpeg_location` / `ffprobe_location` (explicit binary paths consumed by the resolver — see [ffmpeg / ffprobe](#ffmpeg--ffprobe))
+- **Filtering:** min word length, allowed POS tags, excluded subtypes, deduplication, `exclude_hiragana_only_words` / `exclude_katakana_only_words` (kana-only drops, default off), `excluded_wordsets` (active bundled JMnedict name wordsets)
 - **Dictionary:** `dictionary_chain` (the runtime-authoritative ordered list of providers — indexed dicts and Jisho, each toggleable), `dicts_root` (root for all installed `.sqlite` indexes; defaults to `ANKI_MINER_HOME/dicts/` via the `ANKI_MINER_HOME` constant in `config/paths.py`), Jisho URL/delay. Legacy `jmdict_path` + `use_offline_dict` are retained one release for first-launch migration only.
+- **YouTube:** `youtube_cookies_from_browser` (browser profile to pull cookies from) / `youtube_cookies_file` (explicit cookies file), max duration, subtitle mode
+- **Appearance:** `theme`, `theme_favorites`, `ui_font_scale` (whole-UI font scaling, clamped to [0.5, 2.0])
 - **Optional data:** pitch accent, frequency, known words DB, blacklist/whitelist paths and toggles
 - **History/analytics:** DB paths, enable flags
 - **Performance:** max parallel workers (default 6)
@@ -265,9 +267,11 @@ GET `https://jisho.org/api/v1/search/words?keyword=<word>`. Rate-limited with co
 - **ffprobe:** `-show_streams -select_streams a` for Japanese audio track detection
 - Parallel execution via `ThreadPoolExecutor` (default 6 workers)
 
+**Binary resolution.** All ffmpeg/ffprobe invocations (media extraction, subtitle-preview probe, YouTube fetch) go through a resolver instead of assuming a bare `ffmpeg` on PATH. Resolution order: explicit `config.ffmpeg_location` / `config.ffprobe_location` → bundled binaries shipped inside the frozen app → PATH. The standalone builds (Windows `.exe`/`.zip`, macOS tarball, Linux AppImage/tarball) bundle GPL ffmpeg + ffprobe fetched per-OS by the release workflow, with encoder presence (`libmp3lame`, `libopus`, `libsvtav1`, `libwebp`) asserted in the release smoke step. The Linux `.deb` deliberately omits the bundled binaries (GPL distribution constraints) and resolves to the system ffmpeg; PyPI/`pipx` and source installs likewise rely on PATH. A startup health check validates the resolved ffmpeg/ffprobe and surfaces a clear error if neither bundled nor PATH binaries are usable.
+
 ### yt-dlp
 
-Subprocess invoked by `YouTubeFetcherService`. Probe uses `--skip-download --dump-single-json --no-playlist`; fetch uses `--write-sub` (or `--write-auto-sub` for auto-caption mode) + `--sub-lang ja --sub-format vtt/best --convert-subs srt` + a height-capped format string. Progress parsed from a custom `--progress-template`; post-download merge phases detected by scanning for `[Merger]`/`[SubtitleConvertor]` line signatures. Process tree killed via `psutil` on cancel (yt-dlp spawns ffmpeg as a child for merging; `Popen.terminate()` alone leaks it on Windows). Optional `--cookies-from-browser` flag enables bypass of bot-detection prompts and age-restricted content.
+Subprocess invoked by `YouTubeFetcherService`. Probe uses `--skip-download --dump-single-json --no-playlist`; fetch uses `--write-sub` (or `--write-auto-sub` for auto-caption mode) + `--sub-lang ja --sub-format vtt/best --convert-subs srt` + a height-capped format string. Progress parsed from a custom `--progress-template`; post-download merge phases detected by scanning for `[Merger]`/`[SubtitleConvertor]` line signatures. Process tree killed via `psutil` on cancel (yt-dlp spawns ffmpeg as a child for merging; `Popen.terminate()` alone leaks it on Windows). Optional `--cookies-from-browser` (from `config.youtube_cookies_from_browser`) or `--cookies` file (from `config.youtube_cookies_file`) enables bypass of bot-detection prompts and age-restricted content.
 
 ### PyInstaller hook for yt-dlp
 

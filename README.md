@@ -31,7 +31,7 @@ Please leave a ⭐ star if Anki Miner helped you - it helps others find it.
 
 ### Requirements
 
-- **ffmpeg** on PATH.
+- **ffmpeg** — bundled with the standalone builds (Windows `.exe`/`.zip`, macOS tarball, Linux AppImage/tarball), so most users need nothing. You only need ffmpeg on PATH if you install via **PyPI/`pipx`, from source, or the `.deb`** (which ships without bundled ffmpeg for licensing reasons and uses your system copy).
   - macOS: `brew install ffmpeg`
   - Ubuntu/Debian: `sudo apt install ffmpeg`
   - Windows: [download from ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH.
@@ -97,7 +97,9 @@ Tabs:
 - Load any Yomitan dictionaries you like, reorder them, and optionally enable Jisho as a slower, rate-limited online fallback (offline dictionaries are recommended for speed).
 - YouTube queue: paste a list of URLs, mine the whole list in one click.
 - Batch a folder of episode/subtitle pairs for unattended processing.
-- Review and edit the word list before any cards are created.
+- Review and edit the word list before any cards are created — in single-episode mining, and as an opt-in popup for batch runs too.
+- **Word filtering**: skip words already in your collection, cap by frequency rank, exclude proper nouns via bundled name wordsets, and optionally drop hiragana-only or katakana-only words.
+- **Text size control**: scale the whole UI from 0.5× to 2× under Settings → Themes.
 - Audio in MP3 or Opus, at the bitrate you choose — Opus produces much smaller files for the same listening quality.
 - Animated screenshots in AVIF or WebP for cards that show a moment of motion instead of a still frame.
 - Analytics dashboard with history, undo, milestones, and series difficulty rankings.
@@ -177,7 +179,8 @@ Anki Miner checks GitHub for new releases on startup (toggle in Settings). When 
 | "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
 | No definitions found     | Add a Yomitan dictionary in Settings → Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |
 | Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.      |
-| Subtitles out of sync    | Use the subtitle offset control in the GUI.                                      |
+| Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
+| AV1 video won't preview  | In-app preview is disabled for AV1 to avoid decoder error spam. Mining still works normally — only the preview is skipped. |
 
 ## Contributing
 
