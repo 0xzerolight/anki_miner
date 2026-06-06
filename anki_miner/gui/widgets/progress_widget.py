@@ -54,7 +54,7 @@ class ProgressWidget(QWidget):
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
-        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setTextVisible(False)
         self.progress_bar.setFormat("%p%")
         layout.addWidget(self.progress_bar)
 
