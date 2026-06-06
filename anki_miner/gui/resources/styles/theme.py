@@ -219,6 +219,7 @@ class Theme:
     # substitution across it on every row click.
     _qss_template: str | None = None
     _compiled_qss: dict[str, str] = {}
+    _font_scale: float = 1.0
 
     def __init__(self) -> None:
         """Discover themes from shipped + user dirs."""
@@ -250,6 +251,7 @@ class Theme:
         user_dir: Path | None = None,
         state_listener: StateListener | None = None,
         shipped_dir: Path | None = None,
+        font_scale: float = 1.0,
     ) -> None:
         """Seed singleton state from external config and (re)discover themes.
 
@@ -267,6 +269,8 @@ class Theme:
             shipped_dir: Override the shipped themes directory. When provided,
                 replaces the auto-detected package shipped dir. A non-existent
                 path disables shipped themes (useful for test isolation).
+            font_scale: Global font scale multiplier for QSS font-size
+                variables. Clamped to [1.0, 2.0]. Default 1.0 (no scaling).
         """
         cls._instance = None
         cls._current_mode = active
@@ -274,6 +278,7 @@ class Theme:
         cls._user_dir = user_dir
         cls._shipped_dir_override = shipped_dir
         cls._state_listener = state_listener
+        cls._font_scale = max(1.0, min(2.0, font_scale))
         # Theme JSONs may have changed (user dir swap, test reset); drop the
         # compiled-stylesheet cache so the next apply rebuilds from current
         # color values. The raw QSS template never changes at runtime, so
@@ -384,6 +389,27 @@ class Theme:
             return
         cls._current_mode = mode
         cls._notify_state_listener()
+
+    @classmethod
+    def get_font_scale(cls) -> float:
+        """Return the current global font scale multiplier."""
+        return cls._font_scale
+
+    @classmethod
+    def set_font_scale(cls, scale: float) -> None:
+        """Set the global font scale multiplier and invalidate the QSS cache.
+
+        Args:
+            scale: New font scale. Clamped to [1.0, 2.0]. The compiled-QSS
+                cache is cleared so the next get_stylesheet call recompiles
+                with the updated scale. Callers are responsible for calling
+                apply_to_app to repaint the live application.
+        """
+        clamped = max(1.0, min(2.0, scale))
+        if clamped == cls._font_scale:
+            return
+        cls._font_scale = clamped
+        cls._compiled_qss.clear()
 
     @classmethod
     def set_favorites(cls, favorites: Sequence[str]) -> None:
@@ -547,7 +573,7 @@ class Theme:
         if mode is None:
             mode = cls._current_mode
 
-        variables = get_variable_dict()
+        variables = get_variable_dict(cls._font_scale)
         theme_data = instance._themes.get(mode)
         if theme_data:
             variables.update(get_color_variables(theme_data))

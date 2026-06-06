@@ -106,6 +106,7 @@ def main():
         active=_initial_config.theme,
         favorites=_initial_config.theme_favorites,
         user_dir=_initial_config.themes_root,
+        font_scale=_initial_config.ui_font_scale,
     )
     Theme.apply_to_app(app)
 
