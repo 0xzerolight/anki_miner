@@ -346,7 +346,11 @@ class AnkiSettingsPanel(FormPanel):
         # Input
         input_widget = QLineEdit()
         input_widget.setPlaceholderText(placeholder)
-        input_widget.setToolTip(tooltip)
+        # Put the helper on the input itself: add_field sets it on the wrapping
+        # container, but the input + button cover the container with zero margins
+        # and Qt tooltips don't propagate to children, so the container tooltip
+        # is unreachable on hover. Fall back to the explicit tooltip when given.
+        input_widget.setToolTip(tooltip or helper_text)
         row.addWidget(input_widget, 1)
         setattr(self, input_widget_name, input_widget)
 
