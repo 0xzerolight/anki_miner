@@ -8,9 +8,13 @@ from PyQt6.QtMultimedia import QAudioOutput, QMediaMetaData, QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
+from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.utils import find_japanese_audio_stream
 
 logger = logging.getLogger(__name__)
+
+# Base subtitle-overlay font size (px) at scale 1.0.
+_BASE_OVERLAY_FONT_PX = 18
 
 
 class SubtitlePlayerWidget(QWidget):
@@ -54,9 +58,13 @@ class SubtitlePlayerWidget(QWidget):
         self.subtitle_label = QLabel()
         self.subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.subtitle_label.setWordWrap(True)
+        # Overlay font is set at construction, reflecting the scale at that time.
+        # The player widget is created per session/playback, so this is fine —
+        # no live re-scaling plumbing (YAGNI).
+        overlay_font_px = max(1, round(_BASE_OVERLAY_FONT_PX * Theme.get_font_scale()))
         self.subtitle_label.setStyleSheet(
             "QLabel { background-color: rgba(0,0,0,180); color: white; "
-            "font-size: 18px; padding: 6px 12px; border-radius: 4px; }"
+            f"font-size: {overlay_font_px}px; padding: 6px 12px; border-radius: 4px; }}"
         )
         self.subtitle_label.setVisible(False)
         layout.addWidget(self.subtitle_label)

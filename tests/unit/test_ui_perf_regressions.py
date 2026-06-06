@@ -305,9 +305,18 @@ def _make_curation_words(count: int = 20) -> list[TokenizedWord]:
 
 
 def test_curation_uses_fixed_row_height():
-    """Vertical header must use Fixed resize mode with 32px default section size."""
+    """Vertical header must use Fixed resize mode with 32px default section size at scale 1.0."""
     from PyQt6.QtWidgets import QHeaderView
 
+    # Pin the global font scale to 1.0: the row height now scales with it
+    # (Issue #63). Another test may also leave an enlarged stylesheet applied to
+    # the QApplication, whose font metrics clamp the table's row height upward;
+    # clear it so this test sees the unscaled baseline deterministically.
+    Theme.set_font_scale(1.0)
+    app = QApplication.instance()
+    leaked_stylesheet = app.styleSheet() if app else ""
+    if app:
+        app.setStyleSheet("")
     dialog = WordCurationDialog(_make_curation_words())
     try:
         v_header = dialog.table.verticalHeader()
@@ -316,6 +325,8 @@ def test_curation_uses_fixed_row_height():
         assert v_header.defaultSectionSize() == 32
     finally:
         dialog.deleteLater()
+        if app:
+            app.setStyleSheet(leaked_stylesheet)
 
 
 def test_curation_search_debounces_keystrokes():
