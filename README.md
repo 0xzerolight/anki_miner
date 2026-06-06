@@ -25,7 +25,7 @@ Please leave a ⭐ star if Anki Miner helped you - it helps others find it.
 
 | ![ホント](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/ホント.gif) | ![いちゃいちゃ](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/いちゃいちゃ.gif) | ![代](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/代.gif) |
 |:--:|:--:|:--:|
-| 🔊 [with sound](https://github.com/0xzerolight/anki_miner/blob/main/gifs/ホント.mp4) | 🔊 [with sound](https://github.com/0xzerolight/anki_miner/blob/main/gifs/いちゃいちゃ.mp4) | 🔊 [with sound](https://github.com/0xzerolight/anki_miner/blob/main/gifs/代.mp4) |
+| ⬇️ [MP4 (sound)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/ホント.mp4) | ⬇️ [MP4 (sound)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/いちゃいちゃ.mp4) | ⬇️ [MP4 (sound)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/代.mp4) |
 
 ## Installation
 
