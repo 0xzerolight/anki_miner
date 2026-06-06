@@ -108,11 +108,8 @@ class TestStylesheetScaling:
         # The max in scaled should be strictly larger than the max in baseline.
         assert max(scaled_sizes) > max(baseline_sizes)
 
-    def test_scale_1_0_stylesheet_identical_to_no_scale_arg(self):
-        """get_variable_dict(1.0) must be byte-identical to get_variable_dict()."""
-        _reset(font_scale=1.0)
-        s1 = Theme.get_stylesheet("light")
-        # Re-initialize identically — same output expected.
-        _reset(font_scale=1.0)
-        s2 = Theme.get_stylesheet("light")
-        assert s1 == s2
+    def test_scale_1_0_variable_dict_identical_to_default(self):
+        """get_variable_dict(1.0) must equal get_variable_dict() (default arg)."""
+        from anki_miner.gui.resources.styles._variables import get_variable_dict
+
+        assert get_variable_dict(1.0) == get_variable_dict()
