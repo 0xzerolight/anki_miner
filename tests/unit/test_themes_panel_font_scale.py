@@ -27,6 +27,25 @@ def qapp():
     yield app
 
 
+@pytest.fixture(autouse=True)
+def _reset_app_font_scale_state():
+    """Reset the Theme scale AND clear any enlarged stylesheet the apply path
+    left on the shared QApplication.
+
+    The font-scale apply path (slider release / keyboard step) runs
+    ``Theme.apply_to_app`` → ``app.setStyleSheet(<enlarged QSS>)`` on the
+    process-wide QApplication. Resetting only ``set_font_scale(1.0)`` leaves the
+    enlarged stylesheet applied, distorting widget font metrics / row heights in
+    later tests. Clear it here so every test in this module restores a clean
+    slate even if the body raises.
+    """
+    yield
+    Theme.set_font_scale(1.0)
+    app = QApplication.instance()
+    if isinstance(app, QApplication):
+        app.setStyleSheet("")
+
+
 def _theme_dict(name: str, **overrides) -> dict:
     data: dict = {
         "name": name,
