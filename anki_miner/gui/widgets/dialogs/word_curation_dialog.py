@@ -30,6 +30,8 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.models import TokenizedWord
 
@@ -83,6 +85,10 @@ class WordCurationDialog(QDialog):
     Both panes are optional and backward-compatible; existing callers that pass
     only ``words`` receive the same pure-table behaviour as before.
     """
+
+    # Base table row height at font scale 1.0; scaled with the global UI font
+    # scale so rows grow with the (QSS-driven) cell font instead of clipping it.
+    _BASE_ROW_HEIGHT = 32
 
     def __init__(
         self,
@@ -377,18 +383,25 @@ class WordCurationDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _make_font(self, size: int, weight: QFont.Weight = QFont.Weight.Normal) -> QFont:
-        font = QFont()
-        font.setPixelSize(size)
-        font.setWeight(weight)
-        return font
+        # Thin wrapper over the shared scale-aware helper so this dialog's
+        # header/count labels track the global UI font scale. Computed at
+        # construction; the dialog is modal and recreated each open, so it
+        # picks up the current scale on next open (no live re-scaling needed).
+        return make_scaled_font(size, weight)
 
     def _apply_fixed_row_height(self) -> None:
-        """Set Fixed resize mode with standard row dimensions on the vertical header."""
+        """Set Fixed resize mode, deriving the row height from the global font scale.
+
+        Scaling the base height by ``Theme.get_font_scale()`` tracks the same
+        scale the QSS cell font uses, so enlarged fonts no longer clip. Computed
+        when the (modal, per-open) dialog is built — no live re-scaling needed.
+        """
         vh = self.table.verticalHeader()
         if vh:
+            row_h = round(self._BASE_ROW_HEIGHT * Theme.get_font_scale())
             vh.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-            vh.setDefaultSectionSize(32)
-            vh.setMinimumSectionSize(28)
+            vh.setDefaultSectionSize(row_h)
+            vh.setMinimumSectionSize(max(1, row_h - 4))
 
     def _populate_table(self) -> None:
         """Fill the table with words, all checked by default."""

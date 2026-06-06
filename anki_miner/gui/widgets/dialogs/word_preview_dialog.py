@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING, Theme
+from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.gui.widgets.dialogs.export_dialog import ExportDialog
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.models import TokenizedWord
@@ -34,6 +35,10 @@ class WordPreviewDialog(QDialog):
     - Color-coded time badges
     - Modern card-based layout
     """
+
+    # Base table row height at font scale 1.0; scaled with the global UI font
+    # scale so rows grow with the (QSS-driven) cell font instead of clipping it.
+    _BASE_ROW_HEIGHT = 32
 
     def __init__(self, words: list[TokenizedWord], config: AnkiMinerConfig, parent=None):
         """Initialize the word preview dialog.
@@ -174,11 +179,7 @@ class WordPreviewDialog(QDialog):
             table_header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
             table_header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
 
-        v_header = self.table.verticalHeader()
-        if v_header:
-            v_header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-            v_header.setDefaultSectionSize(32)
-            v_header.setMinimumSectionSize(28)
+        self._apply_fixed_row_height()
 
         main_layout.addWidget(self.table)
 
@@ -215,10 +216,26 @@ class WordPreviewDialog(QDialog):
         Returns:
             QFont object
         """
-        font = QFont()
-        font.setPixelSize(size)
-        font.setWeight(weight)
-        return font
+        # Delegate to the shared scale-aware helper so label fonts track the
+        # global UI font scale. Computed at construction; the modal dialog is
+        # recreated each open, so it picks up the current scale on next open.
+        return make_scaled_font(size, weight)
+
+    def _apply_fixed_row_height(self) -> None:
+        """Set Fixed resize mode, deriving the row height from the global font scale.
+
+        Scaling the base height by ``Theme.get_font_scale()`` tracks the same scale
+        the QSS cell font uses, so enlarged fonts no longer clip. Must be re-applied
+        after ``setRowCount`` because some Qt versions reset the vertical-header
+        section modes there. Computed at (modal, per-open) construction — the dialog
+        is recreated each open, so it picks up the current scale; no live re-scaling.
+        """
+        v_header = self.table.verticalHeader()
+        if v_header:
+            row_h = round(self._BASE_ROW_HEIGHT * Theme.get_font_scale())
+            v_header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+            v_header.setDefaultSectionSize(row_h)
+            v_header.setMinimumSectionSize(max(1, row_h - 4))
 
     def _populate_table(self) -> None:
         """Populate the table with filtered words."""
@@ -246,6 +263,11 @@ class WordPreviewDialog(QDialog):
         finally:
             self.table.setSortingEnabled(True)
             self.table.setUpdatesEnabled(True)
+
+        # Re-apply AFTER sorting/updates are re-enabled: re-enabling sorting
+        # resets the vertical-header resize mode to Interactive, which drops the
+        # scaled Fixed row height. Re-applying here keeps it in effect.
+        self._apply_fixed_row_height()
 
         # Update result count
         self.result_count_label.setText(f"Showing {len(self.filtered_words)} of {len(self.all_words)} words")
