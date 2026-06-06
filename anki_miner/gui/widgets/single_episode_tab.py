@@ -32,7 +32,7 @@ from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from anki_miner.gui.widgets.base import configure_expanding_container, make_label_fit_text
+from anki_miner.gui.widgets.base import configure_expanding_container, field_label_width, make_label_fit_text
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -230,12 +230,16 @@ class SingleEpisodeTab(MiningTabBase):
         header = SectionHeader("File Selection")
         layout.addWidget(header)
 
+        # Shared label-column width so every labeled row in this card lines its
+        # input field up at the same x.
+        label_w = field_label_width("Recent Files:", "Video File:", "Subtitle File:", "Subtitle Offset:")
+
         # Recent files dropdown
         recent_layout = QHBoxLayout()
         recent_layout.setSpacing(SPACING.xs)
         recent_label = QLabel("Recent Files:")
         recent_label.setObjectName("field-label")
-        recent_label.setMinimumWidth(100)
+        recent_label.setFixedWidth(label_w)
         make_label_fit_text(recent_label)
         recent_layout.addWidget(recent_label)
 
@@ -254,11 +258,15 @@ class SingleEpisodeTab(MiningTabBase):
         self._refresh_recent_combo()
 
         # Video file selector
-        self.video_selector = FileSelector(label="Video File:", file_mode=True, file_filter=VIDEO_FILE_FILTER)
+        self.video_selector = FileSelector(
+            label="Video File:", file_mode=True, file_filter=VIDEO_FILE_FILTER, label_width=label_w
+        )
         layout.addWidget(self.video_selector)
 
         # Subtitle file selector
-        self.subtitle_selector = FileSelector(label="Subtitle File:", file_mode=True, file_filter=SUBTITLE_FILE_FILTER)
+        self.subtitle_selector = FileSelector(
+            label="Subtitle File:", file_mode=True, file_filter=SUBTITLE_FILE_FILTER, label_width=label_w
+        )
         layout.addWidget(self.subtitle_selector)
 
         # Subtitle offset with helper text
@@ -267,7 +275,7 @@ class SingleEpisodeTab(MiningTabBase):
 
         offset_label = QLabel("Subtitle Offset:")
         offset_label.setObjectName("field-label")
-        offset_label.setMinimumWidth(100)
+        offset_label.setFixedWidth(label_w)
         make_label_fit_text(offset_label)
 
         self.offset_spinbox = QDoubleSpinBox()

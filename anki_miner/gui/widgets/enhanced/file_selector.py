@@ -43,6 +43,7 @@ class FileSelector(QWidget):
         file_mode: bool = True,
         file_filter: str = "All Files (*)",
         placeholder: str = "",
+        label_width: int | None = None,
         parent=None,
     ):
         """Initialize the file selector.
@@ -52,6 +53,9 @@ class FileSelector(QWidget):
             file_mode: True for file selection, False for folder selection
             file_filter: File filter for dialog (only used if file_mode=True)
             placeholder: Placeholder text for input field
+            label_width: Fixed width for the label column. When set, every
+                selector in a section can share one width so their input fields
+                line up. When None, falls back to a 100px minimum.
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -59,6 +63,7 @@ class FileSelector(QWidget):
         self._file_mode = file_mode
         self._file_filter = file_filter
         self._placeholder = placeholder
+        self._label_width = label_width
         self._is_valid = False
         self._full_status_text = ""
 
@@ -80,7 +85,10 @@ class FileSelector(QWidget):
         if self._label_text:
             self.label = QLabel(self._label_text)
             self.label.setObjectName("field-label")
-            self.label.setMinimumWidth(100)
+            if self._label_width is not None:
+                self.label.setFixedWidth(self._label_width)
+            else:
+                self.label.setMinimumWidth(100)
             make_label_fit_text(self.label)
             main_layout.addWidget(self.label)
 
