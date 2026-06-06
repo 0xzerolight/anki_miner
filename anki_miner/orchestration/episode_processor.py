@@ -559,7 +559,7 @@ class EpisodeProcessor:
         subtitle_file: Path,
         preview_mode: bool = False,
         progress_callback: ProgressCallback | None = None,
-        curation_callback: Callable[[list], list] | None = None,
+        curation_callback: Callable[[list], list | None] | None = None,
         cross_episode_counts: dict[str, int] | None = None,
         episode_name_override: str | None = None,
         series_name_override: str | None = None,
@@ -578,7 +578,10 @@ class EpisodeProcessor:
             preview_mode: If True, only show words without creating cards.
             progress_callback: Optional progress callback.
             curation_callback: Optional callback for word curation. Receives
-                filtered words, returns user-selected subset. Empty list cancels.
+                filtered words. Returns the user-selected subset (an empty list
+                means "confirmed with nothing selected" → a completed run with
+                zero new cards), or ``None`` if the user cancelled/rejected the
+                dialog → a cancelled result.
             cross_episode_counts: Optional cross-episode word frequency counts.
             episode_name_override: Optional override for the episode identity
                 passed to stats_service. When ``None`` (default) the identity
@@ -627,10 +630,19 @@ class EpisodeProcessor:
                 return self._cancelled_result_from_ctx(ctx)
 
             if curation_callback is not None and not preview_mode:
-                unknown_words = curation_callback(unknown_words)
+                curated = curation_callback(unknown_words)
+                if curated is None:
+                    # The user cancelled/rejected the curation dialog.
+                    return self._cancelled_result_from_ctx(ctx)
+                unknown_words = curated
                 ctx.new_words_found = len(unknown_words)
                 if not unknown_words:
-                    return self._cancelled_result_from_ctx(ctx)
+                    # The user confirmed with everything deselected: this is an
+                    # intentional "card nothing this episode", a completed run
+                    # with zero new cards — NOT a cancellation (keeps stats and
+                    # batch status accurate).
+                    self.presenter.show_info("No words selected for card creation")
+                    return ctx.build_result(new_words_found=0)
                 self.presenter.show_info(f"User selected {len(unknown_words)} words for card creation")
 
             if preview_mode:
@@ -716,7 +728,7 @@ class EpisodeProcessor:
         cancel_event: threading.Event,
         progress_callback: ProgressCallback | None = None,
         fetch_progress_cb: Callable[[str, float | None], None] | None = None,
-        curation_callback: Callable[[list], list] | None = None,
+        curation_callback: Callable[[list], list | None] | None = None,
         preview_mode: bool = False,
     ) -> ProcessingResult:
         """Fetch a YouTube video + subs then run the standard mining pipeline.

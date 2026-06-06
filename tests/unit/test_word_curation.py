@@ -110,8 +110,8 @@ class TestCurationCallback:
         assert me_args[0][1] == [word1]
         assert result.cards_created == 1
 
-    def test_curation_callback_returns_empty_cancels(self, processor, mock_services, tmp_path):
-        """When callback returns empty list, processing is cancelled."""
+    def test_curation_callback_returns_none_cancels(self, processor, mock_services, tmp_path):
+        """When callback returns None (user cancelled/rejected), processing is cancelled."""
         words = [_make_word("食べる")]
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -120,12 +120,32 @@ class TestCurationCallback:
         result = processor.process_episode(
             tmp_path / "v.mkv",
             tmp_path / "s.ass",
-            curation_callback=lambda w: [],  # Return empty = cancel
+            curation_callback=lambda w: None,  # Return None = cancel
         )
 
         assert result.cards_created == 0
         assert "cancelled" in result.errors[0].lower()
         # Phase 3 should not have been reached
+        mock_services["media_extractor"].extract_media_batch.assert_not_called()
+
+    def test_curation_callback_returns_empty_completes_zero_cards(self, processor, mock_services, tmp_path):
+        """When callback returns [] (confirmed, nothing selected), the run completes
+        with zero cards — NOT a cancellation."""
+        words = [_make_word("食べる")]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+
+        result = processor.process_episode(
+            tmp_path / "v.mkv",
+            tmp_path / "s.ass",
+            curation_callback=lambda w: [],  # Confirmed with nothing selected
+        )
+
+        assert result.cards_created == 0
+        assert result.new_words_found == 0
+        assert not any("cancelled" in e.lower() for e in result.errors)
+        # Phase 3 should not have been reached (no words to card)
         mock_services["media_extractor"].extract_media_batch.assert_not_called()
 
     def test_curation_callback_none_normal_flow(self, processor, mock_services, tmp_path):
