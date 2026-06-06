@@ -167,7 +167,9 @@ jobs:
           }
 
       # Assert the bundled ffmpeg actually landed in the dist tree AND has the
-      # encoders the app requires (libmp3lame/libopus/libsvtav1/libwebp). This
+      # encoders the app requires (libmp3lame/libopus/libsvtav1/libwebp/libwebp_anim).
+      # libwebp_anim is asserted separately because still-image libwebp builds
+      # would otherwise pass while animated-WebP screenshots fail at runtime. This
       # is NOT continue-on-error: a wrong/minimal ffmpeg build must hard-fail
       # the release here rather than ship a binary that silently can't encode.
       # The binary lives under sys._MEIPASS/bin/ — for PyInstaller onedir that
@@ -189,7 +191,7 @@ jobs:
           chmod +x "$FF" || true
           ENC=$("$FF" -hide_banner -encoders 2>/dev/null)
           MISSING=""
-          for e in libmp3lame libopus libsvtav1 libwebp; do
+          for e in libmp3lame libopus libsvtav1 libwebp libwebp_anim; do
             if ! echo "$ENC" | grep -q "$e"; then
               MISSING="$MISSING $e"
             fi
@@ -198,7 +200,7 @@ jobs:
             echo "::error::Bundled ffmpeg is missing required encoder(s):$MISSING"
             exit 1
           fi
-          echo "BUNDLED_FFMPEG_ENCODERS_PASS: libmp3lame libopus libsvtav1 libwebp"
+          echo "BUNDLED_FFMPEG_ENCODERS_PASS: libmp3lame libopus libsvtav1 libwebp libwebp_anim"
 
       - name: Bundled ffmpeg encoder smoke (Windows)
         if: runner.os == 'Windows'
@@ -213,14 +215,14 @@ jobs:
           Write-Host "Found bundled ffmpeg: $($ff.FullName)"
           $enc = & $ff.FullName -hide_banner -encoders 2>$null | Out-String
           $missing = @()
-          foreach ($e in @("libmp3lame", "libopus", "libsvtav1", "libwebp")) {
+          foreach ($e in @("libmp3lame", "libopus", "libsvtav1", "libwebp", "libwebp_anim")) {
             if ($enc -notmatch [regex]::Escape($e)) { $missing += $e }
           }
           if ($missing.Count -gt 0) {
             Write-Error "Bundled ffmpeg is missing required encoder(s): $($missing -join ' ')"
             exit 1
           }
-          Write-Host "BUNDLED_FFMPEG_ENCODERS_PASS: libmp3lame libopus libsvtav1 libwebp"
+          Write-Host "BUNDLED_FFMPEG_ENCODERS_PASS: libmp3lame libopus libsvtav1 libwebp libwebp_anim"
 
       - name: Build Windows installer
         if: runner.os == 'Windows'
