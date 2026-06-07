@@ -85,6 +85,7 @@ python_functions = ["test_*"]
 addopts = "-v --cov=anki_miner --cov-report=term-missing --cov-report=html"
 markers = [
     "youtube: requires network and yt-dlp real extractor",
+    "real_ytdlp: exercises the real _ytdlp_supports_js_runtimes (no autouse stub)",
 ]
 
 [tool.black]
