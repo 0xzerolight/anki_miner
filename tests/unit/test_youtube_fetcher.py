@@ -89,6 +89,24 @@ def service(yt_config: AnkiMinerConfig) -> YouTubeFetcherService:
     return YouTubeFetcherService(yt_config)
 
 
+@pytest.fixture(autouse=True)
+def _js_runtime_capability(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """Default the JS-runtime capability probe OFF for every test.
+
+    Keeps the existing command-construction tests deterministic and stops them
+    shelling out to a real ``yt-dlp --help``. Tests marked ``real_ytdlp`` opt out
+    to exercise the real function and manage the cache themselves. Issue #64.
+    """
+    from anki_miner.services import youtube_fetcher as yf
+
+    real = yf._ytdlp_supports_js_runtimes  # the lru_cache-wrapped function
+    real.cache_clear()
+    if "real_ytdlp" not in request.keywords:
+        monkeypatch.setattr(yf, "_ytdlp_supports_js_runtimes", lambda: False)
+    yield
+    real.cache_clear()
+
+
 # ---------------------------------------------------------------------------
 # probe_metadata
 # ---------------------------------------------------------------------------
@@ -957,3 +975,124 @@ class TestProgressRegexMiss:
 
         # Exactly one progress entry despite three non-matching lines around it.
         assert calls == [("Downloading video", 0.5)]
+
+
+# ---------------------------------------------------------------------------
+# JS runtime auto-detection (Issue #64)
+# ---------------------------------------------------------------------------
+
+
+def _which_factory(available: set[str]):
+    """Build a shutil.which side_effect: returns a path only for ``available``."""
+
+    def _which(name: str, *args: Any, **kwargs: Any) -> str | None:
+        return f"/usr/bin/{name}" if name in available else None
+
+    return _which
+
+
+class TestJsRuntimeArgs:
+    """``_js_runtime_args`` auto-enables an available JS runtime so yt-dlp can
+    solve YouTube's n-challenge (the n-challenge fails when only node is present,
+    since yt-dlp's --js-runtimes defaults to deno)."""
+
+    def _enable_capability(self, monkeypatch: pytest.MonkeyPatch, supported: bool) -> None:
+        from anki_miner.services import youtube_fetcher as yf
+
+        monkeypatch.setattr(yf, "_ytdlp_supports_js_runtimes", lambda: supported)
+
+    def test_probe_adds_js_runtime_node(self, service: YouTubeFetcherService, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._enable_capability(monkeypatch, True)
+        monkeypatch.setattr("anki_miner.services.youtube_fetcher.shutil.which", _which_factory({"node"}))
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_metadata("https://youtu.be/abc123")
+        cmd = mrun.call_args[0][0]
+        assert "--js-runtimes" in cmd
+        assert cmd[cmd.index("--js-runtimes") + 1] == "node"
+
+    def test_fetch_adds_js_runtime_node(
+        self, yt_config: AnkiMinerConfig, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._enable_capability(monkeypatch, True)
+        ffmpeg = tmp_path / "ffmpeg"
+        ffmpeg.write_text("#!/bin/sh\n")
+        svc = YouTubeFetcherService(replace(yt_config, youtube_ffmpeg_location=ffmpeg))
+        _make_happy_outputs(tmp_path)
+        monkeypatch.setattr("anki_miner.services.youtube_fetcher.shutil.which", _which_factory({"node"}))
+        captured: dict[str, Any] = {}
+
+        def fake_popen(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            captured["cmd"] = cmd
+            return _FakePopen(lines=[], returncode=0)
+
+        with patch("subprocess.Popen", side_effect=fake_popen):
+            svc.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        cmd = captured["cmd"]
+        assert "--js-runtimes" in cmd
+        assert cmd[cmd.index("--js-runtimes") + 1] == "node"
+
+    def test_fetch_prefers_node_then_falls_back_to_quickjs(
+        self, yt_config: AnkiMinerConfig, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._enable_capability(monkeypatch, True)
+        ffmpeg = tmp_path / "ffmpeg"
+        ffmpeg.write_text("#!/bin/sh\n")
+        svc = YouTubeFetcherService(replace(yt_config, youtube_ffmpeg_location=ffmpeg))
+        _make_happy_outputs(tmp_path)
+        # Only quickjs available (no node, no bun).
+        monkeypatch.setattr("anki_miner.services.youtube_fetcher.shutil.which", _which_factory({"quickjs"}))
+        captured: dict[str, Any] = {}
+
+        def fake_popen(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            captured["cmd"] = cmd
+            return _FakePopen(lines=[], returncode=0)
+
+        with patch("subprocess.Popen", side_effect=fake_popen):
+            svc.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        cmd = captured["cmd"]
+        assert cmd[cmd.index("--js-runtimes") + 1] == "quickjs"
+
+    def test_no_runtime_on_path_omits_flag(
+        self, service: YouTubeFetcherService, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._enable_capability(monkeypatch, True)
+        # deno is yt-dlp's default and is intentionally not searched; nothing else
+        # is present, so no flag is added.
+        monkeypatch.setattr("anki_miner.services.youtube_fetcher.shutil.which", _which_factory(set()))
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_metadata("https://youtu.be/abc123")
+        assert "--js-runtimes" not in mrun.call_args[0][0]
+
+    def test_unsupported_ytdlp_omits_flag(self, service: YouTubeFetcherService) -> None:
+        # autouse fixture defaults the capability probe to False (old yt-dlp).
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_metadata("https://youtu.be/abc123")
+        assert "--js-runtimes" not in mrun.call_args[0][0]
+
+    @pytest.mark.real_ytdlp
+    def test_capability_probe_true_when_help_lists_flag(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from anki_miner.services import youtube_fetcher as yf
+
+        yf._ytdlp_supports_js_runtimes.cache_clear()
+        help_text = "Usage: yt-dlp [OPTIONS] URL\n  --js-runtimes RUNTIME[:PATH]  ...\n"
+        with patch("subprocess.run", return_value=_fake_run(0, help_text)):
+            assert yf._ytdlp_supports_js_runtimes() is True
+
+    @pytest.mark.real_ytdlp
+    def test_capability_probe_false_when_flag_absent(self) -> None:
+        from anki_miner.services import youtube_fetcher as yf
+
+        yf._ytdlp_supports_js_runtimes.cache_clear()
+        with patch("subprocess.run", return_value=_fake_run(0, "Usage: yt-dlp [OPTIONS] URL\n  --version\n")):
+            assert yf._ytdlp_supports_js_runtimes() is False
+
+    @pytest.mark.real_ytdlp
+    def test_capability_probe_false_when_ytdlp_missing(self) -> None:
+        from anki_miner.services import youtube_fetcher as yf
+
+        yf._ytdlp_supports_js_runtimes.cache_clear()
+        with patch("subprocess.run", side_effect=FileNotFoundError):
+            assert yf._ytdlp_supports_js_runtimes() is False

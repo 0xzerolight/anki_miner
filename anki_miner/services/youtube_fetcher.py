@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections
 import contextlib
+import functools
 import json
 import logging
 import re
@@ -40,6 +41,32 @@ _VIDEO_EXTS = {".mp4", ".webm", ".mkv"}
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 _PROGRESS_RE = re.compile(r"\[ankimine_dl\] (\S+) (\S+)")
 _POSTPROCESS_MARKERS = ("[Merger]", "[FixupM3u8]", "[SubtitleConvertor]", "[ExtractAudio]")
+
+# JS runtimes yt-dlp can solve YouTube's n-challenge with. "deno" is omitted: it is
+# yt-dlp's built-in default, so when the user has deno nothing needs doing. Ordered
+# by preference for the failing case (node is the common Windows setup). Issue #64.
+_JS_RUNTIMES = ("node", "bun", "quickjs")
+
+
+@functools.lru_cache(maxsize=1)
+def _ytdlp_supports_js_runtimes() -> bool:
+    """True if the installed yt-dlp recognizes ``--js-runtimes``.
+
+    Cached for the process lifetime; the binary on PATH does not change mid-run.
+    Guards against older yt-dlp that lacks the flag — passing an unknown option
+    would break all YouTube mining. Any failure (yt-dlp missing, timeout) returns
+    False -> behave as before.
+    """
+    try:
+        proc = subprocess.run(
+            ["yt-dlp", "--help"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return False
+    return "--js-runtimes" in (proc.stdout or "")
 
 
 def _tail(buf: collections.deque[str], n: int = 20) -> str:
@@ -90,6 +117,7 @@ class YouTubeFetcherService:
             "--no-playlist",
         ]
         cmd.extend(self._cookie_args())
+        cmd.extend(self._js_runtime_args())
         cmd.append(url)
 
         try:
@@ -347,6 +375,7 @@ class YouTubeFetcherService:
         )
 
         cmd.extend(self._cookie_args())
+        cmd.extend(self._js_runtime_args())
         ffmpeg_location = self._effective_ffmpeg_location()
         if ffmpeg_location is not None:
             cmd.extend(["--ffmpeg-location", ffmpeg_location])
@@ -365,6 +394,23 @@ class YouTubeFetcherService:
             return ["--cookies", str(self._config.youtube_cookies_file)]
         if self._config.youtube_cookies_from_browser:
             return ["--cookies-from-browser", self._config.youtube_cookies_from_browser]
+        return []
+
+    def _js_runtime_args(self) -> list[str]:
+        """Enable an available JS runtime so yt-dlp can solve the n-challenge.
+
+        YouTube extraction needs a JavaScript runtime, but yt-dlp's
+        ``--js-runtimes`` defaults to deno only. When the user has node (or bun /
+        quickjs) but not deno, extraction fails with "n challenge solving failed".
+        Auto-pass the first available runtime. No-op when the installed yt-dlp
+        lacks the flag or no supported runtime is on PATH (deno, yt-dlp's default,
+        needs no flag). Issue #64.
+        """
+        if not _ytdlp_supports_js_runtimes():
+            return []
+        for runtime in _JS_RUNTIMES:
+            if shutil.which(runtime):
+                return ["--js-runtimes", runtime]
         return []
 
     @staticmethod
