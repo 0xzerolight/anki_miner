@@ -208,7 +208,14 @@ class YouTubeFetcherService:
 
     @staticmethod
     def _has_native_auto_ja(data: dict) -> bool:
-        """Detect native Japanese auto-captions, ignoring translated-from-X."""
+        """Detect native Japanese auto-captions, ignoring translated-from-X.
+
+        The mere presence of ``automatic_captions.ja`` does NOT mean the video
+        is actually Japanese: yt-dlp lists auto-translated tracks (e.g. Japanese
+        auto-translated from English) under the same key. So this also checks
+        the top-level ``language`` field and each track's ``name`` for
+        'translated' / 'from X' markers, and treats those as non-native.
+        """
         auto = data.get("automatic_captions") or {}
         if "ja" not in auto or not auto["ja"]:
             return False
