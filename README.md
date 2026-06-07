@@ -19,7 +19,9 @@ Please leave a ⭐ star if Anki Miner helped you - it helps others find it.
 
 ## Showcase
 
-![Anki Miner Showcase](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/anki_miner_showcase.png)
+![Anki Miner Showcase](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/demo.gif)
+
+<p align="center">⬇️ <a href="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/demo.mp4">Full demo with sound (MP4)</a></p>
 
 ### Example cards
 
