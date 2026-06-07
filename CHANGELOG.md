@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [v2.6.1] - 2026-06-07
 
 ### Added
 
@@ -19,7 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 
-## [2.6.0] - 2026-06-07
+## [2.6.0] - 2026-06-06
 
 ### Added
 - **Bundled ffmpeg/ffprobe in standalone builds.** Windows installer/zip, macOS tarball, and Linux AppImage/tarball now ship ffmpeg + ffprobe — no separate ffmpeg install required. A new resolver (`ffmpeg_location` / `ffprobe_location` config fields) prefers explicit paths, then bundled binaries, then PATH. The `.deb` deliberately ships **without** bundled ffmpeg (GPL) and uses system ffmpeg. PyPI/`pipx` and source installs still need ffmpeg on PATH.
