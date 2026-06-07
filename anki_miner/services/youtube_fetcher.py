@@ -69,6 +69,27 @@ def _ytdlp_supports_js_runtimes() -> bool:
     return "--js-runtimes" in (proc.stdout or "")
 
 
+@functools.lru_cache(maxsize=1)
+def _ytdlp_supports_remote_components() -> bool:
+    """True if the installed yt-dlp recognizes ``--remote-components``.
+
+    Cached for the process lifetime; the binary on PATH does not change mid-run.
+    Probed separately from ``--js-runtimes`` so an older yt-dlp that knows one
+    flag but not the other still degrades safely. Any failure (yt-dlp missing,
+    timeout) returns False -> behave as before. Issue #64.
+    """
+    try:
+        proc = subprocess.run(
+            ["yt-dlp", "--help"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return False
+    return "--remote-components" in (proc.stdout or "")
+
+
 def _tail(buf: collections.deque[str], n: int = 20) -> str:
     """Return the last *n* lines of *buf* joined by newlines."""
     lines = list(buf)[-n:]
@@ -118,6 +139,7 @@ class YouTubeFetcherService:
         ]
         cmd.extend(self._cookie_args())
         cmd.extend(self._js_runtime_args())
+        cmd.extend(self._remote_component_args())
         cmd.append(url)
 
         try:
@@ -376,6 +398,7 @@ class YouTubeFetcherService:
 
         cmd.extend(self._cookie_args())
         cmd.extend(self._js_runtime_args())
+        cmd.extend(self._remote_component_args())
         ffmpeg_location = self._effective_ffmpeg_location()
         if ffmpeg_location is not None:
             cmd.extend(["--ffmpeg-location", ffmpeg_location])
@@ -412,6 +435,27 @@ class YouTubeFetcherService:
             if shutil.which(runtime):
                 return ["--js-runtimes", runtime]
         return []
+
+    def _remote_component_args(self) -> list[str]:
+        """Allow yt-dlp to fetch the EJS challenge-solver script when needed.
+
+        A JS runtime alone is not enough: yt-dlp (>= ~2026.03) split YouTube
+        challenge solving into a runtime *plus* the EJS solver script (the
+        ``yt-dlp-ejs`` component), which it no longer auto-downloads. Without it,
+        signature / n-sig solving fails ("Remote component challenge solver
+        script ... was skipped"). ``ejs:github`` enables fetching it on first use
+        (then yt-dlp caches it); ``ejs:npm`` is Deno/Bun-only, so github is the
+        node-safe choice.
+
+        Not gated on a runtime being found: deno-only users (whom
+        ``_js_runtime_args`` deliberately skips, deno being yt-dlp's default) need
+        the solver script too. Harmless when EJS is already bundled or pip-installed
+        — yt-dlp prefers a local copy and the flag only *allows* a fetch when one is
+        missing. No-op when the installed yt-dlp lacks the flag. Issue #64.
+        """
+        if not _ytdlp_supports_remote_components():
+            return []
+        return ["--remote-components", "ejs:github"]
 
     @staticmethod
     def _is_postprocess_line(line: str) -> bool:
