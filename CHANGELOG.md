@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **YouTube mining failing with "n challenge solving failed" / "Only images are available"** (#64). YouTube extraction needs a JavaScript runtime, but yt-dlp's `--js-runtimes` defaults to deno only. The fetcher now auto-detects an available runtime (node/bun/quickjs) on PATH and passes `--js-runtimes` to both the probe and download commands. Gated on the installed yt-dlp actually supporting the flag, so older yt-dlp installs are unaffected. No configuration required.
 
 ### Removed
 
