@@ -685,6 +685,11 @@ class MainWindow(QMainWindow):
         if info.version == self.config.skipped_update_version:
             return
 
+        # The banner is a singleton: create it once, then reuse it on every
+        # subsequent check result via update_info() (property mutation) rather
+        # than reconstructing it. Tearing it down with setParent(None) +
+        # deleteLater() would race in-flight Qt callbacks. The skip button only
+        # hides the banner; it never deleteLater()s it.
         if self._update_banner is None:
             banner = UpdateBanner(info, self)
             banner.skip_requested.connect(self._on_skip_update_requested)

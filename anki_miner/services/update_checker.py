@@ -160,7 +160,15 @@ class UpdateChecker:
         """Compare two version strings using PEP 440 semantics.
 
         Uses :class:`packaging.version.Version` so prerelease (``2.3.5-rc1``)
-        and post-release (``2.3.5.post1``) tags compare correctly.
+        and post-release (``2.3.5.post1``) tags compare correctly. A naive
+        ``tuple(int(x) for x in s.split("."))`` breaks on these.
+
+        ``packaging`` is declared as an EXPLICIT runtime dependency in
+        pyproject.toml — do not assume setuptools (and its transitive
+        ``packaging``) is present at runtime. pipx-isolated venvs strip
+        setuptools after install; before the dep was explicit, pipx-installed
+        anki-miner crashed with ``ModuleNotFoundError: No module named
+        'packaging'`` on the first update check.
 
         Args:
             latest: Latest version string (e.g. "2.1.0")

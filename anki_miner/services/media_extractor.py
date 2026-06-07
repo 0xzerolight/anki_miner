@@ -238,7 +238,14 @@ class MediaExtractorService:
         raise ValueError(f"Unsupported animated screenshot format: {fmt}")
 
     def _check_encoder_available(self, encoder: str) -> bool:
-        """Probe ffmpeg once for an encoder; cache result."""
+        """Probe ffmpeg once for an encoder; cache result.
+
+        Animated screenshots are opt-in via ``config.screenshot_animated`` and
+        need specific ffmpeg encoders: AVIF needs a build with ``libsvtav1``,
+        WebP needs ``libwebp_anim``. Distro ffmpeg packages vary, so this probes
+        once and caches; a missing encoder logs a clear error and returns False
+        rather than silently producing broken files.
+        """
         with self._encoder_probe_lock:
             cached = self._animated_encoder_ok.get(encoder)
             if cached is not None:
