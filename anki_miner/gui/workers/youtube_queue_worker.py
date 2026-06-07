@@ -6,6 +6,13 @@ time. Each item gets retry-once semantics on :class:`YouTubeFetchError`
 under ``config.media_temp_folder / "youtube" / run-<hex>`` and removes it
 in a ``finally`` block; the next attempt starts from a clean directory.
 
+This worker is the SOLE OWNER of each workspace directory: the fetcher and
+orchestrator only write into it, they never create or delete it. Because
+cleanup happens in the per-attempt ``finally``, a failed first attempt does
+not leak its workspace into the retry. On cancel, the fetcher kills the
+yt-dlp process tree (including the ffmpeg child) via psutil BEFORE the
+rmtree fires, so cleanup never races a live writer.
+
 Signal shapes (exact):
 
 * ``item_started(int)`` — idx fired before the first attempt for the item.
