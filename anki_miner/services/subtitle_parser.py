@@ -76,6 +76,13 @@ class SubtitleParserService:
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
             try:
+                # ReDoS exposure: the compiled pattern is NOT timeout-protected.
+                # A pathological user pattern (e.g. `(a+)+$`) on a long subtitle
+                # line can cause catastrophic backtracking and hang the parser.
+                # The only victim is the user themselves — this config is local,
+                # never network-supplied. If we ever accept regex from an
+                # untrusted source, swap to the third-party `regex` module with
+                # timeout= or compile under re2.
                 self._filter_pattern = re.compile(config.subtitle_regex_filter)
             except re.error as e:
                 # Bad pattern at the boundary should not crash mining. Disable
