@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - **YouTube mining failing with "n challenge solving failed" / "Only images are available"** (#64). YouTube extraction needs a JavaScript runtime, but yt-dlp's `--js-runtimes` defaults to deno only. The fetcher now auto-detects an available runtime (node/bun/quickjs) on PATH and passes `--js-runtimes` to both the probe and download commands. Gated on the installed yt-dlp actually supporting the flag, so older yt-dlp installs are unaffected. No configuration required.
 - **YouTube mining still failing after the runtime fix with "Remote component challenge solver script was skipped"** (#64, follow-up). A JS runtime alone is not enough: recent yt-dlp split YouTube challenge solving into the runtime plus the EJS solver script, which it no longer auto-downloads. The fetcher now also passes `--remote-components ejs:github` (gated on yt-dlp support) so the script is fetched and cached on first use. Added whenever supported — including deno-only setups, which need the script too. No configuration required.
+- **Cards missing audio/picture on large YouTube batches** (connection reset). Large mining sessions overran AnkiConnect's request limit, resetting the connection so media silently failed to store. Media now uploads in chunks bounded by cumulative base64 size (~4MB) and action count, with failed chunks retried as single-file POSTs; any residual failures surface in a warning dialog instead of producing silently empty fields.
+- **Long error text clipped in the YouTube queue rows** (#64). Queue rows now use an eliding label with a full-text tooltip, keeping row heights consistent instead of overflowing or clipping the message.
 
 ### Removed
 
