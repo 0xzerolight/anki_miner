@@ -537,6 +537,13 @@ class EpisodeProcessor:
         created_note_ids = list(self.anki_service.last_created_note_ids)
 
         self.presenter.show_success(f"Successfully created {cards_created} cards")
+        media_failures = self.anki_service.last_media_store_failures
+        if isinstance(media_failures, int) and media_failures > 0:
+            self.presenter.show_warning(
+                f"{media_failures} media file(s) could not be stored in Anki; those cards "
+                f"will have no audio or screenshot. Check that Anki/AnkiConnect is running and "
+                f"see the log for details."
+            )
         skipped_duplicates = self.anki_service.last_skipped_duplicates
         if isinstance(skipped_duplicates, int) and skipped_duplicates > 0:
             self.presenter.show_warning(
