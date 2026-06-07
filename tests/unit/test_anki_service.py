@@ -913,6 +913,85 @@ class TestStoreMediaFilesBatch:
         assert "shot.jpg" in stored
         assert "clip.mp3" not in stored
 
+    def test_multi_failure_falls_back_to_per_file(self, test_config, make_tokenized_word, tmp_path):
+        """A transport failure on the multi POST should retry the chunk per-file."""
+        service = AnkiService(test_config)
+
+        word = make_tokenized_word()
+        ss_path = tmp_path / "shot.jpg"
+        ss_path.write_bytes(b"screenshot-data")
+        au_path = tmp_path / "clip.mp3"
+        au_path.write_bytes(b"audio-data")
+        media = MediaData(
+            screenshot_path=ss_path,
+            audio_path=au_path,
+            screenshot_filename="shot.jpg",
+            audio_filename="clip.mp3",
+        )
+
+        # multi POST resets the connection; each per-file storeMediaFile succeeds.
+        side_effect = [
+            requests.exceptions.ConnectionError("connection reset"),
+            _mock_response(result="shot.jpg"),
+            _mock_response(result="clip.mp3"),
+        ]
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=side_effect) as mock_post:
+            stored = service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
+
+        # 1 failed multi + 2 per-file storeMediaFile retries
+        assert mock_post.call_count == 3
+        actions = [c[1]["json"]["action"] for c in mock_post.call_args_list]
+        assert actions == ["multi", "storeMediaFile", "storeMediaFile"]
+        assert stored == {"shot.jpg", "clip.mp3"}
+        assert service.last_media_store_failures == 0
+
+    def test_size_aware_chunking_splits_large_payload(self, test_config, make_tokenized_word, tmp_path):
+        """Files whose cumulative base64 size exceeds the byte budget split into multiple POSTs."""
+        service = AnkiService(test_config)
+
+        items = []
+        for i in range(3):
+            word = make_tokenized_word(lemma=f"word_{i}")
+            ss_path = tmp_path / f"shot_{i}.jpg"
+            ss_path.write_bytes(b"x" * 300)  # ~400 base64 chars, over the patched budget
+            media = MediaData(screenshot_path=ss_path, screenshot_filename=f"shot_{i}.jpg")
+            items.append(CardPayload(word=word, media=media, definition=f"def_{i}"))
+
+        resp = _mock_response(result=[None])  # one non-error sub-result per single-file chunk
+
+        with (
+            patch("anki_miner.services.anki_service._MEDIA_BATCH_MAX_BYTES", 100),
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post,
+        ):
+            stored = service._store_media_files_batch(items)
+
+        # Each oversized file flushes its own multi chunk → 3 POSTs, each with 1 action
+        assert mock_post.call_count == 3
+        for call in mock_post.call_args_list:
+            payload = call[1]["json"]
+            assert payload["action"] == "multi"
+            assert len(payload["params"]["actions"]) == 1
+        assert stored == {f"shot_{i}.jpg" for i in range(3)}
+
+    def test_total_failure_sets_failure_counter(self, test_config, make_tokenized_word, tmp_path):
+        """When multi and the per-file fallback both fail, the failure count is recorded."""
+        service = AnkiService(test_config)
+
+        word = make_tokenized_word()
+        ss_path = tmp_path / "shot.jpg"
+        ss_path.write_bytes(b"screenshot-data")
+        media = MediaData(screenshot_path=ss_path, screenshot_filename="shot.jpg")
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=requests.exceptions.ConnectionError("reset"),
+        ):
+            stored = service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
+
+        assert stored == set()
+        assert service.last_media_store_failures == 1
+
 
 # ---------------------------------------------------------------------------
 # TestPostMultiErrors
