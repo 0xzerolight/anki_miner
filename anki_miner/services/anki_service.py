@@ -5,6 +5,7 @@ import html
 import logging
 import re
 import unicodedata
+from collections.abc import Iterator
 from pathlib import Path
 
 import requests
@@ -37,6 +38,13 @@ _HTML_TAG_RE = re.compile(r"<[^>]+>")
 # Media uploads are base64-heavy; a smaller chunk than the 100-note addNotes
 # batch keeps individual request payloads manageable.
 _MEDIA_BATCH_CHUNK = 50
+# AnkiConnect resets the connection on very large `multi` request bodies (one
+# 50-file chunk of YouTube clips can hit ~7-8 MB of base64), surfacing as a
+# requests ConnectionError that reads "Is Anki running?" even though it is.
+# Bound each `multi` POST by cumulative base64 size as well as action count so a
+# chunk of large files flushes early instead of tripping the reset (Issue: media
+# files not stored on big batches).
+_MEDIA_BATCH_MAX_BYTES = 4 * 1024 * 1024
 _SOUND_REF_RE = re.compile(r"\[(?:sound|anki:play[^\]]*):[^\]]*\]", re.IGNORECASE)
 
 
@@ -143,6 +151,10 @@ class AnkiService:
         # common case where AnkiConnect returns a null slot is not attributable
         # to a specific cause). Read by the pipeline to report skips.
         self.last_skipped_duplicates: int = 0
+        # Number of media files (screenshots/audio) that could not be stored in
+        # Anki during the last create_cards_batch call. Read by the pipeline to
+        # warn the user when cards land with empty media fields.
+        self.last_media_store_failures: int = 0
         # Per-service-lifetime cache of dict-media filenames already shipped to
         # AnkiConnect this run. Avoids re-uploading the same accent SVG once
         # per card across a 5000-word batch.
@@ -493,10 +505,12 @@ class AnkiService:
         if not word_data_list:
             self.last_created_note_ids = []
             self.last_skipped_duplicates = 0
+            self.last_media_store_failures = 0
             return 0
 
         self.last_created_note_ids = []
         self.last_skipped_duplicates = 0
+        self.last_media_store_failures = 0
         skipped_duplicates = 0
         all_created_ids: list[int] = []
 
@@ -707,10 +721,18 @@ class AnkiService:
         """Store all media files in Anki collection via batched ``multi`` POSTs.
 
         Collects all readable (filename, base64-data) pairs, deduplicates by
-        filename, then sends them in chunks of up to ``_MEDIA_BATCH_CHUNK``
-        actions per ``multi`` call.  Files that cannot be read (OSError) are
-        logged and skipped.  Per-sub-action AnkiConnect errors (sub-result with
-        an ``"error"`` key) exclude that filename from the returned set.
+        filename, then sends them in chunks bounded by both ``_MEDIA_BATCH_CHUNK``
+        actions and ``_MEDIA_BATCH_MAX_BYTES`` of cumulative base64 payload per
+        ``multi`` call.  Files that cannot be read (OSError) are logged and
+        skipped at build time.  If a chunk's ``multi`` POST fails with a transport
+        error (AnkiConnect resets the connection on oversized bodies), the chunk
+        is retried one file at a time via single ``storeMediaFile`` POSTs.
+        Per-sub-action AnkiConnect errors (sub-result with an ``"error"`` key)
+        exclude that filename from the returned set.
+
+        Sets ``self.last_media_store_failures`` to the count of files that could
+        not be stored so callers can surface it to the user instead of silently
+        creating cards with empty media fields.
 
         Args:
             word_data_list: List of CardPayload objects whose media should be uploaded
@@ -734,29 +756,83 @@ class AnkiService:
                     actions_by_filename[filename] = action
 
         if not actions_by_filename:
+            self.last_media_store_failures = 0
             return set()
 
-        filenames = list(actions_by_filename.keys())
-        actions = list(actions_by_filename.values())
-
         stored: set[str] = set()
-        try:
-            for chunk_start in range(0, len(actions), _MEDIA_BATCH_CHUNK):
-                chunk_filenames = filenames[chunk_start : chunk_start + _MEDIA_BATCH_CHUNK]
-                chunk_actions = actions[chunk_start : chunk_start + _MEDIA_BATCH_CHUNK]
-                sub_results = post_multi(self.config.ankiconnect_url, chunk_actions, timeout=30)
-                if len(sub_results) != len(chunk_actions):
-                    logger.warning(
-                        "post_multi returned %d results for %d actions; some files may be silently skipped",
-                        len(sub_results),
-                        len(chunk_actions),
-                    )
-                for filename, sub_result in zip(chunk_filenames, sub_results, strict=False):
-                    if not (isinstance(sub_result, dict) and sub_result.get("error")):
-                        stored.add(filename)
-        except (AnkiConnectionError, OSError) as e:
-            logger.warning(f"Failed to store media files batch: {e}")
+        for chunk in self._chunk_media_actions(list(actions_by_filename.items())):
+            stored |= self._store_media_chunk(chunk)
 
+        self.last_media_store_failures = len(actions_by_filename) - len(stored)
+        return stored
+
+    def _chunk_media_actions(self, items: list[tuple[str, dict]]) -> Iterator[list[tuple[str, dict]]]:
+        """Yield (filename, action) sublists bounded by count and base64 byte budget.
+
+        Flushes the current chunk before adding an action that would push it past
+        ``_MEDIA_BATCH_CHUNK`` actions or ``_MEDIA_BATCH_MAX_BYTES`` of base64
+        data. A single action larger than the byte budget still ships alone.
+        """
+        chunk: list[tuple[str, dict]] = []
+        chunk_bytes = 0
+        for filename, action in items:
+            action_bytes = len(action["params"].get("data", ""))
+            if chunk and (len(chunk) >= _MEDIA_BATCH_CHUNK or chunk_bytes + action_bytes > _MEDIA_BATCH_MAX_BYTES):
+                yield chunk
+                chunk = []
+                chunk_bytes = 0
+            chunk.append((filename, action))
+            chunk_bytes += action_bytes
+        if chunk:
+            yield chunk
+
+    def _store_media_chunk(self, chunk: list[tuple[str, dict]]) -> set[str]:
+        """Store one chunk via ``multi``; fall back to per-file POSTs on transport failure."""
+        filenames = [f for f, _ in chunk]
+        actions = [a for _, a in chunk]
+        try:
+            sub_results = post_multi(self.config.ankiconnect_url, actions, timeout=30)
+        except AnkiConnectionError as e:
+            cause = e.__cause__
+            logger.warning(
+                "Media batch multi POST failed (%s: %s); retrying %d file(s) individually",
+                type(cause).__name__ if cause is not None else type(e).__name__,
+                e,
+                len(actions),
+            )
+            return self._store_media_files_individually(chunk)
+
+        if len(sub_results) != len(actions):
+            logger.warning(
+                "post_multi returned %d results for %d actions; some files may be silently skipped",
+                len(sub_results),
+                len(actions),
+            )
+        stored: set[str] = set()
+        for filename, sub_result in zip(filenames, sub_results, strict=False):
+            if not (isinstance(sub_result, dict) and sub_result.get("error")):
+                stored.add(filename)
+        return stored
+
+    def _store_media_files_individually(self, chunk: list[tuple[str, dict]]) -> set[str]:
+        """Per-file ``storeMediaFile`` fallback (tiny bodies) for a failed-multi chunk.
+
+        This is the pre-batching upload path: each file goes in its own small POST,
+        which avoids the oversized-body connection reset that breaks the ``multi``
+        envelope. Files AnkiConnect still rejects are logged and excluded.
+        """
+        stored: set[str] = set()
+        for filename, action in chunk:
+            try:
+                post_action(
+                    self.config.ankiconnect_url,
+                    "storeMediaFile",
+                    params=action["params"],
+                    timeout=30,
+                )
+                stored.add(filename)
+            except AnkiConnectionError as e:
+                logger.warning("Failed to store media file %s individually: %s", filename, e)
         return stored
 
     def _build_store_media_action(self, filename: str, src_path: Path) -> dict | None:
