@@ -69,7 +69,6 @@ TECH_DEBT_AUDIT.md
 .DS_Store
 Thumbs.db
 
-# Maintainer-only demo-GIF generation tooling (see gifs/gif-tools/README.md).
-# The output GIFs/MP4s in gifs/ stay tracked; only the tooling is hidden.
-gifs/gif-tools/
+# Scratch output dir for demo-GIF regeneration (see gifs/gif-tools/README.md).
+# The tooling and the committed gifs/*.gif|mp4 are tracked; only scratch is hidden.
 gifs/test-gifs/
