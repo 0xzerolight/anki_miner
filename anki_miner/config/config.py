@@ -110,7 +110,7 @@ class AnkiMinerConfig:
     jmdict_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "JMdict_e")
     dicts_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "dicts")
     jisho_api_url: str = "https://jisho.org/api/v1/search/words"
-    jisho_delay: float = 0.5  # Seconds between API calls
+    jisho_delay: float = 0.5  # Seconds between API calls. Jisho rate-limits; do NOT remove or reduce.
 
     # Pitch accent settings
     pitch_accent_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "pitch_accent.csv")
@@ -253,7 +253,16 @@ class AnkiMinerConfig:
     ui_font_scale: float = 1.0
 
     def __post_init__(self):
-        """Convert string paths to Path objects if needed."""
+        """Convert string paths to Path objects if needed.
+
+        This is a frozen dataclass (frozen=True) for thread safety: config is
+        shared across worker threads and must never be mutated in place (use
+        ``dataclasses.replace()`` instead). Because the instance is frozen,
+        normal attribute assignment raises, so coercion here goes through
+        ``object.__setattr__``. That is intentional, not a workaround to be
+        "cleaned up" — it is the supported way to normalise fields during
+        __post_init__ on a frozen dataclass.
+        """
         # Convert paths to Path objects (handles both str and Path inputs)
         if isinstance(self.media_temp_folder, str):
             object.__setattr__(self, "media_temp_folder", Path(self.media_temp_folder))
