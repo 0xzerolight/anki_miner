@@ -78,7 +78,7 @@ def test_pending_item_title_contains_url() -> None:
     item = _pending_item(url)
     widget = YouTubeQueueItemWidget(item)
 
-    title_text = widget.title_label.text()
+    title_text = widget.title_label.full_text
     assert title_text == url
 
 
@@ -100,7 +100,7 @@ def test_pending_item_no_duration_text() -> None:
 def test_probing_shows_placeholder() -> None:
     item = YouTubeQueueItem(url="https://www.youtube.com/watch?v=xyz", status=YouTubeItemStatus.PROBING)
     widget = YouTubeQueueItemWidget(item)
-    assert widget.title_label.text() == "(probing...)"
+    assert widget.title_label.full_text == "(probing...)"
     assert widget.duration_label.text() == ""
     assert widget.remove_button.isEnabled()
 
@@ -120,7 +120,7 @@ def test_ready_shows_video_title() -> None:
     widget = YouTubeQueueItemWidget(_pending_item())
     widget.update_from(item)
 
-    assert widget.title_label.text() == "My Great Video"
+    assert widget.title_label.full_text == "My Great Video"
 
 
 def test_ready_duration_formatted() -> None:
@@ -144,7 +144,7 @@ def test_ready_manual_sub_source_line() -> None:
     widget = YouTubeQueueItemWidget(_pending_item())
     widget.update_from(item)
 
-    assert widget.sub_source_label.text() == "Manual JA subs"
+    assert widget.sub_source_label.full_text == "Manual JA subs"
 
 
 def test_ready_auto_sub_source_line() -> None:
@@ -156,7 +156,7 @@ def test_ready_auto_sub_source_line() -> None:
     widget = YouTubeQueueItemWidget(_pending_item())
     widget.update_from(item)
 
-    assert widget.sub_source_label.text() == "Auto JA subs"
+    assert widget.sub_source_label.full_text == "Auto JA subs"
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +191,7 @@ def test_completed_shows_card_count() -> None:
     widget = YouTubeQueueItemWidget(_pending_item())
     widget.update_from(item)
 
-    assert "42" in widget.sub_source_label.text()
+    assert "42" in widget.sub_source_label.full_text
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +207,7 @@ def test_probe_error_shows_error_message() -> None:
     widget = YouTubeQueueItemWidget(_pending_item())
     widget.update_from(item)
 
-    combined = widget.title_label.text() + widget.sub_source_label.text()
+    combined = widget.title_label.full_text + widget.sub_source_label.full_text
     assert "Video unavailable" in combined
 
 
@@ -225,7 +225,7 @@ def test_error_shows_error_message() -> None:
     widget = YouTubeQueueItemWidget(_pending_item())
     widget.update_from(item)
 
-    combined = widget.title_label.text() + widget.sub_source_label.text()
+    combined = widget.title_label.full_text + widget.sub_source_label.full_text
     assert "Network timeout" in combined
 
 
@@ -239,8 +239,8 @@ def test_error_without_video_info_falls_back_to_url() -> None:
         error_message="network timeout",
     )
     widget = YouTubeQueueItemWidget(item)
-    assert widget.title_label.text() == url
-    assert "network timeout" in widget.sub_source_label.text()
+    assert widget.title_label.full_text == url
+    assert "network timeout" in widget.sub_source_label.full_text
 
 
 # ---------------------------------------------------------------------------
@@ -277,3 +277,35 @@ def test_removed_signal_not_fired_when_disabled() -> None:
     widget.remove_button.click()  # button is disabled — click is a no-op
 
     assert len(fired) == 0
+
+
+# ---------------------------------------------------------------------------
+# Test 9 — long multi-line probe errors stay on one line (Issue #64 screenshot)
+# ---------------------------------------------------------------------------
+
+
+def test_long_multiline_probe_error_collapses_to_one_line() -> None:
+    """A long multi-line yt-dlp probe error must render on a single elided line.
+
+    Regression for the Issue #64 screenshot: the row clipped multi-line error text
+    because the title label rendered the embedded ``\\n`` as a second line that the
+    fixed-height row then sliced off. The full text must remain reachable via
+    ``full_text`` (and hence the hover tooltip).
+    """
+    long_error = (
+        "yt-dlp metadata probe failed (exit 1): WARNING: [youtube] KaRer8-y16M: "
+        "n challenge solving failed: Some formats may be missing.\n"
+        "WARNING: Only images are available for download, use --list-formats to see them"
+    )
+    item = _pending_item()
+    item.status = YouTubeItemStatus.PROBE_ERROR
+    item.error_message = long_error
+
+    widget = YouTubeQueueItemWidget(_pending_item())
+    widget.update_from(item)
+
+    # Full error preserved verbatim (newline intact) for the tooltip.
+    assert long_error in widget.title_label.full_text
+    assert widget.title_label.full_text == f"Probe failed: {long_error}"
+    # Displayed text is a single line — no embedded newline survives.
+    assert "\n" not in widget.title_label.text()

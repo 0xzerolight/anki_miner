@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QFontMetrics
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.widgets.base import make_label_fit_text
+from anki_miner.gui.widgets.base import ElidingLabel, make_label_fit_text
 
 
 class FileSelector(QWidget):
@@ -65,7 +65,6 @@ class FileSelector(QWidget):
         self._placeholder = placeholder
         self._label_width = label_width
         self._is_valid = False
-        self._full_status_text = ""
 
         self._label_text = label
         self._setup_ui()
@@ -114,10 +113,10 @@ class FileSelector(QWidget):
 
         layout.addLayout(main_layout)
 
-        # Status label (shows current file/folder name or validation message)
-        self.status_label = QLabel("")
+        # Status label (shows current file/folder name or validation message).
+        # ElideMiddle keeps the file extension visible when a long name is truncated.
+        self.status_label = ElidingLabel("", mode=Qt.TextElideMode.ElideMiddle)
         self.status_label.setObjectName("caption")
-        self.status_label.setWordWrap(False)
         status_font = QFont()
         status_font.setPixelSize(FONT_SIZES.caption)
         self.status_label.setFont(status_font)
@@ -214,34 +213,19 @@ class FileSelector(QWidget):
         self.path_validated.emit(is_valid, path_str)
 
     def _update_status(self) -> None:
-        """Update the status label."""
+        """Update the status label.
+
+        ``ElidingLabel`` owns truncation, tooltip, and re-elision on resize, so we just
+        hand it the full text.
+        """
         path_str = self.input.text()
 
         if not path_str:
-            empty_msg = "No file selected" if self._file_mode else "No folder selected"
-            self._full_status_text = empty_msg
-            self.status_label.setToolTip("")
-            self._render_status_text()
-            return
-
-        if self._is_valid:
-            self._full_status_text = Path(path_str).name
-            self.status_label.setToolTip(self._full_status_text)
+            self.status_label.setText("No file selected" if self._file_mode else "No folder selected")
+        elif self._is_valid:
+            self.status_label.setText(Path(path_str).name)
         else:
-            self._full_status_text = "File not found" if self._file_mode else "Folder not found"
-            self.status_label.setToolTip("")
-        self._render_status_text()
-
-    def _render_status_text(self) -> None:
-        available = max(self.status_label.width(), 1)
-        metrics = QFontMetrics(self.status_label.font())
-        elided = metrics.elidedText(self._full_status_text, Qt.TextElideMode.ElideMiddle, available)
-        self.status_label.setText(elided)
-
-    def resizeEvent(self, event) -> None:  # noqa: N802
-        super().resizeEvent(event)
-        if hasattr(self, "_full_status_text"):
-            self._render_status_text()
+            self.status_label.setText("File not found" if self._file_mode else "Folder not found")
 
     def get_path(self) -> str:
         """Get the current path.

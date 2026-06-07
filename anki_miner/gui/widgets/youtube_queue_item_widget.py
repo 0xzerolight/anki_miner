@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 
 # ---------------------------------------------------------------------------
@@ -194,14 +195,14 @@ class YouTubeQueueItemWidget(QFrame):
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         top_row.addWidget(self.status_label)
 
-        # Title
-        self.title_label = QLabel()
+        # Title — elides long titles / multi-line probe errors to one line, full text
+        # on hover (see ElidingLabel). Keeps the row a constant height across states.
+        self.title_label = ElidingLabel()
         self.title_label.setObjectName("yt-queue-title")
         title_font = QFont()
         title_font.setPixelSize(FONT_SIZES.body)
         self.title_label.setFont(title_font)
         self.title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        self.title_label.setWordWrap(False)
         top_row.addWidget(self.title_label)
 
         # Duration
@@ -224,7 +225,7 @@ class YouTubeQueueItemWidget(QFrame):
         outer.addLayout(top_row)
 
         # --- second row: sub source / detail line ---
-        self.sub_source_label = QLabel()
+        self.sub_source_label = ElidingLabel()
         self.sub_source_label.setObjectName("yt-queue-sub-source")
         caption_font = QFont()
         caption_font.setPixelSize(FONT_SIZES.caption)
