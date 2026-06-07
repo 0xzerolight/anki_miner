@@ -107,6 +107,24 @@ def _js_runtime_capability(request: pytest.FixtureRequest, monkeypatch: pytest.M
     real.cache_clear()
 
 
+@pytest.fixture(autouse=True)
+def _remote_component_capability(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """Default the remote-components capability probe OFF for every test.
+
+    Mirrors ``_js_runtime_capability``: keeps command-construction tests
+    deterministic and off a real ``yt-dlp --help``. ``real_ytdlp``-marked tests
+    opt out and manage the cache themselves. Issue #64.
+    """
+    from anki_miner.services import youtube_fetcher as yf
+
+    real = yf._ytdlp_supports_remote_components  # the lru_cache-wrapped function
+    real.cache_clear()
+    if "real_ytdlp" not in request.keywords:
+        monkeypatch.setattr(yf, "_ytdlp_supports_remote_components", lambda: False)
+    yield
+    real.cache_clear()
+
+
 # ---------------------------------------------------------------------------
 # probe_metadata
 # ---------------------------------------------------------------------------
@@ -1096,3 +1114,96 @@ class TestJsRuntimeArgs:
         yf._ytdlp_supports_js_runtimes.cache_clear()
         with patch("subprocess.run", side_effect=FileNotFoundError):
             assert yf._ytdlp_supports_js_runtimes() is False
+
+
+class TestRemoteComponentArgs:
+    """``_remote_component_args`` lets yt-dlp fetch the EJS challenge-solver
+    script. A JS runtime alone is not enough (Issue #64): yt-dlp split YouTube
+    challenge solving into a runtime plus the EJS solver script, which it no
+    longer auto-downloads."""
+
+    def _enable_capability(self, monkeypatch: pytest.MonkeyPatch, supported: bool) -> None:
+        from anki_miner.services import youtube_fetcher as yf
+
+        monkeypatch.setattr(yf, "_ytdlp_supports_remote_components", lambda: supported)
+
+    def test_probe_adds_remote_components(
+        self, service: YouTubeFetcherService, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._enable_capability(monkeypatch, True)
+        monkeypatch.setattr("anki_miner.services.youtube_fetcher.shutil.which", _which_factory({"node"}))
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_metadata("https://youtu.be/abc123")
+        cmd = mrun.call_args[0][0]
+        assert "--remote-components" in cmd
+        assert cmd[cmd.index("--remote-components") + 1] == "ejs:github"
+
+    def test_fetch_adds_remote_components(
+        self, yt_config: AnkiMinerConfig, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._enable_capability(monkeypatch, True)
+        ffmpeg = tmp_path / "ffmpeg"
+        ffmpeg.write_text("#!/bin/sh\n")
+        svc = YouTubeFetcherService(replace(yt_config, youtube_ffmpeg_location=ffmpeg))
+        _make_happy_outputs(tmp_path)
+        monkeypatch.setattr("anki_miner.services.youtube_fetcher.shutil.which", _which_factory({"node"}))
+        captured: dict[str, Any] = {}
+
+        def fake_popen(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            captured["cmd"] = cmd
+            return _FakePopen(lines=[], returncode=0)
+
+        with patch("subprocess.Popen", side_effect=fake_popen):
+            svc.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        cmd = captured["cmd"]
+        assert "--remote-components" in cmd
+        assert cmd[cmd.index("--remote-components") + 1] == "ejs:github"
+
+    def test_deno_only_still_gets_ejs_flag(
+        self, service: YouTubeFetcherService, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # No supported runtime on PATH -> _js_runtime_args omits --js-runtimes
+        # (deno is yt-dlp's default and intentionally not searched). The EJS flag
+        # must still be added: deno-only users need the solver script too.
+        self._enable_capability(monkeypatch, True)
+        monkeypatch.setattr("anki_miner.services.youtube_fetcher.shutil.which", _which_factory(set()))
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_metadata("https://youtu.be/abc123")
+        cmd = mrun.call_args[0][0]
+        assert "--js-runtimes" not in cmd
+        assert "--remote-components" in cmd
+        assert cmd[cmd.index("--remote-components") + 1] == "ejs:github"
+
+    def test_unsupported_ytdlp_omits_flag(self, service: YouTubeFetcherService) -> None:
+        # autouse fixture defaults the capability probe to False (old yt-dlp).
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_metadata("https://youtu.be/abc123")
+        assert "--remote-components" not in mrun.call_args[0][0]
+
+    @pytest.mark.real_ytdlp
+    def test_capability_probe_true_when_help_lists_flag(self) -> None:
+        from anki_miner.services import youtube_fetcher as yf
+
+        yf._ytdlp_supports_remote_components.cache_clear()
+        help_text = "Usage: yt-dlp [OPTIONS] URL\n  --remote-components COMPONENT  ...\n"
+        with patch("subprocess.run", return_value=_fake_run(0, help_text)):
+            assert yf._ytdlp_supports_remote_components() is True
+
+    @pytest.mark.real_ytdlp
+    def test_capability_probe_false_when_flag_absent(self) -> None:
+        from anki_miner.services import youtube_fetcher as yf
+
+        yf._ytdlp_supports_remote_components.cache_clear()
+        with patch("subprocess.run", return_value=_fake_run(0, "Usage: yt-dlp [OPTIONS] URL\n  --version\n")):
+            assert yf._ytdlp_supports_remote_components() is False
+
+    @pytest.mark.real_ytdlp
+    def test_capability_probe_false_when_ytdlp_missing(self) -> None:
+        from anki_miner.services import youtube_fetcher as yf
+
+        yf._ytdlp_supports_remote_components.cache_clear()
+        with patch("subprocess.run", side_effect=FileNotFoundError):
+            assert yf._ytdlp_supports_remote_components() is False
