@@ -18,8 +18,8 @@ class StylingWorker(CancellableWorker):
     """Reads the note type's current CSS, edits the managed block, writes it back.
 
     Short-lived: one read + one write against AnkiConnect, off the main thread so
-    the settings UI stays responsive. ``mode="apply"`` composes the default
-    stylesheet (when enabled) plus the user's custom CSS into the managed block
+    the settings UI stays responsive. ``mode="apply"`` composes the selected
+    preset plus the user's custom CSS into the managed block
     and inserts/replaces it; ``mode="remove"`` strips the block for a full
     revert. The read happens first, so a hard failure (Anki down, note type
     missing) surfaces via ``error`` *before* any write — no partial state.
@@ -32,7 +32,7 @@ class StylingWorker(CancellableWorker):
         service: AnkiService,
         *,
         mode: Literal["apply", "remove"],
-        use_default: bool,
+        preset: str,
         custom_css: str,
         note_type: str,
         parent=None,
@@ -40,7 +40,7 @@ class StylingWorker(CancellableWorker):
         super().__init__(parent)
         self.service = service
         self.mode = mode
-        self.use_default = use_default
+        self.preset = preset
         self.custom_css = custom_css
         self.note_type = note_type
 
@@ -52,7 +52,7 @@ class StylingWorker(CancellableWorker):
             existing = self.service.get_model_styling(self.note_type)
 
             if self.mode == "apply":
-                block = build_managed_block(use_default=self.use_default, custom_css=self.custom_css)
+                block = build_managed_block(preset=self.preset, custom_css=self.custom_css)
                 new_css = apply_managed_block(existing, block)
                 message = f"Applied styles to '{self.note_type}'."
             else:
