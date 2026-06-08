@@ -51,6 +51,14 @@ def _resolve_identity(override: str | None, default: str) -> str:
     return override if override is not None else default
 
 
+def _format_timestamp(seconds: float) -> str:
+    """Format a float-second offset as ``HH:MM:SS`` (negative clamps to zero)."""
+    total = max(0, int(seconds))
+    h, rem = divmod(total, 3600)
+    m, s = divmod(rem, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+
 @dataclass
 class _EpisodeContext:
     """Mutable accumulator carried through the five phase helpers.
@@ -67,6 +75,7 @@ class _EpisodeContext:
     subtitle_file_str: str
     episode_name: str
     series_name: str
+    source_label: str
 
     # Accumulator fields populated as phases progress.
     errors: list[str] = field(default_factory=list)
@@ -515,6 +524,9 @@ class EpisodeProcessor:
                 extra_fields["frequency"] = str(word.frequency_rank)
             if glossary:
                 extra_fields["glossary"] = glossary
+            # Stamp the source unconditionally; AnkiService gates the write on a
+            # non-empty configured field name (anki_fields["source"]).
+            extra_fields["source"] = f"{ctx.source_label} @ {_format_timestamp(word.start_time)}"
 
             card_data.append(
                 CardPayload(
@@ -571,6 +583,7 @@ class EpisodeProcessor:
         episode_name_override: str | None = None,
         series_name_override: str | None = None,
         audio_track_override: int | None = None,
+        source_label_override: str | None = None,
     ) -> ProcessingResult:
         """Process a single episode and create Anki cards.
 
@@ -600,16 +613,24 @@ class EpisodeProcessor:
                 from ``video_file.parent.name``.
             audio_track_override: Optional 0-indexed audio track to extract instead of
                 auto-detecting Japanese. None (default) preserves existing JP auto-detect behavior.
+            source_label_override: Optional override for the card "source" field
+                origin. When ``None`` (default) the origin is built from the
+                resolved series/episode identity as ``"<series> — <episode>"``
+                (em dash, U+2014). Used by ``process_youtube_url`` to stamp the
+                actual video title instead of the synthetic ``YT:<video_id>``.
 
         Returns:
             ProcessingResult with statistics.
         """
+        series_name = _resolve_identity(series_name_override, video_file.parent.name)
+        episode_name = _resolve_identity(episode_name_override, video_file.stem)
         ctx = _EpisodeContext(
             start_time=time.time(),
             video_file_str=str(video_file),
             subtitle_file_str=str(subtitle_file),
-            episode_name=_resolve_identity(episode_name_override, video_file.stem),
-            series_name=_resolve_identity(series_name_override, video_file.parent.name),
+            episode_name=episode_name,
+            series_name=series_name,
+            source_label=source_label_override or f"{series_name} — {episode_name}",
         )
         run_temp_folder = self._allocate_run_temp_folder()
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
@@ -737,6 +758,7 @@ class EpisodeProcessor:
         fetch_progress_cb: Callable[[str, float | None], None] | None = None,
         curation_callback: Callable[[list], list | None] | None = None,
         preview_mode: bool = False,
+        source_label: str | None = None,
     ) -> ProcessingResult:
         """Fetch a YouTube video + subs then run the standard mining pipeline.
 
@@ -769,6 +791,10 @@ class EpisodeProcessor:
                 unchanged to ``process_episode``; see its docstring for semantics.
             preview_mode: If True, skip card creation and show previews only.
                 Forwarded unchanged to ``process_episode``.
+            source_label: Optional origin string for the card "source" field
+                (typically the YouTube video title). Forwarded to
+                ``process_episode`` as ``source_label_override``. The stats/dedup
+                identity (``YT:<video_id>`` / ``YouTube``) is unaffected.
 
         Returns:
             ProcessingResult from the mining pipeline, with episode identity
@@ -802,4 +828,5 @@ class EpisodeProcessor:
             curation_callback=curation_callback,
             episode_name_override=f"YT:{video_id}",
             series_name_override="YouTube",
+            source_label_override=source_label,
         )
