@@ -358,11 +358,17 @@ def test_bot_detection_error_workspace_cleaned(mock_processor, youtube_config):
 
 
 # ---------------------------------------------------------------------------
-# preview_mode=False drops curation
+# curation_callback forwarded unconditionally (dead-code-bug fix)
 # ---------------------------------------------------------------------------
 
 
-def test_preview_mode_false_passes_none_curation(make_worker, mock_processor):
+def test_non_preview_forwards_curation_callback(make_worker, mock_processor):
+    """Non-preview runs must forward curation_callback (not None).
+
+    process_episode internally gates invocation on not preview_mode, so
+    passing it unconditionally is correct and was the dead-code bug.
+    """
+
     def _curation(words):
         return words
 
@@ -371,13 +377,8 @@ def test_preview_mode_false_passes_none_curation(make_worker, mock_processor):
     worker.run()
 
     kwargs = mock_processor.process_youtube_url.call_args.kwargs
-    assert kwargs["curation_callback"] is None
+    assert kwargs["curation_callback"] is _curation
     assert kwargs["preview_mode"] is False
-
-
-# ---------------------------------------------------------------------------
-# preview_mode=True forwards curation
-# ---------------------------------------------------------------------------
 
 
 def test_preview_mode_true_forwards_curation_callback(make_worker, mock_processor):
@@ -391,6 +392,16 @@ def test_preview_mode_true_forwards_curation_callback(make_worker, mock_processo
     kwargs = mock_processor.process_youtube_url.call_args.kwargs
     assert kwargs["curation_callback"] is _curation
     assert kwargs["preview_mode"] is True
+
+
+def test_none_curation_callback_passed_through(make_worker, mock_processor):
+    """When curation_callback is None it is forwarded as None (disabled)."""
+    items = [_make_item(video_id="a")]
+    worker = make_worker(items=items, curation_callback=None, preview_mode=False)
+    worker.run()
+
+    kwargs = mock_processor.process_youtube_url.call_args.kwargs
+    assert kwargs["curation_callback"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -494,6 +505,106 @@ def test_mining_progress_adapter_handles_zero_total():
 
     # on_start emits pct=0; on_progress emits 1/1 = 100% under the clamp
     assert emitted[-1] == (3, "Edge case: item", 100)
+
+
+# ---------------------------------------------------------------------------
+# Curation media context attrs set from constructor
+# ---------------------------------------------------------------------------
+
+
+def test_curation_processor_and_offset_set_from_constructor(mock_processor, youtube_config):
+    """_curation_processor and _curation_offset are initialised from constructor args."""
+    worker = YouTubeQueueWorker(
+        processor=mock_processor,
+        config=youtube_config,
+        items=[],
+        curation_callback=None,
+        preview_mode=False,
+    )
+    assert worker._curation_processor is mock_processor
+    assert worker._curation_offset == youtube_config.subtitle_offset
+    assert worker._curation_video is None
+    assert worker._curation_subtitle is None
+
+
+# ---------------------------------------------------------------------------
+# on_fetched forwarded and _capture_curation_media populates paths
+# ---------------------------------------------------------------------------
+
+
+def test_on_fetched_kwarg_passed_to_process_youtube_url(make_worker, mock_processor):
+    """_mine_one must pass on_fetched= to process_youtube_url (the _capture_curation_media method)."""
+    items = [_make_item(video_id="a")]
+    worker = make_worker(items=items)
+    worker.run()
+
+    kwargs = mock_processor.process_youtube_url.call_args.kwargs
+    assert "on_fetched" in kwargs
+    # Bound methods compare by __func__ + __self__; use that to avoid
+    # creating two distinct bound method objects via two attribute accesses.
+    on_fetched = kwargs["on_fetched"]
+    assert callable(on_fetched)
+    assert on_fetched.__func__ is YouTubeQueueWorker._capture_curation_media
+    assert on_fetched.__self__ is worker
+
+
+def test_capture_curation_media_populates_video_and_subtitle(mock_processor, youtube_config, tmp_path):
+    """Invoking _capture_curation_media sets _curation_video and _curation_subtitle."""
+    from anki_miner.models.youtube import FetchedMedia
+
+    worker = YouTubeQueueWorker(
+        processor=mock_processor,
+        config=youtube_config,
+        items=[],
+        curation_callback=None,
+        preview_mode=False,
+    )
+
+    video_path = tmp_path / "video.mp4"
+    sub_path = tmp_path / "subs.vtt"
+    fetched = FetchedMedia(video_file=video_path, subtitle_file=sub_path, sub_source="manual")
+
+    assert worker._curation_video is None
+    assert worker._curation_subtitle is None
+
+    worker._capture_curation_media(fetched)
+
+    assert worker._curation_video == video_path
+    assert worker._curation_subtitle == sub_path
+
+
+def test_on_fetched_invoked_populates_curation_paths(mock_processor, youtube_config, tmp_path):
+    """End-to-end: when process_youtube_url calls on_fetched, _curation_* attrs are set."""
+    from anki_miner.models.youtube import FetchedMedia
+
+    video_path = tmp_path / "ep01.mp4"
+    sub_path = tmp_path / "ep01.vtt"
+    fetched = FetchedMedia(video_file=video_path, subtitle_file=sub_path, sub_source="auto")
+
+    def _call_on_fetched(**kw):
+        # Simulate process_youtube_url calling the on_fetched hook mid-run.
+        kw["on_fetched"](fetched)
+        return MagicMock(name="ProcessingResult")
+
+    mock_processor.process_youtube_url.side_effect = _call_on_fetched
+
+    item = _make_item(video_id="a")
+    worker = YouTubeQueueWorker(
+        processor=mock_processor,
+        config=youtube_config,
+        items=[item],
+        curation_callback=None,
+        preview_mode=False,
+    )
+    worker.run()
+
+    assert worker._curation_video == video_path
+    assert worker._curation_subtitle == sub_path
+
+
+# ---------------------------------------------------------------------------
+# fetch_progress_emit
+# ---------------------------------------------------------------------------
 
 
 def test_fetch_progress_emit_clamps_and_handles_none(make_worker, mock_processor):

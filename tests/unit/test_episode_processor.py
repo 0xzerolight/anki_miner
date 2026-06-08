@@ -1517,6 +1517,89 @@ class TestProcessYoutubeUrl:
         mock_services["anki_service"].create_cards_batch.assert_called_once()
         assert result.cards_created == 1
 
+    def test_on_fetched_callback_fires_with_fetched_media(self, test_config, mock_services, tmp_path):
+        """on_fetched is called with the FetchedMedia returned by fetch_video."""
+        processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
+
+        received: list[FetchedMedia] = []
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+            on_fetched=received.append,
+        )
+
+        assert len(received) == 1
+        assert isinstance(received[0], FetchedMedia)
+
+    def test_on_fetched_callback_fires_before_process_episode(self, test_config, mock_services, tmp_path):
+        """on_fetched must be invoked before the mining pipeline starts."""
+        video_file = tmp_path / "abc123.mp4"
+        subtitle_file = tmp_path / "abc123.ja.srt"
+        video_file.touch()
+        subtitle_file.touch()
+
+        word = _make_word("食べる")
+        media = _make_media()
+        self._happy_pipeline(mock_services, word, media)
+
+        fetched_media = FetchedMedia(
+            video_file=video_file,
+            subtitle_file=subtitle_file,
+            sub_source="manual",
+        )
+        mock_fetcher = MagicMock()
+        mock_fetcher.fetch_video.return_value = fetched_media
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=mock_fetcher,
+            **mock_services,
+        )
+
+        call_order: list[str] = []
+
+        def _on_fetched(fm):
+            call_order.append("on_fetched")
+
+        original_process_episode = processor.process_episode
+
+        def _process_episode_spy(*args, **kwargs):
+            call_order.append("process_episode")
+            return original_process_episode(*args, **kwargs)
+
+        processor.process_episode = _process_episode_spy  # type: ignore[method-assign]
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+            on_fetched=_on_fetched,
+        )
+
+        assert call_order == ["on_fetched", "process_episode"]
+
+    def test_on_fetched_none_by_default_no_error(self, test_config, mock_services, tmp_path):
+        """Omitting on_fetched (default None) runs without error."""
+        processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
+
+        # No exception should be raised when on_fetched is not supplied.
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+        )
+
+        assert result.cards_created == 1
+
 
 def _make_line_lemmas(text="新しい単語", lemmas=("新しい",), start=1.0, end=3.0):
     return LineLemmas(
