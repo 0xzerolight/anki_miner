@@ -202,6 +202,14 @@ def test_anki_fields_includes_glossary_default():
     assert cfg.anki_fields["glossary"] == ""
 
 
+def test_anki_fields_includes_source_default():
+    cfg = AnkiMinerConfig()
+    # Empty string default = opt-in: "source" is only written once the user
+    # maps it to a real Anki field name (Issue #69).
+    assert "source" in cfg.anki_fields
+    assert cfg.anki_fields["source"] == ""
+
+
 def test_dictionary_chain_replace():
     from dataclasses import replace
 

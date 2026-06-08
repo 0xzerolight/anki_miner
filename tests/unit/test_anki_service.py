@@ -1127,6 +1127,107 @@ class TestOptionalFields:
         assert note["fields"]["Frequency"] == "200"
 
 
+class TestSourceField:
+    """Tests for the optional "source" field (Issue #69)."""
+
+    def test_source_in_optional_field_keys(self):
+        """`source` must be a recognized optional field key."""
+        assert "source" in AnkiService.OPTIONAL_FIELD_KEYS
+
+    def _config_with_source(self, temp_dir, source_field_name):
+        from anki_miner.config import AnkiMinerConfig
+
+        return AnkiMinerConfig(
+            anki_fields={
+                "word": "word",
+                "sentence": "sentence",
+                "definition": "definition",
+                "picture": "picture",
+                "audio": "audio",
+                "expression_furigana": "expression_furigana",
+                "expression_reading": "",
+                "sentence_furigana": "sentence_furigana",
+                "sentence_reading": "",
+                "pitch_position": "",
+                "pitch_category": "",
+                "frequency": "",
+                "source": source_field_name,
+            },
+            media_temp_folder=temp_dir / "temp",
+            jmdict_path=temp_dir / "dict",
+        )
+
+    def test_source_written_when_mapped(self, temp_dir, make_tokenized_word):
+        """A mapped `source` field renders the extra_fields value into the note."""
+        config = self._config_with_source(temp_dir, "Source")
+        service = AnkiService(config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=[12345])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            service.create_cards_batch(
+                [
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition="definition",
+                        extra_fields={"source": "Foo @ 00:01:02"},
+                    )
+                ]
+            )
+
+        note_fields = mock_post.call_args[1]["json"]["params"]["notes"][0]["fields"]
+        assert note_fields["Source"] == "Foo @ 00:01:02"
+
+    def test_source_not_written_when_unmapped(self, temp_dir, make_tokenized_word):
+        """With the default empty mapping, `source` is never written."""
+        config = self._config_with_source(temp_dir, "")
+        service = AnkiService(config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=[12345])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            service.create_cards_batch(
+                [
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition="definition",
+                        extra_fields={"source": "Foo @ 00:01:02"},
+                    )
+                ]
+            )
+
+        note_fields = mock_post.call_args[1]["json"]["params"]["notes"][0]["fields"]
+        assert "Foo @ 00:01:02" not in note_fields.values()
+        assert "" not in note_fields
+
+    def test_source_value_html_escaped(self, temp_dir, make_tokenized_word):
+        """The source value is HTML-escaped like the other optional fields."""
+        config = self._config_with_source(temp_dir, "Source")
+        service = AnkiService(config)
+        word = make_tokenized_word()
+        media = MediaData()
+
+        resp = _mock_response(result=[12345])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            service.create_cards_batch(
+                [
+                    CardPayload(
+                        word=word,
+                        media=media,
+                        definition="definition",
+                        extra_fields={"source": "A & B <ep>"},
+                    )
+                ]
+            )
+
+        note_fields = mock_post.call_args[1]["json"]["params"]["notes"][0]["fields"]
+        assert note_fields["Source"] == "A &amp; B &lt;ep&gt;"
+
+
 # ---------------------------------------------------------------------------
 # TestReadingFields (Issue #7: plain-kana reading fields)
 # ---------------------------------------------------------------------------

@@ -133,6 +133,7 @@ class AnkiService:
         "pitch_position",
         "pitch_category",
         "frequency",
+        "source",
     }
 
     def __init__(self, config: AnkiMinerConfig):
