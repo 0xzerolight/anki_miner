@@ -88,7 +88,7 @@ from anki_miner.services._ankiconnect import post_action  # noqa: E402
 logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-CARD_STYLES = REPO_ROOT / "anki_miner/services/dictionary/resources/default_card_styles.css"
+CARD_STYLES = REPO_ROOT / "anki_miner/services/dictionary/resources/presets/default.css"
 
 # Audio leftovers to strip from a silent demo.
 _SOUND_LITERAL_RE = re.compile(r"\[(?:sound|anki:play):[^\]]*\]", re.IGNORECASE)
