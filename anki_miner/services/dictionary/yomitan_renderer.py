@@ -7,6 +7,7 @@ runtime path is a literal SELECT.
 
 from __future__ import annotations
 
+import math
 import re
 from html import escape
 from typing import Any, TypeAlias
@@ -181,10 +182,14 @@ _TAG_STRING_ATTRS: dict[str, frozenset[str]] = {
     "details": frozenset({"title"}),
     "summary": frozenset({"title"}),
 }
+# `img` width/height are NOT here: Yomitan sizes images in `sizeUnits`
+# (px or em), and a bare presentational `width="1"` attr loses the unit and is
+# overridden anyway by the card stylesheet's `.gloss-image { height: auto }`
+# (Issue #68). `_render_img` instead emits the size as inline CSS via
+# `_img_size_decls`, which carries the unit and beats the stylesheet.
 _TAG_INT_ATTRS: dict[str, frozenset[str]] = {
     "td": frozenset({"colspan", "rowspan"}),
     "th": frozenset({"colspan", "rowspan"}),
-    "img": frozenset({"width", "height"}),
 }
 _TAG_BOOL_ATTRS: dict[str, frozenset[str]] = {
     "details": frozenset({"open"}),
@@ -329,16 +334,21 @@ def _coerce_style_value(value: YomitanNode) -> str | None:
     return candidate
 
 
-def _collect_style(node: dict[str, YomitanNode]) -> str:
+def _collect_style(node: dict[str, YomitanNode], *, seed: dict[str, str] | None = None) -> str:
     """Build an inline style="..." value from a node's style props.
 
     Reads both nested `style: {...}` and Yomitan's top-level shortcut keys
     (fontSize, verticalAlign, etc.). Only whitelisted CSS properties survive,
     and values are scrubbed for url()/expression()/quotes/braces.
+
+    `seed` pre-populates declarations the caller built itself (e.g. `<img>`
+    width/height with units from `_img_size_decls`). Seeded props are not in
+    `_ALLOWED_STYLE_PROPS`, so the style-block / shortcut loops can't clobber
+    them — they pass through verbatim.
     """
     # Dict preserves insertion order; nested `style:` block wins because it's
     # spec-canonical, top-level shortcuts overwrite only when nested didn't set.
-    seen: dict[str, str] = {}
+    seen: dict[str, str] = dict(seed) if seed else {}
 
     style_block = node.get("style")
     if isinstance(style_block, dict):
@@ -443,6 +453,40 @@ def structured_content_to_html(
     return f"<{tag}{attrs}>{inner}</{tag}>"
 
 
+# Largest em dimension we'll honor on an image. Inline pitch/accent SVGs are
+# ~1em; anything past this is almost certainly bad data, and capping bounds the
+# blast radius of a hostile dict. px reuses _INT_ATTR_MAX.
+_IMG_EM_MAX = 100.0
+
+
+def _img_size_decls(node: dict[str, YomitanNode]) -> dict[str, str]:
+    """Build unit-carrying CSS width/height decls from a Yomitan `<img>` node.
+
+    Yomitan expresses image size as numeric `width`/`height` interpreted in
+    `sizeUnits` (`"em"` → em, anything else / absent → px, matching Yomitan's
+    default). Emitting these as bare presentational `width="1"` attrs drops the
+    unit and gets overridden by the stylesheet (Issue #68); emitting them as
+    inline CSS keeps the unit and wins over the stylesheet.
+
+    Accepts int or float; rejects bool, non-numeric, non-finite, and <= 0;
+    clamps to a sane bound. Returns an ordered {prop: "<value><unit>"} dict.
+    """
+    unit = "em" if node.get("sizeUnits") == "em" else "px"
+    cap = _IMG_EM_MAX if unit == "em" else float(_INT_ATTR_MAX)
+    decls: dict[str, str] = {}
+    for key in ("width", "height"):
+        raw = node.get(key)
+        if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+            continue
+        val = float(raw)
+        if not math.isfinite(val) or val <= 0:
+            continue
+        if val > cap:
+            val = cap
+        decls[key] = f"{val:g}{unit}"
+    return decls
+
+
 def _render_img(
     node: dict[str, YomitanNode],
     *,
@@ -459,10 +503,9 @@ def _render_img(
     """
     img_src, dict_media = _resolve_img_src(node.get("path"), dict_id=dict_id, media_collector=media_collector)
 
-    # Per-tag passthroughs that belong on the inner <img>.
+    # Per-tag string passthroughs (alt/title) that belong on the inner <img>.
     extras: list[str] = []
     string_attrs = _TAG_STRING_ATTRS.get("img", frozenset())
-    int_attrs = _TAG_INT_ATTRS.get("img", frozenset())
     for raw_key, value in node.items():
         if not isinstance(raw_key, str):
             continue
@@ -471,13 +514,13 @@ def _render_img(
             stripped = value.strip()
             if stripped and len(stripped) <= 256 and not any(ord(c) < 0x20 for c in stripped):
                 extras.append(f'{attr}="{escape(stripped, quote=True)}"')
-        elif attr in int_attrs:
-            try:
-                ival = int(value)  # type: ignore[arg-type]
-            except (TypeError, ValueError):
-                continue
-            if 1 <= ival <= _INT_ATTR_MAX:
-                extras.append(f'{attr}="{ival}"')
+
+    # Size (width/height + sizeUnits) and any other inline style (verticalAlign,
+    # border, …) are merged into one style="…" attr. Size decls seed first so
+    # they survive the style whitelist, which deliberately omits width/height.
+    style_attr = _collect_style(node, seed=_img_size_decls(node))
+    if style_attr:
+        extras.append(style_attr)
 
     if img_src is None:
         # No envelope — nothing to point at. Emit a bare <img> with extras
