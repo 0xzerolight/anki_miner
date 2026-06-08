@@ -47,6 +47,29 @@ class TestImportYomitanZip:
         assert meta["source_revision"] == "v1"
         assert meta["entry_count"] == "2"
 
+    def test_import_survives_lone_surrogate_in_glossary(self, tmp_path: Path):
+        """Issue #67: a hand-converted dict with a lone UTF-16 surrogate in a
+        glossary must import (scrubbed to U+FFFD) instead of crashing with
+        'utf-8 codec can't encode character ... surrogates not allowed'.
+
+        json.dumps writes '\\ud867' as an escape; the importer's json.loads
+        reproduces the lone surrogate — the exact production path."""
+        term_banks = [[["危険", "きけん", "", "", 0, ["danger\ud867ous"], 1, ""]]]
+        zip_path = build_yomitan_zip(tmp_path / "src" / "bad.zip", term_banks=term_banks)
+        dest_root = tmp_path / "dicts"
+
+        result = import_yomitan_zip(zip_path, dest_root)
+        assert result.entry_count == 1
+
+        db_path = dest_root / result.dict_id / "index.sqlite"
+        conn = open_readonly(db_path)
+        try:
+            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("危険",)).fetchone()[0]
+            assert "danger�ous" in content
+            assert "\ud867" not in content
+        finally:
+            conn.close()
+
     def test_progress_callback_fires(self, tmp_path: Path):
         zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip")
         dest_root = tmp_path / "dicts"
