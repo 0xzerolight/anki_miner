@@ -285,7 +285,8 @@ class AnkiSettingsPanel(FormPanel):
 
         self.custom_css_edit = QPlainTextEdit()
         self.custom_css_edit.setPlaceholderText(
-            "/* Appended after the defaults. Example: */\n" '[data-sc-content|="example-sentence"] { display: none; }'
+            "/* Appended after the selected preset. Example: */\n"
+            '[data-sc-content|="example-sentence"] { display: none; }'
         )
         mono_font = QFont("monospace")
         mono_font.setStyleHint(QFont.StyleHint.Monospace)
