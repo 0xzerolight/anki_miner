@@ -18,7 +18,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.models import CardPayload, MediaData, ProcessingResult, TokenizedWord
-from anki_miner.models.youtube import SubMode
+from anki_miner.models.youtube import FetchedMedia, SubMode
 from anki_miner.orchestration.stage_weighted_progress import StageWeightedProgress
 from anki_miner.services import (
     AnkiService,
@@ -736,6 +736,7 @@ class EpisodeProcessor:
         progress_callback: ProgressCallback | None = None,
         fetch_progress_cb: Callable[[str, float | None], None] | None = None,
         curation_callback: Callable[[list], list | None] | None = None,
+        on_fetched: Callable[[FetchedMedia], None] | None = None,
         preview_mode: bool = False,
     ) -> ProcessingResult:
         """Fetch a YouTube video + subs then run the standard mining pipeline.
@@ -767,6 +768,9 @@ class EpisodeProcessor:
                 indeterminate stages (merging, post-processing).
             curation_callback: Optional callback for word curation. Forwarded
                 unchanged to ``process_episode``; see its docstring for semantics.
+            on_fetched: Optional callback invoked with the ``FetchedMedia``
+                result after download completes, before the mining pipeline
+                starts. Called on the calling thread (the worker thread).
             preview_mode: If True, skip card creation and show previews only.
                 Forwarded unchanged to ``process_episode``.
 
@@ -793,6 +797,9 @@ class EpisodeProcessor:
             progress_cb=fetch_progress_cb,
             cancel_event=cancel_event,
         )
+
+        if on_fetched is not None:
+            on_fetched(fetched)
 
         return self.process_episode(
             fetched.video_file,
