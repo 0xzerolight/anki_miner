@@ -33,6 +33,7 @@ def test_config(temp_dir):
             "pitch_position": "PitchPosition",
             "pitch_category": "PitchCategory",
             "frequency": "Frequency",
+            "source": "",
         },
         media_temp_folder=temp_dir / "temp_media",
         jmdict_path=temp_dir / "JMdict_e",
