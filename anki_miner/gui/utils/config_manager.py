@@ -79,6 +79,9 @@ class GUIConfigManager:
             # Migrate old field names
             config_dict = cls._migrate_field_names(config_dict)
 
+            # Migrate pre-preset card-styling boolean → preset id
+            config_dict = cls._migrate_card_style_preset(config_dict)
+
             # Migrate stale allowed_pos defaults (pre-v2.3.2 missing 代名詞)
             config_dict = cls._migrate_allowed_pos(config_dict)
 
@@ -227,6 +230,24 @@ class GUIConfigManager:
         if "frequency_rank" in fields:
             fields["frequency"] = fields.pop("frequency_rank")
 
+        return data
+
+    @staticmethod
+    def _migrate_card_style_preset(data: dict[str, Any]) -> dict[str, Any]:
+        """Map the pre-preset card-styling boolean to a preset id.
+
+        Before card-style presets there was a single boolean
+        ``use_default_card_stylesheet``. The new ``card_style_preset`` field
+        carries a preset id instead, so an old config's ``True`` maps to
+        ``"default"`` (the bundled stylesheet) and ``False`` maps to ``"none"``
+        (custom CSS only). The legacy key is left in place — the valid-keys
+        filter in ``load_config`` drops it. A config that already has
+        ``card_style_preset`` (or neither key) is returned unchanged.
+        """
+        if "card_style_preset" in data:
+            return data
+        if "use_default_card_stylesheet" in data:
+            data["card_style_preset"] = "default" if data["use_default_card_stylesheet"] else "none"
         return data
 
     @staticmethod
