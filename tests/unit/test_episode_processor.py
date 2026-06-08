@@ -252,7 +252,15 @@ class TestProcessEpisode:
         as_args = mock_services["anki_service"].create_cards_batch.call_args
         card_data = as_args[0][0]
         assert len(card_data) == 1
-        assert card_data[0] == CardPayload(word=word, media=media, definition="1. to eat", extra_fields=None)
+        # Every card now carries an unconditional "source" stamp (Issue #69);
+        # the field-level opt-in in AnkiService decides whether it lands.
+        expected_source = f"{video.parent.name} — {video.stem} @ 00:00:01"
+        assert card_data[0] == CardPayload(
+            word=word,
+            media=media,
+            definition="1. to eat",
+            extra_fields={"source": expected_source},
+        )
 
     def test_subtitle_parse_error_handling(self, processor, mock_services, tmp_path):
         """SubtitleParseError should be caught and returned as error."""
@@ -1961,3 +1969,89 @@ class TestAudioTrackOverrideForwarding:
         processor.process_episode(video, sub)
 
         mock_services["media_extractor"].invalidate_audio_stream_cache.assert_called_once_with(video)
+
+
+class TestFormatTimestamp:
+    """Tests for the _format_timestamp module helper (Issue #69)."""
+
+    @pytest.mark.parametrize(
+        "seconds,expected",
+        [
+            (0, "00:00:00"),
+            (59, "00:00:59"),
+            (3661, "01:01:01"),
+            (-5, "00:00:00"),
+            (62.9, "00:01:02"),
+        ],
+    )
+    def test_format(self, seconds, expected):
+        from anki_miner.orchestration.episode_processor import _format_timestamp
+
+        assert _format_timestamp(seconds) == expected
+
+
+class TestSourceField:
+    """Tests for the card "source" extra field (Issue #69)."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    @pytest.fixture
+    def processor(self, test_config, mock_services):
+        return EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+    def _wire_single_word(self, mock_services, word, media):
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+    def test_default_source_label_from_video_path(self, processor, mock_services, tmp_path):
+        """Without an override, source_label is '<folder> — <stem>' plus timestamp."""
+        word = _make_word("食べる", start_time=62.0)
+        media = _make_media()
+        self._wire_single_word(mock_services, word, media)
+
+        folder = tmp_path / "My Show"
+        folder.mkdir()
+        video = folder / "Episode 01.mkv"
+        sub = folder / "Episode 01.ass"
+
+        processor.process_episode(video, sub)
+
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        assert card_data[0].extra_fields["source"] == "My Show — Episode 01 @ 00:01:02"
+
+    def test_source_label_override_wins(self, processor, mock_services, tmp_path):
+        """source_label_override replaces the derived '<folder> — <stem>' origin."""
+        word = _make_word("食べる", start_time=3661.0)
+        media = _make_media()
+        self._wire_single_word(mock_services, word, media)
+
+        processor.process_episode(
+            tmp_path / "ep01.mkv",
+            tmp_path / "ep01.ass",
+            source_label_override="A Cool Video Title",
+        )
+
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        assert card_data[0].extra_fields["source"] == "A Cool Video Title @ 01:01:01"
