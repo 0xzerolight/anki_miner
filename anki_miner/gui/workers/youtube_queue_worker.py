@@ -47,6 +47,7 @@ from PyQt6.QtCore import pyqtSignal
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import YouTubeFetchError
 from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.models.youtube import FetchedMedia
 from anki_miner.models.youtube_queue import YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 
@@ -123,11 +124,11 @@ class YouTubeQueueWorker(CancellableWorker):
             items: Queue items to process, in order. Each must already have
                 ``video_id`` and ``resolved_sub_mode`` populated (probe step
                 handles that before items reach this worker).
-            curation_callback: Forwarded to ``process_youtube_url`` only when
-                ``preview_mode`` is True. In non-preview runs, curation is
-                disabled (per-item curation only makes sense in preview).
-            preview_mode: If True, mining produces previews instead of cards
-                and ``curation_callback`` (if any) is invoked per item.
+            curation_callback: Forwarded unconditionally to
+                ``process_youtube_url``; ``process_episode`` internally gates
+                invocation on ``not preview_mode``, so curation fires only on
+                Mine runs. Pass ``None`` to disable entirely.
+            preview_mode: If True, mining produces previews instead of cards.
             parent: Optional parent QObject.
         """
         super().__init__(parent)
@@ -136,6 +137,12 @@ class YouTubeQueueWorker(CancellableWorker):
         self._items = items
         self._curation_callback = curation_callback
         self._preview_mode = preview_mode
+        # Published for the GUI curation bridge (mirrors BatchQueueWorkerThread's
+        # _curation_* attrs so YouTubeTab reads one attribute name across both workers).
+        self._curation_processor: EpisodeProcessor = processor
+        self._curation_video: Path | None = None
+        self._curation_subtitle: Path | None = None
+        self._curation_offset: float = config.subtitle_offset
 
     def run(self) -> None:
         """Process the queue end-to-end with retry-once per fetch error."""
@@ -207,10 +214,21 @@ class YouTubeQueueWorker(CancellableWorker):
             cancel_event=self._cancel_event,
             progress_callback=mining_cb,
             fetch_progress_cb=lambda label, frac: self._emit_fetch_progress(idx, label, frac),
-            # Curation only fires per item in preview mode; non-preview runs skip it.
-            curation_callback=self._curation_callback if self._preview_mode else None,
+            # process_episode gates curation on not preview_mode, so this fires
+            # only on Mine runs; passing it unconditionally is correct.
+            curation_callback=self._curation_callback,
+            on_fetched=self._capture_curation_media,
             preview_mode=self._preview_mode,
         )
+
+    def _capture_curation_media(self, fetched: FetchedMedia) -> None:
+        """Record download paths so the GUI can build a curation media context.
+
+        Runs on the worker thread, before curation, so the GUI can read the
+        paths via ``_curation_video`` / ``_curation_subtitle`` from its slot.
+        """
+        self._curation_video = fetched.video_file
+        self._curation_subtitle = fetched.subtitle_file
 
     def _emit_fetch_progress(self, idx: int, label: str, frac: float | None) -> None:
         """Translate fetcher progress into the ``item_progress`` signal.
