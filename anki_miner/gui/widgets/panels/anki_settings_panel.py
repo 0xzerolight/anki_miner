@@ -256,6 +256,15 @@ class AnkiSettingsPanel(FormPanel):
         self.frequency_field_input.setPlaceholderText("Frequency")
         self.add_field("Frequency Field", self.frequency_field_input, helper="Stores the word frequency rank.")
 
+        # Source field
+        self.source_field_input = QLineEdit()
+        self.source_field_input.setPlaceholderText("Source")
+        self.add_field(
+            "Source Field",
+            self.source_field_input,
+            helper="Stores the show/episode and timestamp the word came from. Blank = skip.",
+        )
+
         # Card Styling section (Issue #44)
         self.add_section("Card Styling")
 
@@ -492,6 +501,10 @@ class AnkiSettingsPanel(FormPanel):
                 self.frequency_field_input,
                 ["frequency", "freq", "rank", "frequencyrank"],
             ),
+            "source": (
+                self.source_field_input,
+                ["source", "origin"],
+            ),
         }
 
         for _key, (widget, keywords) in mapping.items():
@@ -522,6 +535,7 @@ class AnkiSettingsPanel(FormPanel):
             "pitch_position": self.pitch_position_field_input.text().strip(),
             "pitch_category": self.pitch_category_field_input.text().strip(),
             "frequency": self.frequency_field_input.text().strip(),
+            "source": self.source_field_input.text().strip(),
         }
 
     def set_card_fields(self, fields: dict) -> None:
@@ -543,6 +557,7 @@ class AnkiSettingsPanel(FormPanel):
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.frequency_field_input.setText(fields.get("frequency", ""))
+        self.source_field_input.setText(fields.get("source", ""))
 
     def get_pitch_category_format(self) -> Literal["jp", "romaji"]:
         """Return the selected pitch category format ("jp" or "romaji")."""
