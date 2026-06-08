@@ -20,10 +20,14 @@ queue contents plus the worker handle fully determine the UI.
 from __future__ import annotations
 
 import contextlib
-import threading
+import logging
+from collections.abc import Callable
+from dataclasses import replace
+from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -38,6 +42,8 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.service_factory import create_episode_processor, create_youtube_fetcher
+from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -48,7 +54,11 @@ from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube import SubMode, VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueue, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
+from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+
+logger = logging.getLogger(__name__)
 
 
 def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bool, str | None, SubMode | None]:
@@ -79,18 +89,16 @@ def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bo
     return False, "No Japanese subtitles available for this video.", None
 
 
-class YouTubeTab(QWidget):
+class YouTubeTab(MiningTabBase):
     """Multi-URL YouTube queue mining tab.
 
     The tab owns a :class:`YouTubeQueue`, a list of in-flight
     :class:`YouTubeProbeWorker` instances, and at most one running
     :class:`YouTubeQueueWorker`. Button state is derived from the queue
     contents and the worker handle via :meth:`_recompute_buttons`.
-    """
 
-    # Cross-thread curation bridge: emitted from the worker thread, handled on
-    # the GUI thread. Mirrors the pattern in SingleEpisodeTab.
-    _curation_requested = pyqtSignal(list)
+    The worker→GUI curation bridge is provided by :class:`MiningTabBase`.
+    """
 
     def __init__(
         self,
@@ -145,11 +153,8 @@ class YouTubeTab(QWidget):
         # so mid-run removals of COMPLETED rows don't shift the mapping.
         self._run_items: list[YouTubeQueueItem] = []
 
-        # Curation bridge: the queue worker thread blocks on this event while
-        # the GUI thread shows the curation dialog. Mirrors SingleEpisodeTab.
-        self._curation_event = threading.Event()
-        self._curation_result: list = []
-        self._curation_requested.connect(self._on_curation_requested)
+        # Worker→GUI word-curation bridge (provided by MiningTabBase).
+        self._init_curation_bridge()
 
         self._setup_ui()
         self._recompute_buttons()
@@ -209,6 +214,12 @@ class YouTubeTab(QWidget):
         self.empty_label.setObjectName("helper-text")
         self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         queue_layout.addWidget(self.empty_label)
+
+        # Issue #65: opt-in per-video word curation popup (default off).
+        self.review_words_checkbox = QCheckBox("Review words before mining")
+        self.review_words_checkbox.setChecked(False)
+        self.review_words_checkbox.setToolTip("Show the word-selection popup for each video before creating cards.")
+        queue_layout.addWidget(self.review_words_checkbox)
 
         # Action buttons
         button_row = QHBoxLayout()
@@ -371,11 +382,12 @@ class YouTubeTab(QWidget):
 
         self.progress_widget.reset()
 
+        curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
         worker = YouTubeQueueWorker(
             processor=self._processor,
             config=self._config,
             items=ready_items,
-            curation_callback=self._curation_bridge,
+            curation_callback=curation_cb,
             preview_mode=preview_mode,
         )
         worker.item_started.connect(self._on_item_started)
@@ -394,6 +406,9 @@ class YouTubeTab(QWidget):
 
     def _on_stop_all_clicked(self) -> None:
         """Cancel the active run."""
+        # Release any open curation dialog first so the blocked worker resumes
+        # instead of hanging on _curation_event (Issue #65).
+        self._cancel_active_curation_dialog()
         worker = self.worker_thread
         if worker is None:
             return
@@ -591,29 +606,44 @@ class YouTubeTab(QWidget):
     # Curation bridge
     # ------------------------------------------------------------------
 
-    def _curation_bridge(self, words: list) -> list:
-        """Thread-safe curation bridge: blocks the worker until the dialog closes.
+    def _build_curation_context(
+        self,
+    ) -> tuple[CurationMediaContext | None, Callable[[str], list[tuple[str, str]]] | None]:
+        """Build (media_context, lookup_fn) from the live worker's fetched media.
 
-        Called from the worker thread. Emits a signal to the GUI thread so the
-        dialog runs on the correct thread, then blocks on ``_curation_event``
-        until the GUI slot completes. Returns the user's selected words.
+        The worker is blocked in ``_curation_event.wait()`` while this runs, so
+        reading its ``_curation_*`` attributes is race-free. Mirrors
+        ``BatchProcessingTab._build_curation_context`` for player + dictionary
+        parity.
         """
-        self._curation_event.clear()
-        self._curation_result = []
-        self._curation_requested.emit(words)
-        self._curation_event.wait()
-        return self._curation_result
+        w = self.worker_thread
+        if w is None:
+            return None, None
 
-    def _on_curation_requested(self, words: list) -> None:
-        """Slot on the GUI thread that runs the curation dialog."""
-        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+        lookup_fn = None
+        proc = getattr(w, "_curation_processor", None)
+        if proc is not None and getattr(proc, "definition_service", None) is not None:
+            lookup_fn = proc.definition_service.lookup_all_offline
 
-        dialog = WordCurationDialog(words, self, mark_known_callback=self._mark_known)
-        if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
-            self._curation_result = dialog.get_selected_words()
-        else:
-            self._curation_result = []
-        self._curation_event.set()
+        media_context: CurationMediaContext | None = None
+        video = getattr(w, "_curation_video", None)
+        subtitle = getattr(w, "_curation_subtitle", None)
+        if video is not None and subtitle is not None:
+            try:
+                config_no_offset = replace(self._config, subtitle_offset=0.0)
+                parser = SubtitleParserService(config_no_offset)
+                entries = parser.parse_raw_entries(Path(subtitle))
+                media_context = CurationMediaContext(
+                    video_file=Path(video),
+                    subtitle_entries=entries,
+                    offset=getattr(w, "_curation_offset", 0.0),
+                    audio_track_override=None,
+                    ffprobe_cmd=resolve_ffprobe(self._config),
+                )
+            except Exception:
+                logger.exception("Failed to build media context for curation; proceeding without player")
+                media_context = None
+        return media_context, lookup_fn
 
     def _mark_known(self, forms: set[str]) -> int:
         """Persist curator-selected forms to the local known/ignore list (Issue #42).

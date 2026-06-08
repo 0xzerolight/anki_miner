@@ -344,8 +344,8 @@ class TestRunStartup:
         assert kwargs["preview_mode"] is False
         assert kwargs["processor"] is tab._processor
         assert kwargs["config"] is tab._config
-        # Curation callback always passed; worker decides per item.
-        assert kwargs["curation_callback"] == tab._curation_bridge
+        # Curation callback gated by the (default-unchecked) review checkbox.
+        assert kwargs["curation_callback"] is None
         # Worker handle set.
         assert tab.worker_thread is not None
 
