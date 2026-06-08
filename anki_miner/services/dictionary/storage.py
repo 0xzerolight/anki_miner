@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +24,29 @@ from typing import Iterable
 logger = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 2
+
+# Lone UTF-16 surrogates (U+D800–U+DFFF) have no valid UTF-8 encoding, so sqlite3
+# raises ``UnicodeEncodeError: surrogates not allowed`` the moment such text is
+# bound to a query. ``json.loads`` combines valid surrogate *pairs* into real code
+# points, so anything left in this range is unpaired — typically corruption from a
+# hand-converted dictionary (Issue #67). Scrub to U+FFFD at every write seam.
+_SURROGATE_RE = re.compile("[\ud800-\udfff]")
+
+
+def _scrub_surrogates(value: str | None) -> str | None:
+    """Replace lone UTF-16 surrogates with U+FFFD so the value is UTF-8-encodable.
+
+    Fast path: most strings encode cleanly and return unchanged; the regex only
+    runs on the rare offending string.
+    """
+    if value is None:
+        return None
+    try:
+        value.encode("utf-8")
+        return value
+    except UnicodeEncodeError:
+        return _SURROGATE_RE.sub("�", value)
+
 
 # Sidecar filename living next to each ``index.sqlite``. Holds the dictionary's
 # ``meta`` rows as JSON so ``DictionaryRegistry.load()`` can skip the SQLite
@@ -96,7 +120,16 @@ def bulk_insert(db_path: Path, rows: Iterable[DictRow], batch_size: int = 5000) 
     try:
         batch: list[tuple] = []
         for row in rows:
-            batch.append((row.term, row.reading, row.content, row.tags, row.score, row.sequence))
+            batch.append(
+                (
+                    _scrub_surrogates(row.term),
+                    _scrub_surrogates(row.reading),
+                    _scrub_surrogates(row.content),
+                    _scrub_surrogates(row.tags),
+                    row.score,
+                    row.sequence,
+                )
+            )
             if len(batch) >= batch_size:
                 conn.executemany(
                     "INSERT INTO entries (term, reading, content, tags, score, sequence) " "VALUES (?, ?, ?, ?, ?, ?)",
@@ -124,7 +157,7 @@ def write_meta(db_path: Path, items: dict[str, str]) -> None:
         for key, value in items.items():
             conn.execute(
                 "INSERT INTO meta (key, value) VALUES (?, ?) " "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-                (key, value),
+                (key, _scrub_surrogates(value)),
             )
         conn.commit()
         full_meta = {row[0]: row[1] for row in conn.execute("SELECT key, value FROM meta")}

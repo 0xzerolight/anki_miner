@@ -445,3 +445,71 @@ class TestReadMetaCached:
 
     def test_cached_read_missing_db(self, tmp_path: Path):
         assert read_meta_cached(tmp_path / "nonexistent.sqlite") == {}
+
+
+class TestSurrogateScrubbing:
+    """Lone UTF-16 surrogates have no UTF-8 encoding and crash sqlite3 on insert
+    (Issue #67). bulk_insert / write_meta scrub them to U+FFFD before binding."""
+
+    # Lone high surrogate from the bug report ('\ud867'); a real above-BMP char
+    # (𩨽 = U+29A3D) must survive untouched to prove we only hit lone surrogates.
+    LONE = "to e\ud867at"
+    VALID_EXT_B = "\U00029a3d"  # 𩨽
+
+    def test_bulk_insert_scrubs_surrogate_in_content(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        count = bulk_insert(
+            db_path,
+            [DictRow(term="食べる", reading="たべる", content=f"<div>{self.LONE}</div>", sequence=1)],
+        )
+        assert count == 1
+
+        conn = open_readonly(db_path)
+        try:
+            results = lookup(conn, "食べる")
+            assert results == [("<div>to e�at</div>", "")]
+            assert "\ud867" not in results[0][0]
+        finally:
+            conn.close()
+
+    def test_bulk_insert_scrubs_surrogate_in_term(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        count = bulk_insert(
+            db_path,
+            [DictRow(term="a\ud867b", reading=None, content="<div>x</div>", sequence=1)],
+        )
+        assert count == 1
+
+        conn = open_readonly(db_path)
+        try:
+            results = lookup(conn, "a�b")
+            assert results == [("<div>x</div>", "")]
+        finally:
+            conn.close()
+
+    def test_bulk_insert_preserves_valid_above_bmp_char(self, tmp_path: Path):
+        """A legitimate CJK Extension B code point must pass through unchanged."""
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [DictRow(term=self.VALID_EXT_B, reading=None, content=f"<div>{self.VALID_EXT_B}</div>", sequence=1)],
+        )
+
+        conn = open_readonly(db_path)
+        try:
+            results = lookup(conn, self.VALID_EXT_B)
+            assert results == [(f"<div>{self.VALID_EXT_B}</div>", "")]
+        finally:
+            conn.close()
+
+    def test_write_meta_scrubs_surrogate_in_value(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        write_meta(db_path, {"source_name": "Dict\ud867Name", "format": "yomitan"})
+
+        meta = read_meta(db_path)
+        assert meta["source_name"] == "Dict�Name"
+        assert meta["format"] == "yomitan"
