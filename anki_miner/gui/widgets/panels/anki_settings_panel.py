@@ -5,7 +5,6 @@ from typing import Literal, cast
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -17,6 +16,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import FormPanel, StatusBadge, make_label_fit_text
 from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.services.dictionary.card_style_presets import PRESETS
 
 
 class AnkiSettingsPanel(FormPanel):
@@ -261,17 +261,22 @@ class AnkiSettingsPanel(FormPanel):
 
         styling_helper = QLabel(
             '"Apply to Note Type" writes a managed CSS block via AnkiConnect (never touches your own CSS; '
-            '"Remove" reverts cleanly). Custom CSS is appended after the bundled defaults.'
+            '"Remove" reverts cleanly). Custom CSS is appended after the selected preset.'
         )
         styling_helper.setObjectName("helper-text")
         styling_helper.setWordWrap(True)
         self.add_widget(styling_helper)
 
-        self.use_default_stylesheet_checkbox = QCheckBox("Use bundled default stylesheet")
-        self.use_default_stylesheet_checkbox.setToolTip(
-            "Include Anki Miner's built-in dictionary styling in the managed block."
-        )
-        self.add_widget(self.use_default_stylesheet_checkbox)
+        preset_label = QLabel("Card style preset:")
+        preset_label.setObjectName("field-label")
+        make_label_fit_text(preset_label)
+        self.add_widget(preset_label)
+
+        self.card_style_preset_combo = QComboBox()
+        for preset in PRESETS:
+            self.card_style_preset_combo.addItem(preset.display_name, preset.id)
+        self.card_style_preset_combo.setToolTip("Pick a bundled preset; your custom CSS below is appended after it.")
+        self.add_widget(self.card_style_preset_combo)
 
         css_label = QLabel("Custom CSS:")
         css_label.setObjectName("field-label")
@@ -590,13 +595,18 @@ class AnkiSettingsPanel(FormPanel):
         self.apply_styling_button.setEnabled(enabled)
         self.remove_styling_button.setEnabled(enabled)
 
-    def get_use_default_stylesheet(self) -> bool:
-        """Return whether the bundled default stylesheet is enabled."""
-        return self.use_default_stylesheet_checkbox.isChecked()
+    def get_card_style_preset(self) -> str:
+        """Return the selected preset id (falls back to default)."""
+        data = self.card_style_preset_combo.currentData()
+        return data if isinstance(data, str) and data else "default"
 
-    def set_use_default_stylesheet(self, value: bool) -> None:
-        """Set the bundled-default-stylesheet checkbox."""
-        self.use_default_stylesheet_checkbox.setChecked(value)
+    def set_card_style_preset(self, value: str) -> None:
+        """Select the preset combo by id, falling back to default."""
+        index = self.card_style_preset_combo.findData(value)
+        if index < 0:
+            index = self.card_style_preset_combo.findData("default")
+        if index >= 0:
+            self.card_style_preset_combo.setCurrentIndex(index)
 
     def get_custom_css(self) -> str:
         """Return the user's custom CSS text."""

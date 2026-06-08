@@ -182,10 +182,13 @@ class AnkiMinerConfig:
     # back the Settings → Card Styling section, which pushes a managed CSS block
     # into the configured note type via AnkiConnect `updateModelStyling`. UI/
     # persistence only here — nothing is applied automatically during mining; the
-    # explicit "Apply to note type" button triggers it. `custom_card_css` is the
-    # user's own CSS (Yomitan/Jitendex snippets work verbatim) appended after the
-    # bundled default. Distinct from the app-UI `theme` fields below.
-    use_default_card_stylesheet: bool = True
+    # explicit "Apply to note type" button triggers it. `card_style_preset` is a
+    # preset id (one of the `card_style_presets.PRESETS` ids — default /
+    # yomitan-classic / minimal / none) selecting which bundled preset's CSS fills
+    # the managed block. `custom_card_css` is the user's own CSS (Yomitan/Jitendex
+    # snippets work verbatim) appended after the preset. Distinct from the app-UI
+    # `theme` fields below.
+    card_style_preset: str = "default"
     custom_card_css: str = ""
 
     # Deduplication settings
