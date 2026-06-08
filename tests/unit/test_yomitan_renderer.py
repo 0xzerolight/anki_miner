@@ -477,8 +477,12 @@ class TestPerTagAttributes:
         }
         out = structured_content_to_html(node)
         assert 'alt="diagram"' in out
-        assert 'width="100"' in out
-        assert 'height="50"' in out
+        # Size is emitted as unit-carrying inline CSS (default unit px), not as
+        # bare presentational attrs the card stylesheet would override (#68).
+        assert "width: 100px" in out
+        assert "height: 50px" in out
+        assert 'width="100"' not in out
+        assert 'height="50"' not in out
 
     def test_img_alt_quote_escaped(self):
         node = {"tag": "img", "path": "https://example.com/x.png", "alt": 'a"b'}
@@ -552,12 +556,13 @@ class TestImgEnvelope:
         out = structured_content_to_html(node)
         assert 'alt="diagram"' in out
         assert 'title="hint"' in out
-        assert 'width="100"' in out
-        assert 'height="50"' in out
+        assert "width: 100px" in out
+        assert "height: 50px" in out
         # These belong on the inner <img>, not the outer envelope.
         link_open, _, rest = out.partition(">")
         assert "alt=" not in link_open
         assert "title=" not in link_open
+        assert "style=" not in link_open
 
     def test_img_data_path_is_html_escaped(self):
         node = {"tag": "img", "path": 'a"b/c.png'}
@@ -580,6 +585,66 @@ class TestImgEnvelope:
         node = {"tag": "img", "path": "data:malicious", "alt": "alt text"}
         out = structured_content_to_html(node)
         assert out == '<img alt="alt text">'
+
+
+class TestImgSizing:
+    """Issue #68: bundled SVG art (pitch-accent marks, inline symbols) rendered
+    huge because the renderer emitted bare presentational `height="1"` attrs
+    that lost Yomitan's `sizeUnits` and were overridden by the card stylesheet's
+    `.gloss-image { height: auto }`. Size is now inline CSS in the right unit."""
+
+    def test_height_em_emits_inline_css_not_attr(self):
+        # The exact shape that broke in #68: height 1 with sizeUnits "em".
+        node = {"tag": "img", "path": "svg/accent.svg", "height": 1, "sizeUnits": "em"}
+        out = structured_content_to_html(node, dict_id="d")
+        assert "height: 1em" in out
+        assert 'height="1"' not in out
+
+    def test_fractional_em_height_preserved(self):
+        # int(0.8) == 0 used to fail the `1 <= ival` guard and drop the size
+        # entirely → image blew up. Floats now survive with their unit.
+        node = {"tag": "img", "path": "svg/x.svg", "height": 0.8, "sizeUnits": "em"}
+        out = structured_content_to_html(node, dict_id="d")
+        assert "height: 0.8em" in out
+
+    def test_width_and_height_default_unit_is_px(self):
+        node = {"tag": "img", "path": "https://example.com/x.png", "width": 40, "height": 55}
+        out = structured_content_to_html(node)
+        assert "width: 40px" in out
+        assert "height: 55px" in out
+
+    def test_size_merges_with_other_inline_style(self):
+        # verticalAlign was silently dropped on images before (no _collect_style
+        # call); it now lands in the same style attr as the size.
+        node = {
+            "tag": "img",
+            "path": "svg/x.svg",
+            "height": 1,
+            "sizeUnits": "em",
+            "verticalAlign": "middle",
+        }
+        out = structured_content_to_html(node, dict_id="d")
+        assert out.count("style=") == 1
+        assert "height: 1em" in out
+        assert "vertical-align: middle" in out
+
+    def test_non_positive_and_nonfinite_dimensions_dropped(self):
+        for bad in (0, -3, float("inf"), float("nan")):
+            node = {"tag": "img", "path": "svg/x.svg", "height": bad, "sizeUnits": "em"}
+            out = structured_content_to_html(node, dict_id="d")
+            assert "height:" not in out
+            assert "style=" not in out
+
+    def test_em_dimension_capped(self):
+        node = {"tag": "img", "path": "svg/x.svg", "height": 9999, "sizeUnits": "em"}
+        out = structured_content_to_html(node, dict_id="d")
+        assert "height: 100em" in out
+
+    def test_bool_dimension_rejected(self):
+        # bool is an int subclass; True must not become height: 1.
+        node = {"tag": "img", "path": "svg/x.svg", "height": True, "sizeUnits": "em"}
+        out = structured_content_to_html(node, dict_id="d")
+        assert "height:" not in out
 
 
 class TestDictMediaImgRewrite:
