@@ -37,17 +37,18 @@ def load_default_card_css() -> str:
     return load_preset_css(DEFAULT_PRESET_ID)
 
 
-def build_managed_block(*, use_default: bool, custom_css: str) -> str:
+def build_managed_block(*, preset: str, custom_css: str) -> str:
     """Assemble the managed block.
 
-    The block is the bundled default stylesheet (when ``use_default``) followed
-    by the user's ``custom_css``. Both markers are always emitted — even when
-    both inputs are empty — so a later :func:`apply_managed_block` or
+    The block is the selected preset's CSS (per ``preset``) followed by the
+    user's ``custom_css``. Both markers are always emitted — even when both
+    inputs are empty — so a later :func:`apply_managed_block` or
     :func:`strip_managed_block` can locate the block unambiguously.
     """
     sections: list[str] = []
-    if use_default:
-        sections.append(load_default_card_css().strip())
+    preset_css = load_preset_css(preset).strip()
+    if preset_css:
+        sections.append(preset_css)
     custom = custom_css.strip()
     if custom:
         sections.append(custom)

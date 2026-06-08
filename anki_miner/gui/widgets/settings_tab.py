@@ -219,7 +219,7 @@ class SettingsTab(QWidget):
         self.anki_panel.set_card_fields(self.config.anki_fields)
 
         # Card styling (Issue #44)
-        self.anki_panel.set_use_default_stylesheet(self.config.use_default_card_stylesheet)
+        self.anki_panel.set_card_style_preset(self.config.card_style_preset)
         self.anki_panel.set_custom_css(self.config.custom_card_css)
 
         # Media settings
@@ -410,7 +410,7 @@ class SettingsTab(QWidget):
             anki_fields=self.anki_panel.get_card_fields(),
             anki_word_field=self.anki_panel.get_card_fields().get("word", "Expression"),
             # Card styling (Issue #44)
-            use_default_card_stylesheet=self.anki_panel.get_use_default_stylesheet(),
+            card_style_preset=self.anki_panel.get_card_style_preset(),
             custom_card_css=self.anki_panel.get_custom_css(),
             # Media settings
             audio_format=self.media_panel.audio_format_combo.currentText(),
@@ -1269,7 +1269,7 @@ class SettingsTab(QWidget):
         worker = StylingWorker(
             service,
             mode="apply" if mode == "apply" else "remove",
-            use_default=self.anki_panel.get_use_default_stylesheet(),
+            preset=self.anki_panel.get_card_style_preset(),
             custom_css=self.anki_panel.get_custom_css(),
             note_type=note_type,
             parent=self,
