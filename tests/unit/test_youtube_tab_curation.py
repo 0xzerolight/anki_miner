@@ -160,3 +160,29 @@ def test_stop_releases_active_curation_dialog(tab):
         tab._on_stop_all_clicked()
         cancel.assert_called_once()
         tab.worker_thread.cancel.assert_called_once()
+
+
+def test_shutdown_releases_curation_before_joining_worker(tab):
+    """App close must release an open curation dialog before the unbounded
+    worker.wait(), else a worker parked in _curation_event.wait() hangs the
+    GUI forever (Issue #65). cancel() alone only sets _cancel_event."""
+    with patch.object(tab, "_cancel_active_curation_dialog") as cancel:
+        worker = MagicMock(name="QueueWorker")
+        tab.worker_thread = worker
+        tab.shutdown()
+        cancel.assert_called_once()
+        worker.cancel.assert_called_once()
+        worker.wait.assert_called_once()
+
+
+def test_shutdown_rejects_open_dialog_so_blocked_worker_resumes(tab):
+    """shutdown() drives the real release path: an open dialog is rejected and
+    _curation_cancelled is set, which (via _on_curation_requested's finally,
+    covered in test_mining_tab_base_curation) sets _curation_event so the
+    parked worker unblocks."""
+    dialog = MagicMock(name="WordCurationDialog")
+    tab._active_curation_dialog = dialog
+    tab.worker_thread = MagicMock(name="QueueWorker")
+    tab.shutdown()
+    dialog.reject.assert_called_once()
+    assert tab._curation_cancelled is True
