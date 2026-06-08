@@ -145,17 +145,17 @@ class TestCardStylingRoundTrip:
     """Persistence of the Issue #44 card-styling fields through save/load."""
 
     def test_save_and_load_preserves_card_styling(self, tmp_path, monkeypatch):
-        """Custom CSS and the default-stylesheet toggle must survive save/load."""
+        """Custom CSS and the selected preset id must survive save/load."""
         cfg_file = tmp_path / "gui_config.json"
         monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
 
         css = '.yomitan-glossary { color: red; }\n[data-sc-content|="example-sentence"] { display: none; }'
-        config = replace(create_default_config(), use_default_card_stylesheet=False, custom_card_css=css)
+        config = replace(create_default_config(), card_style_preset="none", custom_card_css=css)
         GUIConfigManager.save_config(config)
 
         loaded = GUIConfigManager.load_config()
 
-        assert loaded.use_default_card_stylesheet is False
+        assert loaded.card_style_preset == "none"
         assert loaded.custom_card_css == css
 
     def test_legacy_config_without_card_styling_uses_defaults(self, tmp_path, monkeypatch):
@@ -174,8 +174,40 @@ class TestCardStylingRoundTrip:
 
         loaded = GUIConfigManager.load_config()
 
-        assert loaded.use_default_card_stylesheet is True
+        assert loaded.card_style_preset == "default"
         assert loaded.custom_card_css == ""
+
+    def test_legacy_boolean_migrates_to_preset_id(self, tmp_path, monkeypatch):
+        """A pre-preset JSON with use_default_card_stylesheet=False maps to "none"."""
+        cfg_file = tmp_path / "gui_config.json"
+        cfg_file.write_text(
+            json.dumps(
+                {
+                    "anki_deck_name": "Legacy Deck",
+                    "use_default_card_stylesheet": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.card_style_preset == "none"
+
+    def test_migrate_card_style_preset_maps_boolean(self):
+        """The boolean→id migration: True→default, False→none, idempotent."""
+        assert (
+            GUIConfigManager._migrate_card_style_preset({"use_default_card_stylesheet": True})["card_style_preset"]
+            == "default"
+        )
+        assert (
+            GUIConfigManager._migrate_card_style_preset({"use_default_card_stylesheet": False})["card_style_preset"]
+            == "none"
+        )
+        # An already-present preset id is left untouched.
+        existing = {"card_style_preset": "minimal", "use_default_card_stylesheet": True}
+        assert GUIConfigManager._migrate_card_style_preset(existing)["card_style_preset"] == "minimal"
 
 
 class TestDictsRootRoundTrip:

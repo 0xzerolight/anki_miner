@@ -63,11 +63,14 @@ Documentation = "https://github.com/0xzerolight/anki_miner/blob/main/README.md"
 [tool.setuptools]
 include-package-data = true
 
-# Ship the bundled dictionary card stylesheet (Issue #44). It lives outside
-# gui/resources (which MANIFEST.in already covers), so declare it explicitly so
-# pip/pipx wheels include it. The PyInstaller bundle wires it via anki_miner.spec.
+# Ship the bundled dictionary card stylesheets (Issue #44 + card-style presets).
+# They live outside gui/resources (which MANIFEST.in already covers), so declare
+# them explicitly so pip/pipx wheels include them. The named preset stylesheets
+# live in the `presets` subpackage, which the parent glob does NOT cover, so it
+# gets its own entry. The PyInstaller bundle wires both via anki_miner.spec.
 [tool.setuptools.package-data]
 "anki_miner.services.dictionary.resources" = ["*.css"]
+"anki_miner.services.dictionary.resources.presets" = ["*.css"]
 
 [tool.setuptools.dynamic]
 version = {attr = "anki_miner.__version__"}
