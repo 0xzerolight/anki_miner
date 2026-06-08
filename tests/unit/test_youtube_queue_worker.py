@@ -19,7 +19,24 @@ from anki_miner.gui.workers.youtube_queue_worker import (
     YouTubeQueueWorker,
     _QueueMiningProgressAdapter,
 )
+from anki_miner.models.youtube import VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
+
+
+def _make_video_info(video_id: str = "abc", title: str = "Some Title") -> VideoInfo:
+    """Build a minimal VideoInfo with the given id/title."""
+    return VideoInfo(
+        video_id=video_id,
+        title=title,
+        duration_s=120,
+        has_manual_ja_subs=True,
+        has_auto_ja_subs=False,
+        thumbnail_url=None,
+        uploader=None,
+        is_live=False,
+        is_age_restricted=False,
+    )
+
 
 # Qt needs a core application for signals. Created once per process.
 _app = QCoreApplication.instance() or QCoreApplication([])
@@ -53,6 +70,7 @@ def _make_item(
     url: str = "https://www.youtube.com/watch?v=abc",
     video_id: str = "abc",
     sub_mode: str = "manual_only",
+    title: str = "Some Title",
 ) -> YouTubeQueueItem:
     """Build a READY queue item with the given identity."""
     return YouTubeQueueItem(
@@ -60,6 +78,7 @@ def _make_item(
         status=YouTubeItemStatus.READY,
         video_id=video_id,
         resolved_sub_mode=sub_mode,  # type: ignore[arg-type]
+        video_info=_make_video_info(video_id=video_id, title=title),
     )
 
 
@@ -402,6 +421,37 @@ def test_none_curation_callback_passed_through(make_worker, mock_processor):
 
     kwargs = mock_processor.process_youtube_url.call_args.kwargs
     assert kwargs["curation_callback"] is None
+
+
+# ---------------------------------------------------------------------------
+# source_label forwarded from video_info.title (Issue #69)
+# ---------------------------------------------------------------------------
+
+
+def test_source_label_forwarded_from_video_info_title(make_worker, mock_processor):
+    """The worker passes the item's video title as source_label."""
+    items = [_make_item(video_id="a", title="My Great Video")]
+    worker = make_worker(items=items)
+    worker.run()
+
+    kwargs = mock_processor.process_youtube_url.call_args.kwargs
+    assert kwargs["source_label"] == "My Great Video"
+
+
+def test_ready_guard_raises_when_video_info_missing(make_worker, mock_processor):
+    """A READY item lacking video_info is a terminal error (probe incomplete)."""
+    item = _make_item(video_id="a")
+    item = replace(item, video_info=None)
+    worker = make_worker(items=[item])
+    caps = _connect_all(worker)
+    worker.run()
+
+    # process_youtube_url is never reached; the item ends with an error.
+    mock_processor.process_youtube_url.assert_not_called()
+    assert len(caps["finished"].calls) == 1
+    idx, result, error, _attempts = caps["finished"].calls[0]
+    assert result is None
+    assert "video_info" in error
 
 
 # ---------------------------------------------------------------------------
