@@ -14,16 +14,14 @@ unit-tested in isolation (see ``tests/unit/test_card_styling.py``).
 from __future__ import annotations
 
 import re
-from importlib.resources import files
+
+from anki_miner.services.dictionary.card_style_presets import DEFAULT_PRESET_ID, load_preset_css
 
 # Marker comments delimiting the block we own inside the note type's CSS. Kept
 # deliberately distinctive so a regex split is unambiguous; users are told (in
 # the marker text and the GUI helper) not to paste these into their custom CSS.
 BEGIN_MARKER = "/* === ANKI MINER DICT STYLES (managed — do not edit) === */"
 END_MARKER = "/* === END ANKI MINER DICT STYLES === */"
-
-_RESOURCE_PACKAGE = "anki_miner.services.dictionary.resources"
-_DEFAULT_CSS_FILENAME = "default_card_styles.css"
 
 # A complete managed block, markers inclusive, plus any leading blank lines so a
 # strip leaves no dangling gap. DOTALL lets ``.`` span newlines; non-greedy so
@@ -35,8 +33,8 @@ _BLOCK_RE = re.compile(
 
 
 def load_default_card_css() -> str:
-    """Return the bundled default stylesheet text."""
-    return files(_RESOURCE_PACKAGE).joinpath(_DEFAULT_CSS_FILENAME).read_text(encoding="utf-8")
+    """Return the bundled default stylesheet text (the ``"default"`` preset)."""
+    return load_preset_css(DEFAULT_PRESET_ID)
 
 
 def build_managed_block(*, use_default: bool, custom_css: str) -> str:
