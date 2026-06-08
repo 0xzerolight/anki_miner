@@ -714,6 +714,11 @@ class YouTubeTab(MiningTabBase):
         threads don't outlive the application.
         """
         if self.worker_thread is not None:
+            # Release any open curation dialog first so a worker blocked in
+            # _curation_event.wait() resumes; otherwise the unbounded wait()
+            # below hangs the GUI forever on app close (Issue #65). cancel()
+            # alone only sets _cancel_event, not _curation_event.
+            self._cancel_active_curation_dialog()
             self.worker_thread.cancel()
             self.worker_thread.quit()
             self.worker_thread.wait()
