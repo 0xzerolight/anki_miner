@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from anki_miner.exceptions import AnkiConnectionError
+from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.models import CardPayload, MediaData
 from anki_miner.services.anki_service import AnkiService
 
@@ -2418,3 +2418,117 @@ class TestEnsureDeck:
             pytest.raises(AnkiConnectionError, match="Cannot connect"),
         ):
             service.ensure_deck("New Deck")
+
+
+# ---------------------------------------------------------------------------
+# TestVerifyCardTarget
+# ---------------------------------------------------------------------------
+
+
+class TestVerifyCardTarget:
+    """Tests for AnkiService.verify_card_target."""
+
+    _MODELS = ["test_note_type", "Basic", "Cloze", "Model4", "Model5", "Model6"]
+    _FIELDS = [
+        "word",
+        "sentence",
+        "definition",
+        "picture",
+        "audio",
+        "expression_furigana",
+        "sentence_furigana",
+        "PitchPosition",
+        "PitchCategory",
+        "Frequency",
+    ]
+
+    def test_happy_path_creates_deck_after_checks(self, test_config):
+        """Should call createDeck with config.anki_deck_name after modelNames + modelFieldNames."""
+
+        service = AnkiService(test_config)
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[self._MODELS, self._FIELDS, 1234],
+        ) as mock_pa:
+            service.verify_card_target()
+
+        calls = mock_pa.call_args_list
+        assert calls[0][0][1] == "modelNames"
+        assert calls[1][0][1] == "modelFieldNames"
+        assert calls[2][0][1] == "createDeck"
+        assert calls[2][1]["params"] == {"deck": test_config.anki_deck_name}
+
+    def test_note_type_missing_raises_setup_error(self, test_config):
+        """Should raise SetupError naming the configured note type when it is absent."""
+        service = AnkiService(test_config)
+        other_models = ["Basic", "Cloze"]
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[other_models],
+            ) as mock_pa,
+            pytest.raises(SetupError, match="test_note_type"),
+        ):
+            service.verify_card_target()
+
+        mock_pa.assert_called_once()
+        assert mock_pa.call_args[0][1] == "modelNames"
+
+    def test_note_type_missing_never_creates_deck(self, test_config):
+        """createDeck must not be called when the note type is absent."""
+        service = AnkiService(test_config)
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[["Basic"]],
+            ) as mock_pa,
+            pytest.raises(SetupError),
+        ):
+            service.verify_card_target()
+
+        actions = [c[0][1] for c in mock_pa.call_args_list]
+        assert "createDeck" not in actions
+
+    def test_missing_field_raises_setup_error(self, test_config):
+        """Should raise SetupError naming the missing field and available fields list."""
+        # Remove "word" field from the actual model fields
+        truncated_fields = [f for f in self._FIELDS if f != "word"]
+        service = AnkiService(test_config)
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[self._MODELS, truncated_fields],
+            ) as mock_pa,
+            pytest.raises(SetupError, match="word") as exc_info,
+        ):
+            service.verify_card_target()
+
+        actions = [c[0][1] for c in mock_pa.call_args_list]
+        assert "createDeck" not in actions
+        assert "Available:" in str(exc_info.value)
+
+    def test_empty_string_field_mappings_ignored(self, test_config):
+        """Fields mapped to '' (unmapped) should not be required in the model."""
+        # test_config already has expression_reading='', sentence_reading='', source=''
+        # so _FIELDS (which omits those) should be sufficient
+        assert (
+            "" in test_config.anki_fields.values()
+        ), "fixture must have at least one empty-string field mapping for this test to be meaningful"
+        service = AnkiService(test_config)
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[self._MODELS, self._FIELDS, 1234],
+        ):
+            service.verify_card_target()  # must not raise
+
+    def test_anki_connection_error_propagates(self, test_config):
+        """AnkiConnectionError from post_action must propagate unchanged."""
+        service = AnkiService(test_config)
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=AnkiConnectionError("Anki is down"),
+            ),
+            pytest.raises(AnkiConnectionError, match="Anki is down"),
+        ):
+            service.verify_card_target()
