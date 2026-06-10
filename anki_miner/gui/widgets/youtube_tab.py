@@ -12,6 +12,14 @@ around three collaborators:
 * :class:`~anki_miner.gui.widgets.youtube_queue_item_widget.YouTubeQueueItemWidget` —
   per-row renderer embedded inside a :class:`QListWidget`.
 
+Playlist URLs (Issue #70) take a detour before joining the queue: Add
+classifies the URL via :func:`classify_youtube_url`; playlist-shaped URLs
+spawn a :class:`YouTubePlaylistResolveWorker` (flat-playlist probe), the
+user confirms via :meth:`_ask_playlist_choice`, and the chosen entries are
+expanded into ordinary queue rows whose metadata is filled in sequentially
+by a single :class:`YouTubePlaylistProbeWorker`. At most one playlist may
+be resolving/probing at a time.
+
 Button enable/disable is recomputed on every queue/worker signal by
 :meth:`_recompute_buttons`. There is no explicit state enum — the
 queue contents plus the worker handle fully determine the UI.
@@ -21,9 +29,10 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
+from typing import Literal
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -34,6 +43,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -48,15 +58,20 @@ from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.widgets.youtube_queue_item_widget import YouTubeQueueItemWidget
+from anki_miner.gui.workers.youtube_playlist_probe_worker import (
+    YouTubePlaylistProbeWorker,
+    YouTubePlaylistResolveWorker,
+)
 from anki_miner.gui.workers.youtube_probe_worker import YouTubeProbeWorker
 from anki_miner.gui.workers.youtube_queue_worker import YouTubeQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
-from anki_miner.models.youtube import SubMode, VideoInfo
+from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueue, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +158,18 @@ class YouTubeTab(MiningTabBase):
 
         # In-flight probe workers — kept alive until they finish.
         self._probe_workers: list[YouTubeProbeWorker] = []
+
+        # Playlist expansion state (Issue #70). At most one playlist may be
+        # resolving or probing at a time; Add warns and refuses a second.
+        self._playlist_resolve_worker: YouTubePlaylistResolveWorker | None = None
+        self._playlist_probe_worker: YouTubePlaylistProbeWorker | None = None
+        # Frozen snapshot of the items handed to the playlist probe worker,
+        # indexed by its per-entry idx signals — same identity-based pattern
+        # as _run_items/_item_at (YouTubeQueueItem is eq=False).
+        self._playlist_probe_items: list[YouTubeQueueItem] = []
+        # Bumped on Clear so a late playlist_resolved from a pre-Clear Add is
+        # ignored instead of popping a dialog over an emptied queue.
+        self._playlist_generation = 0
 
         # Active queue worker. Public name preserved for
         # ``MainWindow.closeEvent`` which looks up ``getattr(tab, "worker_thread")``.
@@ -282,13 +309,27 @@ class YouTubeTab(MiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_add_clicked(self) -> None:
-        """Add the current URL to the queue and spawn a probe worker."""
+        """Add the current URL — single videos probe directly, playlists resolve first."""
         if not self.add_button.isEnabled():
             return  # Defensive: returnPressed fires even when the button is disabled.
         url = self.url_edit.text().strip()
         if not url:
             return
 
+        url_info = classify_youtube_url(url)
+        if url_info.kind in ("playlist", "video_in_playlist"):
+            if self._playlist_resolve_worker is not None or self._playlist_probe_worker is not None:
+                self.log_widget.append_warning("A playlist is already being added — wait for it to finish.")
+                return
+            self._begin_playlist_resolve(url, url_info)
+            return
+
+        # "video" and "unknown" both fall through to the single-video probe
+        # path — yt-dlp remains the final validator for unrecognised URLs.
+        self._add_single_url(url)
+
+    def _add_single_url(self, url: str) -> None:
+        """Queue *url* as a single video and spawn a metadata probe worker."""
         item = self._queue.add(url)
         # The queue model defaults to PENDING; flip to PROBING up-front so the
         # row widget renders the "(probing...)" hint immediately.
@@ -339,6 +380,196 @@ class YouTubeTab(MiningTabBase):
         """Drop the probe handle once its QThread emits finished."""
         with contextlib.suppress(ValueError):
             self._probe_workers.remove(probe)
+
+    # ------------------------------------------------------------------
+    # Playlist resolve + expansion (Issue #70)
+    # ------------------------------------------------------------------
+
+    def _begin_playlist_resolve(self, url: str, url_info: YouTubeUrlInfo) -> None:
+        """Spawn a flat-playlist resolve worker for *url*."""
+        self.log_widget.append_info("Resolving playlist…")
+        self.url_edit.clear()
+
+        worker = YouTubePlaylistResolveWorker(
+            self._fetcher,
+            url,
+            limit=self._config.youtube_playlist_max,
+            parent=self,
+        )
+        worker.playlist_resolved.connect(
+            lambda pl, u=url, ui=url_info, g=self._playlist_generation: self._on_playlist_resolved(u, ui, pl, g)
+        )
+        worker.playlist_error.connect(self._on_playlist_resolve_error)
+        worker.finished.connect(self._on_playlist_resolve_finished)
+        self._playlist_resolve_worker = worker
+        worker.start()
+        self._recompute_buttons()
+
+    def _on_playlist_resolve_error(self, message: str) -> None:
+        """Resolve failed — log it; the finished slot handles state cleanup."""
+        self.log_widget.append_error(f"Playlist resolve failed: {message}")
+
+    def _on_playlist_resolve_finished(self) -> None:
+        """Drop the resolve handle once its QThread emits finished."""
+        self._playlist_resolve_worker = None
+        self._recompute_buttons()
+
+    def _on_playlist_resolved(
+        self,
+        original_url: str,
+        url_info: YouTubeUrlInfo,
+        pl: object,
+        generation: int,
+    ) -> None:
+        """Resolve succeeded — confirm with the user, then expand or fall back."""
+        if generation != self._playlist_generation:
+            return  # User hit Clear while resolving — drop the late result.
+        if not isinstance(pl, PlaylistInfo):  # pragma: no cover - signal guard
+            return
+
+        cap = self._config.youtube_playlist_max
+        # Over-cap contract from YouTubeFetcherService.probe_playlist: the
+        # fetcher returns up to cap+1 entries untruncated, and total_count is
+        # the authoritative size when yt-dlp reports it.
+        over_cap = len(pl.entries) > cap or (pl.total_count is not None and pl.total_count > cap)
+        entries = pl.entries[:cap]
+
+        choice = self._ask_playlist_choice(url_info, pl, cap, over_cap)
+        if choice == "single":
+            self._add_single_url(original_url)
+        elif choice == "playlist":
+            self._expand_playlist(entries, pl.title)
+        else:
+            self.log_widget.append_info("Playlist add cancelled.")
+
+    def _ask_playlist_choice(
+        self,
+        url_info: YouTubeUrlInfo,
+        pl: PlaylistInfo,
+        cap: int,
+        over_cap: bool,
+    ) -> Literal["single", "playlist", "cancel"]:
+        """Ask the user how to handle a resolved playlist.
+
+        Pure playlist URLs under the cap skip the dialog entirely — the user
+        already expressed intent by pasting a playlist URL. A dialog appears
+        only for mixed video+playlist URLs (ambiguous intent) or over-cap
+        playlists (truncation needs consent).
+        """
+        if url_info.kind == "playlist" and not over_cap:
+            return "playlist"
+
+        if pl.total_count is not None:
+            total_text = str(pl.total_count)
+        elif over_cap:
+            total_text = f"more than {cap}"
+        else:
+            total_text = str(len(pl.entries))
+
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setWindowTitle("Add Playlist")
+
+        single_button = None
+        if url_info.kind == "video_in_playlist":
+            box.setText(
+                f"This video is part of the playlist '{pl.title}' ({total_text} videos). "
+                "Add just this video or all of them?"
+            )
+            single_button = box.addButton("Just this video", QMessageBox.ButtonRole.ActionRole)
+            playlist_label = f"Add first {cap} of {total_text}" if over_cap else f"Add all {total_text}"
+        else:
+            box.setText(
+                f"Playlist '{pl.title}' has {total_text} videos — more than the "
+                f"configured maximum ({cap}). Add the first {cap}?"
+            )
+            playlist_label = f"Add first {cap}"
+
+        playlist_button = box.addButton(playlist_label, QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(QMessageBox.StandardButton.Cancel)
+        box.exec()
+
+        clicked = box.clickedButton()
+        if clicked is playlist_button:
+            return "playlist"
+        if single_button is not None and clicked is single_button:
+            return "single"
+        return "cancel"
+
+    def _expand_playlist(self, entries: Sequence[PlaylistEntry], playlist_title: str) -> None:
+        """Add *entries* as PROBING queue rows and start the sequential probe."""
+        existing_ids = {i.video_id for i in self._queue.all_items() if i.video_id}
+        seen: set[str] = set()
+        kept_entries: list[PlaylistEntry] = []
+        skipped = 0
+        for entry in entries:
+            if entry.video_id in existing_ids or entry.video_id in seen:
+                skipped += 1
+                continue
+            seen.add(entry.video_id)
+            kept_entries.append(entry)
+
+        if skipped:
+            self.log_widget.append_warning(f"Skipped {skipped} already-queued video(s).")
+        if not kept_entries:
+            self.log_widget.append_info(f"No new videos to add from playlist '{playlist_title}'.")
+            return
+
+        kept_items: list[YouTubeQueueItem] = []
+        for entry in kept_entries:
+            item = self._queue.add(entry.url)
+            item.video_id = entry.video_id
+            item.display_title = entry.title
+            item.status = YouTubeItemStatus.PROBING
+            self._render_new_item(item)
+            kept_items.append(item)
+
+        # Snapshot BEFORE starting the worker — idx signals resolve against
+        # this frozen list so user row-removals can't shift the mapping.
+        self._playlist_probe_items = kept_items
+        worker = YouTubePlaylistProbeWorker(self._fetcher, [e.url for e in kept_entries], parent=self)
+        worker.entry_probed.connect(self._on_playlist_entry_probed)
+        worker.entry_failed.connect(self._on_playlist_entry_failed)
+        worker.finished.connect(self._on_playlist_probe_finished)
+        self._playlist_probe_worker = worker
+        worker.start()
+
+        self.log_widget.append_info(f"Added {len(kept_items)} videos from playlist '{playlist_title}'.")
+        self._recompute_buttons()
+
+    def _playlist_item_at(self, idx: int) -> YouTubeQueueItem | None:
+        """Map a playlist-probe ``idx`` back to a queue item.
+
+        Resolves against the frozen ``_playlist_probe_items`` snapshot, then
+        confirms the item is still queued — a row the user removed mid-probe
+        is skipped (no status mutation on a detached item).
+        """
+        if not (0 <= idx < len(self._playlist_probe_items)):
+            return None
+        item = self._playlist_probe_items[idx]
+        if item not in self._queue.all_items():
+            return None
+        return item
+
+    def _on_playlist_entry_probed(self, idx: int, info: object) -> None:
+        """Entry probe succeeded — reuse the single-video probe-done logic."""
+        item = self._playlist_item_at(idx)
+        if item is None:
+            return
+        self._on_probe_done(item, info)
+
+    def _on_playlist_entry_failed(self, idx: int, message: str) -> None:
+        """Entry probe failed — reuse the single-video probe-error transition."""
+        item = self._playlist_item_at(idx)
+        if item is None:
+            return
+        self._mark_probe_error(item, message)
+
+    def _on_playlist_probe_finished(self) -> None:
+        """Drop the probe handle + snapshot once its QThread emits finished."""
+        self._playlist_probe_worker = None
+        self._playlist_probe_items = []
+        self._recompute_buttons()
 
     # ------------------------------------------------------------------
     # Run lifecycle
@@ -524,6 +755,13 @@ class YouTubeTab(MiningTabBase):
 
     def _on_clear_clicked(self) -> None:
         """Remove every non-PROCESSING item from the queue."""
+        # Invalidate a pending playlist resolve: its late playlist_resolved
+        # must not pop a dialog over the queue the user just emptied.
+        self._playlist_generation += 1
+        # Cancel an active playlist probe — cancel() only; never wait() on
+        # the GUI thread. The finished slot clears the handle + snapshot.
+        if self._playlist_probe_worker is not None:
+            self._playlist_probe_worker.cancel()
         # Collect targets first so we don't mutate during iteration.
         targets = [i for i in self._queue.all_items() if i.status != YouTubeItemStatus.PROCESSING]
         for item in targets:
@@ -556,6 +794,7 @@ class YouTubeTab(MiningTabBase):
         Derived from queue contents + worker handle:
 
         * Run active → Add/Preview/Mine disabled, Stop visible, Clear allowed.
+        * Playlist resolve pending → Add disabled (everything else unchanged).
         * Otherwise → Add enabled; Preview/Mine/Clear enabled iff a READY
           item exists; Stop hidden.
         """
@@ -563,8 +802,11 @@ class YouTubeTab(MiningTabBase):
         has_items = bool(items)
         has_ready = any(i.status == YouTubeItemStatus.READY for i in items)
         run_active = self.worker_thread is not None
+        resolve_active = self._playlist_resolve_worker is not None
 
-        self.add_button.setEnabled(not run_active)
+        # Add also locks while a playlist resolve is pending — a second Add
+        # mid-resolve would race the confirmation dialog.
+        self.add_button.setEnabled(not run_active and not resolve_active)
         self.preview_button.setEnabled(has_ready and not run_active)
         self.mine_button.setEnabled(has_ready and not run_active)
         # Clear still works during a run for non-PROCESSING items — it's how
@@ -728,3 +970,17 @@ class YouTubeTab(MiningTabBase):
             probe.quit()
             probe.wait()
         self._probe_workers.clear()
+
+        # Playlist workers (Issue #70). The probe worker checks cancellation
+        # between entries and each in-flight subprocess is timeout-bounded,
+        # so wait() returns within ~timeout_s — same guarantee as above.
+        if self._playlist_probe_worker is not None:
+            self._playlist_probe_worker.cancel()
+            self._playlist_probe_worker.quit()
+            self._playlist_probe_worker.wait()
+            self._playlist_probe_worker = None
+        self._playlist_probe_items = []
+        if self._playlist_resolve_worker is not None:
+            self._playlist_resolve_worker.quit()
+            self._playlist_resolve_worker.wait()
+            self._playlist_resolve_worker = None
