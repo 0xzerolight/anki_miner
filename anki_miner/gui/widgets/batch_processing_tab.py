@@ -667,13 +667,17 @@ class BatchProcessingTab(MiningTabBase):
         self.current_progress_widget.reset()
         self.overall_progress_widget.reset()
 
-        # Show summary
+        # Show summary; failed episodes are returned as results with errors
+        # populated (process_episode never raises), so count them explicitly
+        # instead of presenting every finish as a success (Issue #51).
         total_cards = sum(r.cards_created for r in results)
-        QMessageBox.information(
-            self,
-            "Batch Processing Complete",
-            f"Processed {len(results)} episodes\n" f"Total cards created: {total_cards}",
-        )
+        failed = sum(1 for r in results if not r.success)
+        summary = f"Processed {len(results)} episodes\nTotal cards created: {total_cards}"
+        if failed > 0:
+            summary += f"\n{failed} episode(s) failed - see log for details"
+            QMessageBox.warning(self, "Batch Processing Complete", summary)
+        else:
+            QMessageBox.information(self, "Batch Processing Complete", summary)
 
     def _on_processing_error(self, error_message: str) -> None:
         """Handle processing error signal.
