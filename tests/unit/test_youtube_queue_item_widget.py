@@ -105,6 +105,19 @@ def test_probing_shows_placeholder() -> None:
     assert widget.remove_button.isEnabled()
 
 
+def test_probing_with_display_title_shows_title() -> None:
+    """Playlist expansion pre-sets display_title so PROBING rows show the entry title."""
+    item = YouTubeQueueItem(
+        url="https://www.youtube.com/watch?v=xyz",
+        status=YouTubeItemStatus.PROBING,
+        display_title="Episode 3 — 日本語",
+    )
+    widget = YouTubeQueueItemWidget(item)
+    assert widget.title_label.full_text == "Episode 3 — 日本語 (probing...)"
+    assert widget.duration_label.text() == ""
+    assert widget.remove_button.isEnabled()
+
+
 # ---------------------------------------------------------------------------
 # Test 2 — update_from(READY)
 # ---------------------------------------------------------------------------
