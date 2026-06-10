@@ -30,7 +30,8 @@ from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 # title_source is resolved at render time; this table documents the strategy.
 #
 #   PENDING    ●  item.url                  no   yes
-#   PROBING    …  "(probing...)"            no   yes
+#   PROBING    …  "(probing...)" — or "{display_title} (probing...)" when
+#                 playlist expansion pre-set item.display_title   no   yes
 #   READY      ●  video_info.title          yes  yes
 #   PROBE_ERROR ⚠  error_message            no   yes
 #   PROCESSING ▶  video_info.title          yes  no
@@ -155,6 +156,8 @@ class YouTubeQueueItemWidget(QFrame):
         """Return the appropriate title text for the given item state."""
         status = item.status
         if status == YouTubeItemStatus.PROBING:
+            if item.display_title:
+                return f"{item.display_title} (probing...)"
             return "(probing...)"
         if status == YouTubeItemStatus.PROBE_ERROR:
             return f"Probe failed: {item.error_message or 'unknown error'}"

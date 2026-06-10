@@ -100,6 +100,7 @@ class TestYouTubeConfig:
         assert config.youtube_cookies_from_browser is None
         assert config.youtube_cookies_file is None
         assert config.youtube_ffmpeg_location is None
+        assert config.youtube_playlist_max == 100
 
     def test_cookies_file_coerced_from_string(self, temp_dir):
         """youtube_cookies_file should be coerced to Path when passed as str."""

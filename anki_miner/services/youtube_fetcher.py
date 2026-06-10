@@ -27,7 +27,7 @@ from anki_miner.exceptions.youtube import (
     YouTubeFetchError,
 )
 from anki_miner.interfaces.presenter import PresenterProtocol
-from anki_miner.models.youtube import FetchedMedia, SubMode, VideoInfo
+from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 
 logger = logging.getLogger(__name__)
@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 _VIDEO_EXTS = {".mp4", ".webm", ".mkv"}
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+_PLAYLIST_UNAVAILABLE_TITLES = {"[Private video]", "[Deleted video]"}
 _PROGRESS_RE = re.compile(r"\[ankimine_dl\] (\S+) (\S+)")
 _POSTPROCESS_MARKERS = ("[Merger]", "[FixupM3u8]", "[SubtitleConvertor]", "[ExtractAudio]")
 
@@ -204,6 +205,154 @@ class YouTubeFetcherService:
             uploader=data.get("uploader"),
             is_live=bool(data.get("is_live")),
             is_age_restricted=int(data.get("age_limit") or 0) >= 18,
+        )
+
+    # ------------------------------------------------------------------
+    # probe_playlist
+    # ------------------------------------------------------------------
+
+    def probe_playlist(self, url: str, limit: int, timeout_s: float = 120.0) -> PlaylistInfo:
+        """Run yt-dlp --flat-playlist --dump-single-json and return a PlaylistInfo.
+
+        Fetches up to ``limit + 1`` entries so callers can detect when the
+        playlist exceeds the cap without an extra round-trip.  Truncation to
+        ``limit`` is the caller's responsibility; this method returns all
+        fetched entries.
+
+        **Over-cap detection contract**
+
+        Private, deleted, or otherwise unavailable entries are silently dropped
+        from ``PlaylistInfo.entries`` while this method parses the yt-dlp
+        output.  That means ``len(entries) == limit`` does not unambiguously signal
+        "exactly at cap" — one of the fetched slots may have been an unusable
+        entry, leaving fewer usable ones in the list.
+
+        Callers should treat the playlist as over-cap when *either* of these
+        conditions holds:
+
+        * ``len(info.entries) > limit`` — the reliable entry-count signal; OR
+        * ``info.total_count is not None and info.total_count > limit`` — the
+          authoritative playlist-size signal when yt-dlp reports it.
+
+        When ``total_count`` is ``None`` and unusable entries were silently
+        skipped within the fetched window, over-cap detection may produce a
+        false negative (caller sees ``len(entries) <= limit`` and concludes the
+        playlist fits).  This is an acceptable trade-off: the worst case is
+        that the caller queues up to ``limit`` videos without showing an
+        over-cap confirmation.
+
+        Args:
+            url: YouTube playlist URL to probe.
+            limit: maximum entries the caller wants; the command requests
+                ``limit + 1`` from yt-dlp for over-cap detection.
+            timeout_s: subprocess timeout in seconds.  On timeout, yt-dlp is
+                killed and YouTubeFetchError is raised.
+
+        Raises:
+            YouTubeFetchError: yt-dlp crashed, returned non-JSON, the URL is
+                not a playlist (missing / non-list ``entries`` key), or all
+                entries were unusable (private / deleted / bad id).
+        """
+        logger.info("youtube playlist probe starting: %s (limit=%s)", url, limit)
+        cmd: list[str] = [
+            "yt-dlp",
+            "--skip-download",
+            "--flat-playlist",
+            "--dump-single-json",
+            "--playlist-items",
+            f"1:{limit + 1}",
+        ]
+        cmd.extend(self._cookie_args())
+        cmd.extend(self._js_runtime_args())
+        cmd.extend(self._remote_component_args())
+        cmd.append(url)
+
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout_s,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise YouTubeFetchError(f"yt-dlp playlist probe timed out after {e.timeout}s") from e
+        except FileNotFoundError as e:
+            raise YouTubeFetchError("yt-dlp executable not found on PATH. Install yt-dlp and retry.") from e
+
+        if proc.returncode != 0:
+            stderr_tail = (proc.stderr or "").strip().splitlines()[-20:]
+            raise YouTubeFetchError(
+                "yt-dlp playlist probe failed (exit " f"{proc.returncode}): {chr(10).join(stderr_tail)}"
+            )
+
+        try:
+            data = json.loads(proc.stdout)
+        except json.JSONDecodeError as e:
+            stderr_tail = (proc.stderr or "").strip().splitlines()[-10:]
+            raise YouTubeFetchError(
+                "yt-dlp returned non-JSON output — the site or yt-dlp may have "
+                f"broken. stderr: {chr(10).join(stderr_tail)}"
+            ) from e
+
+        raw_entries = data.get("entries")
+        if not isinstance(raw_entries, list):
+            raise YouTubeFetchError(
+                "yt-dlp output is not a playlist (missing or non-list 'entries' key). "
+                "Pass a playlist URL, not a single video URL."
+            )
+
+        playlist_id: str | None = data.get("id") or None
+        raw_title = data.get("title") or ""
+        title = str(raw_title) if raw_title else "Playlist"
+        raw_count = data.get("playlist_count")
+        total_count: int | None = int(raw_count) if raw_count is not None else None
+
+        entries: list[PlaylistEntry] = []
+        for raw in raw_entries:
+            if raw is None:
+                logger.debug("playlist probe: skipping null entry")
+                continue
+
+            video_id = raw.get("id")
+            if not video_id or not _VIDEO_ID_RE.match(str(video_id)):
+                logger.debug("playlist probe: skipping entry with bad/missing id: %r", video_id)
+                continue
+
+            video_id = str(video_id)
+            entry_title_raw = raw.get("title") or ""
+            entry_title = str(entry_title_raw) if entry_title_raw else video_id
+
+            if entry_title in _PLAYLIST_UNAVAILABLE_TITLES:
+                logger.debug("playlist probe: skipping unavailable entry: %r", entry_title)
+                continue
+
+            raw_duration = raw.get("duration")
+            duration_s: int | None = int(raw_duration) if raw_duration is not None else None
+
+            canonical_url = f"https://www.youtube.com/watch?v={video_id}"
+            entries.append(
+                PlaylistEntry(
+                    video_id=video_id,
+                    title=entry_title,
+                    duration_s=duration_s,
+                    url=canonical_url,
+                )
+            )
+
+        if not entries:
+            raise YouTubeFetchError("Playlist contains no accessible videos.")
+
+        logger.info(
+            "youtube playlist probe ok: id=%s title=%r entries=%s",
+            playlist_id,
+            title,
+            len(entries),
+        )
+        return PlaylistInfo(
+            playlist_id=playlist_id,
+            title=title,
+            entries=tuple(entries),
+            total_count=total_count,
         )
 
     @staticmethod

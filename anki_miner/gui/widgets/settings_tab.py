@@ -294,6 +294,7 @@ class SettingsTab(QWidget):
         self.youtube_panel.set_cookies_from_browser(self.config.youtube_cookies_from_browser)
         self.youtube_panel.set_cookies_file(self.config.youtube_cookies_file)
         self.youtube_panel.set_max_duration_seconds(self.config.youtube_max_duration_s)
+        self.youtube_panel.set_playlist_max(self.config.youtube_playlist_max)
 
         # Update settings
         self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
@@ -483,6 +484,7 @@ class SettingsTab(QWidget):
                 Path(self.youtube_panel.get_cookies_file()) if self.youtube_panel.get_cookies_file() else None
             ),
             youtube_max_duration_s=self.youtube_panel.get_max_duration_seconds(),
+            youtube_playlist_max=self.youtube_panel.get_playlist_max(),
             # Update settings
             check_for_updates=now_enabled,
             skipped_update_version=skipped_update_version,
