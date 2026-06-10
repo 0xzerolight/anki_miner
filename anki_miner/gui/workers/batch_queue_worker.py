@@ -102,6 +102,7 @@ class BatchQueueWorkerThread(CancellableWorker):
 
                 # Process each pair using episode processor
                 cards_for_item = 0
+                failed_pairs: list[tuple[str, str]] = []  # (video name, first error)
                 for pair in pairs:
                     if self.check_cancelled():
                         break
@@ -118,10 +119,23 @@ class BatchQueueWorkerThread(CancellableWorker):
                         curation_callback=self.curation_callback,
                     )
                     cards_for_item += result.cards_created
+                    if not result.success:
+                        # process_episode returns failures as results with errors
+                        # populated (it never raises); surface them per-item so the
+                        # GUI marks the item ERROR and offers retry (Issue #51).
+                        failed_pairs.append((pair.video.name, result.errors[0]))
 
-                # Signal completion (status updated by GUI thread via signal handler)
+                # Partial successes still count toward the queue total.
                 total_cards += cards_for_item
-                self.item_completed.emit(item.id, cards_for_item)
+                if failed_pairs:
+                    msg = (
+                        f"{len(failed_pairs)}/{len(pairs)} episodes failed "
+                        f"(e.g. {failed_pairs[0][0]}: {failed_pairs[0][1]})"
+                    )
+                    self.item_failed.emit(item.id, msg)
+                else:
+                    # Signal completion (status updated by GUI thread via signal handler)
+                    self.item_completed.emit(item.id, cards_for_item)
 
             except Exception as e:  # noqa: BLE001 — surface every failure to GUI
                 self.item_failed.emit(item.id, str(e))
