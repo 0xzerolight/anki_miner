@@ -159,6 +159,8 @@ Proper-noun filtering uses bundled name wordsets derived from [JMnedict](https:/
 
 Paste one or more URLs into the YouTube tab. Each row shows its title, length, and subtitle source as you add it; click **Mine** to process the whole list. Transient download errors are retried once before a row is marked failed. Cancel is safe at any point.
 
+Playlist URLs (`/playlist?list=…`) expand into individual queue rows automatically. Watch URLs that carry a `list=` parameter (`/watch?v=…&list=…`) prompt whether to add just that video or the whole playlist. The maximum number of videos pulled from a single playlist defaults to 100 and is configurable under Settings → YouTube. Mix/radio playlist URLs (`list=RD…`) are treated as plain video links. Videos already in the queue are skipped.
+
 Manual Japanese subtitles are used when available. Auto-captions are accepted only when YouTube generated them natively from Japanese audio — captions that YouTube produced by machine-translating from another language are skipped, because they don't make usable cards. Even native auto-captions are rougher than manual subtitles, since they lack sentence boundaries.
 
 Gotchas:
