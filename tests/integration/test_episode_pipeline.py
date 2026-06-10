@@ -52,6 +52,37 @@ class TestEpisodePipeline:
             max_parallel_workers=1,
         )
 
+    @staticmethod
+    def _make_ankiconnect_responder(config, *, post_preflight_side_effect):
+        """Return a side_effect callable that dispatches AnkiConnect responses by action.
+
+        Pre-flight actions (modelNames, modelFieldNames, createDeck) are served
+        from the config so verify_card_target() succeeds.  All subsequent calls
+        (findNotes, notesInfo, addNotes, …) are consumed in order from
+        *post_preflight_side_effect*, which should be a list of MagicMock
+        response objects identical to what the test would have put in
+        ``side_effect`` before the pre-flight was added.
+        """
+        fields = list(config.anki_fields.values())
+        _remaining = list(post_preflight_side_effect)
+
+        def _responder(*args, **kwargs):
+            payload = args[1] if len(args) > 1 else kwargs.get("json", {})
+            action = payload.get("action", "")
+            r = MagicMock()
+            if action == "modelNames":
+                r.json.return_value = {"result": [config.anki_note_type], "error": None}
+                return r
+            if action == "modelFieldNames":
+                r.json.return_value = {"result": fields, "error": None}
+                return r
+            if action == "createDeck":
+                r.json.return_value = {"result": 1, "error": None}
+                return r
+            return _remaining.pop(0)
+
+        return _responder
+
     def test_full_pipeline(self, config, tmp_path):
         """Full pipeline: parse → filter → extract → define → create cards."""
         video = tmp_path / "ep01.mkv"
@@ -114,12 +145,14 @@ class TestEpisodePipeline:
             patch("anki_miner.services.anki_service.requests.post") as mock_post,
         ):
 
-            # AnkiConnect returns empty vocabulary, then accepts cards
+            # AnkiConnect: pre-flight succeeds, then empty vocabulary, then cards added
             find_resp = MagicMock()
             find_resp.json.return_value = {"result": [], "error": None}
             add_resp = MagicMock()
             add_resp.json.return_value = {"result": [1, 2], "error": None}
-            mock_post.side_effect = [find_resp, add_resp]
+            mock_post.side_effect = self._make_ankiconnect_responder(
+                config, post_preflight_side_effect=[find_resp, add_resp]
+            )
 
             # Jisho returns definitions
             jisho_resp = MagicMock()
@@ -245,7 +278,9 @@ class TestEpisodePipeline:
             patch("anki_miner.services.media_extractor.ensure_directory"),
             patch(
                 "anki_miner.services.anki_service.requests.post",
-                side_effect=[find_resp, notes_resp],
+                side_effect=self._make_ankiconnect_responder(
+                    config, post_preflight_side_effect=[find_resp, notes_resp]
+                ),
             ),
         ):
 
