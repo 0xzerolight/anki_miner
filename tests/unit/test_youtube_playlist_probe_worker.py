@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 
 from PyQt6.QtCore import QCoreApplication
 
-from anki_miner.exceptions.youtube import YouTubeFetchError
+from anki_miner.exceptions.youtube import VideoTooLongError, YouTubeFetchError
 from anki_miner.gui.workers.youtube_playlist_probe_worker import (
     YouTubePlaylistProbeWorker,
     YouTubePlaylistResolveWorker,
@@ -370,3 +370,32 @@ def test_probe_worker_generic_exception_emits_entry_failed() -> None:
     assert len(failed.calls) == 1
     assert failed.calls[0][0] == 0
     assert "json parse error" in failed.calls[0][1]
+
+
+def test_probe_worker_video_too_long_emits_entry_failed_and_continues() -> None:
+    """An over-long video becomes entry_failed; the rest of the playlist still probes."""
+    info = _make_video_info("ok_video_id")
+    fetcher = MagicMock()
+    fetcher.probe_metadata.side_effect = [
+        VideoTooLongError("video exceeds maximum duration"),
+        info,
+    ]
+
+    worker = YouTubePlaylistProbeWorker(
+        fetcher=fetcher,
+        urls=[
+            "https://www.youtube.com/watch?v=toolongvid1",
+            "https://www.youtube.com/watch?v=ok_video_id",
+        ],
+    )
+    probed = _SignalCapture()
+    failed = _SignalCapture()
+    worker.entry_probed.connect(probed)
+    worker.entry_failed.connect(failed)
+
+    worker.run()
+
+    assert len(failed.calls) == 1
+    assert failed.calls[0][0] == 0
+    assert "maximum duration" in failed.calls[0][1]
+    assert probed.calls == [(1, info)]
