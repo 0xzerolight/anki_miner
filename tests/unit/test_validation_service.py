@@ -158,6 +158,24 @@ class TestValidationService:
 
             assert success is False
             assert "not found" in message.lower()
+            assert "created automatically" in message
+
+        def test_deck_not_found_lists_available(self, test_config):
+            """Missing deck message should still list available decks."""
+            service = ValidationService(test_config)
+
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "result": ["Default", "Other"],
+                "error": None,
+            }
+
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
+                success, message = service._check_deck_exists()
+
+            assert success is False
+            assert "Available" in message
+            assert "Default" in message
 
     class TestCheckNoteTypeExists:
         """Tests for _check_note_type_exists method."""
@@ -581,6 +599,59 @@ class TestValidationService:
             assert result.note_type_exists is False
             assert result.ffmpeg_ok is True
             assert any(i.component == "AnkiConnect" for i in result.issues)
+
+        def test_missing_deck_produces_warning_not_error(self, test_config):
+            """A missing deck should surface as WARNING (auto-created at mining time), not ERROR."""
+            service = ValidationService(test_config)
+
+            anki_resp = MagicMock()
+            anki_resp.status_code = 200
+            anki_resp.json.return_value = {"result": 6, "error": None}
+
+            # Return decks that do NOT include the configured deck name
+            deck_resp = MagicMock()
+            deck_resp.json.return_value = {"result": ["Default", "Other"], "error": None}
+
+            model_resp = MagicMock()
+            model_resp.json.return_value = {"result": [test_config.anki_note_type], "error": None}
+
+            field_resp = MagicMock()
+            field_resp.json.return_value = {
+                "result": list({v for v in test_config.anki_fields.values() if v}),
+                "error": None,
+            }
+
+            dispatch = {
+                "version": anki_resp,
+                "deckNames": deck_resp,
+                "modelNames": model_resp,
+                "modelFieldNames": field_resp,
+            }
+
+            def mock_post(url, **kwargs):
+                action = kwargs.get("json", {}).get("action", "")
+                return dispatch.get(action, MagicMock())
+
+            ffmpeg_result = MagicMock()
+            ffmpeg_result.returncode = 0
+            ffmpeg_result.stdout = "ffmpeg version 6.0"
+
+            with (
+                patch("anki_miner.services._ankiconnect.requests.post", side_effect=mock_post),
+                patch(
+                    "anki_miner.services.validation_service.subprocess.run",
+                    return_value=ffmpeg_result,
+                ),
+            ):
+                result = service.validate_setup()
+
+            assert result.deck_exists is False
+            deck_issues = [i for i in result.issues if i.component == "Anki Deck"]
+            assert len(deck_issues) == 1
+            assert deck_issues[0].severity == "WARNING"
+            assert "created automatically" in deck_issues[0].message
+            # No ERROR-level issue for the deck
+            assert not any(i.component == "Anki Deck" and i.severity == "ERROR" for i in result.issues)
 
         def test_ffmpeg_failure(self, test_config):
             """ffmpeg not found should be reported as error."""
