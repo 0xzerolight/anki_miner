@@ -83,6 +83,7 @@ class SingleEpisodeTab(MiningTabBase):
         self._current_phase = ""
         self.recent_manager = RecentFilesManager()
         self._audio_track_override: int | None = None
+        self._last_run_was_preview = False
 
         self._init_curation_bridge()
 
@@ -443,6 +444,11 @@ class SingleEpisodeTab(MiningTabBase):
             QMessageBox.warning(self, "File Not Found", f"Subtitle file not found: {subtitle_path}")
             return
 
+        # Record preview mode only after validation passes — a rejected validation
+        # must not flip the flag and cause the previous result's clear/override
+        # logic to misfire.
+        self._last_run_was_preview = preview_mode
+
         video_file = Path(video_path)
         subtitle_file = Path(subtitle_path)
 
@@ -544,23 +550,31 @@ class SingleEpisodeTab(MiningTabBase):
         """
         self._restore_buttons()
 
-        # Add to recent files
-        video_path = self.video_selector.get_path().strip()
-        subtitle_path = self.subtitle_selector.get_path().strip()
-        if video_path and subtitle_path:
-            offset = self.offset_spinbox.value()
-            self.recent_manager.add_entry(Path(video_path), Path(subtitle_path), offset)
-            self._refresh_recent_combo()
+        if result.success:
+            # Add to recent files
+            video_path = self.video_selector.get_path().strip()
+            subtitle_path = self.subtitle_selector.get_path().strip()
+            if video_path and subtitle_path:
+                offset = self.offset_spinbox.value()
+                self.recent_manager.add_entry(Path(video_path), Path(subtitle_path), offset)
+                self._refresh_recent_combo()
 
-        # Clear file selectors so the next run starts from a clean slate.
-        self.video_selector.clear()
-        self.subtitle_selector.clear()
+            if not self._last_run_was_preview:
+                # Clear file selectors so the next run starts from a clean slate.
+                # Failed/cancelled runs keep their paths (Issue #51 retry affordance);
+                # previews keep them for the preview-then-process flow.
+                self.video_selector.clear()
+                self.subtitle_selector.clear()
 
         # Show result
         self.presenter.show_processing_result(result)
 
-        # Reset per-run override so next Process uses Auto unless user picks again
-        self._audio_track_override = None
+        if result.success and not self._last_run_was_preview:
+            # Reset per-run override so next Process uses Auto unless user picks again.
+            # A previewed track pick carries into the subsequent Process run.
+            # Failed runs keep the override intact so the user can retry with the same
+            # track pick without having to reopen the Tracks dialog.
+            self._audio_track_override = None
 
     def _on_processing_error(self, error_message: str) -> None:
         """Handle processing error signal.
@@ -576,8 +590,8 @@ class SingleEpisodeTab(MiningTabBase):
         # Reset progress
         self.progress_widget.reset()
 
-        # Reset per-run override on error path too
-        self._audio_track_override = None
+        # Keep the audio-track override on the error path so the user can retry
+        # without having to reopen the Tracks dialog (consistent with failed results).
 
     def _refresh_recent_combo(self) -> None:
         """Refresh the recent files combo box from disk."""

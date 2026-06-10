@@ -305,17 +305,19 @@ def test_override_resets_after_processing_finished(tab):
 
 
 # ---------------------------------------------------------------------------
-# 10. Override resets after process error
+# 10. Override survives processing error so retry uses the same track
 # ---------------------------------------------------------------------------
 
 
-def test_override_resets_after_processing_error(tab):
+def test_override_survives_processing_error_for_retry(tab):
+    """Failed runs keep _audio_track_override so the user can retry on the
+    same audio track without having to re-pick it from the dialog."""
     tab._audio_track_override = 1
     tab.worker_thread = MagicMock(name="EpisodeWorkerThread")
     tab.worker_thread.isRunning.return_value = False
 
     tab._on_processing_error("Something went wrong")
-    assert tab._audio_track_override is None
+    assert tab._audio_track_override == 1
 
 
 # ---------------------------------------------------------------------------
