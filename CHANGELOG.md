@@ -4,10 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [v2.6.1] - 2026-06-07
+## [Unreleased]
 
 ### Added
 - **YouTube playlist support** (#70). Pasting a playlist URL (`/playlist?list=…`) or a watch URL with a `list=` parameter expands into queue rows via yt-dlp `--flat-playlist`. A confirm dialog appears when the playlist exceeds the new `youtube_playlist_max` cap (default 100, Settings → YouTube). Mixed watch+list URLs (`/watch?v=…&list=…`) prompt whether to add just that video or the whole playlist. Videos already in the queue are skipped as duplicates. Mix/radio URLs (`list=RD…`) are treated as plain video links. Expansion and per-entry probing both run on background threads (`YouTubePlaylistResolveWorker`, `YouTubePlaylistProbeWorker`) so the GUI stays responsive. New helper `utils/youtube_url.py` classifies URLs without network access; new models `PlaylistInfo` and `PlaylistEntry` carry the flat-playlist metadata.
+
+## [v2.6.1] - 2026-06-07
+
+### Added
 
 ### Changed
 
