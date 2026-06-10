@@ -1207,3 +1207,336 @@ class TestRemoteComponentArgs:
         yf._ytdlp_supports_remote_components.cache_clear()
         with patch("subprocess.run", side_effect=FileNotFoundError):
             assert yf._ytdlp_supports_remote_components() is False
+
+
+# ---------------------------------------------------------------------------
+# probe_playlist
+# ---------------------------------------------------------------------------
+
+
+def _make_playlist_entry(
+    video_id: str = "dQw4w9WgXcQ",
+    title: str = "Test Video",
+    duration: int | None = 120,
+    **overrides: Any,
+) -> dict[str, Any]:
+    """Build a plausible yt-dlp flat-playlist entry."""
+    base: dict[str, Any] = {
+        "id": video_id,
+        "title": title,
+        "duration": duration,
+        "url": f"https://www.youtube.com/watch?v={video_id}",
+    }
+    base.update(overrides)
+    return base
+
+
+def _make_playlist_payload(
+    title: str = "Test Playlist",
+    playlist_id: str = "PLtest123456789",
+    playlist_count: int | None = 3,
+    entries: list[dict[str, Any]] | None = None,
+    **overrides: Any,
+) -> dict[str, Any]:
+    """Build a plausible yt-dlp --flat-playlist --dump-single-json payload."""
+    if entries is None:
+        entries = [
+            _make_playlist_entry("aaaaaaaaaaa", "Video 1", 60),
+            _make_playlist_entry("bbbbbbbbbbb", "Video 2", 90),
+            _make_playlist_entry("ccccccccccc", "Video 3", 120),
+        ]
+    base: dict[str, Any] = {
+        "title": title,
+        "id": playlist_id,
+        "entries": entries,
+    }
+    if playlist_count is not None:
+        base["playlist_count"] = playlist_count
+    base.update(overrides)
+    return base
+
+
+class TestProbePlaylist:
+    # ------------------------------------------------------------------
+    # Happy path
+    # ------------------------------------------------------------------
+
+    def test_happy_path_entries_parsed_in_order(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert info.title == "Test Playlist"
+        assert info.playlist_id == "PLtest123456789"
+        assert info.total_count == 3
+        assert len(info.entries) == 3
+        assert info.entries[0].video_id == "aaaaaaaaaaa"
+        assert info.entries[1].video_id == "bbbbbbbbbbb"
+        assert info.entries[2].video_id == "ccccccccccc"
+        # Order preserved
+        assert [e.title for e in info.entries] == ["Video 1", "Video 2", "Video 3"]
+
+    def test_canonical_urls_built_from_video_id(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload(entries=[_make_playlist_entry("aaaaaaaaaaa", url="https://some-other-url")])
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        # URL must be canonical, NOT from entry's own url field
+        assert info.entries[0].url == "https://www.youtube.com/watch?v=aaaaaaaaaaa"
+
+    def test_duration_parsed_as_int(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload(entries=[_make_playlist_entry("aaaaaaaaaaa", duration=183)])
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert info.entries[0].duration_s == 183
+
+    def test_missing_duration_yields_none(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload(entries=[_make_playlist_entry("aaaaaaaaaaa", duration=None)])
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert info.entries[0].duration_s is None
+
+    def test_missing_playlist_count_yields_none(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload(playlist_count=None)
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert info.total_count is None
+
+    def test_missing_title_defaults_to_playlist(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload()
+        del payload["title"]
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert info.title == "Playlist"
+
+    def test_empty_title_defaults_to_playlist(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload(title="")
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert info.title == "Playlist"
+
+    def test_missing_id_yields_none_playlist_id(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload()
+        del payload["id"]
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert info.playlist_id is None
+
+    # ------------------------------------------------------------------
+    # Command shape asserts
+    # ------------------------------------------------------------------
+
+    def test_command_contains_flat_playlist_flags(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=10)
+        cmd = mrun.call_args[0][0]
+        assert "--flat-playlist" in cmd
+        assert "--skip-download" in cmd
+        assert "--dump-single-json" in cmd
+
+    def test_command_contains_playlist_items_limit_plus_one(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=10)
+        cmd = mrun.call_args[0][0]
+        assert "--playlist-items" in cmd
+        assert cmd[cmd.index("--playlist-items") + 1] == "1:11"  # limit+1 = 11
+
+    def test_command_does_not_contain_no_playlist(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=10)
+        cmd = mrun.call_args[0][0]
+        assert "--no-playlist" not in cmd
+
+    def test_command_appends_url_last(self, service: YouTubeFetcherService) -> None:
+        url = "https://www.youtube.com/playlist?list=PLtest123456789"
+        payload = _make_playlist_payload()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_playlist(url, limit=5)
+        cmd = mrun.call_args[0][0]
+        assert cmd[-1] == url
+
+    def test_command_contains_cookies_from_browser(self, yt_config: AnkiMinerConfig) -> None:
+        cfg = replace(yt_config, youtube_cookies_from_browser="chrome")
+        svc = YouTubeFetcherService(cfg)
+        payload = _make_playlist_payload()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            svc.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=5)
+        cmd = mrun.call_args[0][0]
+        assert "--cookies-from-browser" in cmd
+        assert cmd[cmd.index("--cookies-from-browser") + 1] == "chrome"
+
+    def test_command_contains_cookies_file(self, yt_config: AnkiMinerConfig, tmp_path: Path) -> None:
+        cookies = tmp_path / "cookies.txt"
+        cfg = replace(yt_config, youtube_cookies_file=cookies)
+        svc = YouTubeFetcherService(cfg)
+        payload = _make_playlist_payload()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            svc.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=5)
+        cmd = mrun.call_args[0][0]
+        assert "--cookies" in cmd
+        assert cmd[cmd.index("--cookies") + 1] == str(cookies)
+
+    def test_command_no_cookie_flags_when_unset(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=5)
+        cmd = mrun.call_args[0][0]
+        assert "--cookies" not in cmd
+        assert "--cookies-from-browser" not in cmd
+
+    # ------------------------------------------------------------------
+    # Over-cap / limit+1 detection
+    # ------------------------------------------------------------------
+
+    def test_returns_limit_plus_one_entries_when_playlist_bigger(self, service: YouTubeFetcherService) -> None:
+        # 11 entries returned for limit=10; fetcher must NOT truncate
+        # Use fixed-width IDs: 'a' * 10 + hex digit -> exactly 11 chars, all valid
+        hex_chars = "0123456789abcde"
+        entries = [_make_playlist_entry(f"{'a' * 10}{hex_chars[i]}", f"Video {i}", 60) for i in range(11)]
+        payload = _make_playlist_payload(entries=entries)
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=10)
+        assert len(info.entries) == 11  # all limit+1 entries returned (no truncation)
+
+    # ------------------------------------------------------------------
+    # Skipping logic
+    # ------------------------------------------------------------------
+
+    def test_private_video_entry_skipped(self, service: YouTubeFetcherService) -> None:
+        entries = [
+            _make_playlist_entry("aaaaaaaaaaa", "[Private video]"),
+            _make_playlist_entry("bbbbbbbbbbb", "Normal video"),
+        ]
+        payload = _make_playlist_payload(entries=entries)
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert len(info.entries) == 1
+        assert info.entries[0].video_id == "bbbbbbbbbbb"
+
+    def test_deleted_video_entry_skipped(self, service: YouTubeFetcherService) -> None:
+        entries = [
+            _make_playlist_entry("aaaaaaaaaaa", "[Deleted video]"),
+            _make_playlist_entry("bbbbbbbbbbb", "Normal video"),
+        ]
+        payload = _make_playlist_payload(entries=entries)
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert len(info.entries) == 1
+        assert info.entries[0].video_id == "bbbbbbbbbbb"
+
+    def test_null_entry_skipped(self, service: YouTubeFetcherService) -> None:
+        entries: list[Any] = [
+            None,
+            _make_playlist_entry("bbbbbbbbbbb", "Normal video"),
+        ]
+        payload = _make_playlist_payload(entries=entries)
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert len(info.entries) == 1
+        assert info.entries[0].video_id == "bbbbbbbbbbb"
+
+    def test_entry_missing_id_skipped(self, service: YouTubeFetcherService) -> None:
+        entry_no_id: dict[str, Any] = {"title": "No ID", "duration": 60}
+        entries = [
+            entry_no_id,
+            _make_playlist_entry("bbbbbbbbbbb", "Normal video"),
+        ]
+        payload = _make_playlist_payload(entries=entries)
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert len(info.entries) == 1
+
+    def test_entry_bad_video_id_skipped(self, service: YouTubeFetcherService) -> None:
+        bad_entry = _make_playlist_entry("NOT-A-VALID-ID!!", "Bad ID video")
+        entries = [
+            bad_entry,
+            _make_playlist_entry("bbbbbbbbbbb", "Normal video"),
+        ]
+        payload = _make_playlist_payload(entries=entries)
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert len(info.entries) == 1
+        assert info.entries[0].video_id == "bbbbbbbbbbb"
+
+    def test_missing_title_on_entry_defaults_to_video_id(self, service: YouTubeFetcherService) -> None:
+        entry: dict[str, Any] = {"id": "aaaaaaaaaaa", "duration": 60}
+        payload = _make_playlist_payload(entries=[entry])
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert info.entries[0].title == "aaaaaaaaaaa"
+
+    def test_empty_title_on_entry_defaults_to_video_id(self, service: YouTubeFetcherService) -> None:
+        entry = _make_playlist_entry("aaaaaaaaaaa", title="")
+        payload = _make_playlist_payload(entries=[entry])
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+        assert info.entries[0].title == "aaaaaaaaaaa"
+
+    def test_all_entries_unusable_raises(self, service: YouTubeFetcherService) -> None:
+        entries = [
+            _make_playlist_entry("aaaaaaaaaaa", "[Private video]"),
+            _make_playlist_entry("bbbbbbbbbbb", "[Deleted video]"),
+        ]
+        payload = _make_playlist_payload(entries=entries)
+        with (
+            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))),
+            pytest.raises(YouTubeFetchError, match="no accessible videos"),
+        ):
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+
+    # ------------------------------------------------------------------
+    # Error handling
+    # ------------------------------------------------------------------
+
+    def test_missing_entries_key_raises(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload()
+        del payload["entries"]
+        with (
+            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))),
+            pytest.raises(YouTubeFetchError, match="not a playlist"),
+        ):
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+
+    def test_entries_not_a_list_raises(self, service: YouTubeFetcherService) -> None:
+        payload = _make_playlist_payload()
+        payload["entries"] = "not a list"
+        with (
+            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))),
+            pytest.raises(YouTubeFetchError, match="not a playlist"),
+        ):
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+
+    def test_non_zero_exit_raises_with_stderr_tail(self, service: YouTubeFetcherService) -> None:
+        with (
+            patch(
+                "subprocess.run",
+                return_value=_fake_run(1, stdout="", stderr="ERROR: Playlist unavailable"),
+            ),
+            pytest.raises(YouTubeFetchError, match="exit 1"),
+        ):
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+
+    def test_timeout_raises(self, service: YouTubeFetcherService) -> None:
+        with (
+            patch(
+                "subprocess.run",
+                side_effect=subprocess.TimeoutExpired(cmd="yt-dlp", timeout=120),
+            ),
+            pytest.raises(YouTubeFetchError, match="timed out"),
+        ):
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+
+    def test_ytdlp_missing_raises(self, service: YouTubeFetcherService) -> None:
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError()),
+            pytest.raises(YouTubeFetchError, match="yt-dlp executable not found"),
+        ):
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+
+    def test_non_json_output_raises(self, service: YouTubeFetcherService) -> None:
+        with (
+            patch("subprocess.run", return_value=_fake_run(0, "not-json-output", stderr="some warn")),
+            pytest.raises(YouTubeFetchError, match="non-JSON"),
+        ):
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)

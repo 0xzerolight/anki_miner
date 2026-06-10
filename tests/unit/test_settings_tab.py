@@ -37,6 +37,12 @@ class TestYouTubePanelDefaults:
         assert panel.max_duration_spinbox.value() == 120
         assert panel.get_max_duration_seconds() == 7200
 
+    def test_playlist_max_defaults_to_100(self, tab):
+        panel = tab.youtube_panel
+        # test_config does not override youtube_playlist_max, so default is 100.
+        assert panel.playlist_max_spinbox.value() == 100
+        assert panel.get_playlist_max() == 100
+
 
 class TestYouTubePanelValueHelpers:
     """set_* / get_* helpers round-trip config values correctly."""
@@ -118,6 +124,26 @@ class TestYouTubePanelValueHelpers:
         finally:
             panel.deleteLater()
 
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            (1, 1),
+            (100, 100),
+            (1000, 1000),
+            (0, 1),  # clamped to spinbox minimum
+            (1001, 1000),  # clamped to spinbox maximum
+            (500, 500),
+        ],
+    )
+    def test_set_and_get_playlist_max(self, value, expected):
+        panel = YouTubeSettingsPanel()
+        try:
+            panel.set_playlist_max(value)
+            assert panel.playlist_max_spinbox.value() == expected
+            assert panel.get_playlist_max() == expected
+        finally:
+            panel.deleteLater()
+
 
 class TestSettingsTabRoundTrip:
     """Editing widgets and clicking Save should propagate to config_changed."""
@@ -140,6 +166,29 @@ class TestSettingsTabRoundTrip:
         new_config = received[0]
         assert new_config.youtube_cookies_from_browser == "firefox"
         assert new_config.youtube_max_duration_s == 3600
+
+    def test_save_emits_playlist_max(self, tab, monkeypatch):
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+
+        tab.youtube_panel.set_playlist_max(250)
+        tab._on_save_clicked()
+
+        assert len(received) == 1
+        assert received[0].youtube_playlist_max == 250
+
+    def test_load_config_reflects_playlist_max(self, test_config):
+        cfg = replace(test_config, youtube_playlist_max=42)
+        widget = SettingsTab(cfg)
+        try:
+            assert widget.youtube_panel.get_playlist_max() == 42
+            assert widget.youtube_panel.playlist_max_spinbox.value() == 42
+        finally:
+            widget.deleteLater()
 
     def test_load_config_reflects_existing_values(self, test_config):
         cfg = replace(
