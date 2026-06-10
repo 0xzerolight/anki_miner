@@ -52,7 +52,7 @@ Subtitle file (ASS/SRT/SSA)
 ProcessingResult
 ```
 
-Cancellation is checked between each phase. Preview mode exits after stage 2 (shows words, creates no cards). An optional curation callback lets the GUI present a word selection dialog between stages 2 and 3.
+Before Phase 1, a pre-flight step validates the configured note type and field mapping against Anki and auto-creates the target deck; this step is skipped in preview mode. Cancellation is checked between each phase. Preview mode exits after stage 2 (shows words, creates no cards). An optional curation callback lets the GUI present a word selection dialog between stages 2 and 3.
 
 ## Package Dependencies
 
@@ -131,7 +131,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 - **WordFilterService**: multi-layer filtering via `filter_unknown` (lemma-only check against known vocabulary), `filter_by_frequency`, `filter_by_word_lists` (blacklist/whitelist keyed by lemma), `deduplicate_by_sentence` (NFKC-normalized, whitespace-collapsed dedup key), `filter_i_plus_one`, and `filter_by_episode_count`. The name-wordset filter (Issue #59) runs in `_phase2_filter` after the blacklist/whitelist step and is gated on `bypass_optional_filters` (skipped by the Deck Builder corpus preview); which wordsets are active is controlled by `config.excluded_wordsets`. Wordset files are bundled JMnedict-derived proper-noun lists in `anki_miner/gui/resources/wordsets/`.
 - **MediaExtractorService**: extracts screenshots (`ffmpeg -frames:v 1`) and audio clips (`ffmpeg libmp3lame`) at subtitle timestamps. Runs in parallel via `ThreadPoolExecutor` with `max_parallel_workers` threads. Auto-detects the Japanese audio stream via `ffprobe` with thread-safe caching.
 - **DefinitionService**: orchestrates the provider chain built by `DictionaryRegistry` from `config.dictionary_chain`. First-hit-wins across offline `IndexedDictProvider` instances, with `JishoProvider` as the online fallback. Returns HTML-formatted definition strings.
-- **AnkiService**: AnkiConnect HTTP API wrapper (localhost:8765). Key operations: `get_existing_vocabulary`, `store_media_file`, `create_cards_batch` (batch size 50), `delete_notes`. Stores `last_created_note_ids` for undo support.
+- **AnkiService**: AnkiConnect HTTP API wrapper (localhost:8765). Key operations: `verify_card_target` (pre-flight: checks note type, validates fields, creates deck), `get_existing_vocabulary`, `store_media_file`, `create_cards_batch` (batch size 50), `delete_notes`. Stores `last_created_note_ids` for undo support.
 - **ValidationService**: checks AnkiConnect connectivity, ffmpeg presence, deck existence, and note type existence. Returns `ValidationResult` (never raises).
 - **YouTubeFetcherService** (`services/youtube_fetcher.py`): wraps the `yt-dlp` subprocess. Two entry points: `probe_metadata(url) → VideoInfo` (fast, `--skip-download --dump-single-json`) and `fetch_video(url, workspace, sub_mode, progress_cb, cancel_event) → FetchedMedia`. Detects native vs translated auto-captions via `_has_native_auto_ja()`. Tracks the `Popen` handle so cancellation can kill the full process tree (yt-dlp → ffmpeg child) via `psutil`. Writes the (video, subtitle) pair into a caller-owned workspace directory.
 
