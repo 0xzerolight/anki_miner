@@ -235,6 +235,7 @@ class AnkiMinerConfig:
     # --- YouTube ---
     youtube_max_duration_s: int = 7200
     youtube_max_height: int = 720
+    youtube_playlist_max: int = 100
     youtube_cookies_from_browser: str | None = None
     youtube_cookies_file: Path | None = None
     youtube_ffmpeg_location: Path | None = None
