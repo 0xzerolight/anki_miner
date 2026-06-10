@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **Mining now validates the Anki note type and field mapping before processing starts** (#52). If the configured note type is missing or a mapped field is absent, the run fails immediately with a clear error instead of after full media extraction. The configured deck is also auto-created at this point.
+
 ## [v2.6.1] - 2026-06-07
 
 ### Added
