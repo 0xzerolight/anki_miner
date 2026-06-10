@@ -120,6 +120,8 @@ Data classes in `models/`:
 | `VideoInfo` | `youtube.py` | YouTube probe result: id, title, duration, sub availability, is_live, is_age_restricted |
 | `FetchedMedia` | `youtube.py` | yt-dlp fetch result: video path, subtitle path, `sub_source` ("manual" or "auto") |
 | `SubMode` | `youtube.py` | `Literal["manual_only", "auto_only"]` — resolved in the GUI from the probe + user acceptance |
+| `PlaylistEntry` | `youtube.py` | A single entry from a flat playlist probe: video_id, title, duration_s (optional), canonical URL |
+| `PlaylistInfo` | `youtube.py` | Flat playlist probe result: playlist_id (optional), title, entries tuple, total_count (optional) |
 
 ## Services
 
@@ -133,7 +135,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 - **DefinitionService**: orchestrates the provider chain built by `DictionaryRegistry` from `config.dictionary_chain`. First-hit-wins across offline `IndexedDictProvider` instances, with `JishoProvider` as the online fallback. Returns HTML-formatted definition strings.
 - **AnkiService**: AnkiConnect HTTP API wrapper (localhost:8765). Key operations: `get_existing_vocabulary`, `store_media_file`, `create_cards_batch` (batch size 50), `delete_notes`. Stores `last_created_note_ids` for undo support.
 - **ValidationService**: checks AnkiConnect connectivity, ffmpeg presence, deck existence, and note type existence. Returns `ValidationResult` (never raises).
-- **YouTubeFetcherService** (`services/youtube_fetcher.py`): wraps the `yt-dlp` subprocess. Two entry points: `probe_metadata(url) → VideoInfo` (fast, `--skip-download --dump-single-json`) and `fetch_video(url, workspace, sub_mode, progress_cb, cancel_event) → FetchedMedia`. Detects native vs translated auto-captions via `_has_native_auto_ja()`. Tracks the `Popen` handle so cancellation can kill the full process tree (yt-dlp → ffmpeg child) via `psutil`. Writes the (video, subtitle) pair into a caller-owned workspace directory.
+- **YouTubeFetcherService** (`services/youtube_fetcher.py`): wraps the `yt-dlp` subprocess. Three entry points: `probe_metadata(url) → VideoInfo` (fast, `--skip-download --dump-single-json`), `probe_playlist(url, limit) → PlaylistInfo` (`--flat-playlist --dump-single-json`, capped at `limit` entries), and `fetch_video(url, workspace, sub_mode, progress_cb, cancel_event) → FetchedMedia`. Detects native vs translated auto-captions via `_has_native_auto_ja()`. Tracks the `Popen` handle so cancellation can kill the full process tree (yt-dlp → ffmpeg child) via `psutil`. Writes the (video, subtitle) pair into a caller-owned workspace directory.
 
 **Optional services (created based on config flags):**
 
@@ -205,7 +207,7 @@ The `__post_init__` method uses `object.__setattr__` to convert string paths to 
 `MainWindow` contains a `QTabWidget` with five tabs:
 1. **SingleEpisodeTab**: file selectors (drag-and-drop), subtitle offset control, process/preview buttons, log widget, progress widget.
 2. **BatchProcessingTab**: folder selection, `BatchQueue` management via queue panel, dual progress bars.
-3. **YouTubeTab** (`gui/widgets/youtube_tab.py`): URL input + Add button, `QListWidget` queue of `YouTubeQueueItemWidget` rows (per-row status glyph, title, duration, sub source line, remove button), action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. Deck/note-type/tags widgets are global (see `AnkiSettingsPanel`).
+3. **YouTubeTab** (`gui/widgets/youtube_tab.py`): URL input + Add button, `QListWidget` queue of `YouTubeQueueItemWidget` rows (per-row status glyph, title, duration, sub source line, remove button), action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. Deck/note-type/tags widgets are global (see `AnkiSettingsPanel`). URL classification (plain video, playlist, video-in-playlist, Mix) is done without network access by `utils/youtube_url.py` (`classify_youtube_url`); playlist URLs dispatch to `YouTubePlaylistResolveWorker` then `YouTubePlaylistProbeWorker`; mixed watch+list URLs show a choice dialog; playlists over the `youtube_playlist_max` cap show an over-cap confirm.
 4. **AnalyticsTab**: mining statistics dashboard (queries `StatsService`).
 5. **SettingsTab**: config editing with sub-panels (Anki, media, dictionary, filtering, YouTube). Emits `config_changed` signal.
 
@@ -222,6 +224,8 @@ Worker implementations:
 - `ValidationWorkerThread`: runs system validation checks.
 - `UpdateWorkerThread`: checks for updates.
 - `YouTubeProbeWorker` (`gui/workers/youtube_probe_worker.py`): short-lived QThread that calls `YouTubeFetcherService.probe_metadata` so the GUI stays responsive during network I/O.
+- `YouTubePlaylistResolveWorker` (`gui/workers/youtube_playlist_probe_worker.py`): short-lived QThread that calls `YouTubeFetcherService.probe_playlist` once and emits a `PlaylistInfo` or error. Bounded by a subprocess timeout (default 120 s); no cancellation support.
+- `YouTubePlaylistProbeWorker` (`gui/workers/youtube_playlist_probe_worker.py`): `CancellableWorker` that iterates a list of video URLs sequentially, calling `probe_metadata` for each and emitting `entry_probed` / `entry_failed` per entry. Cancellation is polled between entries; failures continue to the next URL.
 - `YouTubeQueueWorker` (`gui/workers/youtube_queue_worker.py`): `CancellableWorker` subclass that drives a list of `YouTubeQueueItem` through fetch + mine sequentially with retry-once on `YouTubeFetchError`. Per-attempt workspace allocation under `media_temp_folder/youtube/run-<uuid>/`.
 - `YouTubeQueueItemWidget` (`gui/widgets/youtube_queue_item_widget.py`): pure renderer for one `YouTubeQueueItem` in the queue list.
 - `PitchImportWorker` (`gui/workers/pitch_import_worker.py`): `CancellableWorker` that runs the Yomitan pitch-accent zip importer so the GUI stays responsive during a large import.
@@ -271,7 +275,7 @@ GET `https://jisho.org/api/v1/search/words?keyword=<word>`. Rate-limited with co
 
 ### yt-dlp
 
-Subprocess invoked by `YouTubeFetcherService`. Probe uses `--skip-download --dump-single-json --no-playlist`; fetch uses `--write-sub` (or `--write-auto-sub` for auto-caption mode) + `--sub-lang ja --sub-format vtt/best --convert-subs srt` + a height-capped format string. Progress parsed from a custom `--progress-template`; post-download merge phases detected by scanning for `[Merger]`/`[SubtitleConvertor]` line signatures. Process tree killed via `psutil` on cancel (yt-dlp spawns ffmpeg as a child for merging; `Popen.terminate()` alone leaks it on Windows). Optional `--cookies-from-browser` (from `config.youtube_cookies_from_browser`) or `--cookies` file (from `config.youtube_cookies_file`) enables bypass of bot-detection prompts and age-restricted content.
+Subprocess invoked by `YouTubeFetcherService`. Single-video probe uses `--skip-download --dump-single-json --no-playlist`; playlist probe uses `--flat-playlist --dump-single-json` capped to `limit` entries via `--playlist-end`; fetch uses `--write-sub` (or `--write-auto-sub` for auto-caption mode) + `--sub-lang ja --sub-format vtt/best --convert-subs srt` + a height-capped format string. Progress parsed from a custom `--progress-template`; post-download merge phases detected by scanning for `[Merger]`/`[SubtitleConvertor]` line signatures. Process tree killed via `psutil` on cancel (yt-dlp spawns ffmpeg as a child for merging; `Popen.terminate()` alone leaks it on Windows). Optional `--cookies-from-browser` (from `config.youtube_cookies_from_browser`) or `--cookies` file (from `config.youtube_cookies_file`) enables bypass of bot-detection prompts and age-restricted content.
 
 ### PyInstaller hook for yt-dlp
 
