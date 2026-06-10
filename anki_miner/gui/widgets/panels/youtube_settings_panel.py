@@ -77,6 +77,15 @@ class YouTubeSettingsPanel(FormPanel):
             helper="Videos longer than this are rejected before fetching.",
         )
 
+        # Playlist max (number of videos)
+        self.playlist_max_spinbox = QSpinBox()
+        self.playlist_max_spinbox.setRange(1, 1000)
+        self.add_field(
+            "Playlist max videos",
+            self.playlist_max_spinbox,
+            helper="When adding a playlist, at most this many videos are queued.",
+        )
+
         self.add_stretch()
 
     # ------------------------------------------------------------------
@@ -120,3 +129,13 @@ class YouTubeSettingsPanel(FormPanel):
     def get_max_duration_seconds(self) -> int:
         """Return the current spinbox value converted to seconds."""
         return self.max_duration_spinbox.value() * 60
+
+    def set_playlist_max(self, value: int) -> None:
+        """Set the playlist-max spinbox, clamped to the widget's range."""
+        minimum = self.playlist_max_spinbox.minimum()
+        maximum = self.playlist_max_spinbox.maximum()
+        self.playlist_max_spinbox.setValue(max(minimum, min(maximum, value)))
+
+    def get_playlist_max(self) -> int:
+        """Return the current playlist-max spinbox value."""
+        return self.playlist_max_spinbox.value()
