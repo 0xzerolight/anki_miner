@@ -176,7 +176,7 @@ Anki Miner checks GitHub for new releases on startup (toggle in Settings). When 
 | Issue                    | Solution                                                                         |
 |--------------------------|----------------------------------------------------------------------------------|
 | "Cannot connect to Anki" | Start Anki and ensure AnkiConnect is installed.                                  |
-| "Deck not found"         | Create the deck in Anki or update the deck name in Settings.                     |
+| "Deck not found"         | The deck is created automatically when mining starts; if you meant a different deck, update the name in Settings. |
 | "Note type not found"    | Configure your note type's field names in Settings → Anki.                       |
 | "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
 | No definitions found     | Add a Yomitan dictionary in Settings → Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |
