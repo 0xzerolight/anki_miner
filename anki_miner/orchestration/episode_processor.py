@@ -621,6 +621,10 @@ class EpisodeProcessor:
 
         Returns:
             ProcessingResult with statistics.
+
+        Raises:
+            SetupError: note type or field mapping is misconfigured.
+            AnkiConnectionError: AnkiConnect is unreachable.
         """
         series_name = _resolve_identity(series_name_override, video_file.parent.name)
         episode_name = _resolve_identity(episode_name_override, video_file.stem)
@@ -632,6 +636,11 @@ class EpisodeProcessor:
             series_name=series_name,
             source_label=source_label_override or f"{series_name} — {episode_name}",
         )
+        # Outside the try/except so SetupError propagates to callers instead of
+        # being absorbed into a "completed" ProcessingResult.  Before temp-folder
+        # allocation so no dir is leaked on failure.
+        if not preview_mode:
+            self._preflight_card_target()
         run_temp_folder = self._allocate_run_temp_folder()
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
@@ -746,6 +755,10 @@ class EpisodeProcessor:
             )
         )
 
+    def _preflight_card_target(self) -> None:
+        """Fail fast on a misconfigured Anki target; auto-create the deck (Issue #52)."""
+        self.anki_service.verify_card_target()
+
     def process_youtube_url(
         self,
         url: str,
@@ -806,6 +819,8 @@ class EpisodeProcessor:
 
         Raises:
             RuntimeError: if no YouTubeFetcherService was injected.
+            SetupError: note type or field mapping is misconfigured.
+            AnkiConnectionError: AnkiConnect is unreachable.
             Any fetcher exception propagates unchanged (no workspace cleanup
             happens here — the worker handles it).
         """
@@ -814,6 +829,12 @@ class EpisodeProcessor:
 
         if cancel_event.is_set():
             return self._make_cancelled_result(time.time())
+
+        if not preview_mode:
+            # Deliberate early check: fail before the video download rather than
+            # after.  process_episode re-runs the same pre-flight post-fetch;
+            # that double-check is intentional — cheap idempotent localhost calls.
+            self._preflight_card_target()
 
         fetched = self._youtube_fetcher.fetch_video(
             url,
