@@ -94,7 +94,7 @@ class ValidationService:
                 issues.append(
                     ValidationIssue(
                         component="Anki Deck",
-                        severity="ERROR",
+                        severity="WARNING",
                         message=deck_msg,
                     )
                 )
@@ -317,7 +317,10 @@ class ValidationService:
             return True, f"Deck '{deck_name}' found"
         available = ", ".join(decks[:5])
         more = "..." if len(decks) > 5 else ""
-        return False, f"Deck '{deck_name}' not found. Available: {available}{more}"
+        return False, (
+            f"Deck '{deck_name}' not found — it will be created automatically when mining starts. "
+            f"Available: {available}{more}"
+        )
 
     def _check_note_type_exists(self) -> tuple[bool, str]:
         """Check if the note type (model) exists in Anki.
