@@ -47,3 +47,34 @@ class FetchedMedia:
             object.__setattr__(self, "video_file", Path(self.video_file))
         if isinstance(self.subtitle_file, str):
             object.__setattr__(self, "subtitle_file", Path(self.subtitle_file))
+
+
+@dataclass(frozen=True)
+class PlaylistEntry:
+    """A single video entry within a YouTube playlist.
+
+    Immutable to keep thread-safety guarantees consistent with the rest of
+    the pipeline (see AnkiMinerConfig).  ``duration_s`` is optional because
+    flat yt-dlp playlist extraction sometimes omits it.
+    """
+
+    video_id: str
+    title: str
+    duration_s: int | None  # flat extraction may omit duration
+    url: str  # canonical https://www.youtube.com/watch?v=<id>
+
+
+@dataclass(frozen=True)
+class PlaylistInfo:
+    """Metadata about a YouTube playlist, gathered before individual video downloads.
+
+    Immutable to keep thread-safety guarantees consistent with the rest of
+    the pipeline (see AnkiMinerConfig).  Both ``playlist_id`` and
+    ``total_count`` are optional because yt-dlp may not provide them for all
+    playlist types.
+    """
+
+    playlist_id: str | None
+    title: str
+    entries: tuple[PlaylistEntry, ...]
+    total_count: int | None  # yt-dlp "playlist_count", may be absent

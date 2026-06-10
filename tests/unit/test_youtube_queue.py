@@ -32,6 +32,23 @@ class TestYouTubeQueueItemDefaults:
         assert item.url == "https://youtu.be/xyz"
         assert item.status == YouTubeItemStatus.READY
 
+    def test_display_title_defaults_to_none(self):
+        item = YouTubeQueueItem(url="https://youtu.be/abc123", status=YouTubeItemStatus.PENDING)
+        assert item.display_title is None
+
+    def test_display_title_settable(self):
+        item = YouTubeQueueItem(url="https://youtu.be/abc123", status=YouTubeItemStatus.PROBING)
+        item.display_title = "My Video Title"
+        assert item.display_title == "My Video Title"
+
+    def test_display_title_can_be_set_at_construction(self):
+        item = YouTubeQueueItem(
+            url="https://youtu.be/abc123",
+            status=YouTubeItemStatus.PROBING,
+            display_title="Preset Title",
+        )
+        assert item.display_title == "Preset Title"
+
 
 # ---------------------------------------------------------------------------
 # YouTubeQueue.add
