@@ -222,8 +222,8 @@ class YouTubeFetcherService:
         **Over-cap detection contract**
 
         Private, deleted, or otherwise unavailable entries are silently dropped
-        from ``PlaylistInfo.entries`` by yt-dlp before this method returns.
-        That means ``len(entries) == limit`` no longer unambiguously signals
+        from ``PlaylistInfo.entries`` while this method parses the yt-dlp
+        output.  That means ``len(entries) == limit`` does not unambiguously signal
         "exactly at cap" — one of the fetched slots may have been an unusable
         entry, leaving fewer usable ones in the list.
 
@@ -237,9 +237,9 @@ class YouTubeFetcherService:
         When ``total_count`` is ``None`` and unusable entries were silently
         skipped within the fetched window, over-cap detection may produce a
         false negative (caller sees ``len(entries) <= limit`` and concludes the
-        playlist fits).  This is an acceptable trade-off: the worst case is that
-        the caller queues up to ``limit`` videos without an over-cap
-        confirmation, which is the same behaviour as before this fix.
+        playlist fits).  This is an acceptable trade-off: the worst case is
+        that the caller queues up to ``limit`` videos without showing an
+        over-cap confirmation.
 
         Args:
             url: YouTube playlist URL to probe.
