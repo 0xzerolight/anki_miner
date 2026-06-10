@@ -11,7 +11,7 @@ from pathlib import Path
 import requests
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import AnkiConnectionError
+from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.models import CardPayload
 from anki_miner.services._ankiconnect import post_action, post_multi
@@ -277,6 +277,48 @@ class AnkiService:
             params={"deck": deck_name},
             timeout=15,
         )
+
+    def verify_card_target(self) -> None:
+        """Validate note type + field mapping, then ensure the deck exists.
+
+        Order is checks-then-side-effects: a failed run creates nothing.
+
+        Raises:
+            SetupError: note type missing, or a configured field absent from it.
+            AnkiConnectionError: AnkiConnect unreachable or errors.
+        """
+        models = post_action(self.config.ankiconnect_url, "modelNames", timeout=15) or []
+        if self.config.anki_note_type not in models:
+            available = ", ".join(models[:5])
+            more = "..." if len(models) > 5 else ""
+            raise SetupError(
+                f"Note type '{self.config.anki_note_type}' not found. "
+                f"Available: {available}{more}. "
+                f"Check Settings → Anki."
+            )
+
+        actual = set(
+            post_action(
+                self.config.ankiconnect_url,
+                "modelFieldNames",
+                params={"modelName": self.config.anki_note_type},
+                timeout=15,
+            )
+            or []
+        )
+        missing = {v for v in self.config.anki_fields.values() if v} - actual
+        if missing:
+            _sorted_actual = sorted(actual)
+            _available = ", ".join(_sorted_actual[:5])
+            _more = "..." if len(actual) > 5 else ""
+            raise SetupError(
+                f"Field(s) {', '.join(sorted(missing))} not found on note type "
+                f"'{self.config.anki_note_type}'. "
+                f"Available: {_available}{_more}. "
+                f"Check Settings → Anki field mapping."
+            )
+
+        self.ensure_deck(self.config.anki_deck_name)
 
     def _build_vocab_query(self) -> str:
         """Build the findNotes query for known-words detection.
