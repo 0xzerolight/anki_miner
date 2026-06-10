@@ -4,15 +4,16 @@ import re
 import threading
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from anki_miner.exceptions import SubtitleParseError
+from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
 from anki_miner.models import CardPayload, LineLemmas, MediaData, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.presenters import NullPresenter
+from anki_miner.services.anki_service import AnkiService
 
 
 def _make_word(lemma="食べる", surface=None, start_time=1.0, pos="動詞"):
@@ -2055,3 +2056,219 @@ class TestSourceField:
 
         card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
         assert card_data[0].extra_fields["source"] == "A Cool Video Title @ 01:01:01"
+
+
+class TestPreflightCardTarget:
+    """Tests for Issue #52: pre-flight Anki target check before the mining pipeline."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock(spec=AnkiService)
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    @pytest.fixture
+    def processor(self, test_config, mock_services):
+        return EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+    def test_setup_error_propagates_and_aborts_pipeline(self, processor, mock_services, tmp_path):
+        """SetupError from verify_card_target raises out of process_episode; Phase 1 never starts."""
+        mock_services["anki_service"].verify_card_target.side_effect = SetupError("bad note type")
+
+        with patch.object(processor, "_allocate_run_temp_folder") as mock_alloc:
+            with pytest.raises(SetupError, match="bad note type"):
+                processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+            mock_alloc.assert_not_called()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
+        mock_services["media_extractor"].extract_media_batch.assert_not_called()
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
+
+    def test_anki_connection_error_propagates(self, processor, mock_services, tmp_path):
+        """AnkiConnectionError from verify_card_target raises out of process_episode."""
+        mock_services["anki_service"].verify_card_target.side_effect = AnkiConnectionError("unreachable")
+
+        with pytest.raises(AnkiConnectionError):
+            processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
+
+    def test_preflight_called_before_subtitle_parsing(self, test_config, mock_services, tmp_path):
+        """verify_card_target is called exactly once and before parse_subtitle_file."""
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        parent = MagicMock()
+        parent.attach_mock(mock_services["anki_service"], "anki_service")
+        parent.attach_mock(mock_services["subtitle_parser"], "subtitle_parser")
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        call_names = [c[0] for c in parent.mock_calls]
+        assert "anki_service.verify_card_target" in call_names
+        assert "subtitle_parser.parse_subtitle_file" in call_names
+        preflight_idx = call_names.index("anki_service.verify_card_target")
+        parse_idx = call_names.index("subtitle_parser.parse_subtitle_file")
+        assert preflight_idx < parse_idx
+
+        mock_services["anki_service"].verify_card_target.assert_called_once()
+
+    def test_preview_mode_skips_preflight(self, processor, mock_services, tmp_path):
+        """preview_mode=True must not call verify_card_target."""
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", preview_mode=True)
+
+        mock_services["anki_service"].verify_card_target.assert_not_called()
+
+    # --- process_youtube_url pre-flight tests ---
+
+    def _make_youtube_processor(self, test_config, mock_services, mock_fetcher):
+        return EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=mock_fetcher,
+            **mock_services,
+        )
+
+    def test_youtube_setup_error_aborts_before_fetch(self, test_config, mock_services, tmp_path):
+        """SetupError raised before fetch_video is called for YouTube URLs."""
+        mock_services["anki_service"].verify_card_target.side_effect = SetupError("bad note type")
+        mock_fetcher = MagicMock()
+
+        processor = self._make_youtube_processor(test_config, mock_services, mock_fetcher)
+
+        with pytest.raises(SetupError, match="bad note type"):
+            processor.process_youtube_url(
+                url="https://youtu.be/abc",
+                video_id="abc",
+                workspace=tmp_path,
+                sub_mode="manual_only",
+                cancel_event=threading.Event(),
+            )
+
+        mock_fetcher.fetch_video.assert_not_called()
+
+    def test_youtube_anki_connection_error_aborts_before_fetch(self, test_config, mock_services, tmp_path):
+        """AnkiConnectionError from verify_card_target propagates before fetch_video is called."""
+        mock_services["anki_service"].verify_card_target.side_effect = AnkiConnectionError("unreachable")
+        mock_fetcher = MagicMock()
+
+        processor = self._make_youtube_processor(test_config, mock_services, mock_fetcher)
+
+        with pytest.raises(AnkiConnectionError):
+            processor.process_youtube_url(
+                url="https://youtu.be/abc",
+                video_id="abc",
+                workspace=tmp_path,
+                sub_mode="manual_only",
+                cancel_event=threading.Event(),
+            )
+
+        mock_fetcher.fetch_video.assert_not_called()
+
+    def test_youtube_preflight_called_before_fetch(self, test_config, mock_services, tmp_path):
+        """verify_card_target is called before fetch_video in process_youtube_url."""
+        video_file = tmp_path / "abc.mp4"
+        subtitle_file = tmp_path / "abc.ja.srt"
+        video_file.touch()
+        subtitle_file.touch()
+
+        word = _make_word("食べる")
+        media = _make_media()
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        mock_fetcher = MagicMock()
+        mock_fetcher.fetch_video.return_value = FetchedMedia(
+            video_file=video_file,
+            subtitle_file=subtitle_file,
+            sub_source="manual",
+        )
+
+        parent = MagicMock()
+        parent.attach_mock(mock_services["anki_service"], "anki_service")
+        parent.attach_mock(mock_fetcher, "fetcher")
+
+        processor = self._make_youtube_processor(test_config, mock_services, mock_fetcher)
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc",
+            video_id="abc",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+        )
+
+        call_names = [c[0] for c in parent.mock_calls]
+        assert "anki_service.verify_card_target" in call_names
+        assert "fetcher.fetch_video" in call_names
+        preflight_idx = call_names.index("anki_service.verify_card_target")
+        fetch_idx = call_names.index("fetcher.fetch_video")
+        assert preflight_idx < fetch_idx
+
+    def test_youtube_preview_mode_skips_preflight(self, test_config, mock_services, tmp_path):
+        """process_youtube_url with preview_mode=True must not call verify_card_target."""
+        video_file = tmp_path / "abc.mp4"
+        subtitle_file = tmp_path / "abc.ja.srt"
+        video_file.touch()
+        subtitle_file.touch()
+
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+
+        mock_fetcher = MagicMock()
+        mock_fetcher.fetch_video.return_value = FetchedMedia(
+            video_file=video_file,
+            subtitle_file=subtitle_file,
+            sub_source="manual",
+        )
+
+        processor = self._make_youtube_processor(test_config, mock_services, mock_fetcher)
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc",
+            video_id="abc",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+            preview_mode=True,
+        )
+
+        mock_services["anki_service"].verify_card_target.assert_not_called()
