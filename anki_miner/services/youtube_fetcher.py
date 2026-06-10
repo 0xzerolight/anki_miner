@@ -215,10 +215,31 @@ class YouTubeFetcherService:
         """Run yt-dlp --flat-playlist --dump-single-json and return a PlaylistInfo.
 
         Fetches up to ``limit + 1`` entries so callers can detect when the
-        playlist exceeds the cap (``len(info.entries) > limit``) without an
-        extra round-trip — even when yt-dlp omits ``playlist_count``.
-        Truncation to ``limit`` is the caller's responsibility; this method
-        returns all fetched entries.
+        playlist exceeds the cap without an extra round-trip.  Truncation to
+        ``limit`` is the caller's responsibility; this method returns all
+        fetched entries.
+
+        **Over-cap detection contract**
+
+        Private, deleted, or otherwise unavailable entries are silently dropped
+        from ``PlaylistInfo.entries`` by yt-dlp before this method returns.
+        That means ``len(entries) == limit`` no longer unambiguously signals
+        "exactly at cap" — one of the fetched slots may have been an unusable
+        entry, leaving fewer usable ones in the list.
+
+        Callers should treat the playlist as over-cap when *either* of these
+        conditions holds:
+
+        * ``len(info.entries) > limit`` — the reliable entry-count signal; OR
+        * ``info.total_count is not None and info.total_count > limit`` — the
+          authoritative playlist-size signal when yt-dlp reports it.
+
+        When ``total_count`` is ``None`` and unusable entries were silently
+        skipped within the fetched window, over-cap detection may produce a
+        false negative (caller sees ``len(entries) <= limit`` and concludes the
+        playlist fits).  This is an acceptable trade-off: the worst case is that
+        the caller queues up to ``limit`` videos without an over-cap
+        confirmation, which is the same behaviour as before this fix.
 
         Args:
             url: YouTube playlist URL to probe.
