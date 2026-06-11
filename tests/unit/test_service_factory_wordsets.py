@@ -1,5 +1,7 @@
 import dataclasses
 
+import pytest
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import service_factory
 
@@ -16,14 +18,31 @@ class _Fake:
         return True
 
 
-def test_factory_builds_wordset_service_when_enabled(monkeypatch):
+@pytest.fixture
+def base_config(tmp_path):
+    """A config whose on-disk paths live under tmp_path, not ~/.anki_miner.
+
+    create_services() scans ``dicts_root`` and constructs ``KnownWordDB`` at
+    ``known_words_db_path``; a bare ``AnkiMinerConfig()`` would point both at
+    the developer's real home directory.
+    """
+    return dataclasses.replace(
+        AnkiMinerConfig(),
+        dicts_root=tmp_path / "dicts",
+        known_words_db_path=tmp_path / "known_words.db",
+        history_db_path=tmp_path / "history.db",
+        stats_db_path=tmp_path / "stats.db",
+    )
+
+
+def test_factory_builds_wordset_service_when_enabled(monkeypatch, base_config):
     monkeypatch.setattr(service_factory, "WordsetService", _Fake, raising=True)
-    cfg = dataclasses.replace(AnkiMinerConfig(), excluded_wordsets=("surnames",))
+    cfg = dataclasses.replace(base_config, excluded_wordsets=("surnames",))
     services = service_factory.create_services(cfg)
     assert services.wordset_service is not None
     assert services.wordset_service.loaded
 
 
-def test_factory_skips_wordset_service_when_empty():
-    services = service_factory.create_services(AnkiMinerConfig())
+def test_factory_skips_wordset_service_when_empty(base_config):
+    services = service_factory.create_services(base_config)
     assert services.wordset_service is None
