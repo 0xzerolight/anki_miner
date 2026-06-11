@@ -85,7 +85,10 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=anki_miner --cov-report=term-missing --cov-report=html"
+# Coverage is computed but never gated, so it's dropped from default runs
+# (CI + local) to avoid paying for an ungated metric. Run it explicitly when
+# needed: pytest --cov=anki_miner
+addopts = "-v"
 markers = [
     "youtube: requires network and yt-dlp real extractor",
     "real_ytdlp: exercises the real _ytdlp_supports_js_runtimes (no autouse stub)",
