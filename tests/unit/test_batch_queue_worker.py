@@ -480,3 +480,55 @@ def test_setup_error_emits_item_failed(tmp_path):
     assert len(failed_emissions) == 1
     assert failed_emissions[0][0] == "i1"
     assert "note type not found" in failed_emissions[0][1]
+
+
+def test_mid_loop_raise_does_not_abort_remaining_pairs_or_lose_cards(tmp_path):
+    """Regression: the new card-target preflight (#52) makes process_episode raise.
+
+    A raise on pair 2 of 3 must NOT abort pairs 3.. nor discard the cards already
+    created for pair 1 — without the per-pair guard the raise escaped to the outer
+    except, marked the whole item ERROR, skipped the cards-counting, and never ran
+    pair 3.
+    """
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    pair3 = SimpleNamespace(video=Path("/tmp/ep3.mkv"), subtitle=Path("/tmp/ep3.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    item = queue.get_all_items()[0]
+
+    proc = MagicMock()
+    proc.process_episode.side_effect = [
+        _ok_result(cards=3),
+        SetupError("AnkiConnect unreachable"),
+        _ok_result(cards=5),
+    ]
+
+    worker = _make_worker_with_queue(queue)
+    results = _wire_status_slots(worker, queue)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair1, pair2, pair3],
+        ),
+    ):
+        worker.run()
+
+    # All three pairs attempted — the raise on pair 2 did not abort pair 3.
+    assert proc.process_episode.call_count == 3
+    # Item marked failed (one pair failed) with the raised pair reported.
+    assert len(results["failed"]) == 1
+    _item_id, msg = results["failed"][0]
+    assert "1/3 episodes failed" in msg
+    assert "ep2.mkv" in msg
+    assert "AnkiConnect unreachable" in msg
+    assert results["completed"] == []
+    # Cards from pairs 1 and 3 are preserved (3 + 5), not discarded by the raise.
+    assert results["finished"] == [8]
+    assert item.status == QueueItemStatus.ERROR
