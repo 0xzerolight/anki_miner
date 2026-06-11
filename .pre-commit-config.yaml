@@ -6,13 +6,13 @@ ci:
 
 repos:
   - repo: https://github.com/psf/black
-    rev: 26.1.0
+    rev: 6305bf1ae645ab7541be4f5028a86239316178eb  # frozen: 26.1.0
     hooks:
       - id: black
         language_version: python3
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.0
+    rev: 0470f7c8a653e950f7cc5a653204ceb3fde4c02a  # frozen: v0.15.0
     hooks:
       - id: ruff
         args: [--fix]
