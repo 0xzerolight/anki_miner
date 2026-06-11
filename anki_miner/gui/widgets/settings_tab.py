@@ -35,6 +35,7 @@ from anki_miner.gui.widgets.panels import (
     ThemesPanel,
     YouTubeSettingsPanel,
 )
+from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
 from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
@@ -206,9 +207,9 @@ class SettingsTab(QWidget):
         # Without this attribute, a freshly-spawned QThread can be garbage
         # collected before run() completes — Qt logs "QThread: Destroyed
         # while thread is still running" and the result signal never fires.
-        self._fetch_fields_worker: FetchFieldsWorker | None = None
+        self._fetch_fields_worker: SingleCallWorker | None = None
         # Same GC-safety rationale for the deck-list fetch worker.
-        self._fetch_decks_worker: FetchDecksWorker | None = None
+        self._fetch_decks_worker: SingleCallWorker | None = None
         # And for the card-styling apply/remove worker (Issue #44).
         self._styling_worker: StylingWorker | None = None
 
