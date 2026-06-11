@@ -84,3 +84,100 @@ def test_curation_processor_exposes_constructor_processor(qapp):
     """Typed curation_processor contract (T-60): returns the run's processor."""
     worker = _make_worker(qapp)
     assert worker.curation_processor is worker.processor
+
+
+# ---------------------------------------------------------------------------
+# Cancel propagation / error-emit / result-suppression (run() called directly)
+# ---------------------------------------------------------------------------
+
+
+def test_cancel_propagates_to_processor(qapp):
+    """cancel() sets the worker flag AND forwards to processor.cancel()."""
+    worker = _make_worker(qapp)
+
+    worker.cancel()
+
+    assert worker.is_cancelled is True
+    worker.processor.cancel.assert_called_once_with()
+
+
+def test_cancel_before_run_skips_process_episode_and_emit(qapp):
+    """A pre-run cancel returns immediately: no processing, no result_ready."""
+    worker = _make_worker(qapp)
+    results: list = []
+    worker.result_ready.connect(results.append)
+
+    worker.cancel()
+    worker.run()
+
+    worker.processor.process_episode.assert_not_called()
+    assert results == []
+
+
+def test_result_suppressed_when_cancelled_after_processing(qapp):
+    """A cancel that lands while process_episode is mid-flight suppresses the
+    result_ready emit (the post-call check_cancelled guard)."""
+    worker = _make_worker(qapp)
+
+    def _cancel_mid_run(*args, **kwargs):
+        worker.cancel()  # user pressed Cancel during the pipeline
+        return MagicMock(name="ProcessingResult")
+
+    worker.processor.process_episode.side_effect = _cancel_mid_run
+
+    results: list = []
+    worker.result_ready.connect(results.append)
+    worker.run()
+
+    # Processing ran, but the late cancel swallows the result.
+    worker.processor.process_episode.assert_called_once()
+    assert results == []
+
+
+def test_error_emitted_with_prefix_when_process_episode_raises(qapp):
+    """A processing exception surfaces on the error signal, not result_ready."""
+    worker = _make_worker(qapp)
+    worker.processor.process_episode.side_effect = RuntimeError("disk full")
+
+    errors: list[str] = []
+    results: list = []
+    worker.error.connect(errors.append)
+    worker.result_ready.connect(results.append)
+
+    worker.run()
+
+    assert results == []
+    assert len(errors) == 1
+    assert errors[0] == "Error processing episode: disk full"
+
+
+def test_error_suppressed_when_cancelled_during_failure(qapp):
+    """A raise that coincides with a cancel stays silent (cancelled runs emit
+    nothing — neither result nor error)."""
+    worker = _make_worker(qapp)
+
+    def _cancel_then_raise(*args, **kwargs):
+        worker.cancel()
+        raise RuntimeError("boom")
+
+    worker.processor.process_episode.side_effect = _cancel_then_raise
+
+    errors: list[str] = []
+    worker.error.connect(errors.append)
+
+    worker.run()
+
+    assert errors == []
+
+
+def test_successful_run_emits_result_ready(qapp):
+    """The happy path forwards the processor's ProcessingResult verbatim."""
+    worker = _make_worker(qapp)
+    sentinel = MagicMock(name="ProcessingResult")
+    worker.processor.process_episode.return_value = sentinel
+
+    results: list = []
+    worker.result_ready.connect(results.append)
+    worker.run()
+
+    assert results == [sentinel]
