@@ -10,7 +10,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.workers.base_worker import CancellableWorker
-from anki_miner.models.batch_queue import BatchQueue
+from anki_miner.models.batch_queue import BatchQueue, QueueItemStatus
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
 
@@ -81,7 +81,15 @@ class BatchQueueWorkerThread(CancellableWorker):
             if item is None:
                 break  # No more pending items
 
-            # Signal processing start (status updated by GUI thread via signal handler)
+            # OWNERSHIP: during a run, this worker thread owns every QueueItem
+            # status/result write, applied synchronously at pick/finish time so
+            # get_next_pending() can never re-pick an in-flight item. Relying on
+            # the queued GUI slots to write status raced the loop: a finished
+            # (or fast-failed) item was still PENDING until the GUI event loop
+            # caught up, and got picked again. BatchProcessingTab's slots are
+            # render-only; between runs (retry reset, repopulation) the GUI
+            # thread owns the model.
+            item.status = QueueItemStatus.PROCESSING
             self.item_started.emit(item.id, item.display_name)
 
             try:
@@ -132,12 +140,17 @@ class BatchQueueWorkerThread(CancellableWorker):
                         f"{len(failed_pairs)}/{len(pairs)} episodes failed "
                         f"(e.g. {failed_pairs[0][0]}: {failed_pairs[0][1]})"
                     )
+                    item.status = QueueItemStatus.ERROR
+                    item.error_message = msg
                     self.item_failed.emit(item.id, msg)
                 else:
-                    # Signal completion (status updated by GUI thread via signal handler)
+                    item.status = QueueItemStatus.COMPLETED
+                    item.cards_created = cards_for_item
                     self.item_completed.emit(item.id, cards_for_item)
 
             except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+                item.status = QueueItemStatus.ERROR
+                item.error_message = str(e)
                 self.item_failed.emit(item.id, str(e))
 
         self.queue_finished.emit(total_cards)
