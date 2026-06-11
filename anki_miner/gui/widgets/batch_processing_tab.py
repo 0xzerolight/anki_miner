@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -36,8 +35,6 @@ from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.panels import QueuePanel
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models.batch_queue import QueueItemStatus
-from anki_miner.services.subtitle_parser import SubtitleParserService
-from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
@@ -423,31 +420,10 @@ class BatchProcessingTab(MiningTabBase):
         w = self.worker_thread
         if w is None:
             return None, None
-
-        lookup_fn = None
-        proc = w.curation_processor
-        if proc is not None:
-            lookup_fn = proc.offline_lookup_fn
-
-        media_context: CurationMediaContext | None = None
-        video = getattr(w, "_curation_video", None)
-        subtitle = getattr(w, "_curation_subtitle", None)
-        if video is not None and subtitle is not None:
-            try:
-                config_no_offset = replace(self.config, subtitle_offset=0.0)
-                parser = SubtitleParserService(config_no_offset)
-                entries = parser.parse_raw_entries(Path(subtitle))
-                media_context = CurationMediaContext(
-                    video_file=Path(video),
-                    subtitle_entries=entries,
-                    offset=getattr(w, "_curation_offset", 0.0),
-                    audio_track_override=None,
-                    ffprobe_cmd=resolve_ffprobe(self.config),
-                )
-            except Exception:
-                logger.exception("Failed to build media context for curation; proceeding without player")
-                media_context = None
-        return media_context, lookup_fn
+        media_context = self._make_curation_media_context(
+            self.config, w._curation_video, w._curation_subtitle, offset=w._curation_offset
+        )
+        return media_context, self._lookup_fn_from_processor(w.curation_processor)
 
     def _process_queue(self) -> None:
         """Process all items in queue."""

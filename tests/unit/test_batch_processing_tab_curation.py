@@ -68,7 +68,7 @@ def test_build_curation_context_reads_worker_attrs(tab, facade_processor, tmp_pa
     )
     mock_parser = MagicMock()
     mock_parser.return_value.parse_raw_entries.return_value = [(0.0, 1.0, "テスト")]
-    with patch("anki_miner.gui.widgets.batch_processing_tab.SubtitleParserService", mock_parser):
+    with patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser):
         media_context, lookup_fn = tab._build_curation_context()
     assert lookup_fn is lookup
     assert media_context is not None
@@ -89,7 +89,7 @@ def test_build_curation_context_parse_error_returns_none_context(tab, facade_pro
     )
     mock_parser = MagicMock()
     mock_parser.return_value.parse_raw_entries.side_effect = RuntimeError("bad subs")
-    with patch("anki_miner.gui.widgets.batch_processing_tab.SubtitleParserService", mock_parser):
+    with patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser):
         media_context, lookup_fn = tab._build_curation_context()
     assert media_context is None
     assert lookup_fn is lookup
@@ -106,3 +106,28 @@ def test_cancel_rejects_active_curation_dialog(tab):
     tab.worker_thread = MagicMock()
     tab._on_cancel_clicked()
     dialog.reject.assert_called_once()
+
+
+def test_build_curation_context_routes_through_shared_helpers(tab, facade_processor, tmp_path):
+    """_build_curation_context delegates to the shared MiningTabBase helpers
+    (T-60): _make_curation_media_context gets the worker's _curation_* attrs
+    (no audio-track override on batch), _lookup_fn_from_processor resolves the
+    typed curation_processor through the offline_lookup_fn facade."""
+    from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+
+    video = tmp_path / "ep1.mkv"
+    subs = tmp_path / "ep1.ass"
+    tab.worker_thread = SimpleNamespace(
+        curation_processor=facade_processor,
+        _curation_video=video,
+        _curation_subtitle=subs,
+        _curation_offset=4.0,
+    )
+
+    sentinel_ctx = object()
+    with patch.object(BatchProcessingTab, "_make_curation_media_context", return_value=sentinel_ctx) as helper:
+        media_context, lookup_fn = tab._build_curation_context()
+
+    helper.assert_called_once_with(tab.config, video, subs, offset=4.0)
+    assert media_context is sentinel_ctx
+    assert lookup_fn is facade_processor.definition_service.lookup_all_offline
