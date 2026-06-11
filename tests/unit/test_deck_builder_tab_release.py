@@ -8,8 +8,9 @@ silently skipped it -- removing a dict under a live build (Linux: deck built
 without that dict; Windows: error) and the retained processor's open
 index.sqlite blocked removal after a build until app restart.
 
-The retained processor lives on ``worker_thread._current_processor`` (set per
-episode in Phase 2), so the release method reads that attribute.
+The retained Phase-2 processor is exposed through the worker's typed
+``curation_processor`` property (T-60); the tab closes its handles through
+the ``EpisodeProcessor.release_dictionary_resources`` facade.
 """
 
 from __future__ import annotations
@@ -42,45 +43,45 @@ def tab(qapp, test_config):
     widget.deleteLater()
 
 
+def _idle_worker(processor):
+    """Build a MagicMock worker exposing ``processor`` via ``curation_processor``."""
+    worker = MagicMock(name="DeckBuilderWorker")
+    worker.isRunning.return_value = False
+    worker.curation_processor = processor
+    return worker
+
+
 def test_release_when_no_worker_returns_true(tab):
     tab.worker_thread = None
     assert tab.release_dictionary_resources() is True
 
 
-def test_release_with_idle_worker_closes_processor(tab):
-    worker = MagicMock(name="DeckBuilderWorker")
-    worker.isRunning.return_value = False
-    tab.worker_thread = worker
+def test_release_with_idle_worker_closes_definition_service_via_facade(tab, facade_processor):
+    tab.worker_thread = _idle_worker(facade_processor)
 
     assert tab.release_dictionary_resources() is True
-    worker._current_processor.definition_service.close.assert_called_once_with()
+    facade_processor.definition_service.close.assert_called_once_with()
 
 
-def test_release_with_running_worker_returns_false(tab):
-    worker = MagicMock(name="DeckBuilderWorker")
+def test_release_with_running_worker_returns_false(tab, facade_processor):
+    worker = _idle_worker(facade_processor)
     worker.isRunning.return_value = True
     tab.worker_thread = worker
 
     assert tab.release_dictionary_resources() is False
-    worker._current_processor.definition_service.close.assert_not_called()
+    facade_processor.definition_service.close.assert_not_called()
 
 
 def test_release_with_idle_worker_no_processor_returns_true(tab):
     # Worker finished before Phase 2 ever ran (preview rejected/cancelled): no
     # processor was retained, so there is nothing to close but removal may proceed.
-    worker = MagicMock(name="DeckBuilderWorker")
-    worker.isRunning.return_value = False
-    worker._current_processor = None
-    tab.worker_thread = worker
-
+    tab.worker_thread = _idle_worker(None)
     assert tab.release_dictionary_resources() is True
 
 
-def test_release_idempotent(tab):
-    worker = MagicMock(name="DeckBuilderWorker")
-    worker.isRunning.return_value = False
-    tab.worker_thread = worker
+def test_release_idempotent(tab, facade_processor):
+    tab.worker_thread = _idle_worker(facade_processor)
 
     assert tab.release_dictionary_resources() is True
     assert tab.release_dictionary_resources() is True
-    assert worker._current_processor.definition_service.close.call_count == 2
+    assert facade_processor.definition_service.close.call_count == 2

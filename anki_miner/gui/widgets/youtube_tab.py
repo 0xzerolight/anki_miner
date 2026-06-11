@@ -908,9 +908,9 @@ class YouTubeTab(MiningTabBase):
             return None, None
 
         lookup_fn = None
-        proc = getattr(w, "_curation_processor", None)
-        if proc is not None and getattr(proc, "definition_service", None) is not None:
-            lookup_fn = proc.definition_service.lookup_all_offline
+        proc = w.curation_processor
+        if proc is not None:
+            lookup_fn = proc.offline_lookup_fn
 
         media_context: CurationMediaContext | None = None
         video = getattr(w, "_curation_video", None)
@@ -978,7 +978,7 @@ class YouTubeTab(MiningTabBase):
             # on Windows where sqlite handles keep the index.sqlite file locked
             # until GC eventually runs (Issue #30).
             if old_processor is not None:
-                old_processor.definition_service.close()
+                old_processor.release_dictionary_resources()
 
     def release_dictionary_resources(self) -> bool:
         """Close any cached dictionary handles so the file can be deleted.
@@ -995,7 +995,7 @@ class YouTubeTab(MiningTabBase):
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return False
         if self._processor is not None:
-            self._processor.definition_service.close()
+            self._processor.release_dictionary_resources()
             self._processor = None
         return True
 

@@ -55,13 +55,13 @@ def test_queue_worker_callback_follows_checkbox(tab):
         assert worker_cls.call_args.kwargs["curation_callback"] is None
 
 
-def test_build_curation_context_reads_worker_attrs(tab, tmp_path):
+def test_build_curation_context_reads_worker_attrs(tab, facade_processor, tmp_path):
     subs = tmp_path / "ep1.ass"
     subs.touch()
     lookup = MagicMock(name="lookup_all_offline")
-    proc = SimpleNamespace(definition_service=SimpleNamespace(lookup_all_offline=lookup))
+    facade_processor.definition_service.lookup_all_offline = lookup
     tab.worker_thread = SimpleNamespace(
-        _curation_processor=proc,
+        curation_processor=facade_processor,
         _curation_video=tmp_path / "ep1.mkv",
         _curation_subtitle=subs,
         _curation_offset=4.0,
@@ -76,13 +76,13 @@ def test_build_curation_context_reads_worker_attrs(tab, tmp_path):
     assert media_context.subtitle_entries == [(0.0, 1.0, "テスト")]
 
 
-def test_build_curation_context_parse_error_returns_none_context(tab, tmp_path):
+def test_build_curation_context_parse_error_returns_none_context(tab, facade_processor, tmp_path):
     subs = tmp_path / "ep1.ass"
     subs.touch()
     lookup = MagicMock(name="lookup_all_offline")
-    proc = SimpleNamespace(definition_service=SimpleNamespace(lookup_all_offline=lookup))
+    facade_processor.definition_service.lookup_all_offline = lookup
     tab.worker_thread = SimpleNamespace(
-        _curation_processor=proc,
+        curation_processor=facade_processor,
         _curation_video=tmp_path / "ep1.mkv",
         _curation_subtitle=subs,
         _curation_offset=0.0,
