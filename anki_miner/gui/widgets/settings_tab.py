@@ -506,6 +506,15 @@ class SettingsTab(QWidget):
             return
         new_config = replace(new_config, frequency_list_path=resolved_freq_path)
 
+        # Sync the dictionary panel to the committed root (T-07). Done here —
+        # alongside the config assignment, after every validation/import has
+        # passed — so the panel never points at a root the save then aborted on.
+        # Without this the panel keeps scanning/rmtree-targeting the OLD root
+        # until restart: refresh_registry() renders fresh imports as "(missing)"
+        # and remove() deletes from the wrong directory.
+        if new_dicts_root != self.config.dicts_root:
+            self.dictionary_panel.set_dicts_root(new_dicts_root)
+
         # Emit signal to notify listeners of config change
         self.config = new_config
         self.config_changed.emit(new_config)
