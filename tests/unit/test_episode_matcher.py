@@ -109,6 +109,95 @@ class TestEpisodeNumberExtractor:
 
             assert result.filename == "Test_S01E01.mp4"
 
+    class TestNumericTitlePrefix:
+        """Regression for T-04 — a numeric show title must not steal the episode slot.
+
+        The bare-number fallback used to take the FIRST number, so numeric
+        titles ("86", "Mob Psycho 100", "Steins;Gate 0", "3-gatsu") collapsed
+        every file onto the title number. The episode number is the LAST bare
+        number on the line.
+        """
+
+        def test_86_title_takes_trailing_episode(self, tmp_path):
+            path = tmp_path / "86 - 03.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 3
+
+        def test_mob_psycho_100_takes_trailing_episode(self, tmp_path):
+            path = tmp_path / "Mob Psycho 100 - 05.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 5
+
+        def test_steins_gate_0_takes_trailing_episode(self, tmp_path):
+            path = tmp_path / "Steins;Gate 0 - 07.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 7
+
+        def test_3_gatsu_no_lion_takes_trailing_episode(self, tmp_path):
+            path = tmp_path / "3-gatsu no Lion - 12.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 12
+
+        def test_numeric_title_files_pair_distinctly(self, tmp_path):
+            """Each numeric-title episode pairs with its own subtitle instead of
+            collapsing onto episode 86."""
+            video_dir = tmp_path / "videos"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+            vids, subs = [], []
+            for n in range(1, 5):
+                v = video_dir / f"86 - {n:02d}.mkv"
+                v.touch()
+                vids.append(v)
+                s = sub_dir / f"86 - {n:02d}.srt"
+                s.touch()
+                subs.append(s)
+
+            pairs = EpisodeMatcher.match_by_episode_number(vids, subs)
+
+            assert len(pairs) == 4
+            assert len({str(s) for _, s in pairs}) == 4
+            for v, s in pairs:
+                assert v.stem == s.stem
+
+    class TestSeasonEpisodeWithSeparator:
+        """Regression for T-04 — SxxEyy must tolerate separators (whitespace/._-)
+        between the season and episode tokens; 'S02 E05' was falling through to the
+        bare-number fallback and mining the SEASON as the episode."""
+
+        def test_s02_space_e05(self, tmp_path):
+            path = tmp_path / "Show.S02 E05.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.season_number == 2
+            assert result.episode_number == 5
+
+        def test_s01_dot_e01(self, tmp_path):
+            path = tmp_path / "Show.S01.E01.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.season_number == 1
+            assert result.episode_number == 1
+
+        def test_s03_dash_e10(self, tmp_path):
+            path = tmp_path / "Show_S03-E10.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.season_number == 3
+            assert result.episode_number == 10
+
     class TestResolutionInFilename:
         """Regression for Issue #36 — resolution must not be misread as season x episode."""
 
