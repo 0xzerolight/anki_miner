@@ -285,6 +285,23 @@ class TestProbeMetadata:
         assert "--cookies" not in cmd
         assert "--cookies-from-browser" not in cmd
 
+    def test_non_json_output_raises(self, service: YouTubeFetcherService) -> None:
+        """Exit 0 but unparseable stdout (the site or yt-dlp broke) wraps the
+        JSONDecodeError into a YouTubeFetchError instead of leaking it."""
+        with (
+            patch("subprocess.run", return_value=_fake_run(0, "not-json", stderr="some warn")),
+            pytest.raises(YouTubeFetchError, match="non-JSON"),
+        ):
+            service.probe_metadata("https://youtu.be/abc123")
+
+    def test_empty_stdout_raises_non_json(self, service: YouTubeFetcherService) -> None:
+        """Exit 0 with empty stdout is also non-JSON, not an empty VideoInfo."""
+        with (
+            patch("subprocess.run", return_value=_fake_run(0, "", stderr="")),
+            pytest.raises(YouTubeFetchError, match="non-JSON"),
+        ):
+            service.probe_metadata("https://youtu.be/abc123")
+
 
 # ---------------------------------------------------------------------------
 # _has_native_auto_ja (helper unit tests)
@@ -941,6 +958,72 @@ class TestFetchVideoHappyPath:
         ):
             out = service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "auto_only")
         assert out.sub_source == "auto"
+
+
+class TestResolveOutputsAmbiguity:
+    """``_resolve_outputs`` must refuse to silently pick one when yt-dlp left
+    more than one video or subtitle matching the id glob — an ambiguous
+    workspace means the wrong file could be mined. Exercised through the public
+    ``fetch_video`` (exit 0, globbing happens on success) so the wrapping at the
+    fetch boundary is covered too.
+    """
+
+    def test_multiple_video_outputs_raises(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        # Two video files + one subtitle for the same id.
+        _touch(tmp_path / "abc123.mp4", b"v1")
+        _touch(tmp_path / "abc123.webm", b"v2")
+        _touch(tmp_path / "abc123.ja.srt", b"1\n00:00:01,000 --> 00:00:02,000\nhi\n")
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+            pytest.raises(YouTubeFetchError, match="Multiple video outputs"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_multiple_subtitle_outputs_raises(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        # One video + two .ja.srt subtitle files for the same id.
+        _touch(tmp_path / "abc123.mp4", b"v1")
+        _touch(tmp_path / "abc123.ja.srt", b"1\n00:00:01,000 --> 00:00:02,000\nhi\n")
+        # A second subtitle whose stem still globs on "abc123*" and ends .ja.srt.
+        _touch(tmp_path / "abc123.extra.ja.srt", b"1\n00:00:01,000 --> 00:00:02,000\nyo\n")
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+            pytest.raises(YouTubeFetchError, match="Multiple subtitle outputs"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_video_ambiguity_reported_before_subtitle(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        """Both ambiguous → the video check runs first, so its message wins."""
+        _touch(tmp_path / "abc123.mp4", b"v1")
+        _touch(tmp_path / "abc123.mkv", b"v2")
+        _touch(tmp_path / "abc123.ja.srt", b"s1")
+        _touch(tmp_path / "abc123.extra.ja.srt", b"s2")
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+            pytest.raises(YouTubeFetchError, match="Multiple video outputs"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_subtitle_stat_oserror_wrapped(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        """An OSError statting the resolved subtitle (vanished / unreadable
+        between glob and stat) wraps to YouTubeFetchError, not a raw OSError."""
+        _make_happy_outputs(tmp_path)
+        real_stat = Path.stat
+
+        def fake_stat(self: Path, *args: Any, **kwargs: Any) -> Any:
+            if self.name.endswith(".ja.srt"):
+                raise OSError("stat boom")
+            return real_stat(self, *args, **kwargs)
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+            patch.object(Path, "stat", fake_stat),
+            pytest.raises(YouTubeFetchError, match="Subtitle file unreadable after fetch"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
 
 def test_probe_metadata_timeout_wrapped(service: YouTubeFetcherService) -> None:
