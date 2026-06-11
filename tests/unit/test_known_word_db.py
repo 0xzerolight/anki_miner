@@ -1,5 +1,7 @@
 """Tests for KnownWordDB service."""
 
+import pytest
+
 from anki_miner.services.known_word_db import KnownWordDB
 
 
@@ -96,6 +98,83 @@ class TestAddWords:
         row = conn.execute("SELECT source FROM known_words WHERE lemma = ?", ("食べる",)).fetchone()
         conn.close()
         assert row[0] == "mined"
+
+
+class TestSourceUpgrade:
+    """Marking a word 'known' must upgrade an existing anki/mined row to 'user'
+    so it survives Rebuild (Issue #42, T-27).
+
+    The PRIMARY KEY is ``lemma`` and the old ``INSERT OR IGNORE`` no-op'd when
+    the row already existed under ``source='anki'``; ``clear(preserve_user=True)``
+    on Rebuild then deleted that anki row and the user's mark was lost. The fix
+    promotes to 'user' on conflict but never downgrades a 'user' row.
+    """
+
+    def _source_of(self, tmp_path, db_path, lemma):
+        import sqlite3
+
+        conn = sqlite3.connect(db_path)
+        try:
+            row = conn.execute("SELECT source FROM known_words WHERE lemma = ?", (lemma,)).fetchone()
+        finally:
+            conn.close()
+        return row[0] if row else None
+
+    def test_user_mark_over_existing_anki_upgrades_source(self, tmp_path):
+        db_path = tmp_path / "known_words.db"
+        db = KnownWordDB(db_path)
+        db.initialize()
+        db.add_words({"食べる"}, source="anki")
+
+        db.add_words({"食べる"}, source="user")
+
+        assert self._source_of(tmp_path, db_path, "食べる") == "user"
+        assert db.get_words_by_source("user") == {"食べる"}
+
+    def test_user_mark_survives_rebuild(self, tmp_path):
+        """The end-to-end invariant: anki row, marked user, survives Rebuild."""
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"食べる"}, source="anki")
+        db.add_words({"食べる"}, source="user")  # user marks it known
+
+        db.clear(preserve_user=True)  # Rebuild Known Words DB
+
+        assert db.get_known_words() == {"食べる"}
+        assert db.get_words_by_source("user") == {"食べる"}
+
+    def test_anki_over_existing_user_does_not_downgrade(self, tmp_path):
+        """A later sync (source='anki'/'mined') must NOT clobber a 'user' row."""
+        db_path = tmp_path / "known_words.db"
+        db = KnownWordDB(db_path)
+        db.initialize()
+        db.add_words({"ラーメン"}, source="user")
+
+        db.add_words({"ラーメン"}, source="anki")
+
+        assert self._source_of(tmp_path, db_path, "ラーメン") == "user"
+        assert db.get_words_by_source("user") == {"ラーメン"}
+
+    def test_mined_over_existing_user_does_not_downgrade(self, tmp_path):
+        db_path = tmp_path / "known_words.db"
+        db = KnownWordDB(db_path)
+        db.initialize()
+        db.add_words({"寿司"}, source="user")
+
+        db.add_words({"寿司"}, source="mined")
+
+        assert self._source_of(tmp_path, db_path, "寿司") == "user"
+
+    def test_user_mark_idempotent_returns_zero_new(self, tmp_path):
+        """Re-marking an existing anki row as user adds no NEW rows."""
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"食べる"}, source="anki")
+
+        new_count = db.add_words({"食べる"}, source="user")
+
+        assert new_count == 0
+        assert db.word_count() == 1
 
 
 class TestGetKnownWords:
@@ -274,3 +353,48 @@ class TestClearUser:
         assert removed == 2
         assert db.get_known_words() == {"食べる"}
         assert db.get_words_by_source("user") == set()
+
+
+class TestExclusiveLock:
+    """Pin the behaviour the caller must tolerate when the DB file is locked.
+
+    Anki (or a parallel mining run) can hold ``known_words.db`` with an
+    exclusive write lock; SQLite raises ``OperationalError('database is
+    locked')`` for writers that can't acquire it. ``EpisodeProcessor`` wraps
+    the post-create ``add_words`` so this no longer discards a successful run
+    (T-19). These tests pin the raise so a future busy_timeout change is a
+    conscious decision.
+    """
+
+    def test_add_words_raises_when_exclusively_locked(self, tmp_path):
+        import sqlite3
+
+        db_path = tmp_path / "known_words.db"
+        db = KnownWordDB(db_path)
+        db.initialize()
+
+        holder = sqlite3.connect(db_path, isolation_level=None)
+        try:
+            holder.execute("BEGIN EXCLUSIVE")
+            with pytest.raises(sqlite3.OperationalError, match="database is locked"):
+                db.add_words({"食べる"})
+        finally:
+            holder.rollback()
+            holder.close()
+
+    def test_get_known_words_raises_when_exclusively_locked(self, tmp_path):
+        import sqlite3
+
+        db_path = tmp_path / "known_words.db"
+        db = KnownWordDB(db_path)
+        db.initialize()
+        db.add_words({"飲む"})
+
+        holder = sqlite3.connect(db_path, isolation_level=None)
+        try:
+            holder.execute("BEGIN EXCLUSIVE")
+            with pytest.raises(sqlite3.OperationalError, match="database is locked"):
+                db.get_known_words()
+        finally:
+            holder.rollback()
+            holder.close()

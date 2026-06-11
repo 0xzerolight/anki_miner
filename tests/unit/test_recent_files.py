@@ -147,3 +147,46 @@ class TestRecentFilesManager:
         entries = mgr2.get_recent()
         assert len(entries) == 1
         assert entries[0]["video"] == "/video/ep01.mkv"
+
+
+class TestAtomicSave:
+    """recent_files.json is written atomically and save failures are logged (T-32)."""
+
+    @pytest.fixture
+    def manager(self, tmp_path):
+        mgr = RecentFilesManager(max_items=5)
+        mgr._file_path = tmp_path / "recent_files.json"
+        return mgr
+
+    def test_no_temp_left_after_successful_save(self, manager):
+        manager.add_entry(Path("/video/ep01.mkv"), Path("/subs/ep01.ass"))
+        assert manager._file_path.exists()
+        tmp = manager._file_path.with_suffix(manager._file_path.suffix + ".tmp")
+        assert not tmp.exists()
+
+    def test_replace_failure_logs_warning_and_keeps_old_file(self, manager, monkeypatch, caplog):
+        """If os.replace fails mid-save, the previous file is intact and we warn.
+
+        Previously the OSError was swallowed with a bare ``except OSError: pass``
+        — the user got no signal that their recent list stopped persisting.
+        """
+        # Establish a known-good on-disk file first.
+        manager.add_entry(Path("/video/ep01.mkv"), Path("/subs/ep01.ass"))
+        original = manager._file_path.read_text(encoding="utf-8")
+
+        import anki_miner.gui.utils.recent_files as rf
+
+        def boom(src, dst):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(rf.os, "replace", boom)
+
+        with caplog.at_level("WARNING"):
+            # add_entry calls _save internally; must not raise.
+            manager.add_entry(Path("/video/ep02.mkv"), Path("/subs/ep02.ass"))
+
+        # Old file untouched; no orphan temp.
+        assert manager._file_path.read_text(encoding="utf-8") == original
+        tmp = manager._file_path.with_suffix(manager._file_path.suffix + ".tmp")
+        assert not tmp.exists()
+        assert any("recent" in r.message.lower() for r in caplog.records)

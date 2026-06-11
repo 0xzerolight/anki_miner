@@ -2,7 +2,7 @@
 
 Covers the four branches the GUI hook has to get right: no-path, CSV passthrough,
 zip-with-overwrite-decline, and the full worker-driven import (success / failure /
-cancel). The real ``PitchImportWorker`` is used end-to-end (a real QThread
+cancel). The real ``YomitanCsvImportWorker`` is used end-to-end (a real QThread
 runs); only the inner ``import_yomitan_pitch_zip`` call is stubbed so we control
 the outcome deterministically.
 """
@@ -78,7 +78,7 @@ def _stub_importer(monkeypatch, *, result=None, error=None):
         return result
 
     monkeypatch.setattr(
-        "anki_miner.gui.workers.pitch_import_worker.import_yomitan_pitch_zip",
+        "anki_miner.gui.widgets.settings_tab.import_yomitan_pitch_zip",
         fake,
     )
     return calls
@@ -240,7 +240,7 @@ class TestNoReimportOnSecondSave:
             raise AssertionError("importer should not run on second save")
 
         monkeypatch.setattr(
-            "anki_miner.gui.workers.pitch_import_worker.import_yomitan_pitch_zip",
+            "anki_miner.gui.widgets.settings_tab.import_yomitan_pitch_zip",
             must_not_run,
         )
         out = tab._resolve_pitch_accent_path()
@@ -272,8 +272,8 @@ class TestFrequencyFailureLeavesPitchUntouched:
         def fake_freq(zip_path, dest_csv, *, progress=None, cancel_check=None):
             raise SetupError("freq zip is broken")
 
-        monkeypatch.setattr("anki_miner.gui.workers.pitch_import_worker.import_yomitan_pitch_zip", fake_pitch)
-        monkeypatch.setattr("anki_miner.gui.workers.frequency_import_worker.import_yomitan_freq_zip", fake_freq)
+        monkeypatch.setattr("anki_miner.gui.widgets.settings_tab.import_yomitan_pitch_zip", fake_pitch)
+        monkeypatch.setattr("anki_miner.gui.widgets.settings_tab.import_yomitan_freq_zip", fake_freq)
 
         # Both selectors point at zips so both resolvers run their importers.
         pitch_zip = tmp_path / "pitch.zip"

@@ -4,6 +4,7 @@ import os
 import re
 from collections.abc import Callable
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from typing import NamedTuple
 
@@ -37,15 +38,14 @@ from anki_miner.gui.widgets.panels import (
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
 from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
-from anki_miner.gui.workers.frequency_import_worker import FrequencyImportWorker
-from anki_miner.gui.workers.pitch_import_worker import PitchImportWorker
 from anki_miner.gui.workers.styling_worker import StylingWorker
+from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
 from anki_miner.services.dictionary.registry import DictionaryRegistry
-from anki_miner.services.frequency import YomitanFreqImportResult
+from anki_miner.services.frequency import YomitanFreqImportResult, import_yomitan_freq_zip
 from anki_miner.services.known_word_db import KnownWordDB
-from anki_miner.services.pitch_accent import YomitanPitchImportResult
+from anki_miner.services.pitch_accent import YomitanPitchImportResult, import_yomitan_pitch_zip
 
 
 class _YomitanCsvLabels(NamedTuple):
@@ -85,14 +85,14 @@ class SettingsTab(QWidget):
         """
         super().__init__(parent)
         self.config = config
-        # Long-lived worker reference; FrequencyImportWorker is a QThread and
+        # Long-lived worker reference; YomitanCsvImportWorker is a QThread and
         # would be destroyed mid-run if the worker fell out of scope before
         # joining. _resolve_frequency_path stores the active worker here.
-        self._active_freq_worker: FrequencyImportWorker | None = None
-        # Same GC-safety rationale as the freq worker above; PitchImportWorker
-        # is a QThread and would be destroyed mid-run if the worker fell out
-        # of scope before joining. _resolve_pitch_accent_path stores it here.
-        self._active_pitch_worker: PitchImportWorker | None = None
+        self._active_freq_worker: YomitanCsvImportWorker | None = None
+        # Same GC-safety rationale as the freq worker above; the pitch worker
+        # is a QThread and would be destroyed mid-run if it fell out of scope
+        # before joining. _resolve_pitch_accent_path stores it here.
+        self._active_pitch_worker: YomitanCsvImportWorker | None = None
         # Deferred CSV-promotion closures (T-10). A pitch/freq zip import stages
         # its CSV to a sibling ``.pending`` file; the promotion (os.replace into
         # place + selector update + success dialog) is held here and run by
@@ -581,7 +581,7 @@ class SettingsTab(QWidget):
         *,
         selector: FileSelector,
         dest_name: str,
-        worker_factory: Callable[[Path, Path], PitchImportWorker | FrequencyImportWorker],
+        worker_factory: Callable[[Path, Path], YomitanCsvImportWorker],
         worker_slot_attr: str,
         commit_slot_attr: str,
         decline_fallback: Path,
@@ -591,9 +591,10 @@ class SettingsTab(QWidget):
 
         Shared engine behind :meth:`_resolve_pitch_accent_path` and
         :meth:`_resolve_frequency_path` — the two flows are byte-identical
-        except for the user-facing ``labels``, the worker class, and which
-        ``self`` slots hold the live-worker GC reference (``worker_slot_attr``)
-        and the deferred-promotion closure (``commit_slot_attr``).
+        except for the user-facing ``labels``, the importer fn bound into the
+        ``YomitanCsvImportWorker``, and which ``self`` slots hold the
+        live-worker GC reference (``worker_slot_attr``) and the
+        deferred-promotion closure (``commit_slot_attr``).
 
         If ``selector`` points at a Yomitan zip, the importer runs in
         ``worker_factory`` (a background QThread driven by a modal
@@ -718,7 +719,7 @@ class SettingsTab(QWidget):
         return self._resolve_yomitan_csv_path(
             selector=self.dictionary_panel.pitch_accent_selector,
             dest_name="pitch_accent.csv",
-            worker_factory=PitchImportWorker,
+            worker_factory=partial(YomitanCsvImportWorker, import_yomitan_pitch_zip),
             worker_slot_attr="_active_pitch_worker",
             commit_slot_attr="_pending_pitch_commit",
             decline_fallback=self.config.pitch_accent_path,
@@ -739,7 +740,7 @@ class SettingsTab(QWidget):
         return self._resolve_yomitan_csv_path(
             selector=self.filtering_panel.frequency_selector,
             dest_name="frequency.csv",
-            worker_factory=FrequencyImportWorker,
+            worker_factory=partial(YomitanCsvImportWorker, import_yomitan_freq_zip),
             worker_slot_attr="_active_freq_worker",
             commit_slot_attr="_pending_freq_commit",
             decline_fallback=self.config.frequency_list_path,
