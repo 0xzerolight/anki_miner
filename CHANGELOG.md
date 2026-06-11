@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Config changes apply mid-session.** Editing settings rebuilds config-bound services and propagates the new config to non-Settings tabs, and an in-session subtitle offset is no longer reset by an unrelated config update.
 - **Episode-number detection.** The fallback matcher takes the *last* bare number (so numeric titles like "86" or "Mob Psycho 100" don't steal the episode slot), tolerates `SxxEyy` separators, and now captures adjacent numbers (e.g. `Title 1 2`) that were previously skipped — while still ignoring resolution tokens like `720p`.
 - **Word counting / furigana parity.** Compound words that can't be located in the sentence are dropped from lemma counts too (matching the card-build path), and noun furigana/readings are recomputed when an i+1 card swaps to the surface form.
+- **CI floor-version jobs.** `scripts/extract_floor_pins.py` imported the 3.11+ stdlib `tomllib` unconditionally, breaking the Python 3.10 test job; it now falls back to `tomli` (added as a `<3.11` dev dep). The `smoke-min-deps` SIGABRT was a test-isolation bug, not a dependency issue: two probe-worker tests created a bare `QCoreApplication`, poisoning the process-wide app singleton so a later widget test aborted with "Cannot create a QWidget without QApplication"; both now create a `QApplication` (still a `QCoreApplication`, so the thread/signal tests are unaffected).
 
 ## [v2.6.1] - 2026-06-07
 
