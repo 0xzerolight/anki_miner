@@ -1,10 +1,15 @@
 """Manager for recently processed file pairs."""
 
+import contextlib
 import json
+import logging
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 from anki_miner.config.paths import ANKI_MINER_HOME
+
+logger = logging.getLogger(__name__)
 
 
 class RecentFilesManager:
@@ -84,12 +89,22 @@ class RecentFilesManager:
         return []
 
     def _save(self, entries: list[dict]) -> None:
-        """Save entries to the JSON file."""
+        """Save entries to the JSON file.
+
+        Atomic: stage to a sibling ``.tmp`` then ``os.replace`` so a crash
+        mid-write can't truncate the existing list. OSErrors are logged rather
+        than swallowed silently — a bare ``except: pass`` left the user with no
+        signal that their recent list had stopped persisting.
+        """
+        tmp_path = self._file_path.with_suffix(self._file_path.suffix + ".tmp")
         try:
             self._file_path.parent.mkdir(parents=True, exist_ok=True)
-            self._file_path.write_text(
+            tmp_path.write_text(
                 json.dumps(entries, indent=2, ensure_ascii=False),
                 encoding="utf-8",
             )
-        except OSError:
-            pass
+            os.replace(tmp_path, self._file_path)
+        except OSError as e:
+            logger.warning("Could not save recent files list: %s", e)
+            with contextlib.suppress(OSError):
+                tmp_path.unlink(missing_ok=True)
