@@ -1,4 +1,4 @@
-"""Tests for SettingsTab._on_reimport_all_clicked — batch reimport flow.
+"""Tests for DictionaryImportFlow.reimport_all — batch reimport flow.
 
 Covers the orchestration logic: chain iteration, per-format dispatch
 (yomitan from source.zip, jmdict from config.jmdict_path), skip-on-missing
@@ -97,11 +97,11 @@ def stubbed_workers(monkeypatch):
     jmdict_factory = MagicMock(name="for_jmdict", side_effect=_make_instance)
 
     monkeypatch.setattr(
-        "anki_miner.gui.widgets.settings_tab.DictionaryImportWorker.for_yomitan",
+        "anki_miner.gui.controllers.dictionary_import_flow.DictionaryImportWorker.for_yomitan",
         yomitan_factory,
     )
     monkeypatch.setattr(
-        "anki_miner.gui.widgets.settings_tab.DictionaryImportWorker.for_jmdict",
+        "anki_miner.gui.controllers.dictionary_import_flow.DictionaryImportWorker.for_jmdict",
         jmdict_factory,
     )
     return {
@@ -152,7 +152,7 @@ def test_reimport_all_two_yomitan(tab_for_reimport_all, monkeypatch, stubbed_wor
     tab.config_changed.connect(config_changed_emissions.append)
     summaries = _silence_dialogs(monkeypatch)
 
-    tab._on_reimport_all_clicked()
+    tab._dict_import_flow.reimport_all()
 
     # Worker 1 launched; complete it → worker 2 launched.
     assert stubbed_workers["yomitan_factory"].call_count == 1
@@ -190,7 +190,7 @@ def test_reimport_all_skips_legacy_without_source_zip(tab_for_reimport_all, monk
     )
     summaries = _silence_dialogs(monkeypatch)
 
-    tab._on_reimport_all_clicked()
+    tab._dict_import_flow.reimport_all()
     _complete_in_flight_worker(stubbed_workers)
 
     # Only the fresh dict was given to a worker.
@@ -213,7 +213,7 @@ def test_reimport_all_includes_jmdict(tab_for_reimport_all, monkeypatch, stubbed
     tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),))
     _silence_dialogs(monkeypatch)
 
-    tab._on_reimport_all_clicked()
+    tab._dict_import_flow.reimport_all()
 
     stubbed_workers["jmdict_factory"].assert_called_once()
     args, _kwargs = stubbed_workers["jmdict_factory"].call_args
@@ -231,7 +231,7 @@ def test_reimport_all_jmdict_skipped_when_xml_missing(tab_for_reimport_all, monk
     tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),))
     summaries = _silence_dialogs(monkeypatch)
 
-    tab._on_reimport_all_clicked()
+    tab._dict_import_flow.reimport_all()
 
     stubbed_workers["jmdict_factory"].assert_not_called()
     _, body = summaries[-1]
@@ -259,7 +259,7 @@ def test_reimport_all_cancel_stops_chain(tab_for_reimport_all, monkeypatch, stub
 
     summaries = _silence_dialogs(monkeypatch)
 
-    tab._on_reimport_all_clicked()
+    tab._dict_import_flow.reimport_all()
     assert stubbed_workers["yomitan_factory"].call_count == 1
 
     from PyQt6.QtWidgets import QProgressDialog
@@ -292,7 +292,7 @@ def test_reimport_all_one_failure_continues(tab_for_reimport_all, monkeypatch, s
     )
     summaries = _silence_dialogs(monkeypatch)
 
-    tab._on_reimport_all_clicked()
+    tab._dict_import_flow.reimport_all()
     _fail_in_flight_worker(stubbed_workers, "boom")
     assert stubbed_workers["yomitan_factory"].call_count == 2
     _complete_in_flight_worker(stubbed_workers)
@@ -310,7 +310,7 @@ def test_reimport_all_empty_chain_shows_message(tab_for_reimport_all, monkeypatc
     tab.dictionary_panel.set_chain(())
     summaries = _silence_dialogs(monkeypatch)
 
-    tab._on_reimport_all_clicked()
+    tab._dict_import_flow.reimport_all()
 
     stubbed_workers["yomitan_factory"].assert_not_called()
     stubbed_workers["jmdict_factory"].assert_not_called()
@@ -337,7 +337,7 @@ def test_reimport_all_release_refusal_blocks_workers(tab_for_reimport_all, monke
         lambda parent, title, body, *a, **kw: warnings.append((title, body)) or 0,
     )
 
-    tab._on_reimport_all_clicked()
+    tab._dict_import_flow.reimport_all()
 
     stubbed_workers["yomitan_factory"].assert_not_called()
     stubbed_workers["jmdict_factory"].assert_not_called()
@@ -362,7 +362,7 @@ def test_reimport_all_joins_predecessor_before_reassign(tab_for_reimport_all, mo
     )
     _silence_dialogs(monkeypatch)
 
-    tab._on_reimport_all_clicked()
+    tab._dict_import_flow.reimport_all()
     assert stubbed_workers["yomitan_factory"].call_count == 1
     first = stubbed_workers["instances"][0]
     # The predecessor is still running when its queued finished slot fires.
@@ -370,7 +370,7 @@ def test_reimport_all_joins_predecessor_before_reassign(tab_for_reimport_all, mo
 
     # Record the active worker at the instant wait() is called on the predecessor.
     active_at_wait: list[object] = []
-    first.wait.side_effect = lambda *a, **k: active_at_wait.append(tab._active_import_worker)
+    first.wait.side_effect = lambda *a, **k: active_at_wait.append(tab._dict_import_flow._active_import_worker)
 
     # Fire the predecessor's finished slot — this synchronously calls launch_next.
     _complete_in_flight_worker(stubbed_workers, idx=0)
@@ -381,4 +381,4 @@ def test_reimport_all_joins_predecessor_before_reassign(tab_for_reimport_all, mo
     assert active_at_wait == [first], "wait() must run while the predecessor is still the active worker"
     # Sanity: the second worker did get launched and is now active.
     assert stubbed_workers["yomitan_factory"].call_count == 2
-    assert tab._active_import_worker is stubbed_workers["instances"][1]
+    assert tab._dict_import_flow._active_import_worker is stubbed_workers["instances"][1]
