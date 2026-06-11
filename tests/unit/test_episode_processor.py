@@ -1695,6 +1695,196 @@ class TestProcessYoutubeUrl:
         assert result.cards_created == 1
 
 
+class TestProcessYoutubeUrlCancelPropagation:
+    """The worker's cancel_event must reach process_episode's checkpoints (T-01).
+
+    Historically process_youtube_url consulted cancel_event once pre-fetch and
+    forwarded it only to fetch_video; the subsequent process_episode polled
+    self._cancelled, which nothing set on the YouTube path — Stop All was
+    ignored mid-mine and a curation dialog could pop after Stop.
+    """
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _build(self, test_config, mock_services, tmp_path):
+        """Processor wired to a happy fetcher + happy 5-phase mocks."""
+        video_file = tmp_path / "abc123.mp4"
+        subtitle_file = tmp_path / "abc123.ja.srt"
+        video_file.touch()
+        subtitle_file.touch()
+
+        word = _make_word("食べる")
+        media = _make_media()
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        mock_fetcher = MagicMock()
+        mock_fetcher.fetch_video.return_value = FetchedMedia(
+            video_file=video_file,
+            subtitle_file=subtitle_file,
+            sub_source="manual",
+        )
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=mock_fetcher,
+            **mock_services,
+        )
+        return processor, mock_fetcher
+
+    def _run(self, processor, tmp_path, cancel_event, **kwargs):
+        return processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=cancel_event,
+            **kwargs,
+        )
+
+    def test_cancel_event_during_parse_stops_pipeline(self, test_config, mock_services, tmp_path):
+        """Stop during phase 1 must end the run before media extraction."""
+        processor, _ = self._build(test_config, mock_services, tmp_path)
+        cancel_event = threading.Event()
+
+        word = _make_word("食べる")
+
+        def _parse_then_cancel(sub_file):
+            cancel_event.set()  # user pressed Stop All mid-parse
+            return [word]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = _parse_then_cancel
+
+        result = self._run(processor, tmp_path, cancel_event)
+
+        assert any("cancel" in e.lower() for e in result.errors)
+        assert result.cards_created == 0
+        mock_services["media_extractor"].extract_media_batch.assert_not_called()
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
+
+    def test_cancel_event_during_filter_skips_curation_dialog(self, test_config, mock_services, tmp_path):
+        """Stop during phase 2 must not invoke the curation callback afterwards."""
+        processor, _ = self._build(test_config, mock_services, tmp_path)
+        cancel_event = threading.Event()
+
+        word = _make_word("食べる")
+
+        def _filter_then_cancel(all_words, existing):
+            cancel_event.set()  # Stop lands while filtering, before curation
+            return [word]
+
+        mock_services["word_filter"].filter_unknown.side_effect = _filter_then_cancel
+        curation = MagicMock(name="curation_callback")
+
+        result = self._run(processor, tmp_path, cancel_event, curation_callback=curation)
+
+        curation.assert_not_called()
+        assert any("cancel" in e.lower() for e in result.errors)
+        mock_services["media_extractor"].extract_media_batch.assert_not_called()
+
+    def test_cancel_event_during_definitions_stops_before_card_creation(self, test_config, mock_services, tmp_path):
+        """Stop during phase 4 must not create cards."""
+        processor, _ = self._build(test_config, mock_services, tmp_path)
+        cancel_event = threading.Event()
+
+        def _define_then_cancel(lemmas, cb):
+            cancel_event.set()
+            return ["1. to eat"]
+
+        mock_services["definition_service"].get_definitions_batch.side_effect = _define_then_cancel
+
+        result = self._run(processor, tmp_path, cancel_event)
+
+        assert any("cancel" in e.lower() for e in result.errors)
+        assert result.cards_created == 0
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
+
+    def test_cancel_event_drives_media_extractor_cancelled_check(self, test_config, mock_services, tmp_path):
+        """The cancelled_check handed to extract_media_batch must reflect cancel_event live."""
+        processor, _ = self._build(test_config, mock_services, tmp_path)
+        cancel_event = threading.Event()
+        observed: dict[str, bool] = {}
+
+        def _extract(video, words, cb, cancelled_check=None, temp_folder=None, **kwargs):
+            observed["before"] = cancelled_check()
+            cancel_event.set()  # Stop lands mid-extraction (the long ffmpeg loop)
+            observed["after"] = cancelled_check()
+            return []
+
+        mock_services["media_extractor"].extract_media_batch.side_effect = _extract
+
+        self._run(processor, tmp_path, cancel_event)
+
+        assert observed == {"before": False, "after": True}
+
+    def test_cancel_event_set_during_fetch_skips_mining(self, test_config, mock_services, tmp_path):
+        """A cancel that lands as the fetch completes must not start the pipeline."""
+        processor, mock_fetcher = self._build(test_config, mock_services, tmp_path)
+        cancel_event = threading.Event()
+
+        fetched = mock_fetcher.fetch_video.return_value
+
+        def _fetch_then_cancel(*args, **kwargs):
+            cancel_event.set()  # cancel arrives right as yt-dlp finishes
+            return fetched
+
+        mock_fetcher.fetch_video.side_effect = _fetch_then_cancel
+
+        result = self._run(processor, tmp_path, cancel_event)
+
+        assert any("cancel" in e.lower() for e in result.errors)
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
+
+    def test_cancelled_run_does_not_poison_next_run(self, test_config, mock_services, tmp_path):
+        """Per-run reset: the bridge from run 1's cancel_event must not leak into run 2.
+
+        YouTubeTab reuses ONE EpisodeProcessor across runs and _cancelled is only
+        reset in __init__ — a sticky flag (or a leaked event reference) set on
+        run 1 would cancel every later run.
+        """
+        processor, _ = self._build(test_config, mock_services, tmp_path)
+
+        run1_event = threading.Event()
+
+        word = _make_word("食べる")
+
+        def _parse_then_cancel(sub_file):
+            run1_event.set()
+            return [word]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = _parse_then_cancel
+        result1 = self._run(processor, tmp_path, run1_event)
+        assert any("cancel" in e.lower() for e in result1.errors)
+
+        # Run 2: same processor, fresh event; run 1's event stays set.
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = None
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        result2 = self._run(processor, tmp_path, threading.Event())
+
+        assert processor.cancelled is False
+        assert result2.cards_created == 1
+        assert not result2.errors
+
+
 def _make_line_lemmas(text="新しい単語", lemmas=("新しい",), start=1.0, end=3.0):
     return LineLemmas(
         line_text=text,
