@@ -22,11 +22,6 @@ class ProcessingResult:
         """Check if processing was successful (no critical errors)."""
         return len(self.errors) == 0
 
-    @property
-    def has_new_words(self) -> bool:
-        """Check if new words were found."""
-        return self.new_words_found > 0
-
     def __str__(self) -> str:
         return (
             f"ProcessingResult(total={self.total_words_found}, "

@@ -23,11 +23,6 @@ class MediaData:
         """Check if audio exists."""
         return self.audio_path is not None and self.audio_path.exists()
 
-    @property
-    def has_any_media(self) -> bool:
-        """Check if any media exists."""
-        return self.has_screenshot or self.has_audio
-
     def __str__(self) -> str:
         parts = []
         if self.has_screenshot:

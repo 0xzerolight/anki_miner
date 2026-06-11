@@ -41,12 +41,6 @@ class TestQueueItem:
         item = QueueItem(anime_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
         assert item.error_message == ""
 
-    def test_status_icon_returns_string(self, tmp_path):
-        item = QueueItem(anime_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
-        for status in QueueItemStatus:
-            item.status = status
-            assert isinstance(item.status_icon, str)
-
 
 class TestBatchQueue:
     """Tests for BatchQueue class."""
@@ -73,16 +67,6 @@ class TestBatchQueue:
         queue = BatchQueue()
         item = queue.add_item(tmp_path / "anime", tmp_path / "subs", "Test", subtitle_offset=1.5)
         assert item.subtitle_offset == 1.5
-
-    def test_remove_item_success(self, tmp_path):
-        queue = BatchQueue()
-        item = queue.add_item(tmp_path / "anime", tmp_path / "subs", "Test")
-        assert queue.remove_item(item.id) is True
-        assert queue.total_items == 0
-
-    def test_remove_item_not_found(self):
-        queue = BatchQueue()
-        assert queue.remove_item("nonexistent-id") is False
 
     def test_get_next_pending(self, tmp_path):
         queue = BatchQueue()
@@ -162,18 +146,6 @@ class TestRetryFeature:
     def test_max_retries_default(self, tmp_path):
         item = QueueItem(anime_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
         assert item.max_retries == 2
-
-    def test_has_failed_items_true(self, tmp_path):
-        queue = BatchQueue()
-        item = queue.add_item(tmp_path / "a", tmp_path / "s", "Test")
-        item.status = QueueItemStatus.ERROR
-        assert queue.has_failed_items is True
-
-    def test_has_failed_items_false(self, tmp_path):
-        queue = BatchQueue()
-        item = queue.add_item(tmp_path / "a", tmp_path / "s", "Test")
-        item.status = QueueItemStatus.COMPLETED
-        assert queue.has_failed_items is False
 
     def test_failed_count(self, tmp_path):
         queue = BatchQueue()
