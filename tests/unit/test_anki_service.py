@@ -328,6 +328,89 @@ class TestGetExistingVocabulary:
         assert len(mock_post.call_args_list[3][1]["json"]["params"]["notes"]) == 500
 
 
+class TestGetExistingVocabularySecondBatchTimeout:
+    """A Timeout on a LATER notesInfo batch (not the first) must degrade the
+    SAME way as a first-batch failure: empty set + warning, and the cache must
+    stay unpopulated so the next run re-queries.
+
+    The whole method runs under one try/except, so a mid-pagination Timeout
+    discards the words already collected from earlier batches — the degraded
+    return is a fresh empty set, NOT a partial result. Pinning this guards
+    against a refactor that accidentally caches the partial set (which would
+    make later-batch words look unknown forever) or returns it as if complete.
+    """
+
+    def _two_batch_find_resp(self):
+        """1500 note IDs -> two notesInfo batches (1000 + 500)."""
+        return _mock_response(result=list(range(1, 1501)))
+
+    def test_returns_empty_set_not_partial(self, test_config):
+        service = AnkiService(test_config)
+
+        find_resp = self._two_batch_find_resp()
+        batch1_resp = _mock_response(result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(1000)])
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[find_resp, batch1_resp, requests.exceptions.Timeout("batch 2 timed out")],
+        ):
+            result = service.get_existing_vocabulary()
+
+        # Degraded to empty — the 1000 words from batch 1 are NOT returned.
+        assert result == set()
+
+    def test_logs_warning(self, test_config, caplog):
+        service = AnkiService(test_config)
+
+        find_resp = self._two_batch_find_resp()
+        batch1_resp = _mock_response(result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(1000)])
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=[find_resp, batch1_resp, requests.exceptions.Timeout("batch 2 timed out")],
+            ),
+            caplog.at_level(logging.WARNING),
+        ):
+            service.get_existing_vocabulary()
+
+        assert "Failed to fetch existing vocabulary" in caplog.text
+
+    def test_cache_stays_none_so_next_call_requeries(self, test_config):
+        """The degraded path returns before assigning the cache; a subsequent
+        call must hit AnkiConnect again rather than serve a cached empty set."""
+        service = AnkiService(test_config)
+
+        find_resp = self._two_batch_find_resp()
+        batch1_resp = _mock_response(result=[{"fields": {"word": {"value": f"語{i}"}}} for i in range(1000)])
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[find_resp, batch1_resp, requests.exceptions.Timeout("batch 2 timed out")],
+        ):
+            service.get_existing_vocabulary()
+
+        # Internal cache field is the source of truth for the "re-query" contract.
+        assert service._existing_vocab_cache is None
+
+        # A clean follow-up run succeeds (cache was not poisoned with empty set).
+        good_find = _mock_response(result=[1, 2])
+        good_notes = _mock_response(
+            result=[
+                {"fields": {"word": {"value": "食べる"}}},
+                {"fields": {"word": {"value": "飲む"}}},
+            ]
+        )
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[good_find, good_notes],
+        ) as mock_post:
+            result = service.get_existing_vocabulary()
+
+        assert result == {"食べる", "飲む"}
+        assert mock_post.called  # re-queried, not served from cache
+
+
 # ---------------------------------------------------------------------------
 # TestCreateCardsBatch
 # ---------------------------------------------------------------------------
