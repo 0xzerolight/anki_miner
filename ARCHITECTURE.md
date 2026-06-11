@@ -14,7 +14,7 @@ YouTube URL (optional entry point)
 │ 0. Fetch (YouTube only)                             │
 │    YouTubeFetcherService (yt-dlp subprocess)        │
 │    probe_metadata(url) → VideoInfo                  │
-│    fetch_video(url, workspace, sub_mode)            │
+│    fetch_video(url, video_id, workspace, sub_mode)  │
 │    → FetchedMedia(video_file, subtitle_file, ...)   │
 └─────────────────────────────────────────────────────┘
   │
@@ -131,11 +131,11 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 
 - **SubtitleParserService**: parses ASS/SRT/SSA files via `pysubs2`, tokenizes Japanese text with `fugashi` (MeCab wrapper), generates furigana annotations against `TokenizedWord.mined_form` (lemma for verbs/adjectives, surface for nouns), and deduplicates emitted words by lemma. Compound-merge passes (prefix, noun-suffix, verb-nominalizer) reconstruct synthetic lemmas from each component's `feature.lemma` so dictionary lookups can hit the headword.
 - **WordFilterService**: multi-layer filtering via `filter_unknown` (lemma-only check against known vocabulary), `filter_by_frequency`, `filter_by_word_lists` (blacklist/whitelist keyed by lemma), `deduplicate_by_sentence` (NFKC-normalized, whitespace-collapsed dedup key), `filter_i_plus_one`, and `filter_by_episode_count`. The name-wordset filter (Issue #59) runs in `_phase2_filter` after the blacklist/whitelist step and is gated on `bypass_optional_filters` (skipped by the Deck Builder corpus preview); which wordsets are active is controlled by `config.excluded_wordsets`. Wordset files are bundled JMnedict-derived proper-noun lists in `anki_miner/gui/resources/wordsets/`.
-- **MediaExtractorService**: extracts screenshots (`ffmpeg -frames:v 1`) and audio clips (`ffmpeg libmp3lame`) at subtitle timestamps. Runs in parallel via `ThreadPoolExecutor` with `max_parallel_workers` threads. Auto-detects the Japanese audio stream via `ffprobe` with thread-safe caching.
+- **MediaExtractorService**: extracts screenshots (`ffmpeg -frames:v 1`) and audio clips at subtitle timestamps. The audio encoder follows `config.audio_format`: `libmp3lame` for mp3 (the default), `libopus` for opus. Runs in parallel via `ThreadPoolExecutor` with `max_parallel_workers` threads. Auto-detects the Japanese audio stream via `ffprobe` with thread-safe caching. Optional animated screenshots use `libsvtav1` (AVIF) or `libwebp_anim` (WebP), each probed for availability before use.
 - **DefinitionService**: orchestrates the provider chain built by `DictionaryRegistry` from `config.dictionary_chain`. First-hit-wins across offline `IndexedDictProvider` instances, with `JishoProvider` as the online fallback. Returns HTML-formatted definition strings.
-- **AnkiService**: AnkiConnect HTTP API wrapper (localhost:8765). Key operations: `verify_card_target` (pre-flight: checks note type, validates fields, creates deck), `get_existing_vocabulary`, `store_media_file`, `create_cards_batch` (batch size 50), `delete_notes`. Stores `last_created_note_ids` for undo support.
+- **AnkiService**: AnkiConnect HTTP API wrapper (localhost:8765). Key operations: `verify_card_target` (pre-flight: checks note type, validates fields, creates deck), `get_existing_vocabulary`, `store_media_file`, `create_cards_batch` (batch size 100; media uploads chunk separately at 50 files or 4 MB of base64, whichever comes first), `delete_notes`. Stores `last_created_note_ids` for undo support.
 - **ValidationService**: checks AnkiConnect connectivity, ffmpeg presence, deck existence, and note type existence. Returns `ValidationResult` (never raises).
-- **YouTubeFetcherService** (`services/youtube_fetcher.py`): wraps the `yt-dlp` subprocess. Three entry points: `probe_metadata(url) → VideoInfo` (fast, `--skip-download --dump-single-json`), `probe_playlist(url, limit) → PlaylistInfo` (`--flat-playlist --dump-single-json`, fetches up to `limit + 1` entries so callers can detect over-cap playlists), and `fetch_video(url, workspace, sub_mode, progress_cb, cancel_event) → FetchedMedia`. Detects native vs translated auto-captions via `_has_native_auto_ja()`. Tracks the `Popen` handle so cancellation can kill the full process tree (yt-dlp → ffmpeg child) via `psutil`. Writes the (video, subtitle) pair into a caller-owned workspace directory.
+- **YouTubeFetcherService** (`services/youtube_fetcher.py`): wraps the `yt-dlp` subprocess. Three entry points: `probe_metadata(url) → VideoInfo` (fast, `--skip-download --dump-single-json --no-playlist`), `probe_playlist(url, limit) → PlaylistInfo` (`--skip-download --flat-playlist --dump-single-json --playlist-items 1:{limit+1}`, the extra entry lets callers detect over-cap playlists), and `fetch_video(url, video_id, workspace, sub_mode, progress_cb, cancel_event) → FetchedMedia`. Detects native vs translated auto-captions via `_has_native_auto_ja()`. Tracks the `Popen` handle so cancellation can kill the full process tree (yt-dlp → ffmpeg child) via `psutil`. Writes the (video, subtitle) pair into a caller-owned workspace directory.
 
 **Optional services (created based on config flags):**
 
@@ -144,7 +144,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 - **KnownWordDB**: SQLite-backed persistent known word cache. Supports differential sync with Anki vocabulary.
 - **WordListService**: loads blacklist/whitelist text files for word filtering.
 - **HistoryService**: SQLite-backed mining history (`mining_history` table). Records what was mined, supports undo via stored card IDs.
-- **StatsService**: SQLite-backed analytics (`mining_sessions`, `difficulty_entries` tables). Provides aggregated stats and milestones.
+- **StatsService**: SQLite-backed analytics (`mining_sessions`, `series_difficulty` tables). Provides aggregated stats and milestones.
 - **UpdateChecker**: queries the GitHub Releases API for newer versions.
 - **ExportService**: exports results to CSV, TSV, or vocabulary list formats.
 
@@ -159,7 +159,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 **EpisodeProcessor** (`orchestration/episode_processor.py`):
 - Receives all services via constructor injection
 - `process_episode()` runs the 5-stage pipeline
-- `process_youtube_url()` calls `YouTubeFetcherService.fetch_video`, then delegates to the unchanged `process_episode` with `episode_name_override=f"YT:{video_id}"` and `series_name_override="YT:<channel_id>"` (or `"YouTube"` fallback). The workspace is allocated and cleaned by the worker, not the orchestrator.
+- `process_youtube_url()` calls `YouTubeFetcherService.fetch_video`, then delegates to the unchanged `process_episode` with `episode_name_override=f"YT:{video_id}"` and `series_name_override="YouTube"`. The workspace is allocated and cleaned by the worker, not the orchestrator.
 - Cancellation checkpoints between each phase (`self._cancelled` flag); the YouTube flow additionally threads a `threading.Event` into the fetcher so an in-flight yt-dlp subprocess can be killed.
 - Supports `preview_mode` (exits after filtering, no cards created)
 - Supports `curation_callback` (GUI presents word selection dialog)
@@ -168,11 +168,8 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 - Records to StatsService and KnownWordDB after successful processing
 - Cleans up temp media files in `finally` block
 
-**FolderProcessor** (`orchestration/folder_processor.py`):
-- Wraps `EpisodeProcessor` for batch processing
-- `find_video_subtitle_pairs()` matches files by stem name
-- `collect_cross_episode_frequencies()` does a two-pass approach: first parses all subtitles, then counts word appearances across episodes
-- `process_folder()` iterates matched pairs sequentially
+**Batch processing** (`gui/workers/batch_queue_worker.py`):
+There is no separate folder-orchestrator class; batch mining is driven directly by `BatchQueueWorkerThread` (a `CancellableWorker`). For each `BatchQueue` item it pairs files via `FilePairMatcher.find_pairs_by_episode_number(anime_folder, subtitle_folder)` (episode-number matching across two folders, not stem-name matching) and runs a fresh `EpisodeProcessor.process_episode` per pair sequentially. A per-item config copy with the item's `subtitle_offset` is made via `dataclasses.replace`. Per-pair failures are surfaced individually (the item is marked ERROR with a count) since `process_episode` returns failures as results rather than raising.
 
 **DeckBuilderWorker** (`gui/workers/deck_builder_worker.py`):
 Whole-anime deck mining in two phases separated by a GUI confirm gate.
@@ -204,12 +201,13 @@ The `__post_init__` method uses `object.__setattr__` to convert string paths to 
 
 ### Window Structure
 
-`MainWindow` contains a `QTabWidget` with five tabs:
-1. **SingleEpisodeTab**: file selectors (drag-and-drop), subtitle offset control, process/preview buttons, log widget, progress widget.
-2. **BatchProcessingTab**: folder selection, `BatchQueue` management via queue panel, dual progress bars.
-3. **YouTubeTab** (`gui/widgets/youtube_tab.py`): URL input + Add button, `QListWidget` queue of `YouTubeQueueItemWidget` rows (per-row status glyph, title, duration, sub source line, remove button), action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. Deck/note-type/tags widgets are global (see `AnkiSettingsPanel`). URL classification (plain video, playlist, video-in-playlist, Mix) is done without network access by `utils/youtube_url.py` (`classify_youtube_url`); playlist URLs dispatch to `YouTubePlaylistResolveWorker` then `YouTubePlaylistProbeWorker`; mixed watch+list URLs show a choice dialog; playlists over the `youtube_playlist_max` cap show an over-cap confirm.
-4. **AnalyticsTab**: mining statistics dashboard (queries `StatsService`).
-5. **SettingsTab**: config editing with sub-panels (Anki, media, dictionary, filtering, YouTube). Emits `config_changed` signal.
+`MainWindow` contains a `QTabWidget` with six tabs (registered in `gui/app.py` as Episode Mining, Batch Mining, Deck Builder, YouTube, Analytics, Settings):
+1. **SingleEpisodeTab** ("Episode Mining"): file selectors (drag-and-drop), subtitle offset control, process/preview buttons, log widget, progress widget.
+2. **BatchProcessingTab** ("Batch Mining"): folder selection, `BatchQueue` management via queue panel, dual progress bars.
+3. **Deck Builder**: whole-anime deck mining over a corpus of subtitles, driven by `DeckBuilderWorker` (see Orchestration). Two phases (aggregate/select, then build) separated by a GUI confirm gate.
+4. **YouTubeTab** (`gui/widgets/youtube_tab.py`): URL input + Add button, `QListWidget` queue of `YouTubeQueueItemWidget` rows (per-row status glyph, title, duration, sub source line, remove button), action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. Deck/note-type/tags widgets are global (see `AnkiSettingsPanel`). URL classification (plain video, playlist, video-in-playlist, Mix) is done without network access by `utils/youtube_url.py` (`classify_youtube_url`); playlist URLs dispatch to `YouTubePlaylistResolveWorker` then `YouTubePlaylistProbeWorker`; mixed watch+list URLs show a choice dialog; playlists over the `youtube_playlist_max` cap show an over-cap confirm.
+5. **AnalyticsTab**: mining statistics dashboard (queries `StatsService`).
+6. **SettingsTab**: config editing with sub-panels (Anki, Media, Dictionary, Filtering, YouTube, Themes). Emits `config_changed` signal.
 
 ### Worker Threads
 
@@ -258,7 +256,7 @@ HTTP POST to `localhost:8765` (configurable). Protocol version 6. Key actions:
 - `version`, `deckNames`, `modelNames`, `modelFieldNames`: validation.
 - `findNotes`, `notesInfo`: vocabulary lookup.
 - `storeMediaFile`: upload screenshots/audio.
-- `addNote`, `addNotes`: card creation (batch size 50).
+- `addNote`, `addNotes`: card creation (batch size 100).
 - `deleteNotes`: undo support.
 
 ### Jisho API
@@ -267,11 +265,11 @@ GET `https://jisho.org/api/v1/search/words?keyword=<word>`. Rate-limited with co
 
 ### ffmpeg / ffprobe
 
-- **ffmpeg:** `-ss` seek + `-i` input + `-frames:v 1` for screenshots, `libmp3lame` for audio extraction
+- **ffmpeg:** `-ss` seek + `-i` input + `-frames:v 1` for screenshots, `libmp3lame` (mp3) or `libopus` (opus) for audio extraction per `config.audio_format`
 - **ffprobe:** `-show_streams -select_streams a` for Japanese audio track detection
 - Parallel execution via `ThreadPoolExecutor` (default 6 workers)
 
-**Binary resolution.** All ffmpeg/ffprobe invocations (media extraction, subtitle-preview probe, YouTube fetch) go through a resolver instead of assuming a bare `ffmpeg` on PATH. Resolution order: explicit `config.ffmpeg_location` / `config.ffprobe_location` → bundled binaries shipped inside the frozen app → PATH. The standalone builds (Windows `.exe`/`.zip`, macOS tarball, Linux AppImage/tarball) bundle GPL ffmpeg + ffprobe fetched per-OS by the release workflow, with encoder presence (`libmp3lame`, `libopus`, `libsvtav1`, `libwebp`) asserted in the release smoke step. The Linux `.deb` deliberately omits the bundled binaries (GPL distribution constraints) and resolves to the system ffmpeg; PyPI/`pipx` and source installs likewise rely on PATH. A startup health check validates the resolved ffmpeg/ffprobe and surfaces a clear error if neither bundled nor PATH binaries are usable.
+**Binary resolution.** All ffmpeg/ffprobe invocations (media extraction, subtitle-preview probe, YouTube fetch) go through a resolver instead of assuming a bare `ffmpeg` on PATH. Resolution order: explicit `config.ffmpeg_location` / `config.ffprobe_location` → bundled binaries shipped inside the frozen app → PATH. The standalone builds (Windows `.exe`/`.zip`, macOS tarball, Linux AppImage/tarball) bundle GPL ffmpeg + ffprobe fetched per-OS by the release workflow, with encoder presence (`libmp3lame`, `libopus`, `libsvtav1`, `libwebp`, `libwebp_anim`) asserted in the release smoke step. The Linux `.deb` deliberately omits the bundled binaries (GPL distribution constraints) and resolves to the system ffmpeg; PyPI/`pipx` and source installs likewise rely on PATH. A startup health check validates the resolved ffmpeg/ffprobe and surfaces a clear error if neither bundled nor PATH binaries are usable.
 
 ### yt-dlp
 
@@ -279,22 +277,23 @@ Subprocess invoked by `YouTubeFetcherService`. Single-video probe uses `--skip-d
 
 ### PyInstaller hook for yt-dlp
 
-yt-dlp lazy-loads ~1600 extractor modules plus optional deps (`websockets`, `mutagen`, `brotli`) that PyInstaller's static analysis misses. `PyInstaller-Hooks/hook-yt_dlp.py` calls `collect_all("yt_dlp")` and the release workflow passes `--additional-hooks-dir=PyInstaller-Hooks`. The release workflow's bundled smoke step (`ANKI_MINER_SMOKE=youtube` env var in `anki_miner/gui/app.py`) walks `yt_dlp.extractor.gen_extractors()` offline to verify the registry survived `collect_all`.
+yt-dlp lazy-loads ~1600 extractor modules plus optional deps (`websockets`, `mutagen`, `brotli`) that PyInstaller's static analysis misses. `PyInstaller-Hooks/hook-yt_dlp.py` calls `collect_all("yt_dlp")`; `anki_miner.spec` registers it via `hookspath=[".../PyInstaller-Hooks"]`, and the release workflow builds with `pyinstaller anki_miner.spec`. The release workflow's bundled smoke step (`ANKI_MINER_SMOKE=youtube` env var in `anki_miner/gui/app.py`) walks `yt_dlp.extractor.gen_extractors()` offline to verify the registry survived `collect_all`.
 
 ## Exception Hierarchy
 
 ```
 AnkiMinerException (base)
-├── ValidationError
 ├── SetupError
 ├── AnkiConnectionError
-├── DeckNotFoundError
-├── NoteTypeNotFoundError
-├── CardCreationError
-├── MediaExtractionError
 ├── SubtitleParseError
-└── FFmpegError
+├── FfmpegNotFoundError
+└── YouTubeFetchError
+    ├── BotDetectionError
+    ├── CookieDatabaseLockedError
+    └── VideoTooLongError
 ```
+
+Defined across `exceptions/` (`base.py`, `validation.py`, `anki.py`, `media.py`, `youtube.py`). `FfmpegNotFoundError` is a direct subclass of `AnkiMinerException`, not of `YouTubeFetchError`, even though only the YouTube fetch path raises it today.
 
 ## Data Storage
 
