@@ -8,7 +8,7 @@ import shutil
 import tempfile
 import zipfile
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
 
@@ -175,7 +175,7 @@ def import_yomitan_zip(
                 "format": "yomitan",
                 "source_name": title,
                 "source_revision": revision,
-                "import_date": datetime.now(timezone.utc).isoformat(),
+                "import_date": datetime.now(UTC).isoformat(),
                 "entry_count": str(total_entries),
             },
         )
@@ -192,9 +192,7 @@ def import_yomitan_zip(
         if final_path.exists():
             if not overwrite:
                 raise SetupError(f"Dictionary '{dict_id}' already exists")
-            backup = final_path.with_name(
-                final_path.name + ".bak-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
-            )
+            backup = final_path.with_name(final_path.name + ".bak-" + datetime.now(UTC).strftime("%Y%m%d%H%M%S%f"))
             final_path.rename(backup)
             try:
                 shutil.move(str(staging), str(final_path))

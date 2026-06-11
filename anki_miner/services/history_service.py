@@ -3,7 +3,7 @@
 import json
 import logging
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from anki_miner.config.paths import ANKI_MINER_HOME
@@ -68,7 +68,7 @@ class HistoryService:
         Returns:
             The row ID of the inserted record
         """
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
         series_name = video_file.parent.name if video_file.parent != video_file else ""
         ids_json = json.dumps(card_ids or [])
         words_json = json.dumps(words_mined or [])

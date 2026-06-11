@@ -2,7 +2,7 @@
 
 <p align="center">
 <a href="https://pypi.org/project/anki-miner/"><img src="https://img.shields.io/pypi/v/anki-miner.svg" alt="PyPI version"></a>
-<a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
+<a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
 <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
 <a href="https://github.com/0xzerolight/anki_miner/releases/latest"><img src="https://img.shields.io/github/downloads/0xzerolight/anki_miner/total.svg?cacheSeconds=86400" alt="GitHub downloads"></a>
 <a href="https://github.com/0xzerolight/anki_miner/stargazers"><img src="https://img.shields.io/github/stars/0xzerolight/anki_miner?style=social&cacheSeconds=86400" alt="GitHub stars"></a>
@@ -53,7 +53,7 @@ Grab the installer for your platform from the [latest release](https://github.co
 No Python required. Installers and portable archives bundle all dependencies.
 
 <details>
-<summary><strong>Install from PyPI (Python 3.10+)</strong></summary>
+<summary><strong>Install from PyPI (Python 3.11+)</strong></summary>
 
 ```bash
 pipx install anki-miner   # or: pip install anki-miner
