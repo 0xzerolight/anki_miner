@@ -169,6 +169,34 @@ class TestEpisodeNumberExtractor:
             for v, s in pairs:
                 assert v.stem == s.stem
 
+    class TestAdjacentBareNumbers:
+        """Regression: BARE_NUMBER used to consume its trailing separator, so
+        non-overlapping findall skipped a number that immediately followed a
+        single-char-separated number — bare[-1] then picked the wrong episode.
+        The trailing boundary is a lookahead so every run is captured.
+        """
+
+        def test_space_separated_trailing_number_wins(self, tmp_path):
+            path = tmp_path / "Title 1 2.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 2
+
+        def test_dash_chain_takes_last(self, tmp_path):
+            path = tmp_path / "5-6-7.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 7
+
+        def test_three_space_separated_numbers(self, tmp_path):
+            path = tmp_path / "Show 1 2 3.mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 3
+
     class TestSeasonEpisodeWithSeparator:
         """Regression for T-04 — SxxEyy must tolerate separators (whitespace/._-)
         between the season and episode tokens; 'S02 E05' was falling through to the

@@ -26,7 +26,13 @@ class EpisodeNumberExtractor:
     # fallback handled separately (findall + LAST match) so numeric show titles
     # like "86", "Mob Psycho 100", "Steins;Gate 0", "3-gatsu" don't steal the
     # episode slot from the trailing episode number. See extract_episode_info.
-    BARE_NUMBER = r"(?:^|[^\d])(\d{1,3})(?:[^\d]|$)"
+    #
+    # The trailing boundary is a LOOKAHEAD, not a consuming class: consuming the
+    # separator made non-overlapping findall skip a number that immediately
+    # followed a single-char-separated number ("Title 1 2" -> ["1"], "5-6-7" ->
+    # ["5","7"]), so bare[-1] picked the wrong episode. The lookahead keeps the
+    # separator available to start the next match, so every run is captured.
+    BARE_NUMBER = r"(?:^|[^\d])(\d{1,3})(?=[^\d]|$)"
 
     # Regex patterns for common episode naming conventions (in priority order).
     # Each is tried with re.search (FIRST match) before falling back to
@@ -58,7 +64,11 @@ class EpisodeNumberExtractor:
         # Resolution tokens like "1280x720" otherwise get parsed as
         # season=1280, episode=720 by the NxN pattern (Issue #36).
         filename = re.sub(r"\d{3,4}[xX]\d{3,4}", "", filename)
-        filename = re.sub(r"\b\d{3,4}[pi]\b", "", filename, flags=re.IGNORECASE)
+        # Use explicit non-alphanumeric boundaries rather than \b: \b does not
+        # fire between an underscore and a digit (both are word chars), so
+        # "Show_03_720p" kept "720p" — which the old consuming BARE_NUMBER regex
+        # silently skipped but the lookahead form would mine as episode 720.
+        filename = re.sub(r"(?<![0-9A-Za-z])\d{3,4}[pi](?![0-9A-Za-z])", "", filename, flags=re.IGNORECASE)
 
         for pattern, extractor in cls.PATTERNS:
             match = re.search(pattern, filename)
