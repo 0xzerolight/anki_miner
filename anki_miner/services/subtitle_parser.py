@@ -366,7 +366,7 @@ class SubtitleParserService:
         """Parse a subtitle file and produce both the deduped mining list and a per-line lemma index.
 
         ``all_words`` is identical to ``parse_subtitle_file(subtitle_file)`` —
-        same dedup-by-(lemma|surface) semantics, same first-wins ordering.
+        same dedup-by-lemma semantics, same first-wins ordering.
 
         ``line_index`` is a parallel structure keyed by line: each entry holds
         every content lemma that appeared on that line (NO dedup against

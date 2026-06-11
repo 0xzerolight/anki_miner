@@ -21,7 +21,7 @@ from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaCon
 
 
 class MiningTabBase(QWidget):
-    """Common scaffolding for file-based mining tabs (``SingleEpisodeTab``, ``BatchProcessingTab``).
+    """Common scaffolding for the four mining tabs (``SingleEpisodeTab``, ``BatchProcessingTab``, ``DeckBuilderTab``, ``YouTubeTab``).
 
     Subclasses own their layout, their progress widgets, and the bodies of the
     progress slots and drag-drop event handlers. The base provides:
@@ -38,7 +38,8 @@ class MiningTabBase(QWidget):
     and ``dropEvent`` via duck typing.
     """
 
-    # Worker→GUI curation bridge (shared by SingleEpisodeTab and BatchProcessingTab).
+    # Worker→GUI curation bridge (shared by SingleEpisodeTab, BatchProcessingTab,
+    # and YouTubeTab; DeckBuilderTab builds its own batch curation callback).
     _curation_requested = pyqtSignal(list)
 
     # ------------------------------------------------------------------
@@ -95,9 +96,9 @@ class MiningTabBase(QWidget):
     def _on_progress_error(self, item: str, error: str) -> None:
         """Default per-item error handler: append a failure line to ``self.log_widget``.
 
-        Both file-based tabs share this exact body. Subclasses that lack a
-        ``log_widget`` should not wire the progress callback through this base,
-        or should override this method.
+        Subclasses with a ``log_widget`` share this exact body. Subclasses that
+        lack a ``log_widget`` should not wire the progress callback through this
+        base, or should override this method.
         """
         self.log_widget.append_error(f"Failed: {item} — {error}")  # type: ignore[attr-defined]
 
@@ -241,7 +242,7 @@ class MiningTabBase(QWidget):
 
         Call from each tab's ``_on_cancel_clicked``. ``reject()`` triggers the
         dialog's exec to return Rejected, whose ``finally`` sets the event and the
-        worker resumes with an empty selection → orchestrator returns a cancelled result.
+        worker resumes with ``None`` → orchestrator returns a cancelled result.
         Also sets ``_curation_cancelled`` so a cancel that arrives before the
         dialog is built is remembered by :meth:`_on_curation_requested`.
         """

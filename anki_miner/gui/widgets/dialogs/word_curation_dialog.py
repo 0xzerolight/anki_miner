@@ -742,7 +742,7 @@ class WordCurationDialog(QDialog):
         check_item = self.table.item(row, 0)
         if check_item:
             check_item.setCheckState(Qt.CheckState.Unchecked)
-            # Strip the checkable flag so bulk actions / Space can't re-include it.
+            # Strip the checkable flag so bulk actions / the S toggle key can't re-include it.
             check_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
         grey = QColor(128, 128, 128)
         for col in range(1, self.table.columnCount()):

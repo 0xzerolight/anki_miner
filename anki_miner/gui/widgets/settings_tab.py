@@ -66,7 +66,8 @@ class SettingsTab(QWidget):
     """Settings tab with category organization.
 
     Uses extracted panel components for cleaner architecture.
-    Each category (Anki, Media, Dictionary, Filtering) has its own panel.
+    Each category (Anki, Media, Dictionary, Filtering, YouTube, Themes) has its
+    own panel.
 
     Signals:
         validation_requested: Emitted when validation should be triggered
@@ -129,7 +130,7 @@ class SettingsTab(QWidget):
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), "Filtering")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), "YouTube")
         # Themes tab — sub-tab index captured so MainWindow / shortcuts can
-        # jump straight to it via :meth:`open_themes_tab`.
+        # jump straight to it via :meth:`open_themes_subtab`.
         self._themes_subtab_index = self.tab_widget.addTab(self._wrap_in_scroll_area(self.themes_panel), "Themes")
         # Reset preview baseline when the user navigates away from Themes so
         # a later visit reverts to their last-chosen theme, not session start.

@@ -346,7 +346,9 @@ class AnkiService:
         Only words containing Japanese characters are included.
 
         Returns:
-            Set of words (lemmas) already in the collection. Returns an
+            Set of Expression (first-field) values already in the
+            collection, dedup-normalized (HTML/media-stripped, NFC) — i.e.
+            ``mined_form`` strings, not lemmas. Returns an
             empty set as a graceful-degradation fallback if AnkiConnect
             responds but the call fails for a recoverable, non-connection
             transport reason (e.g. a ``Timeout`` or a JSON decode
