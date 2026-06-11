@@ -814,6 +814,35 @@ class SettingsTab(QWidget):
         self.config = config
         self._load_config()
 
+    def iter_close_workers(self) -> tuple:
+        """Live worker handles MainWindow must join on close (T-12).
+
+        SettingsTab owns three short-lived AnkiConnect workers — fetch fields,
+        fetch decks, apply/remove styling — each a tab-parented QThread that can
+        sit in a 15-60 s blocking request. They have no ``worker_thread``
+        attribute, so closeEvent discovers them here and routes each through the
+        single ``MainWindow._join_worker_for_close`` policy (cancel + bounded
+        grace join + laggard deferral). Returning them — rather than waiting
+        here — keeps every shutdown join in one place; abandoning them to Qt
+        teardown aborts with "QThread: Destroyed while thread is still running".
+
+        (T-66 lifts these workers into a controller exposing the same hook.)
+        """
+        return (self._fetch_fields_worker, self._fetch_decks_worker, self._styling_worker)
+
+    def shutdown(self) -> None:
+        """Cancel every running AnkiConnect worker (cancel only, no wait).
+
+        Explicit-teardown entry point mirroring the YouTube tab. closeEvent
+        does the bounded join via :meth:`MainWindow._join_worker_for_close`;
+        this is the standalone cancel for any non-close caller (and the future
+        controller). ``cancel()`` is idempotent, so the helper re-cancelling is
+        harmless.
+        """
+        for worker in self.iter_close_workers():
+            if worker is not None and worker.isRunning():
+                worker.cancel()
+
     # === Expose panel inputs for backward compatibility ===
 
     @property
