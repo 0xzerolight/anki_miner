@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+import sqlite3
 import tempfile
 import threading
 import time
@@ -566,9 +567,24 @@ class EpisodeProcessor:
         # Add newly mined words to known word DB.
         # Store mined_form so the local DB matches what Anki stores in the
         # Expression first field (POS-aware via mined_form); Issue #5.
+        #
+        # The cards already exist in Anki at this point. A locked DB (Anki or a
+        # parallel run holding known_words.db) raises OperationalError here; do
+        # NOT let it bubble into process_episode's generic except, which would
+        # report cards_created=0 with no note IDs — a successful run reported as
+        # a failure (T-19). The cache is additive and self-heals on the next
+        # run, so dropping this one write is safe; warn and keep the result.
         if self.known_word_db and self.known_word_db.is_available() and card_data:
             mined_words = {payload.word.mined_form for payload in card_data}
-            self.known_word_db.add_words(mined_words, source="mined")
+            try:
+                self.known_word_db.add_words(mined_words, source="mined")
+            except sqlite3.OperationalError as e:
+                logger.warning(
+                    "Could not record %d mined words in known_words.db (%s); "
+                    "the cards were still created. The cache will re-sync next run.",
+                    len(mined_words),
+                    e,
+                )
 
         return cards_created, created_note_ids
 
