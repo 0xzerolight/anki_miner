@@ -350,6 +350,97 @@ def test_worker_marks_item_processing_at_pick_time(tmp_path):
     assert item.status == QueueItemStatus.COMPLETED
 
 
+# ---------------------------------------------------------------------------
+# Cancellation tests (T-21): an interrupted item must never read COMPLETED.
+# ---------------------------------------------------------------------------
+
+
+def test_cancel_mid_item_does_not_emit_item_completed(tmp_path):
+    """Regression: cancel between pairs (1 of 3 processed) must not fall
+    through to item_completed; the partially processed item is not COMPLETED."""
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    pair3 = SimpleNamespace(video=Path("/tmp/ep3.mkv"), subtitle=Path("/tmp/ep3.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    item = queue.get_all_items()[0]
+
+    proc = MagicMock()
+
+    def cancel_during_first_pair(*_args, **_kwargs):
+        worker.cancel()  # user hits Cancel while pair 1 is processing
+        return _ok_result(cards=2)
+
+    proc.process_episode.side_effect = cancel_during_first_pair
+
+    worker = _make_worker_with_queue(queue)
+    results = _wire_capture_only(worker)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair1, pair2, pair3],
+        ),
+    ):
+        worker.run()
+
+    assert proc.process_episode.call_count == 1, "pairs 2-3 must not run after cancel"
+    assert results["completed"] == [], "interrupted item must not emit item_completed"
+    assert results["failed"] == [], "cancellation is not an item error"
+    assert item.status != QueueItemStatus.COMPLETED
+    assert item.status == QueueItemStatus.PENDING, "interrupted item returns to PENDING"
+    # Cards created before the cancel exist in Anki and count toward the total.
+    assert results["finished"] == [2]
+
+
+def test_cancel_propagates_to_current_processor():
+    """cancel() must forward to the in-flight EpisodeProcessor."""
+    worker = BatchQueueWorkerThread(MagicMock(), AnkiMinerConfig(), MagicMock())
+    proc = MagicMock()
+    worker._current_processor = proc
+
+    worker.cancel()
+
+    proc.cancel.assert_called_once()
+    assert worker.is_cancelled
+
+
+def test_cancel_without_current_processor_does_not_raise():
+    """cancel() before any item started (no processor yet) is safe."""
+    worker = BatchQueueWorkerThread(MagicMock(), AnkiMinerConfig(), MagicMock())
+
+    worker.cancel()
+
+    assert worker.is_cancelled
+
+
+def test_cancel_before_run_exits_at_loop_top():
+    """Pre-cancelled worker exits at the loop top: queue_started(total) and
+    queue_finished(0) still fire, but no item is ever picked."""
+    queue = MagicMock()
+    queue.pending_count = 3
+
+    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock())
+    results = _wire_capture_only(worker)
+    started_totals: list[int] = []
+    worker.queue_started.connect(started_totals.append)
+
+    worker.cancel()
+    worker.run()
+
+    assert started_totals == [3]
+    queue.get_next_pending.assert_not_called()
+    assert results["started"] == []
+    assert results["completed"] == []
+    assert results["failed"] == []
+    assert results["finished"] == [0]
+
+
 def test_setup_error_emits_item_failed(tmp_path):
     """process_episode raising SetupError causes item_failed to be emitted for that item."""
     pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")

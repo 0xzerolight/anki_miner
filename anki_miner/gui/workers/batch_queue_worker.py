@@ -110,9 +110,11 @@ class BatchQueueWorkerThread(CancellableWorker):
 
                 # Process each pair using episode processor
                 cards_for_item = 0
+                interrupted = False
                 failed_pairs: list[tuple[str, str]] = []  # (video name, first error)
                 for pair in pairs:
                     if self.check_cancelled():
+                        interrupted = True
                         break
 
                     self._curation_processor = episode_processor
@@ -133,9 +135,18 @@ class BatchQueueWorkerThread(CancellableWorker):
                         # GUI marks the item ERROR and offers retry (Issue #51).
                         failed_pairs.append((pair.video.name, result.errors[0]))
 
-                # Partial successes still count toward the queue total.
+                # Partial successes still count toward the queue total (cards
+                # created before a cancel exist in Anki).
                 total_cards += cards_for_item
-                if failed_pairs:
+                if interrupted:
+                    # Cancelled between pairs: the item is partially processed,
+                    # neither completed nor failed, so no terminal signal —
+                    # falling through used to mark it COMPLETED. Return it to
+                    # PENDING for a future run; cancellation is sticky
+                    # (threading.Event), so the outer while exits before this
+                    # item could be re-picked in this run.
+                    item.status = QueueItemStatus.PENDING
+                elif failed_pairs:
                     msg = (
                         f"{len(failed_pairs)}/{len(pairs)} episodes failed "
                         f"(e.g. {failed_pairs[0][0]}: {failed_pairs[0][1]})"
