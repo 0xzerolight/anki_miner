@@ -14,26 +14,28 @@ Per the v1 design decisions:
   wins so the user always sees the most-favourable rank for a homograph.
 - Rank-based only: ``frequencyMode == "occurrence-based"`` dicts are rejected
   rather than silently re-ranked.
+
+Shared zip extraction, index validation, the strict ``format == 3`` gate, the
+per-file progress/cancel loop, and the atomic CSV write live in
+:mod:`anki_miner.services.yomitan_meta_bank`; only the frequency-specific
+``frequencyMode`` check and rank normalization remain here.
 """
 
 from __future__ import annotations
 
-import csv
-import json
 import logging
-import os
-import tempfile
-import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
 from anki_miner.exceptions import SetupError
-from anki_miner.services.dictionary.zip_safety import validate_zip_safe
+from anki_miner.services.yomitan_meta_bank import (
+    ProgressFn,
+    atomic_write_csv,
+    open_yomitan_meta_banks,
+)
 
 logger = logging.getLogger(__name__)
-
-ProgressFn = Callable[[int, int, str], None]
 
 
 @dataclass(frozen=True)
@@ -68,72 +70,19 @@ def import_yomitan_freq_zip(
         SetupError: On invalid input, missing meta banks, occurrence-based mode,
             corrupt JSON, or unsafe zip paths.
     """
-    if not zip_path.exists():
-        raise SetupError(f"Yomitan frequency zip not found: {zip_path}")
-
-    with tempfile.TemporaryDirectory(prefix="anki_miner_yomitan_freq_") as tmp:
-        tmp_path = Path(tmp)
-        try:
-            with zipfile.ZipFile(zip_path, "r") as zf:
-                validate_zip_safe(zf, tmp_path)
-                zf.extractall(tmp_path)
-        except zipfile.BadZipFile as e:
-            raise SetupError(f"Corrupt zip file: {e}") from e
-
-        index_file = tmp_path / "index.json"
-        if not index_file.exists():
-            raise SetupError("Zip missing required index.json")
-
-        try:
-            index = json.loads(index_file.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as e:
-            raise SetupError(f"Invalid index.json: {e}") from e
-
-        title = str(index.get("title", "")).strip()
-        revision = str(index.get("revision", "")).strip()
-        if not title:
-            raise SetupError("index.json missing required 'title'")
-
-        # Yomitan format v1/v2 use different term_meta_bank schemas than v3.
-        # A v1 zip would parse silently and could yield zero rows or wrong
-        # ranks. Strict equality with 3 surfaces the issue clearly; revisit
-        # if/when Yomitan ships a v4 we want to accept.
-        format_version = index.get("format")
-        if format_version != 3:
+    with open_yomitan_meta_banks(zip_path, kind="frequency") as banks:
+        if banks.index.frequency_mode == "occurrence-based":
             raise SetupError(
-                f"'{title}' uses unsupported Yomitan format version {format_version!r}. "
-                "anki_miner supports format version 3 only. "
-                "Re-download from a current Yomitan source."
-            )
-
-        frequency_mode = str(index.get("frequencyMode", "")).strip()
-        if frequency_mode == "occurrence-based":
-            raise SetupError(
-                f"'{title}' is an occurrence-based frequency dictionary. "
+                f"'{banks.title}' is an occurrence-based frequency dictionary. "
                 "anki_miner only supports rank-based dictionaries (e.g. JPDB, BCCWJ). "
                 "Use a rank-based dict, or convert this one externally before importing."
-            )
-
-        meta_files = sorted(tmp_path.glob("term_meta_bank_*.json"))
-        if not meta_files:
-            raise SetupError(
-                "Zip contains no frequency data (term_meta_bank_*.json missing). "
-                "This is likely a definition-only dictionary; import it via "
-                "Settings → Dictionary → Add Dictionary instead."
             )
 
         ranks: dict[str, int] = {}
         skipped_display_only = 0
 
-        for file_idx, meta_file in enumerate(meta_files, 1):
-            if cancel_check and cancel_check():
-                raise SetupError("Import cancelled")
-            try:
-                entries = json.loads(meta_file.read_text(encoding="utf-8"))
-            except json.JSONDecodeError as e:
-                raise SetupError(f"Invalid {meta_file.name}: {e}") from e
-
-            for entry in entries:
+        for bank in banks.iter_banks(progress=progress, cancel_check=cancel_check):
+            for entry in bank:
                 if not isinstance(entry, list) or len(entry) < 3:
                     continue
                 if entry[1] != "freq":
@@ -151,8 +100,8 @@ def import_yomitan_freq_zip(
                 if existing is None or rank < existing:
                     ranks[term] = rank
 
-            if progress:
-                progress(file_idx, len(meta_files), f"Imported {meta_file.name}")
+        title = banks.title
+        revision = banks.revision
 
         if not ranks:
             raise SetupError(
@@ -161,25 +110,24 @@ def import_yomitan_freq_zip(
                 "The dictionary may use an unsupported data format."
             )
 
-        _atomic_write_csv(dest_csv, ranks)
+        # term,rank — sorted by rank for stable, human-scannable output.
+        rows = [(term, rank) for term, rank in sorted(ranks.items(), key=lambda kv: kv[1])]
+        atomic_write_csv(dest_csv, ["term", "rank"], rows)
 
-        if progress:
-            progress(len(meta_files), len(meta_files), "Done")
+    logger.info(
+        "Imported %d frequency entries from '%s' (revision '%s'), skipped %d display-only",
+        len(ranks),
+        title,
+        revision,
+        skipped_display_only,
+    )
 
-        logger.info(
-            "Imported %d frequency entries from '%s' (revision '%s'), skipped %d display-only",
-            len(ranks),
-            title,
-            revision,
-            skipped_display_only,
-        )
-
-        return YomitanFreqImportResult(
-            source_name=title,
-            source_revision=revision,
-            entry_count=len(ranks),
-            skipped_display_only=skipped_display_only,
-        )
+    return YomitanFreqImportResult(
+        source_name=title,
+        source_revision=revision,
+        entry_count=len(ranks),
+        skipped_display_only=skipped_display_only,
+    )
 
 
 def _normalize_freq_rank(data: Any) -> int | None:
@@ -244,25 +192,3 @@ def _try_int(s: str) -> int | None:
         return int(s)
     except ValueError:
         return None
-
-
-def _atomic_write_csv(dest_csv: Path, ranks: dict[str, int]) -> None:
-    """Write ``term,rank`` rows to ``dest_csv`` atomically.
-
-    Stages to a sibling ``.tmp`` file then ``os.replace`` so a crash mid-write
-    leaves the user's existing ``frequency.csv`` intact.
-    """
-    dest_csv.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = dest_csv.with_suffix(dest_csv.suffix + ".tmp")
-    try:
-        with open(tmp_path, "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["term", "rank"])
-            for term, rank in sorted(ranks.items(), key=lambda kv: kv[1]):
-                writer.writerow([term, rank])
-        os.replace(tmp_path, dest_csv)
-    finally:
-        # A failure mid-rows raises before os.replace, orphaning the .tmp in
-        # ~/.anki_miner. Unlink it; on success it's already gone (os.replace
-        # consumed it) and missing_ok makes the unlink a no-op.
-        tmp_path.unlink(missing_ok=True)

@@ -348,10 +348,10 @@ class TestAtomicWrite:
     def test_no_tmp_left_when_writing_rows_fails(self, tmp_path: Path, monkeypatch) -> None:
         """A failure DURING row writing must not orphan the .tmp file (T-40).
 
-        The previous code opened the .tmp, raised mid-rows, and never reached
-        os.replace — leaving an orphaned .tmp in ~/.anki_miner.
+        The shared atomic writer opens the .tmp, and a failure mid-rows must
+        still unlink it rather than leave an orphan in ~/.anki_miner.
         """
-        import anki_miner.services.pitch_accent.yomitan_pitch_importer as mod
+        import anki_miner.services.yomitan_meta_bank as mod
 
         dest = tmp_path / "pitch.csv"
         zip_path = build_yomitan_pitch_zip(
