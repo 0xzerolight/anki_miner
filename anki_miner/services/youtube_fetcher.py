@@ -43,6 +43,15 @@ _PLAYLIST_UNAVAILABLE_TITLES = {"[Private video]", "[Deleted video]"}
 _PROGRESS_RE = re.compile(r"\[ankimine_dl\] (\S+) (\S+)")
 _POSTPROCESS_MARKERS = ("[Merger]", "[FixupM3u8]", "[SubtitleConvertor]", "[ExtractAudio]")
 
+# Poll interval for fetch_video's out-of-band cancel watchdog. The reader
+# loop only observes cancel_event when yt-dlp prints a line; during silent
+# phases (the [Merger] ffmpeg post-process, stalled reads, retry backoff)
+# the reader thread is blocked in stdout iteration, so a watchdog thread
+# delivers the kill instead. Cancel latency is near-zero (the watchdog waits
+# on the event itself); this interval only bounds how quickly a *completed*
+# fetch retires the watchdog.
+_CANCEL_POLL_INTERVAL_S = 0.5
+
 # JS runtimes yt-dlp can solve YouTube's n-challenge with. "deno" is omitted: it is
 # yt-dlp's built-in default, so when the user has deno nothing needs doing. Ordered
 # by preference for the failing case (node is the common Windows setup). Issue #64.
@@ -113,6 +122,10 @@ class YouTubeFetcherService:
         self._config = config
         self._presenter = presenter
         self._popen: subprocess.Popen[str] | None = None
+        # Serializes the claim in _kill_tree: the reader loop's inline cancel
+        # check and the cancel watchdog thread may race to kill the same
+        # subprocess; exactly one caller must proceed.
+        self._kill_lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # probe_metadata
@@ -141,6 +154,10 @@ class YouTubeFetcherService:
         cmd.extend(self._cookie_args())
         cmd.extend(self._js_runtime_args())
         cmd.extend(self._remote_component_args())
+        # End-of-options separator: a '-'/'--'-leading URL must not be parsed
+        # as a yt-dlp option (e.g. --update-to self-replaces the binary on the
+        # probe alone, --config-location loads a planted --exec config). T-34.
+        cmd.append("--")
         cmd.append(url)
 
         try:
@@ -184,7 +201,12 @@ class YouTubeFetcherService:
         if not isinstance(video_id, str) or not _VIDEO_ID_RE.match(video_id):
             raise YouTubeFetchError(f"Unexpected video id format: {video_id!r}")
 
-        duration_s = int(duration)
+        # Live streams report ``duration: null`` — the key is present so the
+        # KeyError guard above passes, but ``int(None)`` would raise an
+        # uncaught TypeError, bypassing the caller's "Live streams not
+        # supported" rejection. Treat null as 0 so a VideoInfo is built and
+        # the is_live branch fires (a finite 0 also can't trip max-duration). T-28.
+        duration_s = 0 if duration is None else int(duration)
         if duration_s > self._config.youtube_max_duration_s:
             raise VideoTooLongError(
                 f"Video duration {duration_s}s exceeds configured maximum " f"{self._config.youtube_max_duration_s}s"
@@ -265,6 +287,8 @@ class YouTubeFetcherService:
         cmd.extend(self._cookie_args())
         cmd.extend(self._js_runtime_args())
         cmd.extend(self._remote_component_args())
+        # End-of-options separator before the user URL — see probe_metadata. T-34.
+        cmd.append("--")
         cmd.append(url)
 
         try:
@@ -404,27 +428,46 @@ class YouTubeFetcherService:
 
         cmd = self._build_fetch_cmd(url, workspace, sub_mode)
 
-        self._popen = subprocess.Popen(
+        # Local reference kept for the finally's wait(): _kill_tree claims
+        # (nulls) self._popen when it kills, so the shared handle may be gone
+        # by the time the reader loop unwinds.
+        popen = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=1,
             text=True,
         )
+        self._popen = popen
 
         tail: collections.deque[str] = collections.deque(maxlen=50)
         postprocessing_seen = False
         cancelled = False
 
-        assert self._popen.stdout is not None
+        # Out-of-band cancel delivery: a watchdog thread waits on cancel_event
+        # and kills the process tree, which closes stdout and unblocks the
+        # reader loop below even when yt-dlp is silent. fetch_done retires the
+        # watchdog once this fetch completes.
+        fetch_done = threading.Event()
+        watchdog: threading.Thread | None = None
+        if cancel_event is not None:
+            watchdog = threading.Thread(
+                target=self._cancel_watchdog,
+                args=(cancel_event, fetch_done, popen),
+                name="ytdlp-cancel-watchdog",
+                daemon=True,
+            )
+            watchdog.start()
+
+        assert popen.stdout is not None
         try:
-            for raw in self._popen.stdout:
+            for raw in popen.stdout:
                 line = raw.rstrip("\n")
                 tail.append(line)
 
                 if cancel_event is not None and cancel_event.is_set():
                     cancelled = True
-                    self._kill_tree()
+                    self._kill_tree(expected=popen)
                     break
 
                 m = _PROGRESS_RE.search(line)
@@ -456,8 +499,18 @@ class YouTubeFetcherService:
                     except Exception:  # pragma: no cover - presenter best effort
                         logger.debug("presenter.show_info raised; ignoring")
         finally:
-            returncode = self._popen.wait()
+            returncode = popen.wait()
             self._popen = None
+            fetch_done.set()
+            if watchdog is not None:
+                watchdog.join(timeout=_CANCEL_POLL_INTERVAL_S * 4)
+
+        # Re-check after the loop: a cancel landing after the final stdout
+        # line (or during a fetch that printed nothing) is invisible to the
+        # in-loop check and would otherwise complete as success — outputs
+        # resolved and cards mined after Stop.
+        if cancel_event is not None and cancel_event.is_set():
+            cancelled = True
 
         if cancelled:
             raise YouTubeFetchError("Cancelled by user")
@@ -559,6 +612,8 @@ class YouTubeFetcherService:
         if ffmpeg_location is not None:
             cmd.extend(["--ffmpeg-location", ffmpeg_location])
 
+        # End-of-options separator before the user URL — see probe_metadata. T-34.
+        cmd.append("--")
         cmd.append(url)
         return cmd
 
@@ -682,11 +737,57 @@ class YouTubeFetcherService:
             sub_source=sub_source,
         )
 
-    def _kill_tree(self) -> None:
-        if not self._popen:
+    def _cancel_watchdog(
+        self,
+        cancel_event: threading.Event,
+        fetch_done: threading.Event,
+        popen: subprocess.Popen[str],
+    ) -> None:
+        """Kill the yt-dlp tree when *cancel_event* fires mid-fetch.
+
+        Runs on a daemon thread for the duration of one ``fetch_video`` call.
+        Waits on the cancel event itself (near-zero latency on cancel) and
+        polls *fetch_done* each interval so a completed fetch retires the
+        thread promptly without it ever killing anything.
+
+        *popen* is this fetch's own handle: it is passed through to
+        :meth:`_kill_tree` as ``expected`` so a stale watchdog descheduled past
+        its join can never claim-and-kill a *subsequent* fetch's subprocess —
+        the ``fetch_done``/``is_set`` check and the kill are not atomic across
+        fetches, so the per-fetch handle is the authoritative guard.
+        """
+        while True:
+            if cancel_event.wait(_CANCEL_POLL_INTERVAL_S):
+                if not fetch_done.is_set():
+                    self._kill_tree(expected=popen)
+                return
+            if fetch_done.is_set():
+                return
+
+    def _kill_tree(self, expected: subprocess.Popen[str] | None = None) -> None:
+        # Claim-once: the reader loop's inline cancel check and the cancel
+        # watchdog can race to kill the same fetch; whichever claims the
+        # handle proceeds, the loser no-ops, keeping terminate() single-shot.
+        # fetch_video's finally holds its own local reference for wait(), so
+        # nulling the shared handle here is safe. psutil.NoSuchProcess below
+        # covers a pid that already exited before the Process() lookup.
+        #
+        # *expected* scopes the claim to one fetch: callers tied to a specific
+        # fetch (the reader loop, the cancel watchdog) pass that fetch's own
+        # popen. A stale watchdog that was descheduled past its join and wakes
+        # up during a *later* fetch would otherwise claim and kill the wrong
+        # subprocess — the fetch_done check and this claim are not atomic across
+        # fetches. When expected is None the caller accepts whatever handle is
+        # current (same-fetch callers that have no specific handle to assert).
+        with self._kill_lock:
+            popen = self._popen
+            if expected is not None and popen is not expected:
+                return
+            self._popen = None
+        if popen is None:
             return
         try:
-            parent = psutil.Process(self._popen.pid)
+            parent = psutil.Process(popen.pid)
         except psutil.NoSuchProcess:
             return
 
