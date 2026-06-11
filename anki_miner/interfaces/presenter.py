@@ -1,6 +1,6 @@
 """Presenter protocol for output abstraction."""
 
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from anki_miner.models import (
     ProcessingResult,
@@ -9,6 +9,7 @@ from anki_miner.models import (
 )
 
 
+@runtime_checkable
 class PresenterProtocol(Protocol):
     """Interface for presenting output to the user.
 
