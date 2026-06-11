@@ -638,3 +638,24 @@ def test_recent_selection_legacy_entry_resets_offset_to_zero(tab):
     tab._on_recent_selected(index)
 
     assert tab.offset_spinbox.value() == pytest.approx(0.0)
+
+
+# ---------------------------------------------------------------------------
+# 16. update_config does not clobber the in-session offset spinbox
+# ---------------------------------------------------------------------------
+
+
+def test_update_config_preserves_dialed_offset(tab, test_config):
+    """The offset spinbox is a per-session value never persisted back, so an
+    unrelated settings save / theme toggle (which calls update_config) must not
+    reset the user's dialed-in offset to the config default."""
+    import dataclasses
+
+    tab.offset_spinbox.setValue(1.5)
+    # Unrelated change — subtitle_offset stays at its persisted default (0.0).
+    new_config = dataclasses.replace(test_config, anki_deck_name="other_deck")
+
+    tab.update_config(new_config)
+
+    assert tab.config is new_config
+    assert tab.offset_spinbox.value() == pytest.approx(1.5)

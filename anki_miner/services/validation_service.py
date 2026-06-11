@@ -220,6 +220,40 @@ class ValidationService:
             return False, f"Unexpected error: {e}"
         return True, f"AnkiConnect v{version if version is not None else 'unknown'} is running"
 
+    @staticmethod
+    def _check_tool(name: str, resolved_path: str) -> tuple[bool, str]:
+        """Run ``<resolved_path> -version`` and classify the result.
+
+        Shared body for the ffmpeg/ffprobe checks. ``name`` is the bare tool
+        name used in messages and bundled/system/custom classification;
+        ``resolved_path`` is the already-resolved binary to invoke (so a frozen
+        bundle validates the bundled binary, not whatever is on PATH).
+
+        Returns:
+            Tuple of (success, message)
+        """
+        try:
+            result = subprocess.run(
+                [resolved_path, "-version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            if result.returncode != 0:
+                return False, f"{name} returned non-zero exit code"
+
+            # Extract version from first line
+            version_line = result.stdout.split("\n")[0] if result.stdout else "unknown"
+            return True, f"{version_line} {_classify_resolved(name, resolved_path)}"
+
+        except FileNotFoundError:
+            return False, f"{name} not found. Install it and ensure it's in PATH"
+        except subprocess.TimeoutExpired:
+            return False, f"{name} check timed out"
+        except Exception as e:
+            return False, f"Unexpected error: {e}"
+
     def _check_ffmpeg(self) -> tuple[bool, str]:
         """Check if ffmpeg is installed and accessible.
 
@@ -230,28 +264,7 @@ class ValidationService:
         Returns:
             Tuple of (success, message)
         """
-        ffmpeg = resolve_ffmpeg(self.config)
-        try:
-            result = subprocess.run(
-                [ffmpeg, "-version"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-
-            if result.returncode != 0:
-                return False, "ffmpeg returned non-zero exit code"
-
-            # Extract version from first line
-            version_line = result.stdout.split("\n")[0] if result.stdout else "unknown"
-            return True, f"{version_line} {_classify_resolved('ffmpeg', ffmpeg)}"
-
-        except FileNotFoundError:
-            return False, "ffmpeg not found. Install it and ensure it's in PATH"
-        except subprocess.TimeoutExpired:
-            return False, "ffmpeg check timed out"
-        except Exception as e:
-            return False, f"Unexpected error: {e}"
+        return self._check_tool("ffmpeg", resolve_ffmpeg(self.config))
 
     def _check_ffprobe(self) -> tuple[bool, str]:
         """Check if ffprobe is installed and accessible.
@@ -263,27 +276,7 @@ class ValidationService:
         Returns:
             Tuple of (success, message)
         """
-        ffprobe = resolve_ffprobe(self.config)
-        try:
-            result = subprocess.run(
-                [ffprobe, "-version"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-
-            if result.returncode != 0:
-                return False, "ffprobe returned non-zero exit code"
-
-            version_line = result.stdout.split("\n")[0] if result.stdout else "unknown"
-            return True, f"{version_line} {_classify_resolved('ffprobe', ffprobe)}"
-
-        except FileNotFoundError:
-            return False, "ffprobe not found. Install it and ensure it's in PATH"
-        except subprocess.TimeoutExpired:
-            return False, "ffprobe check timed out"
-        except Exception as e:
-            return False, f"Unexpected error: {e}"
+        return self._check_tool("ffprobe", resolve_ffprobe(self.config))
 
     def _check_deck_exists(self) -> tuple[bool, str]:
         """Check if the target deck exists in Anki.
