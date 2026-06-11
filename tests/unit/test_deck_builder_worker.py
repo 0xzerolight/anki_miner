@@ -60,6 +60,9 @@ def _fake_processor(counts: collections.Counter[str], known: set[str] | None = N
     else:
         proc.known_word_db.is_available.return_value = True
         proc.known_word_db.get_known_words.return_value = known
+        # source='user' ignore list is folded into the preview estimate (T-24);
+        # default to empty so the estimate equals the known set in these tests.
+        proc.known_word_db.get_words_by_source.return_value = set()
     proc.process_episode.return_value = MagicMock(cards_created=1)
     return proc
 
@@ -74,17 +77,19 @@ def _make_request(pairs, *, mode=DeckSelectionMode.ALL, value=0.0, collection_fi
     )
 
 
-def _make_worker(qapp, request, *, processors) -> tuple[DeckBuilderWorker, MagicMock]:
+def _make_worker(qapp, request, *, processors, config_kwargs=None) -> tuple[DeckBuilderWorker, MagicMock]:
     """Construct a worker whose ``create_episode_processor`` is patched.
 
     ``processors`` is a list returned in order on each factory call (Phase 1
-    base processor first, then one per episode). Returns ``(worker, factory)``.
+    base processor first, then one per episode). ``config_kwargs`` overrides
+    extra config fields (e.g. ``use_known_words_db``). Returns
+    ``(worker, factory)``.
     """
     factory = MagicMock(side_effect=processors)
     patcher = patch.object(dbw_module, "create_episode_processor", factory)
     patcher.start()
     # Real config so dataclasses.replace(...) works (it requires a real dataclass).
-    config = AnkiMinerConfig(anki_deck_name="original_deck", include_known_words=False)
+    config = AnkiMinerConfig(anki_deck_name="original_deck", include_known_words=False, **(config_kwargs or {}))
     presenter = MagicMock(name="presenter")
     worker = DeckBuilderWorker(
         request=request,
@@ -250,12 +255,18 @@ def test_collection_filter_false_includes_everything(qapp):
 
 
 def test_collection_filter_true_fetches_known(qapp):
-    """collection_filter True -> include_known_words False; known lemmas fetched from known source."""
+    """collection_filter True -> include_known_words False; known lemmas fetched from the DB cache.
+
+    The DB-cache branch is gated on use_known_words_db (T-24), so enable it here.
+    """
     counts = collections.Counter({"a": 1, "b": 1})
     base = _fake_processor(counts, known={"a"})
     ep = _fake_processor(counts)
     worker, factory = _make_worker(
-        qapp, _make_request([_make_pair("ep1")], collection_filter=True), processors=[base, ep]
+        qapp,
+        _make_request([_make_pair("ep1")], collection_filter=True),
+        processors=[base, ep],
+        config_kwargs={"use_known_words_db": True},
     )
     try:
         previews = _collect(worker.preview_ready)
@@ -289,6 +300,104 @@ def test_collection_filter_true_falls_back_to_anki(qapp):
         assert previews[0].known_skipped == 1  # 'b'
     finally:
         worker._stop_patch.stop()
+
+
+def _worker_with_config(qapp, config) -> DeckBuilderWorker:
+    """Construct a worker with a specific config for direct ``_known_lemmas`` tests."""
+    return DeckBuilderWorker(
+        request=_make_request([_make_pair("ep1")], collection_filter=True),
+        config=config,
+        presenter=MagicMock(name="presenter"),
+        progress_callback=MagicMock(name="ProgressCallback"),
+        stats_service=None,
+    )
+
+
+def test_known_lemmas_db_toggle_off_uses_anki_vocab_not_db(qapp):
+    """Regression (T-24): use_known_words_db=False + a populated DB file must
+
+    fall back to anki_service.get_existing_vocabulary(), NOT the DB cache —
+    matching Phase-2's gate (episode_processor.py). The DB file exists for any
+    user who curated a word, but the live-vocab subtraction is what the build
+    actually applies, so the preview must use the same source or diverge
+    ("promised 2,401, built 51").
+    """
+    config = AnkiMinerConfig(use_known_words_db=False)
+    worker = _worker_with_config(qapp, config)
+
+    base = MagicMock(name="EpisodeProcessor")
+    base.known_word_db.is_available.return_value = True
+    base.known_word_db.get_known_words.return_value = {"db_cached_word"}
+    base.known_word_db.get_words_by_source.return_value = set()
+    base.anki_service.get_existing_vocabulary.return_value = {"anki_live_word"}
+
+    result = worker._known_lemmas(base)
+
+    assert result == {"anki_live_word"}
+    base.known_word_db.get_known_words.assert_not_called()
+    base.anki_service.get_existing_vocabulary.assert_called_once()
+
+
+def test_known_lemmas_folds_user_ignore_list_into_anki_branch(qapp):
+    """Regression (T-24): the source='user' ignore list must be unioned into the
+
+    Anki-vocab branch, mirroring episode_processor.py's always-applied user
+    list (Issue #42). Without it the preview omits user-curated words the build
+    still subtracts.
+    """
+    config = AnkiMinerConfig(use_known_words_db=False)
+    worker = _worker_with_config(qapp, config)
+
+    base = MagicMock(name="EpisodeProcessor")
+    base.known_word_db.is_available.return_value = True
+    base.known_word_db.get_words_by_source.return_value = {"user_ignored"}
+    base.anki_service.get_existing_vocabulary.return_value = {"anki_live_word"}
+
+    result = worker._known_lemmas(base)
+
+    assert result == {"anki_live_word", "user_ignored"}
+    base.known_word_db.get_words_by_source.assert_called_once_with("user")
+
+
+def test_known_lemmas_db_toggle_on_uses_db_cache(qapp):
+    """When use_known_words_db=True and the DB is available, the preview uses the
+
+    DB cache (unioned with the user ignore list), matching Phase-2's enabled path.
+    """
+    config = AnkiMinerConfig(use_known_words_db=True)
+    worker = _worker_with_config(qapp, config)
+
+    base = MagicMock(name="EpisodeProcessor")
+    base.known_word_db.is_available.return_value = True
+    base.known_word_db.get_known_words.return_value = {"db_cached_word"}
+    base.known_word_db.get_words_by_source.return_value = {"user_ignored"}
+
+    result = worker._known_lemmas(base)
+
+    assert result == {"db_cached_word", "user_ignored"}
+    base.known_word_db.get_known_words.assert_called_once()
+    base.anki_service.get_existing_vocabulary.assert_not_called()
+
+
+def test_known_lemmas_no_db_file_uses_anki_vocab(qapp):
+    """No DB file (is_available False) under use_known_words_db=True still falls
+
+    back to live Anki vocab — the user ignore list is empty (guarded by
+    is_available), so the result is just the Anki set.
+    """
+    config = AnkiMinerConfig(use_known_words_db=True)
+    worker = _worker_with_config(qapp, config)
+
+    base = MagicMock(name="EpisodeProcessor")
+    base.known_word_db.is_available.return_value = False
+    base.anki_service.get_existing_vocabulary.return_value = {"anki_live_word"}
+
+    result = worker._known_lemmas(base)
+
+    assert result == {"anki_live_word"}
+    base.known_word_db.get_known_words.assert_not_called()
+    base.known_word_db.get_words_by_source.assert_not_called()
+    base.anki_service.get_existing_vocabulary.assert_called_once()
 
 
 # --------------------------------------------------------------------------- #
