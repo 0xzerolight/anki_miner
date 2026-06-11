@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
@@ -530,5 +530,82 @@ class TestDictsRootRoundTrip:
 
             assert received == [], "save must abort when dicts_root is not writable"
             assert warnings, "user must see a warning explaining the rejection"
+        finally:
+            widget.deleteLater()
+
+
+class TestDictionaryRemovedPersistsNarrowly:
+    """dictionary_removed must persist only the chain — never run the full Save
+    pipeline whose unrelated validation aborts would orphan the removed dict_id
+    in gui_config.json (Issue #30 / T-08)."""
+
+    def test_removed_persists_chain_despite_failing_validation(self, test_config, tmp_path, monkeypatch):
+        """A stale (deleted) cookies file would abort the full Save at its
+        validation gate — but the chain change after a destructive remove must
+        still be persisted, with no warning dialog."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        # A cookies path that does not exist → _on_save_clicked would early-return
+        # at the cookies validation, orphaning the removed dict_id.
+        cfg = replace(
+            test_config,
+            youtube_cookies_file=tmp_path / "gone.txt",
+            dictionary_chain=(
+                ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),
+                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ),
+        )
+        widget = SettingsTab(cfg)
+        try:
+            warnings: list[tuple] = []
+            monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(a) or 0)
+            monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
+
+            # Simulate the panel state AFTER a remove: dict-a gone from the chain.
+            widget.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+
+            widget.dictionary_panel.dictionary_removed.emit()
+
+            assert received, "chain change must be persisted even though Save would have aborted"
+            assert received[-1].dictionary_chain == (ChainEntry(kind="jisho", dict_id=None, enabled=True),)
+            assert warnings == [], "the narrow persist must not pop a validation warning"
+        finally:
+            widget.deleteLater()
+
+    def test_removed_does_not_commit_unrelated_pending_edit(self, test_config, monkeypatch):
+        """The success path of the full Save commits ALL panels' unsaved edits.
+        The narrow persist must touch only dictionary_chain — a typed-but-unsaved
+        deck name must not leak into the persisted config."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        cfg = replace(
+            test_config,
+            anki_deck_name="original_deck",
+            dictionary_chain=(
+                ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),
+                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ),
+        )
+        widget = SettingsTab(cfg)
+        try:
+            monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+            monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: None)
+
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
+
+            # Unrelated pending edit the user has NOT saved.
+            widget.anki_panel.deck_input.setText("unsaved_deck")
+
+            widget.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+            widget.dictionary_panel.dictionary_removed.emit()
+
+            assert received, "chain change must be persisted"
+            # Only the chain changed; the unrelated edit was not committed.
+            assert received[-1].dictionary_chain == (ChainEntry(kind="jisho", dict_id=None, enabled=True),)
+            assert received[-1].anki_deck_name == "original_deck"
         finally:
             widget.deleteLater()
