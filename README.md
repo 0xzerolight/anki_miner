@@ -67,8 +67,10 @@ pipx install anki-miner   # or: pip install anki-miner
 ```bash
 git clone https://github.com/0xzerolight/anki_miner.git
 cd anki_miner
-pip install .
+pip install -e .
 ```
+
+For a full development setup (dev extras, pre-commit, external dependencies), see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 </details>
 
