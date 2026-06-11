@@ -1818,6 +1818,113 @@ class TestDictMediaUpload:
         # Only one multi POST across both batch calls
         assert len(multi_calls) == 1
 
+    def test_multi_failure_falls_back_to_per_file(self, test_config, temp_dir, make_tokenized_word):
+        """A transport failure on the dict-media multi POST should retry the chunk per-file."""
+        config = self._make_config_with_dict_media(test_config, temp_dir / "dicts")
+        (config.dicts_root / "test-dict" / "media" / "second.svg").write_bytes(b"<svg2/>")
+        service = AnkiService(config)
+
+        defs = [
+            '<img class="anki-miner-dict-media" src="test-dict__svg-accent_X.svg">',
+            '<img class="anki-miner-dict-media" src="test-dict__second.svg">',
+        ]
+        word_data_list = [
+            CardPayload(word=make_tokenized_word(lemma=f"word_{i}"), media=MediaData(), definition=d)
+            for i, d in enumerate(defs)
+        ]
+
+        # multi POST resets the connection; each per-file storeMediaFile
+        # succeeds; addNotes then creates both cards.
+        side_effect = [
+            requests.exceptions.ConnectionError("connection reset"),
+            _mock_response(result="test-dict__svg-accent_X.svg"),
+            _mock_response(result="test-dict__second.svg"),
+            _mock_response(result=[1, 2]),
+        ]
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=side_effect) as mock_post:
+            created = service.create_cards_batch(word_data_list)
+
+        # 1 failed multi + 2 per-file storeMediaFile retries + addNotes
+        actions = [c[1]["json"]["action"] for c in mock_post.call_args_list]
+        assert actions == ["multi", "storeMediaFile", "storeMediaFile", "addNotes"]
+        assert created == 2
+        # Confirmed per-file stores are cached.
+        assert "test-dict__svg-accent_X.svg" in service._dict_media_uploaded
+        assert "test-dict__second.svg" in service._dict_media_uploaded
+
+    def test_multi_and_per_file_failure_leaves_src_uncached_for_retry(
+        self, test_config, temp_dir, make_tokenized_word, caplog
+    ):
+        """multi AND per-file fallback fail: cards still created, src uncached so the next batch retries."""
+        config = self._make_config_with_dict_media(test_config, temp_dir / "dicts")
+        service = AnkiService(config)
+
+        src = "test-dict__svg-accent_X.svg"
+        definition = f'<img class="anki-miner-dict-media" src="{src}">'
+        word = make_tokenized_word()
+
+        def fake_post(url, json=None, timeout=None):
+            if json["action"] in ("multi", "storeMediaFile"):
+                raise requests.exceptions.ConnectionError("connection reset")
+            return _mock_response(result=[12345])
+
+        with (
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_service"),
+            patch("anki_miner.services._ankiconnect.requests.post", side_effect=fake_post) as mock_post,
+        ):
+            created = service.create_cards_batch([CardPayload(word=word, media=MediaData(), definition=definition)])
+
+        # Card creation survives the media failure.
+        assert created == 1
+        # The chunk was retried per-file before giving up.
+        actions = [c[1]["json"]["action"] for c in mock_post.call_args_list]
+        assert actions == ["multi", "storeMediaFile", "addNotes"]
+        assert any("individually" in r.message for r in caplog.records)
+        # Never confirmed stored → NOT cached, so the next batch retries it.
+        assert src not in service._dict_media_uploaded
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=fake_post) as mock_post_2:
+            service.create_cards_batch([CardPayload(word=word, media=MediaData(), definition=definition)])
+
+        retry_actions = [c[1]["json"]["action"] for c in mock_post_2.call_args_list]
+        assert retry_actions == ["multi", "storeMediaFile", "addNotes"]
+
+    def test_size_aware_chunking_splits_large_payload(self, test_config, temp_dir, make_tokenized_word):
+        """Dict-media files whose cumulative base64 size exceeds the byte budget split into multiple POSTs."""
+        config = self._make_config_with_dict_media(test_config, temp_dir / "dicts")
+        media_dir = config.dicts_root / "test-dict" / "media"
+        srcs = []
+        for i in range(3):
+            (media_dir / f"big_{i}.svg").write_bytes(b"x" * 300)  # ~400 base64 chars, over the patched budget
+            srcs.append(f"test-dict__big_{i}.svg")
+
+        service = AnkiService(config)
+        word_data_list = [
+            CardPayload(
+                word=make_tokenized_word(lemma=f"word_{i}"),
+                media=MediaData(),
+                definition=f'<img class="anki-miner-dict-media" src="{src}">',
+            )
+            for i, src in enumerate(srcs)
+        ]
+
+        resp = _mock_response(result=[None])  # one non-error sub-result per single-file chunk
+
+        with (
+            patch("anki_miner.services.anki_service._MEDIA_BATCH_MAX_BYTES", 100),
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post,
+        ):
+            service._upload_dict_media_batch(word_data_list)
+
+        # Each oversized file flushes its own multi chunk → 3 POSTs, each with 1 action
+        assert mock_post.call_count == 3
+        for call in mock_post.call_args_list:
+            payload = call[1]["json"]
+            assert payload["action"] == "multi"
+            assert len(payload["params"]["actions"]) == 1
+        assert set(srcs) <= service._dict_media_uploaded
+
 
 class TestAnkiTagsConfig:
     """Tests for the configurable ``anki_tags`` field.
