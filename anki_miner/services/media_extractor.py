@@ -289,7 +289,18 @@ class MediaExtractorService:
         if proc_registry is not None and proc_registry.cancelled:
             return False
         try:
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            # Decode ffmpeg's stderr as UTF-8 with replacement, not the platform
+            # locale codec: ffmpeg echoes the (often non-ASCII Japanese) input
+            # filename + stream titles to stderr, which on Windows (cp932/cp1252)
+            # raises UnicodeDecodeError. Mirrors audio_track_detector._run_ffprobe_json.
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
         except (subprocess.SubprocessError, OSError) as e:
             logger.warning("%s error%s: %s", op_name, suffix, e)
             return False
@@ -309,7 +320,10 @@ class MediaExtractorService:
                     proc.communicate()  # drain pipes + reap the killed process
                     logger.warning("%s timed out%s after %ss", op_name, suffix, timeout)
                     return False
-                except (subprocess.SubprocessError, OSError) as e:
+                except (subprocess.SubprocessError, OSError, ValueError) as e:
+                    # ValueError covers UnicodeDecodeError from communicate()'s
+                    # decode of non-ASCII ffmpeg stderr (defence-in-depth alongside
+                    # errors="replace" on the Popen above).
                     _kill_quietly(proc)
                     logger.warning("%s error%s: %s", op_name, suffix, e)
                     return False
