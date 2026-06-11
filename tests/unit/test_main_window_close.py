@@ -156,19 +156,28 @@ class _FakeDeckBuilderTab(DeckBuilderTab):
 class _FakeSettingsTab(SettingsTab):
     """Real SettingsTab subclass that skips the heavy ``__init__`` (T-12).
 
-    SettingsTab owns three short-lived AnkiConnect workers (fetch fields,
-    fetch decks, apply/remove styling) with no ``worker_thread`` attribute,
-    so closeEvent must discover them via ``iter_close_workers`` and route each
-    through the same join policy as the mining tabs.
+    SettingsTab's three short-lived AnkiConnect workers (fetch fields, fetch
+    decks, apply/remove styling) live on :class:`AnkiProbeController` (T-66)
+    with no ``worker_thread`` attribute, so closeEvent must discover them via
+    ``iter_close_workers`` (tab → controller delegation, exercised for real
+    here) and route each through the same join policy as the mining tabs.
     """
 
     def __init__(self, *, fields_running=False, decks_running=False, styling_running=False, wait_result=True) -> None:
         from PyQt6.QtWidgets import QWidget
 
+        from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
+
         QWidget.__init__(self)
-        self._fetch_fields_worker = _FakeWorker(running=fields_running, wait_result=wait_result)
-        self._fetch_decks_worker = _FakeWorker(running=decks_running, wait_result=wait_result)
-        self._styling_worker = _FakeWorker(running=styling_running, wait_result=wait_result)
+        self._anki_probe = AnkiProbeController(
+            parent=self,
+            anki_panel=MagicMock(),
+            filtering_panel=MagicMock(),
+            get_config=MagicMock(),
+        )
+        self._anki_probe._fetch_fields_worker = _FakeWorker(running=fields_running, wait_result=wait_result)
+        self._anki_probe._fetch_decks_worker = _FakeWorker(running=decks_running, wait_result=wait_result)
+        self._anki_probe._styling_worker = _FakeWorker(running=styling_running, wait_result=wait_result)
 
 
 def _trigger_close(window) -> MagicMock:
@@ -257,7 +266,11 @@ class TestCloseEventSettingsTab:
 
         event = _trigger_close(main_window)
 
-        for worker in (tab._fetch_fields_worker, tab._fetch_decks_worker, tab._styling_worker):
+        for worker in (
+            tab._anki_probe._fetch_fields_worker,
+            tab._anki_probe._fetch_decks_worker,
+            tab._anki_probe._styling_worker,
+        ):
             assert worker.cancel_called
             assert worker.wait_called_with == 2000
         event.accept.assert_called_once()
@@ -268,7 +281,11 @@ class TestCloseEventSettingsTab:
 
         _trigger_close(main_window)
 
-        for worker in (tab._fetch_fields_worker, tab._fetch_decks_worker, tab._styling_worker):
+        for worker in (
+            tab._anki_probe._fetch_fields_worker,
+            tab._anki_probe._fetch_decks_worker,
+            tab._anki_probe._styling_worker,
+        ):
             assert not worker.cancel_called
 
     def test_settings_laggard_defers_close(self, main_window):
@@ -277,7 +294,7 @@ class TestCloseEventSettingsTab:
 
         event = _trigger_close(main_window)
 
-        assert tab._styling_worker.cancel_called
+        assert tab._anki_probe._styling_worker.cancel_called
         event.accept.assert_not_called()
         event.ignore.assert_called_once()
 
