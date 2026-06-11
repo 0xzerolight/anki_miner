@@ -190,8 +190,14 @@ class YouTubeQueueWorker(CancellableWorker):
             result: object = None
             for attempt in (0, 1):
                 attempts = attempt + 1
-                workspace = self._allocate_workspace()
+                # Allocate inside the try: an mkdir OSError (ENOSPC, perms)
+                # must be a per-item error caught below, not propagate out of
+                # run() and strand the whole queue with the item stuck in
+                # PROCESSING (no item_finished / queue_finished). The finally
+                # skips cleanup when allocation never produced a directory.
+                workspace: Path | None = None
                 try:
+                    workspace = self._allocate_workspace()
                     result = self._mine_one(idx, item, workspace)
                     last_error = None
                     break
@@ -207,7 +213,8 @@ class YouTubeQueueWorker(CancellableWorker):
                     last_error = f"{type(exc).__name__}: {exc}"
                     break
                 finally:
-                    shutil.rmtree(workspace, ignore_errors=True)
+                    if workspace is not None:
+                        shutil.rmtree(workspace, ignore_errors=True)
             if last_error is None:
                 self.item_finished.emit(idx, result, None, attempts)
             else:
