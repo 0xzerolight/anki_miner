@@ -2,6 +2,7 @@
 
 import logging
 import time
+from html import escape
 
 import requests
 
@@ -73,7 +74,13 @@ class JishoProvider:
             for i, sense in enumerate(first.get("senses", [])[:5], 1):
                 eng = sense.get("english_definitions", [])
                 if eng:
-                    definitions.append(f"{i}. {'; '.join(eng)}")
+                    # HTML-escape each API-sourced leaf string before it lands
+                    # in card HTML. AnkiService stores this raw and Anki's
+                    # QtWebEngine renders it at review time, so unescaped markup
+                    # from Jisho would be stored XSS (the offline path sanitizes
+                    # via yomitan_renderer; mirror that leaf-text escaping here).
+                    joined = "; ".join(escape(str(d)) for d in eng)
+                    definitions.append(f"{i}. {joined}")
 
             if not definitions:
                 return None

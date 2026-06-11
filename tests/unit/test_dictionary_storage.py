@@ -5,6 +5,8 @@ import sqlite3
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -199,6 +201,54 @@ class TestBulkInsertAndLookup:
             results = lookup(conn, "空")
             assert len(results) == 1
             assert results[0][1] == ""
+        finally:
+            conn.close()
+
+
+class TestOpenReadonly:
+    """open_readonly must build the sqlite ``file:`` URI safely (T-42)."""
+
+    def test_opens_dict_under_path_with_hash(self, tmp_path: Path):
+        """A dicts_root path containing ``#`` (URI fragment delimiter) must still
+        open read-only. A raw f-string ``file:{path}?mode=ro`` truncates at the
+        ``#`` and points sqlite at the wrong file."""
+        weird_dir = tmp_path / "dicts#frag"
+        weird_dir.mkdir()
+        db_path = weird_dir / "index.sqlite"
+        create_index(db_path)
+        bulk_insert(db_path, [DictRow(term="犬", reading="いぬ", content="<div>dog</div>", sequence=1)])
+
+        conn = open_readonly(db_path)
+        try:
+            assert lookup(conn, "犬") == [("<div>dog</div>", "")]
+        finally:
+            conn.close()
+
+    def test_opens_dict_under_path_with_uri_metachars(self, tmp_path: Path):
+        """``?`` and ``%`` are also URI-significant; a path carrying them must
+        open the intended database rather than misparse the query string."""
+        weird_dir = tmp_path / "d?q%2e"
+        weird_dir.mkdir()
+        db_path = weird_dir / "index.sqlite"
+        create_index(db_path)
+        bulk_insert(db_path, [DictRow(term="猫", reading="ねこ", content="<div>cat</div>", sequence=1)])
+
+        conn = open_readonly(db_path)
+        try:
+            assert lookup(conn, "猫") == [("<div>cat</div>", "")]
+        finally:
+            conn.close()
+
+    def test_connection_is_read_only(self, tmp_path: Path):
+        """The fix must preserve read-only mode: writes must be rejected even
+        for a path with no special characters."""
+        db_path = tmp_path / "ro.sqlite"
+        create_index(db_path)
+
+        conn = open_readonly(db_path)
+        try:
+            with pytest.raises(sqlite3.OperationalError):
+                conn.execute("INSERT INTO entries (term, content) VALUES ('x', 'y')")
         finally:
             conn.close()
 
