@@ -30,7 +30,7 @@ def pitch_home(tmp_path, monkeypatch):
     """Redirect ANKI_MINER_HOME to a tmp dir so the importer doesn't touch ~."""
     home = tmp_path / "anki_miner_home"
     home.mkdir()
-    monkeypatch.setattr("anki_miner.gui.widgets.settings_tab.ANKI_MINER_HOME", home)
+    monkeypatch.setattr("anki_miner.gui.controllers.zip_import_flow.ANKI_MINER_HOME", home)
     return home
 
 
