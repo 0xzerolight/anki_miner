@@ -173,12 +173,21 @@ class TestWorkerOutcomes:
         out = tab._resolve_pitch_accent_path()
 
         assert out == pitch_home / "pitch_accent.csv"
-        # Selector reflects CSV path → next save won't re-import.
+        # The import STAGES to a .pending sibling — the real CSV is untouched and
+        # the selector/dialog are deferred until both imports commit (T-10).
+        assert calls and calls[0] == (zip_path, pitch_home / "pitch_accent.csv.pending")
+        assert captured["information"] == []
+        assert (pitch_home / "pitch_accent.csv.pending").exists()
+        assert not (pitch_home / "pitch_accent.csv").exists()
+
+        # Promotion happens on commit: .pending -> final, selector + dialog.
+        tab._commit_pending_csv_imports()
+        assert (pitch_home / "pitch_accent.csv").exists()
+        assert not (pitch_home / "pitch_accent.csv.pending").exists()
         assert tab.dictionary_panel.pitch_accent_selector.get_path() == str(pitch_home / "pitch_accent.csv")
         assert len(captured["information"]) == 1
         assert "Kanjium" in captured["information"][0][1]
         assert "skipped 3" in captured["information"][0][1]
-        assert calls and calls[0] == (zip_path, pitch_home / "pitch_accent.csv")
 
     def test_failed_import_shows_warning_and_returns_none(self, tab, tmp_path, monkeypatch):
         captured = _capture_messagebox(monkeypatch)
@@ -222,6 +231,8 @@ class TestNoReimportOnSecondSave:
         tab.dictionary_panel.pitch_accent_selector.set_path(str(zip_path))
 
         tab._resolve_pitch_accent_path()
+        # Commit promotes the staged import and updates the selector to the CSV.
+        tab._commit_pending_csv_imports()
 
         # Second save: selector now points at CSV; passthrough branch taken.
         # Replace the stub with one that asserts it's not called.
@@ -234,3 +245,56 @@ class TestNoReimportOnSecondSave:
         )
         out = tab._resolve_pitch_accent_path()
         assert out == Path(str(pitch_home / "pitch_accent.csv"))
+
+
+class TestFrequencyFailureLeavesPitchUntouched:
+    """T-10: a failing frequency import after a successful pitch import must not
+    clobber the user's existing pitch_accent.csv — the save aborts and disk is
+    left exactly as it was."""
+
+    def test_freq_failure_does_not_overwrite_existing_pitch_csv(self, tab, tmp_path, pitch_home, monkeypatch):
+        captured = _capture_messagebox(monkeypatch)
+
+        # Seed an existing pitch_accent.csv whose bytes must survive the failed save.
+        original_pitch = "reading,kanji,pattern\nオリジナル,original,0\n"
+        existing_pitch = pitch_home / "pitch_accent.csv"
+        existing_pitch.write_text(original_pitch, encoding="utf-8")
+        # The save reads ANKI_MINER_HOME for the freq dest too; keep it under pitch_home.
+
+        # Pitch importer succeeds: writes its (pending) dest.
+        def fake_pitch(zip_path, dest_csv, *, progress=None, cancel_check=None):
+            dest_csv.write_text("reading,kanji,pattern\nニュー,new,0\n", encoding="utf-8")
+            return YomitanPitchImportResult(
+                source_name="NewPitch", source_revision="v1", entry_count=1, skipped_display_only=0
+            )
+
+        # Frequency importer FAILS — this must abort the save before any pitch promotion.
+        def fake_freq(zip_path, dest_csv, *, progress=None, cancel_check=None):
+            raise SetupError("freq zip is broken")
+
+        monkeypatch.setattr("anki_miner.gui.workers.pitch_import_worker.import_yomitan_pitch_zip", fake_pitch)
+        monkeypatch.setattr("anki_miner.gui.workers.frequency_import_worker.import_yomitan_freq_zip", fake_freq)
+
+        # Both selectors point at zips so both resolvers run their importers.
+        pitch_zip = tmp_path / "pitch.zip"
+        pitch_zip.write_bytes(b"")
+        freq_zip = tmp_path / "freq.zip"
+        freq_zip.write_bytes(b"")
+        # The overwrite guard would otherwise prompt for the existing pitch CSV;
+        # _capture_messagebox answers Yes by default so the import proceeds.
+        tab.config = replace(tab.config, pitch_accent_path=existing_pitch)
+        tab.dictionary_panel.pitch_accent_selector.set_path(str(pitch_zip))
+        tab.filtering_panel.frequency_selector.set_path(str(freq_zip))
+
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+
+        tab._on_save_clicked()
+
+        # Save aborted: no config emitted, freq failure surfaced.
+        assert received == [], "save must abort when the frequency import fails"
+        assert any("Frequency" in title for title, _ in captured["warning"])
+        # The existing pitch_accent.csv is byte-for-byte untouched.
+        assert existing_pitch.read_text(encoding="utf-8") == original_pitch
+        # No staging file is left behind.
+        assert not (pitch_home / "pitch_accent.csv.pending").exists()
