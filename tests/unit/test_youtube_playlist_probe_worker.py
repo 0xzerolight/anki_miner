@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtWidgets import QApplication
 
 from anki_miner.exceptions.youtube import VideoTooLongError, YouTubeFetchError
 from anki_miner.gui.workers.youtube_playlist_probe_worker import (
@@ -17,8 +17,13 @@ from anki_miner.gui.workers.youtube_playlist_probe_worker import (
 )
 from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, VideoInfo
 
-# Qt needs a core application for signals. Created once per process.
-_app = QCoreApplication.instance() or QCoreApplication([])
+# Must be QApplication, not QCoreApplication: the app object is a process-wide
+# singleton shared with widget tests. A bare QCoreApplication satisfies signals
+# here but poisons QApplication.instance() for any widget test that imports
+# later in the same process, aborting QWidget construction ("Cannot create a
+# QWidget without QApplication"). QApplication is a QCoreApplication, so signals
+# still work. Created once per process.
+_app = QApplication.instance() or QApplication([])
 
 
 # ---------------------------------------------------------------------------
