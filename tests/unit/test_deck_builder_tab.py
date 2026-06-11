@@ -285,6 +285,48 @@ def test_second_preview_cancels_lingering_worker(tab, tmp_path):
     assert tab.worker_thread is worker2
 
 
+def test_second_preview_joins_lingering_worker_before_replacing(tab, tmp_path):
+    """Regression (T-25c): the re-Preview branch joins the old thread (bounded).
+
+    Reassigning ``self.worker_thread`` right after ``cancel()`` drops the only
+    reference to a possibly still-running QThread — "QThread: Destroyed while
+    thread is still running". The branch must ``wait()`` (with a finite bound,
+    so a stuck worker cannot hang the GUI forever) before replacing it.
+    """
+    pairs = _make_pairs(tmp_path)
+    tab.deck_name_edit.setText("Deck")
+
+    worker1 = MagicMock(name="worker1")
+    worker2 = MagicMock(name="worker2")
+
+    with (
+        patch(
+            "anki_miner.gui.widgets.deck_builder_tab.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=pairs,
+        ),
+        patch(
+            "anki_miner.gui.widgets.deck_builder_tab.DeckBuilderWorker",
+            side_effect=[worker1, worker2],
+        ),
+    ):
+        tab.video_folder_selector.get_path = MagicMock(return_value=str(tmp_path))
+        tab.video_folder_selector.is_valid = MagicMock(return_value=True)
+        tab.subtitle_folder_selector.get_path = MagicMock(return_value=str(tmp_path))
+        tab.subtitle_folder_selector.is_valid = MagicMock(return_value=True)
+
+        tab._on_preview_clicked()
+        tab._on_preview_clicked()
+
+    worker1.wait.assert_called_once()
+    # Bounded join: a positive millisecond timeout, not an indefinite wait.
+    (timeout_ms,) = worker1.wait.call_args.args
+    assert timeout_ms > 0
+    # cancel() must precede wait() so the gate/processor are unblocked first.
+    names = [name for name, _args, _kwargs in worker1.method_calls]
+    assert names.index("cancel") < names.index("wait")
+    assert tab.worker_thread is worker2
+
+
 # ---------------------------------------------------------------------------
 # 5. _on_preview_clicked — validation failures (no worker started)
 # ---------------------------------------------------------------------------
