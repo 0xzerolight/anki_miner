@@ -173,6 +173,12 @@ def base_config(tmp_path):
         use_whitelist=False,
         use_known_words_db=False,
         include_known_words=False,
+        # Keep the build off the real ~/.anki_miner — in particular the known
+        # words DB, which would otherwise poison collection-filter tests.
+        dicts_root=tmp_path / "dicts",
+        known_words_db_path=tmp_path / "known_words.db",
+        history_db_path=tmp_path / "history.db",
+        stats_db_path=tmp_path / "stats.db",
     )
 
 
