@@ -6,12 +6,18 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel superseded CI runs on the same ref (a new push to a PR obsoletes the
+# prior run). Safe to cancel: CI has no irreversible side effects.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
@@ -21,8 +27,8 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
@@ -34,8 +40,8 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Qt system dependencies
@@ -43,15 +49,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libegl1 libpulse0 libxkbcommon0
       - run: pip install -e ".[dev]"
-      - run: pytest -m "not youtube" --cov=anki_miner --cov-report=term-missing
+      - run: pytest -m "not youtube"
         env:
           QT_QPA_PLATFORM: offscreen
 
   smoke-min-deps:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
       - name: Install Qt system dependencies
@@ -63,15 +69,15 @@ jobs:
           pip install -e ".[dev]"
           pip install $(python scripts/extract_floor_pins.py)
       - name: Smoke-test YouTube layer at floor versions
-        run: pytest tests/unit/test_youtube_*.py -m "not youtube" --no-cov -q
+        run: pytest tests/unit/test_youtube_*.py -m "not youtube" -q
         env:
           QT_QPA_PLATFORM: offscreen
 
   wheel-assets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
       - run: pip install --upgrade build

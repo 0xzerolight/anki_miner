@@ -5,24 +5,75 @@ on:
     tags:
       - "v*"
 
+# Serialize per ref so a tag delete/re-push can't race two publish runs onto
+# the same PyPI upload. Never cancel an in-flight publish (irreversible upload).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  # A v* tag does not trigger ci.yml (push/PR-to-main only), so neither publish
+  # nor release is otherwise CI-validated. Require a green CI run on the exact
+  # tagged commit before touching PyPI (publish is irreversible). Mirrored in
+  # release.yml.
+  ci-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Require green CI on the tagged commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Find completed ci.yml runs for this exact SHA and require one that
+          # concluded "success". The tag must point at a merged commit whose CI
+          # already ran on main; otherwise fail closed.
+          RUNS=$(gh api --paginate \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=completed" \
+            --jq '[.workflow_runs[].conclusion]')
+          echo "CI conclusions for ${GITHUB_SHA}: ${RUNS}"
+          if echo "$RUNS" | grep -q '"success"'; then
+            echo "Green CI run found for tagged commit."
+          else
+            echo "::error::No successful ci.yml run for ${GITHUB_SHA}. Tag a commit whose CI passed on main."
+            exit 1
+          fi
+
   build:
+    needs: ci-gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
 
       - name: Install build tools
         run: pip install build
 
+      - name: Validate tag matches package version
+        shell: bash
+        run: |
+          TAG_VERSION=${GITHUB_REF_NAME#v}
+          # Single source of truth: anki_miner/__init__.py (Issue #10). Parse the
+          # literal directly so this step doesn't depend on the package being
+          # installed. Mirrors release.yml's gate so a mis-tag can't republish a
+          # stale __init__.py version (was masked by skip-existing).
+          CODE_VERSION=$(python -c "import re; print(re.search(r'__version__\s*=\s*[\"\x27]([^\"\x27]+)[\"\x27]', open('anki_miner/__init__.py').read()).group(1))")
+          echo "Tag version: $TAG_VERSION"
+          echo "Code version: $CODE_VERSION"
+          if [ "$TAG_VERSION" != "$CODE_VERSION" ]; then
+            echo "::error::Version mismatch: git tag v$TAG_VERSION != anki_miner/__init__.py $CODE_VERSION"
+            exit 1
+          fi
+
       - name: Build package
         run: python -m build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dist
           path: dist/
@@ -35,12 +86,10 @@ jobs:
       id-token: write
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: dist
           path: dist/
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          skip-existing: true
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
