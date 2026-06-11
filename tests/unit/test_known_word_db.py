@@ -1,5 +1,9 @@
 """Tests for KnownWordDB service."""
 
+import os
+import sqlite3
+import stat
+
 import pytest
 
 from anki_miner.services.known_word_db import KnownWordDB
@@ -398,3 +402,101 @@ class TestExclusiveLock:
         finally:
             holder.rollback()
             holder.close()
+
+
+class TestCorruptDatabaseFile:
+    """A corrupt ``known_words.db`` (truncated download, disk fault, foreign
+    file) must surface a hard SQLite error rather than silently returning an
+    empty set — that would make every word look unknown and re-mine the whole
+    collection. These pin the raise so any future "heal a corrupt DB" handling
+    is a conscious change.
+
+    Note ``is_available`` only checks existence + readability, so it reports
+    True for a corrupt file; the failure manifests on first query/write.
+    """
+
+    @staticmethod
+    def _corrupt(db_path):
+        db_path.write_bytes(b"this is not a sqlite database " * 8)
+
+    def test_is_available_true_even_when_corrupt(self, tmp_path):
+        """is_available is a cheap existence probe, NOT an integrity check."""
+        db_path = tmp_path / "known_words.db"
+        self._corrupt(db_path)
+        db = KnownWordDB(db_path)
+        assert db.is_available() is True
+
+    def test_initialize_on_corrupt_raises_database_error(self, tmp_path):
+        db_path = tmp_path / "known_words.db"
+        self._corrupt(db_path)
+        db = KnownWordDB(db_path)
+        with pytest.raises(sqlite3.DatabaseError):
+            db.initialize()
+
+    def test_get_known_words_on_corrupt_raises_database_error(self, tmp_path):
+        db_path = tmp_path / "known_words.db"
+        self._corrupt(db_path)
+        db = KnownWordDB(db_path)
+        with pytest.raises(sqlite3.DatabaseError):
+            db.get_known_words()
+
+    def test_word_count_on_corrupt_raises_database_error(self, tmp_path):
+        db_path = tmp_path / "known_words.db"
+        self._corrupt(db_path)
+        db = KnownWordDB(db_path)
+        with pytest.raises(sqlite3.DatabaseError):
+            db.word_count()
+
+    def test_add_words_on_corrupt_raises_database_error(self, tmp_path):
+        db_path = tmp_path / "known_words.db"
+        self._corrupt(db_path)
+        db = KnownWordDB(db_path)
+        with pytest.raises(sqlite3.DatabaseError):
+            db.add_words({"食べる"})
+
+    def test_get_words_by_source_on_corrupt_raises_database_error(self, tmp_path):
+        db_path = tmp_path / "known_words.db"
+        self._corrupt(db_path)
+        db = KnownWordDB(db_path)
+        with pytest.raises(sqlite3.DatabaseError):
+            db.get_words_by_source("user")
+
+
+@pytest.mark.skipif(
+    os.geteuid() == 0,
+    reason="root bypasses filesystem write permissions",
+)
+class TestUnwritableParent:
+    """``initialize`` must not silently swallow a filesystem permission failure.
+
+    A read-only ANKI_MINER_HOME (locked-down profile, mounted read-only) means
+    the cache can never be created; the OSError must propagate so the caller can
+    surface it rather than carry on with a phantom empty DB.
+    """
+
+    def test_initialize_creating_subdir_under_readonly_parent_raises(self, tmp_path):
+        """``mkdir(parents=True)`` of a missing subdir under a read-only parent."""
+        ro = tmp_path / "readonly"
+        ro.mkdir()
+        os.chmod(ro, stat.S_IRUSR | stat.S_IXUSR)  # r-x, no write
+        target = ro / "sub" / "known_words.db"
+        db = KnownWordDB(target)
+        try:
+            with pytest.raises(PermissionError):
+                db.initialize()
+        finally:
+            os.chmod(ro, stat.S_IRWXU)  # restore so tmp_path cleanup works
+
+    def test_initialize_connect_under_readonly_existing_parent_raises(self, tmp_path):
+        """Parent exists but is read-only: ``mkdir(exist_ok=True)`` no-ops and the
+        sqlite connect fails with ``unable to open database file``."""
+        ro = tmp_path / "readonly"
+        ro.mkdir()
+        os.chmod(ro, stat.S_IRUSR | stat.S_IXUSR)
+        target = ro / "known_words.db"
+        db = KnownWordDB(target)
+        try:
+            with pytest.raises(sqlite3.OperationalError, match="unable to open database file"):
+                db.initialize()
+        finally:
+            os.chmod(ro, stat.S_IRWXU)
