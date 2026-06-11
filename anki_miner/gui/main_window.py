@@ -105,13 +105,12 @@ class MainWindow(QMainWindow):
         # Create presenter for validation signals
         self.presenter = GUIPresenter(self)
 
-        # Create validation service
-        self.validation_service = ValidationService(self.config)
+        # Config-bound services (validation + the AnkiService shared across undo
+        # callbacks). Rebuilt on every config change via update_config — see
+        # _build_config_bound_services — so an AnkiConnect URL/port edit reaches
+        # the next Undo delete instead of the stale startup endpoint.
         self.validation_worker = None
-
-        # AnkiService instance shared across undo callbacks (avoids constructing
-        # a fresh instance per result — reuses the same config-bound service).
-        self._anki_service = AnkiService(self.config)
+        self._build_config_bound_services()
         self._validation_silent = False
 
         # Connect presenter signals
@@ -542,8 +541,26 @@ class MainWindow(QMainWindow):
         """
         self.config = config
         GUIConfigManager.save_config(config)
+        # Rebuild config-bound services so AnkiConnect URL/port edits take
+        # effect: validation and the undo-delete AnkiService were frozen to the
+        # startup config and would otherwise keep hitting the old endpoint.
+        self._build_config_bound_services()
         if not from_settings:
             self.config_refreshed.emit(config)
+
+    def _build_config_bound_services(self) -> None:
+        """(Re)create services bound to the current ``self.config``.
+
+        Called once from ``__init__`` and again from every ``update_config``.
+        ``_anki_service`` is the single instance the undo-delete callback in
+        ``_on_processing_result`` reuses; ``validation_service`` backs the
+        validation worker. Both must reflect the live config so an AnkiConnect
+        URL change reaches Undo. The callback dereferences ``self._anki_service``
+        lazily, so replacing the attribute here suffices — no stale closure
+        captures the old service.
+        """
+        self.validation_service = ValidationService(self.config)
+        self._anki_service = AnkiService(self.config)
 
     def release_dictionary_resources(self) -> bool:
         """Ask every tab to release cached dictionary handles.
