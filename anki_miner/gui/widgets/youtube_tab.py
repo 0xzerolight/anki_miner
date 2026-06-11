@@ -29,10 +29,12 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -79,6 +81,32 @@ logger = logging.getLogger(__name__)
 # fetcher's cancel watchdog poll plus the psutil kill grace. Converts a
 # worst-case hang into a bounded delay with a leaked-thread warning.
 _SHUTDOWN_WAIT_MS = 30_000
+
+# Bare 11-char YouTube video id (same alphabet as the fetcher's _VIDEO_ID_RE).
+_BARE_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
+
+def _is_acceptable_add_input(url: str) -> bool:
+    """Reject inputs that would reach yt-dlp as an *option*, not a URL (T-34).
+
+    The fetcher already inserts a ``--`` end-of-options separator, but this
+    is belt-and-braces: a ``-``/``--``-leading token (``--update-to=…`` etc.)
+    is never a real video reference, so refuse it before it is queued.
+
+    Accept when the input is an explicit ``http(s)`` URL (yt-dlp stays the
+    final validator for non-YouTube-shaped URLs), a YouTube-classified URL,
+    or a bare 11-char video id. Everything else — option-leading tokens,
+    other schemes, junk — is rejected.
+    """
+    candidate = url.strip()
+    if not candidate:
+        return False
+    scheme = urlparse(candidate).scheme.lower()
+    if scheme in ("http", "https"):
+        return True
+    if _BARE_VIDEO_ID_RE.match(candidate):
+        return True
+    return classify_youtube_url(candidate).kind != "unknown"
 
 
 def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bool, str | None, SubMode | None]:
@@ -319,6 +347,12 @@ class YouTubeTab(MiningTabBase):
             return  # Defensive: returnPressed fires even when the button is disabled.
         url = self.url_edit.text().strip()
         if not url:
+            return
+
+        # Reject option-leading / non-URL inputs before they reach yt-dlp as
+        # an argument. Leave the field populated so the user can fix it. T-34.
+        if not _is_acceptable_add_input(url):
+            self.log_widget.append_error("Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.")
             return
 
         url_info = classify_youtube_url(url)
