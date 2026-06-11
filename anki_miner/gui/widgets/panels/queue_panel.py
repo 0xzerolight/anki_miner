@@ -268,14 +268,19 @@ class QueuePanel(QFrame):
     def get_valid_pairs(self) -> list:
         """Get all valid folder pairs for processing.
 
+        The source widget is included so the caller can stamp the created
+        QueueItem.id back onto it (``widget.item_id``), keeping panel rows and
+        worker items addressable by the same id (T-30).
+
         Returns:
-            List of tuples: (anime_folder, subtitle_folder, display_name, subtitle_offset)
+            List of tuples:
+            (anime_folder, subtitle_folder, display_name, subtitle_offset, widget)
         """
         valid_pairs = []
         for widget in self.queue_item_widgets:
             anime, subtitle = widget.get_folders()
             if anime and subtitle and anime.exists() and subtitle.exists():
-                valid_pairs.append((anime, subtitle, widget.display_name, widget.subtitle_offset))
+                valid_pairs.append((anime, subtitle, widget.display_name, widget.subtitle_offset, widget))
         return valid_pairs
 
     def get_incomplete_items(self) -> list:
@@ -304,26 +309,34 @@ class QueuePanel(QFrame):
         """
         return len(self.queue_item_widgets) == 0
 
-    def set_item_status(self, display_name: str, status: str) -> None:
-        """Set status for an item by display name.
+    def set_item_status(self, item_id: str, status: str) -> None:
+        """Set status for an item by its stable id.
+
+        Keyed by ``item_id`` (not display name): two rows can share a series
+        name, and the worker addresses a specific QueueItem by id (T-30).
 
         Args:
-            display_name: Item display name
+            item_id: Item id (QueueItem.id stamped onto the widget)
             status: New status ('pending', 'processing', 'complete', 'error')
         """
         for widget in self.queue_item_widgets:
-            if widget.display_name == display_name:
+            if widget.item_id == item_id:
                 widget.set_status(status)
                 break
 
-    def set_processing_item_complete(self, cards_created: int) -> None:
-        """Mark the currently processing item as complete.
+    def set_processing_item_complete(self, item_id: str, cards_created: int) -> None:
+        """Mark a specific item complete and record its card count.
+
+        Keyed by ``item_id`` rather than "first row that is processing": with
+        duplicate series names, multiple rows are processing at once and the
+        first-match heuristic landed counts on the wrong row (T-30).
 
         Args:
+            item_id: Item id (QueueItem.id stamped onto the widget)
             cards_created: Number of cards created
         """
         for widget in self.queue_item_widgets:
-            if widget.get_status() == "processing":
+            if widget.item_id == item_id:
                 widget.set_status("complete")
                 widget.set_cards_created(cards_created)
                 break
