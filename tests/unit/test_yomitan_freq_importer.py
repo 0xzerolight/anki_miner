@@ -334,7 +334,7 @@ class TestOutputFormat:
 
     def test_no_tmp_left_when_writing_rows_fails(self, tmp_path: Path, monkeypatch) -> None:
         """A failure DURING row writing must not orphan the .tmp file (T-40)."""
-        import anki_miner.services.frequency.yomitan_freq_importer as mod
+        import anki_miner.services.yomitan_meta_bank as mod
 
         dest = tmp_path / "frequency.csv"
         zip_path = build_yomitan_freq_zip(
