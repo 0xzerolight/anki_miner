@@ -39,6 +39,13 @@ from anki_miner.services.anki_service import AnkiService
 
 logger = logging.getLogger(__name__)
 
+# Shutdown join policy knobs (see MainWindow._join_worker_for_close):
+# grace period each cancellable worker gets to exit during closeEvent before
+# the close is deferred, and the poll cadence while a deferred close waits
+# for laggard threads to finish.
+_CLOSE_JOIN_GRACE_MS = 2000
+_CLOSE_POLL_INTERVAL_MS = 200
+
 
 def _needs_jmdict_migration(xml_path: Path, dicts_root: Path, chain: tuple | None = None) -> bool:
     """Return True iff we should auto-trigger the JMdict → SQLite migration.
@@ -77,11 +84,13 @@ class MainWindow(QMainWindow):
     - Settings (configuration)
 
     Signals:
-        config_refreshed: emitted when a non-Settings code path mutates
-            self.config (e.g. background JMdict migration finishes). Tabs
-            that cache services should reconnect this to their update_config
-            so they pick up the new state without waiting for the user to
-            edit Settings.
+        config_refreshed: emitted whenever a non-Settings code path updates
+            self.config — every ``update_config`` call except the Settings
+            save path (which passes ``from_settings=True``), plus the
+            background JMdict migration finishing. Tabs that cache services
+            (and SettingsTab, so its panels don't go stale) reconnect this to
+            their update_config to pick up the new state without waiting for
+            the user to edit Settings.
     """
 
     config_refreshed = pyqtSignal(object)  # AnkiMinerConfig
@@ -96,13 +105,12 @@ class MainWindow(QMainWindow):
         # Create presenter for validation signals
         self.presenter = GUIPresenter(self)
 
-        # Create validation service
-        self.validation_service = ValidationService(self.config)
+        # Config-bound services (validation + the AnkiService shared across undo
+        # callbacks). Rebuilt on every config change via update_config — see
+        # _build_config_bound_services — so an AnkiConnect URL/port edit reaches
+        # the next Undo delete instead of the stale startup endpoint.
         self.validation_worker = None
-
-        # AnkiService instance shared across undo callbacks (avoids constructing
-        # a fresh instance per result — reuses the same config-bound service).
-        self._anki_service = AnkiService(self.config)
+        self._build_config_bound_services()
         self._validation_silent = False
 
         # Connect presenter signals
@@ -137,6 +145,11 @@ class MainWindow(QMainWindow):
         # the first paint. Held here so the QThread isn't GC'd mid-run and so
         # ``closeEvent`` can wait for it; cleared once it finishes.
         self._prewarm_worker = None
+
+        # Deferred-close state: poll timer + workers that outlived the grace
+        # join in closeEvent (see _join_worker_for_close for the policy).
+        self._close_poll_timer: QTimer | None = None
+        self._close_laggards: list = []
 
         # Post-update confirmation: if last_known_version differs from the
         # currently running __version__, show a one-shot info dialog. Save the
@@ -511,14 +524,43 @@ class MainWindow(QMainWindow):
         """
         return self.config
 
-    def update_config(self, config: AnkiMinerConfig) -> None:
-        """Update configuration and save to disk.
+    def update_config(self, config: AnkiMinerConfig, *, from_settings: bool = False) -> None:
+        """Update configuration, save to disk, and propagate to tabs.
 
         Args:
-            config: New configuration
+            config: New configuration.
+            from_settings: True when the call originates from the Settings
+                save path (``SettingsTab.config_changed`` → here, see app.py).
+                In that case SettingsTab and the mining tabs have ALREADY
+                received the new config directly via ``config_changed``, so we
+                must NOT re-emit ``config_refreshed`` — doing so would re-enter
+                ``SettingsTab.update_config`` and reload every panel mid-save.
+                Every internal mutation (theme cycle, skip-update, first-run
+                flag, post-update version write) leaves it False so SettingsTab
+                refreshes and the next Save can't resurrect the stale value.
         """
         self.config = config
         GUIConfigManager.save_config(config)
+        # Rebuild config-bound services so AnkiConnect URL/port edits take
+        # effect: validation and the undo-delete AnkiService were frozen to the
+        # startup config and would otherwise keep hitting the old endpoint.
+        self._build_config_bound_services()
+        if not from_settings:
+            self.config_refreshed.emit(config)
+
+    def _build_config_bound_services(self) -> None:
+        """(Re)create services bound to the current ``self.config``.
+
+        Called once from ``__init__`` and again from every ``update_config``.
+        ``_anki_service`` is the single instance the undo-delete callback in
+        ``_on_processing_result`` reuses; ``validation_service`` backs the
+        validation worker. Both must reflect the live config so an AnkiConnect
+        URL change reaches Undo. The callback dereferences ``self._anki_service``
+        lazily, so replacing the attribute here suffices — no stale closure
+        captures the old service.
+        """
+        self.validation_service = ValidationService(self.config)
+        self._anki_service = AnkiService(self.config)
 
     def release_dictionary_resources(self) -> bool:
         """Ask every tab to release cached dictionary handles.
@@ -538,30 +580,31 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         """Handle window close event.
 
+        Joins every owned worker thread via the single shutdown join policy
+        in :meth:`_join_worker_for_close`; workers that outlive the grace
+        join defer the close (see :meth:`_defer_close`) instead of being
+        abandoned to Qt teardown.
+
         Args:
             event: Close event
         """
-        # Cancel and wait for validation worker if running
-        if self.validation_worker and self.validation_worker.isRunning():
-            self.validation_worker.cancel()
-            self.validation_worker.wait(2000)
+        laggards: list = []
 
-        # Cancel and wait for update worker if running
-        if self.update_worker and self.update_worker.isRunning():
-            self.update_worker.cancel()
-            self.update_worker.wait(2000)
+        def join(worker, *, timeout_ms: int | None = _CLOSE_JOIN_GRACE_MS) -> None:
+            if not self._join_worker_for_close(worker, timeout_ms=timeout_ms):
+                laggards.append(worker)
 
-        # Cancel and wait for JMdict migration worker if running
-        if self._jmdict_migration_worker and self._jmdict_migration_worker.isRunning():
-            self._jmdict_migration_worker.cancel()
-            self._jmdict_migration_worker.wait(2000)
+        # Window-owned workers: validation, update check, JMdict migration.
+        join(self.validation_worker)
+        join(self.update_worker)
+        join(self._jmdict_migration_worker)
 
-        # Wait for the best-effort prewarm worker if still running. It has no
-        # cancel hook (it's a short, uninterruptible cache warm) so we join it
-        # without timeout — a bounded wait(2000) could expire on a slow
-        # dicts_root and let Qt destroy a still-running QThread (crash on exit).
-        if self._prewarm_worker is not None and self._prewarm_worker.isRunning():
-            self._prewarm_worker.wait()
+        # The best-effort prewarm worker has no cancel hook (it's a short,
+        # uninterruptible cache warm), so join it without timeout instead of
+        # routing it through the deferred close: even on a slow dicts_root it
+        # exits on its own in bounded time, and a bounded wait(2000) that
+        # expired would only delay shutdown behind the poll timer for it.
+        join(self._prewarm_worker, timeout_ms=None)
 
         # Cancel and wait for any processing workers in tabs
         from anki_miner.gui.widgets.youtube_tab import YouTubeTab
@@ -571,18 +614,89 @@ class MainWindow(QMainWindow):
             # All mining tabs expose their worker on `worker_thread`.
             # DeckBuilderWorker.cancel() also opens its confirm gate, so a worker
             # blocked awaiting Build unblocks and exits.
-            worker = getattr(tab, "worker_thread", None)
-            if worker and worker.isRunning():
-                worker.cancel()
-                worker.wait(2000)
+            join(getattr(tab, "worker_thread", None))
             # YouTube tab owns an additional probe worker; shutdown() tears
             # both threads down cleanly.
             if isinstance(tab, YouTubeTab) and hasattr(tab, "shutdown"):
                 tab.shutdown()
 
+        if laggards:
+            self._defer_close(event, laggards)
+            return
+
         # Save configuration before closing
         GUIConfigManager.save_config(self.config)
         event.accept()
+
+    def _join_worker_for_close(self, worker, *, timeout_ms: int | None = _CLOSE_JOIN_GRACE_MS) -> bool:
+        """Single shutdown join policy for all owned worker threads.
+
+        (T-70 will lift this into a window controller; until then this helper
+        is the one place the policy lives — closeEvent only orchestrates.)
+
+        Cancel the worker when it supports ``cancel()``, then join it:
+
+        * ``timeout_ms=None`` — unbounded blocking join, reserved for short
+          workers with no cancel hook (the cache prewarm).
+        * otherwise — bounded grace join. Returns False when the worker
+          outlives it; the caller must then defer the close rather than let
+          Qt destroy a running QThread (window-parented workers die with the
+          window, unparented tab workers get GC'd — either way Qt6 aborts
+          with "QThread: Destroyed while thread is still running" and
+          in-flight ffmpeg children are orphaned). Post-cancel runtime today
+          is dominated by ffmpeg joins and HTTP timeouts (10-60 s); once
+          media-kill (T-33, media_extractor) lands, ``cancel()`` also kills
+          ffmpeg and laggards become rare with no changes here.
+
+        Returns True when the worker has exited (or was None / not running).
+        """
+        if worker is None or not worker.isRunning():
+            return True
+        cancel = getattr(worker, "cancel", None)
+        if callable(cancel):
+            cancel()
+        if timeout_ms is None:
+            worker.wait()
+            return True
+        return bool(worker.wait(timeout_ms))
+
+    def _defer_close(self, event, laggards: list) -> None:
+        """Deferred arm of the shutdown join policy.
+
+        Hides the window (so closing feels instant to the user), refuses the
+        close event (so Qt keeps the window — and the running QThreads it
+        owns — alive), and polls until every laggard has exited. A worker
+        that never exits keeps the hidden process alive by design: a
+        discoverable lingering process beats an abort mid-shutdown.
+        """
+        logger.warning(
+            "Deferring close: %d worker thread(s) still running after %d ms grace",
+            len(laggards),
+            _CLOSE_JOIN_GRACE_MS,
+        )
+        self._close_laggards = laggards
+        if self._close_poll_timer is None:
+            self._close_poll_timer = QTimer(self)
+            self._close_poll_timer.setInterval(_CLOSE_POLL_INTERVAL_MS)
+            self._close_poll_timer.timeout.connect(self._poll_deferred_close)
+        self._close_poll_timer.start()
+        self.hide()
+        event.ignore()
+
+    def _poll_deferred_close(self) -> None:
+        """Finish a deferred close once every laggard worker has exited.
+
+        Quits the application explicitly instead of re-entering ``close()``:
+        closing an already-hidden window does not reliably emit
+        ``lastWindowClosed``, which would leave the event loop running with
+        no windows.
+        """
+        if any(w.isRunning() for w in self._close_laggards):
+            return
+        if self._close_poll_timer is not None:
+            self._close_poll_timer.stop()
+        GUIConfigManager.save_config(self.config)
+        QApplication.quit()
 
     def _on_system_status_clicked(self) -> None:
         """Handle system status indicator click."""
