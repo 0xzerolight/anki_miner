@@ -516,8 +516,21 @@ class SubtitleParserService:
             SubtitleParseError: If subtitle file cannot be parsed
         """
         counts: collections.Counter[str] = collections.Counter()
-        for _text, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
+        for text, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
+            # Resolve each token's span via str.find from a running cursor —
+            # IDENTICAL to the mining loops in parse_subtitle_file* (Issue #20).
+            # A merged compound whose components were whitespace-separated in
+            # the source concatenates to a space-free surface that is NOT
+            # find-able in ``text``; mining drops it (find == -1), so counting
+            # must drop it too or the count-vs-mine sets diverge and the Deck
+            # Builder preview over-promises (T-38). Keep these paths symmetric.
+            cursor = 0
             for token in merged_tokens:
+                surface = token.surface
+                idx = text.find(surface, cursor)
+                if idx == -1:
+                    continue
+                cursor = idx + len(surface)
                 if self._should_include_word(token):
                     counts[self._extract_lemma(token)] += 1
         return counts
