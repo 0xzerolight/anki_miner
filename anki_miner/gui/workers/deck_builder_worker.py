@@ -193,24 +193,25 @@ class DeckBuilderWorker(CancellableWorker):
                 if self.check_cancelled():
                     break
                 callback = self._make_curation_callback(selected, carded)
-                # Empty-curation pitfall: process_episode treats a curation_callback
-                # that returns [] as a cancellation and returns a cancelled-empty
-                # ProcessingResult (cards_created=0) — see episode_processor.py:
+                # Empty-curation behavior: our callback only ever returns a list
+                # (never None), so process_episode treats an empty [] as an
+                # intentional "card nothing this episode" — a COMPLETED zero-card
+                # result, NOT a cancellation. See episode_processor.py:
                 #
-                #     if curation_callback is not None and not preview_mode:
-                #         unknown_words = curation_callback(unknown_words)
-                #         ctx.new_words_found = len(unknown_words)
-                #         if not unknown_words:
-                #             return self._cancelled_result_from_ctx(ctx)
+                #     curated = curation_callback(unknown_words)
+                #     if curated is None:          # only None == cancel
+                #         return self._cancelled_result_from_ctx(ctx)
+                #     unknown_words = curated
+                #     if not unknown_words:        # [] == completed, zero cards
+                #         return ctx.build_result(new_words_found=0)
                 #
-                # That early-return is LOCAL to this single process_episode call and
-                # does NOT cancel the worker. We only read ``result.cards_created``
-                # (0 for such an episode), so an episode with no newly-selected
-                # lemmas simply contributes zero cards and the loop continues. We
-                # deliberately let the callback return the (possibly empty) filtered
-                # list rather than pre-skipping the episode: pre-skipping would
-                # require re-deriving each episode's mineable lemma set here, and a
-                # zero-card result is already the correct, harmless outcome.
+                # We only read ``result.cards_created`` (0 for such an episode),
+                # so an episode with no newly-selected lemmas simply contributes
+                # zero cards and the loop continues. We deliberately let the
+                # callback return the (possibly empty) filtered list rather than
+                # pre-skipping the episode: pre-skipping would require re-deriving
+                # each episode's mineable lemma set here, and a zero-card result
+                # is already the correct, harmless outcome.
                 result = proc.process_episode(
                     pair.video,
                     pair.subtitle,
