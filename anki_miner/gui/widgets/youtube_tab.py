@@ -29,10 +29,12 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -74,6 +76,37 @@ from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url
 
 logger = logging.getLogger(__name__)
+
+# Upper bound for joining the queue worker at shutdown. Generous: covers the
+# fetcher's cancel watchdog poll plus the psutil kill grace. Converts a
+# worst-case hang into a bounded delay with a leaked-thread warning.
+_SHUTDOWN_WAIT_MS = 30_000
+
+# Bare 11-char YouTube video id (same alphabet as the fetcher's _VIDEO_ID_RE).
+_BARE_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
+
+def _is_acceptable_add_input(url: str) -> bool:
+    """Reject inputs that would reach yt-dlp as an *option*, not a URL (T-34).
+
+    The fetcher already inserts a ``--`` end-of-options separator, but this
+    is belt-and-braces: a ``-``/``--``-leading token (``--update-to=…`` etc.)
+    is never a real video reference, so refuse it before it is queued.
+
+    Accept when the input is an explicit ``http(s)`` URL (yt-dlp stays the
+    final validator for non-YouTube-shaped URLs), a YouTube-classified URL,
+    or a bare 11-char video id. Everything else — option-leading tokens,
+    other schemes, junk — is rejected.
+    """
+    candidate = url.strip()
+    if not candidate:
+        return False
+    scheme = urlparse(candidate).scheme.lower()
+    if scheme in ("http", "https"):
+        return True
+    if _BARE_VIDEO_ID_RE.match(candidate):
+        return True
+    return classify_youtube_url(candidate).kind != "unknown"
 
 
 def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bool, str | None, SubMode | None]:
@@ -314,6 +347,12 @@ class YouTubeTab(MiningTabBase):
             return  # Defensive: returnPressed fires even when the button is disabled.
         url = self.url_edit.text().strip()
         if not url:
+            return
+
+        # Reject option-leading / non-URL inputs before they reach yt-dlp as
+        # an argument. Leave the field populated so the user can fix it. T-34.
+        if not _is_acceptable_add_input(url):
+            self.log_widget.append_error("Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.")
             return
 
         url_info = classify_youtube_url(url)
@@ -783,6 +822,11 @@ class YouTubeTab(MiningTabBase):
                 # embedded widget (deleted alongside the list item).
                 self.list_widget.takeItem(row)
         self._row_widgets.pop(item, None)
+        # Mid-run removal must also reach the worker: it iterates its own
+        # constructor snapshot, so editing the GUI queue alone would still
+        # fetch + mine the removed item (cards for rows that no longer exist).
+        if self.worker_thread is not None:
+            self.worker_thread.skip_item(item)
 
     # ------------------------------------------------------------------
     # Button recomputation
@@ -919,10 +963,15 @@ class YouTubeTab(MiningTabBase):
         worker_busy = self.worker_thread is not None and self.worker_thread.isRunning()
         if not worker_busy and self._presenter is not None:
             old_processor = self._processor
+            # Thread the tab's own stats service through, not
+            # ``getattr(self._processor, …)``: a config change before the first
+            # run (processor still startup-deferred / None) would otherwise pass
+            # None and silently disable stats.db for the session (T-15). Mirrors
+            # the lazy rebuild in _start_run.
             self._processor = create_episode_processor(
                 config,
                 self._presenter,
-                stats_service=getattr(self._processor, "stats_service", None),
+                stats_service=self._stats_service,  # type: ignore[arg-type]
             )
             # Close the old chain explicitly — replacing the ref is not enough
             # on Windows where sqlite handles keep the index.sqlite file locked
@@ -957,13 +1006,22 @@ class YouTubeTab(MiningTabBase):
         """
         if self.worker_thread is not None:
             # Release any open curation dialog first so a worker blocked in
-            # _curation_event.wait() resumes; otherwise the unbounded wait()
-            # below hangs the GUI forever on app close (Issue #65). cancel()
-            # alone only sets _cancel_event, not _curation_event.
+            # _curation_event.wait() resumes (Issue #65). cancel() alone only
+            # sets _cancel_event, not _curation_event.
             self._cancel_active_curation_dialog()
             self.worker_thread.cancel()
+            # The dialog release above only helps once the dialog exists. If
+            # the worker emitted _curation_requested but the queued slot has
+            # not run yet, blocking in wait() below would deadlock: this GUI
+            # thread is the only one that could run the slot. Poison the gate
+            # so a parked (or about-to-park) worker falls through.
+            self._poison_curation_gate()
             self.worker_thread.quit()
-            self.worker_thread.wait()
+            if not self.worker_thread.wait(_SHUTDOWN_WAIT_MS):
+                logger.warning(
+                    "YouTube queue worker did not stop within %sms at shutdown; leaking thread",
+                    _SHUTDOWN_WAIT_MS,
+                )
             self.worker_thread = None
 
         for probe in list(self._probe_workers):

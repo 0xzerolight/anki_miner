@@ -283,6 +283,97 @@ def test_cancel_during_item_returns_without_emitting_finished(make_worker, mock_
 
 
 # ---------------------------------------------------------------------------
+# Cancel mid-mine (T-01): processor returns a cancelled result, no exception
+# ---------------------------------------------------------------------------
+
+
+def test_cancel_mid_item_skips_remaining_items_queue_finished_fires(make_worker, mock_processor):
+    """Stop All during item 1's mining run stops the queue before item 2.
+
+    With cancel bridged into the pipeline (T-01), process_youtube_url returns a
+    cancelled ProcessingResult instead of mining to completion; the worker's
+    loop-top check must then skip every remaining item while still emitting
+    queue_finished (cancel-between-items contract, unlike the mid-fetch
+    exception path which returns early).
+    """
+    items = [_make_item(video_id="a"), _make_item(video_id="b"), _make_item(video_id="c")]
+
+    def _cancel_mid_mine(**kw):
+        kw["cancel_event"].set()  # user pressed Stop All mid-pipeline
+        return "R_CANCELLED"  # processor returns a cancelled result, no raise
+
+    mock_processor.process_youtube_url.side_effect = _cancel_mid_mine
+
+    worker = make_worker(items=items)
+    caps = _connect_all(worker)
+    worker.run()
+
+    # Items 2 and 3 never started.
+    assert mock_processor.process_youtube_url.call_count == 1
+    assert caps["started"].calls == [(0,)]
+    assert caps["finished"].calls == [(0, "R_CANCELLED", None, 1)]
+    # queue_finished still fires: the loop-top break exits the loop normally.
+    assert len(caps["queue_finished"].calls) == 1
+
+
+# ---------------------------------------------------------------------------
+# Skip channel (T-23): GUI-removed items must not be mined
+# ---------------------------------------------------------------------------
+
+
+def test_skip_item_drops_queued_items_mid_run(make_worker, mock_processor):
+    """Clear during a run must stop the worker from mining removed items.
+
+    The worker iterates its constructor snapshot; items the GUI dropped used
+    to be fetched and mined anyway — cards appeared for rows that no longer
+    existed and the end-of-run summary undercounted.
+    """
+    items = [_make_item(video_id="a"), _make_item(video_id="b"), _make_item(video_id="c")]
+    worker_box: dict = {}
+
+    def _clear_rest_while_mining_first(**kw):
+        # Simulate the user clicking Clear while item 1 is PROCESSING: the
+        # GUI drops the non-PROCESSING tail into the worker's skip channel.
+        worker_box["worker"].skip_item(items[1])
+        worker_box["worker"].skip_item(items[2])
+        return "R_A"
+
+    mock_processor.process_youtube_url.side_effect = _clear_rest_while_mining_first
+
+    worker = make_worker(items=items)
+    worker_box["worker"] = worker
+    caps = _connect_all(worker)
+    worker.run()
+
+    # Only item 1 was mined.
+    assert mock_processor.process_youtube_url.call_count == 1
+    assert mock_processor.process_youtube_url.call_args.kwargs["video_id"] == "a"
+    # No signals for the dropped items.
+    assert caps["started"].calls == [(0,)]
+    assert caps["finished"].calls == [(0, "R_A", None, 1)]
+    # The queue still completes normally.
+    assert len(caps["queue_finished"].calls) == 1
+
+
+def test_skip_item_before_run_skips_only_that_item(make_worker, mock_processor):
+    """A skip recorded before run() starts drops exactly that item."""
+    items = [_make_item(video_id="a"), _make_item(video_id="b"), _make_item(video_id="c")]
+    mock_processor.process_youtube_url.side_effect = lambda **kw: f"R_{kw['video_id']}"
+
+    worker = make_worker(items=items)
+    worker.skip_item(items[1])
+    caps = _connect_all(worker)
+    worker.run()
+
+    mined = [c.kwargs["video_id"] for c in mock_processor.process_youtube_url.call_args_list]
+    assert mined == ["a", "c"]
+    # idx values still match the frozen snapshot positions (0 and 2).
+    assert caps["started"].calls == [(0,), (2,)]
+    assert caps["finished"].calls == [(0, "R_a", None, 1), (2, "R_c", None, 1)]
+    assert len(caps["queue_finished"].calls) == 1
+
+
+# ---------------------------------------------------------------------------
 # Cancel before first item
 # ---------------------------------------------------------------------------
 
@@ -684,3 +775,49 @@ def test_fetch_progress_emit_clamps_and_handles_none(make_worker, mock_processor
         (0, "Downloading", 100),
         (0, "Downloading", 0),
     ]
+
+
+# ---------------------------------------------------------------------------
+# Workspace mkdir failure is a per-item error, not a queue killer (T-29)
+# ---------------------------------------------------------------------------
+
+
+def test_workspace_alloc_failure_is_per_item_not_queue_killer(make_worker, mock_processor, tmp_path):
+    """An mkdir OSError during workspace allocation must end *that* item with
+    an error and let the queue continue — not propagate out of ``run()`` and
+    strand the queue (no ``item_finished`` / ``queue_finished``).
+
+    A non-``YouTubeFetchError`` ends the item without a retry, so item 0
+    allocates exactly once (it raises) and item 1 allocates exactly once
+    (it succeeds): a plain call counter on the allocation hook is enough.
+    """
+    items = [
+        _make_item(url="https://www.youtube.com/watch?v=a", video_id="a"),
+        _make_item(url="https://www.youtube.com/watch?v=b", video_id="b"),
+    ]
+    mock_processor.process_youtube_url.return_value = "R_B"
+
+    worker = make_worker(items=items)
+    caps = _connect_all(worker)
+
+    calls = {"n": 0}
+
+    def _alloc():
+        calls["n"] += 1
+        if calls["n"] == 1:  # item 0's allocation: simulate ENOSPC / perms
+            raise OSError(28, "No space left on device")
+        ws = tmp_path / f"ws-{calls['n']}"
+        ws.mkdir()
+        return ws
+
+    worker._allocate_workspace = _alloc  # type: ignore[method-assign,assignment]
+
+    worker.run()
+
+    # Both items reported; item 0 errored, item 1 succeeded; queue finished.
+    assert len(caps["finished"].calls) == 2
+    idx0, res0, err0, _ = caps["finished"].calls[0]
+    idx1, res1, err1, _ = caps["finished"].calls[1]
+    assert idx0 == 0 and res0 is None and "OSError" in err0
+    assert idx1 == 1 and res1 == "R_B" and err1 is None
+    assert len(caps["queue_finished"].calls) == 1
