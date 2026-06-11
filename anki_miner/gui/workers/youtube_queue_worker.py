@@ -33,6 +33,11 @@ Cancel semantics deliberately mirror the spec:
   subprocess-kill path raises ``YouTubeFetchError("Cancelled")`` when the
   cancel event fires mid-download — retrying that would just kill the
   freshly-spawned subprocess again.
+* Mid-mine: ``cancel_event`` is forwarded to ``process_youtube_url``, which
+  bridges it into ``process_episode``'s phase checkpoints for that run. A
+  Stop landing after the fetch therefore returns a cancelled
+  ``ProcessingResult`` (no exception): ``item_finished`` fires for that item
+  and the loop-top check then stops the queue.
 """
 
 from __future__ import annotations

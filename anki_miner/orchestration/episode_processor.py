@@ -159,6 +159,14 @@ class EpisodeProcessor:
         self.stats_service = stats_service
         self._youtube_fetcher = youtube_fetcher
         self._cancelled = False
+        # Per-run external cancel source (e.g. a worker's threading.Event
+        # ``is_set``), installed/removed by process_youtube_url around each
+        # run. The YouTube path must NOT set the sticky ``_cancelled`` flag:
+        # this processor instance is reused across runs (YouTubeTab builds it
+        # once) and ``_cancelled`` is only reset in __init__, so a sticky flag
+        # set on run N would poison run N+1. Dropping the reference in a
+        # ``finally`` makes the bridge per-run by construction.
+        self._external_cancel: Callable[[], bool] | None = None
 
     def cancel(self) -> None:
         """Request cancellation of processing."""
@@ -166,8 +174,17 @@ class EpisodeProcessor:
 
     @property
     def cancelled(self) -> bool:
-        """Check if cancellation has been requested."""
-        return self._cancelled
+        """Check if cancellation has been requested.
+
+        True when :meth:`cancel` was called (sticky; file-based worker path)
+        or when the active run's external cancel source — installed by
+        :meth:`process_youtube_url` from the worker's ``cancel_event`` —
+        reports set.
+        """
+        if self._cancelled:
+            return True
+        external = self._external_cancel
+        return external is not None and external()
 
     def _allocate_run_temp_folder(self) -> Path:
         """Create an isolated temp directory for a single episode run.
@@ -448,7 +465,7 @@ class EpisodeProcessor:
             video_file,
             unknown_words,
             progress_callback,
-            cancelled_check=lambda: self._cancelled,
+            cancelled_check=lambda: self.cancelled,
             temp_folder=run_temp_folder,
             audio_track_override=audio_track_override,
         )
@@ -672,14 +689,14 @@ class EpisodeProcessor:
             if not all_words:
                 self.presenter.show_warning("No words found in subtitles")
                 return ctx.build_result()
-            if self._cancelled:
+            if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
             unknown_words = self._phase2_filter(ctx, all_words, line_index, cross_episode_counts)
             if not unknown_words:
                 self.presenter.show_info("All words already in Anki!")
                 return ctx.build_result(new_words_found=0)
-            if self._cancelled:
+            if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
             if curation_callback is not None and not preview_mode:
@@ -717,7 +734,7 @@ class EpisodeProcessor:
             media_results = self._phase3_extract(
                 ctx, video_file, unknown_words, stage_progress, run_temp_folder, audio_track_override
             )
-            if self._cancelled:
+            if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
             if not media_results:
                 self.presenter.show_warning("No media extracted successfully")
@@ -725,7 +742,7 @@ class EpisodeProcessor:
             self.presenter.show_success(f"Extracted media for {len(media_results)} words")
 
             definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
-            if self._cancelled:
+            if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
             cards_created, created_note_ids = self._phase5_create(
@@ -822,7 +839,10 @@ class EpisodeProcessor:
             sub_mode: "manual_only" or "auto_only" — chosen by the user based
                 on what probe_metadata reported as available.
             cancel_event: Threading event set by the worker on cancellation;
-                forwarded to the fetcher so in-flight yt-dlp can be killed.
+                forwarded to the fetcher so in-flight yt-dlp can be killed,
+                and bridged into the mining pipeline's cancellation
+                checkpoints (via :attr:`cancelled`) for the duration of this
+                run only.
             progress_callback: Optional ``ProgressCallback`` forwarded to
                 ``process_episode`` for mining-phase reporting (media extract,
                 definitions, card creation).
@@ -856,8 +876,9 @@ class EpisodeProcessor:
         if self._youtube_fetcher is None:
             raise RuntimeError("YouTubeFetcherService not injected — check service_factory")
 
+        start_time = time.time()
         if cancel_event.is_set():
-            return self._make_cancelled_result(time.time())
+            return self._make_cancelled_result(start_time)
 
         if not preview_mode:
             # Deliberate early check: fail before the video download rather than
@@ -865,25 +886,39 @@ class EpisodeProcessor:
             # that double-check is intentional — cheap idempotent localhost calls.
             self._preflight_card_target()
 
-        fetched = self._youtube_fetcher.fetch_video(
-            url,
-            video_id,
-            workspace,
-            sub_mode,
-            progress_cb=fetch_progress_cb,
-            cancel_event=cancel_event,
-        )
+        # Bridge the worker's cancel_event into the mining pipeline for the
+        # duration of this run only: process_episode's phase checkpoints and
+        # the media extractor's cancelled_check consult self.cancelled, which
+        # folds this source in. See the __init__ comment for why the sticky
+        # self._cancelled flag must NOT be used here (shared processor reuse).
+        self._external_cancel = cancel_event.is_set
+        try:
+            fetched = self._youtube_fetcher.fetch_video(
+                url,
+                video_id,
+                workspace,
+                sub_mode,
+                progress_cb=fetch_progress_cb,
+                cancel_event=cancel_event,
+            )
 
-        if on_fetched is not None:
-            on_fetched(fetched)
+            if on_fetched is not None:
+                on_fetched(fetched)
 
-        return self.process_episode(
-            fetched.video_file,
-            fetched.subtitle_file,
-            preview_mode=preview_mode,
-            progress_callback=progress_callback,
-            curation_callback=curation_callback,
-            episode_name_override=f"YT:{video_id}",
-            series_name_override="YouTube",
-            source_label_override=source_label,
-        )
+            if cancel_event.is_set():
+                # Cancel landed as the fetch completed (the fetcher only
+                # raises for cancels it observed itself): stop before parsing.
+                return self._make_cancelled_result(start_time)
+
+            return self.process_episode(
+                fetched.video_file,
+                fetched.subtitle_file,
+                preview_mode=preview_mode,
+                progress_callback=progress_callback,
+                curation_callback=curation_callback,
+                episode_name_override=f"YT:{video_id}",
+                series_name_override="YouTube",
+                source_label_override=source_label,
+            )
+        finally:
+            self._external_cancel = None

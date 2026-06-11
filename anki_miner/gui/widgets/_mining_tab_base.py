@@ -152,6 +152,8 @@ class MiningTabBase(QWidget):
         # cancel lands in that gap the dialog doesn't exist yet, so rejecting
         # it is a no-op and the slot would otherwise still pop a dialog.
         self._curation_cancelled = False
+        # Flipped once by _poison_curation_gate() at shutdown; never reset.
+        self._curation_gate_poisoned = False
         self._curation_requested.connect(self._on_curation_requested)
 
     def _curation_bridge(self, words: list) -> list | None:
@@ -165,9 +167,31 @@ class MiningTabBase(QWidget):
         self._curation_event.clear()
         self._curation_result = None
         self._curation_cancelled = False
+        # Checked AFTER clear(): _poison_curation_gate sets the flag before
+        # the event, so either the flag is visible here, or the poison's
+        # set() happens after our clear() and wait() returns immediately.
+        # Checking before clear() would let clear() erase a poison forever.
+        if self._curation_gate_poisoned:
+            return None
         self._curation_requested.emit(words)
         self._curation_event.wait()  # Block worker until the GUI sets the event.
         return self._curation_result
+
+    def _poison_curation_gate(self) -> None:
+        """Permanently release the worker-side curation gate (shutdown only).
+
+        ``shutdown()`` must not join the worker while it is parked in
+        ``_curation_event.wait()``: the queued ``_on_curation_requested`` slot
+        can only run on the GUI thread, and that is the thread doing the join
+        — a permanent deadlock. Setting the event releases an already-parked
+        worker (result ``None`` ⇒ cancelled); the poisoned flag makes a worker
+        that has not yet reached the gate fall through instead of clearing the
+        event and parking with nobody left to release it. Order matters: flag
+        before event (see the matching check order in ``_curation_bridge``).
+        """
+        self._curation_gate_poisoned = True
+        self._curation_result = None
+        self._curation_event.set()
 
     def _build_curation_context(
         self,
@@ -185,9 +209,10 @@ class MiningTabBase(QWidget):
         The ``finally`` guarantees ``_curation_event`` is set even if dialog
         construction/exec raises — otherwise ``_curation_bridge`` hangs forever.
         """
-        if self._curation_cancelled:
-            # Cancel landed before this slot ran; release the worker as
-            # cancelled (None) instead of popping a dialog the user must dismiss.
+        if self._curation_cancelled or self._curation_gate_poisoned:
+            # Cancel/shutdown landed before this slot ran; release the worker
+            # as cancelled (None) instead of popping a dialog the user must
+            # dismiss (or popping one over a dying app).
             self._curation_result = None
             self._curation_event.set()
             return

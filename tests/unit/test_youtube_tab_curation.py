@@ -13,6 +13,8 @@ inspected.
 
 from __future__ import annotations
 
+import threading
+import time
 from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -186,3 +188,48 @@ def test_shutdown_rejects_open_dialog_so_blocked_worker_resumes(tab):
     tab.shutdown()
     dialog.reject.assert_called_once()
     assert tab._curation_cancelled is True
+
+
+def test_shutdown_unblocks_worker_parked_at_curation_gate(tab):
+    """shutdown() must not deadlock on a worker parked in _curation_event.wait().
+
+    The dialog-release path (Issue #65) only helps once the dialog exists. If
+    the worker emitted _curation_requested but the queued GUI slot has not run
+    yet, blocking in worker.wait() would deadlock: this GUI thread is the only
+    one that could run the slot. shutdown() must poison the gate before joining
+    (T-01)."""
+    from PyQt6.QtCore import Qt
+
+    results: list = []
+    # DirectConnection probe fires on the bridge thread at emit time, right
+    # before it parks. The queued _on_curation_requested slot itself never
+    # runs because this (GUI) thread does not spin its event loop — exactly
+    # the app-close scenario.
+    reached_gate = threading.Event()
+    tab._curation_requested.connect(lambda words: reached_gate.set(), Qt.ConnectionType.DirectConnection)
+    bridge_thread = threading.Thread(
+        target=lambda: results.append(tab._curation_bridge(["w1"])),
+        daemon=True,
+    )
+    bridge_thread.start()
+    assert reached_gate.wait(2.0), "bridge thread never emitted the curation request"
+    time.sleep(0.05)  # let it advance the final step into _curation_event.wait()
+    assert bridge_thread.is_alive(), "bridge thread should be parked at the gate"
+
+    worker = MagicMock(name="QueueWorker")
+
+    def _join_like_qthread_wait(*args, **kwargs):
+        # QThread.wait() joins the worker thread; the parked bridge stands in
+        # for the real worker body. Bounded so an unfixed deadlock fails fast.
+        bridge_thread.join(timeout=2.0)
+        return not bridge_thread.is_alive()
+
+    worker.wait.side_effect = _join_like_qthread_wait
+    tab.worker_thread = worker
+
+    tab.shutdown()
+
+    bridge_thread.join(timeout=1.0)
+    assert not bridge_thread.is_alive(), "worker was never released from the curation gate"
+    assert results == [None]  # released as cancelled, not with a selection
+    assert tab.worker_thread is None
