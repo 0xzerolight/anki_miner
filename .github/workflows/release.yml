@@ -270,7 +270,12 @@ jobs:
       - name: Install nfpm (Linux)
         if: runner.os == 'Linux'
         run: |
+          set -euo pipefail
+          # Version-pinned; add SHA256 verification (matches goreleaser's
+          # official checksums.txt for v2.46.0). Fail-closed on mismatch.
+          NFPM_SHA256="43b4cb72cde2d6e61c02e5b330e3276882252bf67c057e089957f9dbd2c8de42"
           wget -q https://github.com/goreleaser/nfpm/releases/download/v2.46.0/nfpm_2.46.0_Linux_x86_64.tar.gz
+          echo "${NFPM_SHA256}  nfpm_2.46.0_Linux_x86_64.tar.gz" | sha256sum -c -
           tar -xzf nfpm_2.46.0_Linux_x86_64.tar.gz nfpm
           chmod +x nfpm
 
