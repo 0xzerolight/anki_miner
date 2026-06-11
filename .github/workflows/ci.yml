@@ -49,7 +49,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libegl1 libpulse0 libxkbcommon0
       - run: pip install -e ".[dev]"
-      - run: pytest -m "not youtube" --cov=anki_miner --cov-report=term-missing
+      - run: pytest -m "not youtube"
         env:
           QT_QPA_PLATFORM: offscreen
 
@@ -69,7 +69,7 @@ jobs:
           pip install -e ".[dev]"
           pip install $(python scripts/extract_floor_pins.py)
       - name: Smoke-test YouTube layer at floor versions
-        run: pytest tests/unit/test_youtube_*.py -m "not youtube" --no-cov -q
+        run: pytest tests/unit/test_youtube_*.py -m "not youtube" -q
         env:
           QT_QPA_PLATFORM: offscreen
 
