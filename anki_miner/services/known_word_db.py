@@ -81,20 +81,38 @@ class KnownWordDB:
 
         Args:
             words: Set of lemma strings to add.
-            source: Source label (e.g. 'anki', 'mined').
+            source: Source label (e.g. 'anki', 'mined', 'user').
 
         Returns:
-            Number of newly inserted rows.
+            Number of newly inserted rows (an in-place source upgrade is not
+            counted as new).
         """
         if not words:
             return 0
 
+        # ``lemma`` is the PRIMARY KEY, so a plain INSERT OR IGNORE no-ops when
+        # the row already exists. That silently dropped a user "mark known" when
+        # the lemma was already cached as source='anki': the mark never took, and
+        # clear(preserve_user=True) on Rebuild then deleted the anki row — losing
+        # the user's entry and violating the Issue #42 "user list survives
+        # rebuild" invariant (T-27).
+        #
+        # When marking as 'user' we therefore UPGRADE an existing row's source on
+        # conflict. For every other source (anki/mined) we keep IGNORE so a later
+        # sync can never DOWNGRADE a 'user' row back to 'anki'.
         with closing(sqlite3.connect(self._db_path)) as conn:
             before = self._count(conn)
-            conn.executemany(
-                "INSERT OR IGNORE INTO known_words (lemma, source) VALUES (?, ?)",
-                [(w, source) for w in words],
-            )
+            if source == "user":
+                conn.executemany(
+                    "INSERT INTO known_words (lemma, source) VALUES (?, ?) "
+                    "ON CONFLICT(lemma) DO UPDATE SET source=excluded.source",
+                    [(w, source) for w in words],
+                )
+            else:
+                conn.executemany(
+                    "INSERT OR IGNORE INTO known_words (lemma, source) VALUES (?, ?)",
+                    [(w, source) for w in words],
+                )
             conn.commit()
             after = self._count(conn)
             return after - before
