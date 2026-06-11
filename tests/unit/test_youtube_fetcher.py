@@ -219,6 +219,20 @@ class TestProbeMetadata:
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.is_live is True
 
+    def test_live_stream_null_duration_builds_video_info(self, service: YouTubeFetcherService) -> None:
+        """Live streams report ``duration: null`` (T-28).
+
+        The key exists, so the KeyError guard passes; ``int(None)`` then
+        raised an uncaught TypeError that bypassed the is_live rejection.
+        A null duration must instead yield a VideoInfo (duration 0) so the
+        caller's "Live streams not supported" branch can fire.
+        """
+        payload = _make_metadata(duration=None, is_live=True)
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_metadata("https://youtu.be/abc123")
+        assert info.is_live is True
+        assert info.duration_s == 0
+
     def test_non_zero_exit_raises(self, service: YouTubeFetcherService) -> None:
         with (
             patch(
