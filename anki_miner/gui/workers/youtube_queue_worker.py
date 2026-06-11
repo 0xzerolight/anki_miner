@@ -16,6 +16,8 @@ rmtree fires, so cleanup never races a live writer.
 Signal shapes (exact):
 
 * ``item_started(int)`` — idx fired before the first attempt for the item.
+  Items removed mid-run via :meth:`YouTubeQueueWorker.skip_item` are
+  silently skipped: no ``item_started`` / ``item_finished`` for them.
 * ``item_progress(int, str, int)`` — idx, label, pct (pct == -1 for
   indeterminate phases). Same int conversion rules as the legacy worker.
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
@@ -43,6 +45,7 @@ Cancel semantics deliberately mirror the spec:
 from __future__ import annotations
 
 import shutil
+import threading
 from collections.abc import Callable
 from pathlib import Path
 from uuid import uuid4
@@ -148,12 +151,39 @@ class YouTubeQueueWorker(CancellableWorker):
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = config.subtitle_offset
+        # Skip channel: items the user removed mid-run (Clear / row [x]).
+        # The run loop iterates the frozen constructor snapshot, so a GUI-side
+        # removal alone would still mine the item — cards for rows that no
+        # longer exist. Identity-based membership (YouTubeQueueItem is
+        # eq=False); ``self._items`` keeps every snapshot item alive, so
+        # identities are stable for the whole run.
+        self._skip_lock = threading.Lock()
+        self._skipped: set[YouTubeQueueItem] = set()
+
+    def skip_item(self, item: YouTubeQueueItem) -> None:
+        """Mark *item* to be skipped if its turn has not started yet.
+
+        Thread-safe; called from the GUI thread when the user removes a queued
+        row during an active run. Best-effort: an item the loop has already
+        started runs to completion (its idx signals resolve against the tab's
+        frozen ``_run_items`` snapshot, which tolerates removed rows). Skipped
+        items emit no signals at all.
+        """
+        with self._skip_lock:
+            self._skipped.add(item)
+
+    def _is_skipped(self, item: YouTubeQueueItem) -> bool:
+        """Thread-safe membership check for the skip channel."""
+        with self._skip_lock:
+            return item in self._skipped
 
     def run(self) -> None:
         """Process the queue end-to-end with retry-once per fetch error."""
         for idx, item in enumerate(self._items):
             if self.is_cancelled:
                 break
+            if self._is_skipped(item):
+                continue  # removed from the GUI mid-run; no signals for it
             self.item_started.emit(idx)
             attempts = 0
             last_error: str | None = None
