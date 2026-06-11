@@ -125,10 +125,12 @@ class BackgroundTaskController(QObject):
         """
         if self.validation_worker is not None and self.validation_worker.isRunning():
             return False
-        self.validation_worker = ValidationWorkerThread(service, self)
-        self.validation_worker.result_ready.connect(self.validation_result)
-        self.validation_worker.error.connect(self.validation_error)
-        self.validation_worker.start()
+        worker = ValidationWorkerThread(service, self)
+        self.validation_worker = worker
+        worker.result_ready.connect(self.validation_result)
+        worker.error.connect(self.validation_error)
+        worker.finished.connect(lambda w=worker: self._release_worker("validation_worker", w))
+        worker.start()
         return True
 
     def check_for_updates(self) -> None:
@@ -141,9 +143,11 @@ class BackgroundTaskController(QObject):
         from anki_miner.services.update_checker import UpdateChecker
 
         checker = UpdateChecker(__version__)
-        self.update_worker = UpdateWorkerThread(checker, self)
-        self.update_worker.result_ready.connect(self.update_check_result)
-        self.update_worker.start()
+        worker = UpdateWorkerThread(checker, self)
+        self.update_worker = worker
+        worker.result_ready.connect(self.update_check_result)
+        worker.finished.connect(lambda w=worker: self._release_worker("update_worker", w))
+        worker.start()
 
     def maybe_migrate_jmdict(self, config: AnkiMinerConfig) -> bool:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background.
@@ -177,6 +181,19 @@ class BackgroundTaskController(QObject):
         """
         self.prewarm_worker = worker
         worker.finished.connect(lambda: setattr(self, "prewarm_worker", None))
+
+    def _release_worker(self, attr: str, worker) -> None:
+        """Free a finished window-level worker.
+
+        Workers are parented to the controller (window lifetime), so without
+        this they accumulate as live QObjects across repeated runs — newly
+        reachable for validation since T-53 wired Test Connection to it. Clear
+        the handle only when it still points at *worker* (a fresh run may have
+        already replaced it) and schedule the QThread for deletion.
+        """
+        if getattr(self, attr, None) is worker:
+            setattr(self, attr, None)
+        worker.deleteLater()
 
     # --- Shutdown join policy ------------------------------------------------
 
