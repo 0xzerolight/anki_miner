@@ -775,3 +775,49 @@ def test_fetch_progress_emit_clamps_and_handles_none(make_worker, mock_processor
         (0, "Downloading", 100),
         (0, "Downloading", 0),
     ]
+
+
+# ---------------------------------------------------------------------------
+# Workspace mkdir failure is a per-item error, not a queue killer (T-29)
+# ---------------------------------------------------------------------------
+
+
+def test_workspace_alloc_failure_is_per_item_not_queue_killer(make_worker, mock_processor, tmp_path):
+    """An mkdir OSError during workspace allocation must end *that* item with
+    an error and let the queue continue — not propagate out of ``run()`` and
+    strand the queue (no ``item_finished`` / ``queue_finished``).
+
+    A non-``YouTubeFetchError`` ends the item without a retry, so item 0
+    allocates exactly once (it raises) and item 1 allocates exactly once
+    (it succeeds): a plain call counter on the allocation hook is enough.
+    """
+    items = [
+        _make_item(url="https://www.youtube.com/watch?v=a", video_id="a"),
+        _make_item(url="https://www.youtube.com/watch?v=b", video_id="b"),
+    ]
+    mock_processor.process_youtube_url.return_value = "R_B"
+
+    worker = make_worker(items=items)
+    caps = _connect_all(worker)
+
+    calls = {"n": 0}
+
+    def _alloc():
+        calls["n"] += 1
+        if calls["n"] == 1:  # item 0's allocation: simulate ENOSPC / perms
+            raise OSError(28, "No space left on device")
+        ws = tmp_path / f"ws-{calls['n']}"
+        ws.mkdir()
+        return ws
+
+    worker._allocate_workspace = _alloc  # type: ignore[method-assign,assignment]
+
+    worker.run()
+
+    # Both items reported; item 0 errored, item 1 succeeded; queue finished.
+    assert len(caps["finished"].calls) == 2
+    idx0, res0, err0, _ = caps["finished"].calls[0]
+    idx1, res1, err1, _ = caps["finished"].calls[1]
+    assert idx0 == 0 and res0 is None and "OSError" in err0
+    assert idx1 == 1 and res1 == "R_B" and err1 is None
+    assert len(caps["queue_finished"].calls) == 1
