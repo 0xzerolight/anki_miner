@@ -6,6 +6,7 @@ import json
 import logging
 import subprocess
 import threading
+import time
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -720,6 +721,150 @@ class TestFetchVideoCancel:
                 cancel_event=cancel,
             )
         fake_parent.terminate.assert_called_once()
+
+    def test_cancel_with_no_stdout_lines_reports_cancelled(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        """A cancel invisible to the line loop must not be dropped (T-02).
+
+        The only historical check lived inside the stdout line loop; a fetch
+        that produced no further lines (cancel after the last line) exited
+        the loop normally and completed as success — outputs resolved, cards
+        mined after Stop.
+        """
+        _make_happy_outputs(tmp_path)  # success would be possible if the bug returns
+        cancel = threading.Event()
+        cancel.set()
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+            # The watchdog may race in and kill an "already exited" process.
+            patch(
+                "anki_miner.services.youtube_fetcher.psutil.Process",
+                side_effect=psutil.NoSuchProcess(4242),
+            ),
+            pytest.raises(YouTubeFetchError, match="Cancelled by user"),
+        ):
+            service.fetch_video(
+                "https://youtu.be/abc123",
+                "abc123",
+                tmp_path,
+                "manual_only",
+                cancel_event=cancel,
+            )
+
+    def test_cancel_landing_after_last_line_reports_cancelled(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        """Cancel set between the final stdout line and process exit must raise."""
+        _make_happy_outputs(tmp_path)
+        cancel = threading.Event()
+
+        class _CancelDuringWaitPopen(_FakePopen):
+            def wait(self) -> int:
+                cancel.set()  # cancel lands after stdout drained, before exit
+                return super().wait()
+
+        popen = _CancelDuringWaitPopen(["[ankimine_dl] 1024 1024"], returncode=0)
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=popen),
+            patch(
+                "anki_miner.services.youtube_fetcher.psutil.Process",
+                side_effect=psutil.NoSuchProcess(4242),
+            ),
+            pytest.raises(YouTubeFetchError, match="Cancelled by user"),
+        ):
+            service.fetch_video(
+                "https://youtu.be/abc123",
+                "abc123",
+                tmp_path,
+                "manual_only",
+                cancel_event=cancel,
+            )
+
+
+class _BlockedStdoutPopen:
+    """Popen stand-in whose stdout read blocks until the process is 'killed'.
+
+    Models yt-dlp's silent phases (the [Merger] ffmpeg post-process, stalled
+    reads, retry backoff): the reader thread is parked inside
+    ``for raw in popen.stdout`` and prints nothing.
+    """
+
+    def __init__(self) -> None:
+        self.pid = 4242
+        self._dead = threading.Event()
+        self.stdout = self._stream()
+
+    def _stream(self):
+        # Bounded block so an unfixed implementation fails the test instead
+        # of wedging the suite; a 'killed' process ends the stream early.
+        self._dead.wait(timeout=8.0)
+        return
+        yield  # pragma: no cover - makes this function a generator
+
+    def kill_from_watchdog(self) -> None:
+        """Simulate process-tree death closing stdout."""
+        self._dead.set()
+
+    def wait(self) -> int:
+        return 1  # killed -> non-zero exit
+
+
+class TestFetchVideoCancelDuringSilentPhase:
+    def test_cancel_during_blocked_read_kills_within_watchdog_interval(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        """Cancel must reach yt-dlp even when stdout is silent (T-02).
+
+        The in-loop check only runs when yt-dlp prints; with the reader
+        blocked, only an out-of-band path (watchdog) can call _kill_tree.
+        """
+        cancel = threading.Event()
+        popen = _BlockedStdoutPopen()
+
+        fake_parent = MagicMock()
+        fake_parent.children.return_value = []
+        fake_parent.terminate.side_effect = popen.kill_from_watchdog
+
+        errors: list[BaseException] = []
+
+        def _run_fetch() -> None:
+            try:
+                service.fetch_video(
+                    "https://youtu.be/abc123",
+                    "abc123",
+                    tmp_path,
+                    "manual_only",
+                    cancel_event=cancel,
+                )
+            except BaseException as e:  # noqa: BLE001 - capture for the main thread
+                errors.append(e)
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=popen),
+            patch("anki_miner.services.youtube_fetcher.psutil.Process", return_value=fake_parent),
+            patch(
+                "anki_miner.services.youtube_fetcher.psutil.wait_procs",
+                return_value=([fake_parent], []),
+            ),
+        ):
+            t = threading.Thread(target=_run_fetch, daemon=True)
+            t.start()
+            time.sleep(0.2)  # let the reader park in the blocked stdout
+            assert t.is_alive()
+            cancel.set()  # Stop All during the silent [Merger] phase
+            t.join(timeout=5.0)
+            assert not t.is_alive(), "fetch_video never noticed the cancel (no out-of-band kill path)"
+
+        fake_parent.terminate.assert_called()
+        assert len(errors) == 1
+        assert isinstance(errors[0], YouTubeFetchError)
+        assert "cancel" in str(errors[0]).lower()
 
 
 class TestFetchVideoHappyPath:
