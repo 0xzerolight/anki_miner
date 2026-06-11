@@ -68,6 +68,12 @@ a = Analysis(
             os.path.join(project_root, "anki_miner", "services", "dictionary", "resources"),
             os.path.join("anki_miner", "services", "dictionary", "resources"),
         ),
+        # Bundled name wordsets (Issue #59) — loaded at runtime via
+        # importlib.resources, so they must land at the same package path.
+        (
+            os.path.join(project_root, "anki_miner", "resources"),
+            os.path.join("anki_miner", "resources"),
+        ),
         # unidic-lite dictionary data (required by fugashi/MeCab)
         (unidic_data, "unidic_lite"),
     ]

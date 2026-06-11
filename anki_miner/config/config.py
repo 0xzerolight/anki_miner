@@ -91,7 +91,7 @@ class AnkiMinerConfig:
         ]
     )
     # Enabled name-wordset IDs (Issue #59). Each ID maps to a bundled
-    # plain-text proper-noun list under gui/resources/wordsets/<id>.txt.
+    # plain-text proper-noun list under resources/wordsets/<id>.txt.
     # Words on any enabled set are dropped from mining unless whitelisted.
     excluded_wordsets: tuple[str, ...] = field(default_factory=tuple)
 
