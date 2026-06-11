@@ -54,11 +54,66 @@ class Services:
     load_result: ServiceLoadResult
 
 
-def create_services(config: AnkiMinerConfig) -> Services:
+def build_definition_service(
+    config: AnkiMinerConfig,
+    load_result: ServiceLoadResult | None = None,
+) -> DefinitionService:
+    """Build the dictionary provider chain and its :class:`DefinitionService`.
+
+    Constructs the registry, loads it, assembles the provider chain, and wraps
+    it in a DefinitionService. When ``config.dictionary_chain`` has any enabled
+    indexed entry, the chain is eagerly loaded (``ensure_loaded``) — this is the
+    one path that touches sqlite, so it stays gated on having an indexed entry
+    to keep a Jisho-only config I/O-free.
+
+    Args:
+        config: Mining configuration.
+        load_result: Optional sink for human-readable load info/warnings
+            (used by :func:`create_services`). ``None`` skips that reporting;
+            the eager-load failure is then re-raised for the caller to handle.
+
+    Returns:
+        The constructed DefinitionService (loaded iff an indexed entry is on).
+    """
+    registry = DictionaryRegistry(config.dicts_root)
+    registry.load()
+    providers = registry.build_provider_chain(config)
+    definition_service = DefinitionService(config, providers=providers)
+
+    if any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain):
+        try:
+            definition_service.ensure_loaded()
+        except Exception as e:
+            if load_result is None:
+                raise
+            logger.warning("Could not load dictionary chain: %s", e)
+            load_result.warnings.append(f"Could not load dictionary chain: {e}")
+        else:
+            if load_result is not None:
+                available = [p.name for p in providers if p.is_available()]
+                failed = [p.name for p in providers if not p.is_available()]
+                if available:
+                    load_result.info.append(f"Dictionary chain loaded: {', '.join(available)}")
+                if failed:
+                    load_result.warnings.append(f"Provider(s) unavailable, will be skipped: {', '.join(failed)}")
+                if not available and not failed:
+                    load_result.warnings.append("No offline dictionary index available; lookups will use Jisho only")
+
+    return definition_service
+
+
+def create_services(config: AnkiMinerConfig, subtitle_parser: SubtitleParserService | None = None) -> Services:
     """Create all services needed for episode processing.
 
     Args:
         config: Mining configuration
+        subtitle_parser: Optional pre-built parser to reuse instead of
+            constructing a fresh one. The Deck Builder injects its Phase-1
+            parser here so Phase-2 mining hits the already-filled per-file
+            tokenization cache. The caller owns ensuring the parser's
+            parse-relevant config matches ``config`` (offset / bold target /
+            allowed POS / excluded subtypes / regex-filter fields); the parser
+            reads only those, so reuse is byte-identical for a matching config.
 
     Returns:
         A frozen :class:`Services` bundle holding every constructed
@@ -68,36 +123,19 @@ def create_services(config: AnkiMinerConfig) -> Services:
     """
     load_result = ServiceLoadResult()
 
-    subtitle_parser = SubtitleParserService(config)
+    if subtitle_parser is None:
+        subtitle_parser = SubtitleParserService(config)
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger
     # (fugashi.Tagger initialization is non-trivial).
     word_filter = WordFilterService(config, tagger=subtitle_parser.tagger)
     media_extractor = MediaExtractorService(config)
 
-    # Build the provider chain via the registry, then hand it to DefinitionService.
-    registry = DictionaryRegistry(config.dicts_root)
-    registry.load()
-    providers = registry.build_provider_chain(config)
-    definition_service = DefinitionService(config, providers=providers)
+    # Build the provider chain + DefinitionService (gated eager-load shared with
+    # PrewarmWorker via build_definition_service).
+    definition_service = build_definition_service(config, load_result)
     anki_service = AnkiService(config)
     youtube_fetcher = YouTubeFetcherService(config=config)
-
-    if any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain):
-        try:
-            definition_service.ensure_loaded()
-        except Exception as e:
-            logger.warning("Could not load dictionary chain: %s", e)
-            load_result.warnings.append(f"Could not load dictionary chain: {e}")
-        else:
-            available = [p.name for p in providers if p.is_available()]
-            failed = [p.name for p in providers if not p.is_available()]
-            if available:
-                load_result.info.append(f"Dictionary chain loaded: {', '.join(available)}")
-            if failed:
-                load_result.warnings.append(f"Provider(s) unavailable, will be skipped: {', '.join(failed)}")
-            if not available and not failed:
-                load_result.warnings.append("No offline dictionary index available; lookups will use Jisho only")
 
     # Optional services
     pitch_accent_service = None
@@ -200,6 +238,7 @@ def create_episode_processor(
     config: AnkiMinerConfig,
     presenter: PresenterProtocol,
     stats_service: StatsService | None = None,
+    subtitle_parser: SubtitleParserService | None = None,
 ) -> EpisodeProcessor:
     """Create an EpisodeProcessor with all required services.
 
@@ -207,11 +246,14 @@ def create_episode_processor(
         config: Mining configuration
         presenter: Output presenter for messages
         stats_service: Optional statistics recording service
+        subtitle_parser: Optional pre-built parser to reuse (see
+            :func:`create_services`); the Deck Builder passes its Phase-1 parser
+            here to reuse the filled tokenization cache in Phase 2.
 
     Returns:
         Configured EpisodeProcessor instance
     """
-    services = create_services(config)
+    services = create_services(config, subtitle_parser=subtitle_parser)
 
     # Surface service load feedback to the user
     for msg in services.load_result.info:

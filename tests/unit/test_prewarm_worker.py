@@ -52,12 +52,15 @@ def test_prewarm_swallows_tagger_failure(test_config, qapp, monkeypatch):
 
 def test_prewarm_swallows_registry_failure(test_config, qapp, monkeypatch):
     """A failure warming the dictionary chain is swallowed; ``finished`` emits."""
-    import anki_miner.gui.workers.prewarm_worker as mod
+    # The registry is now built inside service_factory.build_definition_service;
+    # patch it at its definition module so the failure still flows through that
+    # shared path into PrewarmWorker.run()'s best-effort swallow.
+    from anki_miner.services.dictionary.registry import DictionaryRegistry
 
     def boom(*_args, **_kwargs):
         raise RuntimeError("simulated sqlite open failure")
 
-    monkeypatch.setattr(mod.DictionaryRegistry, "load", boom)
+    monkeypatch.setattr(DictionaryRegistry, "load", boom)
 
     worker = PrewarmWorker(test_config)
     finished_count: list[int] = []
