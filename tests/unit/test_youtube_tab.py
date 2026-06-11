@@ -676,6 +676,38 @@ class TestRemoveAndClear:
         assert remaining == [item1]
         assert tab.list_widget.count() == 1
 
+    def test_clear_during_run_skips_dropped_items_in_worker(self, tab):
+        """Mid-run Clear must reach the worker, not just the GUI model (T-23).
+
+        The worker iterates its constructor snapshot, so dropping items from
+        the tab's queue alone still mined them — cards for rows that no
+        longer existed.
+        """
+        item1 = _add_ready_item(tab, "https://youtu.be/v1")
+        item2 = _add_ready_item(tab, "https://youtu.be/v2")
+        item3 = _add_ready_item(tab, "https://youtu.be/v3")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)  # item1 -> PROCESSING
+        worker = tab.worker_thread
+
+        tab._on_clear_clicked()
+
+        skipped = [c.args[0] for c in worker.skip_item.call_args_list]
+        assert skipped == [item2, item3]  # PROCESSING item1 is preserved
+        assert item1 not in skipped
+
+    def test_remove_during_run_skips_item_in_worker(self, tab):
+        """Removing a single row mid-run must also reach the worker (T-23)."""
+        _add_ready_item(tab, "https://youtu.be/v1")
+        item2 = _add_ready_item(tab, "https://youtu.be/v2")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        worker = tab.worker_thread
+
+        tab._on_remove_clicked(item2)
+
+        worker.skip_item.assert_called_once_with(item2)
+
     def test_clear_resets_progress_widget_when_idle(self, tab):
         """Regression: clicking Clear after a stuck-bar scenario clears the bar."""
         # Simulate the post-bug screenshot state: queue idle, bar stuck on "Merging".
