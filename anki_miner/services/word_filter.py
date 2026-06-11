@@ -8,7 +8,14 @@ from typing import TYPE_CHECKING, Any
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import LineLemmas, TokenizedWord
-from anki_miner.utils import is_hiragana_only, is_katakana_only, wrap_target_furigana, wrap_target_plain
+from anki_miner.utils import (
+    generate_furigana,
+    generate_reading,
+    is_hiragana_only,
+    is_katakana_only,
+    wrap_target_furigana,
+    wrap_target_plain,
+)
 
 if TYPE_CHECKING:
     from anki_miner.services.word_list_service import WordListService
@@ -268,10 +275,19 @@ class WordFilterService:
         the tie-break; words with no i+1 line are dropped.
 
         The returned words have their sentence/timing/sentence_furigana/
-        sentence_reading swapped to those of the selected line. Per-word
-        fields (``surface``, ``lemma``, ``reading``, ``expression_furigana``,
-        ``expression_reading``, ``frequency_rank``, ``pos``, ``video_file``)
-        are preserved unchanged.
+        sentence_reading swapped to those of the selected line. ``surface`` and
+        ``surface_start``/``surface_end`` are also swapped to the matched
+        lemma's morpheme on the new line (for bold placement and, for
+        surface-mined POS, the Expression itself). For surface-mined POS
+        (anything that is not 動詞/形容詞, whose ``mined_form`` IS the surface),
+        ``expression_furigana``/``expression_reading`` are recomputed from the
+        new surface so the Expression and its furigana/reading stay mutually
+        consistent — but only when a tagger is available (production always
+        supplies one); otherwise the originals are kept as a best-effort
+        fallback. Verbs/adjectives mine as ``lemma``, so their
+        ``expression_furigana``/``expression_reading`` are unaffected by the
+        surface swap and are preserved unchanged. ``lemma``, ``reading``,
+        ``frequency_rank``, ``pos`` and ``video_file`` are preserved unchanged.
 
         Args:
             mineable_unknowns: Words remaining after blacklist, frequency,
@@ -324,6 +340,25 @@ class WordFilterService:
                 new_bolded = ""
                 new_furi_bolded = ""
 
+            # The swap above replaces ``surface``. For surface-mined POS (nouns
+            # and everything that is not 動詞/形容詞), ``mined_form`` IS the
+            # surface, so the new surface becomes the card's Expression — its
+            # ``expression_furigana``/``expression_reading`` (computed from the
+            # ORIGINAL surface at parse time) would otherwise go stale, leaving
+            # the Expression inconsistent with its own furigana/reading (T-37).
+            # Verbs/adjectives mine as ``lemma`` (unchanged by the swap), so
+            # their Expression fields stay valid and are left untouched.
+            # Recompute requires a tagger; production always supplies one
+            # (service_factory wires the shared parser tagger). When absent
+            # (tagger-less unit setup), the original values are kept as a
+            # best-effort fallback rather than recomputed.
+            expr_furigana = word.expression_furigana
+            expr_reading = word.expression_reading
+            surface_is_expression = word.pos not in ("動詞", "形容詞")
+            if surface_is_expression and new_surface != word.surface and self.tagger is not None:
+                expr_furigana = generate_furigana(new_surface, self.tagger)
+                expr_reading = generate_reading(new_surface, self.tagger)
+
             result.append(
                 dataclasses.replace(
                     word,
@@ -334,6 +369,8 @@ class WordFilterService:
                     start_time=match.start_time,
                     end_time=match.end_time,
                     duration=match.duration,
+                    expression_furigana=expr_furigana,
+                    expression_reading=expr_reading,
                     sentence_furigana=match.sentence_furigana,
                     sentence_reading=match.sentence_reading,
                     sentence_bolded=new_bolded,
