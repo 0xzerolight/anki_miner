@@ -1,5 +1,8 @@
 """Tests for cancellation support in EpisodeProcessor and MediaExtractorService."""
 
+import subprocess
+import threading
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -222,7 +225,7 @@ class TestMediaExtractorBatchCancel:
     def video_file(self, tmp_path):
         return tmp_path / "episode_01.mkv"
 
-    def test_cancelled_mid_batch(self, service, video_file, make_tokenized_word, tmp_path):
+    def test_cancelled_mid_batch(self, service, video_file, make_tokenized_word, recording_progress, tmp_path):
         """Should return partial results when cancelled_check returns True mid-batch."""
         words = [
             make_tokenized_word(lemma="食べる", start_time=1.0),
@@ -248,11 +251,130 @@ class TestMediaExtractorBatchCancel:
             return items_seen > 1  # Cancel after first item processed
 
         with patch.object(service, "extract_media", side_effect=fake_extract):
-            result = service.extract_media_batch(video_file, words, cancelled_check=cancelled_check)
+            result = service.extract_media_batch(video_file, words, recording_progress, cancelled_check=cancelled_check)
 
         # Should have at least 1 result but not all 3
         assert len(result) >= 1
         assert len(result) < 3
+        # A cancelled run must not report completion.
+        assert recording_progress.completes == 0
+
+    def test_cancel_kills_inflight_ffmpeg_and_returns_promptly(
+        self, service, video_file, make_tokenized_word, recording_progress
+    ):
+        """Cancelling mid-encode must kill live ffmpeg processes, not wait them out.
+
+        Regression: shutdown(cancel_futures=True) only drops *queued* futures;
+        already-running encodes used to run to completion (30-60s timeouts) and
+        the executor's context exit joined them, blocking the cancelling caller.
+        """
+        words = [
+            make_tokenized_word(lemma="食べる", start_time=1.0),
+            make_tokenized_word(lemma="飲む", start_time=3.0),
+        ]
+
+        # Audio path must not probe encoders or run ffprobe for real.
+        service._animated_encoder_ok["libmp3lame"] = True
+        service._animated_encoder_ok["libopus"] = True
+
+        spawned = []
+        all_spawned = threading.Event()
+
+        class FakeEncode:
+            """Stands in for a long-running ffmpeg Popen; exits only when killed."""
+
+            def __init__(self):
+                self._dead = threading.Event()
+                self.kill_calls = 0
+                self.returncode = None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return None
+
+            def communicate(self, timeout=None):
+                # Block like a long encode; wake immediately on kill.
+                if not self._dead.wait(timeout=timeout):
+                    raise subprocess.TimeoutExpired("ffmpeg", timeout)
+                self.returncode = -9
+                return ("", "killed")
+
+            def kill(self):
+                self.kill_calls += 1
+                self._dead.set()
+
+            def wait(self, timeout=None):
+                self._dead.wait(timeout)
+                return self.returncode
+
+        def fake_popen(cmd, **kwargs):
+            proc = FakeEncode()
+            spawned.append(proc)
+            if len(spawned) >= len(words):
+                all_spawned.set()
+            return proc
+
+        with (
+            patch(f"{self.MODULE}.subprocess.Popen", side_effect=fake_popen),
+            patch(f"{self.MODULE}.subprocess.run") as mock_run,
+            patch(f"{self.MODULE}.find_japanese_audio_stream", return_value=None),
+        ):
+            start = time.monotonic()
+            result = service.extract_media_batch(
+                video_file,
+                words,
+                recording_progress,
+                cancelled_check=all_spawned.is_set,
+            )
+            elapsed = time.monotonic() - start
+
+        assert result == []
+        # Every in-flight encode was killed instead of running to completion.
+        assert len(spawned) == len(words)
+        assert all(proc.kill_calls >= 1 for proc in spawned)
+        # Promptly: nowhere near the 30s the fake encodes would otherwise block.
+        assert elapsed < 10.0
+        # Cancelled runs must not report completion, and no new ffmpeg may
+        # spawn after the kill (the audio stage follows the killed screenshot).
+        assert recording_progress.completes == 0
+        mock_run.assert_not_called()
+
+    def test_kill_all_tolerates_already_exited_process(self):
+        """Killing a process that already exited (reap race) must not raise."""
+        from anki_miner.services.media_extractor import _FfmpegProcRegistry
+
+        registry = _FfmpegProcRegistry()
+        proc = MagicMock()
+        proc.kill.side_effect = ProcessLookupError("No such process")
+        assert registry.register(proc) is True
+
+        registry.kill_all()  # must not raise
+
+        assert registry.cancelled is True
+        proc.kill.assert_called_once()
+        # Once cancelled, new processes are refused so workers cannot spawn
+        # fresh ffmpeg after the kill sweep.
+        assert registry.register(MagicMock()) is False
+
+    def test_no_new_ffmpeg_spawn_after_cancelled_registry(self, service):
+        """_run_ffmpeg must refuse to spawn once the batch registry is cancelled."""
+        from anki_miner.services.media_extractor import _FfmpegProcRegistry
+
+        registry = _FfmpegProcRegistry()
+        registry.kill_all()
+
+        with patch(f"{self.MODULE}.subprocess.Popen") as mock_popen:
+            ok = service._run_ffmpeg(
+                ["ffmpeg", "-i", "in.mkv", "out.jpg"],
+                "Test op",
+                timeout=5,
+                proc_registry=registry,
+            )
+
+        assert ok is False
+        mock_popen.assert_not_called()
 
     def test_no_cancelled_check_processes_all(self, service, video_file, make_tokenized_word, tmp_path):
         """Should process all words when cancelled_check is None."""
