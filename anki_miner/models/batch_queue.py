@@ -96,6 +96,11 @@ class BatchQueue:
     def get_next_pending(self) -> QueueItem | None:
         """Get next pending item in queue.
 
+        Called from the worker thread, which also writes item status
+        synchronously at pick/finish time (see BatchQueueWorkerThread.run), so
+        an in-flight item is never returned twice. GUI code must not write
+        item status while a run is active.
+
         Returns:
             Next pending QueueItem, or None if no pending items
         """

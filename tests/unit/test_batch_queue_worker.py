@@ -75,41 +75,24 @@ def _make_worker_with_queue(queue: BatchQueue) -> BatchQueueWorkerThread:
     return BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock())
 
 
-def _wire_status_slots(worker: BatchQueueWorkerThread, queue: BatchQueue) -> dict:
-    """Connect signals to dicts that capture emissions and mirror GUI slot behaviour.
+def _wire_status_slots(worker: BatchQueueWorkerThread, _queue: BatchQueue) -> dict:
+    """Connect signals to dicts that capture emissions, mirroring GUI slot behaviour.
 
-    The worker loop calls get_next_pending() to advance the queue; without the
-    GUI slots running (we're synchronous, no Qt event loop), we must set item
-    status ourselves to avoid an infinite PENDING loop.
+    Like BatchProcessingTab's slots, these are render-only: the worker owns all
+    QueueItem status writes during a run (see BatchQueueWorkerThread.run), so
+    capturing without mutating exercises the production ownership model.
     """
     results: dict = {"completed": [], "failed": [], "finished": []}
 
-    def on_started(item_id: str, _name: str) -> None:
-        for item in queue.get_all_items():
-            if item.id == item_id:
-                item.status = QueueItemStatus.PROCESSING
-                break
-
     def on_completed(item_id: str, cards: int) -> None:
         results["completed"].append((item_id, cards))
-        for item in queue.get_all_items():
-            if item.id == item_id:
-                item.status = QueueItemStatus.COMPLETED
-                item.cards_created = cards
-                break
 
     def on_failed(item_id: str, msg: str) -> None:
         results["failed"].append((item_id, msg))
-        for item in queue.get_all_items():
-            if item.id == item_id:
-                item.status = QueueItemStatus.ERROR
-                item.error_message = msg
-                break
 
     def on_finished(total: int) -> None:
         results["finished"].append(total)
 
-    worker.item_started.connect(on_started)
     worker.item_completed.connect(on_completed)
     worker.item_failed.connect(on_failed)
     worker.queue_finished.connect(on_finished)
@@ -238,6 +221,133 @@ def test_all_pairs_succeed_emits_item_completed(tmp_path):
     _item_id, cards = results["completed"][0]
     assert cards == 5
     assert results["finished"] == [5]
+
+
+# ---------------------------------------------------------------------------
+# Status-race regression tests (T-20): worker owns QueueItem status writes.
+# These wire capture-only handlers (no status mutation) to simulate a stalled
+# GUI event loop whose queued slots have not run yet. Each carries a watchdog
+# that cancels the worker if the bug re-picks an item, so a regression fails
+# by assertion instead of hanging the suite.
+# ---------------------------------------------------------------------------
+
+
+def _wire_capture_only(worker: BatchQueueWorkerThread) -> dict:
+    """Capture signal emissions WITHOUT mirroring any GUI status writes."""
+    results: dict = {"started": [], "completed": [], "failed": [], "finished": []}
+    worker.item_started.connect(lambda item_id, _name: results["started"].append(item_id))
+    worker.item_completed.connect(lambda item_id, cards: results["completed"].append((item_id, cards)))
+    worker.item_failed.connect(lambda item_id, msg: results["failed"].append((item_id, msg)))
+    worker.queue_finished.connect(lambda total: results["finished"].append(total))
+    return results
+
+
+def test_item_processed_exactly_once_when_gui_status_write_delayed(tmp_path):
+    """Regression: with GUI status slots delayed, the finished item must not
+    be re-picked as still-PENDING and processed again."""
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    item = queue.get_all_items()[0]
+
+    proc = MagicMock()
+    proc.process_episode.return_value = _ok_result(cards=2)
+
+    worker = _make_worker_with_queue(queue)
+    results = _wire_capture_only(worker)
+    # Watchdog: cancel on a second pick so a regression terminates.
+    worker.item_started.connect(lambda *_: worker.cancel() if len(results["started"]) >= 2 else None)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    assert results["started"] == [item.id], "item must be picked exactly once"
+    assert results["completed"] == [(item.id, 2)], "item_completed must fire exactly once"
+    assert results["failed"] == []
+    assert proc.process_episode.call_count == 1
+    assert item.status == QueueItemStatus.COMPLETED
+    assert item.cards_created == 2
+
+
+def test_fast_fail_item_fails_exactly_once_when_gui_status_write_delayed(tmp_path):
+    """Regression: a fast-failing item ("No matching pairs" raises within the
+    same loop iteration) must not hot-spin re-failing while GUI writes lag."""
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    item = queue.get_all_items()[0]
+
+    worker = _make_worker_with_queue(queue)
+    results = _wire_capture_only(worker)
+    # Watchdog: cancel on a second failure so a regression terminates.
+    worker.item_failed.connect(lambda *_: worker.cancel() if len(results["failed"]) >= 2 else None)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[],
+        ),
+    ):
+        worker.run()
+
+    assert len(results["failed"]) == 1, "item_failed must fire exactly once"
+    assert "No matching video/subtitle pairs found" in results["failed"][0][1]
+    assert results["completed"] == []
+    assert item.status == QueueItemStatus.ERROR
+    assert item.error_message == "No matching video/subtitle pairs found"
+
+
+def test_worker_marks_item_processing_at_pick_time(tmp_path):
+    """The worker itself (not a GUI slot) moves the item PENDING -> PROCESSING
+    before work starts, and to COMPLETED when it finishes."""
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    item = queue.get_all_items()[0]
+
+    seen_during_processing: list[QueueItemStatus] = []
+
+    proc = MagicMock()
+
+    def fake_process(*_args, **_kwargs):
+        seen_during_processing.append(item.status)
+        return _ok_result(cards=1)
+
+    proc.process_episode.side_effect = fake_process
+
+    worker = _make_worker_with_queue(queue)
+    _wire_capture_only(worker)
+    # Watchdog: stop after the first completion so a regression terminates.
+    worker.item_completed.connect(lambda *_: worker.cancel())
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    assert seen_during_processing == [QueueItemStatus.PROCESSING]
+    assert item.status == QueueItemStatus.COMPLETED
 
 
 def test_setup_error_emits_item_failed(tmp_path):
