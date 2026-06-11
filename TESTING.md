@@ -1,16 +1,18 @@
 # Testing
 
-Anki Miner has a substantial test suite — ~1,400 tests across roughly 100 test files in unit and integration layers. This page documents how it is organized and how to run it.
+Anki Miner has a substantial test suite — ~1,400 tests across roughly 130 unit test files plus the integration layer. This page documents how it is organized and how to run it.
 
 ## Layout
 
 ```
 tests/
 ├── conftest.py            # shared fixtures
-├── unit/                  # ~100 files, external services mocked
-│   └── gui/               # widget tests with QT_QPA_PLATFORM=offscreen
+├── unit/                  # ~130 files, external services mocked
+│   └── gui/               # a handful of widget tests; most live in unit/ root
 └── integration/           # 6 files, real adapters where possible
 ```
+
+Most widget tests (panels, tabs, dialogs) live directly under `tests/unit/` (e.g. `test_anki_settings_panel.py`, `test_deck_builder_tab.py`), not in `tests/unit/gui/`. Any test importing a PyQt6 widget needs `QT_QPA_PLATFORM=offscreen` in headless environments — see [Headless Qt](#headless-qt).
 
 - **Unit tests** mock external services (AnkiConnect, ffmpeg, Jisho, yt-dlp). They should run fast and never touch the network.
 - **Integration tests** exercise the assembled pipeline against real adapters. Slow, may require ffmpeg on PATH.
@@ -51,10 +53,10 @@ Register new markers in `[tool.pytest.ini_options].markers` in `pyproject.toml`.
 
 ## Headless Qt
 
-Any test that imports a `PyQt6` widget must run with the offscreen platform plugin set:
+Any test that imports a `PyQt6` widget needs the offscreen platform plugin in a headless environment; setting it everywhere is recommended for parity with CI:
 
 ```bash
-QT_QPA_PLATFORM=offscreen pytest tests/unit/gui
+QT_QPA_PLATFORM=offscreen pytest tests/unit
 ```
 
 CI sets this automatically. Locally, the project exposes `tests/conftest.py` configuration that ensures Qt widgets do not pop a window during tests.
@@ -80,11 +82,12 @@ There is no enforced coverage floor today. New code should add tests where reaso
 
 ## CI behavior
 
-`.github/workflows/ci.yml` defines four jobs:
+`.github/workflows/ci.yml` defines five jobs:
 
 1. **lint** — `ruff check .` + `black --check .` (Python 3.12).
 2. **typecheck** — `mypy anki_miner` (Python 3.12).
-3. **test** — `pytest -m "not youtube"` on the full matrix.
-4. **wheel-assets** — builds a wheel, runs `scripts/check_wheel_assets.py`.
+3. **test** — `pytest -m "not youtube"` with coverage on the full matrix.
+4. **smoke-min-deps** — installs floor-version pins of the fragile deps (via `scripts/extract_floor_pins.py`) and runs the YouTube-layer unit tests (`tests/unit/test_youtube_*.py -m "not youtube"`) against those floors, catching breakage from the oldest supported dependency versions.
+5. **wheel-assets** — builds a wheel, runs `scripts/check_wheel_assets.py`.
 
-All four must pass for a PR to be mergeable.
+All five must pass for a PR to be mergeable.
