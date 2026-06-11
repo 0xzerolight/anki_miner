@@ -608,10 +608,14 @@ class BatchProcessingTab(MiningTabBase):
             self.retry_button.setVisible(False)
             return
 
-        # Hide retry button and start processing
+        # Hide retry button and start processing. Use _show_cancel_state()
+        # (not just _set_buttons_enabled(False)) so the Cancel button is
+        # surfaced for the retry run, matching _process_queue and
+        # _start_processing_with_pairs — otherwise the retry run is
+        # uncancellable (T-22).
         self.retry_button.setVisible(False)
         self._is_processing = True
-        self._set_buttons_enabled(False)
+        self._show_cancel_state()
 
         self.presenter.show_info(f"Retrying {reset_count} failed items...")
         self._start_queue_worker()
