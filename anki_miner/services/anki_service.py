@@ -582,140 +582,150 @@ class AnkiService:
         bold_used = 0
         bold_fallback = 0
 
-        for i in range(0, len(word_data_list), batch_size):
-            batch = word_data_list[i : i + batch_size]
+        # Persist progress even if a later batch raises. Earlier batches'
+        # cards already exist in Anki; on a mid-run failure we must still
+        # record their note IDs (so Undo works) and invalidate the now-stale
+        # vocab cache before the error propagates — otherwise those cards are
+        # orphaned with no record. The `finally` runs on success AND failure.
+        try:
+            for i in range(0, len(word_data_list), batch_size):
+                batch = word_data_list[i : i + batch_size]
 
-            # Build notes array for this batch
-            notes = []
-            for item in batch:
-                word = item.word
-                media = item.media
-                definition = item.definition
-                extra_fields = item.extra_fields
+                # Build notes array for this batch
+                notes = []
+                for item in batch:
+                    word = item.word
+                    media = item.media
+                    definition = item.definition
+                    extra_fields = item.extra_fields
 
-                # Pull glossary out of extra_fields BEFORE the OPTIONAL pass —
-                # OPTIONAL_FIELD_KEYS html.escape()s its values, but glossary
-                # is raw HTML and must be sent verbatim.
-                glossary_html = ""
-                if extra_fields and "glossary" in extra_fields:
-                    glossary_html = extra_fields["glossary"] or ""
-                    extra_fields = {k: v for k, v in extra_fields.items() if k != "glossary"}
-                    if not extra_fields:
-                        extra_fields = None
+                    # Pull glossary out of extra_fields BEFORE the OPTIONAL pass —
+                    # OPTIONAL_FIELD_KEYS html.escape()s its values, but glossary
+                    # is raw HTML and must be sent verbatim.
+                    glossary_html = ""
+                    if extra_fields and "glossary" in extra_fields:
+                        glossary_html = extra_fields["glossary"] or ""
+                        extra_fields = {k: v for k, v in extra_fields.items() if k != "glossary"}
+                        if not extra_fields:
+                            extra_fields = None
 
-                # Build field values (only reference successfully stored media)
-                picture_html = ""
-                if media.screenshot_filename and media.screenshot_filename in stored_files:
-                    picture_html = f'<img src="{html.escape(media.screenshot_filename)}">'
+                    # Build field values (only reference successfully stored media)
+                    picture_html = ""
+                    if media.screenshot_filename and media.screenshot_filename in stored_files:
+                        picture_html = f'<img src="{html.escape(media.screenshot_filename)}">'
 
-                audio_ref = ""
-                if media.audio_filename and media.audio_filename in stored_files:
-                    audio_ref = f"[sound:{media.audio_filename}]"
+                    audio_ref = ""
+                    if media.audio_filename and media.audio_filename in stored_files:
+                        audio_ref = f"[sound:{media.audio_filename}]"
 
-                # Sentence + SentenceFurigana use the bolded forms when the
-                # config flag is on AND the parse pre-computed them. The
-                # precomputed forms are already HTML-safe (per-token escape
-                # in wrap_target_*); the <b> tags must not be double-escaped.
-                # Empty precomputed string means "fall back to escape" — this
-                # is the path for entries that came from a code path that
-                # did not honor the bold flag (defensive).
-                if self.config.bold_target_in_sentence and word.sentence_bolded:
-                    sentence_field = word.sentence_bolded
-                    bold_used += 1
-                else:
-                    sentence_field = html.escape(word.sentence)
-                    if self.config.bold_target_in_sentence:
-                        bold_fallback += 1
-                if self.config.bold_target_in_sentence and word.sentence_furigana_bolded:
-                    sentence_furigana_field = word.sentence_furigana_bolded
-                else:
-                    sentence_furigana_field = html.escape(word.sentence_furigana)
+                    # Sentence + SentenceFurigana use the bolded forms when the
+                    # config flag is on AND the parse pre-computed them. The
+                    # precomputed forms are already HTML-safe (per-token escape
+                    # in wrap_target_*); the <b> tags must not be double-escaped.
+                    # Empty precomputed string means "fall back to escape" — this
+                    # is the path for entries that came from a code path that
+                    # did not honor the bold flag (defensive).
+                    if self.config.bold_target_in_sentence and word.sentence_bolded:
+                        sentence_field = word.sentence_bolded
+                        bold_used += 1
+                    else:
+                        sentence_field = html.escape(word.sentence)
+                        if self.config.bold_target_in_sentence:
+                            bold_fallback += 1
+                    if self.config.bold_target_in_sentence and word.sentence_furigana_bolded:
+                        sentence_furigana_field = word.sentence_furigana_bolded
+                    else:
+                        sentence_furigana_field = html.escape(word.sentence_furigana)
 
-                # Build fields, skipping any with empty config mapping
-                field_data = {
-                    "word": html.escape(word.mined_form),
-                    "sentence": sentence_field,
-                    "definition": definition or "",
-                    "glossary": glossary_html,
-                    "picture": picture_html,
-                    "audio": audio_ref,
-                    "expression_furigana": html.escape(word.expression_furigana),
-                    "expression_reading": html.escape(word.expression_reading),
-                    "sentence_furigana": sentence_furigana_field,
-                    "sentence_reading": html.escape(word.sentence_reading),
-                }
-                fields = {}
-                for key, value in field_data.items():
-                    anki_field_name = self.config.anki_fields.get(key, "")
-                    if anki_field_name:
-                        fields[anki_field_name] = value
-
-                # Add optional fields if configured and data available
-                if extra_fields:
-                    for key, value in extra_fields.items():
+                    # Build fields, skipping any with empty config mapping
+                    field_data = {
+                        "word": html.escape(word.mined_form),
+                        "sentence": sentence_field,
+                        "definition": definition or "",
+                        "glossary": glossary_html,
+                        "picture": picture_html,
+                        "audio": audio_ref,
+                        "expression_furigana": html.escape(word.expression_furigana),
+                        "expression_reading": html.escape(word.expression_reading),
+                        "sentence_furigana": sentence_furigana_field,
+                        "sentence_reading": html.escape(word.sentence_reading),
+                    }
+                    fields = {}
+                    for key, value in field_data.items():
                         anki_field_name = self.config.anki_fields.get(key, "")
-                        if key in self.OPTIONAL_FIELD_KEYS and anki_field_name and value:
-                            fields[anki_field_name] = html.escape(str(value))
+                        if anki_field_name:
+                            fields[anki_field_name] = value
 
-                note: dict = {
-                    "deckName": self.config.anki_deck_name,
-                    "modelName": self.config.anki_note_type,
-                    "fields": fields,
-                    "tags": self.config.anki_tags.split(),
-                }
-                # Deck Builder: re-card words that already exist elsewhere in the
-                # collection. duplicateScope="deck" keeps cross-episode curation's
-                # single-carding meaningful within the new deck.
-                if self.config.allow_duplicate_cards:
-                    note["options"] = {"allowDuplicate": True, "duplicateScope": "deck"}
-                notes.append(note)
+                    # Add optional fields if configured and data available
+                    if extra_fields:
+                        for key, value in extra_fields.items():
+                            anki_field_name = self.config.anki_fields.get(key, "")
+                            if key in self.OPTIONAL_FIELD_KEYS and anki_field_name and value:
+                                fields[anki_field_name] = html.escape(str(value))
 
-            # Send batch request. `post_action` raises `AnkiConnectionError`
-            # for connection failures, transport errors, and AnkiConnect-side
-            # error payloads. Duplicates normally come back as a `null` slot in
-            # the result array (batch survives), but some AnkiConnect versions
-            # raise a top-level duplicate error for the whole batch — which used
-            # to abort the entire run with zero cards. Recover from that case by
-            # retrying per-note and skipping only the duplicates; any other
-            # error still propagates to the pipeline boundary.
-            try:
-                note_ids = (
-                    post_action(
-                        self.config.ankiconnect_url,
-                        "addNotes",
-                        params={"notes": notes},
-                        timeout=60,
+                    note: dict = {
+                        "deckName": self.config.anki_deck_name,
+                        "modelName": self.config.anki_note_type,
+                        "fields": fields,
+                        "tags": self.config.anki_tags.split(),
+                    }
+                    # Deck Builder: re-card words that already exist elsewhere in the
+                    # collection. duplicateScope="deck" keeps cross-episode curation's
+                    # single-carding meaningful within the new deck.
+                    if self.config.allow_duplicate_cards:
+                        note["options"] = {"allowDuplicate": True, "duplicateScope": "deck"}
+                    notes.append(note)
+
+                # Send batch request. `post_action` raises `AnkiConnectionError`
+                # for connection failures, transport errors, and AnkiConnect-side
+                # error payloads. Duplicates normally come back as a `null` slot in
+                # the result array (batch survives), but some AnkiConnect versions
+                # raise a top-level duplicate error for the whole batch — which used
+                # to abort the entire run with zero cards. Recover from that case by
+                # retrying per-note and skipping only the duplicates; any other
+                # error still propagates to the pipeline boundary.
+                try:
+                    note_ids = (
+                        post_action(
+                            self.config.ankiconnect_url,
+                            "addNotes",
+                            params={"notes": notes},
+                            timeout=60,
+                        )
+                        or []
                     )
-                    or []
-                )
-            except AnkiConnectionError as e:
-                if not _is_duplicate_error(e):
-                    raise
-                logger.warning(
-                    "addNotes reported a duplicate for the batch; retrying per-note "
-                    "and skipping duplicates already in your collection.",
-                )
-                note_ids, batch_skipped = self._add_notes_individually(notes)
-                skipped_duplicates += batch_skipped
+                except AnkiConnectionError as e:
+                    if not _is_duplicate_error(e):
+                        raise
+                    logger.warning(
+                        "addNotes reported a duplicate for the batch; retrying per-note "
+                        "and skipping duplicates already in your collection.",
+                    )
+                    note_ids, batch_skipped = self._add_notes_individually(notes)
+                    skipped_duplicates += batch_skipped
 
-            # Count successful creations (non-null IDs)
-            batch_created = sum(1 for nid in note_ids if nid is not None)
-            total_created += batch_created
-            all_created_ids.extend(nid for nid in note_ids if nid is not None)
+                # Count successful creations (non-null IDs)
+                batch_created = sum(1 for nid in note_ids if nid is not None)
+                total_created += batch_created
+                all_created_ids.extend(nid for nid in note_ids if nid is not None)
 
-            if progress_callback:
-                progress_callback.on_progress(
-                    min(i + batch_size, len(word_data_list)),
-                    f"Cards created: {batch_created}/{len(batch)}",
-                )
+                if progress_callback:
+                    progress_callback.on_progress(
+                        min(i + batch_size, len(word_data_list)),
+                        f"Cards created: {batch_created}/{len(batch)}",
+                    )
+        finally:
+            # Record whatever batches completed (all of them on success, the
+            # earlier ones on a mid-run failure) and invalidate the vocab
+            # cache if any card was created so the filter reflects the new
+            # collection. Runs before the exception re-raises.
+            self.last_created_note_ids = all_created_ids
+            self.last_skipped_duplicates = skipped_duplicates
+            if total_created > 0:
+                self.invalidate_existing_vocabulary_cache()
 
         if progress_callback:
             progress_callback.on_complete()
-
-        self.last_created_note_ids = all_created_ids
-        self.last_skipped_duplicates = skipped_duplicates
-        if total_created > 0:
-            self.invalidate_existing_vocabulary_cache()
         if skipped_duplicates > 0:
             logger.info(
                 "Skipped %d note(s) Anki flagged as duplicates (existing card or same-batch).", skipped_duplicates
