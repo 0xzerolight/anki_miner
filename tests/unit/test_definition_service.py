@@ -26,7 +26,11 @@ def make_provider(name="Test", available=True, return_value=None, load_raises=No
 
 
 class TestGetDefinition:
-    """Tests for DefinitionService.get_definition chain walking."""
+    """Single-word chain walking via get_definitions_batch([word])[0].
+
+    The per-word fallback inside get_definitions_batch (providers lacking
+    lookup_many) walks the chain identically to the old get_definition.
+    """
 
     def test_first_hit_wins(self, test_config):
         """When the first provider returns a definition, later providers are not called."""
@@ -34,7 +38,7 @@ class TestGetDefinition:
         p2 = make_provider("B", return_value="from B")
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definition("x") == "from A"
+        assert service.get_definitions_batch(["x"])[0] == "from A"
         p1.lookup.assert_called_once_with("x")
         p2.lookup.assert_not_called()
 
@@ -44,7 +48,7 @@ class TestGetDefinition:
         p2 = make_provider("B", return_value="from B")
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definition("x") == "from B"
+        assert service.get_definitions_batch(["x"])[0] == "from B"
         p1.lookup.assert_called_once_with("x")
         p2.lookup.assert_called_once_with("x")
 
@@ -54,30 +58,30 @@ class TestGetDefinition:
         p2 = make_provider("online", available=True, return_value="online result")
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definition("x") == "online result"
+        assert service.get_definitions_batch(["x"])[0] == "online result"
         p1.lookup.assert_not_called()
         p2.lookup.assert_called_once()
 
     def test_returns_none_when_all_miss(self, test_config):
-        """When every provider returns None, get_definition returns None."""
+        """When every provider returns None, the result is None."""
         p1 = make_provider("A", return_value=None)
         p2 = make_provider("B", return_value=None)
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definition("unknown") is None
+        assert service.get_definitions_batch(["unknown"])[0] is None
 
     def test_returns_none_when_no_providers(self, test_config):
         """Empty provider list yields None for every lookup."""
         service = DefinitionService(test_config, providers=[])
-        assert service.get_definition("x") is None
+        assert service.get_definitions_batch(["x"])[0] is None
 
     def test_returns_none_when_all_unavailable(self, test_config):
-        """When every provider is unavailable, get_definition returns None."""
+        """When every provider is unavailable, the result is None."""
         p1 = make_provider("A", available=False)
         p2 = make_provider("B", available=False)
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definition("x") is None
+        assert service.get_definitions_batch(["x"])[0] is None
         p1.lookup.assert_not_called()
         p2.lookup.assert_not_called()
 
@@ -135,15 +139,15 @@ class TestEnsureLoaded:
         service = DefinitionService(test_config, providers=[p1, p2])
 
         assert service.ensure_loaded() is True
-        assert service.get_definition("x") == "ok"
+        assert service.get_definitions_batch(["x"])[0] == "ok"
 
-    def test_get_definition_triggers_ensure_loaded(self, test_config):
-        """Calling get_definition() lazily loads providers."""
+    def test_batch_lookup_triggers_ensure_loaded(self, test_config):
+        """Calling get_definitions_batch() lazily loads providers."""
         p1 = make_provider("A", return_value="hit")
         service = DefinitionService(test_config, providers=[p1])
 
         # Did not call ensure_loaded explicitly
-        result = service.get_definition("x")
+        result = service.get_definitions_batch(["x"])[0]
 
         p1.load.assert_called_once()
         assert result == "hit"
@@ -231,15 +235,14 @@ class TestGetDefinitionsBatchFastPath:
         assert "x" not in called_with
         assert "y" in called_with
 
-    def test_result_matches_per_word_get_definition(self, test_config):
+    def test_batch_matches_expected_chain_resolution(self, test_config):
         p1 = make_batch_provider("A", table={"a": "A-a", "c": "A-c"})
         p2 = make_batch_provider("B", table={"b": "B-b", "c": "B-c-shadowed"})
         words = ["a", "b", "c", "d"]
         service = DefinitionService(test_config, providers=[p1, p2])
 
         batch = service.get_definitions_batch(words)
-        per_word = [DefinitionService(test_config, providers=[p1, p2]).get_definition(w) for w in words]
-        assert batch == per_word
+        # First-hit-wins across the chain: p1 shadows p2 for "c", "d" misses both.
         assert batch == ["A-a", "B-b", "A-c", None]
 
     def test_word_absent_from_all_providers_is_none(self, test_config):
@@ -405,7 +408,7 @@ class TestClose:
         p2.close.assert_called_once()
 
     def test_resets_loaded_so_next_lookup_reopens(self, test_config):
-        """After close(), the next get_definition() must re-invoke provider.load()."""
+        """After close(), the next batch lookup must re-invoke provider.load()."""
         p1 = make_provider("A", return_value="hit")
         service = DefinitionService(test_config, providers=[p1])
 
@@ -413,7 +416,7 @@ class TestClose:
         p1.load.assert_called_once()
 
         service.close()
-        service.get_definition("x")
+        service.get_definitions_batch(["x"])
 
         assert p1.load.call_count == 2
 

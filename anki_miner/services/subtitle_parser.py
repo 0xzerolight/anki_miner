@@ -68,10 +68,11 @@ class SubtitleParserService:
         self.config = config
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
-        # the first SubtitleParserService before prewarm_tagger() finishes; worst
-        # case is the same wait they'd incur anyway, no correctness impact. GUI-
-        # thread call sites that only call parse_raw_entries never tokenize, so
-        # they don't race the worker thread's .parse() calls on this shared tagger.
+        # the first SubtitleParserService before the background prewarm worker
+        # finishes; worst case is the same wait they'd incur anyway, no correctness
+        # impact. GUI-thread call sites that only call parse_raw_entries never
+        # tokenize, so they don't race the worker thread's .parse() calls on this
+        # shared tagger.
         self.tagger = get_shared_tagger()
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
