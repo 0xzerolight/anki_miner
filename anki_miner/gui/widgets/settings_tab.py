@@ -159,8 +159,16 @@ class SettingsTab(QWidget):
         self.dictionary_panel.reimport_dict_requested.connect(self._on_reimport_dict_clicked)
         self.dictionary_panel.reimport_all_requested.connect(self._on_reimport_all_clicked)
         # Persist immediately after a destructive remove so an orphan dict_id
-        # doesn't reappear in gui_config.json on next launch (Issue #30).
-        self.dictionary_panel.dictionary_removed.connect(self._on_save_clicked)
+        # doesn't reappear in gui_config.json on next launch (Issue #30). Use a
+        # NARROW persist of just the chain — NOT the full Save pipeline (T-08):
+        # _on_save_clicked has unrelated early-return aborts (bad dicts_root,
+        # missing cookies file, invalid regex, pitch/freq import failure), any
+        # of which would skip persisting the removal and leave the deleted
+        # dict_id orphaned — the exact Issue #30 bug this wiring prevents — while
+        # its success path silently commits every panel's unsaved edits.
+        self.dictionary_panel.dictionary_removed.connect(
+            lambda: self._persist_chain_change(self.dictionary_panel.get_chain())
+        )
 
         # Filtering panel: excluded-decks picker + known-words cache rebuild (Issue #38).
         self.filtering_panel.fetch_decks_requested.connect(self._on_fetch_decks_requested)
