@@ -25,6 +25,7 @@ from anki_miner.gui.constants import (
     WINDOW_MIN_HEIGHT,
     WINDOW_MIN_WIDTH,
 )
+from anki_miner.gui.controllers import BackgroundTaskController
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
@@ -32,45 +33,11 @@ from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
-from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutService, ValidationService
 from anki_miner.services.anki_service import AnkiService
 
 logger = logging.getLogger(__name__)
-
-# Shutdown join policy knobs (see MainWindow._join_worker_for_close):
-# grace period each cancellable worker gets to exit during closeEvent before
-# the close is deferred, and the poll cadence while a deferred close waits
-# for laggard threads to finish.
-_CLOSE_JOIN_GRACE_MS = 2000
-_CLOSE_POLL_INTERVAL_MS = 200
-
-
-def _needs_jmdict_migration(xml_path: Path, dicts_root: Path, chain: tuple | None = None) -> bool:
-    """Return True iff we should auto-trigger the JMdict → SQLite migration.
-
-    Triggers only when:
-      * legacy XML is on disk,
-      * no SQLite index exists yet, AND
-      * the user's chain has jmdict-english enabled (no point parsing 60MB
-        XML for someone who explicitly disabled offline lookups).
-
-    The chain check is skipped when chain is None to keep backward-compatible
-    behaviour with the unit tests that just probe file presence.
-    """
-    if not xml_path.exists():
-        return False
-    if (dicts_root / "jmdict-english" / "index.sqlite").exists():
-        return False
-    if chain is None:
-        return True
-    return any(
-        getattr(e, "kind", None) == "indexed"
-        and getattr(e, "dict_id", None) == "jmdict-english"
-        and getattr(e, "enabled", False)
-        for e in chain
-    )
 
 
 class MainWindow(QMainWindow):
@@ -106,11 +73,20 @@ class MainWindow(QMainWindow):
         # Create presenter for validation signals
         self.presenter = GUIPresenter(self)
 
+        # Background-task lifecycle controller (T-70): owns the validation /
+        # update-check / JMdict-migration / prewarm worker handles and the
+        # shutdown join policy. Results are forwarded back here — all UI
+        # consumption (status bar, dialogs, banner, badge) stays in this class.
+        self.background_tasks = BackgroundTaskController(self)
+        self.background_tasks.validation_result.connect(self._on_validation_finished)
+        self.background_tasks.validation_error.connect(self._on_validation_error)
+        self.background_tasks.update_check_result.connect(self._on_update_check_result)
+        self.background_tasks.jmdict_migration_finished.connect(self._on_jmdict_migration_finished)
+
         # Config-bound services (validation + the AnkiService shared across undo
         # callbacks). Rebuilt on every config change via update_config — see
         # _build_config_bound_services — so an AnkiConnect URL/port edit reaches
         # the next Undo delete instead of the stale startup endpoint.
-        self.validation_worker = None
         self._build_config_bound_services()
         self._validation_silent = False
 
@@ -119,9 +95,6 @@ class MainWindow(QMainWindow):
 
         # Set up UI
         self._setup_ui()
-
-        # Track update worker
-        self.update_worker = None
 
         # Singleton update banner — None until the first check yields a result.
         # Reused across update checks via UpdateBanner.update_info() to avoid
@@ -139,18 +112,7 @@ class MainWindow(QMainWindow):
             self._check_for_updates()
 
         # One-time JMdict XML → SQLite migration (background)
-        self._jmdict_migration_worker = None
         self._maybe_migrate_jmdict()
-
-        # Best-effort cache prewarm worker, scheduled by ``app.main()`` after
-        # the first paint. Held here so the QThread isn't GC'd mid-run and so
-        # ``closeEvent`` can wait for it; cleared once it finishes.
-        self._prewarm_worker = None
-
-        # Deferred-close state: poll timer + workers that outlived the grace
-        # join in closeEvent (see _join_worker_for_close for the policy).
-        self._close_poll_timer: QTimer | None = None
-        self._close_laggards: list = []
 
         # Post-update confirmation: if last_known_version differs from the
         # currently running __version__, show a one-shot info dialog. Save the
@@ -608,131 +570,22 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         """Handle window close event.
 
-        Joins every owned worker thread via the single shutdown join policy
-        in :meth:`_join_worker_for_close`; workers that outlive the grace
-        join defer the close (see :meth:`_defer_close`) instead of being
-        abandoned to Qt teardown.
+        Delegates the shutdown join policy to the background-task controller:
+        every owned and tab-owned worker is joined with a bounded grace, and
+        workers that outlive it defer the close (controller hides the window,
+        polls, then saves + quits) instead of being abandoned to Qt teardown.
 
         Args:
             event: Close event
         """
-        laggards: list = []
-
-        def join(worker, *, timeout_ms: int | None = _CLOSE_JOIN_GRACE_MS) -> None:
-            if not self._join_worker_for_close(worker, timeout_ms=timeout_ms):
-                laggards.append(worker)
-
-        # Window-owned workers: validation, update check, JMdict migration.
-        join(self.validation_worker)
-        join(self.update_worker)
-        join(self._jmdict_migration_worker)
-
-        # The best-effort prewarm worker has no cancel hook (it's a short,
-        # uninterruptible cache warm), so join it without timeout instead of
-        # routing it through the deferred close: even on a slow dicts_root it
-        # exits on its own in bounded time, and a bounded wait(2000) that
-        # expired would only delay shutdown behind the poll timer for it.
-        join(self._prewarm_worker, timeout_ms=None)
-
-        # Cancel and wait for any processing workers in tabs
-        from anki_miner.gui.widgets.youtube_tab import YouTubeTab
-
-        for i in range(self.tabs.count()):
-            tab = self.tabs.widget(i)
-            # All mining tabs expose their worker on `worker_thread`.
-            # DeckBuilderWorker.cancel() also opens its confirm gate, so a worker
-            # blocked awaiting Build unblocks and exits.
-            join(getattr(tab, "worker_thread", None))
-            # YouTube tab owns an additional probe worker; shutdown() tears
-            # both threads down cleanly.
-            if isinstance(tab, YouTubeTab) and hasattr(tab, "shutdown"):
-                tab.shutdown()
-            # SettingsTab owns short-lived AnkiConnect workers with no
-            # `worker_thread` (T-12). Route each through the same join policy
-            # so a long fetch/styling request defers the close instead of being
-            # destroyed mid-request.
-            iter_workers = getattr(tab, "iter_close_workers", None)
-            if callable(iter_workers):
-                for worker in iter_workers():
-                    join(worker)
-
+        laggards = self.background_tasks.shutdown(self.tabs)
         if laggards:
-            self._defer_close(event, laggards)
+            self.background_tasks.defer_close(event, laggards)
             return
 
         # Save configuration before closing
         GUIConfigManager.save_config(self.config)
         event.accept()
-
-    def _join_worker_for_close(self, worker, *, timeout_ms: int | None = _CLOSE_JOIN_GRACE_MS) -> bool:
-        """Single shutdown join policy for all owned worker threads.
-
-        (T-70 will lift this into a window controller; until then this helper
-        is the one place the policy lives — closeEvent only orchestrates.)
-
-        Cancel the worker when it supports ``cancel()``, then join it:
-
-        * ``timeout_ms=None`` — unbounded blocking join, reserved for short
-          workers with no cancel hook (the cache prewarm).
-        * otherwise — bounded grace join. Returns False when the worker
-          outlives it; the caller must then defer the close rather than let
-          Qt destroy a running QThread (window-parented workers die with the
-          window, unparented tab workers get GC'd — either way Qt6 aborts
-          with "QThread: Destroyed while thread is still running" and
-          in-flight ffmpeg children are orphaned). Post-cancel runtime today
-          is dominated by ffmpeg joins and HTTP timeouts (10-60 s); once
-          media-kill (T-33, media_extractor) lands, ``cancel()`` also kills
-          ffmpeg and laggards become rare with no changes here.
-
-        Returns True when the worker has exited (or was None / not running).
-        """
-        if worker is None or not worker.isRunning():
-            return True
-        cancel = getattr(worker, "cancel", None)
-        if callable(cancel):
-            cancel()
-        if timeout_ms is None:
-            worker.wait()
-            return True
-        return bool(worker.wait(timeout_ms))
-
-    def _defer_close(self, event, laggards: list) -> None:
-        """Deferred arm of the shutdown join policy.
-
-        Hides the window (so closing feels instant to the user), refuses the
-        close event (so Qt keeps the window — and the running QThreads it
-        owns — alive), and polls until every laggard has exited. A worker
-        that never exits keeps the hidden process alive by design: a
-        discoverable lingering process beats an abort mid-shutdown.
-        """
-        logger.warning(
-            "Deferring close: %d worker thread(s) still running after %d ms grace",
-            len(laggards),
-            _CLOSE_JOIN_GRACE_MS,
-        )
-        self._close_laggards = laggards
-        if self._close_poll_timer is None:
-            self._close_poll_timer = QTimer(self)
-            self._close_poll_timer.setInterval(_CLOSE_POLL_INTERVAL_MS)
-            self._close_poll_timer.timeout.connect(self._poll_deferred_close)
-        self._close_poll_timer.start()
-        self.hide()
-        event.ignore()
-
-    def _poll_deferred_close(self) -> None:
-        """Finish a deferred close once every laggard worker has exited.
-
-        Quits the application explicitly instead of re-entering ``close()``:
-        closing an already-hidden window does not reliably emit
-        ``lastWindowClosed``, which would leave the event loop running with
-        no windows.
-        """
-        if any(w.isRunning() for w in self._close_laggards):
-            return
-        if self._close_poll_timer is not None:
-            self._close_poll_timer.stop()
-        GUIConfigManager.save_config(self.config)
-        QApplication.quit()
 
     def _on_system_status_clicked(self) -> None:
         """Handle system status indicator click."""
@@ -741,19 +594,13 @@ class MainWindow(QMainWindow):
 
     def _run_validation(self) -> None:
         """Run system validation in background thread."""
-        # Don't start a new validation if one is already running
-        if self.validation_worker is not None and self.validation_worker.isRunning():
+        # The controller declines when a validation run is already in flight.
+        # The current (config-bound) service is passed per call so the rebuild
+        # in _build_config_bound_services reaches the next run.
+        if not self.background_tasks.start_validation(self.validation_service):
             self.status_bar.set_operation("Validation already running", "info")
             return
-
-        # Update status bar
         self.status_bar.set_operation("Running system validation...", "info")
-
-        # Create and start validation worker
-        self.validation_worker = ValidationWorkerThread(self.validation_service, self)
-        self.validation_worker.result_ready.connect(self._on_validation_finished)
-        self.validation_worker.error.connect(self._on_validation_error)
-        self.validation_worker.start()
 
     def _on_validation_finished(self, result: ValidationResult) -> None:
         """Handle validation worker completion.
@@ -779,18 +626,8 @@ class MainWindow(QMainWindow):
 
     def _maybe_migrate_jmdict(self) -> None:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background."""
-        from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
-
-        dicts_root = self.config.dicts_root
-        if not _needs_jmdict_migration(self.config.jmdict_path, dicts_root, self.config.dictionary_chain):
-            return
-
-        self._jmdict_migration_worker = DictionaryImportWorker.for_jmdict(self.config.jmdict_path, dicts_root)
-        self._jmdict_migration_worker.import_finished.connect(self._on_jmdict_migration_finished)
-        self._jmdict_migration_worker.failed.connect(lambda err: logger.warning("JMdict migration failed: %s", err))
-        logger.info("Starting one-time JMdict SQLite migration")
-        self.status_bar.set_operation("Migrating JMdict to SQLite…", "info")
-        self._jmdict_migration_worker.start()
+        if self.background_tasks.maybe_migrate_jmdict(self.config):
+            self.status_bar.set_operation("Migrating JMdict to SQLite…", "info")
 
     def _on_jmdict_migration_finished(self, dict_id: str, meta: dict) -> None:
         """Notify tabs that they need to rebuild any cached DefinitionService.
@@ -805,17 +642,7 @@ class MainWindow(QMainWindow):
 
     def _check_for_updates(self) -> None:
         """Check for application updates in background thread."""
-        if self.update_worker and self.update_worker.isRunning():
-            return
-
-        from anki_miner import __version__
-        from anki_miner.gui.workers.update_worker import UpdateWorkerThread
-        from anki_miner.services.update_checker import UpdateChecker
-
-        checker = UpdateChecker(__version__)
-        self.update_worker = UpdateWorkerThread(checker, self)
-        self.update_worker.result_ready.connect(self._on_update_check_result)
-        self.update_worker.start()
+        self.background_tasks.check_for_updates()
 
     def _on_update_check_result(self, info: object) -> None:
         """Handle update check result.
