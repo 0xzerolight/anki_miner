@@ -308,28 +308,6 @@ def wrap_target_furigana(text: str, tagger, start: int, end: int) -> str:
     return wrap_target_furigana_from_tokens(text, tagger(text), start, end)
 
 
-def extract_japanese_text(text: str) -> str:
-    """Extract only Japanese characters from text.
-
-    Args:
-        text: Input text
-
-    Returns:
-        Text containing only Japanese characters
-    """
-    # Keep hiragana, katakana, kanji, and common punctuation
-    japanese_chars = []
-    for char in text:
-        if (
-            "぀" <= char <= "ゟ"  # Hiragana
-            or "゠" <= char <= "ヿ"  # Katakana
-            or "一" <= char <= "鿿"  # Kanji
-            or char in "。、！？ー・"
-        ):
-            japanese_chars.append(char)
-    return "".join(japanese_chars)
-
-
 def is_hiragana_only(text: str) -> bool:
     """Return True iff ``text`` is non-empty and every character is hiragana.
 

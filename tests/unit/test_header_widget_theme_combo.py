@@ -23,8 +23,8 @@ def reset_theme_state():
     """Reset Theme singleton to a known baseline before each test."""
     Theme.initialize(active="light", favorites=("light", "dark"), user_dir=None, state_listener=None)
     yield
-    # Clear any listener installed by the test so other tests aren't affected.
-    Theme.set_state_listener(None)
+    # Each test's setup re-initializes with state_listener=None, so no listener
+    # installed mid-test can leak into another.
 
 
 def _combo_items(widget: HeaderWidget) -> list[tuple[str, object]]:

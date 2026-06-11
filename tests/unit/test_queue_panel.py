@@ -165,5 +165,4 @@ def test_clear_queue_empties_rows(panel, monkeypatch):
     panel._clear_queue()
 
     assert panel.item_count == 0
-    assert panel.is_empty()
     assert "empty" in panel.queue_stats_label.text().lower()

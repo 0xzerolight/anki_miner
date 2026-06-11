@@ -889,7 +889,7 @@ class TestExtractMediaBatch:
         ]
 
         def fake_extract(vf, word, temp_folder=None, **kwargs):
-            # Create real files so has_any_media returns True
+            # Create real files so has_screenshot returns True
             ss = tmp_path / f"{word.lemma}.jpg"
             ss.write_bytes(b"\xff\xd8fake")
             from anki_miner.models import MediaData
@@ -920,7 +920,7 @@ class TestExtractMediaBatch:
             from anki_miner.models import MediaData
 
             if word.lemma == "成功":
-                # Create a real file so has_any_media returns True
+                # Create a real file so has_screenshot returns True
                 p = service.config.media_temp_folder / "success.jpg"
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_bytes(b"\xff\xd8fake")

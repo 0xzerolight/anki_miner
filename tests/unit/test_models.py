@@ -265,16 +265,6 @@ class TestMediaData:
         )
         assert md.has_audio is False
 
-    def test_has_any_media_true(self, tmp_path):
-        ss = tmp_path / "ss.jpg"
-        ss.write_bytes(b"fake")
-        md = MediaData(screenshot_path=ss, screenshot_filename="ss.jpg")
-        assert md.has_any_media is True
-
-    def test_has_any_media_false(self):
-        md = MediaData()
-        assert md.has_any_media is False
-
     def test_str_with_media(self, tmp_path):
         ss = tmp_path / "ss.jpg"
         ss.write_bytes(b"fake")
@@ -310,14 +300,6 @@ class TestProcessingResult:
             errors=["Something failed"],
         )
         assert result.success is False
-
-    def test_has_new_words_true(self):
-        result = ProcessingResult(total_words_found=10, new_words_found=3, cards_created=3)
-        assert result.has_new_words is True
-
-    def test_has_new_words_false(self):
-        result = ProcessingResult(total_words_found=10, new_words_found=0, cards_created=0)
-        assert result.has_new_words is False
 
     def test_default_elapsed_time(self):
         result = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0)

@@ -4,8 +4,8 @@
  *
  * Variables from _variables.py are substituted at load time:
  * - ${font-size-*}: h1, h2, h3, body, body-sm, caption, small, stat-value, icon-large
- * - ${spacing-*}: xxs, xs, sm, md, lg, xl, xxl
- * - ${border-radius-*}: small, default, large, pill
+ * - ${spacing-*}: xxs, xs, sm, md, lg, xl
+ * - ${border-radius-*}: small, default, large
  */
 
 /* ============== BASE WIDGET STYLES ============== */

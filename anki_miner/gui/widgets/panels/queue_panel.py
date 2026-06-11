@@ -301,14 +301,6 @@ class QueuePanel(QFrame):
                 incomplete.append((widget, "incomplete"))
         return incomplete
 
-    def is_empty(self) -> bool:
-        """Check if queue is empty.
-
-        Returns:
-            True if no items in queue
-        """
-        return len(self.queue_item_widgets) == 0
-
     def set_item_status(self, item_id: str, status: str) -> None:
         """Set status for an item by its stable id.
 
