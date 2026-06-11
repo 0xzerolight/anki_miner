@@ -254,9 +254,15 @@ def _atomic_write_csv(dest_csv: Path, ranks: dict[str, int]) -> None:
     """
     dest_csv.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = dest_csv.with_suffix(dest_csv.suffix + ".tmp")
-    with open(tmp_path, "w", encoding="utf-8", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["term", "rank"])
-        for term, rank in sorted(ranks.items(), key=lambda kv: kv[1]):
-            writer.writerow([term, rank])
-    os.replace(tmp_path, dest_csv)
+    try:
+        with open(tmp_path, "w", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["term", "rank"])
+            for term, rank in sorted(ranks.items(), key=lambda kv: kv[1]):
+                writer.writerow([term, rank])
+        os.replace(tmp_path, dest_csv)
+    finally:
+        # A failure mid-rows raises before os.replace, orphaning the .tmp in
+        # ~/.anki_miner. Unlink it; on success it's already gone (os.replace
+        # consumed it) and missing_ok makes the unlink a no-op.
+        tmp_path.unlink(missing_ok=True)
