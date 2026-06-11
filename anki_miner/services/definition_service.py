@@ -63,15 +63,6 @@ class DefinitionService:
                 logger.warning("Failed to close provider '%s': %s", provider.name, e)
         self._loaded = False
 
-    def get_definition(self, word: str) -> str | None:
-        self.ensure_loaded()
-        for provider in self._providers:
-            if provider.is_available():
-                result = provider.lookup(word)
-                if result:
-                    return result
-        return None
-
     def get_definitions_batch(
         self,
         words: list[str],
@@ -83,9 +74,9 @@ class DefinitionService:
         are queried ONCE for the still-unfilled words (one IN-clause SQLite
         query per dictionary instead of one query per word). Words an earlier
         provider resolves are removed from the remaining set BEFORE the next
-        provider is consulted, so chain semantics are identical to walking
-        ``get_definition`` per word. Providers without ``lookup_many`` (e.g. the
-        online Jisho fallback) are consulted per-word for the remaining words.
+        provider is consulted, so chain semantics are first-hit-wins across the
+        provider order. Providers without ``lookup_many`` (e.g. the online Jisho
+        fallback) are consulted per-word for the remaining words.
         """
         if progress_callback:
             progress_callback.on_start(len(words), "Fetching definitions")

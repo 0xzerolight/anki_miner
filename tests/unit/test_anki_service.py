@@ -329,90 +329,6 @@ class TestGetExistingVocabulary:
 
 
 # ---------------------------------------------------------------------------
-# TestStoreMediaFile
-# ---------------------------------------------------------------------------
-
-
-class TestStoreMediaFile:
-    """Tests for AnkiService.store_media_file."""
-
-    def test_success_verifies_base64(self, test_config, tmp_path):
-        """Should read the file, base64-encode it, and return True on success."""
-        service = AnkiService(test_config)
-        filepath = tmp_path / "test.jpg"
-        file_content = b"\xff\xd8fake-jpeg-data"
-        filepath.write_bytes(file_content)
-
-        resp = _mock_response(result="test.jpg")
-
-        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            result = service.store_media_file("test.jpg", filepath)
-
-        assert result is True
-
-        payload = mock_post.call_args[1]["json"]
-        assert payload["action"] == "storeMediaFile"
-        assert payload["version"] == 6
-        assert payload["params"]["filename"] == "test.jpg"
-        expected_b64 = base64.b64encode(file_content).decode("utf-8")
-        assert payload["params"]["data"] == expected_b64
-
-    def test_anki_error_response_returns_false(self, test_config, tmp_path):
-        """Should return False when AnkiConnect reports an error."""
-        service = AnkiService(test_config)
-        filepath = tmp_path / "test.jpg"
-        filepath.write_bytes(b"data")
-
-        resp = _mock_response(error="Permission denied")
-
-        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
-            result = service.store_media_file("test.jpg", filepath)
-
-        assert result is False
-
-    def test_request_exception_returns_false(self, test_config, tmp_path):
-        """Should return False on RequestException."""
-        service = AnkiService(test_config)
-        filepath = tmp_path / "test.jpg"
-        filepath.write_bytes(b"data")
-
-        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=requests.exceptions.ConnectionError()):
-            result = service.store_media_file("test.jpg", filepath)
-
-        assert result is False
-
-    def test_file_not_found_returns_false(self, test_config, tmp_path):
-        """Should return False when the file does not exist (OSError)."""
-        service = AnkiService(test_config)
-        nonexistent = tmp_path / "missing.jpg"
-
-        result = service.store_media_file("missing.jpg", nonexistent)
-
-        assert result is False
-
-    def test_correct_json_payload(self, test_config, tmp_path):
-        """Should send correctly structured JSON to AnkiConnect."""
-        service = AnkiService(test_config)
-        filepath = tmp_path / "audio.mp3"
-        filepath.write_bytes(b"mp3-content")
-
-        resp = _mock_response(result="audio.mp3")
-
-        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
-            service.store_media_file("my_audio.mp3", filepath)
-
-        mock_post.assert_called_once()
-        call_kwargs = mock_post.call_args
-        assert call_kwargs[0][0] == test_config.ankiconnect_url
-        payload = call_kwargs[1]["json"]
-        assert payload["action"] == "storeMediaFile"
-        assert payload["version"] == 6
-        assert "filename" in payload["params"]
-        assert "data" in payload["params"]
-        assert payload["params"]["filename"] == "my_audio.mp3"
-
-
-# ---------------------------------------------------------------------------
 # TestCreateCardsBatch
 # ---------------------------------------------------------------------------
 
@@ -425,7 +341,7 @@ class TestCreateCardsBatch:
         items = []
         for i in range(n):
             word = make_tokenized_word(lemma=f"{prefix}_{i}")
-            media = MediaData()  # no files to avoid store_media_file IO
+            media = MediaData()  # no files to avoid media-store IO
             items.append(CardPayload(word=word, media=media, definition=f"def_{i}"))
         return items
 
