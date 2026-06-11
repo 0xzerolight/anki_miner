@@ -563,6 +563,19 @@ class BatchProcessingTab(MiningTabBase):
         # Update queue stats
         self.queue_panel.update_stats()
 
+        # A mid-pairs cancel returns its item to PENDING without emitting a
+        # terminal signal, so its row can still read "processing" (set at
+        # item-start). Re-sync every row from the worker-owned model status now
+        # that the run is over — render-only and idempotent.
+        _status_text = {
+            QueueItemStatus.PENDING: "pending",
+            QueueItemStatus.PROCESSING: "processing",
+            QueueItemStatus.COMPLETED: "complete",
+            QueueItemStatus.ERROR: "error",
+        }
+        for item in self.batch_queue.get_all_items():
+            self.queue_panel.set_item_status(item.id, _status_text[item.status])
+
         # Show retry button if there are failed items that can be retried
         has_retryable = any(
             item.status == QueueItemStatus.ERROR and item.retry_count < item.max_retries
