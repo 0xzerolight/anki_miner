@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from PyQt6.QtWidgets import QApplication
@@ -422,6 +423,76 @@ class TestDictsRootRoundTrip:
 
             assert received == [], "save must abort when dicts_root is invalid"
             assert warnings, "user must see a warning explaining the rejection"
+        finally:
+            widget.deleteLater()
+
+    def test_save_syncs_panel_dicts_root_to_new_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+        """After saving a changed Storage Folder, the dictionary panel's
+        ``_dicts_root`` must follow so refresh_registry()/remove() target the new
+        location — not the stale old one until restart (T-07)."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+
+        starting = tmp_path / "starting"
+        starting.mkdir()
+        cfg = replace(test_config, dicts_root=starting)
+        widget = SettingsTab(cfg)
+        try:
+            new_root = tmp_path / "new_root"
+            new_root.mkdir()
+            widget.dictionary_panel.dicts_root_selector.set_path(str(new_root))
+
+            # Capture the root the panel rescans on the next registry refresh.
+            import anki_miner.gui.widgets.panels.dictionary_settings_panel as dsp
+
+            scanned_roots: list[Path] = []
+            real_registry = dsp.DictionaryRegistry
+
+            def _tracking_registry(root, *a, **kw):
+                scanned_roots.append(root)
+                return real_registry(root, *a, **kw)
+
+            monkeypatch.setattr(dsp, "DictionaryRegistry", _tracking_registry)
+
+            widget._on_save_clicked()
+
+            # Panel state followed the saved root.
+            assert widget.dictionary_panel._dicts_root == new_root
+            assert widget.dictionary_panel.get_dicts_root() == new_root
+            # A subsequent registry rescan targets the new root, not the old one.
+            widget.dictionary_panel.refresh_registry()
+            assert scanned_roots, "registry should have been rescanned"
+            assert scanned_roots[-1] == new_root
+            assert starting not in scanned_roots
+        finally:
+            widget.deleteLater()
+
+    def test_save_unchanged_dicts_root_does_not_reset_panel(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+        """When the root is unchanged the panel must not be needlessly re-synced
+        (only the changed-root path calls set_dicts_root) — T-07 scope guard."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+
+        starting = tmp_path / "starting"
+        starting.mkdir()
+        cfg = replace(test_config, dicts_root=starting)
+        widget = SettingsTab(cfg)
+        try:
+            calls: list[Path] = []
+            real_set = widget.dictionary_panel.set_dicts_root
+
+            def _spy(root):
+                calls.append(root)
+                return real_set(root)
+
+            monkeypatch.setattr(widget.dictionary_panel, "set_dicts_root", _spy)
+
+            # Selector still shows the current root → no change.
+            widget._on_save_clicked()
+
+            assert calls == [], "set_dicts_root must not run when the root is unchanged"
         finally:
             widget.deleteLater()
 
