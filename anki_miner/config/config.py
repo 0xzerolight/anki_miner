@@ -211,7 +211,6 @@ class AnkiMinerConfig:
     max_sentence_chars: int = 0  # 0 = no character cap
 
     # Cross-episode frequency settings
-    use_cross_episode_priority: bool = False
     min_episode_appearances: int = 2  # Only mine words appearing in at least N episodes
 
     # History settings

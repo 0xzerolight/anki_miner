@@ -19,18 +19,6 @@ class MiningSession:
 
 
 @dataclass
-class SeriesStats:
-    """Aggregated statistics for a single series."""
-
-    series_name: str = ""
-    episodes_mined: int = 0
-    total_words: int = 0
-    total_unknown: int = 0
-    total_cards_created: int = 0
-    total_time: float = 0.0
-
-
-@dataclass
 class OverallStats:
     """Overall mining statistics across all sessions."""
 

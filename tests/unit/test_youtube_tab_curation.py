@@ -37,8 +37,6 @@ def _make_video_info() -> VideoInfo:
         duration_s=600,
         has_manual_ja_subs=True,
         has_auto_ja_subs=False,
-        thumbnail_url=None,
-        uploader="Uploader",
         is_live=False,
         is_age_restricted=False,
     )

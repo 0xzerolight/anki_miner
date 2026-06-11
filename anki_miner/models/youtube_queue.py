@@ -66,23 +66,6 @@ class YouTubeQueue:
         """
         self._items.remove(item)
 
-    def clear_non_processing(self) -> None:
-        """Remove every item whose status is not PROCESSING.
-
-        Items currently being processed are preserved so an in-flight worker
-        can finish without its item disappearing under it.
-        """
-        self._items = [i for i in self._items if i.status == YouTubeItemStatus.PROCESSING]
-
-    def pending_ready_items(self) -> list[YouTubeQueueItem]:
-        """Return items eligible for a worker run (PENDING or READY), in queue order.
-
-        Returns:
-            A new list containing only PENDING and READY items, preserving
-            insertion order.
-        """
-        return [i for i in self._items if i.status in (YouTubeItemStatus.PENDING, YouTubeItemStatus.READY)]
-
     def all_items(self) -> list[YouTubeQueueItem]:
         """Return a copy of all items in the queue.
 
@@ -90,15 +73,3 @@ class YouTubeQueue:
             Shallow copy of the internal items list.
         """
         return self._items.copy()
-
-    def reset_errors_to_pending(self) -> None:
-        """Reset every ERROR item back to PENDING for a re-run.
-
-        Clears ``error_message`` and resets ``retry_count`` to 0.
-        Non-ERROR items are not modified.
-        """
-        for item in self._items:
-            if item.status == YouTubeItemStatus.ERROR:
-                item.status = YouTubeItemStatus.PENDING
-                item.error_message = None
-                item.retry_count = 0
