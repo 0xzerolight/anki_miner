@@ -4,7 +4,7 @@ import contextlib
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from anki_miner.config.paths import ANKI_MINER_HOME
@@ -53,7 +53,7 @@ class RecentFilesManager:
                 "video": video_str,
                 "subtitle": subtitle_str,
                 "subtitle_offset": float(subtitle_offset),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
         )
 

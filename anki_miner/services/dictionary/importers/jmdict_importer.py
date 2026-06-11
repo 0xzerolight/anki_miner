@@ -25,7 +25,7 @@ import shutil
 import tempfile
 import xml.etree.ElementTree as ET  # noqa: S405 - see module docstring
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 from typing import Callable, Iterator
@@ -145,7 +145,7 @@ def import_jmdict_xml(
                 "format": "jmdict",
                 "source_name": "JMdict (English)",
                 "source_revision": "",
-                "import_date": datetime.now(timezone.utc).isoformat(),
+                "import_date": datetime.now(UTC).isoformat(),
                 "entry_count": str(row_count),
             },
         )
@@ -154,7 +154,7 @@ def import_jmdict_xml(
         final = dest_root / JMDICT_DICT_ID
 
         if final.exists():
-            backup = final.with_name(final.name + ".bak-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f"))
+            backup = final.with_name(final.name + ".bak-" + datetime.now(UTC).strftime("%Y%m%d%H%M%S%f"))
             final.rename(backup)
             try:
                 shutil.move(str(staging), str(final))
