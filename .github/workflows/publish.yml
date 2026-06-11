@@ -5,8 +5,43 @@ on:
     tags:
       - "v*"
 
+# Serialize per ref so a tag delete/re-push can't race two publish runs onto
+# the same PyPI upload. Never cancel an in-flight publish (irreversible upload).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  # A v* tag does not trigger ci.yml (push/PR-to-main only), so neither publish
+  # nor release is otherwise CI-validated. Require a green CI run on the exact
+  # tagged commit before touching PyPI (publish is irreversible). Mirrored in
+  # release.yml.
+  ci-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Require green CI on the tagged commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Find completed ci.yml runs for this exact SHA and require one that
+          # concluded "success". The tag must point at a merged commit whose CI
+          # already ran on main; otherwise fail closed.
+          RUNS=$(gh api --paginate \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=completed" \
+            --jq '[.workflow_runs[].conclusion]')
+          echo "CI conclusions for ${GITHUB_SHA}: ${RUNS}"
+          if echo "$RUNS" | grep -q '"success"'; then
+            echo "Green CI run found for tagged commit."
+          else
+            echo "::error::No successful ci.yml run for ${GITHUB_SHA}. Tag a commit whose CI passed on main."
+            exit 1
+          fi
+
   build:
+    needs: ci-gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
