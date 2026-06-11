@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 - **Cancelling now stops promptly across every mining mode.** Stop/Cancel propagates into the YouTube, single-episode, batch, and deck-builder pipelines, kills any in-flight ffmpeg child, and is re-checked during silent yt-dlp phases so a run no longer keeps working after you ask it to stop. Long-running subprocess calls (yt-dlp, ffmpeg, shortcut probes) are now bounded by timeouts.
 - **Closing the window no longer abandons running work.** If a worker is still running at close, the window hides and the close is deferred until the thread exits, instead of tearing down a live thread mid-write.
+- **Dependency floors raised to recent stable.** `psutil>=6.1.0`, `black>=26.3.1`, `lxml>=6.1.0`. The `black` and `lxml` bumps clear CVE-2026-32274 and CVE-2026-41066 at the floor (per the 2026-06-10 supply-chain audit).
 
 ### Fixed
 - **Mining now validates the Anki note type and field mapping before processing starts** (#52). If the configured note type is missing or a mapped field is absent, the run fails immediately with a clear error instead of after full media extraction. The configured deck is also auto-created at this point.
