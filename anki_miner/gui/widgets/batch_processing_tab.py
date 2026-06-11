@@ -462,10 +462,14 @@ class BatchProcessingTab(MiningTabBase):
 
         self._warn_incomplete_items()
 
-        # Populate batch queue from widgets (includes per-item subtitle offset)
+        # Populate batch queue from widgets (includes per-item subtitle offset).
+        # Stamp each created QueueItem's id onto its source widget so status
+        # and card-count updates from the worker address the right row, even
+        # when two rows share a display_name (T-30).
         self.batch_queue.clear()
-        for anime_folder, subtitle_folder, display_name, subtitle_offset in valid_pairs:
-            self.batch_queue.add_item(anime_folder, subtitle_folder, display_name, subtitle_offset)
+        for anime_folder, subtitle_folder, display_name, subtitle_offset, widget in valid_pairs:
+            item = self.batch_queue.add_item(anime_folder, subtitle_folder, display_name, subtitle_offset)
+            widget.item_id = item.id
 
         # Prepare UI for processing
         self._is_processing = True
@@ -534,7 +538,7 @@ class BatchProcessingTab(MiningTabBase):
             display_name: Display name of series
         """
         self.presenter.show_info(f"Processing series: {display_name}")
-        self.queue_panel.set_item_status(display_name, "processing")
+        self.queue_panel.set_item_status(item_id, "processing")
 
     def _on_item_completed(self, item_id: str, cards_created: int) -> None:
         """Called when an item completes successfully.
@@ -553,8 +557,8 @@ class BatchProcessingTab(MiningTabBase):
         self.overall_progress_widget.set_progress(completed, total, f"Completed: {completed}/{total}")
         self.presenter.show_success(f"Created {cards_created} cards")
 
-        # Update queue panel
-        self.queue_panel.set_processing_item_complete(cards_created)
+        # Update queue panel — address the completed row by id (T-30).
+        self.queue_panel.set_processing_item_complete(item_id, cards_created)
 
     def _on_item_failed(self, item_id: str, error_message: str) -> None:
         """Called when an item fails.
