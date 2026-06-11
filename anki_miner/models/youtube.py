@@ -22,8 +22,6 @@ class VideoInfo:
     duration_s: int
     has_manual_ja_subs: bool
     has_auto_ja_subs: bool
-    thumbnail_url: str | None
-    uploader: str | None
     is_live: bool
     is_age_restricted: bool
 

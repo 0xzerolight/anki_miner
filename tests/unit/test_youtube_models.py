@@ -18,8 +18,6 @@ class TestVideoInfo:
             "duration_s": 213,
             "has_manual_ja_subs": True,
             "has_auto_ja_subs": False,
-            "thumbnail_url": "https://img.youtube.com/vi/dQw4w9WgXcQ/hq.jpg",
-            "uploader": "Some Channel",
             "is_live": False,
             "is_age_restricted": False,
         }
@@ -34,16 +32,8 @@ class TestVideoInfo:
         assert info.duration_s == 213
         assert info.has_manual_ja_subs is True
         assert info.has_auto_ja_subs is False
-        assert info.thumbnail_url == "https://img.youtube.com/vi/dQw4w9WgXcQ/hq.jpg"
-        assert info.uploader == "Some Channel"
         assert info.is_live is False
         assert info.is_age_restricted is False
-
-    def test_accepts_none_for_optional_fields(self):
-        """thumbnail_url and uploader are allowed to be None."""
-        info = self._make(thumbnail_url=None, uploader=None)
-        assert info.thumbnail_url is None
-        assert info.uploader is None
 
     def test_is_frozen(self):
         """VideoInfo is immutable; mutating any field raises FrozenInstanceError."""

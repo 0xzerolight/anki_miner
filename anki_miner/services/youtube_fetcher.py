@@ -223,8 +223,6 @@ class YouTubeFetcherService:
             duration_s=duration_s,
             has_manual_ja_subs=has_manual_ja,
             has_auto_ja_subs=has_auto_ja,
-            thumbnail_url=data.get("thumbnail"),
-            uploader=data.get("uploader"),
             is_live=bool(data.get("is_live")),
             is_age_restricted=int(data.get("age_limit") or 0) >= 18,
         )
