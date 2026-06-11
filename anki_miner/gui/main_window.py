@@ -39,6 +39,13 @@ from anki_miner.services.anki_service import AnkiService
 
 logger = logging.getLogger(__name__)
 
+# Shutdown join policy knobs (see MainWindow._join_worker_for_close):
+# grace period each cancellable worker gets to exit during closeEvent before
+# the close is deferred, and the poll cadence while a deferred close waits
+# for laggard threads to finish.
+_CLOSE_JOIN_GRACE_MS = 2000
+_CLOSE_POLL_INTERVAL_MS = 200
+
 
 def _needs_jmdict_migration(xml_path: Path, dicts_root: Path, chain: tuple | None = None) -> bool:
     """Return True iff we should auto-trigger the JMdict → SQLite migration.
@@ -137,6 +144,11 @@ class MainWindow(QMainWindow):
         # the first paint. Held here so the QThread isn't GC'd mid-run and so
         # ``closeEvent`` can wait for it; cleared once it finishes.
         self._prewarm_worker = None
+
+        # Deferred-close state: poll timer + workers that outlived the grace
+        # join in closeEvent (see _join_worker_for_close for the policy).
+        self._close_poll_timer: QTimer | None = None
+        self._close_laggards: list = []
 
         # Post-update confirmation: if last_known_version differs from the
         # currently running __version__, show a one-shot info dialog. Save the
@@ -538,30 +550,31 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         """Handle window close event.
 
+        Joins every owned worker thread via the single shutdown join policy
+        in :meth:`_join_worker_for_close`; workers that outlive the grace
+        join defer the close (see :meth:`_defer_close`) instead of being
+        abandoned to Qt teardown.
+
         Args:
             event: Close event
         """
-        # Cancel and wait for validation worker if running
-        if self.validation_worker and self.validation_worker.isRunning():
-            self.validation_worker.cancel()
-            self.validation_worker.wait(2000)
+        laggards: list = []
 
-        # Cancel and wait for update worker if running
-        if self.update_worker and self.update_worker.isRunning():
-            self.update_worker.cancel()
-            self.update_worker.wait(2000)
+        def join(worker, *, timeout_ms: int | None = _CLOSE_JOIN_GRACE_MS) -> None:
+            if not self._join_worker_for_close(worker, timeout_ms=timeout_ms):
+                laggards.append(worker)
 
-        # Cancel and wait for JMdict migration worker if running
-        if self._jmdict_migration_worker and self._jmdict_migration_worker.isRunning():
-            self._jmdict_migration_worker.cancel()
-            self._jmdict_migration_worker.wait(2000)
+        # Window-owned workers: validation, update check, JMdict migration.
+        join(self.validation_worker)
+        join(self.update_worker)
+        join(self._jmdict_migration_worker)
 
-        # Wait for the best-effort prewarm worker if still running. It has no
-        # cancel hook (it's a short, uninterruptible cache warm) so we join it
-        # without timeout — a bounded wait(2000) could expire on a slow
-        # dicts_root and let Qt destroy a still-running QThread (crash on exit).
-        if self._prewarm_worker is not None and self._prewarm_worker.isRunning():
-            self._prewarm_worker.wait()
+        # The best-effort prewarm worker has no cancel hook (it's a short,
+        # uninterruptible cache warm), so join it without timeout instead of
+        # routing it through the deferred close: even on a slow dicts_root it
+        # exits on its own in bounded time, and a bounded wait(2000) that
+        # expired would only delay shutdown behind the poll timer for it.
+        join(self._prewarm_worker, timeout_ms=None)
 
         # Cancel and wait for any processing workers in tabs
         from anki_miner.gui.widgets.youtube_tab import YouTubeTab
@@ -571,18 +584,89 @@ class MainWindow(QMainWindow):
             # All mining tabs expose their worker on `worker_thread`.
             # DeckBuilderWorker.cancel() also opens its confirm gate, so a worker
             # blocked awaiting Build unblocks and exits.
-            worker = getattr(tab, "worker_thread", None)
-            if worker and worker.isRunning():
-                worker.cancel()
-                worker.wait(2000)
+            join(getattr(tab, "worker_thread", None))
             # YouTube tab owns an additional probe worker; shutdown() tears
             # both threads down cleanly.
             if isinstance(tab, YouTubeTab) and hasattr(tab, "shutdown"):
                 tab.shutdown()
 
+        if laggards:
+            self._defer_close(event, laggards)
+            return
+
         # Save configuration before closing
         GUIConfigManager.save_config(self.config)
         event.accept()
+
+    def _join_worker_for_close(self, worker, *, timeout_ms: int | None = _CLOSE_JOIN_GRACE_MS) -> bool:
+        """Single shutdown join policy for all owned worker threads.
+
+        (T-70 will lift this into a window controller; until then this helper
+        is the one place the policy lives — closeEvent only orchestrates.)
+
+        Cancel the worker when it supports ``cancel()``, then join it:
+
+        * ``timeout_ms=None`` — unbounded blocking join, reserved for short
+          workers with no cancel hook (the cache prewarm).
+        * otherwise — bounded grace join. Returns False when the worker
+          outlives it; the caller must then defer the close rather than let
+          Qt destroy a running QThread (window-parented workers die with the
+          window, unparented tab workers get GC'd — either way Qt6 aborts
+          with "QThread: Destroyed while thread is still running" and
+          in-flight ffmpeg children are orphaned). Post-cancel runtime today
+          is dominated by ffmpeg joins and HTTP timeouts (10-60 s); once
+          media-kill (T-33, media_extractor) lands, ``cancel()`` also kills
+          ffmpeg and laggards become rare with no changes here.
+
+        Returns True when the worker has exited (or was None / not running).
+        """
+        if worker is None or not worker.isRunning():
+            return True
+        cancel = getattr(worker, "cancel", None)
+        if callable(cancel):
+            cancel()
+        if timeout_ms is None:
+            worker.wait()
+            return True
+        return bool(worker.wait(timeout_ms))
+
+    def _defer_close(self, event, laggards: list) -> None:
+        """Deferred arm of the shutdown join policy.
+
+        Hides the window (so closing feels instant to the user), refuses the
+        close event (so Qt keeps the window — and the running QThreads it
+        owns — alive), and polls until every laggard has exited. A worker
+        that never exits keeps the hidden process alive by design: a
+        discoverable lingering process beats an abort mid-shutdown.
+        """
+        logger.warning(
+            "Deferring close: %d worker thread(s) still running after %d ms grace",
+            len(laggards),
+            _CLOSE_JOIN_GRACE_MS,
+        )
+        self._close_laggards = laggards
+        if self._close_poll_timer is None:
+            self._close_poll_timer = QTimer(self)
+            self._close_poll_timer.setInterval(_CLOSE_POLL_INTERVAL_MS)
+            self._close_poll_timer.timeout.connect(self._poll_deferred_close)
+        self._close_poll_timer.start()
+        self.hide()
+        event.ignore()
+
+    def _poll_deferred_close(self) -> None:
+        """Finish a deferred close once every laggard worker has exited.
+
+        Quits the application explicitly instead of re-entering ``close()``:
+        closing an already-hidden window does not reliably emit
+        ``lastWindowClosed``, which would leave the event loop running with
+        no windows.
+        """
+        if any(w.isRunning() for w in self._close_laggards):
+            return
+        if self._close_poll_timer is not None:
+            self._close_poll_timer.stop()
+        GUIConfigManager.save_config(self.config)
+        QApplication.quit()
 
     def _on_system_status_clicked(self) -> None:
         """Handle system status indicator click."""
