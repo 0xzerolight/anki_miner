@@ -201,7 +201,12 @@ class YouTubeFetcherService:
         if not isinstance(video_id, str) or not _VIDEO_ID_RE.match(video_id):
             raise YouTubeFetchError(f"Unexpected video id format: {video_id!r}")
 
-        duration_s = int(duration)
+        # Live streams report ``duration: null`` — the key is present so the
+        # KeyError guard above passes, but ``int(None)`` would raise an
+        # uncaught TypeError, bypassing the caller's "Live streams not
+        # supported" rejection. Treat null as 0 so a VideoInfo is built and
+        # the is_live branch fires (a finite 0 also can't trip max-duration). T-28.
+        duration_s = 0 if duration is None else int(duration)
         if duration_s > self._config.youtube_max_duration_s:
             raise VideoTooLongError(
                 f"Video duration {duration_s}s exceeds configured maximum " f"{self._config.youtube_max_duration_s}s"
