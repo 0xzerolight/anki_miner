@@ -2016,6 +2016,47 @@ class TestCountLemmas:
         assert "を" not in counts
         assert "を" not in mined_lemmas
 
+    def test_whitespace_spanning_compound_count_matches_mine(self, test_config, tmp_path):
+        """Regression for T-38: a merged compound whose components were separated
+        by whitespace in the source line is dropped from mining (its space-free
+        concatenated surface is not str.find-able in the spaced text). count_lemmas
+        must drop it identically so the count and mine lemma sets agree — the
+        count-vs-mine divergence behind the Deck Builder preview bug.
+        """
+        # Source text has a SPACE between 可能 and 性; the noun-suffix merge
+        # concatenates them into the synthetic surface "可能性" (no space), which
+        # str.find("可能性") cannot locate in "可能 性".
+        line_spec = [{"text": "可能 性", "start": 1000, "end": 3000}]
+        kanou = _make_token("可能", "名詞", pos2="普通名詞", lemma="可能", kana="カノウ")
+        sei = _make_token("性", "接尾辞", pos2="名詞的", lemma="性", kana="セイ")
+
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [kanou, sei]
+
+        # Separate service instances → separate per-file caches, each tokenizes
+        # its own fresh mock_subs (matches the sibling symmetry test above).
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=self._make_mock_subs(line_spec)),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            counts = SubtitleParserService(test_config).count_lemmas(sub_file)
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=self._make_mock_subs(line_spec)),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            words = SubtitleParserService(test_config).parse_subtitle_file(sub_file)
+
+        mined_lemmas = {w.lemma for w in words}
+        # The dropped compound must not be counted while it is un-mined.
+        assert "可能性" not in mined_lemmas  # str.find fails on the spaced surface
+        assert "可能性" not in counts  # count must mirror the same drop
+        # Both paths agree (here: both empty for this single-compound line).
+        assert set(counts.keys()) == mined_lemmas
+
     # ------------------------------------------------------------------
     # 3. Empty / content-free file → empty Counter
     # ------------------------------------------------------------------
