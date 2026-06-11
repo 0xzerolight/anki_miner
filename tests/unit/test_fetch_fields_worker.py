@@ -4,7 +4,7 @@ The button click (``AnkiSettingsPanel.fetch_fields_requested``) used to be a
 dead-end signal with no connected slot. These tests pin the wired behaviour:
 
 - The worker calls ``AnkiService.get_note_type_fields`` and emits its result.
-- The settings tab's slot dispatches the worker and routes the result back into
+- The probe controller dispatches the worker and routes the result back into
   ``AnkiSettingsPanel.populate_from_field_list``.
 - An empty note-type input short-circuits without spawning a worker.
 """
@@ -106,7 +106,7 @@ class TestSettingsTabFetchFieldsWiring:
             populate = MagicMock()
             monkeypatch.setattr(tab.anki_panel, "populate_from_field_list", populate)
 
-            with patch("anki_miner.gui.widgets.settings_tab.FetchFieldsWorker") as worker_cls:
+            with patch("anki_miner.gui.controllers.anki_probe_controller.FetchFieldsWorker") as worker_cls:
                 tab.anki_panel.fetch_fields_button.click()
 
             worker_cls.assert_not_called()
@@ -136,14 +136,14 @@ class TestSettingsTabFetchFieldsWiring:
                 inst.service = service
                 inst.isRunning.return_value = False
                 # Simulate the fetched field list arriving from the worker thread.
-                inst.start.side_effect = lambda: tab._on_fetch_fields_finished(
+                inst.start.side_effect = lambda: tab._anki_probe._on_fetch_fields_finished(
                     ["Expression", "Sentence", "MainDefinition"]
                 )
                 built.append(inst)
                 return inst
 
             with patch(
-                "anki_miner.gui.widgets.settings_tab.FetchFieldsWorker",
+                "anki_miner.gui.controllers.anki_probe_controller.FetchFieldsWorker",
                 side_effect=fake_worker_factory,
             ):
                 tab.anki_panel.fetch_fields_button.click()
@@ -173,11 +173,11 @@ class TestSettingsTabFetchFieldsWiring:
             def fake_worker_factory(service, note_type, parent):
                 inst = MagicMock()
                 inst.isRunning.return_value = False
-                inst.start.side_effect = lambda: tab._on_fetch_fields_finished([])
+                inst.start.side_effect = lambda: tab._anki_probe._on_fetch_fields_finished([])
                 return inst
 
             with patch(
-                "anki_miner.gui.widgets.settings_tab.FetchFieldsWorker",
+                "anki_miner.gui.controllers.anki_probe_controller.FetchFieldsWorker",
                 side_effect=fake_worker_factory,
             ):
                 tab.anki_panel.fetch_fields_button.click()

@@ -2,21 +2,17 @@
 
 import os
 import re
-from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
-from typing import NamedTuple
 
-from PyQt6.QtCore import QEventLoop, Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QMessageBox,
-    QProgressDialog,
     QScrollArea,
     QTabWidget,
     QVBoxLayout,
@@ -24,9 +20,11 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
-from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
+from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
+from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
+from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
     AnkiSettingsPanel,
     DictionarySettingsPanel,
@@ -35,32 +33,10 @@ from anki_miner.gui.widgets.panels import (
     ThemesPanel,
     YouTubeSettingsPanel,
 )
-from anki_miner.gui.workers.base_worker import SingleCallWorker
-from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
-from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
-from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
-from anki_miner.gui.workers.styling_worker import StylingWorker
 from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
-from anki_miner.services.anki_service import AnkiService
-from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
-from anki_miner.services.dictionary.registry import DictionaryRegistry
-from anki_miner.services.frequency import YomitanFreqImportResult, import_yomitan_freq_zip
+from anki_miner.services.frequency import import_yomitan_freq_zip
 from anki_miner.services.known_word_db import KnownWordDB
-from anki_miner.services.pitch_accent import YomitanPitchImportResult, import_yomitan_pitch_zip
-
-
-class _YomitanCsvLabels(NamedTuple):
-    """User-facing strings that distinguish the pitch vs frequency import flow.
-
-    Everything else in :meth:`SettingsTab._resolve_yomitan_csv_path` (the
-    QProgressDialog + QEventLoop scaffold, the overwrite guard, the staged
-    ``.pending`` write, cancel suppression) is identical between the two.
-    """
-
-    progress: str  # QProgressDialog label, e.g. "Importing pitch accent dictionary…"
-    overwrite_title: str  # overwrite-confirm dialog title
-    failure_title: str  # import-failure warning title
-    success_title: str  # post-import information dialog title
+from anki_miner.services.pitch_accent import import_yomitan_pitch_zip
 
 
 class SettingsTab(QWidget):
@@ -87,22 +63,32 @@ class SettingsTab(QWidget):
         """
         super().__init__(parent)
         self.config = config
-        # Long-lived worker reference; YomitanCsvImportWorker is a QThread and
-        # would be destroyed mid-run if the worker fell out of scope before
-        # joining. _resolve_frequency_path stores the active worker here.
-        self._active_freq_worker: YomitanCsvImportWorker | None = None
-        # Same GC-safety rationale as the freq worker above; the pitch worker
-        # is a QThread and would be destroyed mid-run if it fell out of scope
-        # before joining. _resolve_pitch_accent_path stores it here.
-        self._active_pitch_worker: YomitanCsvImportWorker | None = None
-        # Deferred CSV-promotion closures (T-10). A pitch/freq zip import stages
-        # its CSV to a sibling ``.pending`` file; the promotion (os.replace into
-        # place + selector update + success dialog) is held here and run by
-        # _commit_pending_csv_imports() only AFTER *both* imports have passed,
-        # so a frequency failure can never leave pitch_accent.csv half-written.
-        self._pending_pitch_commit: Callable[[], None] | None = None
-        self._pending_freq_commit: Callable[[], None] | None = None
         self._setup_ui()
+        # Controllers (T-66) own worker lifecycles + dialogs; the tab keeps
+        # widgets, signal wiring, and config assembly. Dependency is one-way:
+        # tab → controller → workers/services (tab-owned collaboration points
+        # are injected as callables).
+        # Modal pitch/frequency zip import engine: owns the import workers,
+        # the ``.pending`` staging files, and the deferred-promotion closures;
+        # the tab keeps the per-flow wrappers + save-time ordering.
+        self._zip_import_flow = ZipImportFlow(self)
+        # Dictionary add/reimport orchestration, incl. the Reimport-All
+        # chained state machine and its predecessor-join (T-09).
+        self._dict_import_flow = DictionaryImportFlow(
+            parent=self,
+            panel=self.dictionary_panel,
+            get_config=lambda: self.config,
+            persist_chain=self._persist_chain_change,
+            notify_config_changed=lambda: self.config_changed.emit(self.config),
+        )
+        # AnkiConnect probe workers (fetch fields / fetch decks / styling);
+        # their live handles surface through iter_close_workers (T-12).
+        self._anki_probe = AnkiProbeController(
+            parent=self,
+            anki_panel=self.anki_panel,
+            filtering_panel=self.filtering_panel,
+            get_config=lambda: self.config,
+        )
         self._connect_signals()
         self._load_config()
 
@@ -174,15 +160,16 @@ class SettingsTab(QWidget):
         self.anki_panel.deck_sync_requested.connect(self.validation_requested.emit)
         self.anki_panel.notetype_sync_requested.connect(self.validation_requested.emit)
         self.anki_panel.test_connection_requested.connect(self.validation_requested.emit)
-        self.anki_panel.fetch_fields_requested.connect(self._on_fetch_fields_requested)
-        self.anki_panel.apply_styling_requested.connect(self._on_apply_styling_requested)
-        self.anki_panel.remove_styling_requested.connect(self._on_remove_styling_requested)
+        self.anki_panel.fetch_fields_requested.connect(self._anki_probe.fetch_fields)
+        self.anki_panel.apply_styling_requested.connect(self._anki_probe.apply_styling)
+        self.anki_panel.remove_styling_requested.connect(self._anki_probe.remove_styling)
 
-        # Dictionary panel signals — wire Add/Reimport to import worker dialogs.
-        self.dictionary_panel.add_dict_requested.connect(self._on_add_dict_clicked)
-        self.dictionary_panel.reimport_jmdict_requested.connect(self._on_reimport_jmdict_clicked)
-        self.dictionary_panel.reimport_dict_requested.connect(self._on_reimport_dict_clicked)
-        self.dictionary_panel.reimport_all_requested.connect(self._on_reimport_all_clicked)
+        # Dictionary panel signals — wire Add/Reimport to the import flow
+        # controller, which owns the worker dialogs (T-66).
+        self.dictionary_panel.add_dict_requested.connect(self._dict_import_flow.add_dict)
+        self.dictionary_panel.reimport_jmdict_requested.connect(self._dict_import_flow.reimport_jmdict)
+        self.dictionary_panel.reimport_dict_requested.connect(self._dict_import_flow.reimport_dict)
+        self.dictionary_panel.reimport_all_requested.connect(self._dict_import_flow.reimport_all)
         # Persist immediately after a destructive remove so an orphan dict_id
         # doesn't reappear in gui_config.json on next launch (Issue #30). Use a
         # NARROW persist of just the chain — NOT the full Save pipeline (T-08):
@@ -196,23 +183,13 @@ class SettingsTab(QWidget):
         )
 
         # Filtering panel: excluded-decks picker + known-words cache rebuild (Issue #38).
-        self.filtering_panel.fetch_decks_requested.connect(self._on_fetch_decks_requested)
+        self.filtering_panel.fetch_decks_requested.connect(self._anki_probe.fetch_decks)
         self.filtering_panel.rebuild_known_words_requested.connect(self._on_rebuild_known_words)
         self.filtering_panel.manage_known_words_requested.connect(self._on_manage_known_words)
 
         # Themes panel persists immediately on any change (live-preview model).
         self.themes_panel.state_changed.connect(self._on_theme_state_changed)
         self.themes_panel.font_scale_changed.connect(self._on_font_scale_changed)
-
-        # Hold a reference to the fetch-fields worker across its lifetime.
-        # Without this attribute, a freshly-spawned QThread can be garbage
-        # collected before run() completes — Qt logs "QThread: Destroyed
-        # while thread is still running" and the result signal never fires.
-        self._fetch_fields_worker: SingleCallWorker | None = None
-        # Same GC-safety rationale for the deck-list fetch worker.
-        self._fetch_decks_worker: SingleCallWorker | None = None
-        # And for the card-styling apply/remove worker (Issue #44).
-        self._styling_worker: StylingWorker | None = None
 
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts."""
@@ -578,154 +555,21 @@ class SettingsTab(QWidget):
             "Settings saved.",
         )
 
-    def _resolve_yomitan_csv_path(
-        self,
-        *,
-        selector: FileSelector,
-        dest_name: str,
-        worker_factory: Callable[[Path, Path], YomitanCsvImportWorker],
-        worker_slot_attr: str,
-        commit_slot_attr: str,
-        decline_fallback: Path,
-        labels: _YomitanCsvLabels,
-    ) -> Path | None:
-        """Resolve a Yomitan pitch/frequency selector path for persistence.
-
-        Shared engine behind :meth:`_resolve_pitch_accent_path` and
-        :meth:`_resolve_frequency_path` — the two flows are byte-identical
-        except for the user-facing ``labels``, the importer fn bound into the
-        ``YomitanCsvImportWorker``, and which ``self`` slots hold the
-        live-worker GC reference (``worker_slot_attr``) and the
-        deferred-promotion closure (``commit_slot_attr``).
-
-        If ``selector`` points at a Yomitan zip, the importer runs in
-        ``worker_factory`` (a background QThread driven by a modal
-        ``QProgressDialog`` + a local ``QEventLoop`` so this method stays
-        blocking for the caller), staging its CSV to a sibling ``.pending``
-        file under ``ANKI_MINER_HOME / dest_name``. The destructive promotion
-        (os.replace into place, selector update, success dialog) is stored on
-        ``self.<commit_slot_attr>`` and run by
-        :meth:`_commit_pending_csv_imports` only once *every* import in the
-        save has passed (T-10) — so a later failure can never leave the
-        existing CSV half-overwritten. CSV/TSV paths pass through unchanged.
-
-        Returns:
-            * ``Path("")`` if no path is selected.
-            * The original CSV/TSV path if not a zip.
-            * The destination CSV path on successful import (promotion deferred).
-            * ``decline_fallback`` if the user declined to overwrite an existing
-              CSV (other settings still save).
-            * ``None`` if the import failed or was cancelled (caller aborts
-              the whole save).
-        """
-        # No staged promotion unless a zip import succeeds below.
-        setattr(self, commit_slot_attr, None)
-
-        raw = selector.get_path()
-        if not raw:
-            return Path("")
-        if not raw.lower().endswith(".zip"):
-            return Path(raw)
-
-        zip_path = Path(raw)
-        dest_csv = ANKI_MINER_HOME / dest_name
-        pending_csv = dest_csv.with_suffix(dest_csv.suffix + ".pending")
-
-        # Overwrite guard. atomic_write_csv only protects against mid-write
-        # failures, not intentional clobbering of a user's existing CSV.
-        if dest_csv.exists() and dest_csv.stat().st_size > 0:
-            reply = QMessageBox.question(
-                self,
-                labels.overwrite_title,
-                f"{dest_csv} already exists and will be replaced.\n\nContinue with import?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
-            )
-            if reply != QMessageBox.StandardButton.Yes:
-                # User opted out of THIS setting; let the rest of the save
-                # commit with the existing path unchanged.
-                return decline_fallback
-
-        dlg = QProgressDialog(labels.progress, "Cancel", 0, 100, self)
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
-
-        # Import into the staging file, never directly over dest_csv.
-        worker = worker_factory(zip_path, pending_csv)
-        setattr(self, worker_slot_attr, worker)  # keep alive across QThread lifetime
-
-        result_holder: dict[str, object] = {}
-        loop = QEventLoop(self)
-
-        def on_progress(cur: int, total: int, msg: str) -> None:
-            dlg.setMaximum(total)
-            dlg.setValue(cur)
-            dlg.setLabelText(msg)
-
-        def on_done(res: object) -> None:
-            result_holder["ok"] = res
-            loop.quit()
-
-        def on_failed(err: str) -> None:
-            result_holder["err"] = err
-            loop.quit()
-
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_done)
-        worker.failed.connect(on_failed)
-        dlg.canceled.connect(worker.cancel)
-
-        worker.start()
-        loop.exec()
-        dlg.close()
-        worker.wait()  # join thread before next save might construct a new worker
-
-        if "err" in result_holder:
-            err_msg = str(result_holder["err"])
-            if "cancel" not in err_msg.lower():
-                QMessageBox.warning(self, labels.failure_title, err_msg)
-            # Drop the staging file so a failed import leaves nothing behind.
-            pending_csv.unlink(missing_ok=True)
-            return None
-
-        result = result_holder["ok"]
-        # Both YomitanPitchImportResult and YomitanFreqImportResult expose the
-        # entry_count / source_name / skipped_display_only attributes used below.
-        assert isinstance(result, (YomitanPitchImportResult, YomitanFreqImportResult))
-
-        def _commit() -> None:
-            os.replace(pending_csv, dest_csv)
-            # Reflect the imported path back into the UI so subsequent saves
-            # don't re-trigger the import every time the user clicks Save.
-            selector.set_path(str(dest_csv))
-            skipped_note = (
-                f" (skipped {result.skipped_display_only:,} display-only entries)"
-                if result.skipped_display_only
-                else ""
-            )
-            QMessageBox.information(
-                self,
-                labels.success_title,
-                f"Imported {result.entry_count:,} entries from '{result.source_name}'.{skipped_note}",
-            )
-
-        setattr(self, commit_slot_attr, _commit)
-        return dest_csv
-
     def _resolve_pitch_accent_path(self) -> Path | None:
         """Resolve the pitch-accent selector for persistence (see the engine).
 
-        Thin wrapper over :meth:`_resolve_yomitan_csv_path`; see it for the full
-        staging/deferred-promotion contract and the meaning of each return.
+        Thin wrapper over :meth:`ZipImportFlow.run_modal_zip_import`; see it
+        for the full staging/deferred-promotion contract and the meaning of
+        each return.
         """
-        return self._resolve_yomitan_csv_path(
+        return self._zip_import_flow.run_modal_zip_import(
             selector=self.dictionary_panel.pitch_accent_selector,
             dest_name="pitch_accent.csv",
             worker_factory=partial(YomitanCsvImportWorker, import_yomitan_pitch_zip),
             worker_slot_attr="_active_pitch_worker",
             commit_slot_attr="_pending_pitch_commit",
             decline_fallback=self.config.pitch_accent_path,
-            labels=_YomitanCsvLabels(
+            labels=YomitanCsvLabels(
                 progress="Importing pitch accent dictionary…",
                 overwrite_title="Overwrite Pitch Accent File?",
                 failure_title="Pitch Accent Import Failed",
@@ -736,17 +580,18 @@ class SettingsTab(QWidget):
     def _resolve_frequency_path(self) -> Path | None:
         """Resolve the frequency selector for persistence (see the engine).
 
-        Thin wrapper over :meth:`_resolve_yomitan_csv_path`; see it for the full
-        staging/deferred-promotion contract and the meaning of each return.
+        Thin wrapper over :meth:`ZipImportFlow.run_modal_zip_import`; see it
+        for the full staging/deferred-promotion contract and the meaning of
+        each return.
         """
-        return self._resolve_yomitan_csv_path(
+        return self._zip_import_flow.run_modal_zip_import(
             selector=self.filtering_panel.frequency_selector,
             dest_name="frequency.csv",
             worker_factory=partial(YomitanCsvImportWorker, import_yomitan_freq_zip),
             worker_slot_attr="_active_freq_worker",
             commit_slot_attr="_pending_freq_commit",
             decline_fallback=self.config.frequency_list_path,
-            labels=_YomitanCsvLabels(
+            labels=YomitanCsvLabels(
                 progress="Importing frequency dictionary…",
                 overwrite_title="Overwrite Frequency List?",
                 failure_title="Frequency Import Failed",
@@ -755,36 +600,12 @@ class SettingsTab(QWidget):
         )
 
     def _commit_pending_csv_imports(self) -> None:
-        """Promote any staged pitch/frequency CSV imports and clear them.
-
-        Called once both resolvers have succeeded (T-10). Runs each deferred
-        commit closure — os.replace(``.pending`` → final), selector update,
-        success dialog — then resets the slots so a later save starts clean.
-        """
-        pitch_commit = self._pending_pitch_commit
-        freq_commit = self._pending_freq_commit
-        self._pending_pitch_commit = None
-        self._pending_freq_commit = None
-        if pitch_commit is not None:
-            pitch_commit()
-        if freq_commit is not None:
-            freq_commit()
+        """Promote any staged pitch/frequency CSV imports (delegates to the flow)."""
+        self._zip_import_flow.commit_pending_csv_imports()
 
     def _discard_pending_csv_imports(self) -> None:
-        """Drop staged pitch/frequency promotions without touching disk targets.
-
-        Called when the save aborts after a successful pitch import but a failed
-        frequency import (T-10). The frequency resolver already removed its own
-        ``.pending`` file on failure, so here we only clean up a pitch staging
-        file (if pitch succeeded) and clear both deferred commit slots so the
-        next save starts clean. No final CSV is touched.
-        """
-        if self._pending_pitch_commit is not None:
-            dest_csv = ANKI_MINER_HOME / "pitch_accent.csv"
-            pending_csv = dest_csv.with_suffix(dest_csv.suffix + ".pending")
-            pending_csv.unlink(missing_ok=True)
-        self._pending_pitch_commit = None
-        self._pending_freq_commit = None
+        """Drop staged pitch/frequency promotions (delegates to the flow)."""
+        self._zip_import_flow.discard_pending_csv_imports()
 
     def _on_reset_clicked(self) -> None:
         """Handle reset button click."""
@@ -819,32 +640,22 @@ class SettingsTab(QWidget):
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close (T-12).
 
-        SettingsTab owns three short-lived AnkiConnect workers — fetch fields,
-        fetch decks, apply/remove styling — each a tab-parented QThread that can
-        sit in a 15-60 s blocking request. They have no ``worker_thread``
-        attribute, so closeEvent discovers them here and routes each through the
-        single ``BackgroundTaskController._join_worker_for_close`` policy (cancel
-        + bounded grace join + laggard deferral). Returning them — rather than waiting
-        here — keeps every shutdown join in one place; abandoning them to Qt
-        teardown aborts with "QThread: Destroyed while thread is still running".
-
-        (T-66 lifts these workers into a controller exposing the same hook.)
+        Stable hook consumed by ``MainWindow.closeEvent``: yields the three
+        short-lived AnkiConnect probe workers (fetch fields, fetch decks,
+        apply/remove styling), which T-66 lifted into
+        :class:`AnkiProbeController` — this method delegates there. See
+        :meth:`AnkiProbeController.iter_close_workers` for the join-policy
+        rationale.
         """
-        return (self._fetch_fields_worker, self._fetch_decks_worker, self._styling_worker)
+        return self._anki_probe.iter_close_workers()
 
     def shutdown(self) -> None:
         """Cancel every running AnkiConnect worker (cancel only, no wait).
 
-        Explicit-teardown entry point mirroring the YouTube tab. closeEvent
-        does the bounded join via
-        :meth:`BackgroundTaskController._join_worker_for_close`; this is the
-        standalone cancel for any non-close caller (and the future
-        controller). ``cancel()`` is idempotent, so the helper re-cancelling is
-        harmless.
+        Explicit-teardown entry point mirroring the YouTube tab; delegates to
+        :class:`AnkiProbeController`, which owns the workers (T-66).
         """
-        for worker in self.iter_close_workers():
-            if worker is not None and worker.isRunning():
-                worker.cancel()
+        self._anki_probe.shutdown()
 
     # === Expose panel inputs for backward compatibility ===
 
@@ -878,13 +689,7 @@ class SettingsTab(QWidget):
         """Get max workers spinbox widget."""
         return self.media_panel.max_workers_spinbox
 
-    # === Dictionary import handlers ===
-
-    def _set_import_buttons_enabled(self, enabled: bool) -> None:
-        """Toggle import-trigger buttons. Prevents overlapping import workers."""
-        self.dictionary_panel._add_btn.setEnabled(enabled)
-        self.dictionary_panel._reimport_btn.setEnabled(enabled)
-        self.dictionary_panel.set_per_row_reimport_enabled(enabled)
+    # === Dictionary chain persistence ===
 
     def _persist_chain_change(self, new_chain: tuple[ChainEntry, ...]) -> None:
         """Save a chain mutation to disk and notify listeners.
@@ -899,555 +704,7 @@ class SettingsTab(QWidget):
         self.config = new_config
         self.config_changed.emit(new_config)
 
-    def _on_add_dict_clicked(self) -> None:
-        """Prompt for a Yomitan zip and run the import worker."""
-        zip_path_str, _ = QFileDialog.getOpenFileName(self, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)")
-        if not zip_path_str:
-            return
-
-        dest_root = self.config.dicts_root
-        dlg = QProgressDialog("Importing dictionary…", "Cancel", 0, 100, self)
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
-
-        worker = DictionaryImportWorker.for_yomitan(Path(zip_path_str), dest_root)
-        self._active_import_worker = worker  # keep alive across QThread lifetime
-        self._set_import_buttons_enabled(False)
-
-        def on_progress(cur: int, total: int, msg: str) -> None:
-            dlg.setMaximum(total)
-            dlg.setValue(cur)
-            dlg.setLabelText(msg)
-
-        def on_import_finished(dict_id: str, meta: dict) -> None:
-            dlg.close()
-            QMessageBox.information(
-                self,
-                "Dictionary added",
-                f"Imported {dict_id} ({meta.get('entry_count', 0):,} entries)",
-            )
-            new_chain = self._with_dict_at_top(dict_id)
-            # New dict folder on disk — invalidate the panel's cached registry
-            # scan so the row picks up the entry_count + source_name.
-            self.dictionary_panel.refresh_registry()
-            self.dictionary_panel.set_chain(new_chain)
-            self._persist_chain_change(new_chain)
-            self._set_import_buttons_enabled(True)
-
-        def on_failed(err: str) -> None:
-            dlg.close()
-            QMessageBox.warning(self, "Import Failed", err)
-            self._set_import_buttons_enabled(True)
-
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_import_finished)
-        worker.failed.connect(on_failed)
-        dlg.canceled.connect(worker.cancel)
-        worker.start()
-
-    def _on_reimport_dict_clicked(self, slot_id: str) -> None:
-        """Prompt for a matching Yomitan zip and re-import into an existing slot.
-
-        Slot identity is preserved by validating that the chosen zip's derived
-        `dict_id` equals ``slot_id`` before invoking the importer with
-        ``overwrite=True``. Picking a different zip would orphan the stale slot
-        and silently create a new one — we abort with a warning instead.
-        """
-        zip_path_str, _ = QFileDialog.getOpenFileName(self, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)")
-        if not zip_path_str:
-            return
-
-        zip_path = Path(zip_path_str)
-        try:
-            derived_id = derive_dict_id_from_zip(zip_path)
-        except Exception as exc:  # noqa: BLE001 — surface every failure to GUI
-            QMessageBox.warning(self, "Invalid Zip", str(exc))
-            return
-
-        if derived_id != slot_id:
-            QMessageBox.warning(
-                self,
-                "Zip does not match slot",
-                f"This zip is for '{derived_id}', but you are re-importing " f"'{slot_id}'. Pick the matching zip.",
-            )
-            return
-
-        # Drop sqlite handles before the importer renames the dict folder.
-        # On Windows the rename fails with "Access denied" while any
-        # DefinitionService still holds its read-only connection open
-        # (Issue #32). The remove flow uses the same hook (Issue #30).
-        if not self.dictionary_panel.request_resource_release():
-            QMessageBox.warning(
-                self,
-                "Re-import Blocked",
-                "A mining run is in progress. Stop it before re-importing dictionaries.",
-            )
-            return
-
-        dest_root = self.config.dicts_root
-        dlg = QProgressDialog("Re-importing dictionary…", "Cancel", 0, 100, self)
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
-
-        worker = DictionaryImportWorker.for_yomitan(zip_path, dest_root, overwrite=True)
-        self._active_import_worker = worker  # keep alive across QThread lifetime
-        self._set_import_buttons_enabled(False)
-
-        def on_progress(cur: int, total: int, msg: str) -> None:
-            dlg.setMaximum(total)
-            dlg.setValue(cur)
-            dlg.setLabelText(msg)
-
-        def on_done(dict_id: str, meta: dict) -> None:
-            dlg.close()
-            QMessageBox.information(
-                self,
-                "Dictionary re-imported",
-                f"Re-imported {dict_id} ({meta.get('entry_count', 0):,} entries)",
-            )
-            # Refresh registry so the stale-flag warning clears on the row.
-            current_chain = self.dictionary_panel.get_chain()
-            self.dictionary_panel.refresh_registry()
-            self.dictionary_panel.set_chain(current_chain)
-            # Notify listeners so cached DefinitionService instances rebuild
-            # with the freshly-rebuilt SQLite index.
-            self.config_changed.emit(self.config)
-            self._set_import_buttons_enabled(True)
-
-        def on_failed(err: str) -> None:
-            dlg.close()
-            QMessageBox.warning(self, "Re-import Failed", err)
-            self._set_import_buttons_enabled(True)
-
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_done)
-        worker.failed.connect(on_failed)
-        dlg.canceled.connect(worker.cancel)
-        worker.start()
-
-    def _with_dict_at_top(self, dict_id: str) -> tuple[ChainEntry, ...]:
-        """Return the current chain with ``dict_id`` placed (or moved) to the top."""
-        chain = list(self.dictionary_panel.get_chain())
-        chain = [e for e in chain if not (e.kind == "indexed" and e.dict_id == dict_id)]
-        chain.insert(0, ChainEntry(kind="indexed", dict_id=dict_id, enabled=True))
-        return tuple(chain)
-
-    def _on_reimport_jmdict_clicked(self) -> None:
-        """Reimport JMdict from the configured XML path."""
-        xml = self.config.jmdict_path
-        if not xml.exists():
-            QMessageBox.warning(
-                self,
-                "JMdict not found",
-                f"No JMdict XML at {xml}. Download from EDRDG and place it there.",
-            )
-            return
-
-        # Drop sqlite handles before the importer renames the dict folder
-        # (Issue #32 — same root cause as #30). Without this, the rename
-        # at yomitan_importer.py:215 fails with "Access denied" on Windows.
-        if not self.dictionary_panel.request_resource_release():
-            QMessageBox.warning(
-                self,
-                "Re-import Blocked",
-                "A mining run is in progress. Stop it before re-importing dictionaries.",
-            )
-            return
-
-        dest_root = self.config.dicts_root
-        dlg = QProgressDialog("Reimporting JMdict…", "Cancel", 0, 100, self)
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
-
-        worker = DictionaryImportWorker.for_jmdict(xml, dest_root)
-        self._active_import_worker = worker
-        self._set_import_buttons_enabled(False)
-
-        def on_progress(cur: int, total: int, msg: str) -> None:
-            dlg.setMaximum(total)
-            dlg.setValue(cur)
-            dlg.setLabelText(msg)
-
-        def on_done(dict_id: str, meta: dict) -> None:
-            dlg.close()
-            # Re-render chain so the (refreshed) entry count is reflected.
-            current_chain = self.dictionary_panel.get_chain()
-            self.dictionary_panel.refresh_registry()
-            self.dictionary_panel.set_chain(current_chain)
-            # Notify listeners so cached DefinitionService instances rebuild
-            # with the freshly-rebuilt SQLite index.
-            self.config_changed.emit(self.config)
-            self._set_import_buttons_enabled(True)
-
-        def on_failed(err: str) -> None:
-            dlg.close()
-            QMessageBox.warning(self, "Reimport Failed", err)
-            self._set_import_buttons_enabled(True)
-
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_done)
-        worker.failed.connect(on_failed)
-        dlg.canceled.connect(worker.cancel)
-        worker.start()
-
-    def _on_reimport_all_clicked(self) -> None:
-        """Reimport every dictionary in the chain from its saved source.
-
-        For each indexed ChainEntry, dispatch based on format:
-        - jmdict format → reimport from ``config.jmdict_path`` (the XML stays
-          on disk between sessions, no copy needed).
-        - yomitan format → reimport from ``<dicts_root>/<dict_id>/source.zip``
-          if present.
-
-        Dicts with no saved source are skipped and surfaced in the final
-        summary dialog. The user can seed them via the per-row stale-reimport
-        button (which prompts for the zip and now persists it on success).
-
-        Runs sequentially: each worker's ``on_done`` chains the next dispatch
-        so a single ApplicationModal QProgressDialog tracks the whole batch.
-        Per-dict failures accumulate into ``errors`` and don't abort the
-        loop. ``config_changed`` is emitted once at the end so cached
-        DefinitionService instances rebuild a single time.
-        """
-        # Fresh registry scan so we see source_name / format for the summary.
-        registry = DictionaryRegistry(self.config.dicts_root)
-        registry.load()
-
-        # Job tuples: ("yomitan", dict_id, display_name, source_zip_path)
-        #             ("jmdict",  dict_id, display_name, xml_path)
-        jobs: list[tuple[str, str, str, Path]] = []
-        missing_legacy: list[str] = []
-
-        for entry in self.dictionary_panel.get_chain():
-            if entry.kind != "indexed" or entry.dict_id is None:
-                continue
-            meta = registry.get(entry.dict_id)
-            if meta is None:
-                missing_legacy.append(entry.dict_id)
-                continue
-            if meta.format == "jmdict":
-                if self.config.jmdict_path.exists():
-                    jobs.append(("jmdict", meta.dict_id, meta.source_name, self.config.jmdict_path))
-                else:
-                    missing_legacy.append(meta.source_name)
-                continue
-            # Yomitan and anything else with a saved zip
-            source_zip = self.config.dicts_root / meta.dict_id / "source.zip"
-            if source_zip.exists():
-                jobs.append(("yomitan", meta.dict_id, meta.source_name, source_zip))
-            else:
-                missing_legacy.append(meta.source_name)
-
-        if not jobs:
-            if missing_legacy:
-                body = (
-                    "No dictionaries with saved sources were found.\n\n"
-                    "Skipped (no saved source — right-click a dictionary "
-                    "row → Re-import… to seed):\n" + "\n".join(f"  • {n}" for n in missing_legacy)
-                )
-            else:
-                body = "No dictionaries in the chain."
-            QMessageBox.information(self, "Nothing to reimport", body)
-            return
-
-        # Drop sqlite handles before any worker touches the dict folders.
-        # On Windows the importer's directory rename fails with "Access
-        # denied" while a DefinitionService still holds its read-only
-        # connection open (Issue #32; same hook as the remove flow in #30).
-        if not self.dictionary_panel.request_resource_release():
-            QMessageBox.warning(
-                self,
-                "Re-import Blocked",
-                "A mining run is in progress. Stop it before re-importing dictionaries.",
-            )
-            return
-
-        dlg = QProgressDialog("Reimporting dictionaries…", "Cancel", 0, 100, self)
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
-
-        self._set_import_buttons_enabled(False)
-
-        # Mutable state shared across the chained closures.
-        state: dict[str, object] = {
-            "index": 0,
-            "cancelled": False,
-            "reimported": [],
-            "errors": [],
-        }
-
-        def finish() -> None:
-            dlg.close()
-            # One refresh + one config_changed for the whole batch so
-            # DefinitionService rebuilds once, not N times.
-            current_chain = self.dictionary_panel.get_chain()
-            self.dictionary_panel.refresh_registry()
-            self.dictionary_panel.set_chain(current_chain)
-            self.config_changed.emit(self.config)
-            self._set_import_buttons_enabled(True)
-
-            reimported = state["reimported"]
-            errors = state["errors"]
-            assert isinstance(reimported, list)
-            assert isinstance(errors, list)
-
-            lines: list[str] = []
-            if reimported:
-                lines.append(f"Reimported {len(reimported)} dictionar" f"{'y' if len(reimported) == 1 else 'ies'}:")
-                lines.extend(f"  • {n}" for n in reimported)
-            if missing_legacy:
-                if lines:
-                    lines.append("")
-                lines.append("Skipped (no saved source — right-click a " "dictionary row → Re-import… to seed):")
-                lines.extend(f"  • {n}" for n in missing_legacy)
-            if errors:
-                if lines:
-                    lines.append("")
-                lines.append("Failed:")
-                lines.extend(f"  • {name}: {msg}" for name, msg in errors)
-            if state["cancelled"]:
-                if lines:
-                    lines.append("")
-                lines.append("Cancelled before remaining dictionaries.")
-
-            QMessageBox.information(self, "Reimport All", "\n".join(lines) or "Done.")
-
-        def launch_next() -> None:
-            idx = state["index"]
-            assert isinstance(idx, int)
-            if state["cancelled"] or idx >= len(jobs):
-                finish()
-                return
-
-            kind, dict_id, display, source_path = jobs[idx]
-            dlg.setLabelText(f"Dictionary {idx + 1} of {len(jobs)}: {display}")
-            dlg.setMaximum(100)
-            dlg.setValue(0)
-
-            if kind == "jmdict":
-                worker = DictionaryImportWorker.for_jmdict(source_path, self.config.dicts_root)
-            else:
-                worker = DictionaryImportWorker.for_yomitan(source_path, self.config.dicts_root, overwrite=True)
-            # Join the predecessor before dropping its reference (T-09). This
-            # closure runs inside the previous worker's queued finished slot,
-            # emitted from run() just before the OS thread exits — so its
-            # QThread may still be technically running. Reassigning
-            # _active_import_worker without waiting drops the only reference to a
-            # live, unparented QThread → "QThread: Destroyed while thread is
-            # still running". wait() is at most microseconds from returning here.
-            prev = getattr(self, "_active_import_worker", None)
-            if prev is not None and prev.isRunning():
-                prev.wait()
-            self._active_import_worker = worker
-
-            def on_progress(cur: int, total: int, msg: str) -> None:
-                dlg.setMaximum(total)
-                dlg.setValue(cur)
-
-            def on_done(_dict_id: str, _meta: dict) -> None:
-                reimported = state["reimported"]
-                assert isinstance(reimported, list)
-                reimported.append(display)
-                state["index"] = idx + 1
-                launch_next()
-
-            def on_failed(err: str) -> None:
-                errors = state["errors"]
-                assert isinstance(errors, list)
-                errors.append((display, err))
-                state["index"] = idx + 1
-                launch_next()
-
-            worker.progress.connect(on_progress)
-            worker.import_finished.connect(on_done)
-            worker.failed.connect(on_failed)
-            worker.start()
-
-        def on_cancel() -> None:
-            state["cancelled"] = True
-            worker = getattr(self, "_active_import_worker", None)
-            if worker is not None and worker.isRunning():
-                worker.cancel()
-
-        dlg.canceled.connect(on_cancel)
-        launch_next()
-
-    # === Fetch fields handler ===
-
-    def _on_fetch_fields_requested(self) -> None:
-        """Fetch the note type's field list from AnkiConnect in a worker thread.
-
-        Reads the current note type and AnkiConnect URL straight from the panel
-        inputs (not ``self.config``) so the user can fetch without first hitting
-        Save. The button is disabled for the duration to prevent piling up
-        concurrent requests. Results land on the main thread via
-        :meth:`_on_fetch_fields_finished`.
-        """
-        # Don't stack worker threads — first request wins until it completes.
-        if self._fetch_fields_worker is not None and self._fetch_fields_worker.isRunning():
-            return
-
-        note_type = self.anki_panel.note_type_input.text().strip()
-        if not note_type:
-            self.anki_panel.set_notetype_status(False, "Enter a note type name before fetching fields")
-            return
-
-        ankiconnect_url = self.anki_panel.ankiconnect_url_input.text().strip()
-        # Patch the live config with the user's in-flight input values so the
-        # service hits the URL/note type currently shown in the form, not
-        # whatever was last saved to disk.
-        probe_config = replace(
-            self.config,
-            anki_note_type=note_type,
-            ankiconnect_url=ankiconnect_url or self.config.ankiconnect_url,
-        )
-
-        try:
-            service = AnkiService(probe_config)
-        except ValueError as e:
-            # Misconfigured anki_fields keys — surface, don't crash.
-            self.anki_panel.set_notetype_status(False, f"Cannot build AnkiService: {e}")
-            return
-
-        self.anki_panel.set_notetype_status(None, "Fetching fields from note type...")
-        self.anki_panel.fetch_fields_button.setEnabled(False)
-
-        worker = FetchFieldsWorker(service, note_type, self)
-        self._fetch_fields_worker = worker
-        worker.result_ready.connect(self._on_fetch_fields_finished)
-        worker.error.connect(self._on_fetch_fields_error)
-        worker.start()
-
-    def _on_fetch_fields_finished(self, field_names: list[str]) -> None:
-        """Populate the panel with the fetched field list (main-thread slot)."""
-        self.anki_panel.fetch_fields_button.setEnabled(True)
-        if not field_names:
-            # Empty list means AnkiConnect rejected the request or returned
-            # nothing — most commonly the note type doesn't exist, or Anki
-            # isn't running. The status indicator is the existing affordance
-            # for note-type problems, so reuse it.
-            self.anki_panel.set_notetype_status(
-                False, "Could not fetch fields. Is Anki running and the note type spelled right?"
-            )
-            return
-        self.anki_panel.populate_from_field_list(field_names)
-        self.anki_panel.set_notetype_status(True, f"Fetched {len(field_names)} fields and auto-mapped them")
-
-    def _on_fetch_fields_error(self, message: str) -> None:
-        """Surface an unexpected worker exception via the note-type status line."""
-        self.anki_panel.fetch_fields_button.setEnabled(True)
-        self.anki_panel.set_notetype_status(False, message)
-
-    # === Card styling handlers (Issue #44) ===
-
-    def _on_apply_styling_requested(self) -> None:
-        """Apply the managed CSS block to the note type in a worker thread."""
-        self._start_styling_worker("apply")
-
-    def _on_remove_styling_requested(self) -> None:
-        """Strip the managed CSS block from the note type in a worker thread."""
-        self._start_styling_worker("remove")
-
-    def _start_styling_worker(self, mode: str) -> None:
-        """Read the note type's CSS, edit its managed block, and write it back.
-
-        Like :meth:`_on_fetch_fields_requested`, this reads the note type and
-        AnkiConnect URL straight from the panel inputs so the user can apply
-        without first hitting Save. The buttons are disabled for the duration to
-        prevent overlapping writes. Result lands on the main thread via
-        :meth:`_on_styling_finished` / :meth:`_on_styling_error`.
-        """
-        # Don't stack worker threads — first request wins until it completes.
-        if self._styling_worker is not None and self._styling_worker.isRunning():
-            return
-
-        note_type = self.anki_panel.note_type_input.text().strip()
-        if not note_type:
-            self.anki_panel.set_styling_status(False, "Enter a note type name before applying styles")
-            return
-
-        ankiconnect_url = self.anki_panel.ankiconnect_url_input.text().strip()
-        probe_config = replace(
-            self.config,
-            anki_note_type=note_type,
-            ankiconnect_url=ankiconnect_url or self.config.ankiconnect_url,
-        )
-
-        try:
-            service = AnkiService(probe_config)
-        except ValueError as e:
-            self.anki_panel.set_styling_status(False, f"Cannot build AnkiService: {e}")
-            return
-
-        self.anki_panel.set_styling_buttons_enabled(False)
-
-        worker = StylingWorker(
-            service,
-            mode="apply" if mode == "apply" else "remove",
-            preset=self.anki_panel.get_card_style_preset(),
-            custom_css=self.anki_panel.get_custom_css(),
-            note_type=note_type,
-            parent=self,
-        )
-        self._styling_worker = worker
-        worker.finished_ok.connect(self._on_styling_finished)
-        worker.error.connect(self._on_styling_error)
-        worker.start()
-
-    def _on_styling_finished(self, message: str) -> None:
-        """Re-enable the styling buttons and report success (main-thread slot)."""
-        self.anki_panel.set_styling_buttons_enabled(True)
-        self.anki_panel.set_styling_status(True, message)
-
-    def _on_styling_error(self, message: str) -> None:
-        """Re-enable the styling buttons and surface the failure (main-thread slot)."""
-        self.anki_panel.set_styling_buttons_enabled(True)
-        self.anki_panel.set_styling_status(False, message)
-
-    # === Excluded decks handlers (Issue #38) ===
-
-    def _on_fetch_decks_requested(self) -> None:
-        """Fetch the deck list from AnkiConnect to populate the exclude picker.
-
-        Uses the AnkiConnect URL currently shown in the Anki panel (not the
-        last-saved config) so the user can pick decks without hitting Save
-        first. The picker opens when results arrive via
-        :meth:`_on_fetch_decks_finished`.
-        """
-        if self._fetch_decks_worker is not None and self._fetch_decks_worker.isRunning():
-            return
-
-        ankiconnect_url = self.anki_panel.ankiconnect_url_input.text().strip()
-        probe_config = replace(self.config, ankiconnect_url=ankiconnect_url or self.config.ankiconnect_url)
-        try:
-            service = AnkiService(probe_config)
-        except ValueError as e:
-            QMessageBox.warning(self, "Add Deck", f"Cannot build AnkiService: {e}")
-            return
-
-        self.filtering_panel.add_deck_button.setEnabled(False)
-        worker = FetchDecksWorker(service, self)
-        self._fetch_decks_worker = worker
-        worker.result_ready.connect(self._on_fetch_decks_finished)
-        worker.error.connect(self._on_fetch_decks_error)
-        worker.start()
-
-    def _on_fetch_decks_finished(self, deck_names: list[str]) -> None:
-        """Hand the fetched deck list to the panel, which opens the picker."""
-        self.filtering_panel.add_deck_button.setEnabled(True)
-        if not deck_names:
-            QMessageBox.warning(
-                self,
-                "Add Deck",
-                "Could not fetch decks. Is Anki running with AnkiConnect?",
-            )
-            return
-        self.filtering_panel.set_available_decks(deck_names)
-
-    def _on_fetch_decks_error(self, message: str) -> None:
-        """Surface an unexpected deck-fetch worker exception."""
-        self.filtering_panel.add_deck_button.setEnabled(True)
-        QMessageBox.warning(self, "Add Deck", message)
+    # === Known words handlers (Issues #38 / #42) ===
 
     def _on_rebuild_known_words(self) -> None:
         """Clear the local known-words cache after user confirmation.
