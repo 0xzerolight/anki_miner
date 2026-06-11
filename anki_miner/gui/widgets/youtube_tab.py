@@ -963,10 +963,15 @@ class YouTubeTab(MiningTabBase):
         worker_busy = self.worker_thread is not None and self.worker_thread.isRunning()
         if not worker_busy and self._presenter is not None:
             old_processor = self._processor
+            # Thread the tab's own stats service through, not
+            # ``getattr(self._processor, …)``: a config change before the first
+            # run (processor still startup-deferred / None) would otherwise pass
+            # None and silently disable stats.db for the session (T-15). Mirrors
+            # the lazy rebuild in _start_run.
             self._processor = create_episode_processor(
                 config,
                 self._presenter,
-                stats_service=getattr(self._processor, "stats_service", None),
+                stats_service=self._stats_service,  # type: ignore[arg-type]
             )
             # Close the old chain explicitly — replacing the ref is not enough
             # on Windows where sqlite handles keep the index.sqlite file locked
