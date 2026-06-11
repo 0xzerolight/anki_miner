@@ -89,10 +89,12 @@ def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bo
     if info.duration_s > config.youtube_max_duration_s:
         minutes_limit = max(1, config.youtube_max_duration_s // 60)
         return False, f"Video exceeds max duration ({minutes_limit} min).", None
-    if info.is_age_restricted and not config.youtube_cookies_from_browser:
+    if info.is_age_restricted and not (config.youtube_cookies_from_browser or config.youtube_cookies_file):
+        # Either cookies source bypasses YouTube's age gate; the fetcher's
+        # _cookie_args() honors both --cookies-from-browser and --cookies <file>.
         return (
             False,
-            "Age-restricted video. Set Cookies → Browser in Settings and retry.",
+            "Age-restricted video. Set Cookies (Browser or File) in Settings and retry.",
             None,
         )
     if info.has_manual_ja_subs:
@@ -445,7 +447,12 @@ class PlaylistAddController:
 
     def _expand_playlist(self, entries: Sequence[PlaylistEntry], playlist_title: str) -> None:
         """Add *entries* as PROBING queue rows and start the sequential probe."""
-        existing_ids = {i.video_id for i in self._callbacks.queued_items() if i.video_id}
+        # A single-added item keeps video_id=None until its probe completes, so
+        # fall back to the URL-derived id; otherwise a video added standalone
+        # (probe in flight) then again via a playlist slips the dedup and gets
+        # fetched twice for the same YT:<video_id>.
+        existing_ids = {i.video_id or classify_youtube_url(i.url).video_id for i in self._callbacks.queued_items()}
+        existing_ids.discard(None)
         seen: set[str] = set()
         kept_entries: list[PlaylistEntry] = []
         skipped = 0
