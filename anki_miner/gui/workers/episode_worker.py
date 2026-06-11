@@ -7,8 +7,8 @@ from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 
-from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.orchestration import EpisodeProcessor
 
 
@@ -29,7 +29,7 @@ class EpisodeWorkerThread(CancellableWorker):
         video_file: Path,
         subtitle_file: Path,
         preview_mode: bool,
-        progress_callback: GUIProgressCallback,
+        progress_callback: ProgressCallback,
         curation_callback: Callable[[list], list | None] | None = None,
         parent=None,
         *,

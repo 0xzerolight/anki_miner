@@ -38,8 +38,7 @@ import logging
 from PyQt6.QtCore import QThread
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.services.definition_service import DefinitionService
-from anki_miner.services.dictionary.registry import DictionaryRegistry
+from anki_miner.gui.utils.service_factory import build_definition_service
 from anki_miner.services.tagger import get_shared_tagger
 
 logger = logging.getLogger(__name__)
@@ -82,13 +81,10 @@ class PrewarmWorker(QThread):
 
             # Warm the sqlite page cache / meta sidecars for the configured
             # dictionary chain, then discard everything (no shared connections).
-            registry = DictionaryRegistry(self._config.dicts_root)
-            registry.load()
-            providers = registry.build_provider_chain(self._config)
-            definition_service = DefinitionService(self._config, providers=providers)
-            definition_service.ensure_loaded()
+            # Shares the factory's gated eager-load: build_definition_service
+            # only touches sqlite when an indexed entry is enabled, so a
+            # Jisho-only chain warms nothing here, same as the real mine path.
+            definition_service = build_definition_service(self._config)
             del definition_service
-            del providers
-            del registry
         except Exception:  # noqa: BLE001 - best-effort; never crash the app
             logger.debug("Prewarm failed (best-effort, ignored)", exc_info=True)

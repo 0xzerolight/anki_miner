@@ -21,6 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 RESOURCE_DIRS = [
     REPO_ROOT / "anki_miner" / "gui" / "resources",
     REPO_ROOT / "anki_miner" / "services" / "dictionary" / "resources",
+    REPO_ROOT / "anki_miner" / "resources",
 ]
 SPEC_FILE = REPO_ROOT / "anki_miner.spec"
 DIST_DIR = REPO_ROOT / "dist"
@@ -69,6 +70,7 @@ def check_spec_references_resources() -> None:
     expected = [
         '"anki_miner", "gui", "resources"',
         '"anki_miner", "services", "dictionary", "resources"',
+        '"anki_miner", "resources"',
     ]
     for token in expected:
         if token not in text:
