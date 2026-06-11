@@ -517,6 +517,35 @@ class TestCreateCardsBatch:
         ):
             service.create_cards_batch(items)
 
+    def test_mid_run_batch_failure_persists_earlier_batches(self, test_config, make_tokenized_word):
+        """A non-duplicate failure in a later batch must not discard earlier
+        batches' results: their note IDs stay recorded (so Undo works) and the
+        vocab cache is invalidated (it is now stale), while the error still
+        propagates to the pipeline boundary."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=150)  # 2 batches (100 + 50)
+
+        # Prime the vocab cache so we can assert it gets invalidated.
+        service._existing_vocab_cache = {"既知"}
+
+        # Batch 1 succeeds with ids 0..99; batch 2 raises a non-duplicate error.
+        batch1_resp = _mock_response(result=list(range(100)))
+        batch2_err = _mock_response(error="deck was not found: Anki Miner")
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=[batch1_resp, batch2_err],
+            ),
+            pytest.raises(AnkiConnectionError, match="deck was not found"),
+        ):
+            service.create_cards_batch(items)
+
+        # Batch-1 cards exist in Anki — their IDs must be recorded for Undo.
+        assert service.last_created_note_ids == list(range(100))
+        # The cache reflected the pre-run collection and is now stale.
+        assert service._existing_vocab_cache is None
+
     def test_non_duplicate_error_during_per_note_fallback_propagates(self, test_config, make_tokenized_word):
         """If a non-duplicate error surfaces while recovering per-note, raise it."""
         service = AnkiService(test_config)
