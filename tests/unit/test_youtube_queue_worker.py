@@ -652,7 +652,7 @@ def test_mining_progress_adapter_handles_zero_total():
 
 
 def test_curation_processor_and_offset_set_from_constructor(mock_processor, youtube_config):
-    """_curation_processor and _curation_offset are initialised from constructor args."""
+    """curation_processor and _curation_offset are initialised from constructor args."""
     worker = YouTubeQueueWorker(
         processor=mock_processor,
         config=youtube_config,
@@ -660,7 +660,7 @@ def test_curation_processor_and_offset_set_from_constructor(mock_processor, yout
         curation_callback=None,
         preview_mode=False,
     )
-    assert worker._curation_processor is mock_processor
+    assert worker.curation_processor is mock_processor
     assert worker._curation_offset == youtube_config.subtitle_offset
     assert worker._curation_video is None
     assert worker._curation_subtitle is None

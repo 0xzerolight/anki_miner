@@ -1,9 +1,15 @@
 """Base class for cancellable worker threads."""
 
+from __future__ import annotations
+
 import threading
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QThread, pyqtSignal
+
+if TYPE_CHECKING:
+    from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
 
 class CancellableWorker(QThread):
@@ -51,6 +57,30 @@ class CancellableWorker(QThread):
             True if cancellation was requested
         """
         return self._cancel_event.is_set()
+
+
+class ProcessorOwningWorker(CancellableWorker):
+    """Base for mining workers that drive an :class:`EpisodeProcessor`.
+
+    Declares the single typed contract for "the processor that owns
+    curation/lookup resources". GUI readers — the curation dialog context
+    builders and the Settings → Remove dictionary release hooks — consume
+    only :attr:`curation_processor`, so a worker-side rename is a mypy
+    error at the reader instead of a silent ``getattr`` miss (lookup_fn
+    degrading to None, sqlite handles never closed).
+
+    Subclasses MUST override the property to return their own processor
+    storage (constructor arg or per-item current processor).
+    """
+
+    @property
+    def curation_processor(self) -> EpisodeProcessor | None:
+        """Processor owning dictionary resources for the current or most recent run.
+
+        ``None`` only when the worker has not created/received a processor
+        yet (e.g. a queue worker before its first item).
+        """
+        raise NotImplementedError("ProcessorOwningWorker subclasses must override curation_processor")
 
 
 class SingleCallWorker(CancellableWorker):

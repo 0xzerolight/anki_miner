@@ -496,33 +496,22 @@ class SingleEpisodeTab(MiningTabBase):
     def _build_curation_context(
         self,
     ) -> tuple[CurationMediaContext | None, Callable[[str], list[tuple[str, str]]] | None]:
-        """Build (media_context, lookup_fn) from this tab's selectors + live worker."""
-        media_context: CurationMediaContext | None = None
+        """Build (media_context, lookup_fn) from this tab's selectors + live worker.
+
+        The only tab that passes a real ``audio_track_override`` — the per-run
+        Tracks-dialog pick must carry into the curation player.
+        """
         video_path = self.video_selector.get_path().strip()
         subtitle_path = self.subtitle_selector.get_path().strip()
-        if video_path and subtitle_path:
-            try:
-                offset = self.offset_spinbox.value()
-                config_no_offset = replace(self.config, subtitle_offset=0.0)
-                parser = SubtitleParserService(config_no_offset)
-                entries = parser.parse_raw_entries(Path(subtitle_path))
-                media_context = CurationMediaContext(
-                    video_file=Path(video_path),
-                    subtitle_entries=entries,
-                    offset=offset,
-                    audio_track_override=self._audio_track_override,
-                    ffprobe_cmd=resolve_ffprobe(self.config),
-                )
-            except Exception:
-                logger.exception("Failed to build media context for curation; proceeding without player")
-                media_context = None
-
-        lookup_fn = None
-        if self.worker_thread is not None:
-            proc = getattr(self.worker_thread, "processor", None)
-            if proc is not None:
-                lookup_fn = proc.definition_service.lookup_all_offline
-        return media_context, lookup_fn
+        media_context = self._make_curation_media_context(
+            self.config,
+            Path(video_path) if video_path else None,
+            Path(subtitle_path) if subtitle_path else None,
+            offset=self.offset_spinbox.value(),
+            audio_track_override=self._audio_track_override,
+        )
+        proc = self.worker_thread.curation_processor if self.worker_thread is not None else None
+        return media_context, self._lookup_fn_from_processor(proc)
 
     def _on_cancel_clicked(self) -> None:
         """Handle cancel button click."""
@@ -667,20 +656,19 @@ class SingleEpisodeTab(MiningTabBase):
         """Close sqlite handles cached by the most recent worker run.
 
         The processor is created fresh per run, but the finished worker
-        retains it on ``self.worker_thread.processor`` until a new run
+        retains it (exposed via ``curation_processor``) until a new run
         replaces ``self.worker_thread``. On Windows those cached handles
         keep ``index.sqlite`` locked, so Settings → Remove / Re-import fails
         after the user has mined at least once (Issue #30 follow-up).
 
         Returns ``False`` while a worker is actively running — closing
-        providers under an in-flight processor would crash the run.
-        ``DefinitionService.close()`` resets ``_loaded`` so the next mine
-        re-opens the chain cleanly.
+        providers under an in-flight processor would crash the run. The
+        facade resets the chain so the next mine re-opens it cleanly.
         """
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return False
         if self.worker_thread is not None:
-            proc = getattr(self.worker_thread, "processor", None)
+            proc = self.worker_thread.curation_processor
             if proc is not None:
-                proc.definition_service.close()
+                proc.release_dictionary_resources()
         return True

@@ -102,7 +102,7 @@ def test_build_curation_context_no_worker_returns_none(tab):
     assert tab._build_curation_context() == (None, None)
 
 
-def test_build_curation_context_reads_worker_attrs(tab, tmp_path):
+def test_build_curation_context_reads_worker_attrs(tab, facade_processor, tmp_path):
     subs = tmp_path / "v1.srt"
     subs.write_text(
         "1\n00:00:00,000 --> 00:00:01,000\nテスト\n",
@@ -112,15 +112,15 @@ def test_build_curation_context_reads_worker_attrs(tab, tmp_path):
     video.touch()
 
     lookup = MagicMock(name="lookup_all_offline")
-    proc = SimpleNamespace(definition_service=SimpleNamespace(lookup_all_offline=lookup))
+    facade_processor.definition_service.lookup_all_offline = lookup
     tab.worker_thread = SimpleNamespace(
-        _curation_processor=proc,
+        curation_processor=facade_processor,
         _curation_video=video,
         _curation_subtitle=subs,
         _curation_offset=4.0,
     )
 
-    with patch("anki_miner.gui.widgets.youtube_tab.resolve_ffprobe", return_value="ffprobe"):
+    with patch("anki_miner.gui.widgets._mining_tab_base.resolve_ffprobe", return_value="ffprobe"):
         media_context, lookup_fn = tab._build_curation_context()
 
     assert lookup_fn is lookup
@@ -130,16 +130,16 @@ def test_build_curation_context_reads_worker_attrs(tab, tmp_path):
     assert media_context.subtitle_entries  # parsed at least one entry
 
 
-def test_build_curation_context_parse_error_returns_none_context(tab, tmp_path):
+def test_build_curation_context_parse_error_returns_none_context(tab, facade_processor, tmp_path):
     subs = tmp_path / "v1.srt"
     subs.touch()
     video = tmp_path / "v1.mp4"
     video.touch()
 
     lookup = MagicMock(name="lookup_all_offline")
-    proc = SimpleNamespace(definition_service=SimpleNamespace(lookup_all_offline=lookup))
+    facade_processor.definition_service.lookup_all_offline = lookup
     tab.worker_thread = SimpleNamespace(
-        _curation_processor=proc,
+        curation_processor=facade_processor,
         _curation_video=video,
         _curation_subtitle=subs,
         _curation_offset=0.0,
@@ -147,7 +147,7 @@ def test_build_curation_context_parse_error_returns_none_context(tab, tmp_path):
 
     mock_parser = MagicMock()
     mock_parser.return_value.parse_raw_entries.side_effect = RuntimeError("bad subs")
-    with patch("anki_miner.gui.widgets.youtube_tab.SubtitleParserService", mock_parser):
+    with patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser):
         media_context, lookup_fn = tab._build_curation_context()
 
     assert media_context is None
@@ -231,3 +231,28 @@ def test_shutdown_unblocks_worker_parked_at_curation_gate(tab):
     assert not bridge_thread.is_alive(), "worker was never released from the curation gate"
     assert results == [None]  # released as cancelled, not with a selection
     assert tab.worker_thread is None
+
+
+def test_build_curation_context_routes_through_shared_helpers(tab, facade_processor, tmp_path):
+    """_build_curation_context delegates to the shared MiningTabBase helpers
+    (T-60): _make_curation_media_context gets the worker's fetched paths (no
+    audio-track override on YouTube), _lookup_fn_from_processor resolves the
+    typed curation_processor through the offline_lookup_fn facade."""
+    from anki_miner.gui.widgets.youtube_tab import YouTubeTab
+
+    video = tmp_path / "v1.mp4"
+    subs = tmp_path / "v1.srt"
+    tab.worker_thread = SimpleNamespace(
+        curation_processor=facade_processor,
+        _curation_video=video,
+        _curation_subtitle=subs,
+        _curation_offset=4.0,
+    )
+
+    sentinel_ctx = object()
+    with patch.object(YouTubeTab, "_make_curation_media_context", return_value=sentinel_ctx) as helper:
+        media_context, lookup_fn = tab._build_curation_context()
+
+    helper.assert_called_once_with(tab._config, video, subs, offset=4.0)
+    assert media_context is sentinel_ctx
+    assert lookup_fn is facade_processor.definition_service.lookup_all_offline

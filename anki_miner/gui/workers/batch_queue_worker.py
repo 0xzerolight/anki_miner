@@ -8,14 +8,14 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.service_factory import create_episode_processor
-from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.batch_queue import BatchQueue, QueueItemStatus
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
 
-class BatchQueueWorkerThread(CancellableWorker):
+class BatchQueueWorkerThread(ProcessorOwningWorker):
     """Worker thread for processing multiple folder pairs sequentially.
 
     Inherits thread-safe cancellation from CancellableWorker.
@@ -59,10 +59,18 @@ class BatchQueueWorkerThread(CancellableWorker):
         self.curation_callback = curation_callback
         # Published per-pair for the GUI curation bridge (mirrors ManualPairWorkerThread's
         # _curation_* attrs so BatchProcessingTab reads one attribute name across both workers).
-        self._curation_processor: EpisodeProcessor | None = None
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = 0.0
+
+    @property
+    def curation_processor(self) -> EpisodeProcessor | None:
+        """The per-item processor for the current (or most recent) queue item.
+
+        Set before each item's pairs are processed, so it is always the live
+        processor by the time the curation bridge blocks the run loop.
+        """
+        return self._current_processor
 
     def cancel(self) -> None:
         """Cancel processing, propagating to the current processor."""
@@ -118,7 +126,6 @@ class BatchQueueWorkerThread(CancellableWorker):
                         interrupted = True
                         break
 
-                    self._curation_processor = episode_processor
                     self._curation_video = pair.video
                     self._curation_subtitle = pair.subtitle
                     self._curation_offset = item.subtitle_offset

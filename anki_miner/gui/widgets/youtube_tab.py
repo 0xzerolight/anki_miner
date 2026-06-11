@@ -31,8 +31,6 @@ import contextlib
 import logging
 import re
 from collections.abc import Callable, Sequence
-from dataclasses import replace
-from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
@@ -70,9 +68,7 @@ from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueue, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
-from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
-from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url
 
 logger = logging.getLogger(__name__)
@@ -906,31 +902,10 @@ class YouTubeTab(MiningTabBase):
         w = self.worker_thread
         if w is None:
             return None, None
-
-        lookup_fn = None
-        proc = getattr(w, "_curation_processor", None)
-        if proc is not None and getattr(proc, "definition_service", None) is not None:
-            lookup_fn = proc.definition_service.lookup_all_offline
-
-        media_context: CurationMediaContext | None = None
-        video = getattr(w, "_curation_video", None)
-        subtitle = getattr(w, "_curation_subtitle", None)
-        if video is not None and subtitle is not None:
-            try:
-                config_no_offset = replace(self._config, subtitle_offset=0.0)
-                parser = SubtitleParserService(config_no_offset)
-                entries = parser.parse_raw_entries(Path(subtitle))
-                media_context = CurationMediaContext(
-                    video_file=Path(video),
-                    subtitle_entries=entries,
-                    offset=getattr(w, "_curation_offset", 0.0),
-                    audio_track_override=None,
-                    ffprobe_cmd=resolve_ffprobe(self._config),
-                )
-            except Exception:
-                logger.exception("Failed to build media context for curation; proceeding without player")
-                media_context = None
-        return media_context, lookup_fn
+        media_context = self._make_curation_media_context(
+            self._config, w._curation_video, w._curation_subtitle, offset=w._curation_offset
+        )
+        return media_context, self._lookup_fn_from_processor(w.curation_processor)
 
     def _mark_known(self, forms: set[str]) -> int:
         """Persist curator-selected forms to the local known/ignore list (Issue #42).
@@ -978,7 +953,7 @@ class YouTubeTab(MiningTabBase):
             # on Windows where sqlite handles keep the index.sqlite file locked
             # until GC eventually runs (Issue #30).
             if old_processor is not None:
-                old_processor.definition_service.close()
+                old_processor.release_dictionary_resources()
 
     def release_dictionary_resources(self) -> bool:
         """Close any cached dictionary handles so the file can be deleted.
@@ -995,7 +970,7 @@ class YouTubeTab(MiningTabBase):
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return False
         if self._processor is not None:
-            self._processor.definition_service.close()
+            self._processor.release_dictionary_resources()
             self._processor = None
         return True
 
