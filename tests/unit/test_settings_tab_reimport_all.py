@@ -342,3 +342,43 @@ def test_reimport_all_release_refusal_blocks_workers(tab_for_reimport_all, monke
     stubbed_workers["yomitan_factory"].assert_not_called()
     stubbed_workers["jmdict_factory"].assert_not_called()
     assert any(title == "Re-import Blocked" for title, _ in warnings), warnings
+
+
+def test_reimport_all_joins_predecessor_before_reassign(tab_for_reimport_all, monkeypatch, stubbed_workers):
+    """T-09: launch_next runs inside the predecessor's queued finished slot.
+    Reassigning _active_import_worker there drops the only reference to a still-
+    running QThread → "QThread: Destroyed while thread is still running". The
+    predecessor must be joined (.wait()) BEFORE the new worker is assigned.
+    """
+    tab = tab_for_reimport_all
+    dicts_root = tab.config.dicts_root
+    _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
+    _make_dict_on_disk(dicts_root, "dict-b", fmt="yomitan", source_name="Dict B")
+    tab.dictionary_panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),
+            ChainEntry(kind="indexed", dict_id="dict-b", enabled=True),
+        )
+    )
+    _silence_dialogs(monkeypatch)
+
+    tab._on_reimport_all_clicked()
+    assert stubbed_workers["yomitan_factory"].call_count == 1
+    first = stubbed_workers["instances"][0]
+    # The predecessor is still running when its queued finished slot fires.
+    first.isRunning.return_value = True
+
+    # Record the active worker at the instant wait() is called on the predecessor.
+    active_at_wait: list[object] = []
+    first.wait.side_effect = lambda *a, **k: active_at_wait.append(tab._active_import_worker)
+
+    # Fire the predecessor's finished slot — this synchronously calls launch_next.
+    _complete_in_flight_worker(stubbed_workers, idx=0)
+
+    # Predecessor joined.
+    assert first.wait.called, "predecessor QThread must be joined before reassignment"
+    # And it was joined BEFORE the second worker replaced it as _active_import_worker.
+    assert active_at_wait == [first], "wait() must run while the predecessor is still the active worker"
+    # Sanity: the second worker did get launched and is now active.
+    assert stubbed_workers["yomitan_factory"].call_count == 2
+    assert tab._active_import_worker is stubbed_workers["instances"][1]

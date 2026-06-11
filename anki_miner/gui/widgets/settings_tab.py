@@ -1142,6 +1142,16 @@ class SettingsTab(QWidget):
                 worker = DictionaryImportWorker.for_jmdict(source_path, self.config.dicts_root)
             else:
                 worker = DictionaryImportWorker.for_yomitan(source_path, self.config.dicts_root, overwrite=True)
+            # Join the predecessor before dropping its reference (T-09). This
+            # closure runs inside the previous worker's queued finished slot,
+            # emitted from run() just before the OS thread exits — so its
+            # QThread may still be technically running. Reassigning
+            # _active_import_worker without waiting drops the only reference to a
+            # live, unparented QThread → "QThread: Destroyed while thread is
+            # still running". wait() is at most microseconds from returning here.
+            prev = getattr(self, "_active_import_worker", None)
+            if prev is not None and prev.isRunning():
+                prev.wait()
             self._active_import_worker = worker
 
             def on_progress(cur: int, total: int, msg: str) -> None:
