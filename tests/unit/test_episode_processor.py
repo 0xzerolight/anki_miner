@@ -2547,3 +2547,31 @@ class TestPreflightCardTarget:
         )
 
         mock_services["anki_service"].verify_card_target.assert_not_called()
+
+
+class TestDictionaryResourceFacade:
+    """Dictionary-resource facade (T-60): GUI callers stay out of definition_service internals."""
+
+    @pytest.fixture
+    def processor(self, test_config):
+        return EpisodeProcessor(
+            config=test_config,
+            subtitle_parser=MagicMock(),
+            word_filter=MagicMock(),
+            media_extractor=MagicMock(),
+            definition_service=MagicMock(),
+            anki_service=MagicMock(),
+            presenter=NullPresenter(),
+        )
+
+    def test_release_dictionary_resources_closes_definition_service(self, processor):
+        processor.release_dictionary_resources()
+        processor.definition_service.close.assert_called_once_with()
+
+    def test_release_dictionary_resources_idempotent(self, processor):
+        processor.release_dictionary_resources()
+        processor.release_dictionary_resources()
+        assert processor.definition_service.close.call_count == 2
+
+    def test_offline_lookup_fn_is_definition_service_offline_lookup(self, processor):
+        assert processor.offline_lookup_fn is processor.definition_service.lookup_all_offline
