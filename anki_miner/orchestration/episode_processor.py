@@ -760,16 +760,29 @@ class EpisodeProcessor:
             return
         from anki_miner.models.stats import MiningSession
 
-        self.stats_service.record_session(
-            MiningSession(
-                series_name=ctx.series_name,
-                episode_name=ctx.episode_name,
-                total_words=result.total_words_found,
-                unknown_words=result.new_words_found,
-                cards_created=result.cards_created,
-                elapsed_time=result.elapsed_time,
+        # The cards already exist in Anki at this point. A locked stats.db
+        # raises OperationalError here; do NOT let it bubble into
+        # process_episode's generic except, which would report
+        # cards_created=0 with no note IDs — a successful run reported as a
+        # failure. Same exposure the known_words.db write fixed (T-19);
+        # dropping one stats row is safe, so warn and keep the result.
+        try:
+            self.stats_service.record_session(
+                MiningSession(
+                    series_name=ctx.series_name,
+                    episode_name=ctx.episode_name,
+                    total_words=result.total_words_found,
+                    unknown_words=result.new_words_found,
+                    cards_created=result.cards_created,
+                    elapsed_time=result.elapsed_time,
+                )
             )
-        )
+        except sqlite3.OperationalError as e:
+            logger.warning(
+                "Could not record mining session for %s in stats.db (%s); " "the cards were still created.",
+                ctx.episode_name,
+                e,
+            )
 
     def _preflight_card_target(self) -> None:
         """Fail fast on a misconfigured Anki target; auto-create the deck (Issue #52)."""
