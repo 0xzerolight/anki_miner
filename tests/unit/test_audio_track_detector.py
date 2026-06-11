@@ -390,3 +390,50 @@ class TestGetPrimaryVideoCodec:
         cmd = mock_run.call_args[0][0]
         assert cmd[0] == "/custom/ffprobe"
         assert "v:0" in cmd  # selects the first video stream
+
+
+def _unicode_decode_error() -> UnicodeDecodeError:
+    """A realistic locale-decode failure: cp1252 choking on a UTF-8 byte.
+
+    ffprobe always emits UTF-8 JSON; on Windows ``text=True`` decodes with the
+    locale codec (cp1252/cp932), which raises on non-ASCII stream titles
+    (ubiquitous in anime MKVs). ``UnicodeDecodeError`` is a ``ValueError``, so
+    the original ``except (SubprocessError, OSError)`` did NOT catch it.
+    """
+    return UnicodeDecodeError("charmap", b"\x81", 0, 1, "character maps to <undefined>")
+
+
+class TestUnicodeDecodeFallback:
+    """Locale decode of ffprobe's UTF-8 JSON must honor the documented fallback.
+
+    Regression for Windows crashes on non-ASCII stream titles: subprocess.run
+    raises UnicodeDecodeError (a ValueError) during decoding, which must be
+    caught and yield the empty/None fallback rather than crashing the worker.
+    """
+
+    def test_list_audio_streams_unicode_decode_returns_empty(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", side_effect=_unicode_decode_error()):
+            assert list_audio_streams(video_file) == []
+
+    def test_find_japanese_audio_stream_unicode_decode_returns_none(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", side_effect=_unicode_decode_error()):
+            assert find_japanese_audio_stream(video_file) is None
+
+    def test_get_primary_video_codec_unicode_decode_returns_none(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", side_effect=_unicode_decode_error()):
+            assert get_primary_video_codec(video_file) is None
+
+    def test_list_audio_streams_passes_utf8_replace_to_run(self, video_file):
+        stdout = _ffprobe_json([{"index": 0, "language": "jpn"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)) as mock_run:
+            list_audio_streams(video_file)
+        kwargs = mock_run.call_args.kwargs
+        assert kwargs["encoding"] == "utf-8"
+        assert kwargs["errors"] == "replace"
+
+    def test_get_primary_video_codec_passes_utf8_replace_to_run(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=_video_json("av1"))) as mock_run:
+            get_primary_video_codec(video_file)
+        kwargs = mock_run.call_args.kwargs
+        assert kwargs["encoding"] == "utf-8"
+        assert kwargs["errors"] == "replace"
