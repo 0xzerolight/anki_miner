@@ -1,10 +1,11 @@
 """Service for extracting media (screenshots and audio) from video files."""
 
+import contextlib
 import logging
 import subprocess
 import threading
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
@@ -23,8 +24,65 @@ from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 logger = logging.getLogger(__name__)
 
 
+def _kill_quietly(proc: "subprocess.Popen[str]") -> None:
+    """Kill *proc*, tolerating a process that already exited.
+
+    ``Popen.kill`` can raise ``ProcessLookupError`` (an ``OSError``) when the
+    process finished and was reaped between our liveness check and the kill;
+    cancellation must never crash on that race.
+    """
+    with contextlib.suppress(OSError):
+        proc.kill()
+
+
+class _FfmpegProcRegistry:
+    """Live ffmpeg ``Popen`` handles for a single ``extract_media_batch`` run.
+
+    On cancel the batch thread calls :meth:`kill_all`. Without it, in-flight
+    encodes (30-60s timeouts) ran to completion and the executor's context
+    exit joined them, blocking the cancelling caller for the full encode
+    time. Once cancelled, :meth:`register` refuses new processes so a worker
+    that was between two ffmpeg calls cannot spawn fresh work. Reaping stays
+    with the owning worker thread (``communicate``/``wait``) — no zombies.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._procs: set[subprocess.Popen[str]] = set()
+        self._cancelled = False
+
+    @property
+    def cancelled(self) -> bool:
+        """True once :meth:`kill_all` ran; new spawns must be skipped."""
+        with self._lock:
+            return self._cancelled
+
+    def register(self, proc: "subprocess.Popen[str]") -> bool:
+        """Track a live process. Returns False when already cancelled."""
+        with self._lock:
+            if self._cancelled:
+                return False
+            self._procs.add(proc)
+            return True
+
+    def unregister(self, proc: "subprocess.Popen[str]") -> None:
+        with self._lock:
+            self._procs.discard(proc)
+
+    def kill_all(self) -> None:
+        """Mark the run cancelled and kill every tracked process."""
+        with self._lock:
+            self._cancelled = True
+            procs = list(self._procs)
+        for proc in procs:
+            _kill_quietly(proc)
+
+
 class MediaExtractorService:
     """Extract screenshots and audio clips from video files (stateless service)."""
+
+    # Seconds between cancelled_check polls while encodes are still in flight.
+    _CANCEL_POLL_INTERVAL = 0.2
 
     def __init__(self, config: AnkiMinerConfig):
         """Initialize the media extractor.
@@ -49,6 +107,7 @@ class MediaExtractorService:
         temp_folder: Path | None = None,
         *,
         audio_track_override: int | None = None,
+        proc_registry: _FfmpegProcRegistry | None = None,
     ) -> MediaData:
         """Extract screenshot and audio for a single word.
 
@@ -59,6 +118,8 @@ class MediaExtractorService:
                 omitted, falls back to the config-level media_temp_folder.
             audio_track_override: Optional 0-indexed audio track (audio_index) to use instead
                 of auto-detecting Japanese. None (default) preserves existing JP auto-detect.
+            proc_registry: Internal batch-cancel registry; extract_media_batch
+                passes one so cancelled runs can kill in-flight ffmpeg.
 
         Returns:
             MediaData with paths to extracted files
@@ -76,11 +137,13 @@ class MediaExtractorService:
         audio_path = output_dir / audio_file
 
         # Extract screenshot
-        screenshot_success = self._extract_screenshot(video_file, word.start_time, word.duration, screenshot_path)
+        screenshot_success = self._extract_screenshot(
+            video_file, word.start_time, word.duration, screenshot_path, proc_registry
+        )
 
         # Extract audio
         audio_success = self._extract_audio(
-            video_file, word.start_time, word.duration, audio_path, audio_track_override
+            video_file, word.start_time, word.duration, audio_path, audio_track_override, proc_registry
         )
 
         return MediaData(
@@ -118,43 +181,72 @@ class MediaExtractorService:
         if progress_callback:
             progress_callback.on_start(len(words), "Extracting media")
 
-        media_data_list = []
+        media_data_list: list[tuple[TokenizedWord, MediaData]] = []
         max_workers = self.config.max_parallel_workers
         was_cancelled = False
+        # Per-run registry of live ffmpeg processes so the cancel path can
+        # kill them instead of waiting out their 30-60s encode timeouts.
+        proc_registry = _FfmpegProcRegistry()
+        # Poll only when the caller can actually cancel; otherwise block
+        # until the next future completes.
+        poll = self._CANCEL_POLL_INTERVAL if cancelled_check else None
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all extraction jobs
             future_to_word = {
                 executor.submit(
-                    self.extract_media, video_file, word, temp_folder, audio_track_override=audio_track_override
+                    self.extract_media,
+                    video_file,
+                    word,
+                    temp_folder,
+                    audio_track_override=audio_track_override,
+                    proc_registry=proc_registry,
                 ): word
                 for word in words
             }
 
-            # Collect results as they complete
-            for completed, future in enumerate(as_completed(future_to_word), 1):
-                # Check cancellation between items
-                if cancelled_check and cancelled_check():
-                    executor.shutdown(wait=False, cancel_futures=True)
-                    was_cancelled = True
-                    break
+            # Collect results as they complete. concurrent.futures.wait with a
+            # short timeout (instead of as_completed) so a cancel request is
+            # noticed while encodes are still in flight, not only after one
+            # of them happens to finish.
+            pending = set(future_to_word)
+            completed = 0
+            while pending and not was_cancelled:
+                done, pending = wait(pending, timeout=poll, return_when=FIRST_COMPLETED)
+                if not done:
+                    # Nothing finished within the poll window; only check cancel.
+                    if cancelled_check and cancelled_check():
+                        was_cancelled = True
+                    continue
+                for future in done:
+                    # Check cancellation between items
+                    if cancelled_check and cancelled_check():
+                        was_cancelled = True
+                        break
 
-                word = future_to_word[future]
+                    completed += 1
+                    word = future_to_word[future]
 
-                try:
-                    media = future.result()
+                    try:
+                        media = future.result()
 
-                    if media.has_screenshot:
-                        media_data_list.append((word, media))
+                        if media.has_screenshot:
+                            media_data_list.append((word, media))
+                            if progress_callback:
+                                progress_callback.on_progress(completed, f"Extracting media: {word.lemma}")
+                        else:
+                            if progress_callback:
+                                progress_callback.on_progress(completed, f"No screenshot: {word.lemma}")
+
+                    except Exception as e:
                         if progress_callback:
-                            progress_callback.on_progress(completed, f"Extracting media: {word.lemma}")
-                    else:
-                        if progress_callback:
-                            progress_callback.on_progress(completed, f"No screenshot: {word.lemma}")
+                            progress_callback.on_error(word.lemma, str(e))
 
-                except Exception as e:
-                    if progress_callback:
-                        progress_callback.on_error(word.lemma, str(e))
+            if was_cancelled:
+                # Drop queued futures, then kill in-flight ffmpeg so the
+                # executor context exit (which joins workers) returns promptly.
+                executor.shutdown(wait=False, cancel_futures=True)
+                proc_registry.kill_all()
 
         if progress_callback and not was_cancelled:
             progress_callback.on_complete()
@@ -167,31 +259,70 @@ class MediaExtractorService:
         start_time: float,
         duration: float,
         output_path: Path,
+        proc_registry: _FfmpegProcRegistry | None = None,
     ) -> bool:
         """Extract a screenshot from video, dispatching to static or animated path."""
         if self.config.screenshot_animated:
-            return self._extract_animated_screenshot(video_file, start_time, duration, output_path)
-        return self._extract_static_screenshot(video_file, start_time, duration, output_path)
+            return self._extract_animated_screenshot(video_file, start_time, duration, output_path, proc_registry)
+        return self._extract_static_screenshot(video_file, start_time, duration, output_path, proc_registry)
 
-    def _run_ffmpeg(self, cmd: list[str], op_name: str, timeout: int, context: str = "") -> bool:
-        """Run an ffmpeg/ffprobe command. Log + swallow errors. Return success bool.
+    def _run_ffmpeg(
+        self,
+        cmd: list[str],
+        op_name: str,
+        timeout: int,
+        context: str = "",
+        proc_registry: _FfmpegProcRegistry | None = None,
+    ) -> bool:
+        """Run an ffmpeg command. Log + swallow errors. Return success bool.
 
         Returns True only on a zero exit code. Callers may impose additional
         post-run checks (e.g. ``output_path.exists()``) on top of this.
+
+        Spawns via ``Popen`` (not ``subprocess.run``) so a cancelled batch can
+        kill in-flight encodes through *proc_registry*. The timeout semantics
+        of the old ``subprocess.run`` path are preserved: on expiry the
+        process is killed, reaped, and False is returned.
         """
         suffix = f" for {context}" if context else ""
+        if proc_registry is not None and proc_registry.cancelled:
+            return False
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-            if result.returncode == 0:
-                return True
-            logger.warning("%s failed%s: ffmpeg exit code %s: %s", op_name, suffix, result.returncode, result.stderr)
-            return False
-        except subprocess.TimeoutExpired:
-            logger.warning("%s timed out%s after %ss", op_name, suffix, timeout)
-            return False
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         except (subprocess.SubprocessError, OSError) as e:
             logger.warning("%s error%s: %s", op_name, suffix, e)
             return False
+        if proc_registry is not None and not proc_registry.register(proc):
+            # Cancel raced the spawn: kill the fresh process; the context
+            # manager exit closes its pipes and reaps it.
+            with proc:
+                _kill_quietly(proc)
+            return False
+        stderr = ""
+        try:
+            with proc:  # closes pipes and waits on every path — no zombies
+                try:
+                    _, stderr = proc.communicate(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    _kill_quietly(proc)
+                    proc.communicate()  # drain pipes + reap the killed process
+                    logger.warning("%s timed out%s after %ss", op_name, suffix, timeout)
+                    return False
+                except (subprocess.SubprocessError, OSError) as e:
+                    _kill_quietly(proc)
+                    logger.warning("%s error%s: %s", op_name, suffix, e)
+                    return False
+        finally:
+            if proc_registry is not None:
+                proc_registry.unregister(proc)
+        if proc.returncode == 0:
+            return True
+        if proc_registry is not None and proc_registry.cancelled:
+            # Killed by a batch cancel — expected, not an ffmpeg failure.
+            logger.debug("%s cancelled%s", op_name, suffix)
+            return False
+        logger.warning("%s failed%s: ffmpeg exit code %s: %s", op_name, suffix, proc.returncode, stderr)
+        return False
 
     def _extract_static_screenshot(
         self,
@@ -199,6 +330,7 @@ class MediaExtractorService:
         start_time: float,
         duration: float,
         output_path: Path,
+        proc_registry: _FfmpegProcRegistry | None = None,
     ) -> bool:
         """Extract a single still frame as JPEG."""
         # Calculate screenshot time (offset from start)
@@ -218,7 +350,9 @@ class MediaExtractorService:
             str(output_path),
         ]
 
-        if not self._run_ffmpeg(cmd, "Static screenshot extraction", timeout=30, context=output_path.name):
+        if not self._run_ffmpeg(
+            cmd, "Static screenshot extraction", timeout=30, context=output_path.name, proc_registry=proc_registry
+        ):
             return False
         return output_path.exists()
 
@@ -276,6 +410,7 @@ class MediaExtractorService:
         start_time: float,
         duration: float,
         output_path: Path,
+        proc_registry: _FfmpegProcRegistry | None = None,
     ) -> bool:
         """Extract a short animated clip (AVIF or WebP) instead of a static frame."""
         fmt = self.config.screenshot_animated_format
@@ -350,7 +485,9 @@ class MediaExtractorService:
 
         cmd.append(str(output_path))
 
-        if not self._run_ffmpeg(cmd, "Animated screenshot extraction", timeout=60, context=output_path.name):
+        if not self._run_ffmpeg(
+            cmd, "Animated screenshot extraction", timeout=60, context=output_path.name, proc_registry=proc_registry
+        ):
             return False
         return output_path.exists()
 
@@ -438,6 +575,7 @@ class MediaExtractorService:
         duration: float,
         output_path: Path,
         audio_track_override: int | None = None,
+        proc_registry: _FfmpegProcRegistry | None = None,
     ) -> bool:
         """Extract audio clip from video, preferring Japanese audio.
 
@@ -448,6 +586,7 @@ class MediaExtractorService:
             output_path: Output path for audio
             audio_track_override: Optional 0-indexed audio track (audio_index) to use instead
                 of auto-detecting Japanese. None (default) preserves existing JP auto-detect.
+            proc_registry: Internal batch-cancel registry for killing in-flight ffmpeg.
 
         Returns:
             True if successful, False otherwise
@@ -504,6 +643,8 @@ class MediaExtractorService:
 
         cmd.append(str(output_path))
 
-        if not self._run_ffmpeg(cmd, "Audio extraction", timeout=30, context=output_path.name):
+        if not self._run_ffmpeg(
+            cmd, "Audio extraction", timeout=30, context=output_path.name, proc_registry=proc_registry
+        ):
             return False
         return output_path.exists()
