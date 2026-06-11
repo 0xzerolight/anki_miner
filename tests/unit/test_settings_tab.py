@@ -609,3 +609,56 @@ class TestDictionaryRemovedPersistsNarrowly:
             assert received[-1].anki_deck_name == "original_deck"
         finally:
             widget.deleteLater()
+
+
+class TestBlacklistWhitelistSelectorClearedOnNone:
+    """_load_config must CLEAR the blacklist/whitelist selectors when the config
+    path is None — otherwise Reset-to-Defaults leaves the old path visible and
+    the next Save reads it back, re-persisting the stale path (T-11)."""
+
+    def test_reset_clears_selectors_and_next_save_persists_none(self, test_config, tmp_path, monkeypatch):
+        from PyQt6.QtWidgets import QMessageBox
+
+        bl = tmp_path / "blacklist.txt"
+        bl.write_text("a\n", encoding="utf-8")
+        wl = tmp_path / "whitelist.txt"
+        wl.write_text("b\n", encoding="utf-8")
+        cfg = replace(test_config, blacklist_path=bl, whitelist_path=wl)
+        widget = SettingsTab(cfg)
+        try:
+            # Loaded paths are visible.
+            assert widget.filtering_panel.blacklist_selector.get_path() == str(bl)
+            assert widget.filtering_panel.whitelist_selector.get_path() == str(wl)
+
+            # Reset to defaults (paths become None) — confirm Yes, suppress info.
+            monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+            monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+            widget._on_reset_clicked()
+
+            # Selectors must be cleared, not left showing the stale paths.
+            assert widget.filtering_panel.blacklist_selector.get_path() == ""
+            assert widget.filtering_panel.whitelist_selector.get_path() == ""
+
+            # The very next Save must persist None, not re-read the old path.
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
+            widget._on_save_clicked()
+
+            assert received, "save should emit a config"
+            assert received[-1].blacklist_path is None
+            assert received[-1].whitelist_path is None
+        finally:
+            widget.deleteLater()
+
+    def test_update_config_to_none_clears_previously_loaded_path(self, test_config, tmp_path):
+        """A programmatic update_config that drops the path must also clear the
+        selector (the same _load_config branch Reset relies on)."""
+        bl = tmp_path / "blacklist.txt"
+        bl.write_text("a\n", encoding="utf-8")
+        widget = SettingsTab(replace(test_config, blacklist_path=bl))
+        try:
+            assert widget.filtering_panel.blacklist_selector.get_path() == str(bl)
+            widget.update_config(replace(test_config, blacklist_path=None))
+            assert widget.filtering_panel.blacklist_selector.get_path() == ""
+        finally:
+            widget.deleteLater()

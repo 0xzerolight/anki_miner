@@ -290,12 +290,18 @@ class SettingsTab(QWidget):
         self.filtering_panel.set_excluded_decks(self.config.excluded_decks)
         self.filtering_panel.set_excluded_wordsets(self.config.excluded_wordsets)
 
-        # Word list settings
-        if self.config.blacklist_path:
-            self.filtering_panel.blacklist_selector.set_path(str(self.config.blacklist_path))
+        # Word list settings. Always set the selector — including to "" when the
+        # path is None — so Reset-to-Defaults (or any update_config that drops
+        # the path) clears the field. Without the else-branch the stale path
+        # stayed visible and the next Save read it back via get_path(), silently
+        # re-persisting it (T-11).
+        self.filtering_panel.blacklist_selector.set_path(
+            str(self.config.blacklist_path) if self.config.blacklist_path else ""
+        )
         self.filtering_panel.use_blacklist_checkbox.setChecked(self.config.use_blacklist)
-        if self.config.whitelist_path:
-            self.filtering_panel.whitelist_selector.set_path(str(self.config.whitelist_path))
+        self.filtering_panel.whitelist_selector.set_path(
+            str(self.config.whitelist_path) if self.config.whitelist_path else ""
+        )
         self.filtering_panel.use_whitelist_checkbox.setChecked(self.config.use_whitelist)
 
         # Subtitle text filtering settings (Issue #8)
