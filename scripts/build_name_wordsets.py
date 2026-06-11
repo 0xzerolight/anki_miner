@@ -10,7 +10,7 @@ Sources:
     Download: http://ftp.edrdg.org/pub/Nihongo/JMdict_e.gz
     Used only to identify common words that should remain mineable (overlap-drop).
 
-Usage (defaults output to anki_miner/gui/resources/wordsets/):
+Usage (defaults output to anki_miner/resources/wordsets/):
     python3 scripts/build_name_wordsets.py \\
         --jmnedict /tmp/JMnedict.xml \\
         --jmdict   /tmp/JMdict_e.xml
@@ -230,7 +230,7 @@ def build_wordsets(
 # CLI entry point
 # ---------------------------------------------------------------------------
 
-_DEFAULT_OUT_DIR = Path(__file__).parent.parent / "anki_miner" / "gui" / "resources" / "wordsets"
+_DEFAULT_OUT_DIR = Path(__file__).parent.parent / "anki_miner" / "resources" / "wordsets"
 
 
 def main() -> None:

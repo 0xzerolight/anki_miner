@@ -9,7 +9,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-_RESOURCE_PACKAGE = "anki_miner.gui.resources.wordsets"
+_RESOURCE_PACKAGE = "anki_miner.resources.wordsets"
 
 # Canonical bundled set IDs, in display order. Labels here are fallbacks;
 # the file header's "label:" wins when present.
