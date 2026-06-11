@@ -317,6 +317,63 @@ def test_cancel_mid_item_skips_remaining_items_queue_finished_fires(make_worker,
 
 
 # ---------------------------------------------------------------------------
+# Skip channel (T-23): GUI-removed items must not be mined
+# ---------------------------------------------------------------------------
+
+
+def test_skip_item_drops_queued_items_mid_run(make_worker, mock_processor):
+    """Clear during a run must stop the worker from mining removed items.
+
+    The worker iterates its constructor snapshot; items the GUI dropped used
+    to be fetched and mined anyway — cards appeared for rows that no longer
+    existed and the end-of-run summary undercounted.
+    """
+    items = [_make_item(video_id="a"), _make_item(video_id="b"), _make_item(video_id="c")]
+    worker_box: dict = {}
+
+    def _clear_rest_while_mining_first(**kw):
+        # Simulate the user clicking Clear while item 1 is PROCESSING: the
+        # GUI drops the non-PROCESSING tail into the worker's skip channel.
+        worker_box["worker"].skip_item(items[1])
+        worker_box["worker"].skip_item(items[2])
+        return "R_A"
+
+    mock_processor.process_youtube_url.side_effect = _clear_rest_while_mining_first
+
+    worker = make_worker(items=items)
+    worker_box["worker"] = worker
+    caps = _connect_all(worker)
+    worker.run()
+
+    # Only item 1 was mined.
+    assert mock_processor.process_youtube_url.call_count == 1
+    assert mock_processor.process_youtube_url.call_args.kwargs["video_id"] == "a"
+    # No signals for the dropped items.
+    assert caps["started"].calls == [(0,)]
+    assert caps["finished"].calls == [(0, "R_A", None, 1)]
+    # The queue still completes normally.
+    assert len(caps["queue_finished"].calls) == 1
+
+
+def test_skip_item_before_run_skips_only_that_item(make_worker, mock_processor):
+    """A skip recorded before run() starts drops exactly that item."""
+    items = [_make_item(video_id="a"), _make_item(video_id="b"), _make_item(video_id="c")]
+    mock_processor.process_youtube_url.side_effect = lambda **kw: f"R_{kw['video_id']}"
+
+    worker = make_worker(items=items)
+    worker.skip_item(items[1])
+    caps = _connect_all(worker)
+    worker.run()
+
+    mined = [c.kwargs["video_id"] for c in mock_processor.process_youtube_url.call_args_list]
+    assert mined == ["a", "c"]
+    # idx values still match the frozen snapshot positions (0 and 2).
+    assert caps["started"].calls == [(0,), (2,)]
+    assert caps["finished"].calls == [(0, "R_a", None, 1), (2, "R_c", None, 1)]
+    assert len(caps["queue_finished"].calls) == 1
+
+
+# ---------------------------------------------------------------------------
 # Cancel before first item
 # ---------------------------------------------------------------------------
 

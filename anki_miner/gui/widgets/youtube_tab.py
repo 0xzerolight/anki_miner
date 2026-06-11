@@ -788,6 +788,11 @@ class YouTubeTab(MiningTabBase):
                 # embedded widget (deleted alongside the list item).
                 self.list_widget.takeItem(row)
         self._row_widgets.pop(item, None)
+        # Mid-run removal must also reach the worker: it iterates its own
+        # constructor snapshot, so editing the GUI queue alone would still
+        # fetch + mine the removed item (cards for rows that no longer exist).
+        if self.worker_thread is not None:
+            self.worker_thread.skip_item(item)
 
     # ------------------------------------------------------------------
     # Button recomputation
