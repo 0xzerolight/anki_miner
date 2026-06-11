@@ -59,7 +59,10 @@ def test_fails_closed_when_fragile_dep_is_renamed_or_removed() -> None:
 
 def test_real_pyproject_yields_both_fragile_pins() -> None:
     """Guard against the live pyproject silently dropping a FRAGILE floor."""
-    import tomllib
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python 3.10 lacks stdlib tomllib
+        import tomli as tomllib
 
     pyproject = _SCRIPT.resolve().parents[1] / "pyproject.toml"
     deps = tomllib.loads(pyproject.read_text())["project"]["dependencies"]
