@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import QApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
+from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
@@ -152,6 +153,24 @@ class _FakeDeckBuilderTab(DeckBuilderTab):
         self.worker_thread: _FakeWorker | None = _FakeWorker(running=worker_running)
 
 
+class _FakeSettingsTab(SettingsTab):
+    """Real SettingsTab subclass that skips the heavy ``__init__`` (T-12).
+
+    SettingsTab owns three short-lived AnkiConnect workers (fetch fields,
+    fetch decks, apply/remove styling) with no ``worker_thread`` attribute,
+    so closeEvent must discover them via ``iter_close_workers`` and route each
+    through the same join policy as the mining tabs.
+    """
+
+    def __init__(self, *, fields_running=False, decks_running=False, styling_running=False, wait_result=True) -> None:
+        from PyQt6.QtWidgets import QWidget
+
+        QWidget.__init__(self)
+        self._fetch_fields_worker = _FakeWorker(running=fields_running, wait_result=wait_result)
+        self._fetch_decks_worker = _FakeWorker(running=decks_running, wait_result=wait_result)
+        self._styling_worker = _FakeWorker(running=styling_running, wait_result=wait_result)
+
+
 def _trigger_close(window) -> MagicMock:
     """Dispatch a close event and return the fake event so callers can assert."""
     event = MagicMock(spec=QEvent)
@@ -227,6 +246,40 @@ class TestCloseEventDeckBuilderTab:
         _trigger_close(main_window)
 
         assert not tab.worker_thread.cancel_called
+
+
+class TestCloseEventSettingsTab:
+    """SettingsTab's AnkiConnect workers (T-12) must be cancelled + joined."""
+
+    def test_running_settings_workers_cancelled_and_joined(self, main_window):
+        tab = _FakeSettingsTab(fields_running=True, decks_running=True, styling_running=True)
+        main_window.tabs.addTab(tab, "Settings")
+
+        event = _trigger_close(main_window)
+
+        for worker in (tab._fetch_fields_worker, tab._fetch_decks_worker, tab._styling_worker):
+            assert worker.cancel_called
+            assert worker.wait_called_with == 2000
+        event.accept.assert_called_once()
+
+    def test_idle_settings_workers_not_cancelled(self, main_window):
+        tab = _FakeSettingsTab()
+        main_window.tabs.addTab(tab, "Settings")
+
+        _trigger_close(main_window)
+
+        for worker in (tab._fetch_fields_worker, tab._fetch_decks_worker, tab._styling_worker):
+            assert not worker.cancel_called
+
+    def test_settings_laggard_defers_close(self, main_window):
+        tab = _FakeSettingsTab(styling_running=True, wait_result=False)
+        main_window.tabs.addTab(tab, "Settings")
+
+        event = _trigger_close(main_window)
+
+        assert tab._styling_worker.cancel_called
+        event.accept.assert_not_called()
+        event.ignore.assert_called_once()
 
 
 class TestCloseEventNoActiveWorkers:
