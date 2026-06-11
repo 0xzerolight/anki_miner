@@ -154,6 +154,10 @@ class YouTubeFetcherService:
         cmd.extend(self._cookie_args())
         cmd.extend(self._js_runtime_args())
         cmd.extend(self._remote_component_args())
+        # End-of-options separator: a '-'/'--'-leading URL must not be parsed
+        # as a yt-dlp option (e.g. --update-to self-replaces the binary on the
+        # probe alone, --config-location loads a planted --exec config). T-34.
+        cmd.append("--")
         cmd.append(url)
 
         try:
@@ -278,6 +282,8 @@ class YouTubeFetcherService:
         cmd.extend(self._cookie_args())
         cmd.extend(self._js_runtime_args())
         cmd.extend(self._remote_component_args())
+        # End-of-options separator before the user URL — see probe_metadata. T-34.
+        cmd.append("--")
         cmd.append(url)
 
         try:
@@ -601,6 +607,8 @@ class YouTubeFetcherService:
         if ffmpeg_location is not None:
             cmd.extend(["--ffmpeg-location", ffmpeg_location])
 
+        # End-of-options separator before the user URL — see probe_metadata. T-34.
+        cmd.append("--")
         cmd.append(url)
         return cmd
 

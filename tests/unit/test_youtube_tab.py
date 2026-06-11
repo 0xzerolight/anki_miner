@@ -216,6 +216,52 @@ class TestAddUrl:
         assert len(tab._probe_workers) == 3
 
 
+class TestAddUrlRejection:
+    """Add rejects inputs that aren't http(s) / a YouTube URL / a video id (T-34).
+
+    Guards against an option-leading "URL" reaching yt-dlp as an argument
+    (e.g. ``--update-to=...`` -> attacker-repo self-replacement on the probe).
+    A rejected input must queue nothing, spawn no probe, and surface a
+    user-visible error.
+    """
+
+    def test_option_leading_url_rejected(self, tab):
+        probe_cls = tab._probe_worker_cls
+        tab.url_edit.setText("--update-to=evil/fork@tag")
+        tab._on_add_clicked()
+
+        assert tab._queue.all_items() == []
+        assert probe_cls.call_count == 0
+        assert len(tab._probe_workers) == 0
+        # User-visible feedback and the URL field is NOT cleared (so the user
+        # can see/fix what they pasted).
+        assert "valid" in tab.log_widget.text_edit.toPlainText().lower()
+        assert tab.url_edit.text() == "--update-to=evil/fork@tag"
+
+    def test_dash_config_location_rejected(self, tab):
+        probe_cls = tab._probe_worker_cls
+        tab.url_edit.setText("--config-location=/tmp/evil.conf")
+        tab._on_add_clicked()
+        assert tab._queue.all_items() == []
+        assert probe_cls.call_count == 0
+
+    def test_plain_https_url_still_accepted(self, tab):
+        # http(s) inputs remain accepted — yt-dlp stays the final validator
+        # for non-YouTube-shaped URLs (no behaviour change for that path).
+        probe_cls = tab._probe_worker_cls
+        tab.url_edit.setText("https://example.com/whatever")
+        tab._on_add_clicked()
+        assert len(tab._queue.all_items()) == 1
+        assert probe_cls.call_count == 1
+
+    def test_bare_video_id_accepted(self, tab):
+        probe_cls = tab._probe_worker_cls
+        tab.url_edit.setText("dQw4w9WgXcQ")
+        tab._on_add_clicked()
+        assert len(tab._queue.all_items()) == 1
+        assert probe_cls.call_count == 1
+
+
 class TestProbeOutcomes:
     """Probe done/error flip the item's status and refresh buttons."""
 
