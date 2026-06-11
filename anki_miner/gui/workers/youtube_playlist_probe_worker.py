@@ -6,9 +6,10 @@ operations dispatch through these workers.
 
 Two classes are provided:
 
-* :class:`YouTubePlaylistResolveWorker` — a short-lived ``QThread`` (mirrors
-  :class:`YouTubeProbeWorker`) that calls ``probe_playlist`` once and emits the
-  resulting :class:`PlaylistInfo` or an error string.
+* :class:`YouTubePlaylistResolveWorker` — a short-lived probe thread sharing
+  :class:`~anki_miner.gui.workers.youtube_probe_worker._SingleCallProbeThread`
+  with :class:`YouTubeProbeWorker`; it calls ``probe_playlist`` once and emits
+  the resulting :class:`PlaylistInfo` or an error string.
 
 * :class:`YouTubePlaylistProbeWorker` — a :class:`CancellableWorker` that
   iterates a list of video URLs sequentially, emitting ``entry_probed`` or
@@ -35,17 +36,19 @@ same pattern as :class:`YouTubeProbeWorker`.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.gui.workers.youtube_probe_worker import _SingleCallProbeThread
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 
 
-class YouTubePlaylistResolveWorker(QThread):
+class YouTubePlaylistResolveWorker(_SingleCallProbeThread):
     """Run ``fetcher.probe_playlist(url, limit)`` in a background thread.
 
     Mirrors :class:`YouTubeProbeWorker` exactly — short-lived, no cancellation
-    support, bounded by ``timeout_s``.
+    support, bounded by ``timeout_s`` — sharing the same
+    :class:`_SingleCallProbeThread` body.
 
     Signals:
         playlist_resolved: Emitted with the :class:`PlaylistInfo` on success.
@@ -75,23 +78,18 @@ class YouTubePlaylistResolveWorker(QThread):
                 timeout, the fetcher kills the yt-dlp subprocess and raises
                 ``YouTubeFetchError``.
         """
-        super().__init__(parent)  # type: ignore[arg-type]
-        self._fetcher = fetcher
+        super().__init__(fetcher, timeout_s=timeout_s, parent=parent)
         self._url = url
         self._limit = limit
-        self._timeout_s = timeout_s
 
-    def run(self) -> None:
-        """Execute the playlist probe and emit the appropriate signal.
+    def _do_call(self) -> object:
+        return self._fetcher.probe_playlist(self._url, self._limit, timeout_s=self._timeout_s)
 
-        A timeout in the fetcher raises ``YouTubeFetchError``, which is caught
-        by the broad ``except`` below and surfaced via ``playlist_error``.
-        """
-        try:
-            info = self._fetcher.probe_playlist(self._url, self._limit, timeout_s=self._timeout_s)
-            self.playlist_resolved.emit(info)
-        except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
-            self.playlist_error.emit(str(exc))
+    def _emit_result(self, result: object) -> None:
+        self.playlist_resolved.emit(result)
+
+    def _emit_error(self, message: str) -> None:
+        self.playlist_error.emit(message)
 
 
 class YouTubePlaylistProbeWorker(CancellableWorker):
