@@ -332,6 +332,31 @@ class TestOutputFormat:
         assert dest.read_text(encoding="utf-8") == original
         assert not dest.with_suffix(dest.suffix + ".tmp").exists()
 
+    def test_no_tmp_left_when_writing_rows_fails(self, tmp_path: Path, monkeypatch) -> None:
+        """A failure DURING row writing must not orphan the .tmp file (T-40)."""
+        import anki_miner.services.yomitan_meta_bank as mod
+
+        dest = tmp_path / "frequency.csv"
+        zip_path = build_yomitan_freq_zip(
+            tmp_path / "src.zip",
+            meta_banks=[[["猫", "freq", 100]]],
+        )
+
+        class ExplodingWriter:
+            def __init__(self, *_a, **_k):
+                pass
+
+            def writerow(self, *_a, **_k):
+                raise OSError("disk full mid-write")
+
+        monkeypatch.setattr(mod.csv, "writer", lambda *a, **k: ExplodingWriter())
+
+        with pytest.raises(OSError):
+            import_yomitan_freq_zip(zip_path, dest)
+
+        assert not dest.exists()
+        assert not dest.with_suffix(dest.suffix + ".tmp").exists()
+
 
 class TestImportResult:
     def test_result_metadata_populated(self, tmp_path: Path) -> None:

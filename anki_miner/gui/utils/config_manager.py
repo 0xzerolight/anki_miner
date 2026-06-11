@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Any
@@ -41,9 +42,21 @@ class GUIConfigManager:
         # Convert Path objects to strings
         config_dict = cls._paths_to_strings(config_dict)
 
-        # Write to file
-        with cls.CONFIG_FILE.open("w", encoding="utf-8") as f:
-            json.dump(config_dict, f, indent=2, ensure_ascii=False)
+        # Atomic write: stage to a sibling .tmp then os.replace. A truncating
+        # in-place write (open("w")) leaves invalid JSON if we crash or lose
+        # power mid-serialize, which load_config then swallows into factory
+        # defaults — wiping every user setting. Staging keeps the previous good
+        # file intact until the new one is fully written; os.replace is atomic
+        # on the same filesystem. The .tmp is unlinked if serialization raises
+        # so a partial temp doesn't accumulate.
+        tmp_path = cls.CONFIG_FILE.with_suffix(cls.CONFIG_FILE.suffix + ".tmp")
+        try:
+            with tmp_path.open("w", encoding="utf-8") as f:
+                json.dump(config_dict, f, indent=2, ensure_ascii=False)
+            os.replace(tmp_path, cls.CONFIG_FILE)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
 
     @classmethod
     def load_config(cls) -> AnkiMinerConfig:
@@ -108,6 +121,11 @@ class GUIConfigManager:
         except (json.JSONDecodeError, TypeError, ValueError) as e:
             # If config is invalid, return default
             logger.warning(f"Invalid config file, using defaults: {e}")
+            return create_default_config()
+        except OSError as e:
+            # An unreadable file (permissions, transient I/O error) must not
+            # crash startup — fall back to defaults like the invalid-JSON path.
+            logger.warning(f"Could not read config file, using defaults: {e}")
             return create_default_config()
 
     # Pre-v2.3.2 default for allowed_pos (lacked 代名詞). Used to detect untouched
