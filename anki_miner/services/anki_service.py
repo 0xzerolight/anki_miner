@@ -1,12 +1,7 @@
 """Service for interacting with Anki via AnkiConnect."""
 
-import base64
-import html
 import logging
 import re
-import unicodedata
-from collections.abc import Iterator
-from pathlib import Path
 
 import requests
 
@@ -14,59 +9,23 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.models import CardPayload
-from anki_miner.services._ankiconnect import post_action, post_multi
-from anki_miner.services.dictionary.yomitan_renderer import DICT_MEDIA_CLASS
+from anki_miner.services._ankiconnect import post_action
+from anki_miner.services.anki_media_store import AnkiMediaStore
+from anki_miner.services.anki_note_builder import (
+    OPTIONAL_FIELD_KEYS as _OPTIONAL_FIELD_KEYS,
+)
+from anki_miner.services.anki_note_builder import (
+    REQUIRED_FIELD_KEYS as _REQUIRED_FIELD_KEYS,
+)
+from anki_miner.services.anki_note_builder import (
+    _strip_for_dedup,
+    build_note,
+)
 
 logger = logging.getLogger(__name__)
 
 # Matches any hiragana, katakana, or CJK ideograph (kanji)
 _JAPANESE_RE = re.compile(r"[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]")
-
-# `<img>` tags emitted by yomitan_renderer for dictionary-bundled assets carry
-# `class="anki-miner-dict-media"`. Capture the whole tag, then pull `src` out \u2014
-# attribute order in the rendered HTML is fixed but a single regex makes the
-# scan tolerant of future renderer reshuffles.
-_DICT_MEDIA_IMG_RE = re.compile(
-    rf'<img\b[^>]*class="[^"]*\b{re.escape(DICT_MEDIA_CLASS)}\b[^"]*"[^>]*>',
-    re.IGNORECASE,
-)
-_IMG_SRC_RE = re.compile(r'src="([^"]+)"', re.IGNORECASE)
-
-# Used to normalize a stored first-field value to the same key Anki dedups on.
-_HTML_TAG_RE = re.compile(r"<[^>]+>")
-
-# Media uploads are base64-heavy; a smaller chunk than the 100-note addNotes
-# batch keeps individual request payloads manageable.
-_MEDIA_BATCH_CHUNK = 50
-# AnkiConnect resets the connection on very large `multi` request bodies (one
-# 50-file chunk of YouTube clips can hit ~7-8 MB of base64), surfacing as a
-# requests ConnectionError that reads "Is Anki running?" even though it is.
-# Bound each `multi` POST by cumulative base64 size as well as action count so a
-# chunk of large files flushes early instead of tripping the reset (Issue: media
-# files not stored on big batches).
-_MEDIA_BATCH_MAX_BYTES = 4 * 1024 * 1024
-_SOUND_REF_RE = re.compile(r"\[(?:sound|anki:play[^\]]*):[^\]]*\]", re.IGNORECASE)
-
-
-def _strip_for_dedup(value: str) -> str:
-    """Normalize a field value to match Anki's HTML/media-stripped dedup key.
-
-    Anki computes a first-field duplicate checksum after stripping HTML tags and
-    media references (its ``strip_html_media``). Our known-words filter compares
-    the stored first field against ``mined_form`` — a plain string — so we must
-    strip the same way, or a pre-existing card whose Expression carries ``<b>``,
-    ``<div>``, ``&entity;`` markup, a ``[sound:...]`` ref, or stray whitespace
-    slips the filter and then collides at ``addNotes`` time (the AnkiConnect
-    "cannot create note because it is a duplicate" error).
-
-    Mirrors Anki deliberately: it strips HTML/media but NOT ``[reading]``
-    furigana brackets, so ``食べる[たべる]`` stays distinct from ``食べる`` here too.
-    """
-    text = _SOUND_REF_RE.sub("", value)
-    text = _HTML_TAG_RE.sub("", text)
-    text = html.unescape(text)
-    text = unicodedata.normalize("NFC", text)
-    return " ".join(text.split())
 
 
 def _is_duplicate_error(err: AnkiConnectionError) -> bool:
@@ -80,61 +39,13 @@ def _is_duplicate_error(err: AnkiConnectionError) -> bool:
     return "duplicate" in str(err).lower()
 
 
-def _extract_dict_media_srcs(definition_html: str) -> list[str]:
-    """Return every dict-media `src` referenced in a definition HTML blob."""
-    if not definition_html:
-        return []
-    out: list[str] = []
-    for tag in _DICT_MEDIA_IMG_RE.findall(definition_html):
-        m = _IMG_SRC_RE.search(tag)
-        if m:
-            out.append(m.group(1))
-    return out
-
-
-def _resolve_dict_media_path(src: str, dicts_root: Path) -> Path | None:
-    """Map an Anki-side dict-media filename back to the file on disk.
-
-    The renderer formats src as ``<dict_id>__<flattened-basename>``. dict_id is
-    a lowercase-ASCII slug with hyphens (importer guarantees no double-`__`),
-    so we split on the first ``__``. The resolved path must stay inside the
-    dicts_root tree.
-    """
-    if "__" not in src:
-        return None
-    dict_id, _, safe = src.partition("__")
-    if not dict_id or not safe or "/" in safe or "\\" in safe or ".." in safe:
-        return None
-    try:
-        root_resolved = dicts_root.resolve()
-        candidate = (dicts_root / dict_id / "media" / safe).resolve()
-        candidate.relative_to(root_resolved)
-    except (OSError, ValueError):
-        return None
-    if not candidate.is_file():
-        return None
-    return candidate
-
-
 class AnkiService:
     """Service for interacting with Anki via AnkiConnect (stateless service)."""
 
-    REQUIRED_FIELD_KEYS = {
-        "word",
-        "sentence",
-        "definition",
-        "picture",
-        "audio",
-        "expression_furigana",
-        "sentence_furigana",
-    }
-
-    OPTIONAL_FIELD_KEYS = {
-        "pitch_position",
-        "pitch_category",
-        "frequency",
-        "source",
-    }
+    # Field-mapping contract lives in anki_note_builder; aliased here because
+    # callers and tests reference the keys via the service class.
+    REQUIRED_FIELD_KEYS = _REQUIRED_FIELD_KEYS
+    OPTIONAL_FIELD_KEYS = _OPTIONAL_FIELD_KEYS
 
     def __init__(self, config: AnkiMinerConfig):
         """Initialize the Anki service.
@@ -154,12 +65,12 @@ class AnkiService:
         self.last_skipped_duplicates: int = 0
         # Number of media files (screenshots/audio) that could not be stored in
         # Anki during the last create_cards_batch call. Read by the pipeline to
-        # warn the user when cards land with empty media fields.
+        # warn the user when cards land with empty media fields. Mirrored from
+        # the media store after each upload pass.
         self.last_media_store_failures: int = 0
-        # Per-service-lifetime cache of dict-media filenames already shipped to
-        # AnkiConnect this run. Avoids re-uploading the same accent SVG once
-        # per card across a 5000-word batch.
-        self._dict_media_uploaded: set[str] = set()
+        # Owns the storeMediaFile upload pipeline (chunking, per-file fallback)
+        # and the per-run dict-media upload cache.
+        self._media_store = AnkiMediaStore(config)
         # Session-scoped cache for get_existing_vocabulary. None means
         # unpopulated; subsequent calls return the cached set without
         # re-querying AnkiConnect. Call invalidate_existing_vocabulary_cache()
@@ -440,59 +351,20 @@ class AnkiService:
         """
         self._existing_vocab_cache = None
 
+    @property
+    def _dict_media_uploaded(self) -> set[str]:
+        """Dict-media srcs already shipped this run (owned by the media store)."""
+        return self._media_store._dict_media_uploaded
+
     def _upload_dict_media_batch(self, word_data_list: list["CardPayload"]) -> None:
         """Batch-upload all dict-media assets referenced across the whole card batch.
 
-        Scans each item's ``definition`` and ``extra_fields["glossary"]`` for
-        ``<img class="anki-miner-dict-media" src="…">`` tags, collects the union
-        of un-uploaded srcs, resolves each to a file path, and ships them through
-        the same pipeline as card screenshots/audio: ``_build_store_media_action``
-        → ``_chunk_media_actions`` (count + byte budget) → ``_store_media_chunk``
-        (per-file fallback on a failed ``multi`` POST).
-
-        Missing-on-disk srcs are logged as warnings and added to
-        ``_dict_media_uploaded`` so they are not retried on every card (identical
-        to the old per-card behavior). Otherwise a src is cached only after a
-        confirmed successful store — a failed upload stays uncached so the next
-        batch retries it.
+        Delegates to :meth:`AnkiMediaStore.upload_dict_media`: srcs are cached
+        only after a confirmed successful store (missing-on-disk srcs are
+        cached deliberately so they are not retried on every card); a failed
+        upload stays uncached so the next batch retries it.
         """
-        # Collect un-uploaded srcs across the whole batch (ordered, deduped).
-        seen: set[str] = set()
-        all_srcs: list[str] = []
-        for item in word_data_list:
-            for html_field in (
-                item.definition,
-                item.extra_fields.get("glossary") if item.extra_fields else None,
-            ):
-                if not isinstance(html_field, str):
-                    continue
-                for src in _extract_dict_media_srcs(html_field):
-                    if src not in self._dict_media_uploaded and src not in seen:
-                        seen.add(src)
-                        all_srcs.append(src)
-
-        if not all_srcs:
-            return
-
-        # Resolve each src; cache missing ones now so we don't retry.
-        items: list[tuple[str, dict]] = []
-        for src in all_srcs:
-            file_path = _resolve_dict_media_path(src, self.config.dicts_root)
-            if file_path is None:
-                logger.warning("Dict media file missing on disk: %s", src)
-                # Cache anyway so we don't retry every card.
-                self._dict_media_uploaded.add(src)
-                continue
-            action = self._build_store_media_action(src, file_path)
-            if action is not None:
-                items.append((src, action))
-
-        # Shared with the screenshot/audio path: chunks bounded by action count
-        # AND base64 byte budget, per-file fallback when a multi POST trips the
-        # oversized-body connection reset. _store_media_chunk returns only the
-        # srcs confirmed stored, so failures stay uncached and retry next batch.
-        for chunk in self._chunk_media_actions(items):
-            self._dict_media_uploaded |= self._store_media_chunk(chunk)
+        self._media_store.upload_dict_media(word_data_list)
 
     def create_cards_batch(
         self,
@@ -554,90 +426,16 @@ class AnkiService:
             for i in range(0, len(word_data_list), batch_size):
                 batch = word_data_list[i : i + batch_size]
 
-                # Build notes array for this batch
+                # Build notes array for this batch (field mapping lives in
+                # anki_note_builder).
                 notes = []
                 for item in batch:
-                    word = item.word
-                    media = item.media
-                    definition = item.definition
-                    extra_fields = item.extra_fields
-
-                    # Pull glossary out of extra_fields BEFORE the OPTIONAL pass —
-                    # OPTIONAL_FIELD_KEYS html.escape()s its values, but glossary
-                    # is raw HTML and must be sent verbatim.
-                    glossary_html = ""
-                    if extra_fields and "glossary" in extra_fields:
-                        glossary_html = extra_fields["glossary"] or ""
-                        extra_fields = {k: v for k, v in extra_fields.items() if k != "glossary"}
-                        if not extra_fields:
-                            extra_fields = None
-
-                    # Build field values (only reference successfully stored media)
-                    picture_html = ""
-                    if media.screenshot_filename and media.screenshot_filename in stored_files:
-                        picture_html = f'<img src="{html.escape(media.screenshot_filename)}">'
-
-                    audio_ref = ""
-                    if media.audio_filename and media.audio_filename in stored_files:
-                        audio_ref = f"[sound:{media.audio_filename}]"
-
-                    # Sentence + SentenceFurigana use the bolded forms when the
-                    # config flag is on AND the parse pre-computed them. The
-                    # precomputed forms are already HTML-safe (per-token escape
-                    # in wrap_target_*); the <b> tags must not be double-escaped.
-                    # Empty precomputed string means "fall back to escape" — this
-                    # is the path for entries that came from a code path that
-                    # did not honor the bold flag (defensive).
-                    if self.config.bold_target_in_sentence and word.sentence_bolded:
-                        sentence_field = word.sentence_bolded
+                    built = build_note(item, self.config, stored_files)
+                    if built.used_precomputed_bold:
                         bold_used += 1
-                    else:
-                        sentence_field = html.escape(word.sentence)
-                        if self.config.bold_target_in_sentence:
-                            bold_fallback += 1
-                    if self.config.bold_target_in_sentence and word.sentence_furigana_bolded:
-                        sentence_furigana_field = word.sentence_furigana_bolded
-                    else:
-                        sentence_furigana_field = html.escape(word.sentence_furigana)
-
-                    # Build fields, skipping any with empty config mapping
-                    field_data = {
-                        "word": html.escape(word.mined_form),
-                        "sentence": sentence_field,
-                        "definition": definition or "",
-                        "glossary": glossary_html,
-                        "picture": picture_html,
-                        "audio": audio_ref,
-                        "expression_furigana": html.escape(word.expression_furigana),
-                        "expression_reading": html.escape(word.expression_reading),
-                        "sentence_furigana": sentence_furigana_field,
-                        "sentence_reading": html.escape(word.sentence_reading),
-                    }
-                    fields = {}
-                    for key, value in field_data.items():
-                        anki_field_name = self.config.anki_fields.get(key, "")
-                        if anki_field_name:
-                            fields[anki_field_name] = value
-
-                    # Add optional fields if configured and data available
-                    if extra_fields:
-                        for key, value in extra_fields.items():
-                            anki_field_name = self.config.anki_fields.get(key, "")
-                            if key in self.OPTIONAL_FIELD_KEYS and anki_field_name and value:
-                                fields[anki_field_name] = html.escape(str(value))
-
-                    note: dict = {
-                        "deckName": self.config.anki_deck_name,
-                        "modelName": self.config.anki_note_type,
-                        "fields": fields,
-                        "tags": self.config.anki_tags.split(),
-                    }
-                    # Deck Builder: re-card words that already exist elsewhere in the
-                    # collection. duplicateScope="deck" keeps cross-episode curation's
-                    # single-carding meaningful within the new deck.
-                    if self.config.allow_duplicate_cards:
-                        note["options"] = {"allowDuplicate": True, "duplicateScope": "deck"}
-                    notes.append(note)
+                    if built.used_bold_fallback:
+                        bold_fallback += 1
+                    notes.append(built.note)
 
                 # Send batch request. `post_action` raises `AnkiConnectionError`
                 # for connection failures, transport errors, and AnkiConnect-side
@@ -734,21 +532,12 @@ class AnkiService:
         self,
         word_data_list: list[CardPayload],
     ) -> set[str]:
-        """Store all media files in Anki collection via batched ``multi`` POSTs.
+        """Store card media (screenshots/audio) via the media store.
 
-        Collects all readable (filename, base64-data) pairs, deduplicates by
-        filename, then sends them in chunks bounded by both ``_MEDIA_BATCH_CHUNK``
-        actions and ``_MEDIA_BATCH_MAX_BYTES`` of cumulative base64 payload per
-        ``multi`` call.  Files that cannot be read (OSError) are logged and
-        skipped at build time.  If a chunk's ``multi`` POST fails with a transport
-        error (AnkiConnect resets the connection on oversized bodies), the chunk
-        is retried one file at a time via single ``storeMediaFile`` POSTs.
-        Per-sub-action AnkiConnect errors (sub-result with an ``"error"`` key)
-        exclude that filename from the returned set.
-
-        Sets ``self.last_media_store_failures`` to the count of files that could
-        not be stored so callers can surface it to the user instead of silently
-        creating cards with empty media fields.
+        Delegates to :meth:`AnkiMediaStore.store_batch` (chunked ``multi``
+        POSTs with a per-file fallback) and mirrors its failure count onto
+        ``self.last_media_store_failures`` so callers can surface it to the
+        user instead of silently creating cards with empty media fields.
 
         Args:
             word_data_list: List of CardPayload objects whose media should be uploaded
@@ -756,117 +545,9 @@ class AnkiService:
         Returns:
             Set of filenames that were successfully stored
         """
-        # Build (filename → action) mapping, deduped by filename (last writer
-        # wins, matching the old set-based dedup semantics).
-        actions_by_filename: dict[str, dict] = {}
-        for item in word_data_list:
-            media = item.media
-            for filename, src_path in [
-                (media.screenshot_filename, media.screenshot_path),
-                (media.audio_filename, media.audio_path),
-            ]:
-                if not filename or not src_path or not src_path.exists():
-                    continue
-                action = self._build_store_media_action(filename, src_path)
-                if action is not None:
-                    actions_by_filename[filename] = action
-
-        if not actions_by_filename:
-            self.last_media_store_failures = 0
-            return set()
-
-        stored: set[str] = set()
-        for chunk in self._chunk_media_actions(list(actions_by_filename.items())):
-            stored |= self._store_media_chunk(chunk)
-
-        self.last_media_store_failures = len(actions_by_filename) - len(stored)
+        stored = self._media_store.store_batch(word_data_list)
+        self.last_media_store_failures = self._media_store.last_store_failures
         return stored
-
-    def _chunk_media_actions(self, items: list[tuple[str, dict]]) -> Iterator[list[tuple[str, dict]]]:
-        """Yield (filename, action) sublists bounded by count and base64 byte budget.
-
-        Flushes the current chunk before adding an action that would push it past
-        ``_MEDIA_BATCH_CHUNK`` actions or ``_MEDIA_BATCH_MAX_BYTES`` of base64
-        data. A single action larger than the byte budget still ships alone.
-        """
-        chunk: list[tuple[str, dict]] = []
-        chunk_bytes = 0
-        for filename, action in items:
-            action_bytes = len(action["params"].get("data", ""))
-            if chunk and (len(chunk) >= _MEDIA_BATCH_CHUNK or chunk_bytes + action_bytes > _MEDIA_BATCH_MAX_BYTES):
-                yield chunk
-                chunk = []
-                chunk_bytes = 0
-            chunk.append((filename, action))
-            chunk_bytes += action_bytes
-        if chunk:
-            yield chunk
-
-    def _store_media_chunk(self, chunk: list[tuple[str, dict]]) -> set[str]:
-        """Store one chunk via ``multi``; fall back to per-file POSTs on transport failure."""
-        filenames = [f for f, _ in chunk]
-        actions = [a for _, a in chunk]
-        try:
-            sub_results = post_multi(self.config.ankiconnect_url, actions, timeout=30)
-        except AnkiConnectionError as e:
-            cause = e.__cause__
-            logger.warning(
-                "Media batch multi POST failed (%s: %s); retrying %d file(s) individually",
-                type(cause).__name__ if cause is not None else type(e).__name__,
-                e,
-                len(actions),
-            )
-            return self._store_media_files_individually(chunk)
-
-        if len(sub_results) != len(actions):
-            logger.warning(
-                "post_multi returned %d results for %d actions; some files may be silently skipped",
-                len(sub_results),
-                len(actions),
-            )
-        stored: set[str] = set()
-        for filename, sub_result in zip(filenames, sub_results, strict=False):
-            if not (isinstance(sub_result, dict) and sub_result.get("error")):
-                stored.add(filename)
-        return stored
-
-    def _store_media_files_individually(self, chunk: list[tuple[str, dict]]) -> set[str]:
-        """Per-file ``storeMediaFile`` fallback (tiny bodies) for a failed-multi chunk.
-
-        This is the pre-batching upload path: each file goes in its own small POST,
-        which avoids the oversized-body connection reset that breaks the ``multi``
-        envelope. Files AnkiConnect still rejects are logged and excluded.
-        """
-        stored: set[str] = set()
-        for filename, action in chunk:
-            try:
-                post_action(
-                    self.config.ankiconnect_url,
-                    "storeMediaFile",
-                    params=action["params"],
-                    timeout=30,
-                )
-                stored.add(filename)
-            except AnkiConnectionError as e:
-                logger.warning("Failed to store media file %s individually: %s", filename, e)
-        return stored
-
-    def _build_store_media_action(self, filename: str, src_path: Path) -> dict | None:
-        """Build a ``storeMediaFile`` action dict for use in a ``multi`` envelope.
-
-        Returns ``None`` and logs a warning if the file cannot be read.
-        """
-        try:
-            with open(src_path, "rb") as f:
-                data_base64 = base64.b64encode(f.read()).decode("utf-8")
-        except OSError as e:
-            logger.warning(f"Failed to read media file {filename}: {e}")
-            return None
-        return {
-            "action": "storeMediaFile",
-            "version": 6,
-            "params": {"filename": filename, "data": data_base64},
-        }
 
     def delete_notes(self, note_ids: list[int]) -> int:
         """Delete notes from Anki by their IDs.
