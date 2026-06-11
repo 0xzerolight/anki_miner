@@ -18,8 +18,8 @@ Signal shapes (exact):
 * ``item_started(int)`` — idx fired before the first attempt for the item.
   Items removed mid-run via :meth:`YouTubeQueueWorker.skip_item` are
   silently skipped: no ``item_started`` / ``item_finished`` for them.
-* ``item_progress(int, str, int)`` — idx, label, pct (pct == -1 for
-  indeterminate phases). Same int conversion rules as the legacy worker.
+* ``item_progress(int, str, int)`` — idx, label, pct. ``pct`` is an
+  ``int(round(0..100))`` percentage, or ``-1`` for indeterminate phases.
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
   error-string-or-None, attempts. Fires exactly once per item that
   completes (cancel during retry path returns early instead).
@@ -145,8 +145,9 @@ class YouTubeQueueWorker(CancellableWorker):
         self._items = items
         self._curation_callback = curation_callback
         self._preview_mode = preview_mode
-        # Published for the GUI curation bridge (mirrors BatchQueueWorkerThread's
-        # _curation_* attrs so YouTubeTab reads one attribute name across both workers).
+        # Published for the GUI curation bridge. Attribute names mirror
+        # BatchQueueWorkerThread's _curation_* so the shared curation bridge can
+        # read the same attribute names regardless of which worker is driving it.
         self._curation_processor: EpisodeProcessor = processor
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
@@ -224,9 +225,9 @@ class YouTubeQueueWorker(CancellableWorker):
     def _allocate_workspace(self) -> Path:
         """Create and return a fresh per-attempt workspace directory.
 
-        ``exist_ok=False`` matches the single-URL worker: UUID collisions
-        are astronomically unlikely, and silently reusing a stale directory
-        would leak prior-run files into this run.
+        ``exist_ok=False`` is deliberate: UUID collisions are astronomically
+        unlikely, and silently reusing a stale directory would leak prior-run
+        files into this run.
         """
         workspace = self._config.media_temp_folder / "youtube" / f"run-{uuid4().hex}"
         workspace.mkdir(parents=True, exist_ok=False)

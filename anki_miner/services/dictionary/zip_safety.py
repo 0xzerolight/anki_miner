@@ -1,10 +1,11 @@
 """Shared zip-extraction safety guards for Yomitan-format importers.
 
-Yomitan dictionary AND frequency zips are user-supplied (downloaded from third
-parties) and contain arbitrary file paths. We validate every entry name before
-extraction and cap the total uncompressed size to neutralize the standard
-path-traversal + zip-bomb attack surface. Both importers route through
-:func:`validate_zip_safe` before calling ``ZipFile.extractall``.
+Yomitan dictionary, frequency, AND pitch-accent zips are user-supplied
+(downloaded from third parties) and contain arbitrary file paths. We validate
+every entry name before extraction and cap the total uncompressed size to
+neutralize the standard path-traversal + zip-bomb attack surface. All three
+importers route through :func:`validate_zip_safe` before calling
+``ZipFile.extractall``.
 """
 
 from __future__ import annotations

@@ -176,7 +176,8 @@ class MediaExtractorService:
                 of auto-detecting Japanese. None (default) preserves existing JP auto-detect.
 
         Returns:
-            List of (word, media_data) tuples (only includes words with successful extraction)
+            List of (word, media_data) tuples — only words whose screenshot
+            succeeded; audio failure does not exclude.
         """
         if progress_callback:
             progress_callback.on_start(len(words), "Extracting media")

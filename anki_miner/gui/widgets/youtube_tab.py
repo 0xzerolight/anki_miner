@@ -161,9 +161,10 @@ class YouTubeTab(MiningTabBase):
 
         Args:
             config: Frozen application configuration.
-            processor: Episode processor (shared across tabs). May be ``None``
-                so the tab can be constructed before the dictionary chain has
-                loaded; the first ``_start_run`` call builds one lazily.
+            processor: Episode processor (reused across runs within this tab).
+                May be ``None`` so the tab can be constructed before the
+                dictionary chain has loaded; the first ``_start_run`` call builds
+                one lazily.
             fetcher: YouTube fetcher service used for metadata probes and,
                 indirectly via ``processor.process_youtube_url``, downloads.
             presenter: Optional presenter for routing log messages.
