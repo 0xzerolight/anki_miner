@@ -11,10 +11,9 @@ class StatCard(QFrame):
     """Card widget for displaying a single metric/statistic.
 
     Features:
-    - Large value display (with optional animated counting)
+    - Large value display
     - Small label
     - Card styling with border and shadow
-    - Optional trend indicator
 
     Typical usage: Display processing results like cards created, words discovered, etc.
     """

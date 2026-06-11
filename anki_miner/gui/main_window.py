@@ -79,6 +79,7 @@ class MainWindow(QMainWindow):
     This window provides a tabbed interface for:
     - Episode Mining (single video + subtitle pair)
     - Batch Mining (folder of paired files)
+    - Deck Builder (corpus-driven deck assembly)
     - YouTube (URL probe + fetch + mine)
     - Analytics (mining statistics dashboard)
     - Settings (configuration)
@@ -223,7 +224,7 @@ class MainWindow(QMainWindow):
         # Set accessible names for main components
         self.tabs.setAccessibleName("Main Tabs")
         self.tabs.setAccessibleDescription(
-            "Navigate between Episode Mining, Batch Mining, YouTube, Analytics, and Settings"
+            "Navigate between Episode Mining, Batch Mining, Deck Builder, YouTube, Analytics, and Settings"
         )
 
         self.header.setAccessibleName("Application Header")
@@ -234,6 +235,7 @@ class MainWindow(QMainWindow):
 
         # Set tab order: header -> tabs -> status bar
         self.setTabOrder(self.header, self.tabs)
+        self.setTabOrder(self.tabs, self.status_bar)
 
     def _setup_menu_bar(self) -> None:
         """Set up the application menu bar."""
@@ -294,8 +296,8 @@ class MainWindow(QMainWindow):
 
     def _setup_shortcuts(self) -> None:
         """Set up global keyboard shortcuts."""
-        # Tab switching shortcuts (Ctrl+1..Ctrl+5)
-        for i in range(1, 6):
+        # Tab switching shortcuts (Ctrl+1..Ctrl+6, one per tab in order)
+        for i in range(1, 7):
             shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
             shortcut.activated.connect(lambda idx=i - 1: self._switch_to_tab(idx))
 
