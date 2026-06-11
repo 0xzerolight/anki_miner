@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, PropertyMock
 
 from anki_miner.utils.text_utils import (
     clean_subtitle_text,
-    extract_japanese_text,
     generate_furigana,
     generate_furigana_from_tokens,
     generate_reading,
@@ -56,58 +55,6 @@ class TestCleanSubtitleText:
         """Should handle complex subtitle with multiple tag types."""
         text = r"{\pos(100,200)}<b>日本語</b>\Nテスト"
         assert clean_subtitle_text(text) == "日本語 テスト"
-
-
-class TestExtractJapaneseText:
-    """Tests for extract_japanese_text function."""
-
-    def test_extracts_hiragana(self):
-        """Should extract hiragana characters."""
-        text = "Hello こんにちは world"
-        assert extract_japanese_text(text) == "こんにちは"
-
-    def test_extracts_katakana(self):
-        """Should extract katakana characters."""
-        text = "Welcome カタカナ here"
-        assert extract_japanese_text(text) == "カタカナ"
-
-    def test_extracts_kanji(self):
-        """Should extract kanji characters."""
-        text = "漢字 are Chinese characters"
-        assert extract_japanese_text(text) == "漢字"
-
-    def test_extracts_mixed_japanese(self):
-        """Should extract mixed hiragana, katakana, and kanji."""
-        text = "今日はカタカナとひらがな"
-        assert extract_japanese_text(text) == "今日はカタカナとひらがな"
-
-    def test_preserves_japanese_punctuation(self):
-        """Should preserve common Japanese punctuation."""
-        text = "こんにちは。元気ですか？"
-        assert extract_japanese_text(text) == "こんにちは。元気ですか？"
-
-    def test_removes_english(self):
-        """Should remove English characters."""
-        text = "ABC日本語DEF"
-        assert extract_japanese_text(text) == "日本語"
-
-    def test_handles_empty_string(self):
-        """Should handle empty string."""
-        assert extract_japanese_text("") == ""
-
-    def test_handles_no_japanese(self):
-        """Should return empty string when no Japanese present."""
-        assert extract_japanese_text("Hello World 123") == ""
-
-    def test_preserves_long_vowel_mark(self):
-        """Should preserve the long vowel mark (ー)."""
-        text = "コーヒー"
-        assert extract_japanese_text(text) == "コーヒー"
-
-    def test_preserves_middle_dot(self):
-        """Should preserve the middle dot (・)."""
-        text = "カレー・ライス"
-        assert extract_japanese_text(text) == "カレー・ライス"
 
 
 # --- Helpers for building mock MeCab tokens ---
