@@ -8,7 +8,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from PyQt6.QtWidgets import QApplication
 
-from anki_miner.gui.main_window import _needs_jmdict_migration
+from anki_miner.gui.controllers.background_tasks import _needs_jmdict_migration
 
 
 @pytest.fixture

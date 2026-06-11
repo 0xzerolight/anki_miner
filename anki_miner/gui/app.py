@@ -255,14 +255,14 @@ def main():
     # tagger singleton that mining reuses (it builds its own sqlite connections
     # for the dict chain and discards those — connections are unsafe across
     # threads). Best-effort: clicking Mine before it finishes simply takes
-    # today's cold path. Keep a reference on the window so the QThread isn't
-    # GC'd mid-run; the built-in ``finished`` signal clears it once done.
+    # today's cold path. The window's background-task controller holds the
+    # reference (so the QThread isn't GC'd mid-run and shutdown can join it)
+    # and clears it once the built-in ``finished`` signal fires.
     def _start_prewarm() -> None:
         from anki_miner.gui.workers.prewarm_worker import PrewarmWorker
 
         worker = PrewarmWorker(window.get_config())
-        window._prewarm_worker = worker
-        worker.finished.connect(lambda: setattr(window, "_prewarm_worker", None))
+        window.background_tasks.set_prewarm(worker)
         worker.start()
 
     QTimer.singleShot(0, _start_prewarm)
