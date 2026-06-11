@@ -221,6 +221,105 @@ class SubtitleParserService:
         if mtime is not None:
             self._line_cache = {key: (mtime, line_states)}
 
+    @staticmethod
+    def _iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
+        """Yield ``(token, start, end)`` for each token locatable in ``text``.
+
+        Locates each token's char span via ``str.find`` from a running
+        cursor. MeCab silently drops whitespace from the token stream, so
+        naive ``cursor += len(surface)`` walking drifts left by the count of
+        preceding spaces and misaligns every downstream offset (bold
+        wrapping, surface_start/end). Issue #20.
+
+        Tokens whose surface is not find-able are dropped (defensive: should
+        not happen for unmodified MeCab surfaces, but a merged compound whose
+        components were whitespace-separated in the source concatenates to a
+        space-free surface that is NOT find-able in ``text``). This locator
+        is the single source of truth for that drop rule:
+        ``parse_subtitle_file``, ``parse_subtitle_file_with_index`` AND
+        ``count_lemmas`` must all route through it, or the count-vs-mine
+        sets diverge and the Deck Builder preview over-promises (T-38).
+        """
+        cursor = 0
+        for token in tokens:
+            surface = token.surface
+            idx = text.find(surface, cursor)
+            if idx == -1:
+                continue
+            tok_end = idx + len(surface)
+            cursor = tok_end
+            yield token, idx, tok_end
+
+    def _emit_word(
+        self,
+        word_token: Any,
+        tok_start: int,
+        tok_end: int,
+        *,
+        text: str,
+        raw_tokens: list,
+        start_time: float,
+        end_time: float,
+        duration: float,
+        sentence_furigana: str,
+        sentence_reading: str,
+        seen_lemmas: set[str],
+    ) -> TokenizedWord | None:
+        """Build the ``TokenizedWord`` for one included token, lemma-deduped.
+
+        Shared tail of ``parse_subtitle_file`` and
+        ``parse_subtitle_file_with_index``: lemma-keyed dedup (first
+        occurrence wins, recorded in ``seen_lemmas``), reading/expression
+        assembly and the optional bold-target sentence variants. Returns
+        ``None`` when the token's lemma was already emitted.
+        """
+        # Get lemma (dictionary form) for lookups and deduplication
+        lemma = self._extract_lemma(word_token)
+        surface = word_token.surface
+
+        # Dedup on lemma alone: surface variants of the same dictionary
+        # form should collapse, not block each other.
+        if lemma in seen_lemmas:
+            return None
+        seen_lemmas.add(lemma)
+
+        # Get reading if available
+        reading = self._extract_reading(word_token)
+
+        # ExpressionFurigana/Reading match the mined card front:
+        # lemma for verbs/adjectives, surface for nouns (see
+        # TokenizedWord.mined_form for the trade-off).
+        pos = word_token.feature.pos1
+        mined = lemma if pos in ("動詞", "形容詞") else surface
+        expression_furigana = self._furigana(mined)
+        expression_reading = self._reading(mined)
+
+        if self.config.bold_target_in_sentence:
+            sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
+            sentence_furigana_bolded = wrap_target_furigana_from_tokens(text, raw_tokens, tok_start, tok_end)
+        else:
+            sentence_bolded = ""
+            sentence_furigana_bolded = ""
+
+        return TokenizedWord(
+            surface=surface,
+            lemma=lemma,
+            reading=reading,
+            sentence=text,
+            start_time=start_time,
+            end_time=end_time,
+            duration=duration,
+            expression_furigana=expression_furigana,
+            expression_reading=expression_reading,
+            sentence_furigana=sentence_furigana,
+            sentence_reading=sentence_reading,
+            pos=word_token.feature.pos1,
+            surface_start=tok_start,
+            surface_end=tok_end,
+            sentence_bolded=sentence_bolded,
+            sentence_furigana_bolded=sentence_furigana_bolded,
+        )
+
     def parse_raw_entries(self, subtitle_file: Path) -> list[tuple[float, float, str]]:
         """Parse subtitle file and return raw timing entries without tokenization.
 
@@ -275,74 +374,27 @@ class SubtitleParserService:
             sentence_furigana = generate_furigana_from_tokens(raw_tokens)
             sentence_reading = generate_reading_from_tokens(raw_tokens)
 
-            # Locate each token's char span via ``str.find`` from a running
-            # cursor. MeCab silently drops whitespace from the token stream,
-            # so naive ``cursor += len(surface)`` walking drifts left by the
-            # count of preceding spaces and misaligns every downstream
-            # offset (bold wrapping, surface_start/end). Issue #20.
-            cursor = 0
-            for word_token in merged_tokens:
-                surface = word_token.surface
-                idx = text.find(surface, cursor)
-                if idx == -1:
-                    # Defensive: should not happen for unmodified MeCab
-                    # surfaces. Skip rather than emit a wrong span.
-                    continue
-                tok_start = idx
-                tok_end = idx + len(surface)
-                cursor = tok_end
-
+            # Spans come from the shared locator (Issue #20 / T-38 — see
+            # _iter_token_spans for the cursor+find and drop-rule rationale).
+            for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
                 if not self._should_include_word(word_token):
                     continue
 
-                # Get lemma (dictionary form) for lookups and deduplication
-                lemma = self._extract_lemma(word_token)
-                surface = word_token.surface
-
-                # Dedup on lemma alone: surface variants of the same dictionary
-                # form should collapse, not block each other.
-                if lemma in seen_lemmas:
-                    continue
-                seen_lemmas.add(lemma)
-
-                # Get reading if available
-                reading = self._extract_reading(word_token)
-
-                # ExpressionFurigana/Reading match the mined card front:
-                # lemma for verbs/adjectives, surface for nouns (see
-                # TokenizedWord.mined_form for the trade-off).
-                pos = word_token.feature.pos1
-                mined = lemma if pos in ("動詞", "形容詞") else surface
-                expression_furigana = self._furigana(mined)
-                expression_reading = self._reading(mined)
-
-                if self.config.bold_target_in_sentence:
-                    sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
-                    sentence_furigana_bolded = wrap_target_furigana_from_tokens(text, raw_tokens, tok_start, tok_end)
-                else:
-                    sentence_bolded = ""
-                    sentence_furigana_bolded = ""
-
-                all_words.append(
-                    TokenizedWord(
-                        surface=surface,
-                        lemma=lemma,
-                        reading=reading,
-                        sentence=text,
-                        start_time=start_time,
-                        end_time=end_time,
-                        duration=duration,
-                        expression_furigana=expression_furigana,
-                        expression_reading=expression_reading,
-                        sentence_furigana=sentence_furigana,
-                        sentence_reading=sentence_reading,
-                        pos=word_token.feature.pos1,
-                        surface_start=tok_start,
-                        surface_end=tok_end,
-                        sentence_bolded=sentence_bolded,
-                        sentence_furigana_bolded=sentence_furigana_bolded,
-                    )
+                word = self._emit_word(
+                    word_token,
+                    tok_start,
+                    tok_end,
+                    text=text,
+                    raw_tokens=raw_tokens,
+                    start_time=start_time,
+                    end_time=end_time,
+                    duration=duration,
+                    sentence_furigana=sentence_furigana,
+                    sentence_reading=sentence_reading,
+                    seen_lemmas=seen_lemmas,
                 )
+                if word is not None:
+                    all_words.append(word)
 
         return all_words
 
@@ -388,18 +440,9 @@ class SubtitleParserService:
             included_tokens: list = []
             included_spans: list[tuple[int, int]] = []
             lemma_first_span: dict[str, tuple[str, int, int]] = {}
-            # Same offset rule as parse_subtitle_file: locate each token's
-            # span via str.find from a running cursor, because MeCab strips
-            # whitespace from the token stream. Issue #20.
-            cursor = 0
-            for word_token in merged_tokens:
-                surface = word_token.surface
-                idx = text.find(surface, cursor)
-                if idx == -1:
-                    continue
-                tok_start = idx
-                tok_end = idx + len(surface)
-                cursor = tok_end
+            # Spans come from the shared locator — same offset and drop rule
+            # as parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
+            for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
                 if not self._should_include_word(word_token):
                     continue
                 lemma_here = self._extract_lemma(word_token)
@@ -436,49 +479,21 @@ class SubtitleParserService:
 
             # Second pass: emit deduped TokenizedWord entries (lemma-keyed).
             for word_token, (tok_start, tok_end) in zip(included_tokens, included_spans, strict=True):
-                lemma = self._extract_lemma(word_token)
-                surface = word_token.surface
-
-                if lemma in seen_lemmas:
-                    continue
-                seen_lemmas.add(lemma)
-
-                reading = self._extract_reading(word_token)
-
-                # ExpressionFurigana/Reading match the mined card front
-                # (lemma for verbs/adjectives, surface for nouns).
-                pos = word_token.feature.pos1
-                mined = lemma if pos in ("動詞", "形容詞") else surface
-                expression_furigana = self._furigana(mined)
-                expression_reading = self._reading(mined)
-
-                if self.config.bold_target_in_sentence:
-                    sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
-                    sentence_furigana_bolded = wrap_target_furigana_from_tokens(text, raw_tokens, tok_start, tok_end)
-                else:
-                    sentence_bolded = ""
-                    sentence_furigana_bolded = ""
-
-                all_words.append(
-                    TokenizedWord(
-                        surface=surface,
-                        lemma=lemma,
-                        reading=reading,
-                        sentence=text,
-                        start_time=start_time,
-                        end_time=end_time,
-                        duration=duration,
-                        expression_furigana=expression_furigana,
-                        expression_reading=expression_reading,
-                        sentence_furigana=sentence_furigana,
-                        sentence_reading=sentence_reading,
-                        pos=word_token.feature.pos1,
-                        surface_start=tok_start,
-                        surface_end=tok_end,
-                        sentence_bolded=sentence_bolded,
-                        sentence_furigana_bolded=sentence_furigana_bolded,
-                    )
+                word = self._emit_word(
+                    word_token,
+                    tok_start,
+                    tok_end,
+                    text=text,
+                    raw_tokens=raw_tokens,
+                    start_time=start_time,
+                    end_time=end_time,
+                    duration=duration,
+                    sentence_furigana=sentence_furigana,
+                    sentence_reading=sentence_reading,
+                    seen_lemmas=seen_lemmas,
                 )
+                if word is not None:
+                    all_words.append(word)
 
         return all_words, line_index
 
@@ -501,20 +516,13 @@ class SubtitleParserService:
         """
         counts: collections.Counter[str] = collections.Counter()
         for text, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
-            # Resolve each token's span via str.find from a running cursor —
-            # IDENTICAL to the mining loops in parse_subtitle_file* (Issue #20).
-            # A merged compound whose components were whitespace-separated in
-            # the source concatenates to a space-free surface that is NOT
-            # find-able in ``text``; mining drops it (find == -1), so counting
-            # must drop it too or the count-vs-mine sets diverge and the Deck
-            # Builder preview over-promises (T-38). Keep these paths symmetric.
-            cursor = 0
-            for token in merged_tokens:
-                surface = token.surface
-                idx = text.find(surface, cursor)
-                if idx == -1:
-                    continue
-                cursor = idx + len(surface)
+            # Spans come from the SAME locator as the mining loops in
+            # parse_subtitle_file* — a token mining drops (find == -1),
+            # counting drops too, or the count-vs-mine sets diverge and the
+            # Deck Builder preview over-promises (T-38). The cursor+find and
+            # drop-rule rationale lives on _iter_token_spans; do not inline a
+            # divergent copy here.
+            for token, _tok_start, _tok_end in self._iter_token_spans(text, merged_tokens):
                 if self._should_include_word(token):
                     counts[self._extract_lemma(token)] += 1
         return counts
