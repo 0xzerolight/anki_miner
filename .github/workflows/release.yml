@@ -7,8 +7,42 @@ on:
 # Uncomment to enable manual triggering for testing:
 # workflow_dispatch:
 
+# Serialize per ref so a tag delete/re-push can't race two release runs onto the
+# same uploads. Never cancel an in-flight release (publishes a GitHub Release).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  # A v* tag does not trigger ci.yml (push/PR-to-main only). Require a green CI
+  # run on the exact tagged commit before building/publishing release artifacts.
+  # Mirrored in publish.yml.
+  ci-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Require green CI on the tagged commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Find completed ci.yml runs for this exact SHA and require one that
+          # concluded "success". The tag must point at a merged commit whose CI
+          # already ran on main; otherwise fail closed.
+          RUNS=$(gh api --paginate \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=completed" \
+            --jq '[.workflow_runs[].conclusion]')
+          echo "CI conclusions for ${GITHUB_SHA}: ${RUNS}"
+          if echo "$RUNS" | grep -q '"success"'; then
+            echo "Green CI run found for tagged commit."
+          else
+            echo "::error::No successful ci.yml run for ${GITHUB_SHA}. Tag a commit whose CI passed on main."
+            exit 1
+          fi
+
   build:
+    needs: ci-gate
     strategy:
       fail-fast: false
       matrix:
@@ -23,9 +57,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
 
@@ -38,7 +72,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install .
-          pip install pyinstaller
+          # Pin PyInstaller for reproducible bundles; bump deliberately.
+          pip install pyinstaller==6.20.0
 
       - name: Extract and validate version
         id: version
@@ -147,8 +182,8 @@ jobs:
         env:
           ANKI_MINER_SMOKE: youtube
           QT_QPA_PLATFORM: offscreen
-        continue-on-error: true
         run: |
+          set -o pipefail
           ./dist/AnkiMiner/AnkiMiner 2>&1 | tee smoke.log
           grep -q "BUNDLED_SMOKE_PASS" smoke.log
 
@@ -158,7 +193,6 @@ jobs:
         env:
           ANKI_MINER_SMOKE: youtube
           QT_QPA_PLATFORM: offscreen
-        continue-on-error: true
         run: |
           .\dist\AnkiMiner\AnkiMiner.exe 2>&1 | Tee-Object -FilePath smoke.log
           if (-not (Select-String -Path smoke.log -Pattern "BUNDLED_SMOKE_PASS" -Quiet)) {
@@ -237,7 +271,12 @@ jobs:
       - name: Install nfpm (Linux)
         if: runner.os == 'Linux'
         run: |
+          set -euo pipefail
+          # Version-pinned; add SHA256 verification (matches goreleaser's
+          # official checksums.txt for v2.46.0). Fail-closed on mismatch.
+          NFPM_SHA256="43b4cb72cde2d6e61c02e5b330e3276882252bf67c057e089957f9dbd2c8de42"
           wget -q https://github.com/goreleaser/nfpm/releases/download/v2.46.0/nfpm_2.46.0_Linux_x86_64.tar.gz
+          echo "${NFPM_SHA256}  nfpm_2.46.0_Linux_x86_64.tar.gz" | sha256sum -c -
           tar -xzf nfpm_2.46.0_Linux_x86_64.tar.gz nfpm
           chmod +x nfpm
 
@@ -276,16 +315,39 @@ jobs:
         run: |
           Compress-Archive -Path dist\AnkiMiner\* -DestinationPath dist\${{ matrix.artifact_name }}.zip
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
+      # Per-OS explicit upload with if-no-files-found: error. A single catch-all
+      # step with default 'warn' only fails when NOTHING matches, so a sibling
+      # asset filename drift (installer/AppImage/.deb) would upload just the
+      # archive and the release would publish incomplete. Listing each OS's full
+      # expected asset set and erroring on any miss closes that gap.
+      - name: Upload artifact (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ matrix.artifact_name }}
+          if-no-files-found: error
           path: |
             dist/${{ matrix.artifact_name }}.tar.gz
+            dist/AnkiMiner-${{ steps.version.outputs.version }}-Linux-x86_64.AppImage
+            dist/anki-miner_${{ steps.version.outputs.version }}_amd64.deb
+
+      - name: Upload artifact (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ${{ matrix.artifact_name }}
+          if-no-files-found: error
+          path: dist/${{ matrix.artifact_name }}.tar.gz
+
+      - name: Upload artifact (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ${{ matrix.artifact_name }}
+          if-no-files-found: error
+          path: |
             dist/${{ matrix.artifact_name }}.zip
-            dist/AnkiMiner-*-Setup.exe
-            dist/AnkiMiner-*.AppImage
-            dist/anki-miner_*.deb
+            dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
 
   release:
     needs: build
@@ -294,12 +356,12 @@ jobs:
       contents: write
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           path: artifacts/
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
           generate_release_notes: true
           files: |
