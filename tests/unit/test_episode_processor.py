@@ -1157,6 +1157,48 @@ class TestStatsServiceIntegration:
         mock_stats.record_session.assert_not_called()
         mock_stats.record_difficulty.assert_not_called()
 
+    def test_locked_stats_db_on_record_session_keeps_successful_result(self, test_config, mock_services, tmp_path):
+        """A locked stats.db during the post-create session record must NOT
+        discard a successful run's result (T-19 follow-up).
+
+        Anki (or a parallel run) can hold the SQLite file, raising
+        ``OperationalError('database is locked')``. The cards were already
+        created in Anki; letting it bubble into the generic except path
+        reports ``cards_created=0`` with no note IDs — a successful run as a
+        failure. Same exposure as the known_words.db write one line above.
+        """
+        import sqlite3
+
+        mock_stats = MagicMock()
+        mock_stats.is_available.return_value = True
+        mock_stats.record_session.side_effect = sqlite3.OperationalError("database is locked")
+
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].last_created_note_ids = [12345]
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # The lock was hit, but the successful run is preserved.
+        mock_stats.record_session.assert_called_once()
+        assert result.cards_created == 1
+        assert result.card_ids == [12345]
+        assert not result.errors
+
 
 class TestPerRunTempFolder:
     """Isolate temp media per run instead of sharing one folder across calls."""
