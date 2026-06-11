@@ -14,12 +14,20 @@ MODULE = "anki_miner.services.media_extractor"
 DETECTOR_MODULE = "anki_miner.utils.audio_track_detector"
 
 
+def _popen_mock(returncode=0, stderr=""):
+    """A MagicMock shaped like a finished ffmpeg Popen (communicate-style)."""
+    proc = MagicMock()
+    proc.returncode = returncode
+    proc.communicate.return_value = ("", stderr)
+    return proc
+
+
 @pytest.fixture
 def service(test_config):
     """Create a MediaExtractorService with ensure_directory patched out."""
     with patch(f"{MODULE}.ensure_directory"):
         svc = MediaExtractorService(test_config)
-    # Skip audio encoder probe; audio tests use mocked subprocess.run.
+    # Skip audio encoder probe; encode tests mock subprocess.Popen.
     svc._animated_encoder_ok["libmp3lame"] = True
     svc._animated_encoder_ok["libopus"] = True
     return svc
@@ -150,17 +158,16 @@ class TestExtractScreenshot:
         # screenshot_time = 5.0 + min(1.0, 4.0/2) = 5.0 + 1.0 = 6.0
         expected_time = 6.0
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(Path, "exists", return_value=True),
         ):
             service._extract_screenshot(video_file, start_time, duration, output_path)
 
-        mock_run.assert_called_once()
-        cmd = mock_run.call_args[0][0]
+        mock_popen.assert_called_once()
+        cmd = mock_popen.call_args[0][0]
         assert cmd[0] == "ffmpeg"
         assert "-y" in cmd
         assert cmd[cmd.index("-ss") + 1] == str(expected_time)
@@ -179,16 +186,15 @@ class TestExtractScreenshot:
         start_time = 3.0
         duration = 1.0
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(Path, "exists", return_value=True),
         ):
             service._extract_screenshot(video_file, start_time, duration, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert cmd[cmd.index("-ss") + 1] == str(3.5)
 
     def test_returns_true_on_success(self, service, video_file, tmp_path):
@@ -196,10 +202,9 @@ class TestExtractScreenshot:
         output_path = tmp_path / "output.jpg"
         output_path.write_bytes(b"\xff\xd8fake-jpeg")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
-        with patch(f"{MODULE}.subprocess.run", return_value=mock_proc):
+        with patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc):
             result = service._extract_screenshot(video_file, 1.0, 2.0, output_path)
 
         assert result is True
@@ -208,11 +213,9 @@ class TestExtractScreenshot:
         """Should return False when ffmpeg exits with non-zero code."""
         output_path = tmp_path / "output.jpg"
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 1
-        mock_proc.stderr = b"error output"
+        mock_proc = _popen_mock(returncode=1, stderr="error output")
 
-        with patch(f"{MODULE}.subprocess.run", return_value=mock_proc):
+        with patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc):
             result = service._extract_screenshot(video_file, 1.0, 2.0, output_path)
 
         assert result is False
@@ -222,7 +225,7 @@ class TestExtractScreenshot:
         output_path = tmp_path / "output.jpg"
 
         with patch(
-            f"{MODULE}.subprocess.run",
+            f"{MODULE}.subprocess.Popen",
             side_effect=subprocess.SubprocessError("process failed"),
         ):
             result = service._extract_screenshot(video_file, 1.0, 2.0, output_path)
@@ -230,25 +233,32 @@ class TestExtractScreenshot:
         assert result is False
 
     def test_returns_false_on_timeout(self, service, video_file, tmp_path):
-        """Should return False when ffmpeg times out (TimeoutExpired is a SubprocessError)."""
+        """Timeout must kill + reap the process and return False (old subprocess.run semantics)."""
         output_path = tmp_path / "output.jpg"
 
-        with patch(
-            f"{MODULE}.subprocess.run",
-            side_effect=subprocess.TimeoutExpired("ffmpeg", 30),
+        mock_proc = MagicMock()
+        # First communicate times out; the post-kill reaping communicate succeeds.
+        mock_proc.communicate.side_effect = [subprocess.TimeoutExpired("ffmpeg", 30), ("", "")]
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc),
+            patch(f"{MODULE}.subprocess.run") as mock_run,
         ):
             result = service._extract_screenshot(video_file, 1.0, 2.0, output_path)
 
         assert result is False
+        mock_proc.kill.assert_called_once()
+        # Reaped after the kill — no zombie left behind.
+        assert mock_proc.communicate.call_count == 2
+        mock_run.assert_not_called()
 
     def test_returns_false_when_output_missing_despite_success(self, service, video_file, tmp_path):
         """Should return False when ffmpeg exits 0 but output file does not exist."""
         output_path = tmp_path / "nonexistent.jpg"
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
-        with patch(f"{MODULE}.subprocess.run", return_value=mock_proc):
+        with patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc):
             result = service._extract_screenshot(video_file, 1.0, 2.0, output_path)
 
         # output_path does not exist on disk, so result should be False
@@ -316,34 +326,32 @@ class TestAnimatedScreenshot:
     def test_clip_duration_capped_by_word_duration(self, animated_avif_service, video_file, tmp_path):
         """When configured clip duration exceeds word duration, ffmpeg -t should be word duration."""
         output_path = tmp_path / "clip.avif"
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
         # config clip = 2.0s, word duration = 1.0s → expect -t 1.0
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(Path, "exists", return_value=True),
         ):
             animated_avif_service._extract_animated_screenshot(
                 video_file, start_time=5.0, duration=1.0, output_path=output_path
             )
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert cmd[cmd.index("-t") + 1] == str(1.0)
 
     def test_clip_duration_floor_for_very_short_subtitles(self, animated_avif_service, video_file, tmp_path):
         """Floor very-short subtitles to 0.5s to avoid 0-frame clips."""
         output_path = tmp_path / "clip.avif"
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(Path, "exists", return_value=True),
         ):
             animated_avif_service._extract_animated_screenshot(
                 video_file, start_time=5.0, duration=0.1, output_path=output_path
             )
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert cmd[cmd.index("-t") + 1] == str(0.5)
 
     def test_match_audio_uses_padded_range_when_enabled(self, animated_avif_service, video_file, tmp_path):
@@ -355,17 +363,16 @@ class TestAnimatedScreenshot:
         )
         animated_avif_service.config = cfg
         output_path = tmp_path / "clip.avif"
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(Path, "exists", return_value=True),
         ):
             animated_avif_service._extract_animated_screenshot(
                 video_file, start_time=5.0, duration=1.0, output_path=output_path
             )
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert cmd[cmd.index("-ss") + 1] == str(4.7)
         assert cmd[cmd.index("-t") + 1] == str(1.6)
 
@@ -378,17 +385,16 @@ class TestAnimatedScreenshot:
         )
         animated_avif_service.config = cfg
         output_path = tmp_path / "clip.avif"
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(Path, "exists", return_value=True),
         ):
             animated_avif_service._extract_animated_screenshot(
                 video_file, start_time=0.1, duration=1.0, output_path=output_path
             )
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert cmd[cmd.index("-ss") + 1] == str(0.0)
 
     def test_match_audio_overrides_configured_duration(self, animated_avif_service, video_file, tmp_path):
@@ -401,33 +407,31 @@ class TestAnimatedScreenshot:
         )
         animated_avif_service.config = cfg
         output_path = tmp_path / "clip.avif"
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(Path, "exists", return_value=True),
         ):
             animated_avif_service._extract_animated_screenshot(
                 video_file, start_time=5.0, duration=5.0, output_path=output_path
             )
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert cmd[cmd.index("-t") + 1] == str(5.6)
 
     def test_avif_command_shape(self, animated_avif_service, video_file, tmp_path):
         """AVIF ffmpeg command must include libsvtav1, CRF, loop, scale filter."""
         output_path = tmp_path / "clip.avif"
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(Path, "exists", return_value=True),
         ):
             animated_avif_service._extract_animated_screenshot(
                 video_file, start_time=2.0, duration=3.0, output_path=output_path
             )
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert cmd[0] == "ffmpeg"
         assert "-an" in cmd
         assert "-sn" in cmd
@@ -445,17 +449,16 @@ class TestAnimatedScreenshot:
     def test_webp_command_shape(self, animated_webp_service, video_file, tmp_path):
         """WebP ffmpeg command must include libwebp_anim and -quality."""
         output_path = tmp_path / "clip.webp"
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(Path, "exists", return_value=True),
         ):
             animated_webp_service._extract_animated_screenshot(
                 video_file, start_time=2.0, duration=3.0, output_path=output_path
             )
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert cmd[cmd.index("-c:v") + 1] == "libwebp_anim"
         assert "-quality" in cmd
         # default quality 30 maps through as-is for webp
@@ -505,14 +508,35 @@ class TestAnimatedScreenshot:
     def test_animated_returns_false_on_ffmpeg_failure(self, animated_avif_service, video_file, tmp_path):
         """Non-zero ffmpeg exit on encode → return False."""
         output_path = tmp_path / "clip.avif"
-        mock_proc = MagicMock()
-        mock_proc.returncode = 1
-        mock_proc.stderr = b"encode failed"
+        mock_proc = _popen_mock(returncode=1, stderr="encode failed")
 
-        with patch(f"{MODULE}.subprocess.run", return_value=mock_proc):
+        with patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc):
             result = animated_avif_service._extract_animated_screenshot(video_file, 1.0, 2.0, output_path)
 
         assert result is False
+
+    def test_unrecognized_animated_format_skips_word_without_spawn(
+        self, test_config, video_file, make_tokenized_word, recording_progress
+    ):
+        """screenshot_animated_format='gif' (unsupported) → word skipped, no ffmpeg spawn, no raise."""
+        cfg = dataclasses.replace(test_config, screenshot_animated=True, screenshot_animated_format="gif")
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+        words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
+
+        with (
+            patch.object(svc, "_extract_audio", return_value=False),
+            patch(f"{MODULE}.subprocess.Popen") as mock_popen,
+            patch(f"{MODULE}.subprocess.run") as mock_run,
+        ):
+            result = svc.extract_media_batch(video_file, words, recording_progress)
+
+        # The word is skipped (no screenshot), nothing is spawned, nothing raises.
+        assert result == []
+        mock_popen.assert_not_called()
+        mock_run.assert_not_called()
+        assert recording_progress.errors == []
+        assert recording_progress.completes == 1
 
 
 class TestExtractAudio:
@@ -523,16 +547,15 @@ class TestExtractAudio:
         output_path = tmp_path / "output.mp3"
         output_path.write_bytes(b"\xff\xfbfake-mp3")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(service, "_get_japanese_audio_stream", return_value=None),
         ):
             service._extract_audio(video_file, 5.0, 2.0, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         # audio_start = max(0, 5.0 - 0.3) = 4.7
         assert cmd[cmd.index("-ss") + 1] == str(4.7)
         # audio_duration = 2.0 + (0.3 * 2) = 2.6
@@ -543,16 +566,15 @@ class TestExtractAudio:
         output_path = tmp_path / "output.mp3"
         output_path.write_bytes(b"\xff\xfbfake-mp3")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(service, "_get_japanese_audio_stream", return_value=None),
         ):
             service._extract_audio(video_file, 0.1, 2.0, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         # audio_start = max(0, 0.1 - 0.3) = max(0, -0.2) = 0
         assert cmd[cmd.index("-ss") + 1] == str(0)
 
@@ -561,16 +583,15 @@ class TestExtractAudio:
         output_path = tmp_path / "output.mp3"
         output_path.write_bytes(b"\xff\xfbfake-mp3")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(service, "_get_japanese_audio_stream", return_value=2),
         ):
             service._extract_audio(video_file, 1.0, 2.0, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         map_index = cmd.index("-map")
         assert cmd[map_index + 1] == "0:2"
 
@@ -579,16 +600,15 @@ class TestExtractAudio:
         output_path = tmp_path / "output.mp3"
         output_path.write_bytes(b"\xff\xfbfake-mp3")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(service, "_get_japanese_audio_stream", return_value=None),
         ):
             service._extract_audio(video_file, 1.0, 2.0, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         map_index = cmd.index("-map")
         assert cmd[map_index + 1] == "0:a:0"
 
@@ -596,12 +616,10 @@ class TestExtractAudio:
         """Should return False when ffmpeg exits with non-zero code."""
         output_path = tmp_path / "output.mp3"
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 1
-        mock_proc.stderr = b"error output"
+        mock_proc = _popen_mock(returncode=1, stderr="error output")
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc),
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc),
             patch.object(service, "_get_japanese_audio_stream", return_value=None),
         ):
             result = service._extract_audio(video_file, 1.0, 2.0, output_path)
@@ -614,7 +632,7 @@ class TestExtractAudio:
 
         with (
             patch(
-                f"{MODULE}.subprocess.run",
+                f"{MODULE}.subprocess.Popen",
                 side_effect=OSError("ffmpeg not found"),
             ),
             patch.object(service, "_get_japanese_audio_stream", return_value=None),
@@ -628,16 +646,15 @@ class TestExtractAudio:
         output_path = tmp_path / "out.mp3"
         output_path.write_bytes(b"\xff\xfbfake-mp3")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(service, "_get_japanese_audio_stream", return_value=None),
         ):
             service._extract_audio(video_file, 1.0, 2.0, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         codec_index = cmd.index("-acodec")
         assert cmd[codec_index + 1] == "libmp3lame"
 
@@ -651,16 +668,15 @@ class TestExtractAudio:
         output_path = tmp_path / "out.opus"
         output_path.write_bytes(b"OggS")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(svc, "_get_japanese_audio_stream", return_value=None),
         ):
             svc._extract_audio(video_file, 1.0, 2.0, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         codec_index = cmd.index("-acodec")
         assert cmd[codec_index + 1] == "libopus"
 
@@ -674,16 +690,15 @@ class TestExtractAudio:
         output_path = tmp_path / "out.mp3"
         output_path.write_bytes(b"\xff\xfbfake")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(svc, "_get_japanese_audio_stream", return_value=None),
         ):
             svc._extract_audio(video_file, 1.0, 2.0, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         bitrate_index = cmd.index("-b:a")
         assert cmd[bitrate_index + 1] == "64k"
 
@@ -693,14 +708,14 @@ class TestExtractAudio:
 
         with (
             patch.object(service, "_check_encoder_available", return_value=False),
-            patch(f"{MODULE}.subprocess.run") as mock_run,
+            patch(f"{MODULE}.subprocess.Popen") as mock_popen,
             patch.object(service, "_get_japanese_audio_stream", return_value=None),
         ):
             result = service._extract_audio(video_file, 1.0, 2.0, output_path)
 
         assert result is False
         # No ffmpeg encode call should have been made.
-        mock_run.assert_not_called()
+        mock_popen.assert_not_called()
 
     def test_opus_downmixes_to_stereo(self, test_config, video_file, tmp_path):
         """Should pass -ac 2 when opus to avoid libopus 5.1 channel-mapping error (Issue #18)."""
@@ -712,16 +727,15 @@ class TestExtractAudio:
         output_path = tmp_path / "out.opus"
         output_path.write_bytes(b"OggS")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(svc, "_get_japanese_audio_stream", return_value=None),
         ):
             svc._extract_audio(video_file, 1.0, 2.0, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         ac_index = cmd.index("-ac")
         assert cmd[ac_index + 1] == "2"
 
@@ -730,16 +744,15 @@ class TestExtractAudio:
         output_path = tmp_path / "out.mp3"
         output_path.write_bytes(b"\xff\xfbfake")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(service, "_get_japanese_audio_stream", return_value=None),
         ):
             service._extract_audio(video_file, 1.0, 2.0, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert "-ac" not in cmd
 
     def test_filename_extension_matches_format(self, test_config, video_file, make_tokenized_word, tmp_path):
@@ -1032,17 +1045,16 @@ class TestAudioTrackOverride:
             _make_audio_stream(audio_index=2, global_index=3),
         ]
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
             patch(f"{MODULE}.list_audio_streams", return_value=streams) as mock_list,
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
         ):
             result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=1)
 
         assert result is True
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         map_idx = cmd.index("-map")
         assert cmd[map_idx + 1] == "0:2"
         mock_list.assert_called_once_with(video_file, ffprobe_cmd="ffprobe")
@@ -1055,13 +1067,12 @@ class TestAudioTrackOverride:
         output_path = tmp_path / "out.mp3"
         output_path.write_bytes(b"\xff\xfbfake")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
             patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp,
             patch(f"{MODULE}.list_audio_streams") as mock_list,
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
         ):
             from anki_miner.utils.audio_track_detector import JapaneseAudioStream
 
@@ -1070,7 +1081,7 @@ class TestAudioTrackOverride:
             result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=None)
 
         assert result is True
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         map_idx = cmd.index("-map")
         assert cmd[map_idx + 1] == "0:2"
         mock_list.assert_not_called()
@@ -1088,18 +1099,17 @@ class TestAudioTrackOverride:
             _make_audio_stream(audio_index=1, global_index=5),
         ]
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
             patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp,
             patch(f"{MODULE}.list_audio_streams", return_value=streams),
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
         ):
             result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=1)
 
         assert result is True
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         map_idx = cmd.index("-map")
         assert cmd[map_idx + 1] == "0:5"
         mock_find_jp.assert_not_called()
@@ -1132,19 +1142,18 @@ class TestAudioTrackOverride:
         )
         streams = [jp_stream]
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
             patch(f"{MODULE}.list_audio_streams", return_value=streams),
             patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp,
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             caplog.at_level(logging.WARNING, logger="anki_miner.services.media_extractor"),
         ):
             result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=99)
 
         assert result is True
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         map_idx = cmd.index("-map")
         assert cmd[map_idx + 1] == "0:2"
         assert any("audio_track_override=99" in r.message for r in caplog.records)
@@ -1166,18 +1175,17 @@ class TestAudioTrackOverride:
         # One stream: audio_index=0 maps to global_index=3 (e.g. video + sub tracks before it).
         streams = [_make_audio_stream(audio_index=0, global_index=3)]
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
             patch(f"{MODULE}.list_audio_streams", return_value=streams),
             patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp,
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
         ):
             result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=0)
 
         assert result is True
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         map_idx = cmd.index("-map")
         assert cmd[map_idx + 1] == "0:3"
         # Override is set (even though it's 0) — JP auto-detect must not be triggered.
@@ -1191,17 +1199,16 @@ class TestAudioTrackOverride:
         output_path = tmp_path / "out.mp3"
         output_path.write_bytes(b"\xff\xfbfake")
 
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
 
         with (
             patch.object(service, "_get_japanese_audio_stream", return_value=None),
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
         ):
             result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=None)
 
         assert result is True
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         map_idx = cmd.index("-map")
         assert cmd[map_idx + 1] == "0:a:0"
 
@@ -1314,15 +1321,14 @@ class TestFfmpegResolverWiring:
             svc = MediaExtractorService(cfg)
 
         output_path = tmp_path / "shot.jpg"
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(Path, "exists", return_value=True),
         ):
             svc._extract_screenshot(video_file, 1.0, 2.0, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert cmd[0] == str(fake_ffmpeg)
 
     def test_audio_uses_config_override(self, test_config, video_file, tmp_path):
@@ -1337,15 +1343,14 @@ class TestFfmpegResolverWiring:
 
         output_path = tmp_path / "clip.mp3"
         output_path.write_bytes(b"\xff\xfbfake-mp3")
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
+        mock_proc = _popen_mock()
         with (
-            patch(f"{MODULE}.subprocess.run", return_value=mock_proc) as mock_run,
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(svc, "_get_japanese_audio_stream", return_value=None),
         ):
             svc._extract_audio(video_file, 1.0, 2.0, output_path)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert cmd[0] == str(fake_ffmpeg)
 
     def test_encoder_probe_uses_config_override(self, test_config, tmp_path):

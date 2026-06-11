@@ -127,9 +127,11 @@ class TestEpisodePipeline:
         mock_anki_response = MagicMock()
         mock_anki_response.json.return_value = {"result": [], "error": None}
 
-        # Mock subprocess for media extraction
+        # Mock subprocess for media extraction: run() serves the encoder
+        # probe, Popen() serves the killable encode path.
         mock_proc = MagicMock()
         mock_proc.returncode = 0
+        mock_proc.communicate.return_value = ("", "")
 
         # For screenshots to "exist"
         media_dir = tmp_path / "media"
@@ -139,6 +141,7 @@ class TestEpisodePipeline:
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
             patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.media_extractor.subprocess.run", return_value=mock_proc),
+            patch("anki_miner.services.media_extractor.subprocess.Popen", return_value=mock_proc),
             patch("anki_miner.services.media_extractor.ensure_directory"),
             patch("anki_miner.services.dictionary.providers.jisho_provider.requests.get") as mock_get,
             patch("anki_miner.services.dictionary.providers.jisho_provider.time.sleep"),
@@ -212,6 +215,7 @@ class TestEpisodePipeline:
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
             patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.media_extractor.subprocess.run") as mock_subprocess,
+            patch("anki_miner.services.media_extractor.subprocess.Popen") as mock_popen,
             patch("anki_miner.services.media_extractor.ensure_directory"),
             patch("anki_miner.services.anki_service.requests.post", return_value=find_resp),
         ):
@@ -236,6 +240,7 @@ class TestEpisodePipeline:
 
         # Preview mode should not touch media extraction
         mock_subprocess.assert_not_called()
+        mock_popen.assert_not_called()
         assert result.cards_created == 0
         assert result.new_words_found >= 0
 
@@ -275,6 +280,7 @@ class TestEpisodePipeline:
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
             patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             patch("anki_miner.services.media_extractor.subprocess.run") as mock_subprocess,
+            patch("anki_miner.services.media_extractor.subprocess.Popen") as mock_popen,
             patch("anki_miner.services.media_extractor.ensure_directory"),
             patch(
                 "anki_miner.services.anki_service.requests.post",
@@ -305,6 +311,7 @@ class TestEpisodePipeline:
         assert result.new_words_found == 0
         assert result.cards_created == 0
         mock_subprocess.assert_not_called()
+        mock_popen.assert_not_called()
 
 
 class TestIPlusOneFilterIntegration:
