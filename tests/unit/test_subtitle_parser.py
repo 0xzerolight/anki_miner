@@ -2397,3 +2397,120 @@ class TestPerFileLineCache:
         assert counts["猫"] == 1
         assert counts["犬"] == 1
         assert {w.lemma for w in words} == {"猫", "犬"}
+
+
+class TestAbandonedGeneratorCacheNonCommit:
+    """A consumer that abandons ``_iter_parsed_lines`` early must NOT leave a
+    truncated per-file cache entry.
+
+    ``_iter_parsed_lines`` yields lazily and only commits the line-state to
+    ``_line_cache`` once the generator is fully drained. A consumer that stops
+    after a few lines (here via ``itertools.islice``) therefore commits nothing,
+    so a later ``count_lemmas`` re-tokenizes the whole file from scratch instead
+    of replaying a partial — otherwise the corpus counts would silently drop the
+    lines the abandoned pass never reached.
+    """
+
+    @staticmethod
+    def _make_mock_subs(lines):
+        mock_lines = []
+        for spec in lines:
+            ml = MagicMock()
+            ml.text = spec["text"]
+            ml.start = spec["start"]
+            ml.end = spec["end"]
+            mock_lines.append(ml)
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(side_effect=lambda: iter(mock_lines))
+        return mock_subs
+
+    def test_islice_abandon_then_count_lemmas_retokenizes(self, test_config, tmp_path):
+        import itertools
+        import os
+
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+        os.utime(sub_file, (1000, 1000))
+
+        line_spec = [
+            {"text": "猫", "start": 1000, "end": 3000},
+            {"text": "犬", "start": 4000, "end": 6000},
+            {"text": "鳥", "start": 7000, "end": 9000},
+        ]
+        # Text-keyed so re-tokenizing yields the same surfaces (str.find aligns)
+        # regardless of how many passes occur — only the call COUNT changes.
+        by_text = {
+            "猫": [_make_token("猫", "名詞", lemma="猫", kana="ネコ")],
+            "犬": [_make_token("犬", "名詞", lemma="犬", kana="イヌ")],
+            "鳥": [_make_token("鳥", "名詞", lemma="鳥", kana="トリ")],
+        }
+        mock_tagger = MagicMock(side_effect=lambda text: list(by_text[text]))
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                return_value=self._make_mock_subs(line_spec),
+            ),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value="fg"),
+            patch("anki_miner.services.subtitle_parser.generate_reading", return_value="rd"),
+        ):
+            service = SubtitleParserService(test_config)
+
+            # Abandon after the first line: only one tokenize call, NO commit.
+            gen = service._iter_parsed_lines(sub_file)
+            partial = list(itertools.islice(gen, 1))
+            assert len(partial) == 1
+            assert mock_tagger.call_count == 1
+            assert service._line_cache == {}, "abandoned generator left a truncated cache entry"
+
+            # count_lemmas must re-tokenize all three lines (cache had nothing).
+            counts = service.count_lemmas(sub_file)
+
+        # 1 (abandoned partial) + 3 (full re-tokenize) = 4 tagger calls.
+        assert mock_tagger.call_count == 4
+        # All three lines counted — none dropped by a stale partial cache.
+        assert counts["猫"] == 1
+        assert counts["犬"] == 1
+        assert counts["鳥"] == 1
+
+    def test_full_drain_does_commit_then_count_lemmas_hits_cache(self, test_config, tmp_path):
+        """Control: fully draining the SAME generator DOES commit, so a follow-up
+        count_lemmas serves from cache and adds no tagger calls."""
+        import os
+
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+        os.utime(sub_file, (1000, 1000))
+
+        line_spec = [
+            {"text": "猫", "start": 1000, "end": 3000},
+            {"text": "犬", "start": 4000, "end": 6000},
+        ]
+        by_text = {
+            "猫": [_make_token("猫", "名詞", lemma="猫", kana="ネコ")],
+            "犬": [_make_token("犬", "名詞", lemma="犬", kana="イヌ")],
+        }
+        mock_tagger = MagicMock(side_effect=lambda text: list(by_text[text]))
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                return_value=self._make_mock_subs(line_spec),
+            ),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+
+            # Drain fully -> commit.
+            drained = list(service._iter_parsed_lines(sub_file))
+            assert len(drained) == 2
+            assert mock_tagger.call_count == 2
+            assert service._line_cache, "full drain failed to commit the cache entry"
+
+            counts = service.count_lemmas(sub_file)
+
+        # No new tokenize calls — count_lemmas replayed the committed cache.
+        assert mock_tagger.call_count == 2
+        assert counts["猫"] == 1
+        assert counts["犬"] == 1
