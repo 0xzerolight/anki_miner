@@ -75,6 +75,22 @@ def _run_bundled_smoke() -> int:
     return 0
 
 
+def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Connect the Settings tab's validation requests to the window (T-53).
+
+    ``SettingsTab.validation_requested`` is emitted by Test Connection and the
+    deck/note-type sync buttons (the Anki panel forwards all three into it).
+    It was declared and forwarded but never connected, so those buttons did
+    nothing and the connection badge stuck at "Checking connection...". Wiring
+    it to ``_run_validation`` runs a validation pass; the result flows back
+    through ``_on_validation_result``, which now updates the badge.
+
+    Extracted from ``main()`` so the connection is unit-testable without
+    standing up the whole app.
+    """
+    settings_tab.validation_requested.connect(window._run_validation)
+
+
 def main():
     """Launch the Anki Miner GUI application."""
     _scrub_pyinstaller_env()
@@ -196,6 +212,11 @@ def main():
     settings_tab.config_changed.connect(batch_tab.update_config)
     settings_tab.config_changed.connect(deck_builder_tab.update_config)
     settings_tab.config_changed.connect(youtube_tab.update_config)
+    # Make Test Connection + the deck/note-type sync buttons live: they all
+    # emit SettingsTab.validation_requested, which was previously connected to
+    # nothing (T-53). Routing it to _run_validation also drives the Anki
+    # connection badge via _on_validation_result.
+    _connect_settings_validation(window, settings_tab)
     # Wire the Dictionary Settings panel's pre-remove hook so deleting a
     # dictionary closes cached sqlite handles across every tab first — Win11
     # rejects the rmtree otherwise (Issue #30).

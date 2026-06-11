@@ -457,12 +457,38 @@ class MainWindow(QMainWindow):
         ffmpeg_ok = all(issue.component != "ffmpeg" for issue in result.issues)
         self.status_bar.set_system_status(ankiconnect_ok, ffmpeg_ok)
 
+        # Drive the Settings → Anki connection badge so Test Connection and the
+        # deck/note-type sync buttons (which all route through validation)
+        # produce visible feedback (T-53). The badge otherwise sticks at
+        # "Checking connection..." forever — set_connection_status had no
+        # callers. Use the authoritative result.ankiconnect_ok flag.
+        self._set_anki_connection_badge("connected" if result.ankiconnect_ok else "disconnected")
+
         if result.all_passed:
             self.status_bar.set_operation("System validation passed", "success")
         elif not silent:
             # Show validation issues (skip popup during startup auto-check)
             issues_text = "\n".join([f"- {issue.component}: {issue.message}" for issue in result.issues])
             QMessageBox.warning(self, "Validation Issues", f"System validation found issues:\n\n{issues_text}")
+
+    def _set_anki_connection_badge(self, status: str) -> None:
+        """Push an AnkiConnect connection status onto the Settings → Anki badge.
+
+        Locates the Settings tab by capability (same self-healing lookup as
+        :meth:`_settings_tab_index`, so it survives tab reorders) and forwards
+        to ``AnkiSettingsPanel.set_connection_status``. A no-op when the Settings
+        tab or its ``anki_panel`` is absent — e.g. mid-teardown or in tests that
+        build a bare window — so validation never crashes for want of a badge.
+
+        Args:
+            status: one of "connected", "disconnected", "checking", "unknown".
+        """
+        idx = self._settings_tab_index()
+        if idx < 0:
+            return
+        panel = getattr(self.tabs.widget(idx), "anki_panel", None)
+        if panel is not None:
+            panel.set_connection_status(status)
 
     def _on_processing_result(self, result: ProcessingResult) -> None:
         """Handle processing result from presenter.
@@ -619,6 +645,14 @@ class MainWindow(QMainWindow):
             # both threads down cleanly.
             if isinstance(tab, YouTubeTab) and hasattr(tab, "shutdown"):
                 tab.shutdown()
+            # SettingsTab owns short-lived AnkiConnect workers with no
+            # `worker_thread` (T-12). Route each through the same join policy
+            # so a long fetch/styling request defers the close instead of being
+            # destroyed mid-request.
+            iter_workers = getattr(tab, "iter_close_workers", None)
+            if callable(iter_workers):
+                for worker in iter_workers():
+                    join(worker)
 
         if laggards:
             self._defer_close(event, laggards)
