@@ -619,6 +619,14 @@ class MainWindow(QMainWindow):
             # both threads down cleanly.
             if isinstance(tab, YouTubeTab) and hasattr(tab, "shutdown"):
                 tab.shutdown()
+            # SettingsTab owns short-lived AnkiConnect workers with no
+            # `worker_thread` (T-12). Route each through the same join policy
+            # so a long fetch/styling request defers the close instead of being
+            # destroyed mid-request.
+            iter_workers = getattr(tab, "iter_close_workers", None)
+            if callable(iter_workers):
+                for worker in iter_workers():
+                    join(worker)
 
         if laggards:
             self._defer_close(event, laggards)
