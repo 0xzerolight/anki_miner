@@ -654,8 +654,14 @@ class SingleEpisodeTab(MiningTabBase):
         Args:
             config: New configuration
         """
+        # The offset spinbox is a per-session value the user dials in for the
+        # current episode; it is never persisted back to config. Only follow
+        # config.subtitle_offset when the *persisted* value actually changed,
+        # so an unrelated settings save / theme toggle (each of which re-fires
+        # update_config) doesn't wipe the in-progress offset back to 0.0.
+        if config.subtitle_offset != self.config.subtitle_offset:
+            self.offset_spinbox.setValue(config.subtitle_offset)
         self.config = config
-        self.offset_spinbox.setValue(config.subtitle_offset)
 
     def release_dictionary_resources(self) -> bool:
         """Close sqlite handles cached by the most recent worker run.
