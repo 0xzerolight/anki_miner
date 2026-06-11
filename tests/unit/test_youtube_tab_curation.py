@@ -47,7 +47,7 @@ def tab(test_config: AnkiMinerConfig):
     """A YouTubeTab with patched probe/queue worker classes (no real threads)."""
     cfg = replace(test_config, youtube_max_duration_s=7200, youtube_cookies_from_browser=None)
 
-    probe_patch = patch("anki_miner.gui.widgets.youtube_tab.YouTubeProbeWorker", autospec=False)
+    probe_patch = patch("anki_miner.gui.widgets.youtube_playlist_flow.YouTubeProbeWorker", autospec=False)
     queue_patch = patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker", autospec=False)
     with probe_patch as probe_cls, queue_patch as queue_cls:
         probe_cls.side_effect = lambda *a, **kw: MagicMock(name="ProbeWorker")
@@ -70,7 +70,7 @@ def _add_ready_item(tab, url: str = "https://www.youtube.com/watch?v=abc"):
     tab.url_edit.setText(url)
     tab._on_add_clicked()
     item = tab._queue.all_items()[-1]
-    tab._on_probe_done(item, _make_video_info())
+    tab._add_flow._on_probe_done(item, _make_video_info())
     return item
 
 
