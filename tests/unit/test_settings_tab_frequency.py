@@ -173,12 +173,21 @@ class TestWorkerOutcomes:
         out = tab._resolve_frequency_path()
 
         assert out == freq_home / "frequency.csv"
-        # Selector reflects CSV path → next save won't re-import.
+        # The import STAGES to a .pending sibling — the real CSV is untouched and
+        # the selector/dialog are deferred until both imports commit (T-10).
+        assert calls and calls[0] == (zip_path, freq_home / "frequency.csv.pending")
+        assert captured["information"] == []
+        assert (freq_home / "frequency.csv.pending").exists()
+        assert not (freq_home / "frequency.csv").exists()
+
+        # Promotion happens on commit: .pending -> final, selector + dialog.
+        tab._commit_pending_csv_imports()
+        assert (freq_home / "frequency.csv").exists()
+        assert not (freq_home / "frequency.csv.pending").exists()
         assert tab.filtering_panel.frequency_selector.get_path() == str(freq_home / "frequency.csv")
         assert len(captured["information"]) == 1
         assert "JPDB" in captured["information"][0][1]
         assert "skipped 3" in captured["information"][0][1]
-        assert calls and calls[0] == (zip_path, freq_home / "frequency.csv")
 
     def test_failed_import_shows_warning_and_returns_none(self, tab, tmp_path, monkeypatch):
         captured = _capture_messagebox(monkeypatch)
@@ -222,6 +231,8 @@ class TestNoReimportOnSecondSave:
         tab.filtering_panel.frequency_selector.set_path(str(zip_path))
 
         tab._resolve_frequency_path()
+        # Commit promotes the staged import and updates the selector to the CSV.
+        tab._commit_pending_csv_imports()
 
         # Second save: selector now points at CSV; passthrough branch taken.
         # Replace the stub with one that asserts it's not called.

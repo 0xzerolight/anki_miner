@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
@@ -425,6 +426,76 @@ class TestDictsRootRoundTrip:
         finally:
             widget.deleteLater()
 
+    def test_save_syncs_panel_dicts_root_to_new_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+        """After saving a changed Storage Folder, the dictionary panel's
+        ``_dicts_root`` must follow so refresh_registry()/remove() target the new
+        location — not the stale old one until restart (T-07)."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+
+        starting = tmp_path / "starting"
+        starting.mkdir()
+        cfg = replace(test_config, dicts_root=starting)
+        widget = SettingsTab(cfg)
+        try:
+            new_root = tmp_path / "new_root"
+            new_root.mkdir()
+            widget.dictionary_panel.dicts_root_selector.set_path(str(new_root))
+
+            # Capture the root the panel rescans on the next registry refresh.
+            import anki_miner.gui.widgets.panels.dictionary_settings_panel as dsp
+
+            scanned_roots: list[Path] = []
+            real_registry = dsp.DictionaryRegistry
+
+            def _tracking_registry(root, *a, **kw):
+                scanned_roots.append(root)
+                return real_registry(root, *a, **kw)
+
+            monkeypatch.setattr(dsp, "DictionaryRegistry", _tracking_registry)
+
+            widget._on_save_clicked()
+
+            # Panel state followed the saved root.
+            assert widget.dictionary_panel._dicts_root == new_root
+            assert widget.dictionary_panel.get_dicts_root() == new_root
+            # A subsequent registry rescan targets the new root, not the old one.
+            widget.dictionary_panel.refresh_registry()
+            assert scanned_roots, "registry should have been rescanned"
+            assert scanned_roots[-1] == new_root
+            assert starting not in scanned_roots
+        finally:
+            widget.deleteLater()
+
+    def test_save_unchanged_dicts_root_does_not_reset_panel(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+        """When the root is unchanged the panel must not be needlessly re-synced
+        (only the changed-root path calls set_dicts_root) — T-07 scope guard."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+
+        starting = tmp_path / "starting"
+        starting.mkdir()
+        cfg = replace(test_config, dicts_root=starting)
+        widget = SettingsTab(cfg)
+        try:
+            calls: list[Path] = []
+            real_set = widget.dictionary_panel.set_dicts_root
+
+            def _spy(root):
+                calls.append(root)
+                return real_set(root)
+
+            monkeypatch.setattr(widget.dictionary_panel, "set_dicts_root", _spy)
+
+            # Selector still shows the current root → no change.
+            widget._on_save_clicked()
+
+            assert calls == [], "set_dicts_root must not run when the root is unchanged"
+        finally:
+            widget.deleteLater()
+
     def test_save_rejects_unwritable_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
         """A read-only directory must be rejected at Save so the user is not
         silently committed to a path the importers can't write to."""
@@ -459,5 +530,135 @@ class TestDictsRootRoundTrip:
 
             assert received == [], "save must abort when dicts_root is not writable"
             assert warnings, "user must see a warning explaining the rejection"
+        finally:
+            widget.deleteLater()
+
+
+class TestDictionaryRemovedPersistsNarrowly:
+    """dictionary_removed must persist only the chain — never run the full Save
+    pipeline whose unrelated validation aborts would orphan the removed dict_id
+    in gui_config.json (Issue #30 / T-08)."""
+
+    def test_removed_persists_chain_despite_failing_validation(self, test_config, tmp_path, monkeypatch):
+        """A stale (deleted) cookies file would abort the full Save at its
+        validation gate — but the chain change after a destructive remove must
+        still be persisted, with no warning dialog."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        # A cookies path that does not exist → _on_save_clicked would early-return
+        # at the cookies validation, orphaning the removed dict_id.
+        cfg = replace(
+            test_config,
+            youtube_cookies_file=tmp_path / "gone.txt",
+            dictionary_chain=(
+                ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),
+                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ),
+        )
+        widget = SettingsTab(cfg)
+        try:
+            warnings: list[tuple] = []
+            monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(a) or 0)
+            monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
+
+            # Simulate the panel state AFTER a remove: dict-a gone from the chain.
+            widget.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+
+            widget.dictionary_panel.dictionary_removed.emit()
+
+            assert received, "chain change must be persisted even though Save would have aborted"
+            assert received[-1].dictionary_chain == (ChainEntry(kind="jisho", dict_id=None, enabled=True),)
+            assert warnings == [], "the narrow persist must not pop a validation warning"
+        finally:
+            widget.deleteLater()
+
+    def test_removed_does_not_commit_unrelated_pending_edit(self, test_config, monkeypatch):
+        """The success path of the full Save commits ALL panels' unsaved edits.
+        The narrow persist must touch only dictionary_chain — a typed-but-unsaved
+        deck name must not leak into the persisted config."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        cfg = replace(
+            test_config,
+            anki_deck_name="original_deck",
+            dictionary_chain=(
+                ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),
+                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ),
+        )
+        widget = SettingsTab(cfg)
+        try:
+            monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+            monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: None)
+
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
+
+            # Unrelated pending edit the user has NOT saved.
+            widget.anki_panel.deck_input.setText("unsaved_deck")
+
+            widget.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+            widget.dictionary_panel.dictionary_removed.emit()
+
+            assert received, "chain change must be persisted"
+            # Only the chain changed; the unrelated edit was not committed.
+            assert received[-1].dictionary_chain == (ChainEntry(kind="jisho", dict_id=None, enabled=True),)
+            assert received[-1].anki_deck_name == "original_deck"
+        finally:
+            widget.deleteLater()
+
+
+class TestBlacklistWhitelistSelectorClearedOnNone:
+    """_load_config must CLEAR the blacklist/whitelist selectors when the config
+    path is None — otherwise Reset-to-Defaults leaves the old path visible and
+    the next Save reads it back, re-persisting the stale path (T-11)."""
+
+    def test_reset_clears_selectors_and_next_save_persists_none(self, test_config, tmp_path, monkeypatch):
+        from PyQt6.QtWidgets import QMessageBox
+
+        bl = tmp_path / "blacklist.txt"
+        bl.write_text("a\n", encoding="utf-8")
+        wl = tmp_path / "whitelist.txt"
+        wl.write_text("b\n", encoding="utf-8")
+        cfg = replace(test_config, blacklist_path=bl, whitelist_path=wl)
+        widget = SettingsTab(cfg)
+        try:
+            # Loaded paths are visible.
+            assert widget.filtering_panel.blacklist_selector.get_path() == str(bl)
+            assert widget.filtering_panel.whitelist_selector.get_path() == str(wl)
+
+            # Reset to defaults (paths become None) — confirm Yes, suppress info.
+            monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+            monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+            widget._on_reset_clicked()
+
+            # Selectors must be cleared, not left showing the stale paths.
+            assert widget.filtering_panel.blacklist_selector.get_path() == ""
+            assert widget.filtering_panel.whitelist_selector.get_path() == ""
+
+            # The very next Save must persist None, not re-read the old path.
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
+            widget._on_save_clicked()
+
+            assert received, "save should emit a config"
+            assert received[-1].blacklist_path is None
+            assert received[-1].whitelist_path is None
+        finally:
+            widget.deleteLater()
+
+    def test_update_config_to_none_clears_previously_loaded_path(self, test_config, tmp_path):
+        """A programmatic update_config that drops the path must also clear the
+        selector (the same _load_config branch Reset relies on)."""
+        bl = tmp_path / "blacklist.txt"
+        bl.write_text("a\n", encoding="utf-8")
+        widget = SettingsTab(replace(test_config, blacklist_path=bl))
+        try:
+            assert widget.filtering_panel.blacklist_selector.get_path() == str(bl)
+            widget.update_config(replace(test_config, blacklist_path=None))
+            assert widget.filtering_panel.blacklist_selector.get_path() == ""
         finally:
             widget.deleteLater()
