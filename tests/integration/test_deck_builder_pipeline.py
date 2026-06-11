@@ -259,6 +259,14 @@ def _run_worker(
 
     with (
         patch("anki_miner.services.anki_service.post_action", side_effect=_post_action_spy),
+        # Media uploads route through anki_media_store; stub its multi POST
+        # with one non-error sub-result per action so every file counts as
+        # stored without touching the network.
+        patch(
+            "anki_miner.services.anki_media_store.post_multi",
+            side_effect=lambda url, actions, timeout=30: [None] * len(actions),
+        ),
+        patch("anki_miner.services.anki_media_store.post_action", side_effect=_post_action_spy),
         patch(
             "anki_miner.services.media_extractor.MediaExtractorService.extract_media_batch",
             side_effect=_fake_extract_media_batch(tmp_path),
@@ -351,6 +359,14 @@ class TestDeckBuilderRouting:
 
         with (
             patch("anki_miner.services.anki_service.post_action", side_effect=_spy),
+            # Media uploads route through anki_media_store; stub its multi
+            # POST with one non-error sub-result per action so every file
+            # counts as stored without touching the network.
+            patch(
+                "anki_miner.services.anki_media_store.post_multi",
+                side_effect=lambda url, actions, timeout=30: [None] * len(actions),
+            ),
+            patch("anki_miner.services.anki_media_store.post_action", side_effect=_spy),
             patch(
                 "anki_miner.services.media_extractor.MediaExtractorService.extract_media_batch",
                 side_effect=_fake_extract_media_batch(tmp_path),

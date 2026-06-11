@@ -932,7 +932,7 @@ class TestStoreMediaFilesBatch:
 
         with (
             patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
-            caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_service"),
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_media_store"),
         ):
             stored = service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
 
@@ -989,7 +989,7 @@ class TestStoreMediaFilesBatch:
         resp = _mock_response(result=[None])  # one non-error sub-result per single-file chunk
 
         with (
-            patch("anki_miner.services.anki_service._MEDIA_BATCH_MAX_BYTES", 100),
+            patch("anki_miner.services.anki_media_store._MEDIA_BATCH_MAX_BYTES", 100),
             patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post,
         ):
             stored = service._store_media_files_batch(items)
@@ -1869,7 +1869,7 @@ class TestDictMediaUpload:
             return _mock_response(result=[12345])
 
         with (
-            caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_service"),
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_media_store"),
             patch("anki_miner.services._ankiconnect.requests.post", side_effect=fake_post) as mock_post,
         ):
             created = service.create_cards_batch([CardPayload(word=word, media=MediaData(), definition=definition)])
@@ -1911,7 +1911,7 @@ class TestDictMediaUpload:
         resp = _mock_response(result=[None])  # one non-error sub-result per single-file chunk
 
         with (
-            patch("anki_miner.services.anki_service._MEDIA_BATCH_MAX_BYTES", 100),
+            patch("anki_miner.services.anki_media_store._MEDIA_BATCH_MAX_BYTES", 100),
             patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post,
         ):
             service._upload_dict_media_batch(word_data_list)
@@ -1977,7 +1977,7 @@ class TestExtractDictMediaSrcsEnvelope:
     """
 
     def test_envelope_img_src_is_extracted(self):
-        from anki_miner.services.anki_service import _extract_dict_media_srcs
+        from anki_miner.services.anki_media_store import _extract_dict_media_srcs
 
         definition = (
             '<a class="gloss-image-link" data-path="orig/path.svg">'
