@@ -1,10 +1,8 @@
 """Service for interacting with Anki via AnkiConnect."""
 
 import base64
-import html
 import logging
 import re
-import unicodedata
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -15,6 +13,16 @@ from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.models import CardPayload
 from anki_miner.services._ankiconnect import post_action, post_multi
+from anki_miner.services.anki_note_builder import (
+    OPTIONAL_FIELD_KEYS as _OPTIONAL_FIELD_KEYS,
+)
+from anki_miner.services.anki_note_builder import (
+    REQUIRED_FIELD_KEYS as _REQUIRED_FIELD_KEYS,
+)
+from anki_miner.services.anki_note_builder import (
+    _strip_for_dedup,
+    build_note,
+)
 from anki_miner.services.dictionary.yomitan_renderer import DICT_MEDIA_CLASS
 
 logger = logging.getLogger(__name__)
@@ -32,9 +40,6 @@ _DICT_MEDIA_IMG_RE = re.compile(
 )
 _IMG_SRC_RE = re.compile(r'src="([^"]+)"', re.IGNORECASE)
 
-# Used to normalize a stored first-field value to the same key Anki dedups on.
-_HTML_TAG_RE = re.compile(r"<[^>]+>")
-
 # Media uploads are base64-heavy; a smaller chunk than the 100-note addNotes
 # batch keeps individual request payloads manageable.
 _MEDIA_BATCH_CHUNK = 50
@@ -45,28 +50,6 @@ _MEDIA_BATCH_CHUNK = 50
 # chunk of large files flushes early instead of tripping the reset (Issue: media
 # files not stored on big batches).
 _MEDIA_BATCH_MAX_BYTES = 4 * 1024 * 1024
-_SOUND_REF_RE = re.compile(r"\[(?:sound|anki:play[^\]]*):[^\]]*\]", re.IGNORECASE)
-
-
-def _strip_for_dedup(value: str) -> str:
-    """Normalize a field value to match Anki's HTML/media-stripped dedup key.
-
-    Anki computes a first-field duplicate checksum after stripping HTML tags and
-    media references (its ``strip_html_media``). Our known-words filter compares
-    the stored first field against ``mined_form`` — a plain string — so we must
-    strip the same way, or a pre-existing card whose Expression carries ``<b>``,
-    ``<div>``, ``&entity;`` markup, a ``[sound:...]`` ref, or stray whitespace
-    slips the filter and then collides at ``addNotes`` time (the AnkiConnect
-    "cannot create note because it is a duplicate" error).
-
-    Mirrors Anki deliberately: it strips HTML/media but NOT ``[reading]``
-    furigana brackets, so ``食べる[たべる]`` stays distinct from ``食べる`` here too.
-    """
-    text = _SOUND_REF_RE.sub("", value)
-    text = _HTML_TAG_RE.sub("", text)
-    text = html.unescape(text)
-    text = unicodedata.normalize("NFC", text)
-    return " ".join(text.split())
 
 
 def _is_duplicate_error(err: AnkiConnectionError) -> bool:
@@ -119,22 +102,10 @@ def _resolve_dict_media_path(src: str, dicts_root: Path) -> Path | None:
 class AnkiService:
     """Service for interacting with Anki via AnkiConnect (stateless service)."""
 
-    REQUIRED_FIELD_KEYS = {
-        "word",
-        "sentence",
-        "definition",
-        "picture",
-        "audio",
-        "expression_furigana",
-        "sentence_furigana",
-    }
-
-    OPTIONAL_FIELD_KEYS = {
-        "pitch_position",
-        "pitch_category",
-        "frequency",
-        "source",
-    }
+    # Field-mapping contract lives in anki_note_builder; aliased here because
+    # callers and tests reference the keys via the service class.
+    REQUIRED_FIELD_KEYS = _REQUIRED_FIELD_KEYS
+    OPTIONAL_FIELD_KEYS = _OPTIONAL_FIELD_KEYS
 
     def __init__(self, config: AnkiMinerConfig):
         """Initialize the Anki service.
@@ -554,90 +525,16 @@ class AnkiService:
             for i in range(0, len(word_data_list), batch_size):
                 batch = word_data_list[i : i + batch_size]
 
-                # Build notes array for this batch
+                # Build notes array for this batch (field mapping lives in
+                # anki_note_builder).
                 notes = []
                 for item in batch:
-                    word = item.word
-                    media = item.media
-                    definition = item.definition
-                    extra_fields = item.extra_fields
-
-                    # Pull glossary out of extra_fields BEFORE the OPTIONAL pass —
-                    # OPTIONAL_FIELD_KEYS html.escape()s its values, but glossary
-                    # is raw HTML and must be sent verbatim.
-                    glossary_html = ""
-                    if extra_fields and "glossary" in extra_fields:
-                        glossary_html = extra_fields["glossary"] or ""
-                        extra_fields = {k: v for k, v in extra_fields.items() if k != "glossary"}
-                        if not extra_fields:
-                            extra_fields = None
-
-                    # Build field values (only reference successfully stored media)
-                    picture_html = ""
-                    if media.screenshot_filename and media.screenshot_filename in stored_files:
-                        picture_html = f'<img src="{html.escape(media.screenshot_filename)}">'
-
-                    audio_ref = ""
-                    if media.audio_filename and media.audio_filename in stored_files:
-                        audio_ref = f"[sound:{media.audio_filename}]"
-
-                    # Sentence + SentenceFurigana use the bolded forms when the
-                    # config flag is on AND the parse pre-computed them. The
-                    # precomputed forms are already HTML-safe (per-token escape
-                    # in wrap_target_*); the <b> tags must not be double-escaped.
-                    # Empty precomputed string means "fall back to escape" — this
-                    # is the path for entries that came from a code path that
-                    # did not honor the bold flag (defensive).
-                    if self.config.bold_target_in_sentence and word.sentence_bolded:
-                        sentence_field = word.sentence_bolded
+                    built = build_note(item, self.config, stored_files)
+                    if built.used_precomputed_bold:
                         bold_used += 1
-                    else:
-                        sentence_field = html.escape(word.sentence)
-                        if self.config.bold_target_in_sentence:
-                            bold_fallback += 1
-                    if self.config.bold_target_in_sentence and word.sentence_furigana_bolded:
-                        sentence_furigana_field = word.sentence_furigana_bolded
-                    else:
-                        sentence_furigana_field = html.escape(word.sentence_furigana)
-
-                    # Build fields, skipping any with empty config mapping
-                    field_data = {
-                        "word": html.escape(word.mined_form),
-                        "sentence": sentence_field,
-                        "definition": definition or "",
-                        "glossary": glossary_html,
-                        "picture": picture_html,
-                        "audio": audio_ref,
-                        "expression_furigana": html.escape(word.expression_furigana),
-                        "expression_reading": html.escape(word.expression_reading),
-                        "sentence_furigana": sentence_furigana_field,
-                        "sentence_reading": html.escape(word.sentence_reading),
-                    }
-                    fields = {}
-                    for key, value in field_data.items():
-                        anki_field_name = self.config.anki_fields.get(key, "")
-                        if anki_field_name:
-                            fields[anki_field_name] = value
-
-                    # Add optional fields if configured and data available
-                    if extra_fields:
-                        for key, value in extra_fields.items():
-                            anki_field_name = self.config.anki_fields.get(key, "")
-                            if key in self.OPTIONAL_FIELD_KEYS and anki_field_name and value:
-                                fields[anki_field_name] = html.escape(str(value))
-
-                    note: dict = {
-                        "deckName": self.config.anki_deck_name,
-                        "modelName": self.config.anki_note_type,
-                        "fields": fields,
-                        "tags": self.config.anki_tags.split(),
-                    }
-                    # Deck Builder: re-card words that already exist elsewhere in the
-                    # collection. duplicateScope="deck" keeps cross-episode curation's
-                    # single-carding meaningful within the new deck.
-                    if self.config.allow_duplicate_cards:
-                        note["options"] = {"allowDuplicate": True, "duplicateScope": "deck"}
-                    notes.append(note)
+                    if built.used_bold_fallback:
+                        bold_fallback += 1
+                    notes.append(built.note)
 
                 # Send batch request. `post_action` raises `AnkiConnectionError`
                 # for connection failures, transport errors, and AnkiConnect-side
