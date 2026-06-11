@@ -453,7 +453,7 @@ class YouTubeFetcherService:
         if cancel_event is not None:
             watchdog = threading.Thread(
                 target=self._cancel_watchdog,
-                args=(cancel_event, fetch_done),
+                args=(cancel_event, fetch_done, popen),
                 name="ytdlp-cancel-watchdog",
                 daemon=True,
             )
@@ -467,7 +467,7 @@ class YouTubeFetcherService:
 
                 if cancel_event is not None and cancel_event.is_set():
                     cancelled = True
-                    self._kill_tree()
+                    self._kill_tree(expected=popen)
                     break
 
                 m = _PROGRESS_RE.search(line)
@@ -737,31 +737,52 @@ class YouTubeFetcherService:
             sub_source=sub_source,
         )
 
-    def _cancel_watchdog(self, cancel_event: threading.Event, fetch_done: threading.Event) -> None:
+    def _cancel_watchdog(
+        self,
+        cancel_event: threading.Event,
+        fetch_done: threading.Event,
+        popen: subprocess.Popen[str],
+    ) -> None:
         """Kill the yt-dlp tree when *cancel_event* fires mid-fetch.
 
         Runs on a daemon thread for the duration of one ``fetch_video`` call.
         Waits on the cancel event itself (near-zero latency on cancel) and
         polls *fetch_done* each interval so a completed fetch retires the
         thread promptly without it ever killing anything.
+
+        *popen* is this fetch's own handle: it is passed through to
+        :meth:`_kill_tree` as ``expected`` so a stale watchdog descheduled past
+        its join can never claim-and-kill a *subsequent* fetch's subprocess —
+        the ``fetch_done``/``is_set`` check and the kill are not atomic across
+        fetches, so the per-fetch handle is the authoritative guard.
         """
         while True:
             if cancel_event.wait(_CANCEL_POLL_INTERVAL_S):
                 if not fetch_done.is_set():
-                    self._kill_tree()
+                    self._kill_tree(expected=popen)
                 return
             if fetch_done.is_set():
                 return
 
-    def _kill_tree(self) -> None:
+    def _kill_tree(self, expected: subprocess.Popen[str] | None = None) -> None:
         # Claim-once: the reader loop's inline cancel check and the cancel
         # watchdog can race to kill the same fetch; whichever claims the
         # handle proceeds, the loser no-ops, keeping terminate() single-shot.
         # fetch_video's finally holds its own local reference for wait(), so
         # nulling the shared handle here is safe. psutil.NoSuchProcess below
         # covers a pid that already exited before the Process() lookup.
+        #
+        # *expected* scopes the claim to one fetch: callers tied to a specific
+        # fetch (the reader loop, the cancel watchdog) pass that fetch's own
+        # popen. A stale watchdog that was descheduled past its join and wakes
+        # up during a *later* fetch would otherwise claim and kill the wrong
+        # subprocess — the fetch_done check and this claim are not atomic across
+        # fetches. When expected is None the caller accepts whatever handle is
+        # current (same-fetch callers that have no specific handle to assert).
         with self._kill_lock:
             popen = self._popen
+            if expected is not None and popen is not expected:
+                return
             self._popen = None
         if popen is None:
             return

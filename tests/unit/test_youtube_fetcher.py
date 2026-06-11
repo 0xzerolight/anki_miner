@@ -1102,6 +1102,82 @@ class TestKillTreeEdgeCases:
 
 
 # ---------------------------------------------------------------------------
+# _kill_tree per-fetch handle scoping (stale-watchdog guard)
+# ---------------------------------------------------------------------------
+
+
+class TestKillTreeExpectedScoping:
+    """``_kill_tree(expected=...)`` must only kill when it owns the live handle.
+
+    Guards the cross-fetch race: a watchdog descheduled past its join could wake
+    during a later fetch and claim-and-kill the wrong subprocess. The per-fetch
+    ``expected`` handle makes the claim no-op when ``self._popen`` has moved on.
+    """
+
+    def _install_parent(self, service: YouTubeFetcherService) -> MagicMock:
+        """Point service._popen at a fresh fake popen; return its psutil parent mock."""
+        popen = MagicMock()
+        popen.pid = 4242
+        service._popen = popen
+
+        parent = MagicMock()
+        parent.children.return_value = []
+        parent.terminate = MagicMock()
+        parent.kill = MagicMock()
+        return parent
+
+    def test_stale_expected_does_not_kill_current_fetch(self, service: YouTubeFetcherService) -> None:
+        # service._popen is the *current* fetch; a stale watchdog calls with a
+        # DIFFERENT popen object -> claim must no-op, nothing terminated/killed,
+        # and the live handle must be left intact for its real owner.
+        parent = self._install_parent(service)
+        current_popen = service._popen
+        stale_popen = MagicMock()  # a different object than current_popen
+        stale_popen.pid = 9999
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.psutil.Process", return_value=parent) as proc,
+            patch("anki_miner.services.youtube_fetcher.psutil.wait_procs", return_value=([], [])),
+        ):
+            service._kill_tree(expected=stale_popen)
+
+        proc.assert_not_called()
+        parent.terminate.assert_not_called()
+        parent.kill.assert_not_called()
+        # Live handle untouched -> the real same-fetch killer can still claim it.
+        assert service._popen is current_popen
+
+    def test_matching_expected_kills(self, service: YouTubeFetcherService) -> None:
+        # expected IS the current handle -> normal claim-and-kill proceeds.
+        parent = self._install_parent(service)
+        current_popen = service._popen
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.psutil.Process", return_value=parent),
+            patch("anki_miner.services.youtube_fetcher.psutil.wait_procs", return_value=([], [])),
+        ):
+            service._kill_tree(expected=current_popen)
+
+        parent.terminate.assert_called_once()
+        # Claimed: shared handle nulled so the loser of any same-fetch race no-ops.
+        assert service._popen is None
+
+    def test_none_expected_kills_current(self, service: YouTubeFetcherService) -> None:
+        # expected=None (default) preserves the legacy same-fetch path: claim
+        # whatever handle is current and kill it.
+        parent = self._install_parent(service)
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.psutil.Process", return_value=parent),
+            patch("anki_miner.services.youtube_fetcher.psutil.wait_procs", return_value=([], [])),
+        ):
+            service._kill_tree()
+
+        parent.terminate.assert_called_once()
+        assert service._popen is None
+
+
+# ---------------------------------------------------------------------------
 # M2 — Presenter exception suppression
 # ---------------------------------------------------------------------------
 
