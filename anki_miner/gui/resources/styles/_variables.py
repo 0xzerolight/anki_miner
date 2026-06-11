@@ -30,7 +30,6 @@ class Spacing:
     md: int = 16
     lg: int = 24
     xl: int = 32
-    xxl: int = 48
 
 
 @dataclass(frozen=True)
@@ -55,7 +54,6 @@ class BorderRadius:
     small: int = 4
     default: int = 6
     large: int = 8
-    pill: int = 9999  # Fully rounded (pill shape)
 
 
 # Singleton instances for use throughout the application
@@ -82,7 +80,7 @@ def get_variable_dict(font_scale: float = 1.0) -> dict[str, str]:
     variables = {}
 
     # Spacing variables (unaffected by font_scale)
-    for field in ["xxs", "xs", "sm", "md", "lg", "xl", "xxl"]:
+    for field in ["xxs", "xs", "sm", "md", "lg", "xl"]:
         value = getattr(SPACING, field)
         variables[f"spacing-{field}"] = str(value)
 
@@ -115,7 +113,7 @@ def get_variable_dict(font_scale: float = 1.0) -> dict[str, str]:
         variables[f"font-size-{field}"] = str(scaled)
 
     # Border radius variables (unaffected by font_scale)
-    for field in ["small", "default", "large", "pill"]:
+    for field in ["small", "default", "large"]:
         value = getattr(BORDER_RADIUS, field)
         variables[f"border-radius-{field}"] = str(value)
 
