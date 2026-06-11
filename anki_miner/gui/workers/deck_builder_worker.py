@@ -288,9 +288,9 @@ class DeckBuilderWorker(ProcessorOwningWorker):
     def _known_lemmas(self, base: EpisodeProcessor) -> set[str]:
         """Fetch known lemmas for the PREVIEW ESTIMATE only.
 
-        Mirrors Phase-2's known-words gate EXACTLY (episode_processor.py): the
-        local known-words DB cache is used only when BOTH ``use_known_words_db``
-        is on AND the DB is available; otherwise it falls back to
+        Tracks Phase-2's known-words gate (episode_processor.py): the local
+        known-words DB cache is used only when BOTH ``use_known_words_db`` is on
+        AND the DB is available; otherwise it falls back to
         ``anki_service.get_existing_vocabulary()``. The DB *file* exists for any
         user who curated a word via "Mark known" regardless of the toggle, so
         keying on the file alone made the preview subtract a stale/user-only set
@@ -298,12 +298,20 @@ class DeckBuilderWorker(ProcessorOwningWorker):
         51" divergence class. The source='user' ignore list (Issue #42) is
         always unioned in, matching the build's always-applied user list.
 
-        NOTE: this is an ESTIMATE. Corpus lemmas are keyed by dictionary lemma,
-        while Anki known-words are keyed by ``mined_form`` (surface form for
-        nouns). So ``known_skipped`` in the preview is approximate. The EXACT
-        known-words filtering happens during the build via the existing Phase-2
-        path (collection_filter ON → ``include_known_words=False``). We do not
-        attempt to reconcile the two key spaces here.
+        NOTE: this is an ESTIMATE and intentionally does NOT mirror the build
+        byte-for-byte. Two known divergences:
+
+        * Key space: corpus lemmas are keyed by dictionary lemma, while Anki
+          known-words are keyed by ``mined_form`` (surface form for nouns), so
+          ``known_skipped`` is approximate.
+        * Live-Anki sync: when the DB path is taken this returns the cached
+          ``get_known_words()`` only, whereas the build additionally syncs live
+          Anki vocab per episode. With a stale DB the build subtracts MORE, so
+          it can produce fewer cards than the preview promised.
+
+        The EXACT known-words filtering happens during the build via the
+        existing Phase-2 path (collection_filter ON → ``include_known_words=
+        False``). We do not reconcile the two here.
         """
         # User-curated ignore list (Issue #42): always applied in Phase 2
         # regardless of the use_known_words_db toggle; fold it in for parity.
