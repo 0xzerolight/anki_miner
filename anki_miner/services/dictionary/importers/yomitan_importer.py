@@ -28,6 +28,15 @@ from anki_miner.services.dictionary.zip_safety import validate_zip_safe
 
 ProgressFn = Callable[[int, int, str], None]
 
+# index.json is a tiny metadata file (title, revision, format, a handful of
+# scalar fields). Cap how much we ever pull into memory when *peeking* at a zip
+# the user picked for a reimport slot (derive_dict_id_from_zip), so a small zip
+# carrying a multi-GB highly-compressible index.json cannot OOM the process.
+# The full-import path is already protected by validate_zip_safe's total-size
+# cap before extractall; this guards the peek path that bypasses it. 8 MiB is
+# orders of magnitude beyond any legitimate index.json.
+MAX_INDEX_JSON_BYTES = 8 * 1024 * 1024
+
 
 @dataclass(frozen=True)
 class YomitanImportResult:
@@ -269,10 +278,23 @@ def derive_dict_id_from_zip(zip_path: Path) -> str:
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
             try:
-                with zf.open("index.json") as fp:
-                    raw = fp.read().decode("utf-8")
+                info = zf.getinfo("index.json")
             except KeyError as e:
                 raise SetupError("Zip missing required index.json") from e
+            # Reject on the DECLARED uncompressed size before reading a single
+            # byte (a malicious archive can lie here, but a lie that *under*-
+            # reports is still capped by the bounded read below).
+            if info.file_size > MAX_INDEX_JSON_BYTES:
+                raise SetupError(
+                    f"index.json is implausibly large " f"({info.file_size:,} > {MAX_INDEX_JSON_BYTES:,} bytes)"
+                )
+            with zf.open("index.json") as fp:
+                # Bounded read (+1 to detect overflow past the cap) so a zip that
+                # under-declares its size still cannot balloon memory.
+                raw_bytes = fp.read(MAX_INDEX_JSON_BYTES + 1)
+            if len(raw_bytes) > MAX_INDEX_JSON_BYTES:
+                raise SetupError(f"index.json exceeds the {MAX_INDEX_JSON_BYTES:,}-byte cap")
+            raw = raw_bytes.decode("utf-8")
     except zipfile.BadZipFile as e:
         raise SetupError(f"Corrupt zip file: {e}") from e
 
