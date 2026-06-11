@@ -216,6 +216,52 @@ class TestAddUrl:
         assert len(tab._probe_workers) == 3
 
 
+class TestAddUrlRejection:
+    """Add rejects inputs that aren't http(s) / a YouTube URL / a video id (T-34).
+
+    Guards against an option-leading "URL" reaching yt-dlp as an argument
+    (e.g. ``--update-to=...`` -> attacker-repo self-replacement on the probe).
+    A rejected input must queue nothing, spawn no probe, and surface a
+    user-visible error.
+    """
+
+    def test_option_leading_url_rejected(self, tab):
+        probe_cls = tab._probe_worker_cls
+        tab.url_edit.setText("--update-to=evil/fork@tag")
+        tab._on_add_clicked()
+
+        assert tab._queue.all_items() == []
+        assert probe_cls.call_count == 0
+        assert len(tab._probe_workers) == 0
+        # User-visible feedback and the URL field is NOT cleared (so the user
+        # can see/fix what they pasted).
+        assert "valid" in tab.log_widget.text_edit.toPlainText().lower()
+        assert tab.url_edit.text() == "--update-to=evil/fork@tag"
+
+    def test_dash_config_location_rejected(self, tab):
+        probe_cls = tab._probe_worker_cls
+        tab.url_edit.setText("--config-location=/tmp/evil.conf")
+        tab._on_add_clicked()
+        assert tab._queue.all_items() == []
+        assert probe_cls.call_count == 0
+
+    def test_plain_https_url_still_accepted(self, tab):
+        # http(s) inputs remain accepted — yt-dlp stays the final validator
+        # for non-YouTube-shaped URLs (no behaviour change for that path).
+        probe_cls = tab._probe_worker_cls
+        tab.url_edit.setText("https://example.com/whatever")
+        tab._on_add_clicked()
+        assert len(tab._queue.all_items()) == 1
+        assert probe_cls.call_count == 1
+
+    def test_bare_video_id_accepted(self, tab):
+        probe_cls = tab._probe_worker_cls
+        tab.url_edit.setText("dQw4w9WgXcQ")
+        tab._on_add_clicked()
+        assert len(tab._queue.all_items()) == 1
+        assert probe_cls.call_count == 1
+
+
 class TestProbeOutcomes:
     """Probe done/error flip the item's status and refresh buttons."""
 
@@ -374,6 +420,38 @@ class TestDeferredProcessor:
                 kwargs = mock_create.call_args.kwargs
                 assert kwargs["stats_service"] is sentinel_stats
                 assert widget._processor is built_processor
+            finally:
+                widget.deleteLater()
+
+    def test_update_config_on_deferred_processor_keeps_stats_service(self, test_config: AnkiMinerConfig):
+        """update_config before the first run must not drop stats_service (T-15).
+
+        When the processor is still None (startup-deferred), the rebuild used
+        ``getattr(None, "stats_service", None)`` -> None, silently disabling
+        stats.db recording for the session. The tab's own stats service must
+        be threaded through instead.
+        """
+        cfg = replace(test_config, youtube_max_duration_s=7200)
+        sentinel_stats = MagicMock(name="StatsService")
+        with (
+            patch("anki_miner.gui.widgets.youtube_tab.YouTubeProbeWorker", autospec=False),
+            patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker", autospec=False),
+            patch("anki_miner.gui.widgets.youtube_tab.create_youtube_fetcher", return_value=MagicMock()),
+            patch("anki_miner.gui.widgets.youtube_tab.create_episode_processor") as mock_create,
+        ):
+            mock_create.return_value = MagicMock(name="RebuiltProcessor")
+            widget = YouTubeTab(
+                config=cfg,
+                processor=None,
+                fetcher=MagicMock(name="Fetcher"),
+                presenter=MagicMock(name="Presenter"),
+                stats_service=sentinel_stats,
+            )
+            try:
+                widget.update_config(replace(cfg, youtube_max_duration_s=999))
+
+                assert mock_create.call_count == 1
+                assert mock_create.call_args.kwargs["stats_service"] is sentinel_stats
             finally:
                 widget.deleteLater()
 
@@ -675,6 +753,38 @@ class TestRemoveAndClear:
         remaining = tab._queue.all_items()
         assert remaining == [item1]
         assert tab.list_widget.count() == 1
+
+    def test_clear_during_run_skips_dropped_items_in_worker(self, tab):
+        """Mid-run Clear must reach the worker, not just the GUI model (T-23).
+
+        The worker iterates its constructor snapshot, so dropping items from
+        the tab's queue alone still mined them — cards for rows that no
+        longer existed.
+        """
+        item1 = _add_ready_item(tab, "https://youtu.be/v1")
+        item2 = _add_ready_item(tab, "https://youtu.be/v2")
+        item3 = _add_ready_item(tab, "https://youtu.be/v3")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)  # item1 -> PROCESSING
+        worker = tab.worker_thread
+
+        tab._on_clear_clicked()
+
+        skipped = [c.args[0] for c in worker.skip_item.call_args_list]
+        assert skipped == [item2, item3]  # PROCESSING item1 is preserved
+        assert item1 not in skipped
+
+    def test_remove_during_run_skips_item_in_worker(self, tab):
+        """Removing a single row mid-run must also reach the worker (T-23)."""
+        _add_ready_item(tab, "https://youtu.be/v1")
+        item2 = _add_ready_item(tab, "https://youtu.be/v2")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        worker = tab.worker_thread
+
+        tab._on_remove_clicked(item2)
+
+        worker.skip_item.assert_called_once_with(item2)
 
     def test_clear_resets_progress_widget_when_idle(self, tab):
         """Regression: clicking Clear after a stuck-bar scenario clears the bar."""

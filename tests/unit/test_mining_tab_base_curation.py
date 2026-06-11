@@ -1,10 +1,12 @@
 """MiningTabBase curation bridge guards (Issue #60)."""
 
 import contextlib
+import threading
+import time
 from unittest.mock import patch
 
 import pytest
-from PyQt6.QtCore import QThread, QTimer
+from PyQt6.QtCore import Qt, QThread, QTimer
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
@@ -151,3 +153,69 @@ def test_cancel_during_active_dialog_releases_worker(qapp):
 
     assert state["thread"] is qapp.thread()
     assert worker.result is None  # cancelled → None (distinct from empty selection)
+
+
+def test_poison_curation_gate_releases_parked_worker(qapp):
+    """A worker parked in _curation_event.wait() resumes with None after poisoning.
+
+    Simulates app close: the GUI thread never spins its event loop (no
+    _drain_until here), so the queued _curation_requested slot can never run —
+    _poison_curation_gate() must release the worker directly (T-01 deadlock fix).
+    """
+    tab = _Bare()
+    tab._init_curation_bridge()
+
+    # DirectConnection probe runs on the worker thread at emit time, right
+    # before the bridge parks in _curation_event.wait(). Deliberately no
+    # event-loop spin here — processing events would deliver the queued slot
+    # and defeat the scenario.
+    reached_gate = threading.Event()
+    tab._curation_requested.connect(lambda words: reached_gate.set(), Qt.ConnectionType.DirectConnection)
+
+    worker = _CurationWorker(tab, ["w1"])
+    worker.start()
+    assert reached_gate.wait(2.0), "worker never emitted the curation request"
+    time.sleep(0.05)  # let it advance the final step into _curation_event.wait()
+    assert not worker.isFinished(), "worker should be parked at the curation gate"
+
+    tab._poison_curation_gate()
+
+    assert worker.wait(3000), "poison did not release the parked worker"
+    assert worker.result is None
+    # Flush the stale queued signal; the poisoned slot must not pop a dialog.
+    with patch(f"{MODULE}.WordCurationDialog") as dialog_cls:
+        QApplication.processEvents()
+    dialog_cls.assert_not_called()
+
+
+def test_curation_bridge_after_poison_returns_none_without_blocking(qapp):
+    """A worker that reaches the gate after poisoning falls through immediately.
+
+    Covers the shutdown race where the worker passes its pipeline cancel
+    checkpoint just before cancel is set: it must not clear the event and park
+    with nobody left to release it.
+    """
+    tab = _Bare()
+    tab._init_curation_bridge()
+    tab._poison_curation_gate()
+
+    emitted: list = []
+    tab._curation_requested.connect(lambda words: emitted.append(words))
+
+    assert tab._curation_bridge(["w1"]) is None
+    assert emitted == []  # no request signal once the gate is poisoned
+
+
+def test_on_curation_requested_after_poison_releases_without_dialog(qapp):
+    """Late slot delivery after poisoning releases the worker, no dialog."""
+    tab = _Bare()
+    tab._init_curation_bridge()
+    tab._curation_event.clear()
+    tab._poison_curation_gate()
+
+    with patch(f"{MODULE}.WordCurationDialog") as dialog_cls:
+        tab._on_curation_requested(["w1"])
+
+    dialog_cls.assert_not_called()
+    assert tab._curation_event.is_set()
+    assert tab._curation_result is None
