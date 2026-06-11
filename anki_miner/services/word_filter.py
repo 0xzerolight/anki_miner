@@ -65,8 +65,9 @@ class WordFilterService:
         lemma differed from its surface (e.g. 豪腕→剛腕; Issue #5).
 
         ``existing_vocabulary`` is populated from
-        ``AnkiService.get_existing_vocabulary()``, which reads the raw
-        first field of every note — i.e. the same ``mined_form`` strings.
+        ``AnkiService.get_existing_vocabulary()``, which reads the
+        dedup-normalized (HTML/media-stripped, NFC) first field of every
+        note — i.e. the same ``mined_form`` strings.
 
         Legacy verb cards with surface-form Expressions still block their
         own surface (because their stored Expression IS the surface
