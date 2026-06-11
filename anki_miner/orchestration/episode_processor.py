@@ -186,6 +186,36 @@ class EpisodeProcessor:
         external = self._external_cancel
         return external is not None and external()
 
+    # ------------------------------------------------------------------
+    # Dictionary-resource facade
+    #
+    # GUI callers (mining tabs, Settings → Remove dictionary) need exactly
+    # two things from the dictionary stack: the offline lookup the curation
+    # dialog calls, and a way to drop sqlite handles (Issue #30 file locks).
+    # These wrappers keep that contract on the processor so tabs never reach
+    # two levels deep into ``definition_service`` internals.
+    # ------------------------------------------------------------------
+
+    @property
+    def offline_lookup_fn(self) -> Callable[[str], list[tuple[str, str]]]:
+        """Offline-dictionary lookup for interactive UI (curation dialog).
+
+        Bound form of :meth:`DefinitionService.lookup_all_offline`: takes a
+        word, returns ``(provider_name, html)`` per offline provider hit.
+        """
+        return self.definition_service.lookup_all_offline
+
+    def release_dictionary_resources(self) -> None:
+        """Close dictionary provider handles held by the definition service.
+
+        Drops per-dict ``index.sqlite`` connections so Settings → Remove /
+        Re-import can delete the folder (Issue #30, Win11 file-lock). The
+        service re-opens the chain lazily on the next lookup, so calling
+        this on an idle processor is always safe; callers are responsible
+        for not invoking it mid-run.
+        """
+        self.definition_service.close()
+
     def _allocate_run_temp_folder(self) -> Path:
         """Create an isolated temp directory for a single episode run.
 
