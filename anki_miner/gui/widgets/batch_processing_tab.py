@@ -462,10 +462,14 @@ class BatchProcessingTab(MiningTabBase):
 
         self._warn_incomplete_items()
 
-        # Populate batch queue from widgets (includes per-item subtitle offset)
+        # Populate batch queue from widgets (includes per-item subtitle offset).
+        # Stamp each created QueueItem's id onto its source widget so status
+        # and card-count updates from the worker address the right row, even
+        # when two rows share a display_name (T-30).
         self.batch_queue.clear()
-        for anime_folder, subtitle_folder, display_name, subtitle_offset in valid_pairs:
-            self.batch_queue.add_item(anime_folder, subtitle_folder, display_name, subtitle_offset)
+        for anime_folder, subtitle_folder, display_name, subtitle_offset, widget in valid_pairs:
+            item = self.batch_queue.add_item(anime_folder, subtitle_folder, display_name, subtitle_offset)
+            widget.item_id = item.id
 
         # Prepare UI for processing
         self._is_processing = True
@@ -525,59 +529,47 @@ class BatchProcessingTab(MiningTabBase):
     def _on_item_started(self, item_id: str, display_name: str) -> None:
         """Called when processing starts for an item.
 
+        Render-only: the worker already set the item's status at pick time
+        (it owns all QueueItem writes during a run — see
+        BatchQueueWorkerThread.run). Writing status here raced the worker loop.
+
         Args:
             item_id: Item ID
             display_name: Display name of series
         """
-        # Update model state from GUI thread
-        items = self.batch_queue.get_all_items()
-        for item in items:
-            if item.id == item_id:
-                item.status = QueueItemStatus.PROCESSING
-                break
-
         self.presenter.show_info(f"Processing series: {display_name}")
-        self.queue_panel.set_item_status(display_name, "processing")
+        self.queue_panel.set_item_status(item_id, "processing")
 
     def _on_item_completed(self, item_id: str, cards_created: int) -> None:
         """Called when an item completes successfully.
+
+        Render-only: status/cards were already written by the worker before it
+        emitted this signal (see BatchQueueWorkerThread.run), so completed_count
+        below is accurate even while this slot lags the worker.
 
         Args:
             item_id: Item ID
             cards_created: Number of cards created
         """
-        # Update model state from GUI thread
-        items = self.batch_queue.get_all_items()
-        for item in items:
-            if item.id == item_id:
-                item.status = QueueItemStatus.COMPLETED
-                item.cards_created = cards_created
-                break
-
         completed = self.batch_queue.completed_count
         total = self.batch_queue.total_items
 
         self.overall_progress_widget.set_progress(completed, total, f"Completed: {completed}/{total}")
         self.presenter.show_success(f"Created {cards_created} cards")
 
-        # Update queue panel
-        self.queue_panel.set_processing_item_complete(cards_created)
+        # Update queue panel — address the completed row by id (T-30).
+        self.queue_panel.set_processing_item_complete(item_id, cards_created)
 
     def _on_item_failed(self, item_id: str, error_message: str) -> None:
         """Called when an item fails.
+
+        Render-only: the worker already set ERROR status and error_message
+        before emitting (see BatchQueueWorkerThread.run).
 
         Args:
             item_id: Item ID
             error_message: Error message
         """
-        # Update model state from GUI thread
-        items = self.batch_queue.get_all_items()
-        for item in items:
-            if item.id == item_id:
-                item.status = QueueItemStatus.ERROR
-                item.error_message = error_message
-                break
-
         self.presenter.show_error(error_message)
 
     def _on_queue_finished(self, total_cards: int) -> None:
@@ -620,10 +612,14 @@ class BatchProcessingTab(MiningTabBase):
             self.retry_button.setVisible(False)
             return
 
-        # Hide retry button and start processing
+        # Hide retry button and start processing. Use _show_cancel_state()
+        # (not just _set_buttons_enabled(False)) so the Cancel button is
+        # surfaced for the retry run, matching _process_queue and
+        # _start_processing_with_pairs — otherwise the retry run is
+        # uncancellable (T-22).
         self.retry_button.setVisible(False)
         self._is_processing = True
-        self._set_buttons_enabled(False)
+        self._show_cancel_state()
 
         self.presenter.show_info(f"Retrying {reset_count} failed items...")
         self._start_queue_worker()

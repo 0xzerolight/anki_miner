@@ -49,6 +49,10 @@ class QueueItemWidget(QFrame):
         """
         super().__init__(parent)
         self.display_name = display_name or "Untitled Series"
+        # Stable identity stamped with the BatchQueue QueueItem.id when the
+        # queue is populated, so status/card-count updates from the worker
+        # address the right row even when two rows share a display_name (T-30).
+        self.item_id = ""
         self._status = "pending"  # pending, processing, complete
         self._is_expanded = True
         self._anime_folder = ""
