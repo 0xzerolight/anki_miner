@@ -10,11 +10,9 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QMessageBox,
-    QProgressDialog,
     QScrollArea,
     QTabWidget,
     QVBoxLayout,
@@ -22,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
 from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.enhanced import ModernButton
@@ -34,14 +33,11 @@ from anki_miner.gui.widgets.panels import (
     YouTubeSettingsPanel,
 )
 from anki_miner.gui.workers.base_worker import SingleCallWorker
-from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
 from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
 from anki_miner.gui.workers.styling_worker import StylingWorker
 from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
 from anki_miner.services.anki_service import AnkiService
-from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
-from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.frequency import import_yomitan_freq_zip
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent import import_yomitan_pitch_zip
@@ -71,11 +67,24 @@ class SettingsTab(QWidget):
         """
         super().__init__(parent)
         self.config = config
-        # Modal pitch/frequency zip import engine (T-66). Owns the import
-        # workers, the ``.pending`` staging files, and the deferred-promotion
-        # closures; the tab keeps the per-flow wrappers + save-time ordering.
-        self._zip_import_flow = ZipImportFlow(self)
         self._setup_ui()
+        # Controllers (T-66) own worker lifecycles + dialogs; the tab keeps
+        # widgets, signal wiring, and config assembly. Dependency is one-way:
+        # tab → controller → workers/services (tab-owned collaboration points
+        # are injected as callables).
+        # Modal pitch/frequency zip import engine: owns the import workers,
+        # the ``.pending`` staging files, and the deferred-promotion closures;
+        # the tab keeps the per-flow wrappers + save-time ordering.
+        self._zip_import_flow = ZipImportFlow(self)
+        # Dictionary add/reimport orchestration, incl. the Reimport-All
+        # chained state machine and its predecessor-join (T-09).
+        self._dict_import_flow = DictionaryImportFlow(
+            parent=self,
+            panel=self.dictionary_panel,
+            get_config=lambda: self.config,
+            persist_chain=self._persist_chain_change,
+            notify_config_changed=lambda: self.config_changed.emit(self.config),
+        )
         self._connect_signals()
         self._load_config()
 
@@ -151,11 +160,12 @@ class SettingsTab(QWidget):
         self.anki_panel.apply_styling_requested.connect(self._on_apply_styling_requested)
         self.anki_panel.remove_styling_requested.connect(self._on_remove_styling_requested)
 
-        # Dictionary panel signals — wire Add/Reimport to import worker dialogs.
-        self.dictionary_panel.add_dict_requested.connect(self._on_add_dict_clicked)
-        self.dictionary_panel.reimport_jmdict_requested.connect(self._on_reimport_jmdict_clicked)
-        self.dictionary_panel.reimport_dict_requested.connect(self._on_reimport_dict_clicked)
-        self.dictionary_panel.reimport_all_requested.connect(self._on_reimport_all_clicked)
+        # Dictionary panel signals — wire Add/Reimport to the import flow
+        # controller, which owns the worker dialogs (T-66).
+        self.dictionary_panel.add_dict_requested.connect(self._dict_import_flow.add_dict)
+        self.dictionary_panel.reimport_jmdict_requested.connect(self._dict_import_flow.reimport_jmdict)
+        self.dictionary_panel.reimport_dict_requested.connect(self._dict_import_flow.reimport_dict)
+        self.dictionary_panel.reimport_all_requested.connect(self._dict_import_flow.reimport_all)
         # Persist immediately after a destructive remove so an orphan dict_id
         # doesn't reappear in gui_config.json on next launch (Issue #30). Use a
         # NARROW persist of just the chain — NOT the full Save pipeline (T-08):
@@ -694,13 +704,7 @@ class SettingsTab(QWidget):
         """Get max workers spinbox widget."""
         return self.media_panel.max_workers_spinbox
 
-    # === Dictionary import handlers ===
-
-    def _set_import_buttons_enabled(self, enabled: bool) -> None:
-        """Toggle import-trigger buttons. Prevents overlapping import workers."""
-        self.dictionary_panel._add_btn.setEnabled(enabled)
-        self.dictionary_panel._reimport_btn.setEnabled(enabled)
-        self.dictionary_panel.set_per_row_reimport_enabled(enabled)
+    # === Dictionary chain persistence ===
 
     def _persist_chain_change(self, new_chain: tuple[ChainEntry, ...]) -> None:
         """Save a chain mutation to disk and notify listeners.
@@ -714,379 +718,6 @@ class SettingsTab(QWidget):
         new_config = replace(self.config, dictionary_chain=new_chain)
         self.config = new_config
         self.config_changed.emit(new_config)
-
-    def _on_add_dict_clicked(self) -> None:
-        """Prompt for a Yomitan zip and run the import worker."""
-        zip_path_str, _ = QFileDialog.getOpenFileName(self, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)")
-        if not zip_path_str:
-            return
-
-        dest_root = self.config.dicts_root
-        dlg = QProgressDialog("Importing dictionary…", "Cancel", 0, 100, self)
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
-
-        worker = DictionaryImportWorker.for_yomitan(Path(zip_path_str), dest_root)
-        self._active_import_worker = worker  # keep alive across QThread lifetime
-        self._set_import_buttons_enabled(False)
-
-        def on_progress(cur: int, total: int, msg: str) -> None:
-            dlg.setMaximum(total)
-            dlg.setValue(cur)
-            dlg.setLabelText(msg)
-
-        def on_import_finished(dict_id: str, meta: dict) -> None:
-            dlg.close()
-            QMessageBox.information(
-                self,
-                "Dictionary added",
-                f"Imported {dict_id} ({meta.get('entry_count', 0):,} entries)",
-            )
-            new_chain = self._with_dict_at_top(dict_id)
-            # New dict folder on disk — invalidate the panel's cached registry
-            # scan so the row picks up the entry_count + source_name.
-            self.dictionary_panel.refresh_registry()
-            self.dictionary_panel.set_chain(new_chain)
-            self._persist_chain_change(new_chain)
-            self._set_import_buttons_enabled(True)
-
-        def on_failed(err: str) -> None:
-            dlg.close()
-            QMessageBox.warning(self, "Import Failed", err)
-            self._set_import_buttons_enabled(True)
-
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_import_finished)
-        worker.failed.connect(on_failed)
-        dlg.canceled.connect(worker.cancel)
-        worker.start()
-
-    def _on_reimport_dict_clicked(self, slot_id: str) -> None:
-        """Prompt for a matching Yomitan zip and re-import into an existing slot.
-
-        Slot identity is preserved by validating that the chosen zip's derived
-        `dict_id` equals ``slot_id`` before invoking the importer with
-        ``overwrite=True``. Picking a different zip would orphan the stale slot
-        and silently create a new one — we abort with a warning instead.
-        """
-        zip_path_str, _ = QFileDialog.getOpenFileName(self, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)")
-        if not zip_path_str:
-            return
-
-        zip_path = Path(zip_path_str)
-        try:
-            derived_id = derive_dict_id_from_zip(zip_path)
-        except Exception as exc:  # noqa: BLE001 — surface every failure to GUI
-            QMessageBox.warning(self, "Invalid Zip", str(exc))
-            return
-
-        if derived_id != slot_id:
-            QMessageBox.warning(
-                self,
-                "Zip does not match slot",
-                f"This zip is for '{derived_id}', but you are re-importing " f"'{slot_id}'. Pick the matching zip.",
-            )
-            return
-
-        # Drop sqlite handles before the importer renames the dict folder.
-        # On Windows the rename fails with "Access denied" while any
-        # DefinitionService still holds its read-only connection open
-        # (Issue #32). The remove flow uses the same hook (Issue #30).
-        if not self.dictionary_panel.request_resource_release():
-            QMessageBox.warning(
-                self,
-                "Re-import Blocked",
-                "A mining run is in progress. Stop it before re-importing dictionaries.",
-            )
-            return
-
-        dest_root = self.config.dicts_root
-        dlg = QProgressDialog("Re-importing dictionary…", "Cancel", 0, 100, self)
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
-
-        worker = DictionaryImportWorker.for_yomitan(zip_path, dest_root, overwrite=True)
-        self._active_import_worker = worker  # keep alive across QThread lifetime
-        self._set_import_buttons_enabled(False)
-
-        def on_progress(cur: int, total: int, msg: str) -> None:
-            dlg.setMaximum(total)
-            dlg.setValue(cur)
-            dlg.setLabelText(msg)
-
-        def on_done(dict_id: str, meta: dict) -> None:
-            dlg.close()
-            QMessageBox.information(
-                self,
-                "Dictionary re-imported",
-                f"Re-imported {dict_id} ({meta.get('entry_count', 0):,} entries)",
-            )
-            # Refresh registry so the stale-flag warning clears on the row.
-            current_chain = self.dictionary_panel.get_chain()
-            self.dictionary_panel.refresh_registry()
-            self.dictionary_panel.set_chain(current_chain)
-            # Notify listeners so cached DefinitionService instances rebuild
-            # with the freshly-rebuilt SQLite index.
-            self.config_changed.emit(self.config)
-            self._set_import_buttons_enabled(True)
-
-        def on_failed(err: str) -> None:
-            dlg.close()
-            QMessageBox.warning(self, "Re-import Failed", err)
-            self._set_import_buttons_enabled(True)
-
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_done)
-        worker.failed.connect(on_failed)
-        dlg.canceled.connect(worker.cancel)
-        worker.start()
-
-    def _with_dict_at_top(self, dict_id: str) -> tuple[ChainEntry, ...]:
-        """Return the current chain with ``dict_id`` placed (or moved) to the top."""
-        chain = list(self.dictionary_panel.get_chain())
-        chain = [e for e in chain if not (e.kind == "indexed" and e.dict_id == dict_id)]
-        chain.insert(0, ChainEntry(kind="indexed", dict_id=dict_id, enabled=True))
-        return tuple(chain)
-
-    def _on_reimport_jmdict_clicked(self) -> None:
-        """Reimport JMdict from the configured XML path."""
-        xml = self.config.jmdict_path
-        if not xml.exists():
-            QMessageBox.warning(
-                self,
-                "JMdict not found",
-                f"No JMdict XML at {xml}. Download from EDRDG and place it there.",
-            )
-            return
-
-        # Drop sqlite handles before the importer renames the dict folder
-        # (Issue #32 — same root cause as #30). Without this, the rename
-        # at yomitan_importer.py:215 fails with "Access denied" on Windows.
-        if not self.dictionary_panel.request_resource_release():
-            QMessageBox.warning(
-                self,
-                "Re-import Blocked",
-                "A mining run is in progress. Stop it before re-importing dictionaries.",
-            )
-            return
-
-        dest_root = self.config.dicts_root
-        dlg = QProgressDialog("Reimporting JMdict…", "Cancel", 0, 100, self)
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
-
-        worker = DictionaryImportWorker.for_jmdict(xml, dest_root)
-        self._active_import_worker = worker
-        self._set_import_buttons_enabled(False)
-
-        def on_progress(cur: int, total: int, msg: str) -> None:
-            dlg.setMaximum(total)
-            dlg.setValue(cur)
-            dlg.setLabelText(msg)
-
-        def on_done(dict_id: str, meta: dict) -> None:
-            dlg.close()
-            # Re-render chain so the (refreshed) entry count is reflected.
-            current_chain = self.dictionary_panel.get_chain()
-            self.dictionary_panel.refresh_registry()
-            self.dictionary_panel.set_chain(current_chain)
-            # Notify listeners so cached DefinitionService instances rebuild
-            # with the freshly-rebuilt SQLite index.
-            self.config_changed.emit(self.config)
-            self._set_import_buttons_enabled(True)
-
-        def on_failed(err: str) -> None:
-            dlg.close()
-            QMessageBox.warning(self, "Reimport Failed", err)
-            self._set_import_buttons_enabled(True)
-
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_done)
-        worker.failed.connect(on_failed)
-        dlg.canceled.connect(worker.cancel)
-        worker.start()
-
-    def _on_reimport_all_clicked(self) -> None:
-        """Reimport every dictionary in the chain from its saved source.
-
-        For each indexed ChainEntry, dispatch based on format:
-        - jmdict format → reimport from ``config.jmdict_path`` (the XML stays
-          on disk between sessions, no copy needed).
-        - yomitan format → reimport from ``<dicts_root>/<dict_id>/source.zip``
-          if present.
-
-        Dicts with no saved source are skipped and surfaced in the final
-        summary dialog. The user can seed them via the per-row stale-reimport
-        button (which prompts for the zip and now persists it on success).
-
-        Runs sequentially: each worker's ``on_done`` chains the next dispatch
-        so a single ApplicationModal QProgressDialog tracks the whole batch.
-        Per-dict failures accumulate into ``errors`` and don't abort the
-        loop. ``config_changed`` is emitted once at the end so cached
-        DefinitionService instances rebuild a single time.
-        """
-        # Fresh registry scan so we see source_name / format for the summary.
-        registry = DictionaryRegistry(self.config.dicts_root)
-        registry.load()
-
-        # Job tuples: ("yomitan", dict_id, display_name, source_zip_path)
-        #             ("jmdict",  dict_id, display_name, xml_path)
-        jobs: list[tuple[str, str, str, Path]] = []
-        missing_legacy: list[str] = []
-
-        for entry in self.dictionary_panel.get_chain():
-            if entry.kind != "indexed" or entry.dict_id is None:
-                continue
-            meta = registry.get(entry.dict_id)
-            if meta is None:
-                missing_legacy.append(entry.dict_id)
-                continue
-            if meta.format == "jmdict":
-                if self.config.jmdict_path.exists():
-                    jobs.append(("jmdict", meta.dict_id, meta.source_name, self.config.jmdict_path))
-                else:
-                    missing_legacy.append(meta.source_name)
-                continue
-            # Yomitan and anything else with a saved zip
-            source_zip = self.config.dicts_root / meta.dict_id / "source.zip"
-            if source_zip.exists():
-                jobs.append(("yomitan", meta.dict_id, meta.source_name, source_zip))
-            else:
-                missing_legacy.append(meta.source_name)
-
-        if not jobs:
-            if missing_legacy:
-                body = (
-                    "No dictionaries with saved sources were found.\n\n"
-                    "Skipped (no saved source — right-click a dictionary "
-                    "row → Re-import… to seed):\n" + "\n".join(f"  • {n}" for n in missing_legacy)
-                )
-            else:
-                body = "No dictionaries in the chain."
-            QMessageBox.information(self, "Nothing to reimport", body)
-            return
-
-        # Drop sqlite handles before any worker touches the dict folders.
-        # On Windows the importer's directory rename fails with "Access
-        # denied" while a DefinitionService still holds its read-only
-        # connection open (Issue #32; same hook as the remove flow in #30).
-        if not self.dictionary_panel.request_resource_release():
-            QMessageBox.warning(
-                self,
-                "Re-import Blocked",
-                "A mining run is in progress. Stop it before re-importing dictionaries.",
-            )
-            return
-
-        dlg = QProgressDialog("Reimporting dictionaries…", "Cancel", 0, 100, self)
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
-
-        self._set_import_buttons_enabled(False)
-
-        # Mutable state shared across the chained closures.
-        state: dict[str, object] = {
-            "index": 0,
-            "cancelled": False,
-            "reimported": [],
-            "errors": [],
-        }
-
-        def finish() -> None:
-            dlg.close()
-            # One refresh + one config_changed for the whole batch so
-            # DefinitionService rebuilds once, not N times.
-            current_chain = self.dictionary_panel.get_chain()
-            self.dictionary_panel.refresh_registry()
-            self.dictionary_panel.set_chain(current_chain)
-            self.config_changed.emit(self.config)
-            self._set_import_buttons_enabled(True)
-
-            reimported = state["reimported"]
-            errors = state["errors"]
-            assert isinstance(reimported, list)
-            assert isinstance(errors, list)
-
-            lines: list[str] = []
-            if reimported:
-                lines.append(f"Reimported {len(reimported)} dictionar" f"{'y' if len(reimported) == 1 else 'ies'}:")
-                lines.extend(f"  • {n}" for n in reimported)
-            if missing_legacy:
-                if lines:
-                    lines.append("")
-                lines.append("Skipped (no saved source — right-click a " "dictionary row → Re-import… to seed):")
-                lines.extend(f"  • {n}" for n in missing_legacy)
-            if errors:
-                if lines:
-                    lines.append("")
-                lines.append("Failed:")
-                lines.extend(f"  • {name}: {msg}" for name, msg in errors)
-            if state["cancelled"]:
-                if lines:
-                    lines.append("")
-                lines.append("Cancelled before remaining dictionaries.")
-
-            QMessageBox.information(self, "Reimport All", "\n".join(lines) or "Done.")
-
-        def launch_next() -> None:
-            idx = state["index"]
-            assert isinstance(idx, int)
-            if state["cancelled"] or idx >= len(jobs):
-                finish()
-                return
-
-            kind, dict_id, display, source_path = jobs[idx]
-            dlg.setLabelText(f"Dictionary {idx + 1} of {len(jobs)}: {display}")
-            dlg.setMaximum(100)
-            dlg.setValue(0)
-
-            if kind == "jmdict":
-                worker = DictionaryImportWorker.for_jmdict(source_path, self.config.dicts_root)
-            else:
-                worker = DictionaryImportWorker.for_yomitan(source_path, self.config.dicts_root, overwrite=True)
-            # Join the predecessor before dropping its reference (T-09). This
-            # closure runs inside the previous worker's queued finished slot,
-            # emitted from run() just before the OS thread exits — so its
-            # QThread may still be technically running. Reassigning
-            # _active_import_worker without waiting drops the only reference to a
-            # live, unparented QThread → "QThread: Destroyed while thread is
-            # still running". wait() is at most microseconds from returning here.
-            prev = getattr(self, "_active_import_worker", None)
-            if prev is not None and prev.isRunning():
-                prev.wait()
-            self._active_import_worker = worker
-
-            def on_progress(cur: int, total: int, msg: str) -> None:
-                dlg.setMaximum(total)
-                dlg.setValue(cur)
-
-            def on_done(_dict_id: str, _meta: dict) -> None:
-                reimported = state["reimported"]
-                assert isinstance(reimported, list)
-                reimported.append(display)
-                state["index"] = idx + 1
-                launch_next()
-
-            def on_failed(err: str) -> None:
-                errors = state["errors"]
-                assert isinstance(errors, list)
-                errors.append((display, err))
-                state["index"] = idx + 1
-                launch_next()
-
-            worker.progress.connect(on_progress)
-            worker.import_finished.connect(on_done)
-            worker.failed.connect(on_failed)
-            worker.start()
-
-        def on_cancel() -> None:
-            state["cancelled"] = True
-            worker = getattr(self, "_active_import_worker", None)
-            if worker is not None and worker.isRunning():
-                worker.cancel()
-
-        dlg.canceled.connect(on_cancel)
-        launch_next()
 
     # === Fetch fields handler ===
 
