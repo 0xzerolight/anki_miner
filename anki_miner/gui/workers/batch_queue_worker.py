@@ -129,18 +129,29 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                     self._curation_video = pair.video
                     self._curation_subtitle = pair.subtitle
                     self._curation_offset = item.subtitle_offset
-                    result = episode_processor.process_episode(
-                        pair.video,
-                        pair.subtitle,
-                        preview_mode=False,
-                        progress_callback=self.progress_callback,
-                        curation_callback=self.curation_callback,
-                    )
+                    try:
+                        result = episode_processor.process_episode(
+                            pair.video,
+                            pair.subtitle,
+                            preview_mode=False,
+                            progress_callback=self.progress_callback,
+                            curation_callback=self.curation_callback,
+                        )
+                    except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
+                        # Per-pair guard: process_episode now runs the card-target
+                        # preflight (Issue #52) OUTSIDE its own try, so it can raise
+                        # SetupError/AnkiConnectionError. Without this guard a single
+                        # transient AnkiConnect blip aborted the item's remaining pairs
+                        # AND dropped cards already created for earlier pairs from the
+                        # count. Record the failure and continue (mirrors
+                        # ManualPairWorkerThread's per-pair except).
+                        failed_pairs.append((pair.video.name, str(e)))
+                        continue
                     cards_for_item += result.cards_created
                     if not result.success:
-                        # process_episode returns failures as results with errors
-                        # populated (it never raises); surface them per-item so the
-                        # GUI marks the item ERROR and offers retry (Issue #51).
+                        # process_episode also returns soft failures as results with
+                        # errors populated; surface them per-item so the GUI marks the
+                        # item ERROR and offers retry (Issue #51).
                         failed_pairs.append((pair.video.name, result.errors[0]))
 
                 # Partial successes still count toward the queue total (cards
