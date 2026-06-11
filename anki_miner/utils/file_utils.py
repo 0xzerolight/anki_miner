@@ -16,31 +16,6 @@ def ensure_directory(path: Path) -> Path:
     return path
 
 
-def cleanup_temp_files(directory: Path, pattern: str = "*") -> int:
-    """Remove temporary files from a directory.
-
-    Args:
-        directory: Directory to clean
-        pattern: File pattern to match (default: all files)
-
-    Returns:
-        Number of files removed
-    """
-    if not directory.exists():
-        return 0
-
-    count = 0
-    for file_path in directory.glob(pattern):
-        if file_path.is_file():
-            try:
-                file_path.unlink()
-                count += 1
-            except OSError:
-                pass  # Ignore errors during cleanup
-
-    return count
-
-
 def safe_filename(filename: str) -> str:
     """Make a filename safe for the file system.
 

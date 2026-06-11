@@ -57,13 +57,13 @@ class TestDefinitionPipeline:
         service = DefinitionService(config, providers=[offline_provider, jisho])
 
         with patch.object(JishoProvider, "lookup") as mock_jisho:
-            result = service.get_definition("食べる")
+            result = service.get_definitions_batch(["食べる"])[0]
         assert result is not None
         assert "to eat" in result
         mock_jisho.assert_not_called()
 
         with patch.object(JishoProvider, "lookup") as mock_jisho:
-            result2 = service.get_definition("学生")
+            result2 = service.get_definitions_batch(["学生"])[0]
         assert result2 is not None
         assert "student" in result2
         mock_jisho.assert_not_called()
@@ -75,7 +75,7 @@ class TestDefinitionPipeline:
 
         # "飲む" is NOT in the stub; Jisho should be queried as fallback.
         with patch.object(JishoProvider, "lookup", return_value="1. to drink") as mock_jisho:
-            result = service.get_definition("飲む")
+            result = service.get_definitions_batch(["飲む"])[0]
 
         mock_jisho.assert_called_once_with("飲む")
         assert result == "1. to drink"

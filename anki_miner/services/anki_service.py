@@ -440,32 +440,6 @@ class AnkiService:
         """
         self._existing_vocab_cache = None
 
-    def store_media_file(self, filename: str, filepath: Path) -> bool:
-        """Store a media file in Anki's collection.
-
-        Args:
-            filename: Filename to use in Anki
-            filepath: Path to the file to store
-
-        Returns:
-            True if successful, False otherwise
-        """
-        try:
-            with open(filepath, "rb") as f:
-                data_b64 = base64.b64encode(f.read()).decode("utf-8")
-        except OSError:
-            return False
-        try:
-            post_action(
-                self.config.ankiconnect_url,
-                "storeMediaFile",
-                params={"filename": filename, "data": data_b64},
-                timeout=30,
-            )
-        except AnkiConnectionError:
-            return False
-        return True
-
     def _upload_dict_media_batch(self, word_data_list: list["CardPayload"]) -> None:
         """Batch-upload all dict-media assets referenced across the whole card batch.
 

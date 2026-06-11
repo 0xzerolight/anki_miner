@@ -26,14 +26,6 @@ class StatusBadge(QLabel):
 
     clicked = pyqtSignal()
 
-    # Standard status types
-    STATUS_CHECKING = "checking"
-    STATUS_SUCCESS = "success"
-    STATUS_ERROR = "error"
-    STATUS_WARNING = "warning"
-    STATUS_INFO = "info"
-    STATUS_PENDING = "pending"
-
     def __init__(self, name: str, status: str = "checking", clickable: bool = True, parent=None):
         """Initialize the status badge.
 

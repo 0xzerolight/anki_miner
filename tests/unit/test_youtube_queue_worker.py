@@ -31,8 +31,6 @@ def _make_video_info(video_id: str = "abc", title: str = "Some Title") -> VideoI
         duration_s=120,
         has_manual_ja_subs=True,
         has_auto_ja_subs=False,
-        thumbnail_url=None,
-        uploader=None,
         is_live=False,
         is_age_restricted=False,
     )

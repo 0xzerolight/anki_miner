@@ -49,8 +49,6 @@ def _make_video_info(
     duration_s: int = 600,
     has_manual_ja_subs: bool = True,
     has_auto_ja_subs: bool = False,
-    thumbnail_url: str | None = None,
-    uploader: str | None = "Uploader",
     is_live: bool = False,
     is_age_restricted: bool = False,
 ) -> VideoInfo:
@@ -61,8 +59,6 @@ def _make_video_info(
         duration_s=duration_s,
         has_manual_ja_subs=has_manual_ja_subs,
         has_auto_ja_subs=has_auto_ja_subs,
-        thumbnail_url=thumbnail_url,
-        uploader=uploader,
         is_live=is_live,
         is_age_restricted=is_age_restricted,
     )

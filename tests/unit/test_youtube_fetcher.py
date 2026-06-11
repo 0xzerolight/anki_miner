@@ -141,8 +141,6 @@ class TestProbeMetadata:
         assert info.duration_s == 120
         assert info.has_manual_ja_subs is True
         assert info.has_auto_ja_subs is False
-        assert info.thumbnail_url.endswith(".jpg")
-        assert info.uploader == "TestChannel"
         assert info.is_live is False
         assert info.is_age_restricted is False
 
@@ -190,8 +188,7 @@ class TestProbeMetadata:
         del payload["uploader"]
         with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
             info = service.probe_metadata("https://youtu.be/abc123")
-        assert info.thumbnail_url is None
-        assert info.uploader is None
+        assert info.video_id == "dQw4w9WgXcQ"
 
     def test_video_too_long(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata(duration=99999)
