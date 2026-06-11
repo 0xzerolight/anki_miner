@@ -471,6 +471,48 @@ class TestFetchVideoCommand:
         assert cmd[cmd.index("--ffmpeg-location") + 1] == str(fake_ffmpeg)
 
 
+class TestUrlArgumentSeparator:
+    """yt-dlp argument-injection guard (T-34).
+
+    The user-controlled URL must be the final argv token AND be immediately
+    preceded by a literal ``--`` end-of-options separator in every command
+    builder. Otherwise a ``-``/``--``-leading "URL" (e.g. ``--update-to=...``
+    or ``--config-location=<planted file>``) is parsed as a yt-dlp option ->
+    binary self-replacement / RCE on the probe alone.
+    """
+
+    # A hostile "URL" that, absent ``--``, yt-dlp would treat as an option.
+    _HOSTILE = "--update-to=evil/fork@tag"
+
+    @staticmethod
+    def _assert_sep_then_url(cmd: list[str], url: str) -> None:
+        assert cmd[-1] == url, f"URL must be the final token, got {cmd[-1]!r}"
+        assert cmd[-2] == "--", f"a literal '--' must immediately precede the URL, got {cmd[-2]!r}"
+
+    def test_probe_metadata_inserts_separator(self, service: YouTubeFetcherService) -> None:
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_metadata(self._HOSTILE)
+        cmd = mrun.call_args.args[0]
+        self._assert_sep_then_url(cmd, self._HOSTILE)
+
+    def test_probe_playlist_inserts_separator(self, service: YouTubeFetcherService) -> None:
+        payload = {
+            "id": "PLxxxxxxxxxxxx",
+            "title": "List",
+            "playlist_count": 1,
+            "entries": [{"id": "dQw4w9WgXcQ", "title": "V", "duration": 10}],
+        }
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_playlist(self._HOSTILE, limit=5)
+        cmd = mrun.call_args.args[0]
+        self._assert_sep_then_url(cmd, self._HOSTILE)
+
+    def test_build_fetch_cmd_inserts_separator(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        cmd = service._build_fetch_cmd(self._HOSTILE, tmp_path, "manual_only")
+        self._assert_sep_then_url(cmd, self._HOSTILE)
+
+
 class TestFetchVideoResolverFallback:
     """When ``youtube_ffmpeg_location`` is unset, the fetcher falls back to
     ``resolve_ffmpeg`` so frozen builds use the bundled binary instead of
