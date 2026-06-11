@@ -7,12 +7,12 @@ from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 
-from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.orchestration import EpisodeProcessor
 
 
-class EpisodeWorkerThread(CancellableWorker):
+class EpisodeWorkerThread(ProcessorOwningWorker):
     """Worker thread for processing episodes in background.
 
     This thread runs the episode processing workflow in the background to keep
@@ -56,6 +56,11 @@ class EpisodeWorkerThread(CancellableWorker):
         self.progress_callback = progress_callback
         self.curation_callback = curation_callback
         self.audio_track_override = audio_track_override
+
+    @property
+    def curation_processor(self) -> EpisodeProcessor | None:
+        """The constructor-supplied processor (typed contract for GUI readers)."""
+        return self.processor
 
     def cancel(self) -> None:
         """Cancel processing, propagating to the processor."""

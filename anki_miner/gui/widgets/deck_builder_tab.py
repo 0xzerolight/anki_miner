@@ -537,22 +537,23 @@ class DeckBuilderTab(MiningTabBase):
     def release_dictionary_resources(self) -> bool:
         """Close sqlite handles cached by the most recent build (Issue #30/#32).
 
-        Phase 2 retains the last per-episode processor on
-        ``worker_thread._current_processor`` (with open ``index.sqlite``
-        handles) until a new run replaces the worker. On Windows those handles
-        keep the dictionary folder locked, so Settings -> Remove / Re-import
-        fails after a build until the app is restarted.
+        Phase 2 retains the last per-episode processor (exposed via the
+        worker's typed ``curation_processor`` property, with open
+        ``index.sqlite`` handles) until a new run replaces the worker. On
+        Windows those handles keep the dictionary folder locked, so
+        Settings -> Remove / Re-import fails after a build until the app is
+        restarted.
 
         Returns ``False`` while a worker is actively running — Phase 1 (aggregate)
         or Phase 2 (build) — because closing providers under an in-flight
         processor would crash the run; the caller surfaces a clear "in progress"
-        message instead of silently dropping the dict. ``DefinitionService.close()``
-        resets ``_loaded`` so the next build re-opens the chain cleanly.
+        message instead of silently dropping the dict. The facade resets the
+        chain so the next build re-opens it cleanly.
         """
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return False
         if self.worker_thread is not None:
-            proc = getattr(self.worker_thread, "_current_processor", None)
+            proc = self.worker_thread.curation_processor
             if proc is not None:
-                proc.definition_service.close()
+                proc.release_dictionary_resources()
         return True

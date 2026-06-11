@@ -425,9 +425,9 @@ class BatchProcessingTab(MiningTabBase):
             return None, None
 
         lookup_fn = None
-        proc = getattr(w, "_curation_processor", None)
+        proc = w.curation_processor
         if proc is not None:
-            lookup_fn = proc.definition_service.lookup_all_offline
+            lookup_fn = proc.offline_lookup_fn
 
         media_context: CurationMediaContext | None = None
         video = getattr(w, "_curation_video", None)
@@ -721,23 +721,20 @@ class BatchProcessingTab(MiningTabBase):
     def release_dictionary_resources(self) -> bool:
         """Close sqlite handles cached by the most recent worker run.
 
-        ``ManualPairWorkerThread`` keeps the single processor on
-        ``episode_processor``; ``BatchQueueWorkerThread`` keeps the last
-        item's processor on ``_current_processor``. Either way, the handle
-        is still open after the run finishes and blocks Settings → Remove /
+        Both hosted workers (``ManualPairWorkerThread``,
+        ``BatchQueueWorkerThread``) expose their retained processor via the
+        typed ``curation_processor`` property. Either way, the handle is
+        still open after the run finishes and blocks Settings → Remove /
         Re-import on Windows (Issue #30 follow-up).
 
         Returns ``False`` while a worker is actively running — closing
-        providers under an in-flight processor would crash the run.
-        ``DefinitionService.close()`` resets ``_loaded`` so the next mine
-        re-opens the chain cleanly.
+        providers under an in-flight processor would crash the run. The
+        facade resets the chain so the next mine re-opens it cleanly.
         """
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return False
         if self.worker_thread is not None:
-            proc = getattr(self.worker_thread, "episode_processor", None) or getattr(
-                self.worker_thread, "_current_processor", None
-            )
+            proc = self.worker_thread.curation_processor
             if proc is not None:
-                proc.definition_service.close()
+                proc.release_dictionary_resources()
         return True

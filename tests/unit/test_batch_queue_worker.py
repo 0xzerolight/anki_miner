@@ -24,7 +24,7 @@ def test_curation_attrs_use_item_offset_and_callback_forwarded(tmp_path):
             {
                 "offset": worker._curation_offset,
                 "video": worker._curation_video,
-                "processor": worker._curation_processor,
+                "processor": worker.curation_processor,
                 "callback": curation_callback,
             }
         )

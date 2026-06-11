@@ -104,7 +104,7 @@ def test_build_curation_context_no_worker_returns_none(tab):
     assert tab._build_curation_context() == (None, None)
 
 
-def test_build_curation_context_reads_worker_attrs(tab, tmp_path):
+def test_build_curation_context_reads_worker_attrs(tab, facade_processor, tmp_path):
     subs = tmp_path / "v1.srt"
     subs.write_text(
         "1\n00:00:00,000 --> 00:00:01,000\nテスト\n",
@@ -114,9 +114,9 @@ def test_build_curation_context_reads_worker_attrs(tab, tmp_path):
     video.touch()
 
     lookup = MagicMock(name="lookup_all_offline")
-    proc = SimpleNamespace(definition_service=SimpleNamespace(lookup_all_offline=lookup))
+    facade_processor.definition_service.lookup_all_offline = lookup
     tab.worker_thread = SimpleNamespace(
-        _curation_processor=proc,
+        curation_processor=facade_processor,
         _curation_video=video,
         _curation_subtitle=subs,
         _curation_offset=4.0,
@@ -132,16 +132,16 @@ def test_build_curation_context_reads_worker_attrs(tab, tmp_path):
     assert media_context.subtitle_entries  # parsed at least one entry
 
 
-def test_build_curation_context_parse_error_returns_none_context(tab, tmp_path):
+def test_build_curation_context_parse_error_returns_none_context(tab, facade_processor, tmp_path):
     subs = tmp_path / "v1.srt"
     subs.touch()
     video = tmp_path / "v1.mp4"
     video.touch()
 
     lookup = MagicMock(name="lookup_all_offline")
-    proc = SimpleNamespace(definition_service=SimpleNamespace(lookup_all_offline=lookup))
+    facade_processor.definition_service.lookup_all_offline = lookup
     tab.worker_thread = SimpleNamespace(
-        _curation_processor=proc,
+        curation_processor=facade_processor,
         _curation_video=video,
         _curation_subtitle=subs,
         _curation_offset=0.0,
