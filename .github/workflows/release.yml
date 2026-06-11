@@ -309,16 +309,39 @@ jobs:
         run: |
           Compress-Archive -Path dist\AnkiMiner\* -DestinationPath dist\${{ matrix.artifact_name }}.zip
 
-      - name: Upload artifact
+      # Per-OS explicit upload with if-no-files-found: error. A single catch-all
+      # step with default 'warn' only fails when NOTHING matches, so a sibling
+      # asset filename drift (installer/AppImage/.deb) would upload just the
+      # archive and the release would publish incomplete. Listing each OS's full
+      # expected asset set and erroring on any miss closes that gap.
+      - name: Upload artifact (Linux)
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact_name }}
+          if-no-files-found: error
           path: |
             dist/${{ matrix.artifact_name }}.tar.gz
+            dist/AnkiMiner-${{ steps.version.outputs.version }}-Linux-x86_64.AppImage
+            dist/anki-miner_${{ steps.version.outputs.version }}_amd64.deb
+
+      - name: Upload artifact (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact_name }}
+          if-no-files-found: error
+          path: dist/${{ matrix.artifact_name }}.tar.gz
+
+      - name: Upload artifact (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact_name }}
+          if-no-files-found: error
+          path: |
             dist/${{ matrix.artifact_name }}.zip
-            dist/AnkiMiner-*-Setup.exe
-            dist/AnkiMiner-*.AppImage
-            dist/anki-miner_*.deb
+            dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
 
   release:
     needs: build
