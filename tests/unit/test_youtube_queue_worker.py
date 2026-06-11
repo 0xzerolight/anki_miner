@@ -283,6 +283,40 @@ def test_cancel_during_item_returns_without_emitting_finished(make_worker, mock_
 
 
 # ---------------------------------------------------------------------------
+# Cancel mid-mine (T-01): processor returns a cancelled result, no exception
+# ---------------------------------------------------------------------------
+
+
+def test_cancel_mid_item_skips_remaining_items_queue_finished_fires(make_worker, mock_processor):
+    """Stop All during item 1's mining run stops the queue before item 2.
+
+    With cancel bridged into the pipeline (T-01), process_youtube_url returns a
+    cancelled ProcessingResult instead of mining to completion; the worker's
+    loop-top check must then skip every remaining item while still emitting
+    queue_finished (cancel-between-items contract, unlike the mid-fetch
+    exception path which returns early).
+    """
+    items = [_make_item(video_id="a"), _make_item(video_id="b"), _make_item(video_id="c")]
+
+    def _cancel_mid_mine(**kw):
+        kw["cancel_event"].set()  # user pressed Stop All mid-pipeline
+        return "R_CANCELLED"  # processor returns a cancelled result, no raise
+
+    mock_processor.process_youtube_url.side_effect = _cancel_mid_mine
+
+    worker = make_worker(items=items)
+    caps = _connect_all(worker)
+    worker.run()
+
+    # Items 2 and 3 never started.
+    assert mock_processor.process_youtube_url.call_count == 1
+    assert caps["started"].calls == [(0,)]
+    assert caps["finished"].calls == [(0, "R_CANCELLED", None, 1)]
+    # queue_finished still fires: the loop-top break exits the loop normally.
+    assert len(caps["queue_finished"].calls) == 1
+
+
+# ---------------------------------------------------------------------------
 # Cancel before first item
 # ---------------------------------------------------------------------------
 

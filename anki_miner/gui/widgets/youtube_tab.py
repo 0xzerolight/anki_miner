@@ -75,6 +75,11 @@ from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url
 
 logger = logging.getLogger(__name__)
 
+# Upper bound for joining the queue worker at shutdown. Generous: covers the
+# fetcher's cancel watchdog poll plus the psutil kill grace. Converts a
+# worst-case hang into a bounded delay with a leaked-thread warning.
+_SHUTDOWN_WAIT_MS = 30_000
+
 
 def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bool, str | None, SubMode | None]:
     """Classify a probe result.
@@ -957,13 +962,22 @@ class YouTubeTab(MiningTabBase):
         """
         if self.worker_thread is not None:
             # Release any open curation dialog first so a worker blocked in
-            # _curation_event.wait() resumes; otherwise the unbounded wait()
-            # below hangs the GUI forever on app close (Issue #65). cancel()
-            # alone only sets _cancel_event, not _curation_event.
+            # _curation_event.wait() resumes (Issue #65). cancel() alone only
+            # sets _cancel_event, not _curation_event.
             self._cancel_active_curation_dialog()
             self.worker_thread.cancel()
+            # The dialog release above only helps once the dialog exists. If
+            # the worker emitted _curation_requested but the queued slot has
+            # not run yet, blocking in wait() below would deadlock: this GUI
+            # thread is the only one that could run the slot. Poison the gate
+            # so a parked (or about-to-park) worker falls through.
+            self._poison_curation_gate()
             self.worker_thread.quit()
-            self.worker_thread.wait()
+            if not self.worker_thread.wait(_SHUTDOWN_WAIT_MS):
+                logger.warning(
+                    "YouTube queue worker did not stop within %sms at shutdown; leaking thread",
+                    _SHUTDOWN_WAIT_MS,
+                )
             self.worker_thread = None
 
         for probe in list(self._probe_workers):
