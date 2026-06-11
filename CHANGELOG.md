@@ -10,9 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **YouTube playlist support** (#70). Pasting a playlist URL (`/playlist?list=…`) or a watch URL with a `list=` parameter expands into queue rows via yt-dlp `--flat-playlist`. A confirm dialog appears when the playlist exceeds the new `youtube_playlist_max` cap (default 100, Settings → YouTube). Mixed watch+list URLs (`/watch?v=…&list=…`) prompt whether to add just that video or the whole playlist. Videos already in the queue are skipped as duplicates. Mix/radio URLs (`list=RD…`) are treated as plain video links. Expansion and per-entry probing both run on background threads (`YouTubePlaylistResolveWorker`, `YouTubePlaylistProbeWorker`) so the GUI stays responsive. New helper `utils/youtube_url.py` classifies URLs without network access; new models `PlaylistInfo` and `PlaylistEntry` carry the flat-playlist metadata.
 
 ### Changed
+- **Dependency floors raised to recent stable.** The `>=` minimums in `pyproject.toml` were bumped to recent battle-tested releases (pysubs2, requests, fugashi, PyQt6, yt-dlp, psutil, packaging, and the dev tools). Upward flexibility is preserved; yt-dlp keeps its `<2027.0.0` upper bound. The `black` and `lxml` floor bumps also clear CVE-2026-32274 and CVE-2026-41066 at the floor (per the 2026-06-10 supply-chain audit).
+- **Minimum Python raised to 3.11** (3.10 dropped). Standalone bundles freeze their own interpreter, so source/PyPI installs now require Python 3.11+.
 - **Cancelling now stops promptly across every mining mode.** Stop/Cancel propagates into the YouTube, single-episode, batch, and deck-builder pipelines, kills any in-flight ffmpeg child, and is re-checked during silent yt-dlp phases so a run no longer keeps working after you ask it to stop. Long-running subprocess calls (yt-dlp, ffmpeg, shortcut probes) are now bounded by timeouts.
 - **Closing the window no longer abandons running work.** If a worker is still running at close, the window hides and the close is deferred until the thread exits, instead of tearing down a live thread mid-write.
-- **Dependency floors raised to recent stable.** `psutil>=6.1.0`, `black>=26.3.1`, `lxml>=6.1.0`. The `black` and `lxml` bumps clear CVE-2026-32274 and CVE-2026-41066 at the floor (per the 2026-06-10 supply-chain audit).
 
 ### Fixed
 - **Mining now validates the Anki note type and field mapping before processing starts** (#52). If the configured note type is missing or a mapped field is absent, the run fails immediately with a clear error instead of after full media extraction. The configured deck is also auto-created at this point.
@@ -29,7 +30,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Config changes apply mid-session.** Editing settings rebuilds config-bound services and propagates the new config to non-Settings tabs, and an in-session subtitle offset is no longer reset by an unrelated config update.
 - **Episode-number detection.** The fallback matcher takes the *last* bare number (so numeric titles like "86" or "Mob Psycho 100" don't steal the episode slot), tolerates `SxxEyy` separators, and now captures adjacent numbers (e.g. `Title 1 2`) that were previously skipped — while still ignoring resolution tokens like `720p`.
 - **Word counting / furigana parity.** Compound words that can't be located in the sentence are dropped from lemma counts too (matching the card-build path), and noun furigana/readings are recomputed when an i+1 card swaps to the surface form.
-- **CI floor-version jobs.** `scripts/extract_floor_pins.py` imported the 3.11+ stdlib `tomllib` unconditionally, breaking the Python 3.10 test job; it now falls back to `tomli` (added as a `<3.11` dev dep). The `smoke-min-deps` SIGABRT was a test-isolation bug, not a dependency issue: two probe-worker tests created a bare `QCoreApplication`, poisoning the process-wide app singleton so a later widget test aborted with "Cannot create a QWidget without QApplication"; both now create a `QApplication` (still a `QCoreApplication`, so the thread/signal tests are unaffected).
+- **Test isolation: probe-worker tests no longer poison the Qt app singleton.** Two YouTube probe-worker tests created a bare `QCoreApplication`, so a later widget test reused it and aborted with "Cannot create a QWidget without QApplication"; both now create a `QApplication` (still a `QCoreApplication`, so the thread/signal tests are unaffected).
+
+### Removed
+- **The `smoke-min-deps` CI job and floor-pin tooling** (`scripts/extract_floor_pins.py`). With dependency floors now at recent stable, floor-version smoke-testing is redundant with the latest-version `test` job.
 
 ## [v2.6.1] - 2026-06-07
 
