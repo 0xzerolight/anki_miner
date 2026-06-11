@@ -3,9 +3,9 @@
 from anki_miner.gui.resources.styles.theme import Theme
 
 
-def _reset_with_builtins(active: str = "light", favorites=("light", "dark")) -> None:
+def _reset_with_builtins(active: str = "light", favorites=("light", "dark"), state_listener=None) -> None:
     """Re-initialize the Theme singleton with shipped themes only."""
-    Theme.initialize(active=active, favorites=favorites, user_dir=None, state_listener=None)
+    Theme.initialize(active=active, favorites=favorites, user_dir=None, state_listener=state_listener)
 
 
 class TestFavoritesAPI:
@@ -54,11 +54,9 @@ class TestStateListener:
         def listener(active, favorites):
             calls.append((active, favorites))
 
-        _reset_with_builtins(active="light", favorites=("light", "dark"))
-        Theme.set_state_listener(listener)
+        _reset_with_builtins(active="light", favorites=("light", "dark"), state_listener=listener)
         Theme.set_mode("dark")
         assert calls and calls[-1] == ("dark", ("light", "dark"))
-        Theme.set_state_listener(None)
 
     def test_listener_fires_on_set_favorites(self):
         calls: list[tuple[str, tuple[str, ...]]] = []
@@ -66,21 +64,17 @@ class TestStateListener:
         def listener(active, favorites):
             calls.append((active, favorites))
 
-        _reset_with_builtins(active="light", favorites=("light", "dark"))
-        Theme.set_state_listener(listener)
+        _reset_with_builtins(active="light", favorites=("light", "dark"), state_listener=listener)
         Theme.set_favorites(("light",))
         assert calls and calls[-1][1] == ("light",)
-        Theme.set_state_listener(None)
 
     def test_set_mode_no_change_no_listener(self):
         calls: list[tuple] = []
 
-        _reset_with_builtins(active="light")
-        Theme.set_state_listener(lambda a, f: calls.append((a, f)))
+        _reset_with_builtins(active="light", state_listener=lambda a, f: calls.append((a, f)))
         # Setting the same mode should not refire the listener.
         Theme.set_mode("light")
         assert calls == []
-        Theme.set_state_listener(None)
 
 
 class TestCycleByFavorites:
