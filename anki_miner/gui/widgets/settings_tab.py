@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
 from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
 from anki_miner.gui.resources.styles import SPACING
@@ -32,12 +33,7 @@ from anki_miner.gui.widgets.panels import (
     ThemesPanel,
     YouTubeSettingsPanel,
 )
-from anki_miner.gui.workers.base_worker import SingleCallWorker
-from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
-from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
-from anki_miner.gui.workers.styling_worker import StylingWorker
 from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
-from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.frequency import import_yomitan_freq_zip
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent import import_yomitan_pitch_zip
@@ -84,6 +80,14 @@ class SettingsTab(QWidget):
             get_config=lambda: self.config,
             persist_chain=self._persist_chain_change,
             notify_config_changed=lambda: self.config_changed.emit(self.config),
+        )
+        # AnkiConnect probe workers (fetch fields / fetch decks / styling);
+        # their live handles surface through iter_close_workers (T-12).
+        self._anki_probe = AnkiProbeController(
+            parent=self,
+            anki_panel=self.anki_panel,
+            filtering_panel=self.filtering_panel,
+            get_config=lambda: self.config,
         )
         self._connect_signals()
         self._load_config()
@@ -156,9 +160,9 @@ class SettingsTab(QWidget):
         self.anki_panel.deck_sync_requested.connect(self.validation_requested.emit)
         self.anki_panel.notetype_sync_requested.connect(self.validation_requested.emit)
         self.anki_panel.test_connection_requested.connect(self.validation_requested.emit)
-        self.anki_panel.fetch_fields_requested.connect(self._on_fetch_fields_requested)
-        self.anki_panel.apply_styling_requested.connect(self._on_apply_styling_requested)
-        self.anki_panel.remove_styling_requested.connect(self._on_remove_styling_requested)
+        self.anki_panel.fetch_fields_requested.connect(self._anki_probe.fetch_fields)
+        self.anki_panel.apply_styling_requested.connect(self._anki_probe.apply_styling)
+        self.anki_panel.remove_styling_requested.connect(self._anki_probe.remove_styling)
 
         # Dictionary panel signals — wire Add/Reimport to the import flow
         # controller, which owns the worker dialogs (T-66).
@@ -179,23 +183,13 @@ class SettingsTab(QWidget):
         )
 
         # Filtering panel: excluded-decks picker + known-words cache rebuild (Issue #38).
-        self.filtering_panel.fetch_decks_requested.connect(self._on_fetch_decks_requested)
+        self.filtering_panel.fetch_decks_requested.connect(self._anki_probe.fetch_decks)
         self.filtering_panel.rebuild_known_words_requested.connect(self._on_rebuild_known_words)
         self.filtering_panel.manage_known_words_requested.connect(self._on_manage_known_words)
 
         # Themes panel persists immediately on any change (live-preview model).
         self.themes_panel.state_changed.connect(self._on_theme_state_changed)
         self.themes_panel.font_scale_changed.connect(self._on_font_scale_changed)
-
-        # Hold a reference to the fetch-fields worker across its lifetime.
-        # Without this attribute, a freshly-spawned QThread can be garbage
-        # collected before run() completes — Qt logs "QThread: Destroyed
-        # while thread is still running" and the result signal never fires.
-        self._fetch_fields_worker: SingleCallWorker | None = None
-        # Same GC-safety rationale for the deck-list fetch worker.
-        self._fetch_decks_worker: SingleCallWorker | None = None
-        # And for the card-styling apply/remove worker (Issue #44).
-        self._styling_worker: StylingWorker | None = None
 
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts."""
@@ -646,31 +640,22 @@ class SettingsTab(QWidget):
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close (T-12).
 
-        SettingsTab owns three short-lived AnkiConnect workers — fetch fields,
-        fetch decks, apply/remove styling — each a tab-parented QThread that can
-        sit in a 15-60 s blocking request. They have no ``worker_thread``
-        attribute, so closeEvent discovers them here and routes each through the
-        single ``MainWindow._join_worker_for_close`` policy (cancel + bounded
-        grace join + laggard deferral). Returning them — rather than waiting
-        here — keeps every shutdown join in one place; abandoning them to Qt
-        teardown aborts with "QThread: Destroyed while thread is still running".
-
-        (T-66 lifts these workers into a controller exposing the same hook.)
+        Stable hook consumed by ``MainWindow.closeEvent``: yields the three
+        short-lived AnkiConnect probe workers (fetch fields, fetch decks,
+        apply/remove styling), which T-66 lifted into
+        :class:`AnkiProbeController` — this method delegates there. See
+        :meth:`AnkiProbeController.iter_close_workers` for the join-policy
+        rationale.
         """
-        return (self._fetch_fields_worker, self._fetch_decks_worker, self._styling_worker)
+        return self._anki_probe.iter_close_workers()
 
     def shutdown(self) -> None:
         """Cancel every running AnkiConnect worker (cancel only, no wait).
 
-        Explicit-teardown entry point mirroring the YouTube tab. closeEvent
-        does the bounded join via :meth:`MainWindow._join_worker_for_close`;
-        this is the standalone cancel for any non-close caller (and the future
-        controller). ``cancel()`` is idempotent, so the helper re-cancelling is
-        harmless.
+        Explicit-teardown entry point mirroring the YouTube tab; delegates to
+        :class:`AnkiProbeController`, which owns the workers (T-66).
         """
-        for worker in self.iter_close_workers():
-            if worker is not None and worker.isRunning():
-                worker.cancel()
+        self._anki_probe.shutdown()
 
     # === Expose panel inputs for backward compatibility ===
 
@@ -719,182 +704,7 @@ class SettingsTab(QWidget):
         self.config = new_config
         self.config_changed.emit(new_config)
 
-    # === Fetch fields handler ===
-
-    def _on_fetch_fields_requested(self) -> None:
-        """Fetch the note type's field list from AnkiConnect in a worker thread.
-
-        Reads the current note type and AnkiConnect URL straight from the panel
-        inputs (not ``self.config``) so the user can fetch without first hitting
-        Save. The button is disabled for the duration to prevent piling up
-        concurrent requests. Results land on the main thread via
-        :meth:`_on_fetch_fields_finished`.
-        """
-        # Don't stack worker threads — first request wins until it completes.
-        if self._fetch_fields_worker is not None and self._fetch_fields_worker.isRunning():
-            return
-
-        note_type = self.anki_panel.note_type_input.text().strip()
-        if not note_type:
-            self.anki_panel.set_notetype_status(False, "Enter a note type name before fetching fields")
-            return
-
-        ankiconnect_url = self.anki_panel.ankiconnect_url_input.text().strip()
-        # Patch the live config with the user's in-flight input values so the
-        # service hits the URL/note type currently shown in the form, not
-        # whatever was last saved to disk.
-        probe_config = replace(
-            self.config,
-            anki_note_type=note_type,
-            ankiconnect_url=ankiconnect_url or self.config.ankiconnect_url,
-        )
-
-        try:
-            service = AnkiService(probe_config)
-        except ValueError as e:
-            # Misconfigured anki_fields keys — surface, don't crash.
-            self.anki_panel.set_notetype_status(False, f"Cannot build AnkiService: {e}")
-            return
-
-        self.anki_panel.set_notetype_status(None, "Fetching fields from note type...")
-        self.anki_panel.fetch_fields_button.setEnabled(False)
-
-        worker = FetchFieldsWorker(service, note_type, self)
-        self._fetch_fields_worker = worker
-        worker.result_ready.connect(self._on_fetch_fields_finished)
-        worker.error.connect(self._on_fetch_fields_error)
-        worker.start()
-
-    def _on_fetch_fields_finished(self, field_names: list[str]) -> None:
-        """Populate the panel with the fetched field list (main-thread slot)."""
-        self.anki_panel.fetch_fields_button.setEnabled(True)
-        if not field_names:
-            # Empty list means AnkiConnect rejected the request or returned
-            # nothing — most commonly the note type doesn't exist, or Anki
-            # isn't running. The status indicator is the existing affordance
-            # for note-type problems, so reuse it.
-            self.anki_panel.set_notetype_status(
-                False, "Could not fetch fields. Is Anki running and the note type spelled right?"
-            )
-            return
-        self.anki_panel.populate_from_field_list(field_names)
-        self.anki_panel.set_notetype_status(True, f"Fetched {len(field_names)} fields and auto-mapped them")
-
-    def _on_fetch_fields_error(self, message: str) -> None:
-        """Surface an unexpected worker exception via the note-type status line."""
-        self.anki_panel.fetch_fields_button.setEnabled(True)
-        self.anki_panel.set_notetype_status(False, message)
-
-    # === Card styling handlers (Issue #44) ===
-
-    def _on_apply_styling_requested(self) -> None:
-        """Apply the managed CSS block to the note type in a worker thread."""
-        self._start_styling_worker("apply")
-
-    def _on_remove_styling_requested(self) -> None:
-        """Strip the managed CSS block from the note type in a worker thread."""
-        self._start_styling_worker("remove")
-
-    def _start_styling_worker(self, mode: str) -> None:
-        """Read the note type's CSS, edit its managed block, and write it back.
-
-        Like :meth:`_on_fetch_fields_requested`, this reads the note type and
-        AnkiConnect URL straight from the panel inputs so the user can apply
-        without first hitting Save. The buttons are disabled for the duration to
-        prevent overlapping writes. Result lands on the main thread via
-        :meth:`_on_styling_finished` / :meth:`_on_styling_error`.
-        """
-        # Don't stack worker threads — first request wins until it completes.
-        if self._styling_worker is not None and self._styling_worker.isRunning():
-            return
-
-        note_type = self.anki_panel.note_type_input.text().strip()
-        if not note_type:
-            self.anki_panel.set_styling_status(False, "Enter a note type name before applying styles")
-            return
-
-        ankiconnect_url = self.anki_panel.ankiconnect_url_input.text().strip()
-        probe_config = replace(
-            self.config,
-            anki_note_type=note_type,
-            ankiconnect_url=ankiconnect_url or self.config.ankiconnect_url,
-        )
-
-        try:
-            service = AnkiService(probe_config)
-        except ValueError as e:
-            self.anki_panel.set_styling_status(False, f"Cannot build AnkiService: {e}")
-            return
-
-        self.anki_panel.set_styling_buttons_enabled(False)
-
-        worker = StylingWorker(
-            service,
-            mode="apply" if mode == "apply" else "remove",
-            preset=self.anki_panel.get_card_style_preset(),
-            custom_css=self.anki_panel.get_custom_css(),
-            note_type=note_type,
-            parent=self,
-        )
-        self._styling_worker = worker
-        worker.finished_ok.connect(self._on_styling_finished)
-        worker.error.connect(self._on_styling_error)
-        worker.start()
-
-    def _on_styling_finished(self, message: str) -> None:
-        """Re-enable the styling buttons and report success (main-thread slot)."""
-        self.anki_panel.set_styling_buttons_enabled(True)
-        self.anki_panel.set_styling_status(True, message)
-
-    def _on_styling_error(self, message: str) -> None:
-        """Re-enable the styling buttons and surface the failure (main-thread slot)."""
-        self.anki_panel.set_styling_buttons_enabled(True)
-        self.anki_panel.set_styling_status(False, message)
-
-    # === Excluded decks handlers (Issue #38) ===
-
-    def _on_fetch_decks_requested(self) -> None:
-        """Fetch the deck list from AnkiConnect to populate the exclude picker.
-
-        Uses the AnkiConnect URL currently shown in the Anki panel (not the
-        last-saved config) so the user can pick decks without hitting Save
-        first. The picker opens when results arrive via
-        :meth:`_on_fetch_decks_finished`.
-        """
-        if self._fetch_decks_worker is not None and self._fetch_decks_worker.isRunning():
-            return
-
-        ankiconnect_url = self.anki_panel.ankiconnect_url_input.text().strip()
-        probe_config = replace(self.config, ankiconnect_url=ankiconnect_url or self.config.ankiconnect_url)
-        try:
-            service = AnkiService(probe_config)
-        except ValueError as e:
-            QMessageBox.warning(self, "Add Deck", f"Cannot build AnkiService: {e}")
-            return
-
-        self.filtering_panel.add_deck_button.setEnabled(False)
-        worker = FetchDecksWorker(service, self)
-        self._fetch_decks_worker = worker
-        worker.result_ready.connect(self._on_fetch_decks_finished)
-        worker.error.connect(self._on_fetch_decks_error)
-        worker.start()
-
-    def _on_fetch_decks_finished(self, deck_names: list[str]) -> None:
-        """Hand the fetched deck list to the panel, which opens the picker."""
-        self.filtering_panel.add_deck_button.setEnabled(True)
-        if not deck_names:
-            QMessageBox.warning(
-                self,
-                "Add Deck",
-                "Could not fetch decks. Is Anki running with AnkiConnect?",
-            )
-            return
-        self.filtering_panel.set_available_decks(deck_names)
-
-    def _on_fetch_decks_error(self, message: str) -> None:
-        """Surface an unexpected deck-fetch worker exception."""
-        self.filtering_panel.add_deck_button.setEnabled(True)
-        QMessageBox.warning(self, "Add Deck", message)
+    # === Known words handlers (Issues #38 / #42) ===
 
     def _on_rebuild_known_words(self) -> None:
         """Clear the local known-words cache after user confirmation.
