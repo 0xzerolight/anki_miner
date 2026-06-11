@@ -54,7 +54,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import YouTubeFetchError
-from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.models.youtube_queue import YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
@@ -94,7 +94,7 @@ class _QueueMiningProgressAdapter:
         return
 
 
-class YouTubeQueueWorker(CancellableWorker):
+class YouTubeQueueWorker(ProcessorOwningWorker):
     """Worker thread that processes a queue of YouTube URLs sequentially.
 
     Each item runs fetch + mine through ``EpisodeProcessor.process_youtube_url``.
@@ -148,7 +148,6 @@ class YouTubeQueueWorker(CancellableWorker):
         # Published for the GUI curation bridge. Attribute names mirror
         # BatchQueueWorkerThread's _curation_* so the shared curation bridge can
         # read the same attribute names regardless of which worker is driving it.
-        self._curation_processor: EpisodeProcessor = processor
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = config.subtitle_offset
@@ -160,6 +159,11 @@ class YouTubeQueueWorker(CancellableWorker):
         # identities are stable for the whole run.
         self._skip_lock = threading.Lock()
         self._skipped: set[YouTubeQueueItem] = set()
+
+    @property
+    def curation_processor(self) -> EpisodeProcessor | None:
+        """The constructor-supplied processor, shared by every queue item."""
+        return self._processor
 
     def skip_item(self, item: YouTubeQueueItem) -> None:
         """Mark *item* to be skipped if its turn has not started yet.

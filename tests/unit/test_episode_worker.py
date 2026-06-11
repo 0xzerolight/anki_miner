@@ -78,3 +78,9 @@ def test_worker_default_attribute_is_none(qapp):
     """audio_track_override attribute defaults to None."""
     worker = _make_worker(qapp)
     assert worker.audio_track_override is None
+
+
+def test_curation_processor_exposes_constructor_processor(qapp):
+    """Typed curation_processor contract (T-60): returns the run's processor."""
+    worker = _make_worker(qapp)
+    assert worker.curation_processor is worker.processor

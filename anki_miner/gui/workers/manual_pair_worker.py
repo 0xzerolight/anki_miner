@@ -1,15 +1,16 @@
 """Worker thread for processing manually-paired video/subtitle files."""
 
 from collections.abc import Callable
+from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 
-from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.orchestration import EpisodeProcessor
 
 
-class ManualPairWorkerThread(CancellableWorker):
+class ManualPairWorkerThread(ProcessorOwningWorker):
     """Worker thread for processing pre-paired video/subtitle files.
 
     Inherits thread-safe cancellation from CancellableWorker.
@@ -40,10 +41,14 @@ class ManualPairWorkerThread(CancellableWorker):
         self.progress_callback = progress_callback
         self.curation_callback = curation_callback
         # Published per-pair so the GUI bridge can build the dialog's media context.
-        self._curation_processor = episode_processor
-        self._curation_video = None
-        self._curation_subtitle = None
-        self._curation_offset = 0.0
+        self._curation_video: Path | None = None
+        self._curation_subtitle: Path | None = None
+        self._curation_offset: float = 0.0
+
+    @property
+    def curation_processor(self) -> EpisodeProcessor | None:
+        """The single constructor-supplied processor, reused for every pair."""
+        return self.episode_processor
 
     def cancel(self) -> None:
         """Cancel processing, propagating to the processor."""
@@ -70,7 +75,6 @@ class ManualPairWorkerThread(CancellableWorker):
                 try:
                     # Mirror BatchQueueWorkerThread's _curation_* attrs so the GUI
                     # bridge reads one attribute name across both batch workers.
-                    self._curation_processor = self.episode_processor
                     self._curation_video = pair.video
                     self._curation_subtitle = pair.subtitle
                     self._curation_offset = self.episode_processor.config.subtitle_offset

@@ -400,7 +400,7 @@ def test_timing_button_hidden_during_processing_and_restored(tab, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_curation_requested_passes_media_context_and_lookup_fn(tab, tmp_path):
+def test_curation_requested_passes_media_context_and_lookup_fn(tab, facade_processor, tmp_path):
     """Dialog receives a CurationMediaContext and lookup_fn when files are set
     and a worker with a live processor is present."""
     from PyQt6.QtWidgets import QDialog
@@ -414,14 +414,12 @@ def test_curation_requested_passes_media_context_and_lookup_fn(tab, tmp_path):
     tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
     tab.offset_spinbox.setValue(1.5)
 
-    # Fake worker with processor.definition_service.lookup_all_offline
+    # Worker exposing a real processor (T-60 typed contract): lookup_fn must
+    # resolve through the offline_lookup_fn facade to the definition service.
     fake_lookup = MagicMock(name="lookup_all_offline")
-    fake_def_svc = MagicMock()
-    fake_def_svc.lookup_all_offline = fake_lookup
-    fake_proc = MagicMock()
-    fake_proc.definition_service = fake_def_svc
+    facade_processor.definition_service.lookup_all_offline = fake_lookup
     fake_worker = MagicMock()
-    fake_worker.processor = fake_proc
+    fake_worker.curation_processor = facade_processor
     tab.worker_thread = fake_worker
 
     fake_entry = (0.0, 2.5, "テスト")

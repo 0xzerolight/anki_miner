@@ -24,7 +24,7 @@ def test_curation_attrs_and_callback_forwarded(tmp_path):
         captured["video"] = worker._curation_video
         captured["subtitle"] = worker._curation_subtitle
         captured["offset"] = worker._curation_offset
-        captured["processor"] = worker._curation_processor
+        captured["processor"] = worker.curation_processor
         captured["callback"] = curation_callback
         return SimpleNamespace(cards_created=0)
 
