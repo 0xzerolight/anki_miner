@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 from anki_miner.models.deck_build import DeckBuildPreview, DeckSelectionMode
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from anki_miner.services.subtitle_parser import SubtitleParserService
     from anki_miner.utils.file_pairing import FilePair
 
@@ -19,12 +21,18 @@ if TYPE_CHECKING:
 def aggregate(
     parser: SubtitleParserService,
     pairs: list[FilePair],
+    cancel_check: Callable[[], bool] | None = None,
 ) -> collections.Counter[str]:
     """Sum per-file lemma counts across all file pairs into a single corpus Counter.
 
     Args:
         parser: Subtitle parser service providing :meth:`count_lemmas`.
         pairs: List of video/subtitle file pairs to aggregate.
+        cancel_check: Optional callable polled before each file; returning True
+            stops aggregation early.  This is the longest deck-builder Phase-1
+            step (MeCab over the whole corpus), so a cancel must be able to
+            interrupt it between files.  The partial ``Counter`` is returned;
+            the caller is expected to re-check cancellation and discard it.
 
     Returns:
         Combined ``Counter`` mapping lemma → total occurrence count across the
@@ -32,6 +40,8 @@ def aggregate(
     """
     combined: collections.Counter[str] = collections.Counter()
     for pair in pairs:
+        if cancel_check is not None and cancel_check():
+            break
         combined.update(parser.count_lemmas(pair.subtitle))
     return combined
 
