@@ -1,5 +1,7 @@
 """Tests for KnownWordDB service."""
 
+import pytest
+
 from anki_miner.services.known_word_db import KnownWordDB
 
 
@@ -274,3 +276,48 @@ class TestClearUser:
         assert removed == 2
         assert db.get_known_words() == {"食べる"}
         assert db.get_words_by_source("user") == set()
+
+
+class TestExclusiveLock:
+    """Pin the behaviour the caller must tolerate when the DB file is locked.
+
+    Anki (or a parallel mining run) can hold ``known_words.db`` with an
+    exclusive write lock; SQLite raises ``OperationalError('database is
+    locked')`` for writers that can't acquire it. ``EpisodeProcessor`` wraps
+    the post-create ``add_words`` so this no longer discards a successful run
+    (T-19). These tests pin the raise so a future busy_timeout change is a
+    conscious decision.
+    """
+
+    def test_add_words_raises_when_exclusively_locked(self, tmp_path):
+        import sqlite3
+
+        db_path = tmp_path / "known_words.db"
+        db = KnownWordDB(db_path)
+        db.initialize()
+
+        holder = sqlite3.connect(db_path, isolation_level=None)
+        try:
+            holder.execute("BEGIN EXCLUSIVE")
+            with pytest.raises(sqlite3.OperationalError, match="database is locked"):
+                db.add_words({"食べる"})
+        finally:
+            holder.rollback()
+            holder.close()
+
+    def test_get_known_words_raises_when_exclusively_locked(self, tmp_path):
+        import sqlite3
+
+        db_path = tmp_path / "known_words.db"
+        db = KnownWordDB(db_path)
+        db.initialize()
+        db.add_words({"飲む"})
+
+        holder = sqlite3.connect(db_path, isolation_level=None)
+        try:
+            holder.execute("BEGIN EXCLUSIVE")
+            with pytest.raises(sqlite3.OperationalError, match="database is locked"):
+                db.get_known_words()
+        finally:
+            holder.rollback()
+            holder.close()
