@@ -290,13 +290,13 @@ class TestCloseEventNoActiveWorkers:
         event.accept.assert_called_once()
 
 
-_WINDOW_OWNED_WORKER_ATTRS = ["validation_worker", "update_worker", "_jmdict_migration_worker"]
+_WINDOW_OWNED_WORKER_ATTRS = ["validation_worker", "update_worker", "jmdict_migration_worker"]
 
 
 @pytest.fixture
 def quit_calls(monkeypatch):
     """Record QApplication.quit() calls made by the deferred-close machinery."""
-    from anki_miner.gui import main_window as mw_module
+    from anki_miner.gui.controllers import background_tasks as bg_module
 
     calls: list[bool] = []
 
@@ -305,17 +305,17 @@ def quit_calls(monkeypatch):
         def quit() -> None:
             calls.append(True)
 
-    monkeypatch.setattr(mw_module, "QApplication", _QuitRecorder)
+    monkeypatch.setattr(bg_module, "QApplication", _QuitRecorder)
     return calls
 
 
 class TestCloseEventWindowOwnedWorkers:
-    """closeEvent must join all four window-owned workers before accepting."""
+    """closeEvent must join all four window-owned (controller-held) workers before accepting."""
 
     @pytest.mark.parametrize("attr", _WINDOW_OWNED_WORKER_ATTRS)
     def test_running_worker_cancelled_and_joined(self, main_window, attr):
         worker = _FakeWorker(running=True)
-        setattr(main_window, attr, worker)
+        setattr(main_window.background_tasks, attr, worker)
 
         event = _trigger_close(main_window)
 
@@ -325,7 +325,7 @@ class TestCloseEventWindowOwnedWorkers:
 
     def test_prewarm_worker_joined_without_timeout(self, main_window):
         worker = _FakePrewarmWorker(running=True)
-        main_window._prewarm_worker = worker
+        main_window.background_tasks.prewarm_worker = worker
 
         event = _trigger_close(main_window)
 
@@ -349,7 +349,7 @@ class TestCloseEventJoinTimeoutPolicy:
     def test_window_owned_laggard_defers_close(self, main_window, attr):
         main_window.show()
         worker = _FakeWorker(running=True, wait_result=False)
-        setattr(main_window, attr, worker)
+        setattr(main_window.background_tasks, attr, worker)
 
         event = _trigger_close(main_window)
 
@@ -357,8 +357,8 @@ class TestCloseEventJoinTimeoutPolicy:
         event.accept.assert_not_called()
         event.ignore.assert_called_once()
         assert main_window.isHidden()
-        assert main_window._close_poll_timer is not None
-        assert main_window._close_poll_timer.isActive()
+        assert main_window.background_tasks._close_poll_timer is not None
+        assert main_window.background_tasks._close_poll_timer.isActive()
 
     def test_tab_laggard_defers_close(self, main_window):
         tab = _FakeEpisodeTab(worker_running=True, wait_result=False)
@@ -372,21 +372,21 @@ class TestCloseEventJoinTimeoutPolicy:
 
     def test_poll_keeps_app_alive_while_laggard_runs(self, quit_calls, main_window):
         worker = _FakeWorker(running=True, wait_result=False)
-        main_window.update_worker = worker
+        main_window.background_tasks.update_worker = worker
         _trigger_close(main_window)
 
-        main_window._poll_deferred_close()
+        main_window.background_tasks._poll_deferred_close()
 
         assert quit_calls == []
-        assert main_window._close_poll_timer.isActive()
+        assert main_window.background_tasks._close_poll_timer.isActive()
 
     def test_poll_quits_only_after_laggards_exit(self, quit_calls, main_window):
         worker = _FakeWorker(running=True, wait_result=False)
-        main_window.update_worker = worker
+        main_window.background_tasks.update_worker = worker
         _trigger_close(main_window)
 
         worker.finish()
-        main_window._poll_deferred_close()
+        main_window.background_tasks._poll_deferred_close()
 
         assert quit_calls == [True]
-        assert not main_window._close_poll_timer.isActive()
+        assert not main_window.background_tasks._close_poll_timer.isActive()
