@@ -42,6 +42,11 @@ def test_config(temp_dir):
         subtitle_offset=0.0,
         max_parallel_workers=2,  # Reduced for tests
         stats_db_path=temp_dir / "stats.db",
+        # Keep tests off the real ~/.anki_miner: these paths otherwise default
+        # under ANKI_MINER_HOME, so point dicts/known-words/history at tmp too.
+        dicts_root=temp_dir / "dicts",
+        known_words_db_path=temp_dir / "known_words.db",
+        history_db_path=temp_dir / "history.db",
     )
 
 
