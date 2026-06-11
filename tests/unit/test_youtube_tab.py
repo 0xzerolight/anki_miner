@@ -423,6 +423,38 @@ class TestDeferredProcessor:
             finally:
                 widget.deleteLater()
 
+    def test_update_config_on_deferred_processor_keeps_stats_service(self, test_config: AnkiMinerConfig):
+        """update_config before the first run must not drop stats_service (T-15).
+
+        When the processor is still None (startup-deferred), the rebuild used
+        ``getattr(None, "stats_service", None)`` -> None, silently disabling
+        stats.db recording for the session. The tab's own stats service must
+        be threaded through instead.
+        """
+        cfg = replace(test_config, youtube_max_duration_s=7200)
+        sentinel_stats = MagicMock(name="StatsService")
+        with (
+            patch("anki_miner.gui.widgets.youtube_tab.YouTubeProbeWorker", autospec=False),
+            patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker", autospec=False),
+            patch("anki_miner.gui.widgets.youtube_tab.create_youtube_fetcher", return_value=MagicMock()),
+            patch("anki_miner.gui.widgets.youtube_tab.create_episode_processor") as mock_create,
+        ):
+            mock_create.return_value = MagicMock(name="RebuiltProcessor")
+            widget = YouTubeTab(
+                config=cfg,
+                processor=None,
+                fetcher=MagicMock(name="Fetcher"),
+                presenter=MagicMock(name="Presenter"),
+                stats_service=sentinel_stats,
+            )
+            try:
+                widget.update_config(replace(cfg, youtube_max_duration_s=999))
+
+                assert mock_create.call_count == 1
+                assert mock_create.call_args.kwargs["stats_service"] is sentinel_stats
+            finally:
+                widget.deleteLater()
+
 
 class TestRunStartup:
     """Preview / Mine buttons construct the queue worker correctly."""
