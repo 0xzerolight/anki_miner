@@ -222,7 +222,12 @@ def open_readonly(db_path: Path) -> sqlite3.Connection:
     The connection is read-only (`PRAGMA query_only=ON`) so concurrent reads
     are safe under sqlite3's serialized access mode.
     """
-    uri = f"file:{db_path}?mode=ro"
+    # Build the file: URI via Path.as_uri() so URI-significant characters in the
+    # path (``#`` fragment, ``?`` query, ``%`` escape) are percent-encoded. A
+    # raw f-string would let a dicts_root containing any of these truncate the
+    # path and point sqlite at the wrong (or nonexistent) file. as_uri() needs
+    # an absolute path, so resolve first.
+    uri = db_path.resolve().as_uri() + "?mode=ro"
     conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
     conn.execute("PRAGMA query_only=ON")
     return conn
