@@ -50,11 +50,18 @@ def main_window(monkeypatch, test_config):
 
 
 class _FakeWorker:
-    """Minimal stand-in for a ``CancellableWorker`` thread."""
+    """Minimal stand-in for a ``CancellableWorker`` thread.
 
-    def __init__(self, *, running: bool = False) -> None:
+    ``wait_result=False`` simulates a thread that outlives the grace join:
+    ``wait()`` times out (returns False) and the worker keeps running until
+    the test calls :meth:`finish`.
+    """
+
+    def __init__(self, *, running: bool = False, wait_result: bool = True) -> None:
         self._running = running
+        self._wait_result = wait_result
         self.cancel_called = False
+        self.wait_called = False
         self.wait_called_with: int | None = None
 
     def isRunning(self) -> bool:  # noqa: N802 (Qt convention)
@@ -62,10 +69,40 @@ class _FakeWorker:
 
     def cancel(self) -> None:
         self.cancel_called = True
-        self._running = False
 
     def wait(self, timeout_ms: int) -> bool:
+        self.wait_called = True
         self.wait_called_with = timeout_ms
+        if self._wait_result:
+            self._running = False
+            return True
+        return False
+
+    def finish(self) -> None:
+        """Simulate the thread eventually exiting on its own."""
+        self._running = False
+
+
+class _FakePrewarmWorker:
+    """Stand-in for the cache prewarm worker: a QThread with NO cancel hook.
+
+    Deliberately has no ``cancel`` attribute so the join policy is exercised
+    against the real prewarm worker's shape (closeEvent must not assume every
+    worker is cancellable).
+    """
+
+    def __init__(self, *, running: bool = False) -> None:
+        self._running = running
+        self.wait_called = False
+        self.wait_args: tuple | None = None
+
+    def isRunning(self) -> bool:  # noqa: N802 (Qt convention)
+        return self._running
+
+    def wait(self, *args) -> bool:
+        self.wait_called = True
+        self.wait_args = args
+        self._running = False
         return True
 
 
@@ -88,11 +125,11 @@ class _FakeYouTubeTab(YouTubeTab):
 class _FakeEpisodeTab(SingleEpisodeTab):
     """Real SingleEpisodeTab subclass that skips the heavy ``__init__``."""
 
-    def __init__(self, *, worker_running: bool = False) -> None:
+    def __init__(self, *, worker_running: bool = False, wait_result: bool = True) -> None:
         from PyQt6.QtWidgets import QWidget
 
         QWidget.__init__(self)
-        self.worker_thread = _FakeWorker(running=worker_running)
+        self.worker_thread = _FakeWorker(running=worker_running, wait_result=wait_result)
 
 
 class _FakeBatchTab(BatchProcessingTab):
@@ -198,3 +235,105 @@ class TestCloseEventNoActiveWorkers:
     def test_close_with_no_tabs(self, main_window):
         event = _trigger_close(main_window)
         event.accept.assert_called_once()
+
+
+_WINDOW_OWNED_WORKER_ATTRS = ["validation_worker", "update_worker", "_jmdict_migration_worker"]
+
+
+@pytest.fixture
+def quit_calls(monkeypatch):
+    """Record QApplication.quit() calls made by the deferred-close machinery."""
+    from anki_miner.gui import main_window as mw_module
+
+    calls: list[bool] = []
+
+    class _QuitRecorder:
+        @staticmethod
+        def quit() -> None:
+            calls.append(True)
+
+    monkeypatch.setattr(mw_module, "QApplication", _QuitRecorder)
+    return calls
+
+
+class TestCloseEventWindowOwnedWorkers:
+    """closeEvent must join all four window-owned workers before accepting."""
+
+    @pytest.mark.parametrize("attr", _WINDOW_OWNED_WORKER_ATTRS)
+    def test_running_worker_cancelled_and_joined(self, main_window, attr):
+        worker = _FakeWorker(running=True)
+        setattr(main_window, attr, worker)
+
+        event = _trigger_close(main_window)
+
+        assert worker.cancel_called
+        assert worker.wait_called_with == 2000
+        event.accept.assert_called_once()
+
+    def test_prewarm_worker_joined_without_timeout(self, main_window):
+        worker = _FakePrewarmWorker(running=True)
+        main_window._prewarm_worker = worker
+
+        event = _trigger_close(main_window)
+
+        # The prewarm worker has no cancel hook; it must be joined with an
+        # unbounded wait() — a bounded wait could expire and abandon it.
+        assert worker.wait_called
+        assert worker.wait_args == ()
+        event.accept.assert_called_once()
+
+
+class TestCloseEventJoinTimeoutPolicy:
+    """``wait()`` returning False must never accept the close with a live thread.
+
+    Policy under test: a worker that outlives the grace join defers the close
+    — the window hides (so closing feels instant), the event is ignored (so
+    Qt does not destroy the window and its running QThread children), and a
+    poll timer quits the application only once every laggard has exited.
+    """
+
+    @pytest.mark.parametrize("attr", _WINDOW_OWNED_WORKER_ATTRS)
+    def test_window_owned_laggard_defers_close(self, main_window, attr):
+        main_window.show()
+        worker = _FakeWorker(running=True, wait_result=False)
+        setattr(main_window, attr, worker)
+
+        event = _trigger_close(main_window)
+
+        assert worker.cancel_called  # cancel is still requested
+        event.accept.assert_not_called()
+        event.ignore.assert_called_once()
+        assert main_window.isHidden()
+        assert main_window._close_poll_timer is not None
+        assert main_window._close_poll_timer.isActive()
+
+    def test_tab_laggard_defers_close(self, main_window):
+        tab = _FakeEpisodeTab(worker_running=True, wait_result=False)
+        main_window.tabs.addTab(tab, "Episode")
+
+        event = _trigger_close(main_window)
+
+        assert tab.worker_thread.cancel_called
+        event.accept.assert_not_called()
+        event.ignore.assert_called_once()
+
+    def test_poll_keeps_app_alive_while_laggard_runs(self, quit_calls, main_window):
+        worker = _FakeWorker(running=True, wait_result=False)
+        main_window.update_worker = worker
+        _trigger_close(main_window)
+
+        main_window._poll_deferred_close()
+
+        assert quit_calls == []
+        assert main_window._close_poll_timer.isActive()
+
+    def test_poll_quits_only_after_laggards_exit(self, quit_calls, main_window):
+        worker = _FakeWorker(running=True, wait_result=False)
+        main_window.update_worker = worker
+        _trigger_close(main_window)
+
+        worker.finish()
+        main_window._poll_deferred_close()
+
+        assert quit_calls == [True]
+        assert not main_window._close_poll_timer.isActive()
