@@ -306,15 +306,6 @@ class Theme:
         return cls._instance
 
     @classmethod
-    def set_state_listener(cls, listener: StateListener | None) -> None:
-        """Install (or clear) the listener that runs after every state change.
-
-        Used by the app entry point to persist `(active, favorites)` to
-        gui_config.json without making the Theme module aware of file IO.
-        """
-        cls._state_listener = listener
-
-    @classmethod
     def get_current_mode(cls) -> str:
         """Get the current theme mode (theme key, e.g. 'light', 'dark')."""
         cls.get_instance()
@@ -452,19 +443,6 @@ class Theme:
         if not cls.is_favorite(key):
             return
         cls.set_favorites(tuple(k for k in cls._favorites if k != key))
-
-    @classmethod
-    def get_theme_source(cls, key: str) -> str | None:
-        """Return the source marker for a theme key ('shipped' or 'user').
-
-        Returns None if the theme key is unknown.
-        """
-        instance = cls.get_instance()
-        data = instance._themes.get(key)
-        if data is None:
-            return None
-        source = data.get("_source")
-        return source if isinstance(source, str) else None
 
     @classmethod
     def get_colors(cls, mode: str | None = None) -> dict[str, str]:

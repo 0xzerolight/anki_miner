@@ -388,7 +388,6 @@ class TestAddToKnownWords:
         _select_rows(dlg, [0])
         dlg._on_add_to_known()
         assert captured == [{mined}]
-        assert dlg._marked_known == {mined}
 
     def test_marked_rows_are_unchecked_and_excluded(self):
         dlg, _ = self._dialog_with_callback()

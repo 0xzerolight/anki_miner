@@ -105,8 +105,6 @@ class WordCurationDialog(QDialog):
         # the local known/ignore list (Issue #42). Persisted immediately so the
         # words stick even if the dialog is later cancelled.
         self._mark_known_callback = mark_known_callback
-        # Mined forms the user marked as known this session (exposed for tests).
-        self._marked_known: set[str] = set()
         self._media_context = media_context
         self._lookup_fn = lookup_fn
 
@@ -724,7 +722,6 @@ class WordCurationDialog(QDialog):
 
         if self._mark_known_callback is not None:
             self._mark_known_callback(forms)
-        self._marked_known |= forms
 
         self.table.blockSignals(True)
         for row in rows:

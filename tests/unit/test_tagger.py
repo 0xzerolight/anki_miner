@@ -1,4 +1,4 @@
-"""Tests for anki_miner.services.tagger — shared singleton and pre-warm."""
+"""Tests for anki_miner.services.tagger — shared singleton."""
 
 import threading
 from unittest.mock import MagicMock
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 import anki_miner.services.tagger as tagger_mod
-from anki_miner.services.tagger import get_shared_tagger, prewarm_tagger
+from anki_miner.services.tagger import get_shared_tagger
 
 
 @pytest.fixture(autouse=True)
@@ -85,69 +85,8 @@ class TestBuiltOnceUnderConcurrency:
             assert r is returned_instance, f"Thread {i} got a different object"
 
 
-class TestPrewarm:
-    """prewarm_tagger() is non-blocking and triggers construction."""
-
-    def test_returns_thread_immediately(self, monkeypatch):
-        """prewarm_tagger() returns a Thread without blocking."""
-        barrier = threading.Barrier(2)
-        fake_tagger = MagicMock(name="fake_tagger")
-
-        def slow_factory():
-            barrier.wait()  # block until the test joins the barrier
-            return fake_tagger
-
-        monkeypatch.setattr(tagger_mod.fugashi, "Tagger", slow_factory)
-
-        t = prewarm_tagger()
-        assert isinstance(t, threading.Thread)
-        assert t.daemon is True
-        # unblock the factory so the thread can finish
-        barrier.wait()
-        t.join(timeout=5)
-
-    def test_tagger_built_after_join(self, monkeypatch):
-        """After the pre-warm thread joins, get_shared_tagger() returns the built instance."""
-        call_count = 0
-        fake_tagger = MagicMock(name="fake_tagger")
-
-        def counting_factory():
-            nonlocal call_count
-            call_count += 1
-            return fake_tagger
-
-        monkeypatch.setattr(tagger_mod.fugashi, "Tagger", counting_factory)
-
-        t = prewarm_tagger()
-        t.join(timeout=10)
-
-        result = get_shared_tagger()
-        assert result is fake_tagger
-        assert call_count == 1, "Factory should have been called exactly once"
-
-    def test_subsequent_get_does_not_rebuild(self, monkeypatch):
-        """Calling get_shared_tagger() after prewarm does not call the factory again."""
-        call_count = 0
-        fake_tagger = MagicMock(name="fake_tagger")
-
-        def counting_factory():
-            nonlocal call_count
-            call_count += 1
-            return fake_tagger
-
-        monkeypatch.setattr(tagger_mod.fugashi, "Tagger", counting_factory)
-
-        t = prewarm_tagger()
-        t.join(timeout=10)
-
-        get_shared_tagger()
-        get_shared_tagger()
-
-        assert call_count == 1
-
-
 class TestFailurePaths:
-    """Error handling contracts for get_shared_tagger and prewarm_tagger."""
+    """Error handling contracts for get_shared_tagger."""
 
     def test_get_shared_tagger_does_not_poison_on_failure(self, monkeypatch):
         """Constructor failure leaves _tagger None so a retry can still succeed."""
@@ -171,21 +110,6 @@ class TestFailurePaths:
         result = get_shared_tagger()
         assert result is fake_tagger
         assert call_count == 2, "Constructor should have been called twice (once failing, once succeeding)"
-
-    def test_prewarm_swallows_failure(self, monkeypatch, caplog):
-        """A broken install on the prewarm thread must not raise on the calling thread."""
-        import logging
-
-        monkeypatch.setattr(tagger_mod.fugashi, "Tagger", lambda: (_ for _ in ()).throw(RuntimeError("no MeCab")))
-
-        with caplog.at_level(logging.WARNING, logger="anki_miner.services.tagger"):
-            t = prewarm_tagger()
-            t.join(timeout=10)
-
-        assert tagger_mod._tagger is None, "_tagger must remain None when prewarm fails"
-        assert any(
-            "pre-warm failed" in r.message for r in caplog.records
-        ), "Expected a warning log about prewarm failure"
 
 
 @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")

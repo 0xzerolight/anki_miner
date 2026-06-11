@@ -176,14 +176,6 @@ class FormPanel(QFrame):
         self._active_form_layout = self._new_form_layout()
         self._main_layout.addLayout(self._active_form_layout)
 
-    def add_spacing(self, size: int = SPACING.xs) -> None:
-        """Add vertical spacing.
-
-        Args:
-            size: Spacing in pixels
-        """
-        self._main_layout.addSpacing(size)
-
     def add_stretch(self, factor: int = 1) -> None:
         """Add stretch to push content.
 

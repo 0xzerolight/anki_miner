@@ -30,16 +30,6 @@ class QueueItem:
     retry_count: int = 0
     max_retries: int = 2
 
-    @property
-    def status_icon(self) -> str:
-        """Icon for current status (empty - icons removed)."""
-        return {
-            QueueItemStatus.PENDING: "",
-            QueueItemStatus.PROCESSING: "",
-            QueueItemStatus.COMPLETED: "",
-            QueueItemStatus.ERROR: "",
-        }[self.status]
-
 
 class BatchQueue:
     """Manages a queue of folder pairs for batch processing."""
@@ -77,21 +67,6 @@ class BatchQueue:
         )
         self._items.append(item)
         return item
-
-    def remove_item(self, item_id: str) -> bool:
-        """Remove item from queue by ID.
-
-        Args:
-            item_id: ID of the item to remove
-
-        Returns:
-            True if item was removed, False if not found
-        """
-        for i, item in enumerate(self._items):
-            if item.id == item_id:
-                del self._items[i]
-                return True
-        return False
 
     def get_next_pending(self) -> QueueItem | None:
         """Get next pending item in queue.
@@ -135,11 +110,6 @@ class BatchQueue:
     def completed_count(self) -> int:
         """Get count of completed items."""
         return sum(1 for item in self._items if item.status == QueueItemStatus.COMPLETED)
-
-    @property
-    def has_failed_items(self) -> bool:
-        """Check if any items have ERROR status."""
-        return any(item.status == QueueItemStatus.ERROR for item in self._items)
 
     @property
     def failed_count(self) -> int:

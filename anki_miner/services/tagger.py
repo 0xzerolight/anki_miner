@@ -1,4 +1,4 @@
-"""Process-wide shared fugashi tagger with lazy construction and background pre-warm.
+"""Process-wide shared fugashi tagger with lazy, double-checked-locked construction.
 
 Single-flight assumption (IMPORTANT):
     A MeCab tagger is not safe for concurrent ``.parse()`` calls on one instance.
@@ -7,14 +7,14 @@ Single-flight assumption (IMPORTANT):
     time, batch processing is sequential, and users mine one tab at a time.  If
     concurrent mining is ever introduced, give each worker its own tagger or guard
     every ``.parse()`` / ``tagger(text)`` call with a lock.
+
+Background warming of this singleton is done by ``gui/workers/prewarm_worker.py``,
+which calls ``get_shared_tagger()`` off the GUI thread before the first mine.
 """
 
-import logging
 import threading
 
 import fugashi
-
-logger = logging.getLogger(__name__)
 
 _tagger: fugashi.Tagger | None = None
 _lock = threading.Lock()
@@ -28,17 +28,3 @@ def get_shared_tagger() -> fugashi.Tagger:
             if _tagger is None:
                 _tagger = fugashi.Tagger()
     return _tagger
-
-
-def _prewarm_worker() -> None:
-    try:
-        get_shared_tagger()
-    except Exception:  # noqa: BLE001 - background prewarm must never crash the app
-        logger.warning("Tagger pre-warm failed; it will be built on first use.", exc_info=True)
-
-
-def prewarm_tagger() -> threading.Thread:
-    """Start building the shared tagger on a daemon thread; return the thread (fire-and-forget)."""
-    t = threading.Thread(target=_prewarm_worker, name="tagger-prewarm", daemon=True)
-    t.start()
-    return t

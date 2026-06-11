@@ -1,10 +1,8 @@
 """Tests for file_utils module."""
 
-from pathlib import Path
-
 import pytest
 
-from anki_miner.utils.file_utils import cleanup_temp_files, ensure_directory, safe_filename
+from anki_miner.utils.file_utils import ensure_directory, safe_filename
 
 
 class TestEnsureDirectory:
@@ -41,57 +39,6 @@ class TestEnsureDirectory:
 
         assert existing_dir.exists()
         assert result == existing_dir
-
-
-class TestCleanupTempFiles:
-    """Tests for cleanup_temp_files function."""
-
-    def test_removes_matching_files(self, tmp_path):
-        """Should remove files matching pattern."""
-        # Create test files
-        (tmp_path / "test1.tmp").write_text("temp")
-        (tmp_path / "test2.tmp").write_text("temp")
-        (tmp_path / "keep.txt").write_text("keep")
-
-        count = cleanup_temp_files(tmp_path, "*.tmp")
-
-        assert count == 2
-        assert not (tmp_path / "test1.tmp").exists()
-        assert not (tmp_path / "test2.tmp").exists()
-        assert (tmp_path / "keep.txt").exists()
-
-    def test_removes_all_files_with_default_pattern(self, tmp_path):
-        """Should remove all files with default pattern."""
-        (tmp_path / "file1.txt").write_text("a")
-        (tmp_path / "file2.txt").write_text("b")
-
-        count = cleanup_temp_files(tmp_path)
-
-        assert count == 2
-
-    def test_returns_zero_for_nonexistent_directory(self, tmp_path):
-        """Should return 0 for non-existent directory."""
-        nonexistent = tmp_path / "does_not_exist"
-
-        count = cleanup_temp_files(nonexistent)
-
-        assert count == 0
-
-    def test_ignores_subdirectories(self, tmp_path):
-        """Should not remove subdirectories."""
-        subdir = tmp_path / "subdir"
-        subdir.mkdir()
-        (tmp_path / "file.txt").write_text("temp")
-
-        count = cleanup_temp_files(tmp_path)
-
-        assert count == 1
-        assert subdir.exists()
-
-    def test_returns_zero_for_empty_directory(self, tmp_path):
-        """Should return 0 for empty directory."""
-        count = cleanup_temp_files(tmp_path, "*.tmp")
-        assert count == 0
 
 
 class TestSafeFilename:
@@ -164,29 +111,3 @@ class TestSafeFilename:
         result = safe_filename(long_name)
         assert len(result.encode("utf-8")) <= 255
         assert result.endswith(".mp3")
-
-
-class TestCleanupTempFilesErrorHandling:
-    """Tests for error handling in cleanup_temp_files."""
-
-    def test_skips_files_that_fail_to_unlink(self, tmp_path):
-        """Should skip files that raise OSError on unlink and continue."""
-        (tmp_path / "file1.tmp").write_text("a")
-        (tmp_path / "file2.tmp").write_text("b")
-
-        original_unlink = Path.unlink
-
-        def mock_unlink(self, *args, **kwargs):
-            if self.name == "file1.tmp":
-                raise OSError("permission denied")
-            original_unlink(self, *args, **kwargs)
-
-        from unittest.mock import patch
-
-        with patch.object(Path, "unlink", mock_unlink):
-            count = cleanup_temp_files(tmp_path, "*.tmp")
-
-        # file1 failed, file2 succeeded
-        assert count == 1
-        assert (tmp_path / "file1.tmp").exists()
-        assert not (tmp_path / "file2.tmp").exists()

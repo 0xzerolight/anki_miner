@@ -85,9 +85,6 @@ class HeaderWidget(QWidget):
         self.setLayout(layout)
         self.setObjectName("header-widget")
 
-        # Alias for compatibility
-        self.theme_selector = self.theme_combo
-
     def _populate_theme_combo(self) -> None:
         """Rebuild the combo from current favorites + active theme + sentinel.
 
