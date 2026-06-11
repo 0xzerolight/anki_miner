@@ -1,7 +1,9 @@
 """Tests for history_service module."""
 
 import json
+import os
 import sqlite3
+import stat
 
 import pytest
 
@@ -155,3 +157,75 @@ class TestRecordSession:
         row = _fetch_row(history_service.db_path, row_id)
         assert row is not None
         assert json.loads(row["words_mined"]) == ["猫", "犬"]
+
+
+# ---------------------------------------------------------------------------
+# TestCorruptDatabaseFile
+# ---------------------------------------------------------------------------
+
+
+class TestCorruptDatabaseFile:
+    """A corrupt ``history.db`` must surface a hard SQLite error rather than be
+    silently swallowed. Pins the raise so future heal/quarantine handling is a
+    conscious change.
+    """
+
+    @staticmethod
+    def _corrupt(db_path):
+        db_path.write_bytes(b"definitely not a sqlite header " * 8)
+
+    def test_initialize_on_corrupt_raises_database_error(self, tmp_path):
+        db_path = tmp_path / "history.db"
+        self._corrupt(db_path)
+        service = HistoryService(db_path)
+        with pytest.raises(sqlite3.DatabaseError):
+            service.initialize()
+
+    def test_record_session_on_corrupt_raises_database_error(self, tmp_path, sample_result):
+        """A corrupt file that ``initialize`` never managed to fix still fails on
+        the insert in ``record_session``."""
+        db_path = tmp_path / "history.db"
+        self._corrupt(db_path)
+        service = HistoryService(db_path)
+        with pytest.raises(sqlite3.DatabaseError):
+            service.record_session(tmp_path / "v.mkv", tmp_path / "s.ass", sample_result)
+
+
+# ---------------------------------------------------------------------------
+# TestUnwritableParent
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(
+    os.geteuid() == 0,
+    reason="root bypasses filesystem write permissions",
+)
+class TestUnwritableParent:
+    """``initialize`` must not swallow a filesystem permission failure: a
+    read-only data dir means history can never be written and the OSError must
+    propagate so the caller can surface it.
+    """
+
+    def test_initialize_creating_subdir_under_readonly_parent_raises(self, tmp_path):
+        ro = tmp_path / "readonly"
+        ro.mkdir()
+        os.chmod(ro, stat.S_IRUSR | stat.S_IXUSR)  # r-x, no write
+        target = ro / "sub" / "history.db"
+        service = HistoryService(target)
+        try:
+            with pytest.raises(PermissionError):
+                service.initialize()
+        finally:
+            os.chmod(ro, stat.S_IRWXU)
+
+    def test_initialize_connect_under_readonly_existing_parent_raises(self, tmp_path):
+        ro = tmp_path / "readonly"
+        ro.mkdir()
+        os.chmod(ro, stat.S_IRUSR | stat.S_IXUSR)
+        target = ro / "history.db"
+        service = HistoryService(target)
+        try:
+            with pytest.raises(sqlite3.OperationalError, match="unable to open database file"):
+                service.initialize()
+        finally:
+            os.chmod(ro, stat.S_IRWXU)
