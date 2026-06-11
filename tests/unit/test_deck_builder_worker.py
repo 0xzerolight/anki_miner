@@ -9,6 +9,7 @@ or ``reject()`` so ``run()`` does not block.
 from __future__ import annotations
 
 import collections
+import threading
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -81,9 +82,9 @@ def _make_worker(qapp, request, *, processors, config_kwargs=None) -> tuple[Deck
     """Construct a worker whose ``create_episode_processor`` is patched.
 
     ``processors`` is a list returned in order on each factory call (Phase 1
-    base processor first, then one per episode). ``config_kwargs`` overrides
-    extra config fields (e.g. ``use_known_words_db``). Returns
-    ``(worker, factory)``.
+    base processor first, then one per episode) — or a callable used as the
+    factory's ``side_effect`` directly. ``config_kwargs`` overrides extra
+    config fields (e.g. ``use_known_words_db``). Returns ``(worker, factory)``.
     """
     factory = MagicMock(side_effect=processors)
     patcher = patch.object(dbw_module, "create_episode_processor", factory)
@@ -431,8 +432,140 @@ def test_cancel_before_confirm_skips_build(qapp):
         worker.cancel()
         worker.run()
         base.anki_service.ensure_deck.assert_not_called()
-        assert factory.call_count == 1
+        # No per-episode processor was created (Phase 1 is also skipped, T-25a).
+        assert factory.call_count <= 1
     finally:
+        worker._stop_patch.stop()
+
+
+# --------------------------------------------------------------------------- #
+# Phase-1 / construction-window cancellation (T-25)
+# --------------------------------------------------------------------------- #
+
+
+def test_cancel_before_run_emits_no_preview(qapp):
+    """Regression (T-25a): a cancel landing before run() starts suppresses Phase 1.
+
+    No processor construction, no aggregate, and above all no preview_ready —
+    the GUI would otherwise show a fresh preview (and enable Build) for a
+    worker the user already cancelled.
+    """
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    worker, factory = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base])
+    try:
+        previews = _collect(worker.preview_ready)
+        worker.cancel()
+        worker.run()
+        assert previews == []
+        factory.assert_not_called()
+        base.subtitle_parser.count_lemmas.assert_not_called()
+    finally:
+        worker._stop_patch.stop()
+
+
+def test_cancel_during_aggregate_stops_phase1(qapp):
+    """Regression (T-25a): a cancel during aggregate() stops Phase 1 promptly.
+
+    aggregate() runs MeCab over the whole corpus (minutes) and _known_lemmas
+    can spend 15-30 s on AnkiConnect HTTP. A cancel landing mid-aggregate must
+    stop the per-file loop, skip the known-words fetch, and suppress
+    preview_ready.
+    """
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts, known={"a"})
+    worker, _ = _make_worker(
+        qapp,
+        _make_request([_make_pair("ep1"), _make_pair("ep2")], collection_filter=True),
+        processors=[base],
+        config_kwargs={"use_known_words_db": True},
+    )
+
+    def cancel_on_first_file(_path):
+        worker.cancel()
+        return counts
+
+    base.subtitle_parser.count_lemmas.side_effect = cancel_on_first_file
+    try:
+        previews = _collect(worker.preview_ready)
+        worker.run()
+        assert previews == []
+        # ep2 was never parsed: the cancel callback stopped aggregate between files.
+        assert base.subtitle_parser.count_lemmas.call_count == 1
+        base.known_word_db.get_known_words.assert_not_called()
+    finally:
+        worker._stop_patch.stop()
+
+
+def test_cancel_during_processor_construction_skips_next_episode(qapp):
+    """Regression (T-25b): cancel during create_episode_processor is not lost.
+
+    A cancel() landing while the factory is still constructing the NEXT
+    per-episode processor propagates to the PREVIOUS processor (or None), and
+    the loop-top check already ran before that window opened. Without a
+    re-check after the _current_processor assignment, the next episode mines
+    fully (ffmpeg + lookups) despite the cancel.
+    """
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    ep1 = _fake_processor(counts)
+    ep2 = _fake_processor(counts)
+    queue = [base, ep1, ep2]
+    holder: dict = {}
+
+    def factory_cancels_during_ep2_construction(*_args, **_kwargs):
+        proc = queue.pop(0)
+        if proc is ep2:
+            holder["worker"].cancel()  # lands mid-construction
+        return proc
+
+    worker, _ = _make_worker(
+        qapp,
+        _make_request([_make_pair("ep1"), _make_pair("ep2")]),
+        processors=factory_cancels_during_ep2_construction,
+    )
+    holder["worker"] = worker
+    try:
+        finished = _collect(worker.build_finished)
+        worker.confirm()
+        worker.run()
+        ep1.process_episode.assert_called_once()
+        ep2.process_episode.assert_not_called()
+        assert finished == []
+    finally:
+        worker._stop_patch.stop()
+
+
+def test_cancel_releases_blocked_confirm_gate_real_thread(qapp):
+    """cancel() must release a worker genuinely blocked on _confirm_event.wait().
+
+    Runs the worker as a real QThread (offscreen). Cross-thread signal delivery
+    to plain callables would need a spinning event loop, so gate arrival is
+    detected by wrapping the gate's own wait() instead. After cancel(), the
+    thread must end within a bounded join — a regression here leaves the GUI's
+    "Cancelling…" state stuck forever.
+    """
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base])
+    reached_gate = threading.Event()
+    real_wait = worker._confirm_event.wait
+
+    def spying_wait(*args, **kwargs):
+        reached_gate.set()
+        return real_wait(*args, **kwargs)
+
+    worker._confirm_event.wait = spying_wait  # instance attr shadows the method
+    try:
+        worker.start()
+        assert reached_gate.wait(10.0), "worker never blocked on the confirm gate"
+        worker.cancel()
+        assert worker.wait(10_000), "cancel() did not release the blocked confirm gate"
+        base.anki_service.ensure_deck.assert_not_called()
+    finally:
+        if worker.isRunning():  # pragma: no cover - only on regression
+            worker.confirm()
+            worker.wait(10_000)
         worker._stop_patch.stop()
 
 
