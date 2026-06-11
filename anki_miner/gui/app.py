@@ -188,7 +188,10 @@ def main():
     window.tabs.addTab(analytics_tab, "Analytics")
 
     settings_tab = SettingsTab(window.get_config())
-    settings_tab.config_changed.connect(window.update_config)
+    # from_settings=True suppresses the config_refreshed re-emit: SettingsTab
+    # and the mining tabs are notified directly on the next four lines, so a
+    # re-emit would only reload SettingsTab's panels mid-save (re-entrancy).
+    settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg, from_settings=True))
     settings_tab.config_changed.connect(episode_tab.update_config)
     settings_tab.config_changed.connect(batch_tab.update_config)
     settings_tab.config_changed.connect(deck_builder_tab.update_config)
