@@ -525,35 +525,28 @@ class BatchProcessingTab(MiningTabBase):
     def _on_item_started(self, item_id: str, display_name: str) -> None:
         """Called when processing starts for an item.
 
+        Render-only: the worker already set the item's status at pick time
+        (it owns all QueueItem writes during a run — see
+        BatchQueueWorkerThread.run). Writing status here raced the worker loop.
+
         Args:
             item_id: Item ID
             display_name: Display name of series
         """
-        # Update model state from GUI thread
-        items = self.batch_queue.get_all_items()
-        for item in items:
-            if item.id == item_id:
-                item.status = QueueItemStatus.PROCESSING
-                break
-
         self.presenter.show_info(f"Processing series: {display_name}")
         self.queue_panel.set_item_status(display_name, "processing")
 
     def _on_item_completed(self, item_id: str, cards_created: int) -> None:
         """Called when an item completes successfully.
 
+        Render-only: status/cards were already written by the worker before it
+        emitted this signal (see BatchQueueWorkerThread.run), so completed_count
+        below is accurate even while this slot lags the worker.
+
         Args:
             item_id: Item ID
             cards_created: Number of cards created
         """
-        # Update model state from GUI thread
-        items = self.batch_queue.get_all_items()
-        for item in items:
-            if item.id == item_id:
-                item.status = QueueItemStatus.COMPLETED
-                item.cards_created = cards_created
-                break
-
         completed = self.batch_queue.completed_count
         total = self.batch_queue.total_items
 
@@ -566,18 +559,13 @@ class BatchProcessingTab(MiningTabBase):
     def _on_item_failed(self, item_id: str, error_message: str) -> None:
         """Called when an item fails.
 
+        Render-only: the worker already set ERROR status and error_message
+        before emitting (see BatchQueueWorkerThread.run).
+
         Args:
             item_id: Item ID
             error_message: Error message
         """
-        # Update model state from GUI thread
-        items = self.batch_queue.get_all_items()
-        for item in items:
-            if item.id == item_id:
-                item.status = QueueItemStatus.ERROR
-                item.error_message = error_message
-                break
-
         self.presenter.show_error(error_message)
 
     def _on_queue_finished(self, total_cards: int) -> None:
