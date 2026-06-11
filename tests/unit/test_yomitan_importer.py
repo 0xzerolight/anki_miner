@@ -435,3 +435,32 @@ class TestDeriveDictIdFromZip:
         bad.write_bytes(b"this is not a zip file")
         with pytest.raises(SetupError, match="Corrupt zip"):
             derive_dict_id_from_zip(bad)
+
+    def test_oversized_index_json_rejected_without_full_read(self, tmp_path: Path):
+        """T-35: a small zip carrying a huge highly-compressible index.json must
+        be rejected on its DECLARED uncompressed size, before the bytes are read
+        fully into memory (which would OOM the process when a user picks the zip
+        for a reimport slot)."""
+        import zipfile
+        from unittest.mock import patch
+
+        from anki_miner.services.dictionary.importers import yomitan_importer
+
+        bad = tmp_path / "bomb.zip"
+        # Declared uncompressed size just over the cap; compresses to a few KB
+        # on disk so the test stays fast and small.
+        payload = b" " * (yomitan_importer.MAX_INDEX_JSON_BYTES + 1)
+        with zipfile.ZipFile(bad, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("index.json", payload)
+
+        # Fail loudly if the implementation ever does an unbounded read of the
+        # entry — proving the declared-size cap (or a bounded read) fires first.
+        real_read = zipfile.ZipExtFile.read
+
+        def guard(self, n=-1):  # noqa: ANN001
+            if n is None or n < 0:
+                raise AssertionError("derive_dict_id_from_zip read index.json without a size cap")
+            return real_read(self, n)
+
+        with patch.object(zipfile.ZipExtFile, "read", guard), pytest.raises(SetupError, match="(?i)index.json"):
+            derive_dict_id_from_zip(bad)
