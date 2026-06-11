@@ -82,12 +82,11 @@ There is no enforced coverage floor today. New code should add tests where reaso
 
 ## CI behavior
 
-`.github/workflows/ci.yml` defines five jobs:
+`.github/workflows/ci.yml` defines four jobs:
 
 1. **lint** — `ruff check .` + `black --check .` (Python 3.12).
 2. **typecheck** — `mypy anki_miner` (Python 3.12).
 3. **test** — `pytest -m "not youtube"` with coverage on the full matrix.
-4. **smoke-min-deps** — installs floor-version pins of the fragile deps (via `scripts/extract_floor_pins.py`) and runs the YouTube-layer unit tests (`tests/unit/test_youtube_*.py -m "not youtube"`) against those floors, catching breakage from the oldest supported dependency versions.
-5. **wheel-assets** — builds a wheel, runs `scripts/check_wheel_assets.py`.
+4. **wheel-assets** — builds a wheel, runs `scripts/check_wheel_assets.py`.
 
-All five must pass for a PR to be mergeable.
+All four must pass for a PR to be mergeable.
