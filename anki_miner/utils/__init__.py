@@ -7,11 +7,9 @@ from .audio_track_detector import (
     get_primary_video_codec,
     list_audio_streams,
 )
-from .file_utils import cleanup_temp_files, ensure_directory, safe_filename
-from .sort_utils import natural_sort_key
+from .file_utils import ensure_directory, safe_filename
 from .text_utils import (
     clean_subtitle_text,
-    extract_japanese_text,
     generate_furigana,
     generate_reading,
     is_hiragana_only,
@@ -24,10 +22,8 @@ from .text_utils import (
 __all__ = [
     "AudioStream",
     "ensure_directory",
-    "cleanup_temp_files",
     "safe_filename",
     "clean_subtitle_text",
-    "extract_japanese_text",
     "find_japanese_audio_stream",
     "get_primary_video_codec",
     "generate_furigana",
@@ -37,7 +33,6 @@ __all__ = [
     "JapaneseAudioStream",
     "katakana_to_hiragana",
     "list_audio_streams",
-    "natural_sort_key",
     "wrap_target_furigana",
     "wrap_target_plain",
 ]
