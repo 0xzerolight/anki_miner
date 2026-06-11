@@ -388,6 +388,14 @@ class DeckBuilderTab(MiningTabBase):
             with contextlib.suppress(TypeError, RuntimeError):
                 self.worker_thread.finished.disconnect(self._restore_buttons)
             self.worker_thread.cancel()
+            # Bounded join: cancel() unblocks the confirm gate / active
+            # processor, so the thread winds down quickly. Reassigning
+            # self.worker_thread below would otherwise drop the only reference
+            # to a live QThread — "QThread: Destroyed while thread is still
+            # running" — and crash. Bounded so a stuck worker cannot freeze
+            # the GUI forever.
+            if not self.worker_thread.wait(5000):
+                logger.warning("Lingering deck-builder worker did not stop within 5 s; replacing it anyway")
 
         self.log_widget.clear_log()
         self.log_widget.append_info("Analysing corpus…")

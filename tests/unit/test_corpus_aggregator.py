@@ -101,6 +101,38 @@ class TestAggregate:
         called_paths = {call.args[0] for call in parser.count_lemmas.call_args_list}
         assert called_paths == {p1.subtitle, p2.subtitle}
 
+    def test_cancel_check_stops_between_files(self):
+        """Regression (T-25a): cancel_check=True stops the per-file loop early.
+
+        aggregate() is the longest deck-builder Phase-1 step (MeCab over the
+        whole corpus, minutes); the optional callback lets the worker abort
+        between files instead of grinding through every remaining subtitle.
+        """
+        p1, p2, p3 = _pair("ep01"), _pair("ep02"), _pair("ep03")
+        parser = _parser(
+            {
+                p1.subtitle: collections.Counter({"a": 1}),
+                p2.subtitle: collections.Counter({"b": 1}),
+                p3.subtitle: collections.Counter({"c": 1}),
+            }
+        )
+        cancel_check = MagicMock(side_effect=[False, True])
+
+        result = aggregate(parser, [p1, p2, p3], cancel_check=cancel_check)
+
+        # First file processed; loop stopped before the second.
+        assert parser.count_lemmas.call_count == 1
+        assert result == collections.Counter({"a": 1})
+
+    def test_cancel_check_false_processes_everything(self):
+        """A cancel_check that never fires must not change the aggregate result."""
+        p1, p2 = _pair("ep01"), _pair("ep02")
+        parser = _parser({p1.subtitle: collections.Counter({"a": 1}), p2.subtitle: collections.Counter({"b": 2})})
+
+        result = aggregate(parser, [p1, p2], cancel_check=lambda: False)
+
+        assert result == collections.Counter({"a": 1, "b": 2})
+
 
 # ---------------------------------------------------------------------------
 # select() — ALL mode
