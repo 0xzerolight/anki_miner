@@ -2,6 +2,7 @@
 
 import os
 import re
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
@@ -77,6 +78,13 @@ class SettingsTab(QWidget):
         # is a QThread and would be destroyed mid-run if the worker fell out
         # of scope before joining. _resolve_pitch_accent_path stores it here.
         self._active_pitch_worker: PitchImportWorker | None = None
+        # Deferred CSV-promotion closures (T-10). A pitch/freq zip import stages
+        # its CSV to a sibling ``.pending`` file; the promotion (os.replace into
+        # place + selector update + success dialog) is held here and run by
+        # _commit_pending_csv_imports() only AFTER *both* imports have passed,
+        # so a frequency failure can never leave pitch_accent.csv half-written.
+        self._pending_pitch_commit: Callable[[], None] | None = None
+        self._pending_freq_commit: Callable[[], None] | None = None
         self._setup_ui()
         self._connect_signals()
         self._load_config()
@@ -404,11 +412,13 @@ class SettingsTab(QWidget):
 
         # Build the candidate config from all panels FIRST, then run the
         # pitch-zip and frequency-zip imports LAST so any current or future
-        # pre-import validation step has a chance to abort before we mutate
+        # pre-import validation step has a chance to abort before we touch
         # ~/.anki_miner/pitch_accent.csv or ~/.anki_miner/frequency.csv on
-        # disk. The imports are the only side-effecting steps in this method
-        # — once they run there's no rollback short of re-importing the
-        # previous CSV. See review of commit 63ffcd9 finding #2.
+        # disk. The imports stage to ``.pending`` siblings and only promote
+        # over the real CSVs once BOTH have passed (see
+        # _commit_pending_csv_imports), so a frequency failure can't leave a
+        # half-written pitch_accent.csv (T-10). See review of commit 63ffcd9
+        # finding #2.
         new_config = replace(
             self.config,
             # Anki settings
@@ -440,15 +450,13 @@ class SettingsTab(QWidget):
             # Dictionary storage folder (Issue #45). Validated above; reuse of
             # current value passes through unchanged.
             dicts_root=new_dicts_root,
-            # Pitch accent settings — pitch_accent_path is filled in below
-            # after _resolve_pitch_accent_path runs (last side-effect, see
-            # top of this method).
+            # Pitch accent settings — pitch_accent_path is overwritten below
+            # with the resolver's result once both staged imports commit.
             pitch_accent_path=self.config.pitch_accent_path,
             use_pitch_accent=self.dictionary_panel.use_pitch_accent_checkbox.isChecked(),
             pitch_category_format=self.anki_panel.get_pitch_category_format(),
-            # Frequency settings — frequency_list_path is filled in below
-            # after _resolve_frequency_path runs (last side-effect, see top
-            # of this method).
+            # Frequency settings — frequency_list_path is overwritten below
+            # with the resolver's result once both staged imports commit.
             frequency_list_path=self.config.frequency_list_path,
             use_frequency_data=self.filtering_panel.use_frequency_checkbox.isChecked(),
             max_frequency_rank=self.filtering_panel.max_frequency_spinbox.value(),
@@ -498,21 +506,36 @@ class SettingsTab(QWidget):
             skipped_update_version=skipped_update_version,
         )
 
-        # Last side-effects before commit: import the Yomitan pitch-accent
-        # zip and frequency zip if the user picked either. Any pre-import
-        # validation belongs ABOVE these calls. None here means an import
-        # failed OR was cancelled — abort the whole save (the user already
-        # saw the error dialog, if any). Pitch runs before frequency so
-        # neither side-effects until validation passes for both.
+        # Last steps before commit: import the Yomitan pitch-accent zip and
+        # frequency zip if the user picked either. Any pre-import validation
+        # belongs ABOVE these calls. None here means an import failed OR was
+        # cancelled — abort the whole save (the user already saw the error
+        # dialog, if any). Each resolver only STAGES its CSV to a sibling
+        # ``.pending`` file and defers the destructive promotion (os.replace +
+        # selector update + success dialog) into a commit closure; nothing on
+        # disk is clobbered until _commit_pending_csv_imports() runs below,
+        # which only happens once BOTH imports have passed. A frequency failure
+        # after a successful pitch import therefore leaves the user's existing
+        # pitch_accent.csv untouched.
         resolved_pitch_path = self._resolve_pitch_accent_path()
         if resolved_pitch_path is None:
             return
-        new_config = replace(new_config, pitch_accent_path=resolved_pitch_path)
 
         resolved_freq_path = self._resolve_frequency_path()
         if resolved_freq_path is None:
+            # Pitch may have staged a .pending file; drop it so a failed save
+            # never leaves stray staging files behind.
+            self._discard_pending_csv_imports()
             return
-        new_config = replace(new_config, frequency_list_path=resolved_freq_path)
+
+        # Both imports validated — promote both staged CSVs to disk and run
+        # their UI feedback now, after which the paths are safe to persist.
+        self._commit_pending_csv_imports()
+        new_config = replace(
+            new_config,
+            pitch_accent_path=resolved_pitch_path,
+            frequency_list_path=resolved_freq_path,
+        )
 
         # Sync the dictionary panel to the committed root (T-07). Done here —
         # alongside the config assignment, after every validation/import has
@@ -538,19 +561,30 @@ class SettingsTab(QWidget):
         If the path points at a Yomitan-format pitch-accent zip, run the
         importer in a background ``PitchImportWorker`` (driven by a modal
         ``QProgressDialog`` + a local ``QEventLoop`` so this method stays
-        blocking for the caller) and return the materialized
-        ``pitch_accent.csv`` path. CSV/TSV paths pass through unchanged.
+        blocking for the caller) and return the eventual ``pitch_accent.csv``
+        path. CSV/TSV paths pass through unchanged.
+
+        On a successful zip import the CSV is staged to a sibling ``.pending``
+        file; the destructive promotion (os.replace into place, selector
+        update, success dialog) is held in ``self._pending_pitch_commit`` and
+        run by :meth:`_commit_pending_csv_imports` only once the *frequency*
+        import has also passed (T-10). This guarantees a later frequency
+        failure can never leave the user's existing ``pitch_accent.csv``
+        half-overwritten.
 
         Returns:
             * ``Path("")`` if no path is selected.
             * The original CSV/TSV path if not a zip.
-            * The materialized CSV path on successful import.
+            * The destination CSV path on successful import (promotion deferred).
             * ``self.config.pitch_accent_path`` if the user declined to
               overwrite an existing ``pitch_accent.csv`` (other settings still
               save).
             * ``None`` if the import failed or was cancelled (caller aborts
               the whole save).
         """
+        # No staged promotion unless a zip import succeeds below.
+        self._pending_pitch_commit = None
+
         raw = self.dictionary_panel.pitch_accent_selector.get_path()
         if not raw:
             return Path("")
@@ -559,6 +593,7 @@ class SettingsTab(QWidget):
 
         zip_path = Path(raw)
         dest_csv = ANKI_MINER_HOME / "pitch_accent.csv"
+        pending_csv = dest_csv.with_suffix(dest_csv.suffix + ".pending")
 
         # Overwrite guard. atomic_write_csv only protects against mid-write
         # failures, not intentional clobbering of a user's existing CSV.
@@ -579,7 +614,8 @@ class SettingsTab(QWidget):
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
-        worker = PitchImportWorker(zip_path, dest_csv)
+        # Import into the staging file, never directly over dest_csv.
+        worker = PitchImportWorker(zip_path, pending_csv)
         self._active_pitch_worker = worker  # keep alive across QThread lifetime
 
         result_holder: dict[str, object] = {}
@@ -612,23 +648,30 @@ class SettingsTab(QWidget):
             err_msg = str(result_holder["err"])
             if "cancel" not in err_msg.lower():
                 QMessageBox.warning(self, "Pitch Accent Import Failed", err_msg)
+            # Drop the staging file so a failed import leaves nothing behind.
+            pending_csv.unlink(missing_ok=True)
             return None
 
         result = result_holder["ok"]
         assert isinstance(result, YomitanPitchImportResult)
 
-        # Reflect the imported path back into the UI so subsequent saves don't
-        # re-trigger the import every time the user clicks Save.
-        self.dictionary_panel.pitch_accent_selector.set_path(str(dest_csv))
+        def _commit() -> None:
+            os.replace(pending_csv, dest_csv)
+            # Reflect the imported path back into the UI so subsequent saves
+            # don't re-trigger the import every time the user clicks Save.
+            self.dictionary_panel.pitch_accent_selector.set_path(str(dest_csv))
+            skipped_note = (
+                f" (skipped {result.skipped_display_only:,} display-only entries)"
+                if result.skipped_display_only
+                else ""
+            )
+            QMessageBox.information(
+                self,
+                "Pitch accent dictionary imported",
+                f"Imported {result.entry_count:,} entries from '{result.source_name}'.{skipped_note}",
+            )
 
-        skipped_note = (
-            f" (skipped {result.skipped_display_only:,} display-only entries)" if result.skipped_display_only else ""
-        )
-        QMessageBox.information(
-            self,
-            "Pitch accent dictionary imported",
-            f"Imported {result.entry_count:,} entries from '{result.source_name}'.{skipped_note}",
-        )
+        self._pending_pitch_commit = _commit
         return dest_csv
 
     def _resolve_frequency_path(self) -> Path | None:
@@ -637,19 +680,27 @@ class SettingsTab(QWidget):
         If the path points at a Yomitan-format frequency zip, run the importer
         in a background ``FrequencyImportWorker`` (driven by a modal
         ``QProgressDialog`` + a local ``QEventLoop`` so this method stays
-        blocking for the caller) and return the materialized
-        ``frequency.csv`` path. CSV/TSV paths pass through unchanged.
+        blocking for the caller) and return the eventual ``frequency.csv``
+        path. CSV/TSV paths pass through unchanged.
+
+        Like :meth:`_resolve_pitch_accent_path`, a successful zip import is
+        staged to a sibling ``.pending`` file and the destructive promotion is
+        deferred into ``self._pending_freq_commit``, run by
+        :meth:`_commit_pending_csv_imports` only after both imports pass (T-10).
 
         Returns:
             * ``Path("")`` if no path is selected.
             * The original CSV/TSV path if not a zip.
-            * The materialized CSV path on successful import.
+            * The destination CSV path on successful import (promotion deferred).
             * ``self.config.frequency_list_path`` if the user declined to
               overwrite an existing ``frequency.csv`` (other settings still
               save).
             * ``None`` if the import failed or was cancelled (caller aborts
               the whole save).
         """
+        # No staged promotion unless a zip import succeeds below.
+        self._pending_freq_commit = None
+
         raw = self.filtering_panel.frequency_selector.get_path()
         if not raw:
             return Path("")
@@ -658,6 +709,7 @@ class SettingsTab(QWidget):
 
         zip_path = Path(raw)
         dest_csv = ANKI_MINER_HOME / "frequency.csv"
+        pending_csv = dest_csv.with_suffix(dest_csv.suffix + ".pending")
 
         # Overwrite guard. atomic_write_csv only protects against mid-write
         # failures, not intentional clobbering of a user's existing CSV.
@@ -678,7 +730,8 @@ class SettingsTab(QWidget):
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
-        worker = FrequencyImportWorker(zip_path, dest_csv)
+        # Import into the staging file, never directly over dest_csv.
+        worker = FrequencyImportWorker(zip_path, pending_csv)
         self._active_freq_worker = worker  # keep alive across QThread lifetime
 
         result_holder: dict[str, object] = {}
@@ -711,24 +764,63 @@ class SettingsTab(QWidget):
             err_msg = str(result_holder["err"])
             if "cancel" not in err_msg.lower():
                 QMessageBox.warning(self, "Frequency Import Failed", err_msg)
+            # Drop the staging file so a failed import leaves nothing behind.
+            pending_csv.unlink(missing_ok=True)
             return None
 
         result = result_holder["ok"]
         assert isinstance(result, YomitanFreqImportResult)
 
-        # Reflect the imported path back into the UI so subsequent saves don't
-        # re-trigger the import every time the user clicks Save.
-        self.filtering_panel.frequency_selector.set_path(str(dest_csv))
+        def _commit() -> None:
+            os.replace(pending_csv, dest_csv)
+            # Reflect the imported path back into the UI so subsequent saves
+            # don't re-trigger the import every time the user clicks Save.
+            self.filtering_panel.frequency_selector.set_path(str(dest_csv))
+            skipped_note = (
+                f" (skipped {result.skipped_display_only:,} display-only entries)"
+                if result.skipped_display_only
+                else ""
+            )
+            QMessageBox.information(
+                self,
+                "Frequency dictionary imported",
+                f"Imported {result.entry_count:,} entries from '{result.source_name}'.{skipped_note}",
+            )
 
-        skipped_note = (
-            f" (skipped {result.skipped_display_only:,} display-only entries)" if result.skipped_display_only else ""
-        )
-        QMessageBox.information(
-            self,
-            "Frequency dictionary imported",
-            f"Imported {result.entry_count:,} entries from '{result.source_name}'.{skipped_note}",
-        )
+        self._pending_freq_commit = _commit
         return dest_csv
+
+    def _commit_pending_csv_imports(self) -> None:
+        """Promote any staged pitch/frequency CSV imports and clear them.
+
+        Called once both resolvers have succeeded (T-10). Runs each deferred
+        commit closure — os.replace(``.pending`` → final), selector update,
+        success dialog — then resets the slots so a later save starts clean.
+        """
+        pitch_commit = self._pending_pitch_commit
+        freq_commit = self._pending_freq_commit
+        self._pending_pitch_commit = None
+        self._pending_freq_commit = None
+        if pitch_commit is not None:
+            pitch_commit()
+        if freq_commit is not None:
+            freq_commit()
+
+    def _discard_pending_csv_imports(self) -> None:
+        """Drop staged pitch/frequency promotions without touching disk targets.
+
+        Called when the save aborts after a successful pitch import but a failed
+        frequency import (T-10). The frequency resolver already removed its own
+        ``.pending`` file on failure, so here we only clean up a pitch staging
+        file (if pitch succeeded) and clear both deferred commit slots so the
+        next save starts clean. No final CSV is touched.
+        """
+        if self._pending_pitch_commit is not None:
+            dest_csv = ANKI_MINER_HOME / "pitch_accent.csv"
+            pending_csv = dest_csv.with_suffix(dest_csv.suffix + ".pending")
+            pending_csv.unlink(missing_ok=True)
+        self._pending_pitch_commit = None
+        self._pending_freq_commit = None
 
     def _on_reset_clicked(self) -> None:
         """Handle reset button click."""
