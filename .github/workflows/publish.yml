@@ -18,6 +18,22 @@ jobs:
       - name: Install build tools
         run: pip install build
 
+      - name: Validate tag matches package version
+        shell: bash
+        run: |
+          TAG_VERSION=${GITHUB_REF_NAME#v}
+          # Single source of truth: anki_miner/__init__.py (Issue #10). Parse the
+          # literal directly so this step doesn't depend on the package being
+          # installed. Mirrors release.yml's gate so a mis-tag can't republish a
+          # stale __init__.py version (was masked by skip-existing).
+          CODE_VERSION=$(python -c "import re; print(re.search(r'__version__\s*=\s*[\"\x27]([^\"\x27]+)[\"\x27]', open('anki_miner/__init__.py').read()).group(1))")
+          echo "Tag version: $TAG_VERSION"
+          echo "Code version: $CODE_VERSION"
+          if [ "$TAG_VERSION" != "$CODE_VERSION" ]; then
+            echo "::error::Version mismatch: git tag v$TAG_VERSION != anki_miner/__init__.py $CODE_VERSION"
+            exit 1
+          fi
+
       - name: Build package
         run: python -m build
 
@@ -42,5 +58,3 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          skip-existing: true
