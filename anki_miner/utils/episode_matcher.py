@@ -22,16 +22,24 @@ class EpisodeInfo:
 class EpisodeNumberExtractor:
     """Extract episode numbers from filenames using regex patterns."""
 
-    # Regex patterns for common episode naming conventions (in priority order)
+    # Just numbers: 01, 001, 1 (at boundaries or after non-digits). Last-resort
+    # fallback handled separately (findall + LAST match) so numeric show titles
+    # like "86", "Mob Psycho 100", "Steins;Gate 0", "3-gatsu" don't steal the
+    # episode slot from the trailing episode number. See extract_episode_info.
+    BARE_NUMBER = r"(?:^|[^\d])(\d{1,3})(?:[^\d]|$)"
+
+    # Regex patterns for common episode naming conventions (in priority order).
+    # Each is tried with re.search (FIRST match) before falling back to
+    # BARE_NUMBER. The bare-number fallback is intentionally excluded here.
     PATTERNS = [
-        # S01E01, s1e1, S01 E01 (season + episode)
-        (r"[Ss](\d+)[Ee](\d+)", lambda m: (int(m.group(1)), int(m.group(2)))),
+        # S01E01, s1e1, S01 E01, S01.E01, S01-E01 (season + episode). The
+        # separator class lets "Show.S02 E05" be read as season 2 / episode 5
+        # instead of falling through to BARE_NUMBER and mining the season.
+        (r"[Ss](\d+)[\s._-]*[Ee](\d+)", lambda m: (int(m.group(1)), int(m.group(2)))),
         # 1x01, 1X01 (season x episode)
         (r"(\d+)[xX](\d+)", lambda m: (int(m.group(1)), int(m.group(2)))),
         # Episode 01, Ep01, ep.01, episode_01 (no season)
         (r"[Ee][Pp](?:isode)?[\s._-]*(\d+)", lambda m: (None, int(m.group(1)))),
-        # Just numbers: 01, 001, 1 (at boundaries or after non-digits)
-        (r"(?:^|[^\d])(\d{1,3})(?:[^\d]|$)", lambda m: (None, int(m.group(1)))),
     ]
 
     @classmethod
@@ -57,6 +65,14 @@ class EpisodeNumberExtractor:
             if match:
                 season, episode = extractor(match)
                 return EpisodeInfo(file_path, episode, season)
+
+        # Last resort: bare number. Take the LAST 1-3 digit run, not the first —
+        # numeric show titles ("86 - 03", "Mob Psycho 100 - 05") put the title
+        # number first and the episode number last; taking the first collapsed
+        # every file in the folder onto the title number (T-04).
+        bare = re.findall(cls.BARE_NUMBER, filename)
+        if bare:
+            return EpisodeInfo(file_path, int(bare[-1]), None)
 
         return None
 
