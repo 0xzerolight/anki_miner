@@ -400,7 +400,7 @@ def test_timing_button_hidden_during_processing_and_restored(tab, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_curation_requested_passes_media_context_and_lookup_fn(tab, tmp_path):
+def test_curation_requested_passes_media_context_and_lookup_fn(tab, facade_processor, tmp_path):
     """Dialog receives a CurationMediaContext and lookup_fn when files are set
     and a worker with a live processor is present."""
     from PyQt6.QtWidgets import QDialog
@@ -414,14 +414,12 @@ def test_curation_requested_passes_media_context_and_lookup_fn(tab, tmp_path):
     tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
     tab.offset_spinbox.setValue(1.5)
 
-    # Fake worker with processor.definition_service.lookup_all_offline
+    # Worker exposing a real processor (T-60 typed contract): lookup_fn must
+    # resolve through the offline_lookup_fn facade to the definition service.
     fake_lookup = MagicMock(name="lookup_all_offline")
-    fake_def_svc = MagicMock()
-    fake_def_svc.lookup_all_offline = fake_lookup
-    fake_proc = MagicMock()
-    fake_proc.definition_service = fake_def_svc
+    facade_processor.definition_service.lookup_all_offline = fake_lookup
     fake_worker = MagicMock()
-    fake_worker.processor = fake_proc
+    fake_worker.curation_processor = facade_processor
     tab.worker_thread = fake_worker
 
     fake_entry = (0.0, 2.5, "テスト")
@@ -437,7 +435,7 @@ def test_curation_requested_passes_media_context_and_lookup_fn(tab, tmp_path):
 
     words: list = []
     with (
-        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+        patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser_cls),
         patch("anki_miner.gui.widgets._mining_tab_base.WordCurationDialog", mock_dialog_cls),
     ):
         tab._on_curation_requested(words)
@@ -496,7 +494,7 @@ def test_curation_media_context_uses_resolved_ffprobe(qapp, test_config, tmp_pat
         mock_dialog_cls.DialogCode = QDialog.DialogCode
 
         with (
-            patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+            patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser_cls),
             patch("anki_miner.gui.widgets._mining_tab_base.WordCurationDialog", mock_dialog_cls),
         ):
             tab._on_curation_requested([])
@@ -540,7 +538,7 @@ def test_curation_requested_parse_error_passes_none_media_context(tab, tmp_path)
     tab.worker_thread = None  # no worker — lookup_fn will also be None
 
     with (
-        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+        patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser_cls),
         patch(
             "anki_miner.gui.widgets._mining_tab_base.WordCurationDialog",
             mock_dialog_cls,
@@ -584,7 +582,7 @@ def test_curation_requested_no_worker_passes_none_lookup_fn(tab, tmp_path):
     mock_dialog_cls.DialogCode = QDialog.DialogCode
 
     with (
-        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+        patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser_cls),
         patch(
             "anki_miner.gui.widgets._mining_tab_base.WordCurationDialog",
             mock_dialog_cls,
@@ -659,3 +657,42 @@ def test_update_config_preserves_dialed_offset(tab, test_config):
 
     assert tab.config is new_config
     assert tab.offset_spinbox.value() == pytest.approx(1.5)
+
+
+# ---------------------------------------------------------------------------
+# 17. Curation context routes through the shared MiningTabBase helpers (T-60)
+# ---------------------------------------------------------------------------
+
+
+def test_build_curation_context_routes_through_shared_helpers(tab, facade_processor, tmp_path):
+    """_build_curation_context delegates to _make_curation_media_context with
+    this tab's inputs (selectors, spinbox offset, audio-track override — the
+    one real per-tab difference) and to _lookup_fn_from_processor for the
+    worker's typed curation_processor."""
+    from pathlib import Path
+
+    fake_video = tmp_path / "ep01.mkv"
+    fake_subs = tmp_path / "ep01.ass"
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.offset_spinbox.setValue(2.5)
+    tab._audio_track_override = 3
+
+    worker = MagicMock(name="EpisodeWorkerThread")
+    worker.curation_processor = facade_processor
+    tab.worker_thread = worker
+
+    sentinel_ctx = object()
+    with patch.object(SingleEpisodeTab, "_make_curation_media_context", return_value=sentinel_ctx) as helper:
+        media_context, lookup_fn = tab._build_curation_context()
+
+    helper.assert_called_once_with(
+        tab.config,
+        Path(str(fake_video)),
+        Path(str(fake_subs)),
+        offset=2.5,
+        audio_track_override=3,
+    )
+    assert media_context is sentinel_ctx
+    # Lookup resolves through the processor facade (offline_lookup_fn).
+    assert lookup_fn is facade_processor.definition_service.lookup_all_offline

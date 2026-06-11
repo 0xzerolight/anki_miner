@@ -1,5 +1,7 @@
 """Pytest configuration and shared fixtures."""
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
@@ -40,6 +42,27 @@ def test_config(temp_dir):
         subtitle_offset=0.0,
         max_parallel_workers=2,  # Reduced for tests
         stats_db_path=temp_dir / "stats.db",
+    )
+
+
+@pytest.fixture
+def facade_processor(test_config):
+    """Real EpisodeProcessor over MagicMock services.
+
+    For GUI-level tests that exercise the processor's dictionary-resource
+    facade (``offline_lookup_fn`` / ``release_dictionary_resources``) against
+    a mock definition service without standing up real services (T-60).
+    """
+    from anki_miner.orchestration.episode_processor import EpisodeProcessor
+
+    return EpisodeProcessor(
+        config=test_config,
+        subtitle_parser=MagicMock(name="SubtitleParser"),
+        word_filter=MagicMock(name="WordFilter"),
+        media_extractor=MagicMock(name="MediaExtractor"),
+        definition_service=MagicMock(name="DefinitionService"),
+        anki_service=MagicMock(name="AnkiService"),
+        presenter=NullPresenter(),
     )
 
 

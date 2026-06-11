@@ -9,8 +9,11 @@ genuinely shared scaffolding and leaves slot bodies to the subclasses via duck t
 
 from __future__ import annotations
 
+import logging
 import threading
 from collections.abc import Callable
+from dataclasses import replace
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
@@ -18,6 +21,16 @@ from PyQt6.QtWidgets import QWidget
 
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
+from anki_miner.services.subtitle_parser import SubtitleParserService
+from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.orchestration.episode_processor import EpisodeProcessor
+
+logger = logging.getLogger(__name__)
 
 
 class MiningTabBase(QWidget):
@@ -200,9 +213,53 @@ class MiningTabBase(QWidget):
         """Override to supply ``(media_context, lookup_fn)`` for the dialog.
 
         Default returns ``(None, None)`` → a plain table-only popup. Subclasses
-        override with their own media/lookup sourcing.
+        override with their own media/lookup sourcing, built from the shared
+        :meth:`_make_curation_media_context` / :meth:`_lookup_fn_from_processor`
+        helpers (only the per-tab *inputs* differ).
         """
         return None, None
+
+    @staticmethod
+    def _lookup_fn_from_processor(
+        proc: EpisodeProcessor | None,
+    ) -> Callable[[str], list[tuple[str, str]]] | None:
+        """Offline-dictionary lookup for the dialog, or ``None`` without a processor.
+
+        Sources the lookup through the processor's ``offline_lookup_fn``
+        facade; ``proc`` is typically a worker's ``curation_processor``.
+        """
+        return None if proc is None else proc.offline_lookup_fn
+
+    @staticmethod
+    def _make_curation_media_context(
+        config: AnkiMinerConfig,
+        video: Path | None,
+        subtitle: Path | None,
+        offset: float,
+        audio_track_override: int | None = None,
+    ) -> CurationMediaContext | None:
+        """Build the dialog's embedded-player context from a video/subtitle pair.
+
+        Returns ``None`` when either path is missing or subtitle parsing
+        fails — the dialog then opens table-only, which is always preferable
+        to blocking curation on a media problem. Entries are parsed with a
+        zero offset (the player applies ``offset`` itself).
+        """
+        if video is None or subtitle is None:
+            return None
+        try:
+            parser = SubtitleParserService(replace(config, subtitle_offset=0.0))
+            entries = parser.parse_raw_entries(subtitle)
+            return CurationMediaContext(
+                video_file=video,
+                subtitle_entries=entries,
+                offset=offset,
+                audio_track_override=audio_track_override,
+                ffprobe_cmd=resolve_ffprobe(config),
+            )
+        except Exception:
+            logger.exception("Failed to build media context for curation; proceeding without player")
+            return None
 
     def _on_curation_requested(self, words: list) -> None:
         """GUI-thread slot: build context, exec the dialog, ALWAYS release the worker.

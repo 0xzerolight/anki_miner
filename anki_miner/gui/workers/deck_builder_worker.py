@@ -23,7 +23,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.service_factory import create_episode_processor
-from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.deck_build import DeckBuildRequest
@@ -44,7 +44,7 @@ _PARSE_RELEVANT_FIELDS = (
 )
 
 
-class DeckBuilderWorker(CancellableWorker):
+class DeckBuilderWorker(ProcessorOwningWorker):
     """Two-phase deck-builder worker with a GUI confirm gate.
 
     Inherits thread-safe cancellation and the ``error`` signal from
@@ -90,6 +90,15 @@ class DeckBuilderWorker(CancellableWorker):
         # The per-episode processor currently running in Phase 2. Set before
         # each process_episode call so cancel() can propagate into it.
         self._current_processor: EpisodeProcessor | None = None
+
+    @property
+    def curation_processor(self) -> EpisodeProcessor | None:
+        """The Phase-2 per-episode processor (None until the build starts).
+
+        DeckBuilderTab's release hook closes its dictionary handles after a
+        build; the deck-builder flow has no curation dialog of its own.
+        """
+        return self._current_processor
 
     # ------------------------------------------------------------------ #
     # GUI-thread control surface

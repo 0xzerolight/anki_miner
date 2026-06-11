@@ -700,3 +700,20 @@ def test_error_during_phase1_emits_error(qapp):
         assert errors == ["boom"]
     finally:
         worker._stop_patch.stop()
+
+
+def test_curation_processor_tracks_phase2_current_processor(qapp):
+    """Typed curation_processor contract (T-60): None before the build, then
+    the retained Phase-2 processor afterwards (DeckBuilderTab's release hook
+    closes its dictionary handles through it)."""
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    ep1 = _fake_processor(counts)
+    worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base, ep1])
+    try:
+        assert worker.curation_processor is None
+        worker.confirm()
+        worker.run()
+        assert worker.curation_processor is ep1
+    finally:
+        worker._stop_patch.stop()

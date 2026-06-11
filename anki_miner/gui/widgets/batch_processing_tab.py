@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -36,8 +35,6 @@ from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.panels import QueuePanel
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models.batch_queue import QueueItemStatus
-from anki_miner.services.subtitle_parser import SubtitleParserService
-from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
@@ -423,31 +420,10 @@ class BatchProcessingTab(MiningTabBase):
         w = self.worker_thread
         if w is None:
             return None, None
-
-        lookup_fn = None
-        proc = getattr(w, "_curation_processor", None)
-        if proc is not None:
-            lookup_fn = proc.definition_service.lookup_all_offline
-
-        media_context: CurationMediaContext | None = None
-        video = getattr(w, "_curation_video", None)
-        subtitle = getattr(w, "_curation_subtitle", None)
-        if video is not None and subtitle is not None:
-            try:
-                config_no_offset = replace(self.config, subtitle_offset=0.0)
-                parser = SubtitleParserService(config_no_offset)
-                entries = parser.parse_raw_entries(Path(subtitle))
-                media_context = CurationMediaContext(
-                    video_file=Path(video),
-                    subtitle_entries=entries,
-                    offset=getattr(w, "_curation_offset", 0.0),
-                    audio_track_override=None,
-                    ffprobe_cmd=resolve_ffprobe(self.config),
-                )
-            except Exception:
-                logger.exception("Failed to build media context for curation; proceeding without player")
-                media_context = None
-        return media_context, lookup_fn
+        media_context = self._make_curation_media_context(
+            self.config, w._curation_video, w._curation_subtitle, offset=w._curation_offset
+        )
+        return media_context, self._lookup_fn_from_processor(w.curation_processor)
 
     def _process_queue(self) -> None:
         """Process all items in queue."""
@@ -721,23 +697,20 @@ class BatchProcessingTab(MiningTabBase):
     def release_dictionary_resources(self) -> bool:
         """Close sqlite handles cached by the most recent worker run.
 
-        ``ManualPairWorkerThread`` keeps the single processor on
-        ``episode_processor``; ``BatchQueueWorkerThread`` keeps the last
-        item's processor on ``_current_processor``. Either way, the handle
-        is still open after the run finishes and blocks Settings → Remove /
+        Both hosted workers (``ManualPairWorkerThread``,
+        ``BatchQueueWorkerThread``) expose their retained processor via the
+        typed ``curation_processor`` property. Either way, the handle is
+        still open after the run finishes and blocks Settings → Remove /
         Re-import on Windows (Issue #30 follow-up).
 
         Returns ``False`` while a worker is actively running — closing
-        providers under an in-flight processor would crash the run.
-        ``DefinitionService.close()`` resets ``_loaded`` so the next mine
-        re-opens the chain cleanly.
+        providers under an in-flight processor would crash the run. The
+        facade resets the chain so the next mine re-opens it cleanly.
         """
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return False
         if self.worker_thread is not None:
-            proc = getattr(self.worker_thread, "episode_processor", None) or getattr(
-                self.worker_thread, "_current_processor", None
-            )
+            proc = self.worker_thread.curation_processor
             if proc is not None:
-                proc.definition_service.close()
+                proc.release_dictionary_resources()
         return True
