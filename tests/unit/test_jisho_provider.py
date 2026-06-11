@@ -151,6 +151,39 @@ class TestJishoProvider:
         assert "2. to live on; subsist on" in result
         assert result.endswith("</div>")
 
+    def test_lookup_escapes_html_in_definitions(self):
+        """T-36: API-sourced definition strings must be HTML-escaped before
+        interpolation. Anki's QtWebEngine renders the stored card HTML at review
+        time, so an unescaped `<img onerror=...>` from Jisho is stored XSS that
+        can reach AnkiConnect on localhost. Mirrors the offline path's leaf-text
+        escaping in yomitan_renderer."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {
+                    "senses": [
+                        {"english_definitions": ['<img src=x onerror="alert(1)">']},
+                    ]
+                }
+            ]
+        }
+
+        provider = JishoProvider(delay=0)
+        with patch(
+            "anki_miner.services.dictionary.providers.jisho_provider.requests.get",
+            return_value=mock_response,
+        ):
+            result = provider.lookup("食べる")
+
+        assert result is not None
+        # The live `<img ...>` element must NOT appear: the `<` `>` `"` that make
+        # it an executable tag must all be entity-escaped, rendering it inert
+        # text. (The bare substring "onerror=" survives as escaped text, which is
+        # harmless — it can only execute inside a real, unescaped tag.)
+        assert "<img" not in result
+        assert "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;" in result
+
 
 def test_jisho_provider_is_online():
     provider = JishoProvider()
