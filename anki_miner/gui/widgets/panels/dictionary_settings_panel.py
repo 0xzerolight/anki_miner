@@ -414,11 +414,12 @@ class DictionarySettingsPanel(FormPanel):
     def _on_row_context_menu(self, pos: QPoint) -> None:
         """Right-click a dictionary row to re-import or remove it.
 
-        Reuses the stale-row re-import signals so the handler in settings_tab
-        (`_on_reimport_dict_clicked`) drives the import flow regardless of
-        entry point. Jisho rows have no menu — the online fallback can't be
-        re-imported. Missing meta (dict files vanished from disk) also skip
-        because we can't decide between yomitan and jmdict dispatch.
+        Reuses the stale-row re-import signals so the same handler
+        (`DictionaryImportFlow.reimport_dict`) drives the import flow
+        regardless of entry point. Jisho rows have no menu — the online
+        fallback can't be re-imported. Missing meta (dict files vanished from
+        disk) also skip because we can't decide between yomitan and jmdict
+        dispatch.
         """
         item = self._list.itemAt(pos)
         if item is None:
