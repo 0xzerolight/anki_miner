@@ -388,6 +388,14 @@ class DeckBuilderTab(MiningTabBase):
             with contextlib.suppress(TypeError, RuntimeError):
                 self.worker_thread.finished.disconnect(self._restore_buttons)
             self.worker_thread.cancel()
+            # Bounded join: cancel() unblocks the confirm gate / active
+            # processor, so the thread winds down quickly. Reassigning
+            # self.worker_thread below would otherwise drop the only reference
+            # to a live QThread — "QThread: Destroyed while thread is still
+            # running" — and crash. Bounded so a stuck worker cannot freeze
+            # the GUI forever.
+            if not self.worker_thread.wait(5000):
+                logger.warning("Lingering deck-builder worker did not stop within 5 s; replacing it anyway")
 
         self.log_widget.clear_log()
         self.log_widget.append_info("Analysing corpus…")
@@ -525,3 +533,26 @@ class DeckBuilderTab(MiningTabBase):
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         self.config = config
+
+    def release_dictionary_resources(self) -> bool:
+        """Close sqlite handles cached by the most recent build (Issue #30/#32).
+
+        Phase 2 retains the last per-episode processor on
+        ``worker_thread._current_processor`` (with open ``index.sqlite``
+        handles) until a new run replaces the worker. On Windows those handles
+        keep the dictionary folder locked, so Settings -> Remove / Re-import
+        fails after a build until the app is restarted.
+
+        Returns ``False`` while a worker is actively running — Phase 1 (aggregate)
+        or Phase 2 (build) — because closing providers under an in-flight
+        processor would crash the run; the caller surfaces a clear "in progress"
+        message instead of silently dropping the dict. ``DefinitionService.close()``
+        resets ``_loaded`` so the next build re-opens the chain cleanly.
+        """
+        if self.worker_thread is not None and self.worker_thread.isRunning():
+            return False
+        if self.worker_thread is not None:
+            proc = getattr(self.worker_thread, "_current_processor", None)
+            if proc is not None:
+                proc.definition_service.close()
+        return True

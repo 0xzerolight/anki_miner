@@ -114,10 +114,23 @@ class DeckBuilderWorker(CancellableWorker):
     def run(self) -> None:
         """Run the aggregate → preview → (gated) build flow."""
         try:
-            # Phase 1: aggregate + preview.
+            # Phase 1: aggregate + preview. Every step here is slow (processor
+            # construction: seconds; aggregate: MeCab over the whole corpus,
+            # minutes; known-words fetch: 15-30 s of AnkiConnect HTTP), so
+            # cancellation is re-checked between steps — otherwise a Cancel
+            # keeps grinding through Phase 1 and even emits preview_ready
+            # after the user gave up.
+            if self.check_cancelled():
+                return
             base = create_episode_processor(self.config, self.presenter, self.stats_service)
-            counts = aggregate(base.subtitle_parser, self.request.pairs)
+            if self.check_cancelled():
+                return
+            counts = aggregate(base.subtitle_parser, self.request.pairs, cancel_check=self.check_cancelled)
+            if self.check_cancelled():
+                return
             known = self._known_lemmas(base) if self.request.collection_filter else set()
+            if self.check_cancelled():
+                return
             selected, preview = select(counts, self.request.mode, self.request.value, known)
             self.preview_ready.emit(preview)
 
@@ -168,9 +181,17 @@ class DeckBuilderWorker(CancellableWorker):
                 # is therefore byte-identical to a freshly-constructed parser.
                 proc.subtitle_parser = base.subtitle_parser
                 # Register as current BEFORE process_episode so a mid-call
-                # cancel() reaches this processor. The tiny window before this
-                # assignment is covered by the loop-top check_cancelled().
+                # cancel() reaches this processor.
                 self._current_processor = proc
+                # A cancel() that landed while create_episode_processor was
+                # still constructing `proc` propagated to the PREVIOUS
+                # processor (or None) — and the loop-top check ran before that
+                # window opened, so it cannot cover it. Re-check now that
+                # `proc` is registered: cancel() sets the flag before reading
+                # _current_processor, so any cancel this check misses lands on
+                # `proc` directly instead.
+                if self.check_cancelled():
+                    break
                 callback = self._make_curation_callback(selected, carded)
                 # Empty-curation pitfall: process_episode treats a curation_callback
                 # that returns [] as a cancellation and returns a cancelled-empty
@@ -241,8 +262,15 @@ class DeckBuilderWorker(CancellableWorker):
     def _known_lemmas(self, base: EpisodeProcessor) -> set[str]:
         """Fetch known lemmas for the PREVIEW ESTIMATE only.
 
-        Mirrors Phase-2's known-words source: the local known-words DB when
-        available, otherwise ``anki_service.get_existing_vocabulary()``.
+        Mirrors Phase-2's known-words gate EXACTLY (episode_processor.py): the
+        local known-words DB cache is used only when BOTH ``use_known_words_db``
+        is on AND the DB is available; otherwise it falls back to
+        ``anki_service.get_existing_vocabulary()``. The DB *file* exists for any
+        user who curated a word via "Mark known" regardless of the toggle, so
+        keying on the file alone made the preview subtract a stale/user-only set
+        while the build subtracted live Anki vocab — the "promised 2,401, built
+        51" divergence class. The source='user' ignore list (Issue #42) is
+        always unioned in, matching the build's always-applied user list.
 
         NOTE: this is an ESTIMATE. Corpus lemmas are keyed by dictionary lemma,
         while Anki known-words are keyed by ``mined_form`` (surface form for
@@ -251,6 +279,12 @@ class DeckBuilderWorker(CancellableWorker):
         path (collection_filter ON → ``include_known_words=False``). We do not
         attempt to reconcile the two key spaces here.
         """
+        # User-curated ignore list (Issue #42): always applied in Phase 2
+        # regardless of the use_known_words_db toggle; fold it in for parity.
+        user_words: set[str] = set()
         if base.known_word_db and base.known_word_db.is_available():
-            return base.known_word_db.get_known_words()
-        return base.anki_service.get_existing_vocabulary()
+            user_words = base.known_word_db.get_words_by_source("user")
+
+        if self.config.use_known_words_db and base.known_word_db and base.known_word_db.is_available():
+            return base.known_word_db.get_known_words() | user_words
+        return base.anki_service.get_existing_vocabulary() | user_words
