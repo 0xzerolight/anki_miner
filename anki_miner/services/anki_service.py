@@ -469,13 +469,16 @@ class AnkiService:
 
         Scans each item's ``definition`` and ``extra_fields["glossary"]`` for
         ``<img class="anki-miner-dict-media" src="…">`` tags, collects the union
-        of un-uploaded srcs, resolves each to a file path, and ships them via
-        chunked ``multi`` POSTs (reusing ``_build_store_media_action``).
+        of un-uploaded srcs, resolves each to a file path, and ships them through
+        the same pipeline as card screenshots/audio: ``_build_store_media_action``
+        → ``_chunk_media_actions`` (count + byte budget) → ``_store_media_chunk``
+        (per-file fallback on a failed ``multi`` POST).
 
         Missing-on-disk srcs are logged as warnings and added to
         ``_dict_media_uploaded`` so they are not retried on every card (identical
-        to the old per-card behavior). Each src that is sent successfully is also
-        added to the cache.
+        to the old per-card behavior). Otherwise a src is cached only after a
+        confirmed successful store — a failed upload stays uncached so the next
+        batch retries it.
         """
         # Collect un-uploaded srcs across the whole batch (ordered, deduped).
         seen: set[str] = set()
@@ -496,8 +499,7 @@ class AnkiService:
             return
 
         # Resolve each src; cache missing ones now so we don't retry.
-        srcs_to_upload: list[str] = []
-        actions: list[dict] = []
+        items: list[tuple[str, dict]] = []
         for src in all_srcs:
             file_path = _resolve_dict_media_path(src, self.config.dicts_root)
             if file_path is None:
@@ -507,29 +509,14 @@ class AnkiService:
                 continue
             action = self._build_store_media_action(src, file_path)
             if action is not None:
-                srcs_to_upload.append(src)
-                actions.append(action)
+                items.append((src, action))
 
-        if not actions:
-            return
-
-        # Chunked multi POSTs — mirrors _store_media_files_batch structure.
-        try:
-            for chunk_start in range(0, len(actions), _MEDIA_BATCH_CHUNK):
-                chunk_srcs = srcs_to_upload[chunk_start : chunk_start + _MEDIA_BATCH_CHUNK]
-                chunk_actions = actions[chunk_start : chunk_start + _MEDIA_BATCH_CHUNK]
-                sub_results = post_multi(self.config.ankiconnect_url, chunk_actions, timeout=30)
-                if len(sub_results) != len(chunk_actions):
-                    logger.warning(
-                        "post_multi returned %d results for %d dict-media actions; some files may be silently skipped",
-                        len(sub_results),
-                        len(chunk_actions),
-                    )
-                for src, sub_result in zip(chunk_srcs, sub_results, strict=False):
-                    if not (isinstance(sub_result, dict) and sub_result.get("error")):
-                        self._dict_media_uploaded.add(src)
-        except (AnkiConnectionError, OSError) as e:
-            logger.warning("Failed to batch-upload dict media files: %s", e)
+        # Shared with the screenshot/audio path: chunks bounded by action count
+        # AND base64 byte budget, per-file fallback when a multi POST trips the
+        # oversized-body connection reset. _store_media_chunk returns only the
+        # srcs confirmed stored, so failures stay uncached and retry next batch.
+        for chunk in self._chunk_media_actions(items):
+            self._dict_media_uploaded |= self._store_media_chunk(chunk)
 
     def create_cards_batch(
         self,
