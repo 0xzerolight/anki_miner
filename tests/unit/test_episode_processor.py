@@ -2575,3 +2575,164 @@ class TestDictionaryResourceFacade:
 
     def test_offline_lookup_fn_is_definition_service_offline_lookup(self, processor):
         assert processor.offline_lookup_fn is processor.definition_service.lookup_all_offline
+
+
+class TestPhase2FilterOrdering:
+    """Pin the order of the Phase-2 optional filters.
+
+    The i+1 filter MUST run before the sentence-length filter: ``filter_i_plus_one``
+    swaps each word's example sentence (and duration) to its chosen i+1 line, so a
+    length cap applied before the swap would be silently bypassed by the swap
+    target (documented invariant near episode_processor.py). The script-type
+    filter runs before i+1. These use ``attach_mock`` + ``mock_calls`` so a future
+    reorder trips the test.
+    """
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        # All Phase-2 filters pass through so each one actually fires and the
+        # pipeline reaches the next; signatures differ (positional vs kwargs).
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        word_filter.filter_i_plus_one.side_effect = lambda words, idx: words
+        word_filter.filter_by_sentence_length.side_effect = lambda words, **kw: words
+        word_filter.filter_by_script_type.side_effect = lambda words, **kw: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _wire_pipeline_with_index(self, mock_services, word, line, media):
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = ([word], [line])
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+    def test_i_plus_one_runs_before_sentence_length(self, test_config, mock_services, tmp_path):
+        config = replace(
+            test_config,
+            use_i_plus_one_filter=True,
+            use_sentence_length_filter=True,
+            max_sentence_chars=40,
+        )
+        word = _make_word("食べる")
+        line = _make_line_lemmas(lemmas=("食べる",))
+        self._wire_pipeline_with_index(mock_services, word, line, _make_media())
+
+        parent = MagicMock()
+        parent.attach_mock(mock_services["word_filter"], "word_filter")
+
+        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        call_names = [c[0] for c in parent.mock_calls]
+        assert "word_filter.filter_i_plus_one" in call_names
+        assert "word_filter.filter_by_sentence_length" in call_names
+        assert call_names.index("word_filter.filter_i_plus_one") < call_names.index(
+            "word_filter.filter_by_sentence_length"
+        )
+
+    def test_script_type_runs_before_i_plus_one(self, test_config, mock_services, tmp_path):
+        config = replace(
+            test_config,
+            use_i_plus_one_filter=True,
+            exclude_hiragana_only_words=True,
+        )
+        word = _make_word("食べる")
+        line = _make_line_lemmas(lemmas=("食べる",))
+        self._wire_pipeline_with_index(mock_services, word, line, _make_media())
+
+        parent = MagicMock()
+        parent.attach_mock(mock_services["word_filter"], "word_filter")
+
+        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        call_names = [c[0] for c in parent.mock_calls]
+        assert "word_filter.filter_by_script_type" in call_names
+        assert "word_filter.filter_i_plus_one" in call_names
+        assert call_names.index("word_filter.filter_by_script_type") < call_names.index("word_filter.filter_i_plus_one")
+
+    def test_script_type_filter_wiring(self, test_config, mock_services, tmp_path):
+        """filter_by_script_type is called with the configured exclude flags and
+        its output drives the rest of the pipeline."""
+        config = replace(
+            test_config,
+            exclude_hiragana_only_words=True,
+            exclude_katakana_only_words=True,
+        )
+        word1 = _make_word("食べる")
+        word2 = _make_word("ラーメン", pos="名詞", start_time=5.0)
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
+        # script-type filter drops the katakana-only word2 (override the
+        # fixture's pass-through side_effect so return_value takes effect).
+        mock_services["word_filter"].filter_by_script_type.side_effect = None
+        mock_services["word_filter"].filter_by_script_type.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_script_type.assert_called_once_with(
+            [word1, word2],
+            exclude_hiragana_only=True,
+            exclude_katakana_only=True,
+        )
+        # Only word1 (survivor) reached media extraction.
+        assert mock_services["media_extractor"].extract_media_batch.call_args[0][1] == [word1]
+
+    def test_script_type_filter_bypassed_by_optional_filters_flag(self, test_config, mock_services, tmp_path):
+        """Deck Builder bypass_optional_filters=True must skip the script-type filter."""
+        config = replace(
+            test_config,
+            exclude_hiragana_only_words=True,
+            bypass_optional_filters=True,
+        )
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_script_type.assert_not_called()
+
+    def test_sentence_length_filter_bypassed_by_optional_filters_flag(self, test_config, mock_services, tmp_path):
+        """bypass_optional_filters=True must skip the sentence-length filter too."""
+        config = replace(
+            test_config,
+            use_sentence_length_filter=True,
+            max_sentence_chars=40,
+            bypass_optional_filters=True,
+        )
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_sentence_length.assert_not_called()
