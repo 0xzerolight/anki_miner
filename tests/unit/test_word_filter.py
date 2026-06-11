@@ -669,6 +669,64 @@ class TestWordFilterService:
             assert swapped.sentence_bolded == ""
             assert swapped.sentence_furigana_bolded == ""
 
+        def test_i_plus_one_swap_recomputes_noun_furigana_reading(self):
+            """Regression for T-37: a noun (mined_form == surface) whose surface
+            differs across lines must end up with Expression, furigana, and
+            reading mutually consistent — furigana/reading recomputed from the
+            swapped-in surface, not left stale from the original surface.
+            """
+            from unittest.mock import MagicMock
+
+            from anki_miner.config import AnkiMinerConfig
+
+            # Mock tagger: returns one token whose surface+kana matches the text
+            # it is handed, so generate_furigana/reading reflect the NEW surface.
+            kana_by_surface = {"取り引き": "トリヒキ", "取引": "トリヒキ"}
+
+            def _tagger(text):
+                token = MagicMock()
+                token.surface = text
+                token.feature.kana = kana_by_surface.get(text, "")
+                return [token]
+
+            config = AnkiMinerConfig()  # bold flag off; recompute must NOT depend on it
+            service = WordFilterService(config, tagger=_tagger)
+
+            # Original word: noun mined as surface 取り引き; furigana/reading were
+            # computed from that original surface.
+            word = TokenizedWord(
+                surface="取り引き",
+                lemma="取引",
+                reading="トリヒキ",
+                sentence="original",
+                start_time=0.0,
+                end_time=1.0,
+                duration=1.0,
+                pos="名詞",
+                expression_furigana="取り引き[とりひき]",
+                expression_reading="とりひき",
+            )
+            # New i+1 line writes the same lemma with a DIFFERENT surface (取引).
+            line = LineLemmas(
+                line_text="今日の取引",
+                lemmas=frozenset({"取引"}),
+                start_time=10.0,
+                end_time=12.0,
+                duration=2.0,
+                lemma_spans=(("取引", "取引", 3, 5),),
+            )
+
+            result = service.filter_i_plus_one([word], [line])
+
+            assert len(result) == 1
+            swapped = result[0]
+            # The Expression (mined_form == surface for a noun) is the new surface.
+            assert swapped.mined_form == "取引"
+            # ...and furigana/reading are consistent WITH that new surface, not
+            # the stale 取り引き[とりひき] / とりひき from the original.
+            assert swapped.expression_furigana == "取引[とりひき]"
+            assert swapped.expression_reading == "とりひき"
+
         def test_i_plus_one_swap_recomputes_bolded_when_flag_on(self):
             """When the bold flag is on and a tagger is supplied, the swap rebuilds
             the bolded sentence + furigana against the new line."""
