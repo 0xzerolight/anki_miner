@@ -43,6 +43,52 @@ class JapaneseAudioStream:
     language_tag: str
 
 
+def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -> dict | None:
+    """Run ffprobe for ``select_streams`` and return the parsed JSON object.
+
+    Returns ``None`` if ffprobe fails, times out, raises an OSError, returns a
+    non-zero exit code, or returns output that does not parse as JSON. Callers
+    translate ``None`` into their documented empty/None fallback.
+
+    ffprobe always emits UTF-8 JSON, so stdout is decoded with
+    ``encoding="utf-8", errors="replace"`` — not the platform locale codec,
+    which on Windows (cp1252/cp932) raises ``UnicodeDecodeError`` on non-ASCII
+    stream titles (ubiquitous in anime MKVs). ``UnicodeDecodeError`` is a
+    ``ValueError`` and is also caught defensively below.
+
+    ``ffprobe_cmd`` becomes ``cmd[0]``; config-bearing callers should pass
+    ``resolve_ffprobe(config)`` so frozen bundles use the bundled binary.
+    """
+    cmd = [
+        ffprobe_cmd,
+        "-v",
+        "quiet",
+        "-print_format",
+        "json",
+        "-show_streams",
+        "-select_streams",
+        select_streams,
+        str(video_path),
+    ]
+
+    try:
+        proc = subprocess.run(cmd, capture_output=True, timeout=30, text=True, encoding="utf-8", errors="replace")
+    except (subprocess.SubprocessError, OSError, ValueError) as e:
+        logger.warning(f"Error probing {video_path} (select={select_streams}): {e}")
+        return None
+
+    if proc.returncode != 0:
+        logger.warning(f"ffprobe failed for {video_path}: {proc.stderr}")
+        return None
+
+    try:
+        data: dict = json.loads(proc.stdout)
+    except json.JSONDecodeError as e:
+        logger.warning(f"ffprobe returned malformed JSON for {video_path}: {e}")
+        return None
+    return data
+
+
 def list_audio_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> list[AudioStream]:
     """Probe a video file with ffprobe and return all audio streams.
 
@@ -57,32 +103,8 @@ def list_audio_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> list[A
     callers should pass ``resolve_ffprobe(config)`` so frozen bundles use the
     bundled binary.
     """
-    cmd = [
-        ffprobe_cmd,
-        "-v",
-        "quiet",
-        "-print_format",
-        "json",
-        "-show_streams",
-        "-select_streams",
-        "a",
-        str(video_path),
-    ]
-
-    try:
-        proc = subprocess.run(cmd, capture_output=True, timeout=30, text=True)
-    except (subprocess.SubprocessError, OSError) as e:
-        logger.warning(f"Error probing audio streams for {video_path}: {e}")
-        return []
-
-    if proc.returncode != 0:
-        logger.warning(f"ffprobe failed for {video_path}: {proc.stderr}")
-        return []
-
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError as e:
-        logger.warning(f"ffprobe returned malformed JSON for {video_path}: {e}")
+    data = _run_ffprobe_json(video_path, "a", ffprobe_cmd)
+    if data is None:
         return []
 
     raw_streams = data.get("streams", [])
@@ -168,32 +190,8 @@ def get_primary_video_codec(video_file: Path, ffprobe_cmd: str = "ffprobe") -> s
     ``"ffprobe"`` literal. Config-bearing callers should pass
     ``resolve_ffprobe(config)`` so frozen bundles use the bundled binary.
     """
-    cmd = [
-        ffprobe_cmd,
-        "-v",
-        "quiet",
-        "-print_format",
-        "json",
-        "-show_streams",
-        "-select_streams",
-        "v:0",
-        str(video_file),
-    ]
-
-    try:
-        proc = subprocess.run(cmd, capture_output=True, timeout=30, text=True)
-    except (subprocess.SubprocessError, OSError) as e:
-        logger.warning(f"Error probing video codec for {video_file}: {e}")
-        return None
-
-    if proc.returncode != 0:
-        logger.warning(f"ffprobe failed for {video_file}: {proc.stderr}")
-        return None
-
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError as e:
-        logger.warning(f"ffprobe returned malformed JSON for {video_file}: {e}")
+    data = _run_ffprobe_json(video_file, "v:0", ffprobe_cmd)
+    if data is None:
         return None
 
     streams = data.get("streams", [])
