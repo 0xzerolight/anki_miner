@@ -12,7 +12,7 @@ from dataclasses import replace
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtWidgets import QApplication
 
 from anki_miner.exceptions.youtube import YouTubeFetchError
 from anki_miner.gui.workers.youtube_queue_worker import (
@@ -36,8 +36,10 @@ def _make_video_info(video_id: str = "abc", title: str = "Some Title") -> VideoI
     )
 
 
-# Qt needs a core application for signals. Created once per process.
-_app = QCoreApplication.instance() or QCoreApplication([])
+# Qt needs an application for signals. Use a full QApplication (not
+# QCoreApplication) so widget tests in the same process — when this module is
+# imported first — can still construct QWidgets instead of hard-aborting.
+_app = QApplication.instance() or QApplication([])
 
 
 class _SignalCapture:

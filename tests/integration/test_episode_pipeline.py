@@ -88,8 +88,6 @@ class TestEpisodePipeline:
         video = tmp_path / "ep01.mkv"
         sub = tmp_path / "ep01.ass"
 
-        [_make_word("食べる", "食べる", 1.0), _make_word("走る", "走る", 5.0)]
-
         # Mock pysubs2.load to return mock subtitle lines
         mock_line1 = MagicMock()
         mock_line1.text = "食べる"
@@ -123,45 +121,79 @@ class TestEpisodePipeline:
 
         mock_tagger = MagicMock(side_effect=tagger_func)
 
-        # Mock AnkiConnect responses
-        mock_anki_response = MagicMock()
-        mock_anki_response.json.return_value = {"result": [], "error": None}
-
-        # Mock subprocess for media extraction: run() serves the encoder
-        # probe, Popen() serves the killable encode path.
-        mock_proc = MagicMock()
-        mock_proc.returncode = 0
-        mock_proc.communicate.return_value = ("", "")
-
-        # For screenshots to "exist"
+        # Stub media extraction: write a real screenshot file per word so
+        # MediaData.has_screenshot is True and cards reach the addNotes call.
         media_dir = tmp_path / "media"
         media_dir.mkdir(parents=True, exist_ok=True)
+
+        def _fake_extract(video_file, words, *args, **kwargs):
+            from anki_miner.models import MediaData
+
+            results = []
+            for w in words:
+                ss = media_dir / f"{w.lemma}.jpg"
+                ss.write_bytes(b"\xff\xd8\xff\xe0fake-jpeg")
+                results.append(
+                    (
+                        w,
+                        MediaData(
+                            screenshot_path=ss, audio_path=None, screenshot_filename=ss.name, audio_filename=None
+                        ),
+                    )
+                )
+            return results
+
+        # Capture addNotes payloads so we can assert what reached AnkiConnect.
+        added_notes: list[dict] = []
+
+        # Dispatch AnkiConnect responses by action name (order-independent):
+        # pre-flight + empty vocab + media upload (multi/storeMediaFile) + addNotes.
+        fields = list(config.anki_fields.values())
+
+        def _anki_responder(*args, **kwargs):
+            payload = args[1] if len(args) > 1 else kwargs.get("json", {})
+            action = payload.get("action", "")
+            params = payload.get("params", {})
+            r = MagicMock()
+            if action == "modelNames":
+                r.json.return_value = {"result": [config.anki_note_type], "error": None}
+            elif action == "modelFieldNames":
+                r.json.return_value = {"result": fields, "error": None}
+            elif action == "createDeck":
+                r.json.return_value = {"result": 1, "error": None}
+            elif action == "findNotes":
+                r.json.return_value = {"result": [], "error": None}
+            elif action == "storeMediaFile":
+                r.json.return_value = {"result": "stored.jpg", "error": None}
+            elif action == "multi":
+                # Media upload envelope: one result per sub-action.
+                sub = params.get("actions", [])
+                r.json.return_value = {"result": ["stored.jpg"] * len(sub), "error": None}
+            elif action == "addNotes":
+                notes = params.get("notes", [])
+                added_notes.extend(notes)
+                r.json.return_value = {"result": list(range(1, len(notes) + 1)), "error": None}
+            else:
+                r.json.return_value = {"result": None, "error": None}
+            return r
 
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
             patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
-            patch("anki_miner.services.media_extractor.subprocess.run", return_value=mock_proc),
-            patch("anki_miner.services.media_extractor.subprocess.Popen", return_value=mock_proc),
-            patch("anki_miner.services.media_extractor.ensure_directory"),
-            patch("anki_miner.services.dictionary.providers.jisho_provider.requests.get") as mock_get,
-            patch("anki_miner.services.dictionary.providers.jisho_provider.time.sleep"),
-            patch("anki_miner.services.anki_service.requests.post") as mock_post,
+            patch(
+                "anki_miner.services.media_extractor.MediaExtractorService.extract_media_batch",
+                side_effect=_fake_extract,
+            ),
+            patch(
+                "anki_miner.services.definition_service.DefinitionService.get_definitions_batch",
+                side_effect=lambda words, *a, **kw: ["a definition"] * len(words),
+            ),
+            patch(
+                "anki_miner.services.definition_service.DefinitionService.get_glossaries_batch",
+                side_effect=lambda words, *a, **kw: [None] * len(words),
+            ),
+            patch("anki_miner.services.anki_service.requests.post", side_effect=_anki_responder),
         ):
-
-            # AnkiConnect: pre-flight succeeds, then empty vocabulary, then cards added
-            find_resp = MagicMock()
-            find_resp.json.return_value = {"result": [], "error": None}
-            add_resp = MagicMock()
-            add_resp.json.return_value = {"result": [1, 2], "error": None}
-            mock_post.side_effect = self._make_ankiconnect_responder(
-                config, post_preflight_side_effect=[find_resp, add_resp]
-            )
-
-            # Jisho returns definitions
-            jisho_resp = MagicMock()
-            jisho_resp.status_code = 200
-            jisho_resp.json.return_value = {"data": [{"senses": [{"english_definitions": ["to eat"]}]}]}
-            mock_get.return_value = jisho_resp
 
             # Build services with real instances
             subtitle_parser = SubtitleParserService(config)
@@ -182,8 +214,13 @@ class TestEpisodePipeline:
 
             result = processor.process_episode(video, sub)
 
-        assert result.total_words_found >= 0  # Some words found from parsing
+        # Two unknown verbs (食べる, 走る) are parsed, both new, both carded.
+        assert result.total_words_found == 2
+        assert result.new_words_found == 2
+        assert result.cards_created == 2
         assert result.elapsed_time > 0
+        # addNotes actually fired with both mined words.
+        assert {n["fields"]["word"] for n in added_notes} == {"食べる", "走る"}
 
     def test_preview_mode_skips_media_and_cards(self, config, tmp_path):
         """Preview mode should parse and filter but not extract media or create cards."""
@@ -241,8 +278,10 @@ class TestEpisodePipeline:
         # Preview mode should not touch media extraction
         mock_subprocess.assert_not_called()
         mock_popen.assert_not_called()
+        # One unknown noun (勉強) is parsed; preview surfaces it but cards none.
+        assert result.total_words_found == 1
+        assert result.new_words_found == 1
         assert result.cards_created == 0
-        assert result.new_words_found >= 0
 
     def test_all_words_known_returns_early(self, config, tmp_path):
         """When all words are already in Anki, should return early."""

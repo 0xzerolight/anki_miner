@@ -168,11 +168,18 @@ def test_shutdown_releases_curation_before_joining_worker(tab):
     GUI forever (Issue #65). cancel() alone only sets _cancel_event."""
     with patch.object(tab, "_cancel_active_curation_dialog") as cancel:
         worker = MagicMock(name="QueueWorker")
+        # Record cross-mock call order: the dialog release must precede wait().
+        order = MagicMock()
+        order.attach_mock(cancel, "release")
+        order.attach_mock(worker.wait, "wait")
         tab.worker_thread = worker
         tab.shutdown()
         cancel.assert_called_once()
         worker.cancel.assert_called_once()
         worker.wait.assert_called_once()
+        # The release must come before the (unbounded) join, not after.
+        called = [c[0] for c in order.mock_calls]
+        assert called.index("release") < called.index("wait")
 
 
 def test_shutdown_rejects_open_dialog_so_blocked_worker_resumes(tab):
