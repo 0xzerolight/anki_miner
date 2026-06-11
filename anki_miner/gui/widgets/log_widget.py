@@ -25,7 +25,7 @@ class LogWidget(QWidget):
     - Color-coded messages (info, success, warning, error)
     - Header bar with Clear and Copy buttons
     - Timestamps for each message
-    - Auto-scroll with user override
+    - Auto-scroll to the newest line
     - Log rotation to prevent memory issues (max 1000 lines)
     - Card-style container with rounded corners
     """
