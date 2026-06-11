@@ -1,5 +1,6 @@
 """Tests for ShortcutService."""
 
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -177,6 +178,78 @@ class TestCreateShortcut:
         assert mock_run.called
         first_call_args = mock_run.call_args_list[0].args[0]
         assert first_call_args[0] == "powershell"
+
+
+class TestSubprocessTimeouts:
+    """Subprocess invocations must be bounded so a hung helper can't freeze the GUI."""
+
+    def test_linux_update_desktop_database_passes_timeout(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        fake_exe = tmp_path / "anki_miner_gui"
+        fake_exe.touch()
+
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "linux"),
+            patch("subprocess.run") as mock_run,
+        ):
+            ShortcutService.create_shortcut()
+
+        assert mock_run.called
+        _, kwargs = mock_run.call_args
+        assert kwargs.get("timeout") is not None
+
+    def test_linux_update_desktop_database_timeout_is_graceful(self, tmp_path, monkeypatch):
+        """A hung update-desktop-database must not crash shortcut creation."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        fake_exe = tmp_path / "anki_miner_gui"
+        fake_exe.touch()
+
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "linux"),
+            patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="update-desktop-database", timeout=5)),
+        ):
+            result = ShortcutService.create_shortcut()
+
+        # Desktop file is still written; the database refresh is best-effort.
+        assert result.success is True
+        desktop_file = tmp_path / ".local" / "share" / "applications" / f"{APP_ID}.desktop"
+        assert desktop_file.exists()
+
+    def test_windows_powershell_passes_timeout(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        (tmp_path / "Desktop").mkdir()
+        fake_exe = tmp_path / "anki_miner_gui.exe"
+        fake_exe.touch()
+
+        completed = MagicMock(returncode=0, stderr="")
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "win32"),
+            patch("subprocess.run", return_value=completed) as mock_run,
+        ):
+            ShortcutService.create_shortcut()
+
+        _, kwargs = mock_run.call_args_list[0]
+        assert kwargs.get("timeout") is not None
+
+    def test_windows_powershell_timeout_is_graceful(self, tmp_path, monkeypatch):
+        """A hung PowerShell must surface an error, not crash the GUI thread."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        (tmp_path / "Desktop").mkdir()
+        fake_exe = tmp_path / "anki_miner_gui.exe"
+        fake_exe.touch()
+
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "win32"),
+            patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="powershell", timeout=5)),
+        ):
+            result = ShortcutService.create_shortcut()
+
+        assert result.success is False
+        assert result.error is not None
 
 
 @pytest.fixture(autouse=True)

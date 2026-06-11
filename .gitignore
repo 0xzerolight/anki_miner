@@ -63,6 +63,13 @@ resources/
 !anki_miner/gui/resources/styles/
 !anki_miner/gui/resources/styles/themes/
 !anki_miner/gui/resources/styles/themes/*.json
+# Same for the bundled name wordsets (Issue #59), relocated out of gui/resources
+# into their own non-GUI data package. Negate the package dirs + tracked file types.
+!anki_miner/resources/
+!anki_miner/resources/__init__.py
+!anki_miner/resources/wordsets/
+!anki_miner/resources/wordsets/__init__.py
+!anki_miner/resources/wordsets/*.txt
 TECH_DEBT_AUDIT.md
 
 # OS

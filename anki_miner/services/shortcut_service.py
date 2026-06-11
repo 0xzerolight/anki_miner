@@ -18,6 +18,10 @@ APP_ID = "anki-miner"
 APP_COMMENT = "Japanese vocabulary mining from anime subtitles"
 ICON_FILENAME = "anki_miner.svg"
 
+# These helpers run synchronously on the GUI thread; bound them so a hung
+# PowerShell / update-desktop-database can't freeze the whole app.
+_SUBPROCESS_TIMEOUT_SECONDS = 10
+
 
 @dataclass
 class ShortcutResult:
@@ -140,11 +144,12 @@ StartupWMClass=anki_miner
         result.messages.append(f"Desktop file created: {desktop_file}")
         result.paths_created.append(desktop_file)
 
-        with contextlib.suppress(FileNotFoundError):
+        with contextlib.suppress(FileNotFoundError, subprocess.TimeoutExpired):
             subprocess.run(
                 ["update-desktop-database", str(desktop_dir)],
                 capture_output=True,
                 check=False,
+                timeout=_SUBPROCESS_TIMEOUT_SECONDS,
             )
 
         result.success = True
@@ -175,11 +180,15 @@ StartupWMClass=anki_miner
                 check=True,
                 capture_output=True,
                 text=True,
+                timeout=_SUBPROCESS_TIMEOUT_SECONDS,
             )
             result.messages.append(f"Desktop shortcut created: {shortcut_path}")
             result.paths_created.append(shortcut_path)
         except subprocess.CalledProcessError as exc:
             result.error = f"Error creating shortcut: {exc.stderr}"
+            return
+        except subprocess.TimeoutExpired:
+            result.error = "PowerShell timed out while creating the shortcut."
             return
         except FileNotFoundError:
             result.error = "PowerShell not found. Cannot create shortcut."
@@ -203,10 +212,11 @@ StartupWMClass=anki_miner
                     check=True,
                     capture_output=True,
                     text=True,
+                    timeout=_SUBPROCESS_TIMEOUT_SECONDS,
                 )
                 result.messages.append(f"Start Menu shortcut created: {start_shortcut}")
                 result.paths_created.append(start_shortcut)
-            except (subprocess.CalledProcessError, FileNotFoundError):
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
                 pass  # optional
 
         result.success = True

@@ -22,12 +22,26 @@ from dataclasses import replace
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.interfaces.presenter import PresenterProtocol
+from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.deck_build import DeckBuildRequest
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.corpus_aggregator import aggregate, select
+
+# Config fields SubtitleParserService actually reads. Phase 2 reuses Phase 1's
+# parser (with its filled per-file tokenization cache); that's only sound while
+# the per-episode cfg leaves every one of these untouched, so we assert it.
+_PARSE_RELEVANT_FIELDS = (
+    "subtitle_offset",
+    "bold_target_in_sentence",
+    "allowed_pos",
+    "excluded_subtypes",
+    "use_subtitle_regex_filter",
+    "subtitle_regex_filter",
+    "subtitle_regex_replacement",
+)
 
 
 class DeckBuilderWorker(CancellableWorker):
@@ -47,8 +61,8 @@ class DeckBuilderWorker(CancellableWorker):
         self,
         request: DeckBuildRequest,
         config: AnkiMinerConfig,
-        presenter: GUIPresenter,
-        progress_callback: GUIProgressCallback | None = None,
+        presenter: PresenterProtocol,
+        progress_callback: ProgressCallback | None = None,
         stats_service=None,
         parent=None,
     ):
@@ -168,18 +182,20 @@ class DeckBuilderWorker(CancellableWorker):
                     # collection so the deck is genuinely complete.
                     allow_duplicate_cards=True,
                 )
-                proc = create_episode_processor(cfg, self.presenter, self.stats_service)
                 # Cross-phase tokenization cache: reuse the Phase-1 parser whose
                 # per-file line cache was filled by aggregate() → count_lemmas
                 # above, so Phase 2's parse_subtitle_file* hits the cache instead
-                # of re-running MeCab over every file a second time. Safe because
-                # SubtitleParserService reads only subtitle_offset /
-                # bold_target_in_sentence / allowed_pos / excluded_subtypes /
-                # the regex-filter fields — none of which the Phase-2 cfg changes
-                # (it only overrides anki_deck_name / include_known_words /
-                # bypass_optional_filters / allow_duplicate_cards). Parse output
-                # is therefore byte-identical to a freshly-constructed parser.
-                proc.subtitle_parser = base.subtitle_parser
+                # of re-running MeCab over every file a second time. The reuse is
+                # byte-identical only while cfg leaves every parse-relevant field
+                # untouched (it overrides anki_deck_name / include_known_words /
+                # bypass_optional_filters / allow_duplicate_cards, none of which
+                # the parser reads) — assert that invariant rather than trust it.
+                assert all(
+                    getattr(cfg, name) == getattr(self.config, name) for name in _PARSE_RELEVANT_FIELDS
+                ), "Deck Builder Phase-2 cfg changed a parse-relevant field; parser cache reuse is unsafe"
+                proc = create_episode_processor(
+                    cfg, self.presenter, self.stats_service, subtitle_parser=base.subtitle_parser
+                )
                 # Register as current BEFORE process_episode so a mid-call
                 # cancel() reaches this processor.
                 self._current_processor = proc
