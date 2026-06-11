@@ -84,11 +84,13 @@ class MainWindow(QMainWindow):
     - Settings (configuration)
 
     Signals:
-        config_refreshed: emitted when a non-Settings code path mutates
-            self.config (e.g. background JMdict migration finishes). Tabs
-            that cache services should reconnect this to their update_config
-            so they pick up the new state without waiting for the user to
-            edit Settings.
+        config_refreshed: emitted whenever a non-Settings code path updates
+            self.config — every ``update_config`` call except the Settings
+            save path (which passes ``from_settings=True``), plus the
+            background JMdict migration finishing. Tabs that cache services
+            (and SettingsTab, so its panels don't go stale) reconnect this to
+            their update_config to pick up the new state without waiting for
+            the user to edit Settings.
     """
 
     config_refreshed = pyqtSignal(object)  # AnkiMinerConfig
@@ -523,14 +525,25 @@ class MainWindow(QMainWindow):
         """
         return self.config
 
-    def update_config(self, config: AnkiMinerConfig) -> None:
-        """Update configuration and save to disk.
+    def update_config(self, config: AnkiMinerConfig, *, from_settings: bool = False) -> None:
+        """Update configuration, save to disk, and propagate to tabs.
 
         Args:
-            config: New configuration
+            config: New configuration.
+            from_settings: True when the call originates from the Settings
+                save path (``SettingsTab.config_changed`` → here, see app.py).
+                In that case SettingsTab and the mining tabs have ALREADY
+                received the new config directly via ``config_changed``, so we
+                must NOT re-emit ``config_refreshed`` — doing so would re-enter
+                ``SettingsTab.update_config`` and reload every panel mid-save.
+                Every internal mutation (theme cycle, skip-update, first-run
+                flag, post-update version write) leaves it False so SettingsTab
+                refreshes and the next Save can't resurrect the stale value.
         """
         self.config = config
         GUIConfigManager.save_config(config)
+        if not from_settings:
+            self.config_refreshed.emit(config)
 
     def release_dictionary_resources(self) -> bool:
         """Ask every tab to release cached dictionary handles.
