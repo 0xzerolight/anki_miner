@@ -74,7 +74,7 @@ Prefer mocking at the smallest interface that still exercises your code. Patch a
 
 ## Python matrix
 
-CI runs the suite on Python 3.10, 3.11, 3.12, and 3.13. The lint and typecheck jobs run only on Python 3.12.
+CI runs the suite on Python 3.11, 3.12, and 3.13. The lint and typecheck jobs run only on Python 3.12.
 
 ## Coverage
 
