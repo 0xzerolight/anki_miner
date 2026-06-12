@@ -154,6 +154,20 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 - **DictionaryRegistry**: scans `config.dicts_root` (`ANKI_MINER_HOME/dicts/`) for installed dictionaries and builds the provider chain from `config.dictionary_chain`. Disk I/O happens in the explicit `load()` call, not in `__init__`. The chain is first-hit-wins, with `JishoProvider` appended as the online fallback.
 - **JishoProvider**: REST client for the jisho.org API. Always available. Rate-limited with a configurable delay (`jisho_delay`).
 
+**Expression audio** (`services/audio_packs/`, `services/expression_audio_fetcher.py`):
+
+Word-level audio (Issue #73) runs through a `ChainedExpressionAudioFetcher` that walks an ordered list of `ExpressionAudioFetcher` implementations (the protocol is in `interfaces/expression_audio.py`; fetchers never raise) and returns the first non-None path. The chain is assembled by `service_factory` from `config.expression_audio_chain` — a list of `AudioSourceEntry` objects, each tagged `kind: "pack"|"jpod101"` with an enabled flag. The default chain contains only the JPod101 entry, preserving pre-feature behavior with zero extra I/O for users who have not imported any packs.
+
+Local audio packs are imported from [local-audio-yomichan](https://github.com/themoeway/local-audio-yomichan)-compatible directories. Four pack formats are supported: `ajt_japanese` (per-expression subdirectory layout), `nhk16` (NHK 2016 accent survey), `forvo_ja` (Forvo scrape), and `jpod_legacy` / `jpod_alternate` (JapanesePod101 archive). Format detection is in `services/audio_packs/formats.py`; importing is in `services/audio_packs/importer.py`.
+
+Each imported pack gets a SQLite index at `config.audio_packs_root/<pack_id>/index.sqlite` (`~/.anki_miner/audio_packs/` by default) with an `entries(expression, reading, source, speaker, display, file)` table and a JSON meta sidecar. The audio files themselves are never moved — the index records their absolute path inside the original pack directory. Import is atomic (stage to a temp location, then rename into place). `AudioPackRegistry` (`services/audio_packs/registry.py`) has an I/O-free `__init__` and a `load()` call; it is only instantiated when at least one enabled pack entry is present in the chain.
+
+`LocalAudioPackFetcher` opens a read-only SQLite connection per call, queries by `(expression, reading)` — using `mined_form` for expression to match the card's Expression field — and copies the matched file into `~/.anki_miner/audio_cache/local_packs/` as `{pack_id}_{mined_form}_{reading}{ext}`. It never returns in-place pack paths (containment guard prevents path traversal), so the cached copy is what gets stored in Anki. In a chained configuration, pack fetchers are inserted above the JPod101 entry (packs take priority); JPod101 still acts as a fallback for words not covered by any installed pack.
+
+The triple gate is unchanged: expression audio is written to a card only when `config.expression_audio_enabled` is set, a fetcher is injected, and `config.anki_fields["expression_audio"]` is non-empty.
+
+The import flow is in `gui/widgets/audio_pack_settings_panel.py`. Settings → Audio shows a row per installed pack with format, entry count, and a missing-folder badge when the original audio directory has moved. Rows can be reordered, disabled, or removed (deletes the index only; audio files are untouched). A right-click context menu offers re-import. The Add Audio Pack button opens a directory picker; if the chosen directory contains multiple detectable packs (e.g. a parent folder), all are imported sequentially in priority order (nhk16 > shinmeikai8 > forvo > jpod > jpod_alternate) and inserted above the JPod101 chain entry.
+
 ## Orchestration
 
 **EpisodeProcessor** (`orchestration/episode_processor.py`):
@@ -312,5 +326,7 @@ All persistent user data under `~/.anki_miner/`:
 | `stats.db` | SQLite | Analytics (sessions, difficulty, milestones) |
 | `pitch_accent.csv` | CSV | Pitch accent lookup data |
 | `frequency.csv` | CSV | Word frequency rankings |
+| `audio_packs/<pack_id>/index.sqlite` | SQLite | Per-pack expression audio index; audio files stay in their original location |
+| `audio_cache/local_packs/` | Files | Per-hit cache copies from installed packs: `{pack_id}_{mined_form}_{reading}{ext}` |
 
 Temporary media files are stored in the system temp directory under `anki_miner_temp/` and cleaned up after each processing run. YouTube downloads go one level deeper — `anki_miner_temp/youtube/run-<uuid>/` — owned by `YouTubeQueueWorker` (one workspace per attempt; cleaned up in `finally` on every exit path) and `rmtree`'d on every exit path (success, cancel, exception).
