@@ -200,6 +200,27 @@ class TestJPod101AudioFetcher:
         assert result is None
         assert not list(tmp_path.glob("*.mp3"))
         assert not list(tmp_path.glob("*.miss"))
+        assert not list(tmp_path.glob("*.part"))
+
+    def test_empty_body_200_returns_none_no_files(self, tmp_path):
+        """Zero-byte 200 response is a transient failure — no mp3, no miss marker."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.requests.get", return_value=_response(content=b"")):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is None
+        assert not list(tmp_path.glob("*.mp3"))
+        assert not list(tmp_path.glob("*.miss"))
+
+    def test_successful_write_leaves_no_part_file_and_correct_content(self, tmp_path):
+        """Atomic write: no .part file remains after success and content is correct."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.requests.get", return_value=_response(content=b"audio-data")):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is not None
+        assert result.read_bytes() == b"audio-data"
+        assert not list(tmp_path.glob("*.part"))
 
     def test_not_found_hash_constant_value(self):
         """The placeholder hash matches the value Yomitan hardcodes."""

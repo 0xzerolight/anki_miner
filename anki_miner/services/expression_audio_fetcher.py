@@ -2,6 +2,7 @@
 
 import hashlib
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -75,12 +76,24 @@ class JPod101AudioFetcher:
             if response.status_code != 200:
                 return None
 
+            # Zero-byte 200 is ambiguous (network glitch, premature close) —
+            # treat as transient failure, not a confirmed miss.
+            if not response.content:
+                return None
+
             if hashlib.sha256(response.content).hexdigest() == JPOD101_NOT_FOUND_SHA256:
                 # Confirmed not-found: marker prevents re-requesting.
+                # Miss markers are permanent by design (Yomitan-style); delete
+                # the cache dir to retry words that were incorrectly marked.
                 miss_path.touch()
                 return None
 
-            mp3_path.write_bytes(response.content)
+            # Write atomically: stage to a .part file then rename so a killed
+            # process cannot leave a truncated mp3 that passes the st_size > 0
+            # cache-hit check on the next run.
+            part_path = mp3_path.with_suffix(".mp3.part")
+            part_path.write_bytes(response.content)
+            os.replace(part_path, mp3_path)
             return mp3_path
 
         except requests.exceptions.Timeout:
