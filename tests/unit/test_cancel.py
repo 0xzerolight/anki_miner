@@ -211,6 +211,124 @@ class TestEpisodeProcessorCancel:
         assert cancelled_check() is True
 
 
+class TestProcessEpisodeCancelEvent:
+    """process_episode must bridge a caller-supplied cancel_event into its checkpoints.
+
+    The audiobook queue worker calls process_episode directly (no
+    process_youtube_url wrapper), so worker.cancel() mid-mine must reach the
+    processor's phase checkpoints via the cancel_event keyword — NOT via the
+    sticky processor.cancel(), which poisons cached processors across runs.
+    """
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    @pytest.fixture
+    def processor(self, test_config, mock_services):
+        return EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+    def _wire_happy_pipeline(self, mock_services):
+        words = [_make_word("食べる")]
+        media = _make_media("taberu")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+        return words
+
+    def test_set_cancel_event_stops_at_first_checkpoint(self, processor, mock_services, tmp_path):
+        """A pre-set cancel_event ends the run at the first phase checkpoint."""
+        words = [_make_word("食べる")]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        event = threading.Event()
+        event.set()
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cancel_event=event)
+
+        assert result.cards_created == 0
+        assert "cancelled" in result.errors[0].lower()
+        # Phase 2 must NOT have been reached.
+        mock_services["anki_service"].get_existing_vocabulary.assert_not_called()
+
+    def test_cancel_event_set_mid_parse_stops_pipeline(self, processor, mock_services, tmp_path):
+        """An event set mid-phase-1 (worker Stop mid-mine) stops before phase 2."""
+        words = [_make_word("食べる")]
+        event = threading.Event()
+
+        def _parse_then_cancel(sub_file):
+            event.set()  # user pressed Stop mid-parse
+            return words
+
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = _parse_then_cancel
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cancel_event=event)
+
+        assert result.cards_created == 0
+        assert "cancelled" in result.errors[0].lower()
+        mock_services["anki_service"].get_existing_vocabulary.assert_not_called()
+
+    def test_unset_cancel_event_runs_full_pipeline(self, processor, mock_services, tmp_path):
+        """An event that is never set must not perturb a normal run."""
+        self._wire_happy_pipeline(mock_services)
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cancel_event=threading.Event())
+
+        assert result.cards_created == 1
+        assert result.success is True
+
+    def test_bridge_reset_after_run(self, processor, mock_services, tmp_path):
+        """_external_cancel is dropped after the call (shared-processor reuse)."""
+        self._wire_happy_pipeline(mock_services)
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cancel_event=threading.Event())
+
+        assert processor._external_cancel is None
+
+    def test_bridge_reset_after_cancelled_run_does_not_poison_next_run(self, processor, mock_services, tmp_path):
+        """Run 1's set event must not cancel run 2 on the same processor."""
+        self._wire_happy_pipeline(mock_services)
+        run1_event = threading.Event()
+        run1_event.set()
+
+        result1 = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cancel_event=run1_event)
+        assert "cancelled" in result1.errors[0].lower()
+        assert processor._external_cancel is None
+
+        # Run 2: fresh event; run 1's event stays set.
+        result2 = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cancel_event=threading.Event())
+
+        assert processor.cancelled is False
+        assert result2.cards_created == 1
+
+    def test_bridge_reset_after_error(self, processor, mock_services, tmp_path):
+        """_external_cancel is dropped even when the pipeline errors out."""
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = ValueError("boom")
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cancel_event=threading.Event())
+
+        assert result.errors  # the error surfaced in the result
+        assert processor._external_cancel is None
+
+
 class TestMediaExtractorBatchCancel:
     """Tests for MediaExtractorService.extract_media_batch() cancellation."""
 
@@ -242,13 +360,11 @@ class TestMediaExtractorBatchCancel:
             ss.write_bytes(b"\xff\xd8fake")
             return MediaData(screenshot_path=ss, screenshot_filename=ss.name)
 
-        # Cancel after first item
-        items_seen = 0
-
+        # Cancel after the first item is collected. Keyed on recorded progress
+        # (not cancelled_check call count) so the pre-loop cancellation probe
+        # and in-flight poll checks don't trip it before any work happens.
         def cancelled_check():
-            nonlocal items_seen
-            items_seen += 1
-            return items_seen > 1  # Cancel after first item processed
+            return len(recording_progress.progresses) >= 1
 
         with patch.object(service, "extract_media", side_effect=fake_extract):
             result = service.extract_media_batch(video_file, words, recording_progress, cancelled_check=cancelled_check)
