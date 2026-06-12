@@ -264,10 +264,15 @@ class GUIConfigManager:
         from the dataclass default factory so this stays in sync automatically.
         """
         saved = data.get("anki_fields")
+        defaults = create_default_config().anki_fields
         if not isinstance(saved, dict):
+            # null, string, or any non-dict value from a corrupt/legacy config:
+            # replace with the full defaults so __post_init__ never sees a
+            # non-dict anki_fields.
+            if "anki_fields" in data:
+                data["anki_fields"] = dict(defaults)
             return data
 
-        defaults = create_default_config().anki_fields
         for key, default_value in defaults.items():
             saved.setdefault(key, default_value)
         return data

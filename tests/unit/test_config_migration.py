@@ -107,6 +107,27 @@ def test_old_config_without_expression_audio_fields_gets_defaults(tmp_config: Pa
     assert loaded.expression_audio_delay == 0.2
 
 
+def test_null_anki_fields_does_not_raise(tmp_config: Path):
+    """Config JSON with anki_fields: null must not crash load_config; the
+    _backfill_anki_fields guard silently skips non-dict values and the
+    loaded config falls back to dataclass defaults (including expression_audio).
+    """
+    tmp_config.write_text(json.dumps({"anki_fields": None}))
+
+    loaded = GUIConfigManager.load_config()
+    assert "expression_audio" in loaded.anki_fields
+
+
+def test_string_anki_fields_does_not_raise(tmp_config: Path):
+    """Config JSON with anki_fields as a string must not crash load_config;
+    same non-dict guard path as the null case.
+    """
+    tmp_config.write_text(json.dumps({"anki_fields": "legacy_string"}))
+
+    loaded = GUIConfigManager.load_config()
+    assert "expression_audio" in loaded.anki_fields
+
+
 def test_legacy_use_offline_dict_false_is_stripped(tmp_config: Path):
     """Legacy use_offline_dict=False is silently dropped; default chain is used.
 
