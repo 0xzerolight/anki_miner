@@ -801,9 +801,7 @@ class TestStoreMediaFilesBatch:
             audio_filename="missing.mp3",
         )
 
-        resp = _mock_response(result="ok")
-
-        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post") as mock_post:
             service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
 
         # No HTTP calls because files don't exist on disk.

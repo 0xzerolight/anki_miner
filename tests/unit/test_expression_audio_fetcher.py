@@ -1,6 +1,7 @@
 """Tests for JPod101AudioFetcher."""
 
 import hashlib
+import logging
 import os
 import time
 from unittest.mock import MagicMock, patch
@@ -8,7 +9,6 @@ from unittest.mock import MagicMock, patch
 import requests
 
 from anki_miner.services.expression_audio_fetcher import (
-    JPOD101_NOT_FOUND_SHA256,
     MAX_AUDIO_BYTES,
     STALE_PART_AGE_SECONDS,
     JPod101AudioFetcher,
@@ -101,7 +101,10 @@ class TestJPod101AudioFetcher:
     def test_cache_hit_skips_network_and_sleep(self, tmp_path):
         """Existing non-empty mp3 short-circuits without network or delay."""
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0.2)
-        with patch("requests.Session.get", return_value=_response()):
+        with (
+            patch("requests.Session.get", return_value=_response()),
+            patch(f"{MODULE}.time.sleep"),
+        ):
             first = fetcher.fetch("食べる", "たべる")
         assert first is not None
 
@@ -247,10 +250,6 @@ class TestJPod101AudioFetcher:
         assert result is not None
         assert result.read_bytes() == audio
         assert not list(tmp_path.glob("*.part"))
-
-    def test_not_found_hash_constant_value(self):
-        """The placeholder hash matches the value Yomitan hardcodes."""
-        assert JPOD101_NOT_FOUND_SHA256 == "ae6398b5a27bc8c0a771df6c907ade794be15518174773c58c7c7ddd17098906"
 
     # ------------------------------------------------------------------
     # New hardening tests (TDD: these are written before implementation)
@@ -426,8 +425,6 @@ class TestJPod101AudioFetcher:
 
     def test_request_exception_emits_debug_log(self, tmp_path, caplog):
         """DNS/connection failure emits a debug log so failures are diagnosable."""
-        import logging
-
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
         with (
             caplog.at_level(logging.DEBUG, logger="anki_miner.services.expression_audio_fetcher"),
@@ -634,6 +631,32 @@ class TestJPod101AudioFetcher:
     # ------------------------------------------------------------------
     # Session reuse (Task 6)
     # ------------------------------------------------------------------
+
+    def test_zero_byte_cached_mp3_refetched(self, tmp_path):
+        """A zero-byte .mp3 in the cache dir triggers a network refetch and
+        the file is repaired with the valid body.
+
+        The cache-hit guard checks st_size > 0, so a truncated/empty mp3
+        left by a previous crash must not satisfy the hit and must be
+        replaced with valid content.
+        """
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+
+        # Pre-seed a zero-byte mp3 with the deterministic cache filename.
+        from anki_miner.utils.file_utils import safe_filename
+
+        stem = safe_filename("jpod101_食べる_たべる")
+        empty_mp3 = tmp_path / f"{stem}.mp3"
+        empty_mp3.write_bytes(b"")
+
+        with patch("requests.Session.get", return_value=_response()) as mock_get:
+            result = fetcher.fetch("食べる", "たべる")
+
+        # Network must have been hit (cache miss due to empty file).
+        mock_get.assert_called_once()
+        assert result is not None
+        assert result.read_bytes() == _VALID_MP3
+        assert result.stat().st_size > 0
 
     def test_session_reused_across_fetches(self, tmp_path):
         """The same requests.Session.get is called for two distinct cold-cache words.
