@@ -90,7 +90,7 @@ class AudiobookQueueWorker(ProcessorOwningWorker):
         # the curation wait, so reads from the GUI thread are race-free).
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
-        self._curation_offset: float = 0.0
+        self._curation_offset: float = config.subtitle_offset
         # Skip channel: items the user removed mid-run (Clear / row [x]).
         # The run loop iterates the frozen constructor snapshot, so a GUI-side
         # removal alone would still mine the item — cards for rows that no
@@ -146,10 +146,12 @@ class AudiobookQueueWorker(ProcessorOwningWorker):
         """
         # Publish curation media context BEFORE mining so the GUI curation
         # bridge can read it while the worker blocks in the curation wait.
-        # Audiobook pairs are local files used as-is, so the offset is 0.
+        # The invariant is "publish the offset mining will apply": subtitle
+        # parsing applies config.subtitle_offset unconditionally, local files
+        # included, so the bridge must see the same value.
         self._curation_video = item.audio_file
         self._curation_subtitle = item.subtitle_file
-        self._curation_offset = 0.0
+        self._curation_offset = self._config.subtitle_offset
 
         mining_cb = QueueMiningProgressAdapter(idx, self.item_progress.emit)
 
