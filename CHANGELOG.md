@@ -7,6 +7,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+
+## [2.6.2] - 2026-06-12
+
+### Added
+- **Source field on mined cards** (#69). Opt-in Anki field recording where a mined word came from, as `<origin> @ HH:MM:SS` — for file mining the origin is `<folder> — <episode>`, for YouTube the video title. Mapped under Settings → Anki → Auxiliary Data Fields (auto-detects note fields named "source"/"origin"); nothing is written until a field is mapped.
+- **Card styling via named presets.** The single default-stylesheet toggle is replaced by a preset picker — Default, Yomitan / Lapis Classic, Minimal / Clean, or None — backed by a `card_style_presets` registry. The old `use_default_card_stylesheet` boolean migrates to a preset id on load.
+- **Review words before mining on YouTube** (#65). An opt-in checkbox brings the word-curation dialog to YouTube runs with full parity to batch mining: the embedded video player and multi-dictionary lookup are sourced from the video's fetched media.
 - **YouTube playlist support** (#70). Pasting a playlist URL (`/playlist?list=…`) or a watch URL with a `list=` parameter expands into queue rows via yt-dlp `--flat-playlist`. A confirm dialog appears when the playlist exceeds the new `youtube_playlist_max` cap (default 100, Settings → YouTube). Mixed watch+list URLs (`/watch?v=…&list=…`) prompt whether to add just that video or the whole playlist. Videos already in the queue are skipped as duplicates. Mix/radio URLs (`list=RD…`) are treated as plain video links. Expansion and per-entry probing both run on background threads (`YouTubePlaylistResolveWorker`, `YouTubePlaylistProbeWorker`) so the GUI stays responsive. New helper `utils/youtube_url.py` classifies URLs without network access; new models `PlaylistInfo` and `PlaylistEntry` carry the flat-playlist metadata.
 
 ### Changed
@@ -20,17 +34,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Mining no longer crashes on non-ASCII (Japanese) filenames or stream titles.** Both ffprobe and ffmpeg output are decoded as UTF-8 with replacement, so cp932/cp1252 (Windows) no longer raises a decode error mid-extraction.
 - **A failed pair in a batch no longer aborts the rest of the item or loses cards already made.** Each video/subtitle pair is guarded independently: a transient AnkiConnect failure on one episode is reported against that episode while the remaining episodes still process and earlier cards still count. Failed episodes are now surfaced in the batch and manual-pair completion summaries, and file selectors stay populated after a failed or preview-only run (#51).
 - **Batch queue robustness.** Cancelling between episodes returns the item to *pending* (with its row redrawn) instead of marking it *completed*; queue rows are keyed by a stable id so duplicate series names update the right row; the worker owns item-status writes to close a re-pick race; and the Cancel button is shown during a Retry Failed run.
-- **YouTube reliability.** A workspace-creation failure on one video no longer kills the whole queue; mid-run Clear/remove skips items still queued; a live-stream probe with no duration is handled instead of erroring; the fetch watchdog only kills its own process; and `Stop` during a YouTube run shuts the pipeline down cleanly.
+- **YouTube reliability.** A workspace-creation failure on one video no longer kills the whole queue; mid-run Clear/remove skips items still queued; a live-stream probe with no duration is handled instead of erroring; the fetch watchdog only kills its own process; `Stop` during a YouTube run shuts the pipeline down cleanly (and closing the app mid-curation releases the dialog instead of hanging the GUI); and a config change before the tab's first run no longer silently disables session stats.
 - **Age-restricted YouTube videos are accepted when a cookies *file* is configured**, not only when cookies come from a browser. Duplicate playlist entries already queued (probe still in flight) are also skipped, preventing a double fetch of the same video.
 - **Security: yt-dlp argument injection blocked.** Option-leading inputs (e.g. `--…`) are rejected before reaching yt-dlp, and Jisho API definitions are HTML-escaped before being interpolated into a card.
 - **Card media no longer silently goes missing on large sessions.** Both note media and dictionary-supplied media upload through one byte-budgeted chunked path, and earlier card batches are persisted even when a later batch fails.
 - **Dictionary / import resilience.** Read-only SQLite is opened via a percent-encoded URI so dictionary folders with spaces or special characters work; dictionary sqlite handles are released before a remove/re-import; pitch and frequency CSV imports are staged and only promoted once both succeed (leftover `.tmp` files are cleaned on failure); and an oversized dictionary `index.json` is capped while deriving the dictionary id.
+- **Yomitan structured-content images sized correctly** (#68). Image dimensions are emitted as unit-carrying inline CSS honoring `sizeUnits`, so em-sized inline art (pitch-accent marks, ［派生語］ tags in 三省堂国語辞典 etc.) no longer renders huge, and fractional em sizes survive instead of truncating to zero. `verticalAlign`/`border` styles on images are no longer dropped.
+- **Dictionary imports no longer abort on lone UTF-16 surrogates** (#67). Hand-converted term banks carrying unpaired surrogates used to kill the whole import with a sqlite UTF-8 encode error; they are now scrubbed to U+FFFD at the storage write seam.
 - **Local databases survive being locked.** A run still succeeds (and stats/known-words still record) when `known_words.db`, `stats.db`, or another local DB is momentarily locked, and `gui_config.json` / `recent_files.json` are written atomically with `OSError` logged rather than swallowed. A word marked "known" now survives a known-words DB rebuild.
 - **Settings reliability.** Saving a changed dictionary storage folder re-syncs the dictionary panel; removing a dictionary persists only the chain (not a full save); blacklist/whitelist selectors clear when no list is set; the Reimport-All worker joins its predecessor before restarting; and the previously dead Anki panel sync/test buttons now run validation. Repeated Test Connection / update checks no longer leak worker threads.
 - **Config changes apply mid-session.** Editing settings rebuilds config-bound services and propagates the new config to non-Settings tabs, and an in-session subtitle offset is no longer reset by an unrelated config update.
 - **Episode-number detection.** The fallback matcher takes the *last* bare number (so numeric titles like "86" or "Mob Psycho 100" don't steal the episode slot), tolerates `SxxEyy` separators, and now captures adjacent numbers (e.g. `Title 1 2`) that were previously skipped — while still ignoring resolution tokens like `720p`.
 - **Word counting / furigana parity.** Compound words that can't be located in the sentence are dropped from lemma counts too (matching the card-build path), and noun furigana/readings are recomputed when an i+1 card swaps to the surface form.
 - **Test isolation: probe-worker tests no longer poison the Qt app singleton.** Two YouTube probe-worker tests created a bare `QCoreApplication`, so a later widget test reused it and aborted with "Cannot create a QWidget without QApplication"; both now create a `QApplication` (still a `QCoreApplication`, so the thread/signal tests are unaffected).
+
+### Maintenance
+- **New app icon** — white 鉱 on black (Shippori Mincho B1), glyph embedded as outline paths so it no longer depends on the system's serif fallback font.
+- **Supply-chain / CI hardening.** Workflow actions and pre-commit hooks pinned to commit SHAs; PyInstaller and appimagetool pinned (with checksum verification, plus nfpm checksum); tag-triggered workflows gated on green CI; per-OS release uploads fail on missing files; the bundled YouTube smoke test hard-fails instead of continue-on-error.
+- **README**: demo GIFs rebuilt with audio-synced animation, recommended resources updated (Bee's Character Dictionary added), badge caching tuned.
+- Welcomed @Geniusssmit and @cskings14 to CONTRIBUTORS.md.
 
 ### Removed
 - **The `smoke-min-deps` CI job and floor-pin tooling** (`scripts/extract_floor_pins.py`). With dependency floors now at recent stable, floor-version smoke-testing is redundant with the latest-version `test` job.
