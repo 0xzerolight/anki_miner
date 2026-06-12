@@ -188,7 +188,7 @@ class AnkiSettingsPanel(FormPanel):
         self.add_field(
             "Expression Audio",
             self.expression_audio_checkbox,
-            helper="Fetch word pronunciation audio from JapanesePod101 (free, no account).",
+            helper="Plays word audio from imported audio packs first, JapanesePod101 online as fallback.",
         )
 
         self.expression_audio_field_input = QLineEdit()

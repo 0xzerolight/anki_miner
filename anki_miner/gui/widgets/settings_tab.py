@@ -19,14 +19,16 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry
 from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
+from anki_miner.gui.controllers.audio_pack_import_flow import AudioPackImportFlow
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
 from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
     AnkiSettingsPanel,
+    AudioPackSettingsPanel,
     DictionarySettingsPanel,
     FilteringSettingsPanel,
     MediaSettingsPanel,
@@ -81,6 +83,13 @@ class SettingsTab(QWidget):
             persist_chain=self._persist_chain_change,
             notify_config_changed=lambda: self.config_changed.emit(self.config),
         )
+        # Audio pack add/reimport orchestration.
+        self._audio_pack_import_flow = AudioPackImportFlow(
+            parent=self,
+            panel=self.audio_panel,
+            get_config=lambda: self.config,
+            persist_chain=self._persist_audio_chain_change,
+        )
         # AnkiConnect probe workers (fetch fields / fetch decks / styling);
         # their live handles surface through iter_close_workers (T-12).
         self._anki_probe = AnkiProbeController(
@@ -106,6 +115,7 @@ class SettingsTab(QWidget):
         self.anki_panel = AnkiSettingsPanel()
         self.media_panel = MediaSettingsPanel()
         self.dictionary_panel = DictionarySettingsPanel(self.config.dicts_root)
+        self.audio_panel = AudioPackSettingsPanel(self.config.audio_packs_root)
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
         self.themes_panel = ThemesPanel(self.config.themes_root)
@@ -114,6 +124,7 @@ class SettingsTab(QWidget):
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.anki_panel), "Anki")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.media_panel), "Media")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.dictionary_panel), "Dictionary")
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.audio_panel), "Audio")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), "Filtering")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), "YouTube")
         # Themes tab — sub-tab index captured so MainWindow / shortcuts can
@@ -181,6 +192,13 @@ class SettingsTab(QWidget):
         self.dictionary_panel.dictionary_removed.connect(
             lambda: self._persist_chain_change(self.dictionary_panel.get_chain())
         )
+
+        # Audio panel signals — wire Add/Reimport to the import flow controller.
+        self.audio_panel.add_pack_requested.connect(self._audio_pack_import_flow.add_pack)
+        self.audio_panel.reimport_pack_requested.connect(self._audio_pack_import_flow.reimport_pack)
+        # Persist chain immediately after reorder/toggle or destructive remove.
+        self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
+        self.audio_panel.pack_removed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
 
         # Filtering panel: excluded-decks picker + known-words cache rebuild (Issue #38).
         self.filtering_panel.fetch_decks_requested.connect(self._anki_probe.fetch_decks)
@@ -256,6 +274,9 @@ class SettingsTab(QWidget):
         # Dictionary chain
         self.dictionary_panel.set_dicts_root(self.config.dicts_root)
         self.dictionary_panel.set_chain(self.config.dictionary_chain)
+
+        # Audio source chain
+        self.audio_panel.set_chain(self.config.expression_audio_chain)
 
         # Pitch accent settings
         self.dictionary_panel.pitch_accent_selector.set_path(str(self.config.pitch_accent_path))
@@ -499,6 +520,8 @@ class SettingsTab(QWidget):
             max_sentence_chars=self.filtering_panel.max_sentence_chars_spinbox.value(),
             # Card formatting (Issue #20)
             bold_target_in_sentence=self.filtering_panel.bold_target_in_sentence_checkbox.isChecked(),
+            # Audio source chain
+            expression_audio_chain=self.audio_panel.get_chain(),
             # YouTube settings
             youtube_cookies_from_browser=self.youtube_panel.get_cookies_from_browser(),
             youtube_cookies_file=(
@@ -706,6 +729,17 @@ class SettingsTab(QWidget):
         i.e. invisible to DictionaryRegistry.build_provider_chain.
         """
         new_config = replace(self.config, dictionary_chain=new_chain)
+        self.config = new_config
+        self.config_changed.emit(new_config)
+
+    def _persist_audio_chain_change(self, new_chain: tuple[AudioSourceEntry, ...]) -> None:
+        """Save an audio chain mutation to disk and notify listeners.
+
+        Called after a successful audio pack import or a destructive remove so
+        the freshly-imported pack is reachable on the very next lookup without
+        requiring the user to click Save in Settings.
+        """
+        new_config = replace(self.config, expression_audio_chain=new_chain)
         self.config = new_config
         self.config_changed.emit(new_config)
 
