@@ -48,6 +48,7 @@ class MainWindow(QMainWindow):
     - Batch Mining (folder of paired files)
     - Deck Builder (corpus-driven deck assembly)
     - YouTube (URL probe + fetch + mine)
+    - Audiobook (audio + subtitle pair queue)
     - Analytics (mining statistics dashboard)
     - Settings (configuration)
 
@@ -186,7 +187,8 @@ class MainWindow(QMainWindow):
         # Set accessible names for main components
         self.tabs.setAccessibleName("Main Tabs")
         self.tabs.setAccessibleDescription(
-            "Navigate between Episode Mining, Batch Mining, Deck Builder, YouTube, Analytics, and Settings"
+            "Navigate between Episode Mining, Batch Mining, Deck Builder, YouTube, "
+            "Audiobook, Analytics, and Settings"
         )
 
         self.header.setAccessibleName("Application Header")
@@ -258,8 +260,8 @@ class MainWindow(QMainWindow):
 
     def _setup_shortcuts(self) -> None:
         """Set up global keyboard shortcuts."""
-        # Tab switching shortcuts (Ctrl+1..Ctrl+6, one per tab in order)
-        for i in range(1, 7):
+        # Tab switching shortcuts (Ctrl+1..Ctrl+7, one per tab in order)
+        for i in range(1, 8):
             shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
             shortcut.activated.connect(lambda idx=i - 1: self._switch_to_tab(idx))
 

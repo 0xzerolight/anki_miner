@@ -48,6 +48,7 @@ def _build_tabs(monkeypatch, test_config):
     from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
     from anki_miner.gui.utils.service_factory import create_youtube_fetcher
     from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
+    from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
     from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
     from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
     from anki_miner.gui.widgets.settings_tab import SettingsTab
@@ -100,6 +101,15 @@ def _build_tabs(monkeypatch, test_config):
     )
     window.tabs.addTab(youtube_tab, "YouTube")
 
+    audiobook_presenter = GUIPresenter(window)
+    audiobook_tab = AudiobookTab(
+        config=window.get_config(),
+        processor=None,
+        presenter=audiobook_presenter,
+        stats_service=stats_service,
+    )
+    window.tabs.addTab(audiobook_tab, "Audiobook")
+
     analytics_tab = AnalyticsTab(stats_service)
     window.tabs.addTab(analytics_tab, "Analytics")
 
@@ -109,6 +119,7 @@ def _build_tabs(monkeypatch, test_config):
     settings_tab.config_changed.connect(batch_tab.update_config)
     settings_tab.config_changed.connect(deck_builder_tab.update_config)
     settings_tab.config_changed.connect(youtube_tab.update_config)
+    settings_tab.config_changed.connect(audiobook_tab.update_config)
     window.tabs.addTab(settings_tab, "Settings")
 
     window.config_refreshed.connect(settings_tab.update_config)
@@ -116,6 +127,7 @@ def _build_tabs(monkeypatch, test_config):
     window.config_refreshed.connect(batch_tab.update_config)
     window.config_refreshed.connect(deck_builder_tab.update_config)
     window.config_refreshed.connect(youtube_tab.update_config)
+    window.config_refreshed.connect(audiobook_tab.update_config)
 
     tab_count = window.tabs.count()
     titles = [window.tabs.tabText(i) for i in range(tab_count)]
