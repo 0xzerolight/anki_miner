@@ -60,7 +60,7 @@ class JPod101AudioFetcher:
             delay: Seconds to wait before each network request.
         """
         self._cache_dir = cache_dir
-        self._delay = delay
+        self._delay = max(0.0, delay)
 
     def fetch(self, mined_form: str, reading: str) -> Path | None:
         """Fetch pronunciation audio for a word.
@@ -148,7 +148,6 @@ class JPod101AudioFetcher:
             finally:
                 response.close()
 
-        except requests.exceptions.Timeout:
-            return None
-        except (requests.RequestException, OSError):
+        except (requests.RequestException, OSError) as exc:
+            logger.debug("expression audio fetch failed for %s: %s", mined_form, exc)
             return None
