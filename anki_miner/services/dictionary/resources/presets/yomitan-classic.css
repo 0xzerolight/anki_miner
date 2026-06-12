@@ -3,19 +3,33 @@
  *
  * The headline "looks like Yomitan" preset: a polished glossary with a small
  * dictionary-name chip, an accent sense rail, and tidy tables/collapsibles.
- * Everything is scoped under `.yomitan-glossary` so it never leaks into the
- * rest of the card. Colors inherit from the card via `currentColor` and a few
- * tunable custom properties, so it reads well on both light and dark note
- * types without hard-coding a background. Original work — Yomitan/Lapis-
- * flavored, not copied from any Yomitan source.
+ * Every rule is guarded by `ol[data-count]` — markup only Anki Miner's
+ * providers produce — so the preset never restyles Yomitan-exported glossary
+ * HTML living in the same note type (Yomitan bakes its own indentation into
+ * card HTML; matching it would double-indent). The guard also bumps selector
+ * specificity: custom CSS overriding preset rules needs the same guard (or
+ * more), though the `--am-*` tunables below stay overridable from a plain
+ * `.yomitan-glossary` rule. Colors inherit from the card via `currentColor`,
+ * so it reads well on both light and dark note types without hard-coding a
+ * background. Original work — Yomitan/Lapis-flavored, not copied from any
+ * Yomitan source.
  */
 
 .yomitan-glossary {
-  /* Tunables — override these in your custom CSS to re-skin without forking. */
+  /* Tunables — override these in your custom CSS to re-skin without forking.
+   * Custom properties only in this rule: they are inert on Yomitan-made
+   * cards, so it is the one selector allowed without the data-count guard. */
   --am-muted: color-mix(in srgb, currentColor 55%, transparent);
   --am-faint: color-mix(in srgb, currentColor 22%, transparent);
   --am-accent: #4f7cff;
+}
 
+/* Outer dictionary list (miner-only markup): typography for the whole block,
+ * and drop the default ordinal/indent chrome. */
+.yomitan-glossary > ol[data-count] {
+  margin: 0;
+  padding: 0;
+  list-style: none;
   text-align: left;
   font-size: 0.92em;
   line-height: 1.6;
@@ -23,28 +37,21 @@
 }
 
 /* Stack multiple dictionaries (each is its own .yomitan-glossary block). */
-.yomitan-glossary + .yomitan-glossary {
+.yomitan-glossary + .yomitan-glossary > ol[data-count] {
   margin-top: 0.9em;
   padding-top: 0.75em;
   border-top: 1px solid var(--am-faint);
 }
 
-/* Outer dictionary list: drop the default ordinal/indent chrome. */
-.yomitan-glossary > ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 /* Per-dictionary block, with a stronger accent sense rail. */
-.yomitan-glossary li[data-dictionary] {
+.yomitan-glossary ol[data-count] li[data-dictionary] {
   margin: 0;
   padding: 0.1em 0 0.1em 0.9em;
   border-left: 3px solid color-mix(in srgb, var(--am-accent) 45%, transparent);
 }
 
 /* The "(part-of-speech…, Dictionary Name)" line — a small pill/chip. */
-.yomitan-glossary li[data-dictionary] > i {
+.yomitan-glossary ol[data-count] li[data-dictionary] > i {
   display: inline-block;
   margin-bottom: 0.35em;
   padding: 0.05em 0.5em;
@@ -57,44 +64,44 @@
 }
 
 /* Sense list: numbered, comfortable rhythm. */
-.yomitan-glossary ul.gloss-list {
+.yomitan-glossary ol[data-count] ul.gloss-list {
   margin: 0.2em 0 0;
   padding-left: 1.35em;
   list-style-type: decimal;
   line-height: 1.6;
 }
 
-.yomitan-glossary ul.gloss-list[data-count="1"] {
+.yomitan-glossary ol[data-count] ul.gloss-list[data-count="1"] {
   list-style-type: none;
   padding-left: 0;
 }
 
-.yomitan-glossary li.gloss-item {
+.yomitan-glossary ol[data-count] li.gloss-item {
   margin: 0.25em 0;
 }
 
-.yomitan-glossary li.gloss-item::marker {
+.yomitan-glossary ol[data-count] li.gloss-item::marker {
   color: var(--am-muted);
 }
 
-.yomitan-glossary .gloss-content {
+.yomitan-glossary ol[data-count] .gloss-content {
   font-weight: normal;
 }
 
 /* Generic structured-content baseline. */
-.yomitan-glossary [class^="gloss-sc-"],
-.yomitan-glossary [class*=" gloss-sc-"] {
+.yomitan-glossary ol[data-count] [class^="gloss-sc-"],
+.yomitan-glossary ol[data-count] [class*=" gloss-sc-"] {
   margin: 0;
 }
 
-.yomitan-glossary [class^="gloss-sc-"] ul,
-.yomitan-glossary [class^="gloss-sc-"] ol {
+.yomitan-glossary ol[data-count] [class^="gloss-sc-"] ul,
+.yomitan-glossary ol[data-count] [class^="gloss-sc-"] ol {
   margin: 0.2em 0;
   padding-left: 1.2em;
 }
 
 /* Example sentences and supplementary notes — read as secondary. */
-.yomitan-glossary [data-sc-content|="example-sentence"] {
+.yomitan-glossary ol[data-count] [data-sc-content|="example-sentence"] {
   display: block;
   margin: 0.3em 0;
   padding-left: 0.6em;
@@ -103,62 +110,62 @@
   color: var(--am-muted);
 }
 
-.yomitan-glossary [data-sc-content|="extra-info"],
-.yomitan-glossary [data-sc-content|="attribution"] {
+.yomitan-glossary ol[data-count] [data-sc-content|="extra-info"],
+.yomitan-glossary ol[data-count] [data-sc-content|="attribution"] {
   font-size: 0.8em;
   color: var(--am-muted);
 }
 
 /* Dictionary-bundled images — cap so they never blow out the card. */
-.yomitan-glossary .gloss-image {
+.yomitan-glossary ol[data-count] .gloss-image {
   max-width: 100%;
   max-height: 8em;
   height: auto;
   vertical-align: middle;
 }
 
-.yomitan-glossary .gloss-image-link {
+.yomitan-glossary ol[data-count] .gloss-image-link {
   text-decoration: none;
 }
 
-.yomitan-glossary .gloss-image-container {
+.yomitan-glossary ol[data-count] .gloss-image-container {
   display: inline-block;
 }
 
 /* Collapsible notes / conjugation tables. */
-.yomitan-glossary details {
+.yomitan-glossary ol[data-count] details {
   margin: 0.3em 0;
 }
 
-.yomitan-glossary summary {
+.yomitan-glossary ol[data-count] summary {
   cursor: pointer;
   color: var(--am-accent);
 }
 
-.yomitan-glossary details[open] > summary {
+.yomitan-glossary ol[data-count] details[open] > summary {
   margin-bottom: 0.25em;
 }
 
 /* Tables (some dictionaries lay out inflections/readings in tables). */
-.yomitan-glossary table {
+.yomitan-glossary ol[data-count] table {
   border-collapse: collapse;
   margin: 0.3em 0;
 }
 
-.yomitan-glossary th,
-.yomitan-glossary td {
+.yomitan-glossary ol[data-count] th,
+.yomitan-glossary ol[data-count] td {
   padding: 0.18em 0.5em;
   border: 1px solid var(--am-faint);
   text-align: left;
 }
 
-.yomitan-glossary th {
+.yomitan-glossary ol[data-count] th {
   font-weight: 600;
 }
 
 /* Frequency / pitch hooks, when a dictionary surfaces them inline. */
-.yomitan-glossary [data-sc-content|="frequency"],
-.yomitan-glossary [data-sc-content|="pitch-accent"] {
+.yomitan-glossary ol[data-count] [data-sc-content|="frequency"],
+.yomitan-glossary ol[data-count] [data-sc-content|="pitch-accent"] {
   font-size: 0.85em;
   color: var(--am-muted);
 }
