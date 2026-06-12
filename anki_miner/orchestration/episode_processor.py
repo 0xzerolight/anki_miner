@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from anki_miner.models import LineLemmas
+    from anki_miner.services.expression_audio_fetcher import JPod101AudioFetcher
     from anki_miner.services.frequency_service import FrequencyService
     from anki_miner.services.known_word_db import KnownWordDB
     from anki_miner.services.pitch_accent_service import PitchAccentService
@@ -124,6 +125,7 @@ class EpisodeProcessor:
         wordset_service: WordsetService | None = None,
         stats_service: StatsService | None = None,
         youtube_fetcher: YouTubeFetcherService | None = None,
+        expression_audio_fetcher: JPod101AudioFetcher | None = None,
     ):
         """Initialize the episode processor.
 
@@ -143,6 +145,10 @@ class EpisodeProcessor:
             stats_service: Optional statistics recording service
             youtube_fetcher: Optional YouTube fetcher service. Required for
                 ``process_youtube_url``; unused by ``process_episode``.
+            expression_audio_fetcher: Optional JPod101 pronunciation audio
+                fetcher (Issue #73). Only consulted in Phase 3 when
+                ``config.expression_audio_enabled`` is on AND the
+                ``expression_audio`` Anki field is mapped.
         """
         self.config = config
         self.subtitle_parser = subtitle_parser
@@ -158,6 +164,7 @@ class EpisodeProcessor:
         self.wordset_service = wordset_service
         self.stats_service = stats_service
         self._youtube_fetcher = youtube_fetcher
+        self.expression_audio_fetcher = expression_audio_fetcher
         self._cancelled = False
         # Per-run external cancel source (e.g. a worker's threading.Event
         # ``is_set``), installed/removed by process_youtube_url around each
@@ -499,6 +506,30 @@ class EpisodeProcessor:
             temp_folder=run_temp_folder,
             audio_track_override=audio_track_override,
         )
+
+        # Expression (pronunciation) audio, Issue #73. Sequential on purpose:
+        # the fetcher rate-limits and caches internally and never raises, so
+        # the loop needs no try/except, no sleep, and no parallelism. Gated on
+        # the toggle AND a mapped field — fetching audio no card would use is
+        # wasted network. Cancellation mirrors the extractor's cancelled_check;
+        # the caller's post-phase checkpoint owns the cancel result.
+        if (
+            self.expression_audio_fetcher is not None
+            and self.config.expression_audio_enabled
+            and self.config.anki_fields.get("expression_audio")
+            and media_results
+        ):
+            fetched_count = 0
+            for word, media in media_results:
+                if self.cancelled:
+                    return media_results
+                path = self.expression_audio_fetcher.fetch(word.mined_form, word.expression_reading)
+                if path is not None:
+                    media.expression_audio_path = path
+                    media.expression_audio_filename = path.name
+                    fetched_count += 1
+            self.presenter.show_info(f"Expression audio: {fetched_count}/{len(media_results)} fetched")
+
         return media_results
 
     def _phase4_lookup(

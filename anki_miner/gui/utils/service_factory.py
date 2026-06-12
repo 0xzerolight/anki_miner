@@ -4,11 +4,13 @@ import logging
 from dataclasses import dataclass, field
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.registry import DictionaryRegistry
+from anki_miner.services.expression_audio_fetcher import JPod101AudioFetcher
 from anki_miner.services.frequency_service import FrequencyService
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.media_extractor import MediaExtractorService
@@ -51,6 +53,7 @@ class Services:
     word_list_service: WordListService | None
     wordset_service: WordsetService | None
     youtube_fetcher: YouTubeFetcherService
+    expression_audio_fetcher: JPod101AudioFetcher
     load_result: ServiceLoadResult
 
 
@@ -136,6 +139,12 @@ def create_services(config: AnkiMinerConfig, subtitle_parser: SubtitleParserServ
     definition_service = build_definition_service(config, load_result)
     anki_service = AnkiService(config)
     youtube_fetcher = YouTubeFetcherService(config=config)
+    # Constructed unconditionally — __init__ is I/O-free; the enabled/field
+    # gates live in the processor's Phase 3 (Issue #73).
+    expression_audio_fetcher = JPod101AudioFetcher(
+        cache_dir=ANKI_MINER_HOME / "audio_cache" / "jpod101",
+        delay=config.expression_audio_delay,
+    )
 
     # Optional services
     pitch_accent_service = None
@@ -230,6 +239,7 @@ def create_services(config: AnkiMinerConfig, subtitle_parser: SubtitleParserServ
         word_list_service=word_list_service,
         wordset_service=wordset_service,
         youtube_fetcher=youtube_fetcher,
+        expression_audio_fetcher=expression_audio_fetcher,
         load_result=load_result,
     )
 
@@ -276,6 +286,7 @@ def create_episode_processor(
         wordset_service=services.wordset_service,
         stats_service=stats_service,
         youtube_fetcher=services.youtube_fetcher,
+        expression_audio_fetcher=services.expression_audio_fetcher,
     )
 
 
