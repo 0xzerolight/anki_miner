@@ -297,7 +297,7 @@ class TestProcessEpisode:
         processor.process_episode(video, sub)
 
         me_kwargs = mock_services["media_extractor"].extract_media_batch.call_args.kwargs
-        assert me_kwargs.get("audio_only", False) is False
+        assert me_kwargs["audio_only"] is False
 
     def test_subtitle_parse_error_handling(self, processor, mock_services, tmp_path):
         """SubtitleParseError should be caught and returned as error."""
