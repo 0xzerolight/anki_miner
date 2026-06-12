@@ -36,7 +36,7 @@ def test_create_services_wires_expression_audio_fetcher(base_config):
     assert fetcher._cache_dir == ANKI_MINER_HOME / "audio_cache" / "jpod101"
 
 
-def test_create_episode_processor_wires_same_fetcher(base_config, monkeypatch):
+def test_create_episode_processor_wires_same_fetcher(base_config):
     """create_episode_processor passes the expression_audio_fetcher from
     create_services onto the EpisodeProcessor unchanged.
     """

@@ -26,9 +26,10 @@ JPOD101_NOT_FOUND_SHA256 = "ae6398b5a27bc8c0a771df6c907ade794be15518174773c58c7c
 # larger is almost certainly an error page or CDN redirect body.
 MAX_AUDIO_BYTES = 5 * 1024 * 1024
 
-# Stale .part files older than this threshold (seconds) are swept on each
-# fetch() call. Files younger than this are assumed to belong to a concurrent
-# in-progress download and are left alone.
+# Stale .part files older than this threshold (seconds) are swept on
+# cache-miss fetch() calls (warm-cache hits return before the sweep). Files
+# younger than this are assumed to belong to a concurrent in-progress
+# download and are left alone.
 STALE_PART_AGE_SECONDS = 60
 
 
@@ -68,8 +69,9 @@ class JPod101AudioFetcher:
             delay: Seconds to wait before each network request.
         """
         self._cache_dir = cache_dir
-        # max(0.0, nan) returns nan (NaN comparisons are always False), so
-        # time.sleep(nan) would raise.  Use an explicit guard instead.
+        # NaN must clamp to 0.0 (time.sleep(nan) raises). max(0.0, delay)
+        # keeps 0.0 for nan only by argument-order accident; the explicit
+        # comparison states the intent.
         self._delay = delay if delay >= 0.0 else 0.0
         # Not thread-safe; safe because each processor builds its own fetcher
         # (service_factory creates fresh Services per create_episode_processor call).
