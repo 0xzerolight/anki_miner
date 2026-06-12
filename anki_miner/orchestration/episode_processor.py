@@ -358,6 +358,12 @@ class EpisodeProcessor:
                 "options (bold target word, etc.) only apply to newly mined cards."
             )
 
+        # Issue #74: snapshot the full unknown-lemma set before optional
+        # filters (frequency, word-list, script-type, wordset) shrink it.
+        # The i+1 check must see ALL words the learner doesn't know, not
+        # just the mineable ones.
+        all_unknown_lemmas = {w.lemma for w in unknown_words}
+
         # Frequency rank cutoff.
         if self.config.max_frequency_rank > 0 and not self.config.bypass_optional_filters:
             before = len(unknown_words)
@@ -440,11 +446,15 @@ class EpisodeProcessor:
                 )
 
         # i+1 sentence filtering. Restricts mining to words with an i+1 example
-        # sentence (exactly one mineable unknown). Rescans lines and may swap
-        # the chosen sentence per word. Drops words with no i+1 coverage.
+        # sentence (exactly one unknown overall — checked against the pre-filter
+        # snapshot, Issue #74 — and that unknown must be mineable). Rescans
+        # lines and may swap the chosen sentence per word. Drops words with no
+        # i+1 coverage.
         if self.config.use_i_plus_one_filter and not self.config.bypass_optional_filters:
             before = len(unknown_words)
-            unknown_words = self.word_filter.filter_i_plus_one(unknown_words, line_index or [])
+            unknown_words = self.word_filter.filter_i_plus_one(
+                unknown_words, line_index or [], all_unknown_lemmas=all_unknown_lemmas
+            )
             kept = len(unknown_words)
             pct = (kept / before * 100.0) if before else 0.0
             self.presenter.show_info(f"i+1 filter: kept {kept}/{before} words ({pct:.0f}%)")

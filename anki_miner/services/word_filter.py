@@ -266,14 +266,19 @@ class WordFilterService:
         self,
         mineable_unknowns: list[TokenizedWord],
         line_index: list[LineLemmas],
+        all_unknown_lemmas: set[str] | None = None,
     ) -> list[TokenizedWord]:
         """Restrict mining to words covered by at least one i+1 example sentence.
 
-        An "i+1" line is a subtitle line whose intersection with the target
-        unknown-lemma set has exactly one element — i.e. the line contains
-        exactly one of the words being considered for mining. For each
-        candidate word, the earliest such line in ``line_index`` order wins
-        the tie-break; words with no i+1 line are dropped.
+        An "i+1" line is a subtitle line containing exactly one UNKNOWN lemma
+        — checked against ``all_unknown_lemmas``, the full unknown set — and
+        that one unknown must also be a mineable target. Checking against the
+        mineable set alone is wrong (Issue #74): unknowns removed by optional
+        filters (frequency rank, blacklist, script type, name wordsets) are
+        still unknown to the learner, so a line packed with them must not
+        qualify. For each candidate word, the earliest such line in
+        ``line_index`` order wins the tie-break; words with no i+1 line are
+        dropped.
 
         The returned words have their sentence/timing/sentence_furigana/
         sentence_reading swapped to those of the selected line. ``surface`` and
@@ -292,9 +297,14 @@ class WordFilterService:
 
         Args:
             mineable_unknowns: Words remaining after blacklist, frequency,
-                and word-list filters (the count basis for "unknown").
+                and word-list filters — the candidates eligible for mining.
             line_index: Per-line lemma index for the episode, in original
                 subtitle order.
+            all_unknown_lemmas: Every lemma the learner doesn't know,
+                snapshotted BEFORE optional filters shrink the unknown set
+                (the count basis for "exactly one unknown"). ``None`` means
+                "no unknowns beyond the targets" and degrades to checking
+                against the mineable set only.
 
         Returns:
             Filtered list of words with i+1 sentence/timing swapped in,
@@ -304,13 +314,17 @@ class WordFilterService:
             return []
 
         target_lemmas = {w.lemma for w in mineable_unknowns}
+        # Union defensively: a caller-supplied set that somehow misses a
+        # target must not make that target unmatchable.
+        unknown_lemmas = (all_unknown_lemmas | target_lemmas) if all_unknown_lemmas is not None else target_lemmas
 
         earliest: dict[str, LineLemmas] = {}
         for line in line_index:
-            intersect = line.lemmas & target_lemmas
-            if len(intersect) == 1:
-                (only,) = intersect
-                earliest.setdefault(only, line)
+            unknown_in_line = line.lemmas & unknown_lemmas
+            if len(unknown_in_line) == 1:
+                (only,) = unknown_in_line
+                if only in target_lemmas:
+                    earliest.setdefault(only, line)
 
         result: list[TokenizedWord] = []
         for word in mineable_unknowns:
