@@ -109,13 +109,15 @@ def test_old_config_without_expression_audio_fields_gets_defaults(tmp_config: Pa
 
 def test_null_anki_fields_does_not_raise(tmp_config: Path):
     """Config JSON with anki_fields: null must not crash load_config; the
-    _backfill_anki_fields guard silently skips non-dict values and the
-    loaded config falls back to dataclass defaults (including expression_audio).
+    corrupt value is replaced with full defaults while every OTHER saved
+    setting survives (no whole-config reset).
     """
-    tmp_config.write_text(json.dumps({"anki_fields": None}))
+    tmp_config.write_text(json.dumps({"anki_fields": None, "anki_deck_name": "KeepMe", "expression_audio_delay": 1.5}))
 
     loaded = GUIConfigManager.load_config()
     assert "expression_audio" in loaded.anki_fields
+    assert loaded.anki_deck_name == "KeepMe"
+    assert loaded.expression_audio_delay == 1.5
 
 
 def test_string_anki_fields_does_not_raise(tmp_config: Path):
