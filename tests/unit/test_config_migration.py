@@ -1,4 +1,4 @@
-"""Tests for dictionary_chain persistence and legacy migration."""
+"""Tests for dictionary_chain / expression_audio_chain persistence and legacy migration."""
 
 import json
 from dataclasses import replace
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 
 
@@ -150,3 +150,90 @@ def test_legacy_use_offline_dict_false_is_stripped(tmp_config: Path):
         ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
         ChainEntry(kind="jisho", dict_id=None, enabled=False),
     )
+
+
+# ---------------------------------------------------------------------------
+# expression_audio_chain migration tests
+# ---------------------------------------------------------------------------
+
+
+def test_save_then_load_preserves_audio_chain(tmp_config: Path):
+    """A config with pack + jpod101 entries survives save/load unchanged."""
+    chain = (
+        AudioSourceEntry(kind="pack", pack_id="nhk16", enabled=True),
+        AudioSourceEntry(kind="pack", pack_id="forvo-jp", enabled=False),
+        AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),
+    )
+    config = replace(AnkiMinerConfig(), expression_audio_chain=chain)
+    GUIConfigManager.save_config(config)
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.expression_audio_chain == chain
+
+
+def test_absent_audio_chain_yields_jpod101_default(tmp_config: Path):
+    """An old gui_config.json without expression_audio_chain uses the default."""
+    tmp_config.write_text(json.dumps({"anki_deck_name": "MyDeck"}))
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.expression_audio_chain == (AudioSourceEntry(kind="jpod101"),)
+
+
+def test_migrate_expression_audio_chain_rebuilds_from_dicts():
+    """_migrate_expression_audio_chain converts list[dict] to tuple[AudioSourceEntry]."""
+    data = {
+        "expression_audio_chain": [
+            {"kind": "pack", "pack_id": "nhk16", "enabled": True},
+            {"kind": "jpod101", "pack_id": None, "enabled": False},
+        ]
+    }
+    result = GUIConfigManager._migrate_expression_audio_chain(data)
+    chain = result["expression_audio_chain"]
+    assert isinstance(chain, tuple)
+    assert chain == (
+        AudioSourceEntry(kind="pack", pack_id="nhk16", enabled=True),
+        AudioSourceEntry(kind="jpod101", pack_id=None, enabled=False),
+    )
+
+
+def test_migrate_expression_audio_chain_enabled_flag_defaults_true():
+    """Missing 'enabled' key in a JSON dict defaults to True."""
+    data = {
+        "expression_audio_chain": [
+            {"kind": "pack", "pack_id": "nhk16"},
+        ]
+    }
+    result = GUIConfigManager._migrate_expression_audio_chain(data)
+    assert result["expression_audio_chain"][0].enabled is True
+
+
+def test_migrate_expression_audio_chain_pack_id_none():
+    """pack_id absent from JSON dict is stored as None."""
+    data = {
+        "expression_audio_chain": [
+            {"kind": "jpod101"},
+        ]
+    }
+    result = GUIConfigManager._migrate_expression_audio_chain(data)
+    assert result["expression_audio_chain"][0].pack_id is None
+
+
+def test_migrate_expression_audio_chain_skips_unknown_kinds():
+    """Entries with unknown kind values are silently dropped."""
+    data = {
+        "expression_audio_chain": [
+            {"kind": "unknown_source", "pack_id": "foo"},
+            {"kind": "jpod101"},
+        ]
+    }
+    result = GUIConfigManager._migrate_expression_audio_chain(data)
+    chain = result["expression_audio_chain"]
+    assert len(chain) == 1
+    assert chain[0].kind == "jpod101"
+
+
+def test_migrate_expression_audio_chain_absent_key_is_noop():
+    """When expression_audio_chain is absent the dict is returned unchanged."""
+    data: dict = {"anki_deck_name": "Test"}
+    result = GUIConfigManager._migrate_expression_audio_chain(data)
+    assert "expression_audio_chain" not in result

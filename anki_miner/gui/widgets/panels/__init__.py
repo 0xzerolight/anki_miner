@@ -1,6 +1,7 @@
 """Extracted panel widgets for cleaner tab organization."""
 
 from .anki_settings_panel import AnkiSettingsPanel
+from .audio_pack_settings_panel import AudioPackSettingsPanel
 from .dictionary_settings_panel import DictionarySettingsPanel
 from .filtering_settings_panel import FilteringSettingsPanel
 from .media_settings_panel import MediaSettingsPanel
@@ -10,6 +11,7 @@ from .youtube_settings_panel import YouTubeSettingsPanel
 
 __all__ = [
     "AnkiSettingsPanel",
+    "AudioPackSettingsPanel",
     "MediaSettingsPanel",
     "DictionarySettingsPanel",
     "FilteringSettingsPanel",
