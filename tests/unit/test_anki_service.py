@@ -1022,6 +1022,174 @@ class TestStoreMediaFilesBatch:
 
 
 # ---------------------------------------------------------------------------
+# TestExpressionAudio
+# ---------------------------------------------------------------------------
+
+
+class TestExpressionAudio:
+    """Expression audio routing through media upload and note build (Issue #73)."""
+
+    def test_media_data_defaults_none(self):
+        """New MediaData fields default to None (no expression audio)."""
+        media = MediaData()
+        assert media.expression_audio_path is None
+        assert media.expression_audio_filename is None
+
+    def test_expression_audio_is_optional_not_required(self):
+        """expression_audio must be optional: configs without it keep working."""
+        assert "expression_audio" in AnkiService.OPTIONAL_FIELD_KEYS
+        assert "expression_audio" not in AnkiService.REQUIRED_FIELD_KEYS
+
+    def _config_with_expression_audio(self, test_config, field_name="ExpressionAudio"):
+        from dataclasses import replace
+
+        return replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": field_name},
+        )
+
+    def test_build_note_emits_sound_ref_when_stored_and_mapped(self, test_config, make_tokenized_word):
+        """Filename present + stored + mapping non-empty → [sound:...] in mapped field."""
+        from anki_miner.services.anki_note_builder import build_note
+
+        config = self._config_with_expression_audio(test_config)
+        media = MediaData(expression_audio_filename="食べる_exp.mp3")
+        item = CardPayload(word=make_tokenized_word(), media=media, definition="def")
+
+        built = build_note(item, config, stored_files={"食べる_exp.mp3"})
+
+        assert built.note["fields"]["ExpressionAudio"] == "[sound:食べる_exp.mp3]"
+
+    def test_build_note_field_absent_when_mapping_blank(self, test_config, make_tokenized_word):
+        """Blank mapping → no expression-audio field on the note at all."""
+        from dataclasses import replace
+
+        from anki_miner.services.anki_note_builder import build_note
+
+        config = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": ""},
+        )
+        media = MediaData(expression_audio_filename="食べる_exp.mp3")
+        item = CardPayload(word=make_tokenized_word(), media=media, definition="def")
+
+        built = build_note(item, config, stored_files={"食べる_exp.mp3"})
+
+        assert "[sound:食べる_exp.mp3]" not in built.note["fields"].values()
+        assert "ExpressionAudio" not in built.note["fields"]
+
+    def test_build_note_field_empty_when_filename_none(self, test_config, make_tokenized_word):
+        """Mapping set but no expression audio fetched → field stays empty."""
+        from anki_miner.services.anki_note_builder import build_note
+
+        config = self._config_with_expression_audio(test_config)
+        item = CardPayload(word=make_tokenized_word(), media=MediaData(), definition="def")
+
+        built = build_note(item, config, stored_files=set())
+
+        assert built.note["fields"]["ExpressionAudio"] == ""
+
+    def test_build_note_field_empty_when_not_stored(self, test_config, make_tokenized_word):
+        """Filename set but upload failed (not in stored_files) → field stays empty."""
+        from anki_miner.services.anki_note_builder import build_note
+
+        config = self._config_with_expression_audio(test_config)
+        media = MediaData(expression_audio_filename="食べる_exp.mp3")
+        item = CardPayload(word=make_tokenized_word(), media=media, definition="def")
+
+        built = build_note(item, config, stored_files=set())
+
+        assert built.note["fields"]["ExpressionAudio"] == ""
+
+    def test_build_note_config_without_key_does_not_crash(self, test_config, make_tokenized_word):
+        """Old configs without the expression_audio key keep working (optional)."""
+        from anki_miner.services.anki_note_builder import build_note
+
+        assert "expression_audio" not in test_config.anki_fields
+        media = MediaData(expression_audio_filename="食べる_exp.mp3")
+        item = CardPayload(word=make_tokenized_word(), media=media, definition="def")
+
+        built = build_note(item, test_config, stored_files={"食べる_exp.mp3"})
+
+        assert "[sound:食べる_exp.mp3]" not in built.note["fields"].values()
+
+    def test_store_batch_includes_expression_audio(self, test_config, make_tokenized_word, tmp_path):
+        """Expression audio file ships in the same upload batch as card media."""
+        service = AnkiService(test_config)
+
+        exp_path = tmp_path / "食べる_exp.mp3"
+        exp_path.write_bytes(b"expression-audio-data")
+        au_path = tmp_path / "clip.mp3"
+        au_path.write_bytes(b"audio-data")
+        media = MediaData(
+            audio_path=au_path,
+            audio_filename="clip.mp3",
+            expression_audio_path=exp_path,
+            expression_audio_filename="食べる_exp.mp3",
+        )
+
+        resp = _mock_response(result=["clip.mp3", "食べる_exp.mp3"])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            stored = service._store_media_files_batch(
+                [CardPayload(word=make_tokenized_word(), media=media, definition="def")]
+            )
+
+        payload = mock_post.call_args[1]["json"]
+        filenames_sent = [a["params"]["filename"] for a in payload["params"]["actions"]]
+        assert "食べる_exp.mp3" in filenames_sent
+        assert stored == {"clip.mp3", "食べる_exp.mp3"}
+
+    def test_store_batch_skips_expression_audio_when_none(self, test_config, make_tokenized_word, tmp_path):
+        """No expression audio on the payload → nothing extra in the batch."""
+        service = AnkiService(test_config)
+
+        au_path = tmp_path / "clip.mp3"
+        au_path.write_bytes(b"audio-data")
+        media = MediaData(audio_path=au_path, audio_filename="clip.mp3")
+
+        resp = _mock_response(result=["clip.mp3"])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            stored = service._store_media_files_batch(
+                [CardPayload(word=make_tokenized_word(), media=media, definition="def")]
+            )
+
+        payload = mock_post.call_args[1]["json"]
+        assert len(payload["params"]["actions"]) == 1
+        assert stored == {"clip.mp3"}
+
+    def test_store_batch_dedupes_shared_expression_audio_filename(self, test_config, make_tokenized_word, tmp_path):
+        """Two words sharing one deterministic expression-audio filename → one upload action."""
+        service = AnkiService(test_config)
+
+        exp_path = tmp_path / "食べる_exp.mp3"
+        exp_path.write_bytes(b"expression-audio-data")
+        items = [
+            CardPayload(
+                word=make_tokenized_word(lemma=f"word_{i}"),
+                media=MediaData(
+                    expression_audio_path=exp_path,
+                    expression_audio_filename="食べる_exp.mp3",
+                ),
+                definition=f"def_{i}",
+            )
+            for i in range(2)
+        ]
+
+        resp = _mock_response(result=["食べる_exp.mp3"])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            stored = service._store_media_files_batch(items)
+
+        payload = mock_post.call_args[1]["json"]
+        filenames_sent = [a["params"]["filename"] for a in payload["params"]["actions"]]
+        assert filenames_sent == ["食べる_exp.mp3"]
+        assert stored == {"食べる_exp.mp3"}
+        assert service.last_media_store_failures == 0
+
+
+# ---------------------------------------------------------------------------
 # TestPostMultiErrors
 # ---------------------------------------------------------------------------
 
