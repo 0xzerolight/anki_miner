@@ -1,6 +1,7 @@
 """Service for extracting media (screenshots and audio) from video files."""
 
 import contextlib
+import hashlib
 import logging
 import subprocess
 import threading
@@ -108,6 +109,7 @@ class MediaExtractorService:
         *,
         audio_track_override: int | None = None,
         proc_registry: _FfmpegProcRegistry | None = None,
+        audio_only: bool = False,
     ) -> MediaData:
         """Extract screenshot and audio for a single word.
 
@@ -120,6 +122,9 @@ class MediaExtractorService:
                 of auto-detecting Japanese. None (default) preserves existing JP auto-detect.
             proc_registry: Internal batch-cancel registry; extract_media_batch
                 passes one so cancelled runs can kill in-flight ffmpeg.
+            audio_only: When True (audiobook mining), skip screenshot extraction
+                entirely; screenshot fields stay None. extract_media_batch fills
+                them with per-book cover art instead.
 
         Returns:
             MediaData with paths to extracted files
@@ -136,10 +141,12 @@ class MediaExtractorService:
         screenshot_path = output_dir / screenshot_file
         audio_path = output_dir / audio_file
 
-        # Extract screenshot
-        screenshot_success = self._extract_screenshot(
-            video_file, word.start_time, word.duration, screenshot_path, proc_registry
-        )
+        # Extract screenshot (skipped for audiobooks — no video stream to grab)
+        screenshot_success = False
+        if not audio_only:
+            screenshot_success = self._extract_screenshot(
+                video_file, word.start_time, word.duration, screenshot_path, proc_registry
+            )
 
         # Extract audio
         audio_success = self._extract_audio(
@@ -162,6 +169,7 @@ class MediaExtractorService:
         temp_folder: Path | None = None,
         *,
         audio_track_override: int | None = None,
+        audio_only: bool = False,
     ) -> list[tuple[TokenizedWord, MediaData]]:
         """Extract media for multiple words in parallel.
 
@@ -174,10 +182,15 @@ class MediaExtractorService:
             temp_folder: Per-run temp directory forwarded to extract_media.
             audio_track_override: Optional 0-indexed audio track (audio_index) to use instead
                 of auto-detecting Japanese. None (default) preserves existing JP auto-detect.
+            audio_only: When True (audiobook mining), skip screenshots, extract
+                embedded cover art once for the whole batch and share it across
+                every word, and keep words on audio success instead of
+                screenshot success. Missing cover art never excludes a word.
 
         Returns:
             List of (word, media_data) tuples — only words whose screenshot
-            succeeded; audio failure does not exclude.
+            succeeded (or, in audio_only mode, whose audio succeeded); the
+            other medium's failure does not exclude.
         """
         if progress_callback:
             progress_callback.on_start(len(words), "Extracting media")
@@ -188,6 +201,14 @@ class MediaExtractorService:
         # Per-run registry of live ffmpeg processes so the cancel path can
         # kill them instead of waiting out their 30-60s encode timeouts.
         proc_registry = _FfmpegProcRegistry()
+
+        # Audiobooks have no video stream, so the Picture field uses the
+        # embedded cover art (attached_pic) instead — extracted once per book,
+        # shared by every card. None (no cover) leaves the field blank.
+        cover_path: Path | None = None
+        if audio_only:
+            output_dir = temp_folder if temp_folder is not None else self.config.media_temp_folder
+            cover_path = self.extract_cover_art(video_file, output_dir, proc_registry=proc_registry)
         # Poll only when the caller can actually cancel; otherwise block
         # until the next future completes.
         poll = self._CANCEL_POLL_INTERVAL if cancelled_check else None
@@ -202,6 +223,7 @@ class MediaExtractorService:
                     temp_folder,
                     audio_track_override=audio_track_override,
                     proc_registry=proc_registry,
+                    audio_only=audio_only,
                 ): word
                 for word in words
             }
@@ -231,13 +253,21 @@ class MediaExtractorService:
                     try:
                         media = future.result()
 
-                        if media.has_screenshot:
+                        # audio_only keys the keep/drop decision on audio (there
+                        # is no per-word screenshot); default mode keeps the
+                        # original screenshot-based filter.
+                        keep = media.has_audio if audio_only else media.has_screenshot
+                        if keep:
+                            if audio_only and cover_path is not None:
+                                media.screenshot_path = cover_path
+                                media.screenshot_filename = cover_path.name
                             media_data_list.append((word, media))
                             if progress_callback:
                                 progress_callback.on_progress(completed, f"Extracting media: {word.lemma}")
                         else:
+                            skip_reason = "No audio" if audio_only else "No screenshot"
                             if progress_callback:
-                                progress_callback.on_progress(completed, f"No screenshot: {word.lemma}")
+                                progress_callback.on_progress(completed, f"{skip_reason}: {word.lemma}")
 
                     except Exception as e:
                         if progress_callback:
@@ -253,6 +283,55 @@ class MediaExtractorService:
             progress_callback.on_complete()
 
         return media_data_list
+
+    def extract_cover_art(
+        self,
+        media_file: Path,
+        temp_folder: Path,
+        *,
+        proc_registry: _FfmpegProcRegistry | None = None,
+    ) -> Path | None:
+        """Extract embedded cover art (attached_pic stream) from an audiobook.
+
+        Audiobook formats (.m4b/.mp3) commonly embed the cover as an
+        attached_pic video stream; ``-map 0:v -frames:v 1`` pulls it out as a
+        single JPEG. The filename is keyed on the source path + size so
+        AnkiConnect dedups the media file across cards and runs.
+
+        Args:
+            media_file: Path to the audiobook file
+            temp_folder: Directory to write the cover JPEG into
+            proc_registry: Internal batch-cancel registry for killing in-flight ffmpeg.
+
+        Returns:
+            Path to the extracted cover, or None on failure / no embedded art.
+        """
+        try:
+            size = media_file.stat().st_size
+        except OSError as e:
+            logger.warning("Cover art extraction skipped, cannot stat %s: %s", media_file, e)
+            return None
+
+        digest = hashlib.sha1(f"{media_file}{size}".encode()).hexdigest()[:12]
+        output_path = temp_folder / f"audiobook_cover_{digest}.jpg"
+
+        cmd = [
+            resolve_ffmpeg(self.config),
+            "-y",
+            "-i",
+            str(media_file),
+            "-map",
+            "0:v",  # attached_pic is exposed as a video stream
+            "-frames:v",
+            "1",
+            str(output_path),
+        ]
+
+        if not self._run_ffmpeg(
+            cmd, "Cover art extraction", timeout=30, context=output_path.name, proc_registry=proc_registry
+        ):
+            return None
+        return output_path if output_path.exists() else None
 
     def _extract_screenshot(
         self,
