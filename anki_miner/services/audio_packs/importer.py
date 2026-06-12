@@ -55,7 +55,7 @@ def _slugify(text: str) -> str:
     return slug or "pack"
 
 
-def _derive_pack_id(folder_name: str) -> str:
+def derive_pack_id(folder_name: str) -> str:
     """Return canonical pack_id for *folder_name*.
 
     Canonical names in :data:`_CANONICAL_IDS` map directly; all others are
@@ -115,7 +115,7 @@ def import_audio_pack(
 
     # --- pack_id derivation ---
     if pack_id is None:
-        pack_id = _derive_pack_id(pack_dir.name)
+        pack_id = derive_pack_id(pack_dir.name)
     source_name = pack_id
 
     # --- exists check (before staging so we fail fast) ---
