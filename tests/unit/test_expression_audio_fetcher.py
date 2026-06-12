@@ -406,6 +406,7 @@ class TestJPod101AudioFetcher:
         called with a negative argument (which raises ValueError).
         """
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=-1)
+        assert fetcher._delay == 0.0
         sleep_calls: list[float] = []
         with (
             patch(f"{MODULE}.time.sleep", side_effect=lambda s: sleep_calls.append(s)),
@@ -415,6 +416,13 @@ class TestJPod101AudioFetcher:
 
         assert result is not None
         assert all(s >= 0.0 for s in sleep_calls), f"negative sleep arg: {sleep_calls}"
+
+    def test_nan_delay_clamped_to_zero(self, tmp_path):
+        """NaN delay must clamp to 0.0; max(0.0, nan) returns nan, so time.sleep
+        would raise — the explicit guard must prevent that.
+        """
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=float("nan"))
+        assert fetcher._delay == 0.0
 
     def test_request_exception_emits_debug_log(self, tmp_path, caplog):
         """DNS/connection failure emits a debug log so failures are diagnosable."""

@@ -68,10 +68,11 @@ class JPod101AudioFetcher:
             delay: Seconds to wait before each network request.
         """
         self._cache_dir = cache_dir
-        self._delay = max(0.0, delay)
-        # One Session is reused across all fetch() calls so that DNS, TCP, and
-        # TLS are established once and kept alive across sequential words.
-        # Session() does no network I/O — it is safe to create here.
+        # max(0.0, nan) returns nan (NaN comparisons are always False), so
+        # time.sleep(nan) would raise.  Use an explicit guard instead.
+        self._delay = delay if delay >= 0.0 else 0.0
+        # Not thread-safe; safe because each processor builds its own fetcher
+        # (service_factory creates fresh Services per create_episode_processor call).
         self._session = requests.Session()
 
     def fetch(
