@@ -230,6 +230,7 @@ class BackgroundTaskController(QObject):
         join(self.prewarm_worker, timeout_ms=None)
 
         # Cancel and wait for any processing workers in tabs
+        from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
         from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
         for i in range(tabs.count()):
@@ -239,8 +240,10 @@ class BackgroundTaskController(QObject):
             # blocked awaiting Build unblocks and exits.
             join(getattr(tab, "worker_thread", None))
             # YouTube tab owns an additional probe worker; shutdown() tears
-            # both threads down cleanly.
-            if isinstance(tab, YouTubeTab) and hasattr(tab, "shutdown"):
+            # both threads down cleanly. Audiobook tab's shutdown() poisons its
+            # curation gate so a worker parked in the curation wait (Issue #65)
+            # falls through instead of deadlocking the join.
+            if isinstance(tab, (YouTubeTab, AudiobookTab)) and hasattr(tab, "shutdown"):
                 tab.shutdown()
             # SettingsTab owns short-lived AnkiConnect workers with no
             # `worker_thread` (T-12). Route each through the same join policy

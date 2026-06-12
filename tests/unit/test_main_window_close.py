@@ -16,6 +16,7 @@ from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
@@ -123,6 +124,22 @@ class _FakeYouTubeTab(YouTubeTab):
         self.shutdown_called = True
 
 
+class _FakeAudiobookTab(AudiobookTab):
+    """Real AudiobookTab subclass that skips the heavy ``__init__``."""
+
+    def __init__(self, *, worker_running: bool = False) -> None:
+        # Bypass AudiobookTab.__init__ — we only need attribute storage and the
+        # two methods that closeEvent interacts with.
+        from PyQt6.QtWidgets import QWidget
+
+        QWidget.__init__(self)
+        self.worker_thread: _FakeWorker | None = _FakeWorker(running=worker_running)
+        self.shutdown_called = False
+
+    def shutdown(self) -> None:
+        self.shutdown_called = True
+
+
 class _FakeEpisodeTab(SingleEpisodeTab):
     """Real SingleEpisodeTab subclass that skips the heavy ``__init__``."""
 
@@ -210,6 +227,31 @@ class TestCloseEventYouTubeTab:
         assert not yt_tab.worker_thread.cancel_called
         # shutdown() runs regardless so the probe worker is torn down.
         assert yt_tab.shutdown_called
+
+
+class TestCloseEventAudiobookTab:
+    """closeEvent should cancel a running Audiobook worker and call shutdown()."""
+
+    def test_running_audiobook_worker_is_cancelled(self, main_window):
+        ab_tab = _FakeAudiobookTab(worker_running=True)
+        main_window.tabs.addTab(ab_tab, "Audiobook")
+
+        event = _trigger_close(main_window)
+
+        assert ab_tab.worker_thread.cancel_called
+        assert ab_tab.worker_thread.wait_called_with == 2000
+        assert ab_tab.shutdown_called
+        event.accept.assert_called_once()
+
+    def test_idle_audiobook_tab_still_calls_shutdown(self, main_window):
+        ab_tab = _FakeAudiobookTab(worker_running=False)
+        main_window.tabs.addTab(ab_tab, "Audiobook")
+
+        _trigger_close(main_window)
+
+        assert not ab_tab.worker_thread.cancel_called
+        # shutdown() runs regardless so the curation gate is poisoned.
+        assert ab_tab.shutdown_called
 
 
 class TestCloseEventOtherTabs:

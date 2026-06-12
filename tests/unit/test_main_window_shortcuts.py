@@ -1,9 +1,9 @@
 """Tests for :class:`MainWindow` tab-switching keyboard shortcuts.
 
-There are six tabs (Episode Mining, Batch Mining, Deck Builder, YouTube,
-Analytics, Settings), so ``Ctrl+1``..``Ctrl+6`` must each be wired — one per
-tab. Like ``test_main_window_menu``, this builds a real ``MainWindow`` with the
-heavy startup side effects patched out.
+There are seven tabs (Episode Mining, Batch Mining, Deck Builder, YouTube,
+Audiobook, Analytics, Settings), so ``Ctrl+1``..``Ctrl+7`` must each be wired —
+one per tab. Like ``test_main_window_menu``, this builds a real ``MainWindow``
+with the heavy startup side effects patched out.
 """
 
 from __future__ import annotations
@@ -46,16 +46,16 @@ def _shortcut_keys(window) -> set[str]:
     return {sc.key().toString(QKeySequence.SequenceFormat.PortableText) for sc in window.findChildren(QShortcut)}
 
 
-def test_ctrl_1_through_6_tab_shortcuts_wired(main_window):
-    """One tab-switch shortcut per tab: Ctrl+1..Ctrl+6 (Ctrl+6 reaches Settings)."""
+def test_ctrl_1_through_7_tab_shortcuts_wired(main_window):
+    """One tab-switch shortcut per tab: Ctrl+1..Ctrl+7 (Ctrl+7 reaches Settings)."""
     keys = _shortcut_keys(main_window)
-    for i in range(1, 7):
+    for i in range(1, 8):
         assert f"Ctrl+{i}" in keys, f"missing Ctrl+{i} tab shortcut"
 
 
-def test_about_dialog_lists_six_tab_shortcuts():
-    """The About card advertises Ctrl+1..6, matching the six wired tab shortcuts."""
+def test_about_dialog_lists_seven_tab_shortcuts():
+    """The About card advertises Ctrl+1..7, matching the seven wired tab shortcuts."""
     from anki_miner.gui.widgets.dialogs.about_dialog import ABOUT_SHORTCUTS
 
     labels = dict(ABOUT_SHORTCUTS)
-    assert labels.get("Ctrl+1..6") == "Switch tabs"
+    assert labels.get("Ctrl+1..7") == "Switch tabs"

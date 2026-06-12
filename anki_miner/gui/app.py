@@ -14,6 +14,7 @@ from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
+from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
@@ -199,6 +200,26 @@ def main():
     youtube_presenter.processing_result_signal.connect(window._on_processing_result)
     youtube_presenter.word_preview_signal.connect(window._on_word_preview)
 
+    # Audiobook tab (Issue #71). Same lazy-processor pattern as YouTube:
+    # processor=None defers the dictionary-chain build to the first Mine
+    # click; stats_service is threaded through so sessions land in analytics.
+    audiobook_presenter = GUIPresenter(window)
+    audiobook_tab = AudiobookTab(
+        config=window.get_config(),
+        processor=None,
+        presenter=audiobook_presenter,
+        stats_service=stats_service,
+    )
+    window.tabs.addTab(audiobook_tab, "Audiobook")
+
+    # Route Audiobook tab presenter through the main window status bar handlers
+    audiobook_presenter.info_signal.connect(window._on_info_message)
+    audiobook_presenter.success_signal.connect(window._on_success_message)
+    audiobook_presenter.warning_signal.connect(window._on_warning_message)
+    audiobook_presenter.error_signal.connect(window._on_error_message)
+    audiobook_presenter.processing_result_signal.connect(window._on_processing_result)
+    audiobook_presenter.word_preview_signal.connect(window._on_word_preview)
+
     # Analytics tab
     analytics_tab = AnalyticsTab(stats_service)
     window.tabs.addTab(analytics_tab, "Analytics")
@@ -212,6 +233,7 @@ def main():
     settings_tab.config_changed.connect(batch_tab.update_config)
     settings_tab.config_changed.connect(deck_builder_tab.update_config)
     settings_tab.config_changed.connect(youtube_tab.update_config)
+    settings_tab.config_changed.connect(audiobook_tab.update_config)
     # Make Test Connection + the deck/note-type sync buttons live: they all
     # emit SettingsTab.validation_requested, which was previously connected to
     # nothing (T-53). Routing it to _run_validation also drives the Anki
@@ -239,6 +261,7 @@ def main():
     window.config_refreshed.connect(batch_tab.update_config)
     window.config_refreshed.connect(deck_builder_tab.update_config)
     window.config_refreshed.connect(youtube_tab.update_config)
+    window.config_refreshed.connect(audiobook_tab.update_config)
 
     # Show window first so the user sees the UI immediately; then run the
     # deferred init (stats DB open) on the next event loop tick. The
