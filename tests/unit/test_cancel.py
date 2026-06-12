@@ -242,13 +242,11 @@ class TestMediaExtractorBatchCancel:
             ss.write_bytes(b"\xff\xd8fake")
             return MediaData(screenshot_path=ss, screenshot_filename=ss.name)
 
-        # Cancel after first item
-        items_seen = 0
-
+        # Cancel after the first item is collected. Keyed on recorded progress
+        # (not cancelled_check call count) so the pre-loop cancellation probe
+        # and in-flight poll checks don't trip it before any work happens.
         def cancelled_check():
-            nonlocal items_seen
-            items_seen += 1
-            return items_seen > 1  # Cancel after first item processed
+            return len(recording_progress.progresses) >= 1
 
         with patch.object(service, "extract_media", side_effect=fake_extract):
             result = service.extract_media_batch(video_file, words, recording_progress, cancelled_check=cancelled_check)
