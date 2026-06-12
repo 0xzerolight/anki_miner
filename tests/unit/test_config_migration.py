@@ -107,6 +107,29 @@ def test_old_config_without_expression_audio_fields_gets_defaults(tmp_config: Pa
     assert loaded.expression_audio_delay == 0.2
 
 
+def test_null_anki_fields_does_not_raise(tmp_config: Path):
+    """Config JSON with anki_fields: null must not crash load_config; the
+    corrupt value is replaced with full defaults while every OTHER saved
+    setting survives (no whole-config reset).
+    """
+    tmp_config.write_text(json.dumps({"anki_fields": None, "anki_deck_name": "KeepMe", "expression_audio_delay": 1.5}))
+
+    loaded = GUIConfigManager.load_config()
+    assert "expression_audio" in loaded.anki_fields
+    assert loaded.anki_deck_name == "KeepMe"
+    assert loaded.expression_audio_delay == 1.5
+
+
+def test_string_anki_fields_does_not_raise(tmp_config: Path):
+    """Config JSON with anki_fields as a string must not crash load_config;
+    same non-dict guard path as the null case.
+    """
+    tmp_config.write_text(json.dumps({"anki_fields": "legacy_string"}))
+
+    loaded = GUIConfigManager.load_config()
+    assert "expression_audio" in loaded.anki_fields
+
+
 def test_legacy_use_offline_dict_false_is_stripped(tmp_config: Path):
     """Legacy use_offline_dict=False is silently dropped; default chain is used.
 
