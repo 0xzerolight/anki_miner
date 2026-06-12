@@ -19,14 +19,37 @@ JPOD101_AUDIO_URL = "https://assets.languagepod101.com/dictionary/japanese/audio
 # (same value Yomitan hardcodes) — matching bodies are treated as misses.
 JPOD101_NOT_FOUND_SHA256 = "ae6398b5a27bc8c0a771df6c907ade794be15518174773c58c7c7ddd17098906"
 
+# Real word audio is ~10–100 KB. 5 MB is a generous upper bound; anything
+# larger is almost certainly an error page or CDN redirect body.
+MAX_AUDIO_BYTES = 5 * 1024 * 1024
+
+
+def _is_mp3(body: bytes) -> bool:
+    """Return True if *body* looks like MP3 audio.
+
+    Accepts either an ID3v2 tag header (b"ID3") or a raw MPEG frame-sync
+    sequence (first byte 0xFF, top 3 bits of second byte all set).
+    """
+    if len(body) < 2:
+        return False
+    if body[:3] == b"ID3":
+        return True
+    # MPEG frame sync: 0xFF followed by a byte whose top 3 bits are all 1.
+    return bool(body[0] == 0xFF and (body[1] & 0xE0) == 0xE0)
+
 
 class JPod101AudioFetcher:
     """Fetches word pronunciation audio from JapanesePod101.
 
     Results are cached on disk: successful downloads as ``.mp3`` files,
     confirmed not-found words as zero-byte ``.miss`` markers so they are
-    never re-requested. Transient failures (timeouts, non-200) are not
-    cached and will be retried on the next call.
+    never re-requested. Transient failures (timeouts, non-200 status,
+    HTTPS downgrade, oversized body, non-audio body) are not cached and
+    will be retried on the next call.
+
+    Non-audio bodies such as HTML rate-limit pages are treated as transient
+    failures — no ``.miss`` marker is written — so affected words are
+    retried automatically on the next run.
     """
 
     def __init__(self, cache_dir: Path, delay: float = 0.2):
@@ -67,34 +90,63 @@ class JPod101AudioFetcher:
 
             # Valid words 301-redirect to a CDN mp3; requests follows
             # redirects by default, so the final body is the audio itself.
+            # stream=True lets us cap the body size before buffering it all.
             response = requests.get(
                 JPOD101_AUDIO_URL,
                 params={"kanji": mined_form, "kana": reading},
                 timeout=10,
+                stream=True,
             )
 
-            if response.status_code != 200:
-                return None
+            try:
+                if response.status_code != 200:
+                    return None
 
-            # Zero-byte 200 is ambiguous (network glitch, premature close) —
-            # treat as transient failure, not a confirmed miss.
-            if not response.content:
-                return None
+                # A redirect that downgrades HTTPS → HTTP could expose audio
+                # data in transit; treat as transient so it is retried next run.
+                if not response.url.startswith("https://"):
+                    return None
 
-            if hashlib.sha256(response.content).hexdigest() == JPOD101_NOT_FOUND_SHA256:
-                # Confirmed not-found: marker prevents re-requesting.
-                # Miss markers are permanent by design (Yomitan-style); delete
-                # the cache dir to retry words that were incorrectly marked.
-                miss_path.touch()
-                return None
+                # Read the body in chunks, aborting if it exceeds MAX_AUDIO_BYTES.
+                # Real word audio is ~10–100 KB; anything larger is almost certainly
+                # an error page or unexpected CDN response.
+                chunks: list[bytes] = []
+                total = 0
+                for chunk in response.iter_content(chunk_size=8192):
+                    total += len(chunk)
+                    if total > MAX_AUDIO_BYTES:
+                        # Oversized — transient failure, nothing written.
+                        return None
+                    chunks.append(chunk)
+                body = b"".join(chunks)
 
-            # Write atomically: stage to a .part file then rename so a killed
-            # process cannot leave a truncated mp3 that passes the st_size > 0
-            # cache-hit check on the next run.
-            part_path = mp3_path.with_suffix(".mp3.part")
-            part_path.write_bytes(response.content)
-            os.replace(part_path, mp3_path)
-            return mp3_path
+                # Zero-byte 200 is ambiguous (network glitch, premature close) —
+                # treat as transient failure, not a confirmed miss.
+                if not body:
+                    return None
+
+                if hashlib.sha256(body).hexdigest() == JPOD101_NOT_FOUND_SHA256:
+                    # Confirmed not-found: marker prevents re-requesting.
+                    # Miss markers are permanent by design (Yomitan-style); delete
+                    # the cache dir to retry words that were incorrectly marked.
+                    miss_path.touch()
+                    return None
+
+                # Reject non-audio bodies (HTML error pages, CDN text responses,
+                # etc.) as transient failures. No .miss marker so the word is
+                # retried on the next run once the rate-limit clears.
+                if not _is_mp3(body):
+                    return None
+
+                # Write atomically: stage to a .part file then rename so a killed
+                # process cannot leave a truncated mp3 that passes the st_size > 0
+                # cache-hit check on the next run.
+                part_path = mp3_path.with_suffix(".mp3.part")
+                part_path.write_bytes(body)
+                os.replace(part_path, mp3_path)
+                return mp3_path
+            finally:
+                response.close()
 
         except requests.exceptions.Timeout:
             return None
