@@ -1,14 +1,19 @@
-"""JapanesePod101 pronunciation audio fetcher with on-disk cache."""
+"""Expression audio fetchers: JPod101 and chained composite."""
 
 import hashlib
 import logging
 import os
 import time
+from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import requests
 
 from anki_miner.utils.file_utils import safe_filename
+
+if TYPE_CHECKING:
+    from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -100,3 +105,36 @@ class JPod101AudioFetcher:
             return None
         except (requests.RequestException, OSError):
             return None
+
+
+class ChainedExpressionAudioFetcher:
+    """Composite fetcher that walks a sequence of fetchers, first hit wins.
+
+    Implements the :class:`~anki_miner.interfaces.ExpressionAudioFetcher`
+    protocol structurally.  An empty chain returns None.  Members are assumed
+    to honor the protocol contract (never raise); no try/except is added here.
+    """
+
+    def __init__(self, fetchers: "Sequence[ExpressionAudioFetcher]") -> None:
+        """Initialize with an ordered list of fetchers.
+
+        Args:
+            fetchers: Fetchers tried left-to-right; first non-None Path wins.
+        """
+        self._fetchers: list[ExpressionAudioFetcher] = list(fetchers)
+
+    def fetch(self, mined_form: str, reading: str) -> Path | None:
+        """Return the first non-None result from the fetcher chain.
+
+        Args:
+            mined_form: Word as mined onto the card (kanji/surface form).
+            reading: Kana reading of the word (may be empty).
+
+        Returns:
+            Path to an audio file from the first matching fetcher, or None.
+        """
+        for fetcher in self._fetchers:
+            result = fetcher.fetch(mined_form, reading)
+            if result is not None:
+                return result
+        return None
