@@ -37,7 +37,6 @@ class JPod101AudioFetcher:
         """
         self._cache_dir = cache_dir
         self._delay = delay
-        self._cache_dir.mkdir(parents=True, exist_ok=True)
 
     def fetch(self, mined_form: str, reading: str) -> Path | None:
         """Fetch pronunciation audio for a word.
@@ -57,6 +56,7 @@ class JPod101AudioFetcher:
         miss_path = self._cache_dir / f"{stem}.miss"
 
         try:
+            self._cache_dir.mkdir(parents=True, exist_ok=True)
             if mp3_path.exists() and mp3_path.stat().st_size > 0:
                 return mp3_path
             if miss_path.exists():
