@@ -136,16 +136,28 @@ class TestJPod101AudioFetcher:
         mock_get.assert_not_called()
         mock_sleep.assert_not_called()
 
-    def test_empty_reading_still_fetches(self, tmp_path):
-        """Empty reading fetches with kanji only."""
+    def test_empty_reading_returns_none_without_network(self, tmp_path):
+        """Empty reading short-circuits to None: kana omitted → endpoint guesses
+        a homograph reading, which would be cached permanently if wrong."""
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
-        with patch(f"{MODULE}.requests.get", return_value=_response()) as mock_get:
+        with patch(f"{MODULE}.requests.get") as mock_get:
             result = fetcher.fetch("食べる", "")
 
-        assert result is not None
-        mock_get.assert_called_once()
-        params = mock_get.call_args.kwargs["params"]
-        assert params["kanji"] == "食べる"
+        assert result is None
+        mock_get.assert_not_called()
+        assert not list(tmp_path.glob("*.mp3"))
+        assert not list(tmp_path.glob("*.miss"))
+
+    def test_whitespace_only_reading_returns_none_without_network(self, tmp_path):
+        """Whitespace-only reading is treated the same as empty."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.requests.get") as mock_get:
+            result = fetcher.fetch("辛い", "   ")
+
+        assert result is None
+        mock_get.assert_not_called()
+        assert not list(tmp_path.glob("*.mp3"))
+        assert not list(tmp_path.glob("*.miss"))
 
     def test_empty_mined_form_returns_none_without_network(self, tmp_path):
         """Empty or whitespace mined_form short-circuits to None."""

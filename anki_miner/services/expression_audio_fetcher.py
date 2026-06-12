@@ -74,12 +74,16 @@ class JPod101AudioFetcher:
 
         Args:
             mined_form: Word as mined onto the card (kanji/surface form).
-            reading: Kana reading of the word (may be empty).
+            reading: Kana reading of the word.  An empty or whitespace-only
+                reading skips the fetch entirely: without ``kana`` the JPod101
+                endpoint guesses a reading for the kanji, which picks the wrong
+                pronunciation for homographs (e.g. 辛い → からい vs つらい) and
+                caches that incorrect audio permanently under the word's key.
 
         Returns:
             Path to a cached mp3, or None if unavailable.
         """
-        if not mined_form.strip():
+        if not mined_form.strip() or not reading.strip():
             return None
 
         stem = safe_filename(f"jpod101_{mined_form}_{reading}")
