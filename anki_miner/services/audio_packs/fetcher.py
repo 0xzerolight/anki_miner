@@ -67,7 +67,12 @@ class LocalAudioPackFetcher:
 
         Args:
             mined_form: Word as mined onto the card (kanji/surface form).
-            reading: Kana reading of the word (may be empty).
+            reading: Kana reading of the word.  An empty or whitespace-only
+                reading skips the fetch entirely: storage.lookup falls back to
+                wildcard row selection without a reading, which can pick — and
+                cache permanently under the word's key — the wrong homograph
+                pronunciation (e.g. 辛い → からい vs つらい).  Same hazard the
+                JPod101AudioFetcher empty-reading skip closes.
             cancelled_check: Optional zero-argument callable that returns True
                 when the caller has requested cancellation.  Consulted once at
                 entry (before the sqlite open) — local lookups are fast enough
@@ -76,20 +81,32 @@ class LocalAudioPackFetcher:
         Returns:
             Path to a cached audio file, or None if unavailable. Never raises.
         """
-        if not mined_form:
+        if not mined_form.strip() or not reading.strip():
             return None
 
         if cancelled_check is not None and cancelled_check():
             return None
 
-        # 1. Cache hit: glob for any extension — suffix varies by pack format.
+        # 1. Cache hit: match any extension — suffix varies by pack format.
+        #    iterdir + startswith instead of glob: mined forms may contain
+        #    glob metacharacters ([], *, ?) that would corrupt a glob pattern.
         #    Skip leftover .part staging files (e.g. stem.mp3.part from a
         #    crashed prior copy); they contain partial/garbage data.
         stem = safe_filename(f"{self._pack_id}_{mined_form}_{reading}")
-        existing = next(
-            (p for p in self._cache_dir.glob(f"{stem}.*") if p.is_file() and not p.name.endswith(".part")),
-            None,
-        )
+        prefix = f"{stem}."
+        try:
+            existing = next(
+                (
+                    p
+                    for p in self._cache_dir.iterdir()
+                    if p.name.startswith(prefix) and not p.name.endswith(".part") and p.is_file()
+                ),
+                None,
+            )
+        except OSError:
+            # Cache dir missing (first fetch) or unreadable — fall through to
+            # the index lookup; the copy step creates the dir as needed.
+            existing = None
         if existing is not None:
             return existing
 

@@ -197,8 +197,11 @@ class SettingsTab(QWidget):
         self.audio_panel.add_pack_requested.connect(self._audio_pack_import_flow.add_pack)
         self.audio_panel.reimport_pack_requested.connect(self._audio_pack_import_flow.reimport_pack)
         # Persist chain immediately after reorder/toggle or destructive remove.
+        # Removal also emits chain_changed (after pack deletion succeeds), so
+        # this single wiring covers it; wiring pack_removed too would persist
+        # the same chain twice. pack_removed stays unconnected until a
+        # consumer needs the removal-specific notification.
         self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
-        self.audio_panel.pack_removed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
 
         # Filtering panel: excluded-decks picker + known-words cache rebuild (Issue #38).
         self.filtering_panel.fetch_decks_requested.connect(self._anki_probe.fetch_decks)

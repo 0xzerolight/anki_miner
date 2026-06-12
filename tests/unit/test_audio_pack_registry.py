@@ -155,6 +155,32 @@ class TestLoad:
         reg.load()
         assert ".bak-20240101000000" not in reg.packs
 
+    def test_importer_backup_sibling_skipped(self, tmp_path: Path):
+        """<pack>.bak-<timestamp> siblings (NOT hidden) are importer overwrite
+        backups — a failed Windows rmtree must not surface them as packs."""
+        packs_root, _, pack_id = _import_pack(tmp_path)
+        bak = packs_root / "nhk16.bak-123"
+        bak.mkdir()
+        db = bak / "index.sqlite"
+        create_index(db)
+        write_meta(
+            db,
+            {
+                "pack_id": "nhk16",
+                "source": "nhk16",
+                "format": "nhk16",
+                "entry_count": "1",
+                "schema_version": str(SCHEMA_VERSION),
+                "pack_dir": str(bak),
+            },
+        )
+
+        reg = AudioPackRegistry(packs_root)
+        reg.load()
+        assert pack_id in reg.packs
+        assert "nhk16.bak-123" not in reg.packs
+        assert "nhk16" not in reg.packs  # backup must not masquerade as the pack
+
     def test_corrupt_meta_skipped_with_warning(self, tmp_path: Path, caplog):
         root = tmp_path / "audio_packs"
         bad_dir = root / "bad_pack"
