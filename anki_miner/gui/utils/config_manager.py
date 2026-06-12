@@ -92,6 +92,9 @@ class GUIConfigManager:
             # Migrate old field names
             config_dict = cls._migrate_field_names(config_dict)
 
+            # Backfill any anki_fields keys that are new since the config was saved
+            config_dict = cls._backfill_anki_fields(config_dict)
+
             # Migrate pre-preset card-styling boolean → preset id
             config_dict = cls._migrate_card_style_preset(config_dict)
 
@@ -248,6 +251,25 @@ class GUIConfigManager:
         if "frequency_rank" in fields:
             fields["frequency"] = fields.pop("frequency_rank")
 
+        return data
+
+    @staticmethod
+    def _backfill_anki_fields(data: dict[str, Any]) -> dict[str, Any]:
+        """Merge in any anki_fields keys introduced after the config was saved.
+
+        Old saved configs have an anki_fields dict that lacks keys added in newer
+        versions (e.g. ``expression_audio``). Without this merge, loading such a
+        config would silently drop the new key, causing KeyError or missing
+        functionality downstream. The default value for each missing key is taken
+        from the dataclass default factory so this stays in sync automatically.
+        """
+        saved = data.get("anki_fields")
+        if not isinstance(saved, dict):
+            return data
+
+        defaults = create_default_config().anki_fields
+        for key, default_value in defaults.items():
+            saved.setdefault(key, default_value)
         return data
 
     @staticmethod
