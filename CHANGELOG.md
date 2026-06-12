@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Local audio pack import** (Issue #73 follow-up). Settings → Audio → Add Audio Pack imports a [local-audio-yomichan](https://github.com/themoeway/local-audio-yomichan)-compatible audio directory (ajt_japanese, nhk16, forvo_ja, jpod_legacy / jpod_alternate formats). Packs are indexed into `~/.anki_miner/audio_packs/` — audio files stay where they are. When a pack is installed and enabled, its entries are queried before JapanesePod101, so offline audio takes priority; JPod101 remains the fallback for uncovered words. Multiple packs installed at once are queried in priority order (nhk16 > shinmeikai8 > forvo > jpod > jpod_alternate). Packs can be reordered, disabled, or removed (index only — audio files are never deleted). JPod101 is still the zero-setup default when no packs are installed.
 
 ### Changed
 

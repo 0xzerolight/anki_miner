@@ -1,16 +1,19 @@
-"""Tests for JPod101AudioFetcher."""
+"""Tests for JPod101AudioFetcher and ChainedExpressionAudioFetcher."""
 
 import hashlib
 import logging
 import os
 import time
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import requests
 
 from anki_miner.services.expression_audio_fetcher import (
+    JPOD101_NOT_FOUND_SHA256,
     MAX_AUDIO_BYTES,
     STALE_PART_AGE_SECONDS,
+    ChainedExpressionAudioFetcher,
     JPod101AudioFetcher,
 )
 
@@ -672,3 +675,126 @@ class TestJPod101AudioFetcher:
         assert (
             mock_session_get.call_count == 2
         ), f"expected 2 calls (one per word) but got {mock_session_get.call_count}"
+
+    def test_not_found_hash_constant_value(self):
+        """The placeholder hash matches the value Yomitan hardcodes."""
+        assert JPOD101_NOT_FOUND_SHA256 == "ae6398b5a27bc8c0a771df6c907ade794be15518174773c58c7c7ddd17098906"
+
+
+class TestChainedExpressionAudioFetcher:
+    """Tests for ChainedExpressionAudioFetcher."""
+
+    def _stub(self, return_value: Path | None) -> object:
+        """Return a minimal stub fetcher that returns ``return_value``."""
+        from collections.abc import Callable
+
+        class _Stub:
+            def __init__(self, rv: Path | None) -> None:
+                self._rv = rv
+                self.calls: list[tuple[str, str]] = []
+
+            def fetch(
+                self,
+                mined_form: str,
+                reading: str,
+                cancelled_check: Callable[[], bool] | None = None,
+            ) -> Path | None:
+                self.calls.append((mined_form, reading))
+                return self._rv
+
+        return _Stub(return_value)
+
+    def test_first_hit_returned_second_never_called(self, tmp_path):
+        """When the first fetcher returns a Path, the second is not consulted."""
+        audio = tmp_path / "word.mp3"
+        audio.touch()
+        first = self._stub(audio)
+        second = self._stub(tmp_path / "other.mp3")
+        chain = ChainedExpressionAudioFetcher([first, second])  # type: ignore[arg-type]
+
+        result = chain.fetch("食べる", "たべる")
+
+        assert result == audio
+        assert len(first.calls) == 1  # type: ignore[union-attr]
+        assert len(second.calls) == 0  # type: ignore[union-attr]
+
+    def test_first_none_second_consulted_and_returned(self, tmp_path):
+        """When the first fetcher returns None, the second is tried and its Path returned."""
+        audio = tmp_path / "word.mp3"
+        audio.touch()
+        first = self._stub(None)
+        second = self._stub(audio)
+        chain = ChainedExpressionAudioFetcher([first, second])  # type: ignore[arg-type]
+
+        result = chain.fetch("食べる", "たべる")
+
+        assert result == audio
+        assert len(first.calls) == 1  # type: ignore[union-attr]
+        assert len(second.calls) == 1  # type: ignore[union-attr]
+
+    def test_all_none_returns_none(self, tmp_path):
+        """When every fetcher returns None, the chain returns None."""
+        chain = ChainedExpressionAudioFetcher([self._stub(None), self._stub(None)])  # type: ignore[arg-type]
+
+        result = chain.fetch("食べる", "たべる")
+
+        assert result is None
+
+    def test_empty_chain_returns_none(self):
+        """An empty fetcher list returns None immediately."""
+        chain = ChainedExpressionAudioFetcher([])
+
+        result = chain.fetch("食べる", "たべる")
+
+        assert result is None
+
+    def test_cancelled_check_forwarded_to_members(self, tmp_path):
+        """The chain forwards cancelled_check to each member fetcher."""
+        received: list[object] = []
+
+        class _Recorder:
+            def fetch(self, mined_form, reading, cancelled_check=None):
+                received.append(cancelled_check)
+                return None
+
+        def check() -> bool:
+            return False
+
+        chain = ChainedExpressionAudioFetcher([_Recorder(), _Recorder()])  # type: ignore[list-item]
+
+        result = chain.fetch("食べる", "たべる", check)
+
+        assert result is None
+        assert received == [check, check]
+
+    def test_cancelled_before_first_member_skips_all(self, tmp_path):
+        """cancelled_check True at entry ⇒ None without consulting any member."""
+        first = self._stub(tmp_path / "word.mp3")
+        chain = ChainedExpressionAudioFetcher([first])  # type: ignore[arg-type]
+
+        result = chain.fetch("食べる", "たべる", cancelled_check=lambda: True)
+
+        assert result is None
+        assert len(first.calls) == 0  # type: ignore[union-attr]
+
+    def test_cancelled_between_members_short_circuits(self, tmp_path):
+        """Cancellation observed between members stops the walk and returns None."""
+        audio = tmp_path / "word.mp3"
+        audio.touch()
+        first = self._stub(None)
+        second = self._stub(audio)
+        calls = 0
+
+        def _cancel_after_first() -> bool:
+            nonlocal calls
+            calls += 1
+            # First consultation (before member 1) → False; second → True.
+            return calls >= 2
+
+        chain = ChainedExpressionAudioFetcher([first, second])  # type: ignore[arg-type]
+
+        result = chain.fetch("食べる", "たべる", cancelled_check=_cancel_after_first)
+
+        assert result is None
+        assert len(first.calls) == 1  # type: ignore[union-attr]
+        assert len(second.calls) == 0  # type: ignore[union-attr]
