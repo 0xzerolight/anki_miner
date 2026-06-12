@@ -1,4 +1,4 @@
-"""JapanesePod101 pronunciation audio fetcher with on-disk cache."""
+"""Expression audio fetchers: JPod101 and chained composite."""
 
 import contextlib
 import hashlib
@@ -6,12 +6,16 @@ import logging
 import os
 import tempfile
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import requests
 
 from anki_miner.utils.file_utils import safe_filename
+
+if TYPE_CHECKING:
+    from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -218,3 +222,48 @@ class JPod101AudioFetcher:
         except (requests.RequestException, OSError) as exc:
             logger.debug("expression audio fetch failed for %s: %s", mined_form, exc)
             return None
+
+
+class ChainedExpressionAudioFetcher:
+    """Composite fetcher that walks a sequence of fetchers, first hit wins.
+
+    Implements the :class:`~anki_miner.interfaces.ExpressionAudioFetcher`
+    protocol structurally.  An empty chain returns None.  Members are assumed
+    to honor the protocol contract (never raise); no try/except is added here.
+    """
+
+    def __init__(self, fetchers: "Sequence[ExpressionAudioFetcher]") -> None:
+        """Initialize with an ordered list of fetchers.
+
+        Args:
+            fetchers: Fetchers tried left-to-right; first non-None Path wins.
+        """
+        self._fetchers: list[ExpressionAudioFetcher] = list(fetchers)
+
+    def fetch(
+        self,
+        mined_form: str,
+        reading: str,
+        cancelled_check: Callable[[], bool] | None = None,
+    ) -> Path | None:
+        """Return the first non-None result from the fetcher chain.
+
+        Args:
+            mined_form: Word as mined onto the card (kanji/surface form).
+            reading: Kana reading of the word (may be empty).
+            cancelled_check: Optional zero-argument callable that returns True
+                when the caller has requested cancellation.  Forwarded to every
+                member fetcher and also consulted between members, so a chain
+                stops walking as soon as cancellation is observed.  Returns
+                None immediately on cancellation.
+
+        Returns:
+            Path to an audio file from the first matching fetcher, or None.
+        """
+        for fetcher in self._fetchers:
+            if cancelled_check is not None and cancelled_check():
+                return None
+            result = fetcher.fetch(mined_form, reading, cancelled_check)
+            if result is not None:
+                return result
+        return None

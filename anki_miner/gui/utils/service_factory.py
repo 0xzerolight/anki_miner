@@ -5,12 +5,15 @@ from dataclasses import dataclass, field
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
+from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
+from anki_miner.services.audio_packs.registry import AudioPackRegistry
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.registry import DictionaryRegistry
-from anki_miner.services.expression_audio_fetcher import JPod101AudioFetcher
+from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher, JPod101AudioFetcher
 from anki_miner.services.frequency_service import FrequencyService
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.media_extractor import MediaExtractorService
@@ -53,7 +56,7 @@ class Services:
     word_list_service: WordListService | None
     wordset_service: WordsetService | None
     youtube_fetcher: YouTubeFetcherService
-    expression_audio_fetcher: JPod101AudioFetcher
+    expression_audio_fetcher: ExpressionAudioFetcher
     load_result: ServiceLoadResult
 
 
@@ -105,6 +108,85 @@ def build_definition_service(
     return definition_service
 
 
+def _build_expression_audio_fetcher(
+    config: AnkiMinerConfig,
+    load_result: ServiceLoadResult | None = None,
+) -> ExpressionAudioFetcher:
+    """Build the expression audio fetcher chain from ``config.expression_audio_chain``.
+
+    Constructs a :class:`~anki_miner.services.expression_audio_fetcher.ChainedExpressionAudioFetcher`
+    whose members follow config order.  ``kind="jpod101"`` entries become
+    :class:`~anki_miner.services.expression_audio_fetcher.JPod101AudioFetcher`;
+    ``kind="pack"`` entries are resolved against :class:`AudioPackRegistry`.
+
+    I/O neutrality: ``AudioPackRegistry`` is only constructed + loaded when
+    ``config.expression_audio_enabled`` is set AND at least one enabled
+    ``kind="pack"`` entry is present — mirrors the dictionary eager-load
+    gating so a default (jpod101-only) or toggle-off config causes no disk
+    access.  With the toggle off the fetcher is never consulted (Phase 3
+    triple gate), so pack entries are skipped silently; jpod101 entries are
+    still constructed (I/O-free) to keep the chain shape uniform and
+    ``Services.expression_audio_fetcher`` non-Optional.
+
+    Args:
+        config: Mining configuration.
+        load_result: Optional sink for human-readable warnings (e.g. missing
+            pack_id). ``None`` suppresses those messages; logger always fires.
+
+    Returns:
+        A :class:`ChainedExpressionAudioFetcher` wrapping the resolved list.
+        The list may be empty (all entries disabled) — the chain returns None.
+    """
+    jpod_cache = ANKI_MINER_HOME / "audio_cache" / "jpod101"
+    pack_cache = ANKI_MINER_HOME / "audio_cache" / "local_packs"
+
+    # Build registry only when needed — avoids disk scan for default config
+    # and when the expression-audio toggle is off (fetcher never consulted).
+    has_pack_entries = config.expression_audio_enabled and any(
+        e.kind == "pack" and e.enabled for e in config.expression_audio_chain
+    )
+    pack_fetchers_by_id: dict[str, LocalAudioPackFetcher] = {}
+    if has_pack_entries:
+        registry = AudioPackRegistry(config.audio_packs_root)
+        registry.load()
+        for pack_fetcher in registry.build_fetcher_chain(config, pack_cache):
+            pack_fetchers_by_id[pack_fetcher.pack_id] = pack_fetcher
+
+    fetchers: list[ExpressionAudioFetcher] = []
+    for entry in config.expression_audio_chain:
+        if not entry.enabled:
+            continue
+        if entry.kind == "jpod101":
+            fetchers.append(
+                JPod101AudioFetcher(
+                    cache_dir=jpod_cache,
+                    delay=config.expression_audio_delay,
+                )
+            )
+        elif entry.kind == "pack":
+            if not config.expression_audio_enabled:
+                # Toggle off → fetcher never consulted (Phase 3 triple gate);
+                # skip silently so a disabled feature surfaces no pack noise.
+                continue
+            if entry.pack_id is None:
+                msg = "Skipping audio pack chain entry with null pack_id"
+                # warning already logged by registry.build_fetcher_chain
+                if load_result is not None:
+                    load_result.warnings.append(msg)
+                continue
+            resolved_pack = pack_fetchers_by_id.get(entry.pack_id)
+            if resolved_pack is None:
+                # Registry skipped it (unknown/missing); warning already logged
+                # there — add to load_result for UI surfacing.
+                msg = f"Audio pack '{entry.pack_id}' not available; skipped in audio chain"
+                if load_result is not None:
+                    load_result.warnings.append(msg)
+                continue
+            fetchers.append(resolved_pack)  # duplicate pack_ids pass through (same object queried twice)
+
+    return ChainedExpressionAudioFetcher(fetchers)
+
+
 def create_services(config: AnkiMinerConfig, subtitle_parser: SubtitleParserService | None = None) -> Services:
     """Create all services needed for episode processing.
 
@@ -139,12 +221,7 @@ def create_services(config: AnkiMinerConfig, subtitle_parser: SubtitleParserServ
     definition_service = build_definition_service(config, load_result)
     anki_service = AnkiService(config)
     youtube_fetcher = YouTubeFetcherService(config=config)
-    # Constructed unconditionally — __init__ is I/O-free; the enabled/field
-    # gates live in the processor's Phase 3 (Issue #73).
-    expression_audio_fetcher = JPod101AudioFetcher(
-        cache_dir=ANKI_MINER_HOME / "audio_cache" / "jpod101",
-        delay=config.expression_audio_delay,
-    )
+    expression_audio_fetcher = _build_expression_audio_fetcher(config, load_result)
 
     # Optional services
     pitch_accent_service = None
