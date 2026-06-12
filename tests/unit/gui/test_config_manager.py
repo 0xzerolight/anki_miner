@@ -258,6 +258,52 @@ class TestDictsRootRoundTrip:
         assert loaded.dicts_root.name == "dicts"
 
 
+class TestAudioPacksRootRoundTrip:
+    """Persistence of the audio_packs_root field through save/load."""
+
+    def test_save_and_load_preserves_audio_packs_root(self, tmp_path, monkeypatch):
+        """A non-default audio_packs_root must survive save/load as a Path object."""
+        cfg_file = tmp_path / "gui_config.json"
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        external = tmp_path / "external_ssd_audio"
+        external.mkdir()
+
+        config = replace(create_default_config(), audio_packs_root=external)
+        GUIConfigManager.save_config(config)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert isinstance(loaded.audio_packs_root, Path)
+        assert loaded.audio_packs_root == external
+
+    def test_audio_packs_root_serialized_as_string(self, tmp_path, monkeypatch):
+        """The on-disk JSON must store audio_packs_root as a string."""
+        cfg_file = tmp_path / "gui_config.json"
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        external = tmp_path / "elsewhere_audio"
+        external.mkdir()
+        GUIConfigManager.save_config(replace(create_default_config(), audio_packs_root=external))
+
+        raw = json.loads(cfg_file.read_text(encoding="utf-8"))
+        assert raw["audio_packs_root"] == str(external)
+
+    def test_legacy_config_without_audio_packs_root_uses_default(self, tmp_path, monkeypatch):
+        """A JSON file missing audio_packs_root must fall back to the dataclass default."""
+        cfg_file = tmp_path / "gui_config.json"
+        cfg_file.write_text(
+            json.dumps({"anki_deck_name": "Legacy Deck"}),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert isinstance(loaded.audio_packs_root, Path)
+        assert loaded.audio_packs_root.name == "audio_packs"
+
+
 class TestUiFontScaleRoundTrip:
     """Persistence of the Issue #63 ui_font_scale field through save/load."""
 

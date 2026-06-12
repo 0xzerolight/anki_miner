@@ -22,6 +22,20 @@ class ChainEntry:
 
 
 @dataclass(frozen=True)
+class AudioSourceEntry:
+    """One entry in the expression audio source chain.
+
+    Pack entries reference a local audio pack under
+    ~/.anki_miner/audio_packs/<pack_id>/.
+    JPod101 entries are the always-available online fallback; pack_id is None.
+    """
+
+    kind: Literal["pack", "jpod101"]
+    pack_id: str | None = None
+    enabled: bool = True
+
+
+@dataclass(frozen=True)
 class AnkiMinerConfig:
     """Immutable configuration for anki mining operations.
 
@@ -119,6 +133,12 @@ class AnkiMinerConfig:
     # Off by default (opt-in); expression_audio_delay mirrors jisho_delay.
     expression_audio_enabled: bool = False
     expression_audio_delay: float = 0.2  # Seconds between audio fetch requests.
+    # Ordered list of audio sources tried in priority order.
+    # Default is jpod101-only to preserve pre-feature behaviour exactly.
+    expression_audio_chain: tuple["AudioSourceEntry", ...] = field(
+        default_factory=lambda: (AudioSourceEntry(kind="jpod101"),)
+    )
+    audio_packs_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "audio_packs")
 
     # Pitch accent settings
     pitch_accent_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "pitch_accent.csv")
@@ -281,6 +301,8 @@ class AnkiMinerConfig:
             object.__setattr__(self, "jmdict_path", Path(self.jmdict_path))
         if isinstance(self.dicts_root, str):
             object.__setattr__(self, "dicts_root", Path(self.dicts_root))
+        if isinstance(self.audio_packs_root, str):
+            object.__setattr__(self, "audio_packs_root", Path(self.audio_packs_root))
         if isinstance(self.pitch_accent_path, str):
             object.__setattr__(self, "pitch_accent_path", Path(self.pitch_accent_path))
         if isinstance(self.frequency_list_path, str):
