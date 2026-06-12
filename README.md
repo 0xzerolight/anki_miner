@@ -9,15 +9,15 @@
 </p>
 
 <p align="center">
-Turn native Japanese content into Anki vocabulary cards - with screenshots, sentence audio, furigana, pitch accent, and frequency data.
+Turn native Japanese content into Anki vocabulary cards.
 </p>
 
 <p align="center">
-Please leave a ⭐ star if Anki Miner helped you - it helps others find it.
+Please leave a ⭐ star if Anki Miner helped you - it helps others find it :).
 </p>
 
 
-## Showcase
+# <p align="center">Mining Demo</p>
 
 ![Anki Miner Showcase](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/demo.gif)
 
@@ -33,10 +33,7 @@ Please leave a ⭐ star if Anki Miner helped you - it helps others find it.
 
 ### Requirements
 
-- **ffmpeg** — bundled with the standalone builds (Windows `.exe`/`.zip`, macOS tarball, Linux AppImage/tarball), so most users need nothing. You only need ffmpeg on PATH if you install via **PyPI/`pipx`, from source, or the `.deb`** (which ships without bundled ffmpeg for licensing reasons and uses your system copy).
-  - macOS: `brew install ffmpeg`
-  - Ubuntu/Debian: `sudo apt install ffmpeg`
-  - Windows: [download from ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH.
+- **ffmpeg** **only if installing from pip/pipx, .deb, or from source.**
 - **Anki** with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on. In Anki: **Tools → Add-ons → Get Add-ons**, paste code `2055492159`, restart.
 
 ### Download
@@ -49,8 +46,6 @@ Grab the installer for your platform from the [latest release](https://github.co
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` | `AnkiMiner-*-Linux-x86_64.AppImage` |
 | Linux (other) | — | `AnkiMiner-Linux-x86_64.tar.gz` |
 | macOS (Apple Silicon) | — | `AnkiMiner-macOS-arm64.tar.gz` |
-
-No Python required. Installers and portable archives bundle all dependencies.
 
 <details>
 <summary><strong>Install from PyPI (Python 3.11+)</strong></summary>
@@ -70,44 +65,24 @@ cd anki_miner
 pip install -e .
 ```
 
-For a full development setup (dev extras, pre-commit, external dependencies), see [CONTRIBUTING.md](CONTRIBUTING.md).
+For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 </details>
 
-## Quick Start
+## Tabs:
 
-After installing, launch **Anki Miner** from your Start Menu, Applications folder, or app menu. If you installed from PyPI or source, run `anki_miner_gui` from a terminal. A desktop shortcut is created on first launch; re-run it from **Tools → Create Desktop Shortcut…** inside the app.
-
-Anki must be running with AnkiConnect installed before mining starts.
-
-Tabs:
-
-- **Episode Mining**: mine one video/subtitle pair with file selectors and progress tracking.
-- **Batch Mining**: queue a folder of episode/subtitle pairs for sequential processing. Files are paired by episode number, so each folder / queue item should hold a single show (use Multi-Anime Queue for mining multiple series at a time).
-- **Deck Builder**: point at a folder of episode/subtitle pairs and mine the full series into one named deck. Lemmas are ranked by in-series frequency; pick how many to include (all, top N, or a coverage target) and preview before cards are created.
+- **Episode Mining**: mine one video/subtitle pair with word curation.
+- **Batch Mining**: batch mine a folder of episode/subtitle pairs for sequential processing. Files are paired by episode number, so each folder / queue item should hold a single show (use Multi-Anime Queue for mining multiple series at a time).
 - **YouTube**: paste one or more URLs, then mine the queue.
+- **Deck Builder**: point at a folder of episode/subtitle pairs and mine the full series into one named deck. Ranked by frequency; pick how many to include (all, top N, or a coverage target) and preview before cards are created.
 - **Analytics**: history, series difficulty rankings, milestones, undo.
 - **Settings**: Anki, Media, Dictionary, Filtering, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
 
-## Features
+## Other Features
 
-- **Deck Builder**: point it at a folder with all episodes of a show and it mines the whole series into a single named deck, frequency-ordered, deduped across episodes. Inspired by the approach of jiten.moe / jpdb — free, using media you already have.
-- Anki cards with furigana, pitch accent, and word frequency.
-- **Bold the target word** in the sentence so it stands out on the card front.
-- **Glossary field** that combines every enabled dictionary into one card field, compatible with the Senren dictionary-toggle template.
-- **Word Curator with embedded video player** — hear each sentence before you decide, and see every enabled offline dictionary's hit side-by-side.
-- **Custom card styling** — generated cards render cleanly out of the box; no manual Anki note-type styling required.
-- **User-curated known-words list** — add words straight from the curator; they're skipped on every future run.
-- Load any Yomitan dictionaries you like, reorder them, and optionally enable Jisho as a slower, rate-limited online fallback (offline dictionaries are recommended for speed).
-- YouTube queue: paste a list of URLs, mine the whole list in one click.
-- Batch a folder of episode/subtitle pairs for unattended processing.
-- Review and edit the word list before any cards are created — in single-episode mining, and as an opt-in popup for batch runs too.
-- **Word filtering**: skip words already in your collection, cap by frequency rank, exclude proper nouns via bundled name wordsets, and optionally drop hiragana-only or katakana-only words.
-- **Text size control**: scale the whole UI from 0.5× to 2× under Settings → Themes.
-- Audio in MP3 or Opus, at the bitrate you choose — Opus produces much smaller files for the same listening quality.
-- Animated screenshots in AVIF or WebP for cards that show a moment of motion instead of a still frame.
-- Analytics dashboard with history, undo, milestones, and series difficulty rankings.
-- 29 built-in themes (Catppuccin, Gruvbox, Nord, Tokyo Night, Rosé Pine, Dracula, and more) with a favorites list, `Ctrl+T` to cycle, and custom themes from a JSON file. See the full list below.
+- Extensive filtering options (i+1 filter, frequency limits, word blacklist, subtitle regex filtering, wordset filtering, and more).
+- Animated screenshots (see example card gifs).
+- Audio format options.
 
 <details>
 <summary><strong>Built-in themes (29)</strong></summary>
@@ -123,8 +98,8 @@ Tabs:
 - **Solarized** — Light, Dark
 - **Standalone** — Light, Dark, Sakura, Nord, One Dark, Tokyo Night
 
-Upstream attribution: [LICENSE-THEMES.md](LICENSE-THEMES.md). 
-Custom themes: drop a JSON file matching the schema in `anki_miner/gui/resources/styles/themes/` into your config dir. Or suggest in an Issue and it will be added for all users.
+Theme licenses: [LICENSE-THEMES.md](LICENSE-THEMES.md). 
+Want another theme added? Suggest in a GitHub Issue.
 
 </details>
 
@@ -141,8 +116,6 @@ Custom themes: drop a JSON file matching the schema in `anki_miner/gui/resources
 
 ## Recommended Resources
 
-None of these ship with Anki Miner — load the ones you want, all free. Definitions are looked up through a **provider chain** (first hit wins); Jisho is a slower, rate-limited online fallback, off by default.
-
 | Type | Resource | What you get | Download | Add via |
 |------|----------|--------------|----------|---------|
 | Dictionary | [Jitendex](https://jitendex.org/) | JMdict successor; structured formatting, examples, tags | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Add Dictionary… |
@@ -156,20 +129,6 @@ Dictionaries are indexed once into `~/.anki_miner/dicts/` (drag to reorder the c
 The pitch and frequency pickers accept a raw CSV/TSV or a Yomitan zip, auto-converted to `~/.anki_miner/pitch_accent.csv` / `frequency.csv` on Save.
 
 Proper-noun filtering uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html) (JMdict/EDICT project, EDRDG, CC BY-SA 4.0).
-
-## YouTube Mining
-
-Paste one or more URLs into the YouTube tab. Each row shows its title, length, and subtitle source as you add it; click **Mine** to process the whole list. Transient download errors are retried once before a row is marked failed. Cancel is safe at any point.
-
-Playlist URLs (`/playlist?list=…`) expand into individual queue rows automatically. Watch URLs that carry a `list=` parameter (`/watch?v=…&list=…`) prompt whether to add just that video or the whole playlist. The maximum number of videos pulled from a single playlist defaults to 100 and is configurable under Settings → YouTube. Mix/radio playlist URLs (`list=RD…`) are treated as plain video links. Videos already in the queue are skipped.
-
-Manual Japanese subtitles are used when available. Auto-captions are accepted only when YouTube generated them natively from Japanese audio — captions that YouTube produced by machine-translating from another language are skipped, because they don't make usable cards. Even native auto-captions are rougher than manual subtitles, since they lack sentence boundaries.
-
-Gotchas:
-
-- **Bot-detection prompts**: if YouTube asks "Sign in to confirm you're not a bot", open **Settings → Cookies → Browser** and pick Firefox or Chrome. Anki Miner pulls cookies from that browser's profile on every fetch.
-- **Age-restricted videos**: same fix.
-- **Max duration**: defaults to 120 minutes. The probe aborts before downloading if the video is longer. Adjust in Settings.
 
 ## Updates
 
