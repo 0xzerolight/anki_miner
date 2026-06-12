@@ -9,6 +9,10 @@ The combined CSS is ``[default stylesheet] + [user custom CSS]`` surrounded by
 replaces that block idempotently; ``strip_managed_block`` removes it for a full
 revert. No Qt, no HTTP — every function here is a pure ``str`` transform and is
 unit-tested in isolation (see ``tests/unit/test_card_styling.py``).
+
+Preset CSS itself is guarded by miner-only ``ol[data-count]`` markup so the
+managed block never restyles Yomitan-exported glossary HTML sharing the note
+type — see ``card_style_presets`` and ``TestPresetYomitanLeak``.
 """
 
 from __future__ import annotations
