@@ -82,9 +82,14 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Other Features
 
+- Offline Yomitan dictionary import (definitions, pitch accent, frequency data) with priority ordering and optional Jisho fallback.
+- Pitch accent and frequency rank on cards, automatic furigana, target word bolded in the sentence.
+- Card styling presets or custom CSS, applied to your note type straight from the app.
 - Extensive filtering options (i+1 filter, frequency limits, word blacklist, subtitle regex filtering, wordset filtering, and more).
+- Subtitle timing preview with adjustable offset.
 - Animated screenshots (see example card gifs).
 - Audio format options.
+- Drag-and-drop file selection, recent files, automatic update check.
 
 <details>
 <summary><strong>Built-in themes (29)</strong></summary>
