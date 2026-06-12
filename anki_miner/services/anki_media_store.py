@@ -158,8 +158,11 @@ class AnkiMediaStore:
         Returns:
             Set of filenames that were successfully stored
         """
-        # Build (filename → action) mapping, deduped by filename (last writer
-        # wins, matching the old set-based dedup semantics).
+        # Build (filename → action) mapping, deduped by filename (first writer
+        # wins; duplicates point at the same file, so content is identical
+        # either way). Dedup BEFORE the read+encode so a file shared by N
+        # payloads — e.g. audiobook cover art on every card — is read and
+        # base64-encoded once, not N times.
         actions_by_filename: dict[str, dict] = {}
         for item in word_data_list:
             media = item.media
@@ -168,6 +171,8 @@ class AnkiMediaStore:
                 (media.audio_filename, media.audio_path),
             ]:
                 if not filename or not src_path or not src_path.exists():
+                    continue
+                if filename in actions_by_filename:
                     continue
                 action = _build_store_media_action(filename, src_path)
                 if action is not None:
