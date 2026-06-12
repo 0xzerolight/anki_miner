@@ -1002,6 +1002,51 @@ class TestStoreMediaFilesBatch:
             assert len(payload["params"]["actions"]) == 1
         assert stored == {f"shot_{i}.jpg" for i in range(3)}
 
+    def test_duplicate_filenames_read_and_encoded_once(self, test_config, make_tokenized_word, tmp_path):
+        """A filename shared by N payloads (audiobook cover art) is built once."""
+        from anki_miner.services import anki_media_store
+
+        service = AnkiService(test_config)
+
+        cover_path = tmp_path / "cover.jpg"
+        cover_path.write_bytes(b"cover-data")
+
+        items = []
+        for i in range(3):
+            au_path = tmp_path / f"clip_{i}.mp3"
+            au_path.write_bytes(b"audio-data")
+            media = MediaData(
+                screenshot_path=cover_path,
+                audio_path=au_path,
+                screenshot_filename="cover.jpg",
+                audio_filename=f"clip_{i}.mp3",
+            )
+            items.append(CardPayload(word=make_tokenized_word(lemma=f"word_{i}"), media=media, definition=f"def_{i}"))
+
+        # 4 deduplicated actions (cover + 3 clips), all successful
+        resp = _mock_response(result=[None, None, None, None])
+
+        with (
+            patch.object(
+                anki_media_store,
+                "_build_store_media_action",
+                wraps=anki_media_store._build_store_media_action,
+            ) as build_mock,
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post,
+        ):
+            stored = service._store_media_files_batch(items)
+
+        # The shared cover is read + base64-encoded once, not once per payload
+        built_filenames = [c.args[0] for c in build_mock.call_args_list]
+        assert built_filenames.count("cover.jpg") == 1
+        assert build_mock.call_count == 4
+
+        # And shipped once in the multi POST
+        payload = mock_post.call_args[1]["json"]
+        filenames_sent = [a["params"]["filename"] for a in payload["params"]["actions"]]
+        assert filenames_sent.count("cover.jpg") == 1
+        assert stored == {"cover.jpg", "clip_0.mp3", "clip_1.mp3", "clip_2.mp3"}
+
     def test_total_failure_sets_failure_counter(self, test_config, make_tokenized_word, tmp_path):
         """When multi and the per-file fallback both fail, the failure count is recorded."""
         service = AnkiService(test_config)
