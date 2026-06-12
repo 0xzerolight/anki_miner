@@ -46,10 +46,12 @@ class AudioPackRegistry:
         """Scan *packs_root* for installed audio packs.
 
         Each subdirectory that is not hidden (does not start with ``.``) and
-        contains an ``index.sqlite`` is considered a candidate.  Directories
-        that start with ``.staging-`` or ``.bak-`` (importer internals) are
-        explicitly skipped.  Packs with unreadable/corrupt meta or a
-        schema_version mismatch are skipped with a warning.
+        contains an ``index.sqlite`` is considered a candidate.  Hidden
+        directories (covers ``.staging-*`` importer staging) and names
+        containing ``.bak-`` (importer overwrite backups like
+        ``<pack>.bak-<timestamp>``) are explicitly skipped.  Packs with
+        unreadable/corrupt meta or a schema_version mismatch are skipped
+        with a warning.
         """
         self._packs.clear()
         if not self._root.is_dir():
@@ -57,8 +59,12 @@ class AudioPackRegistry:
         for child in sorted(self._root.iterdir()):
             if not child.is_dir():
                 continue
-            # Skip hidden dirs — importer staging/backup artefacts.
+            # Skip hidden dirs — importer staging artefacts.
             if child.name.startswith("."):
+                continue
+            # Skip importer overwrite backups (<pack>.bak-<timestamp> siblings):
+            # a failed Windows rmtree must not surface a stale backup as a pack.
+            if ".bak-" in child.name:
                 continue
             db = child / "index.sqlite"
             if not db.exists():

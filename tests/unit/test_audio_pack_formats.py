@@ -572,3 +572,39 @@ class TestScanImportablePacks:
 
     def test_empty_directory(self, tmp_path):
         assert scan_importable_packs(tmp_path) == []
+
+    def test_canonical_user_files_parent_yields_only_children(self, tmp_path):
+        """A canonical user_files/ parent must yield ONLY its child packs.
+
+        The heuristic formats (forvo/jpod_legacy) match on audio files below
+        the directory, so without the children-first rule the parent itself
+        would be misreported as a junk "forvo"/"jpod_legacy" pack built from
+        its children's audio files.
+        """
+        user_files = tmp_path / "user_files"
+
+        # jpod_files: flat "{reading} - {expression}" stems
+        jpod = user_files / "jpod_files"
+        _make_audio(jpod, "たべる - 食べる.mp3")
+        _make_audio(jpod, "のむ - 飲む.mp3")
+
+        # nhk16_files: entries.json + audio/
+        nhk = user_files / "nhk16_files"
+        nhk.mkdir(parents=True)
+        _write_json(nhk / "entries.json", [])
+        (nhk / "audio").mkdir()
+
+        # forvo_files: speaker dirs with audio files
+        forvo = user_files / "forvo_files"
+        _make_audio(forvo / "alice", "走る.mp3")
+
+        results = scan_importable_packs(user_files)
+
+        assert sorted(results) == sorted(
+            [
+                (jpod, "jpod_legacy"),
+                (nhk, "nhk16"),
+                (forvo, "forvo"),
+            ]
+        )
+        assert not any(p == user_files for p, _ in results), "parent must never be reported as a pack"
