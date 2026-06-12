@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
 from anki_miner.services.audio_packs.storage import (
     SCHEMA_VERSION,
@@ -359,40 +361,35 @@ class TestEmptyMinedForm:
 
 
 # ---------------------------------------------------------------------------
-# NULL / empty reading wildcard
+# Empty / whitespace-only reading guard
 # ---------------------------------------------------------------------------
 
 
-class TestNullReadingWildcard:
-    def test_null_reading_row_matched_by_empty_reading(self, tmp_path: Path):
-        """A row inserted with reading=None should be found when reading=''."""
-        pack_dir = tmp_path / "pack_audio"
-        pack_dir.mkdir(parents=True, exist_ok=True)
-        (pack_dir / "taberu_null.mp3").write_bytes(b"AUDIO:taberu_null.mp3")
-        db_path = tmp_path / "index.sqlite"
-        create_index(db_path)
-        bulk_insert(
-            db_path,
-            [AudioPackRow(expression="食べる", reading=None, source="test", file="taberu_null.mp3")],
-        )
-        write_meta(
-            db_path,
-            {
-                "pack_id": "testpack",
-                "source": "test",
-                "format": "test",
-                "entry_count": "1",
-                "schema_version": str(SCHEMA_VERSION),
-                "pack_dir": str(pack_dir),
-            },
-        )
+class TestEmptyReadingGuard:
+    """Mirrors the JPod101AudioFetcher empty-reading skip.
+
+    Without a reading the storage lookup falls back to wildcard row selection,
+    which can cache the wrong homograph pronunciation permanently under the
+    word's key. Storage-level wildcard semantics are unchanged (covered in
+    test_audio_pack_storage.py) — only the fetcher entry point is guarded.
+    """
+
+    @pytest.mark.parametrize("reading", ["", "   "])
+    def test_empty_reading_returns_none_no_cache(self, tmp_path: Path, reading: str):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
         cache_dir = tmp_path / "cache"
-        fetcher = _make_fetcher(db_path, pack_dir, cache_dir)
+        fetcher = _make_fetcher(db, pack_dir, cache_dir)
 
-        result = fetcher.fetch("食べる", "")
+        assert fetcher.fetch("食べる", reading) is None
+        assert not cache_dir.exists() or not any(cache_dir.iterdir()), "no cache writes on empty reading"
 
-        assert result is not None
-        assert result.read_bytes() == b"AUDIO:taberu_null.mp3"
+    @pytest.mark.parametrize("mined_form", ["", "   "])
+    def test_whitespace_mined_form_returns_none(self, tmp_path: Path, mined_form: str):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        cache_dir = tmp_path / "cache"
+        fetcher = _make_fetcher(db, pack_dir, cache_dir)
+
+        assert fetcher.fetch(mined_form, "たべる") is None
 
 
 # ---------------------------------------------------------------------------

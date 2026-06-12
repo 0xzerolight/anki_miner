@@ -210,6 +210,23 @@ class TestDerivePackId:
         assert result.pack_id == "custom-id"
         assert (dest / "custom-id" / "index.sqlite").exists()
 
+    def test_jpod101_folder_name_reserved(self, tmp_path: Path):
+        """A folder named jpod101 derives the reserved id and must be rejected."""
+        pack = _make_ajt_pack(tmp_path / "jpod101")
+        dest = tmp_path / "out"
+
+        with pytest.raises(SetupError, match="reserved"):
+            import_audio_pack(pack, dest)
+
+        assert not (dest / "jpod101").exists()
+
+    def test_jpod101_explicit_pack_id_reserved(self, tmp_path: Path):
+        pack = _make_ajt_pack(tmp_path / "source_dir")
+        dest = tmp_path / "out"
+
+        with pytest.raises(SetupError, match="reserved"):
+            import_audio_pack(pack, dest, pack_id="jpod101")
+
 
 # ---------------------------------------------------------------------------
 # exists / overwrite

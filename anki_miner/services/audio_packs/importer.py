@@ -116,6 +116,11 @@ def import_audio_pack(
     # --- pack_id derivation ---
     if pack_id is None:
         pack_id = derive_pack_id(pack_dir.name)
+    if pack_id == "jpod101":
+        # Reserved for the online JPod101 source: its cache files are named
+        # jpod101_{word}_{reading}.* and a pack with the same id would collide,
+        # violating the filename-uniqueness contract for Anki media.
+        raise SetupError("Pack id 'jpod101' is reserved for the online JPod101 source; rename the folder")
     source_name = pack_id
 
     # --- exists check (before staging so we fail fast) ---

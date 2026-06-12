@@ -106,7 +106,17 @@ class AudioPackImportFlow:
         if not chosen_dir:
             return
 
-        packs = scan_importable_packs(Path(chosen_dir))
+        try:
+            packs = scan_importable_packs(Path(chosen_dir))
+        except OSError as exc:
+            # Permission/IO errors during the directory walk must not escape
+            # the Qt slot — surface them as a dialog instead.
+            QMessageBox.warning(
+                self._parent,
+                "Scan Failed",
+                f"Could not scan folder: {exc}",
+            )
+            return
         # Sort by upstream source priority so completion order = priority order
         # and _chain_with_new_packs_inserted preserves the correct sequence.
         # Unknown pack_ids land after all known ones (stable sort).
@@ -232,11 +242,19 @@ class AudioPackImportFlow:
             return
 
         dest_root = self._get_config().audio_packs_root
-        dlg = QProgressDialog("Re-importing audio pack…", "Cancel", 0, 100, self._parent)
+        # Busy/indeterminate (maximum 0) like add_pack — import has no
+        # percentage granularity, only progress message updates.
+        dlg = QProgressDialog("Re-importing audio pack…", "Cancel", 0, 0, self._parent)
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
         worker = AudioPackImportWorker.for_pack(Path(chosen_dir), dest_root, pack_id=pack_id, overwrite=True)
+        # Join the predecessor before dropping its reference (same as
+        # launch_next in add_pack — a still-running QThread must not be
+        # garbage-collected mid-run).
+        prev = self._active_import_worker
+        if prev is not None and prev.isRunning():
+            prev.wait()
         self._active_import_worker = worker
         self._set_import_buttons_enabled(False)
 

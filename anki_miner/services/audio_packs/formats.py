@@ -36,13 +36,9 @@ def detect_pack_format(pack_dir: Path) -> str | None:
     if not pack_dir.is_dir():
         return None
 
-    # ajt: index.json + media/ directory
-    if (pack_dir / "index.json").is_file() and (pack_dir / "media").is_dir():
-        return "ajt"
-
-    # nhk16: entries.json + audio/ directory
-    if (pack_dir / "entries.json").is_file() and (pack_dir / "audio").is_dir():
-        return "nhk16"
+    fmt = _detect_index_driven_format(pack_dir)
+    if fmt is not None:
+        return fmt
 
     # forvo: immediate subdirectories that contain audio-extension files (no index files)
     if _looks_like_forvo(pack_dir):
@@ -51,6 +47,25 @@ def detect_pack_format(pack_dir: Path) -> str | None:
     # jpod_legacy: audio files (possibly nested) with "{reading} - {expression}" stems
     if _looks_like_jpod_legacy(pack_dir):
         return "jpod_legacy"
+
+    return None
+
+
+def _detect_index_driven_format(pack_dir: Path) -> str | None:
+    """Detect only the index-file-driven formats (ajt/nhk16).
+
+    Unlike the forvo/jpod_legacy heuristics, these formats are identified by a
+    specific index file and cannot be triggered by audio files belonging to
+    nested child packs — safe to apply to a parent directory whose children
+    are themselves packs.
+    """
+    # ajt: index.json + media/ directory
+    if (pack_dir / "index.json").is_file() and (pack_dir / "media").is_dir():
+        return "ajt"
+
+    # nhk16: entries.json + audio/ directory
+    if (pack_dir / "entries.json").is_file() and (pack_dir / "audio").is_dir():
+        return "nhk16"
 
     return None
 
@@ -384,27 +399,41 @@ PARSERS: dict[str, ParserFn] = {
 def scan_importable_packs(directory: Path) -> list[tuple[Path, str]]:
     """Return (pack_dir, format) for every detectable pack under *directory*.
 
-    Checks *directory* itself first, then each immediate non-hidden child
-    directory.  Skips hidden directories (names starting with ``'.'``).
-    Packs nested more than one level deep are not detected.
+    Checks each immediate non-hidden child directory first, then *directory*
+    itself.  Skips hidden directories (names starting with ``'.'``).  Packs
+    nested more than one level deep are not detected.
+
+    When one or more children were detected as packs, the directory itself is
+    only checked against the index-driven formats (ajt/nhk16): the heuristic
+    formats (forvo/jpod_legacy) match on audio files anywhere below the
+    directory, so a canonical ``user_files/`` parent holding jpod/forvo/nhk16
+    children would otherwise also be misreported as a junk parent pack.
+    A directory that is itself a pack with no pack children gets the full
+    detection as before.
     """
-    results: list[tuple[Path, str]] = []
     seen: set[Path] = set()
-
-    def _try(path: Path) -> None:
-        resolved = path.resolve()
-        if resolved in seen:
-            return
-        seen.add(resolved)
-        fmt = detect_pack_format(path)
-        if fmt is not None:
-            results.append((path, fmt))
-
-    _try(directory)
+    child_results: list[tuple[Path, str]] = []
 
     if directory.is_dir():
         for child in sorted(directory.iterdir()):
-            if child.is_dir() and not child.name.startswith("."):
-                _try(child)
+            if not child.is_dir() or child.name.startswith("."):
+                continue
+            resolved = child.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            fmt = detect_pack_format(child)
+            if fmt is not None:
+                child_results.append((child, fmt))
 
+    results: list[tuple[Path, str]] = []
+    if directory.resolve() not in seen:
+        if child_results:
+            dir_fmt = _detect_index_driven_format(directory) if directory.is_dir() else None
+        else:
+            dir_fmt = detect_pack_format(directory)
+        if dir_fmt is not None:
+            results.append((directory, dir_fmt))
+
+    results.extend(child_results)
     return results

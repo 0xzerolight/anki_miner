@@ -112,6 +112,7 @@ class TestBuildExpressionAudioFetcher:
         cfg = dataclasses.replace(
             base_config,
             audio_packs_root=packs_root,
+            expression_audio_enabled=True,
             expression_audio_chain=(
                 AudioSourceEntry(kind="jpod101", enabled=False),
                 AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),
@@ -132,6 +133,7 @@ class TestBuildExpressionAudioFetcher:
         cfg = dataclasses.replace(
             base_config,
             audio_packs_root=packs_root,
+            expression_audio_enabled=True,
             expression_audio_chain=(
                 AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),
                 AudioSourceEntry(kind="jpod101", enabled=True),
@@ -152,6 +154,7 @@ class TestBuildExpressionAudioFetcher:
         cfg = dataclasses.replace(
             base_config,
             audio_packs_root=packs_root,
+            expression_audio_enabled=True,
             expression_audio_chain=(
                 AudioSourceEntry(kind="jpod101", enabled=True),
                 AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),
@@ -169,6 +172,7 @@ class TestBuildExpressionAudioFetcher:
         cfg = dataclasses.replace(
             base_config,
             audio_packs_root=packs_root,
+            expression_audio_enabled=True,
             expression_audio_chain=(
                 AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=False),
                 AudioSourceEntry(kind="jpod101", enabled=True),
@@ -186,6 +190,7 @@ class TestBuildExpressionAudioFetcher:
         cfg = dataclasses.replace(
             base_config,
             audio_packs_root=packs_root,
+            expression_audio_enabled=True,
             expression_audio_chain=(
                 AudioSourceEntry(kind="pack", pack_id="nonexistent_pack", enabled=True),
                 AudioSourceEntry(kind="jpod101", enabled=True),
@@ -205,6 +210,40 @@ class TestBuildExpressionAudioFetcher:
 
         # Warning also appeared in log records
         assert any("nonexistent_pack" in r.message for r in caplog.records)
+
+    def test_toggle_off_pack_entries_no_registry_io(self, monkeypatch, tmp_path, base_config):
+        """expression_audio_enabled=False → no registry construction even with pack entries."""
+        constructed = []
+
+        class _TrackingRegistry:
+            def __init__(self, *args, **kwargs):
+                constructed.append(True)
+
+            def load(self):
+                pass
+
+            def build_fetcher_chain(self, *a, **kw):
+                return []
+
+        monkeypatch.setattr(service_factory, "AudioPackRegistry", _TrackingRegistry, raising=True)
+        cfg = dataclasses.replace(
+            base_config,
+            audio_packs_root=tmp_path / "audio_packs",
+            expression_audio_enabled=False,
+            expression_audio_chain=(
+                AudioSourceEntry(kind="pack", pack_id="some-pack", enabled=True),
+                AudioSourceEntry(kind="jpod101", enabled=True),
+            ),
+        )
+        load_result = service_factory.ServiceLoadResult()
+        fetcher = service_factory._build_expression_audio_fetcher(cfg, load_result)
+
+        assert constructed == [], "registry must not be constructed when the toggle is off"
+        # Pack entry skipped silently; jpod101 still present for type uniformity.
+        assert isinstance(fetcher, ChainedExpressionAudioFetcher)
+        assert len(fetcher._fetchers) == 1
+        assert isinstance(fetcher._fetchers[0], JPod101AudioFetcher)
+        assert load_result.warnings == [], "disabled feature must surface no pack warnings"
 
     def test_all_disabled_empty_chain_fetch_returns_none(self, base_config):
         """All entries disabled → empty chain; fetch returns None without crash."""
@@ -229,6 +268,7 @@ class TestBuildExpressionAudioFetcher:
         cfg = dataclasses.replace(
             base_config,
             audio_packs_root=packs_root_a,
+            expression_audio_enabled=True,
             expression_audio_chain=(
                 AudioSourceEntry(kind="pack", pack_id=pack_a_id, enabled=True),
                 AudioSourceEntry(kind="jpod101", enabled=True),
@@ -252,6 +292,7 @@ class TestBuildExpressionAudioFetcher:
         cfg = dataclasses.replace(
             base_config,
             audio_packs_root=packs_root,
+            expression_audio_enabled=True,
             expression_audio_chain=(
                 AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),
                 AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),
@@ -307,6 +348,7 @@ class TestCreateServicesAudioChain:
         cfg = dataclasses.replace(
             base_config,
             audio_packs_root=packs_root,
+            expression_audio_enabled=True,
             expression_audio_chain=(
                 AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),
                 AudioSourceEntry(kind="jpod101", enabled=True),

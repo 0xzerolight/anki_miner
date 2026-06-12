@@ -119,9 +119,14 @@ def _build_expression_audio_fetcher(
     :class:`~anki_miner.services.expression_audio_fetcher.JPod101AudioFetcher`;
     ``kind="pack"`` entries are resolved against :class:`AudioPackRegistry`.
 
-    I/O neutrality: ``AudioPackRegistry`` is only constructed + loaded when at
-    least one enabled ``kind="pack"`` entry is present — mirrors the dictionary
-    eager-load gating so a default (jpod101-only) config causes no disk access.
+    I/O neutrality: ``AudioPackRegistry`` is only constructed + loaded when
+    ``config.expression_audio_enabled`` is set AND at least one enabled
+    ``kind="pack"`` entry is present — mirrors the dictionary eager-load
+    gating so a default (jpod101-only) or toggle-off config causes no disk
+    access.  With the toggle off the fetcher is never consulted (Phase 3
+    triple gate), so pack entries are skipped silently; jpod101 entries are
+    still constructed (I/O-free) to keep the chain shape uniform and
+    ``Services.expression_audio_fetcher`` non-Optional.
 
     Args:
         config: Mining configuration.
@@ -135,8 +140,11 @@ def _build_expression_audio_fetcher(
     jpod_cache = ANKI_MINER_HOME / "audio_cache" / "jpod101"
     pack_cache = ANKI_MINER_HOME / "audio_cache" / "local_packs"
 
-    # Build registry only when needed — avoids disk scan for default config.
-    has_pack_entries = any(e.kind == "pack" and e.enabled for e in config.expression_audio_chain)
+    # Build registry only when needed — avoids disk scan for default config
+    # and when the expression-audio toggle is off (fetcher never consulted).
+    has_pack_entries = config.expression_audio_enabled and any(
+        e.kind == "pack" and e.enabled for e in config.expression_audio_chain
+    )
     pack_fetchers_by_id: dict[str, LocalAudioPackFetcher] = {}
     if has_pack_entries:
         registry = AudioPackRegistry(config.audio_packs_root)
@@ -156,6 +164,10 @@ def _build_expression_audio_fetcher(
                 )
             )
         elif entry.kind == "pack":
+            if not config.expression_audio_enabled:
+                # Toggle off → fetcher never consulted (Phase 3 triple gate);
+                # skip silently so a disabled feature surfaces no pack noise.
+                continue
             if entry.pack_id is None:
                 msg = "Skipping audio pack chain entry with null pack_id"
                 # warning already logged by registry.build_fetcher_chain
