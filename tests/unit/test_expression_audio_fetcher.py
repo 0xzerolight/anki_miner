@@ -379,3 +379,45 @@ class TestJPod101AudioFetcher:
 
         assert result is not None
         resp.close.assert_called_once()
+
+    # ------------------------------------------------------------------
+    # Negative delay clamping and error logging (Task 2)
+    # ------------------------------------------------------------------
+
+    def test_negative_delay_clamped_to_zero(self, tmp_path):
+        """Negative delay from hand-edited config must not crash the run.
+
+        Constructing with delay=-1 must clamp to 0.0 so time.sleep is never
+        called with a negative argument (which raises ValueError).
+        """
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=-1)
+        sleep_calls: list[float] = []
+        with (
+            patch(f"{MODULE}.time.sleep", side_effect=lambda s: sleep_calls.append(s)),
+            patch(f"{MODULE}.requests.get", return_value=_response()),
+        ):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is not None
+        assert all(s >= 0.0 for s in sleep_calls), f"negative sleep arg: {sleep_calls}"
+
+    def test_request_exception_emits_debug_log(self, tmp_path, caplog):
+        """DNS/connection failure emits a debug log so failures are diagnosable."""
+        import logging
+
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with (
+            caplog.at_level(logging.DEBUG, logger="anki_miner.services.expression_audio_fetcher"),
+            patch(
+                f"{MODULE}.requests.get",
+                side_effect=requests.exceptions.ConnectionError("Name or service not known"),
+            ),
+        ):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is None
+        assert any(
+            "expression audio" in r.message.lower() or "食べる" in r.message
+            for r in caplog.records
+            if r.levelno == logging.DEBUG
+        ), f"No debug log emitted; records: {caplog.records}"
