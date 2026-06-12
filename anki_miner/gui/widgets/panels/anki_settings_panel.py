@@ -5,6 +5,7 @@ from typing import Literal, cast
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -180,6 +181,23 @@ class AnkiSettingsPanel(FormPanel):
         self.audio_field_input = QLineEdit()
         self.audio_field_input.setPlaceholderText("SentenceAudio")
         self.add_field("Audio Field", self.audio_field_input, helper="Stores the sentence audio clip.")
+
+        # Expression audio toggle + field (Issue #73). Kept adjacent so the
+        # enable/destination pairing is obvious.
+        self.expression_audio_checkbox = QCheckBox("Enable expression audio")
+        self.add_field(
+            "Expression Audio",
+            self.expression_audio_checkbox,
+            helper="Fetch word pronunciation audio from JapanesePod101 (free, no account).",
+        )
+
+        self.expression_audio_field_input = QLineEdit()
+        self.expression_audio_field_input.setPlaceholderText("ExpressionAudio")
+        self.add_field(
+            "Expression Audio Field",
+            self.expression_audio_field_input,
+            helper="Stores the word pronunciation audio clip.",
+        )
 
         # Expression Furigana field
         self.expression_furigana_field_input = QLineEdit()
@@ -479,6 +497,10 @@ class AnkiSettingsPanel(FormPanel):
             ),
             "picture": (self.picture_field_input, ["picture", "image", "screenshot", "photo"]),
             "audio": (self.audio_field_input, ["audio", "sound", "sentenceaudio"]),
+            "expression_audio": (
+                self.expression_audio_field_input,
+                ["expressionaudio", "wordaudio"],
+            ),
             "expression_furigana": (
                 self.expression_furigana_field_input,
                 ["expressionfurigana", "wordfurigana"],
@@ -534,6 +556,7 @@ class AnkiSettingsPanel(FormPanel):
             "glossary": self.glossary_field_input.text().strip(),
             "picture": self.picture_field_input.text().strip(),
             "audio": self.audio_field_input.text().strip(),
+            "expression_audio": self.expression_audio_field_input.text().strip(),
             "expression_furigana": self.expression_furigana_field_input.text().strip(),
             "expression_reading": self.expression_reading_field_input.text().strip(),
             "sentence_furigana": self.sentence_furigana_field_input.text().strip(),
@@ -556,6 +579,7 @@ class AnkiSettingsPanel(FormPanel):
         self.glossary_field_input.setText(fields.get("glossary", ""))
         self.picture_field_input.setText(fields.get("picture", "Picture"))
         self.audio_field_input.setText(fields.get("audio", "SentenceAudio"))
+        self.expression_audio_field_input.setText(fields.get("expression_audio", ""))
         self.expression_furigana_field_input.setText(fields.get("expression_furigana", "ExpressionFurigana"))
         self.expression_reading_field_input.setText(fields.get("expression_reading", ""))
         self.sentence_furigana_field_input.setText(fields.get("sentence_furigana", "SentenceFurigana"))
@@ -564,6 +588,14 @@ class AnkiSettingsPanel(FormPanel):
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.frequency_field_input.setText(fields.get("frequency", ""))
         self.source_field_input.setText(fields.get("source", ""))
+
+    def get_expression_audio_enabled(self) -> bool:
+        """Return whether expression audio fetching is enabled."""
+        return self.expression_audio_checkbox.isChecked()
+
+    def set_expression_audio_enabled(self, enabled: bool) -> None:
+        """Set the expression audio fetch toggle."""
+        self.expression_audio_checkbox.setChecked(enabled)
 
     def get_pitch_category_format(self) -> Literal["jp", "romaji"]:
         """Return the selected pitch category format ("jp" or "romaji")."""
