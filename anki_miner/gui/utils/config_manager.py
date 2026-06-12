@@ -104,6 +104,9 @@ class GUIConfigManager:
             # Migrate legacy dictionary fields → dictionary_chain
             config_dict = cls._migrate_dictionary_chain(config_dict)
 
+            # Migrate expression_audio_chain JSON dicts → AudioSourceEntry
+            config_dict = cls._migrate_expression_audio_chain(config_dict)
+
             # Migrate theme key out of QSettings (only when the key is absent
             # from the loaded dict — i.e. first launch after v2.5 upgrade).
             config_dict = cls._migrate_theme_from_qsettings(config_dict)
@@ -190,6 +193,35 @@ class GUIConfigManager:
             elif isinstance(item, ChainEntry):
                 chain.append(item)
         data["dictionary_chain"] = tuple(chain)
+        return data
+
+    @staticmethod
+    def _migrate_expression_audio_chain(data: dict[str, Any]) -> dict[str, Any]:
+        """Rebuild AudioSourceEntry instances when an existing expression_audio_chain
+        is loaded as list[dict] from JSON. Missing chains fall through to the
+        dataclass default (jpod101-only = exact pre-feature behaviour).
+        """
+        from anki_miner.config import AudioSourceEntry
+
+        raw_chain = data.get("expression_audio_chain")
+        if raw_chain is None:
+            return data
+
+        chain: list[AudioSourceEntry] = []
+        for item in raw_chain:
+            if isinstance(item, dict):
+                kind = item.get("kind")
+                if kind in ("pack", "jpod101"):
+                    chain.append(
+                        AudioSourceEntry(
+                            kind=kind,
+                            pack_id=item.get("pack_id"),
+                            enabled=bool(item.get("enabled", True)),
+                        )
+                    )
+            elif isinstance(item, AudioSourceEntry):
+                chain.append(item)
+        data["expression_audio_chain"] = tuple(chain)
         return data
 
     @staticmethod
@@ -327,6 +359,7 @@ class GUIConfigManager:
             "media_temp_folder",
             "jmdict_path",
             "dicts_root",
+            "audio_packs_root",
             "pitch_accent_path",
             "frequency_list_path",
             "known_words_db_path",

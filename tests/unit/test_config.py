@@ -254,6 +254,78 @@ def test_sentence_length_filter_defaults():
     assert cfg.max_sentence_chars == 0
 
 
+class TestAudioSourceEntry:
+    """Tests for the AudioSourceEntry frozen dataclass."""
+
+    def test_frozen(self):
+        """AudioSourceEntry must be immutable."""
+        from dataclasses import FrozenInstanceError
+
+        import pytest
+
+        from anki_miner.config import AudioSourceEntry
+
+        entry = AudioSourceEntry(kind="jpod101")
+        with pytest.raises(FrozenInstanceError):
+            entry.kind = "pack"  # type: ignore[misc]
+
+    def test_defaults(self):
+        """pack_id defaults to None; enabled defaults to True."""
+        from anki_miner.config import AudioSourceEntry
+
+        entry = AudioSourceEntry(kind="jpod101")
+        assert entry.pack_id is None
+        assert entry.enabled is True
+
+    def test_pack_entry(self):
+        """A pack entry stores pack_id and enabled properly."""
+        from anki_miner.config import AudioSourceEntry
+
+        entry = AudioSourceEntry(kind="pack", pack_id="nhk16", enabled=False)
+        assert entry.kind == "pack"
+        assert entry.pack_id == "nhk16"
+        assert entry.enabled is False
+
+
+class TestExpressionAudioChainConfig:
+    """Tests for expression_audio_chain and audio_packs_root config fields."""
+
+    def test_expression_audio_chain_default_is_jpod101_only(self):
+        """Default chain must be exactly (AudioSourceEntry(kind='jpod101'),)."""
+        from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
+
+        cfg = AnkiMinerConfig()
+        assert cfg.expression_audio_chain == (AudioSourceEntry(kind="jpod101"),)
+
+    def test_audio_packs_root_default_ends_in_audio_packs(self):
+        """audio_packs_root must default to a Path ending in 'audio_packs'."""
+        cfg = AnkiMinerConfig()
+        assert isinstance(cfg.audio_packs_root, Path)
+        assert cfg.audio_packs_root.name == "audio_packs"
+
+    def test_audio_packs_root_coerced_from_string(self, tmp_path):
+        """audio_packs_root must be coerced to Path when passed as str."""
+        cfg = AnkiMinerConfig(audio_packs_root=str(tmp_path / "packs"))
+        assert isinstance(cfg.audio_packs_root, Path)
+        assert cfg.audio_packs_root == tmp_path / "packs"
+
+    def test_expression_audio_chain_replace(self):
+        """replace() must allow swapping the audio chain."""
+        from dataclasses import replace
+
+        from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
+
+        cfg = AnkiMinerConfig()
+        new_chain = (
+            AudioSourceEntry(kind="pack", pack_id="nhk16"),
+            AudioSourceEntry(kind="jpod101"),
+        )
+        updated = replace(cfg, expression_audio_chain=new_chain)
+        assert updated.expression_audio_chain == new_chain
+        # Original unchanged
+        assert len(cfg.expression_audio_chain) == 1
+
+
 class TestUiFontScale:
     """Tests for the ui_font_scale config field (Issue #63)."""
 
