@@ -73,8 +73,8 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - **Episode Mining**: mine one video/subtitle pair with word curation.
 - **Batch Mining**: batch mine a folder of episode/subtitle pairs for sequential processing. Files are paired by episode number, so each folder / queue item should hold a single show (use Multi-Anime Queue for mining multiple series at a time).
-- **YouTube**: paste one or more URLs, then mine the queue.
 - **Deck Builder**: point at a folder of episode/subtitle pairs and mine the full series into one named deck. Ranked by frequency; pick how many to include (all, top N, or a coverage target) and preview before cards are created.
+- **YouTube**: paste one or more URLs, then mine the queue.
 - **Analytics**: history, series difficulty rankings, milestones, undo.
 - **Settings**: Anki, Media, Dictionary, Filtering, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
 
