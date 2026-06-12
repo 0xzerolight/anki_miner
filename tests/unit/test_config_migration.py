@@ -52,6 +52,61 @@ def test_legacy_use_offline_dict_stripped_and_default_chain_used(tmp_config: Pat
     )
 
 
+def test_old_config_backfills_expression_audio_in_anki_fields(tmp_config: Path):
+    """A saved config whose anki_fields lacks 'expression_audio' must get the
+    default value merged in on load — not crash or silently omit the key.
+    """
+    tmp_config.write_text(
+        json.dumps(
+            {
+                "anki_fields": {
+                    "word": "Expression",
+                    "sentence": "Sentence",
+                    "definition": "MainDefinition",
+                    "glossary": "",
+                    "picture": "Picture",
+                    "audio": "SentenceAudio",
+                    "expression_furigana": "ExpressionFurigana",
+                    "expression_reading": "",
+                    "sentence_furigana": "SentenceFurigana",
+                    "sentence_reading": "",
+                    "pitch_position": "",
+                    "pitch_category": "",
+                    "frequency": "Frequency",  # user-set non-empty value
+                    "source": "",
+                    # expression_audio intentionally absent (old config)
+                },
+            }
+        )
+    )
+
+    loaded = GUIConfigManager.load_config()
+    # New key must be present with the default empty string
+    assert "expression_audio" in loaded.anki_fields
+    assert loaded.anki_fields["expression_audio"] == ""
+    # Existing user value must be preserved
+    assert loaded.anki_fields["frequency"] == "Frequency"
+
+
+def test_old_config_without_expression_audio_fields_gets_defaults(tmp_config: Path):
+    """A saved config missing expression_audio_enabled and expression_audio_delay
+    must fall through to dataclass defaults rather than crashing.
+    """
+    tmp_config.write_text(
+        json.dumps(
+            {
+                "anki_deck_name": "MyDeck",
+                # expression_audio_enabled / expression_audio_delay absent
+            }
+        )
+    )
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.anki_deck_name == "MyDeck"
+    assert loaded.expression_audio_enabled is False
+    assert loaded.expression_audio_delay == 0.2
+
+
 def test_legacy_use_offline_dict_false_is_stripped(tmp_config: Path):
     """Legacy use_offline_dict=False is silently dropped; default chain is used.
 

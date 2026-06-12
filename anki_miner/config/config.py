@@ -49,6 +49,7 @@ class AnkiMinerConfig:
             "pitch_category": "",
             "frequency": "",
             "source": "",
+            "expression_audio": "",
         }
     )
     ankiconnect_url: str = "http://127.0.0.1:8765"
@@ -112,6 +113,12 @@ class AnkiMinerConfig:
     dicts_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "dicts")
     jisho_api_url: str = "https://jisho.org/api/v1/search/words"
     jisho_delay: float = 0.5  # Seconds between API calls. Jisho rate-limits; do NOT remove or reduce.
+
+    # Expression audio settings (Issue #73). Fetches word pronunciation audio
+    # from an external endpoint and writes it to the expression_audio Anki field.
+    # Off by default (opt-in); expression_audio_delay mirrors jisho_delay.
+    expression_audio_enabled: bool = False
+    expression_audio_delay: float = 0.2  # Seconds between audio fetch requests.
 
     # Pitch accent settings
     pitch_accent_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "pitch_accent.csv")
