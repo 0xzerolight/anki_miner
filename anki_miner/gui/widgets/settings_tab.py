@@ -228,6 +228,9 @@ class SettingsTab(QWidget):
         # Anki card field mappings
         self.anki_panel.set_card_fields(self.config.anki_fields)
 
+        # Expression audio toggle (Issue #73)
+        self.anki_panel.set_expression_audio_enabled(self.config.expression_audio_enabled)
+
         # Card styling (Issue #44)
         self.anki_panel.set_card_style_preset(self.config.card_style_preset)
         self.anki_panel.set_custom_css(self.config.custom_card_css)
@@ -428,6 +431,8 @@ class SettingsTab(QWidget):
             anki_tags=self.anki_panel.anki_tags_input.text(),
             anki_fields=self.anki_panel.get_card_fields(),
             anki_word_field=self.anki_panel.get_card_fields().get("word", "Expression"),
+            # Expression audio toggle (Issue #73)
+            expression_audio_enabled=self.anki_panel.get_expression_audio_enabled(),
             # Card styling (Issue #44)
             card_style_preset=self.anki_panel.get_card_style_preset(),
             custom_card_css=self.anki_panel.get_custom_css(),
