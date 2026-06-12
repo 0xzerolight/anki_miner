@@ -488,6 +488,7 @@ class EpisodeProcessor:
         progress_callback: ProgressCallback | None,
         run_temp_folder: Path,
         audio_track_override: int | None = None,
+        audio_only: bool = False,
     ) -> list[tuple[TokenizedWord, MediaData]]:
         """Phase 3: extract media (screenshots + audio) for each unknown word."""
         self.presenter.show_info("Step 3/5 — Extracting media from video")
@@ -498,6 +499,7 @@ class EpisodeProcessor:
             cancelled_check=lambda: self.cancelled,
             temp_folder=run_temp_folder,
             audio_track_override=audio_track_override,
+            audio_only=audio_only,
         )
         return media_results
 
@@ -647,6 +649,7 @@ class EpisodeProcessor:
         series_name_override: str | None = None,
         audio_track_override: int | None = None,
         source_label_override: str | None = None,
+        audio_only: bool = False,
     ) -> ProcessingResult:
         """Process a single episode and create Anki cards.
 
@@ -681,6 +684,9 @@ class EpisodeProcessor:
                 resolved series/episode identity as ``"<series> — <episode>"``
                 (em dash, U+2014). Used by ``process_youtube_url`` to stamp the
                 actual video title instead of the synthetic ``YT:<video_id>``.
+            audio_only: If True (audiobook mining), media extraction skips
+                per-word screenshots and reuses the file's embedded cover art
+                instead. False (default) preserves existing video behavior.
 
         Returns:
             ProcessingResult with statistics.
@@ -762,7 +768,13 @@ class EpisodeProcessor:
                 stage_progress = StageWeightedProgress(progress_callback, stage_weights)
 
             media_results = self._phase3_extract(
-                ctx, video_file, unknown_words, stage_progress, run_temp_folder, audio_track_override
+                ctx,
+                video_file,
+                unknown_words,
+                stage_progress,
+                run_temp_folder,
+                audio_track_override,
+                audio_only=audio_only,
             )
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
