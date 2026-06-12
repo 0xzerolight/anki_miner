@@ -789,11 +789,11 @@ class TestStoreMediaFilesBatch:
         assert stored == {"shot.jpg", "clip.mp3"}
 
     def test_skips_nonexistent_paths(self, test_config, make_tokenized_word, tmp_path):
-        """Should not attempt to store files when paths do not exist on disk."""
+        """Files with a path set but missing on disk: no upload attempt, counted as failures."""
         service = AnkiService(test_config)
 
         word = make_tokenized_word()
-        # Paths set but files not created on disk
+        # Paths set but files not created on disk (vanished between pipeline and upload)
         media = MediaData(
             screenshot_path=tmp_path / "missing.jpg",
             audio_path=tmp_path / "missing.mp3",
@@ -801,13 +801,13 @@ class TestStoreMediaFilesBatch:
             audio_filename="missing.mp3",
         )
 
-        resp = _mock_response(result="ok")
-
-        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+        with patch("anki_miner.services._ankiconnect.requests.post") as mock_post:
             service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
 
-        # No calls because files don't exist
+        # No HTTP calls because files don't exist on disk.
         mock_post.assert_not_called()
+        # Both vanished files count toward the failure total (not silent).
+        assert service.last_media_store_failures == 2
 
     def test_silently_handles_errors(self, test_config, make_tokenized_word, tmp_path):
         """Should swallow exceptions and continue without raising."""
@@ -1063,6 +1063,67 @@ class TestStoreMediaFilesBatch:
             stored = service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
 
         assert stored == set()
+        assert service.last_media_store_failures == 1
+
+    def test_vanished_source_file_counts_as_failure(self, test_config, make_tokenized_word, tmp_path):
+        """A file whose path was set but vanished before upload counts as a failure."""
+        service = AnkiService(test_config)
+
+        word = make_tokenized_word()
+        # Create a path that points to a non-existent file (never written to disk).
+        media = MediaData(
+            screenshot_path=tmp_path / "vanished.jpg",
+            screenshot_filename="vanished.jpg",
+        )
+
+        with patch("anki_miner.services._ankiconnect.requests.post") as mock_post:
+            stored = service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
+
+        # Nothing to upload — no HTTP call made.
+        mock_post.assert_not_called()
+        assert stored == set()
+        # But the vanished file counts toward the failure total.
+        assert service.last_media_store_failures == 1
+
+    def test_none_filename_or_path_not_counted_as_failure(self, test_config, make_tokenized_word, tmp_path):
+        """Legitimately absent media (filename or path is None) stays silent — not a failure."""
+        service = AnkiService(test_config)
+
+        au_path = tmp_path / "clip.mp3"
+        au_path.write_bytes(b"audio-data")
+        # No screenshot at all (both filename and path absent) — legitimately silent.
+        media = MediaData(audio_path=au_path, audio_filename="clip.mp3")
+
+        resp = _mock_response(result=["clip.mp3"])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            service._store_media_files_batch([CardPayload(word=make_tokenized_word(), media=media, definition="def")])
+
+        assert service.last_media_store_failures == 0
+
+    def test_vanished_expression_audio_counts_as_failure(self, test_config, make_tokenized_word, tmp_path):
+        """Vanished expression_audio file (Issue #73 field) is counted in the failure total."""
+        service = AnkiService(test_config)
+
+        au_path = tmp_path / "clip.mp3"
+        au_path.write_bytes(b"audio-data")
+        # Expression audio path set but file was deleted (e.g. audio_cache cleared mid-run).
+        media = MediaData(
+            audio_path=au_path,
+            audio_filename="clip.mp3",
+            expression_audio_path=tmp_path / "食べる_exp.mp3",
+            expression_audio_filename="食べる_exp.mp3",
+        )
+
+        resp = _mock_response(result=["clip.mp3"])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            stored = service._store_media_files_batch(
+                [CardPayload(word=make_tokenized_word(), media=media, definition="def")]
+            )
+
+        # clip.mp3 uploads fine; expression audio vanished → 1 failure.
+        assert "clip.mp3" in stored
         assert service.last_media_store_failures == 1
 
 

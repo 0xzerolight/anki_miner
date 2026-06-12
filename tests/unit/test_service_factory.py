@@ -1,0 +1,73 @@
+"""Tests for expression audio DI wiring in service_factory."""
+
+import dataclasses
+
+import pytest
+
+from anki_miner.config import AnkiMinerConfig
+from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.gui.utils import service_factory
+from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher, JPod101AudioFetcher
+
+
+@pytest.fixture
+def base_config(tmp_path):
+    """Config whose on-disk paths live under tmp_path, not ~/.anki_miner."""
+    return dataclasses.replace(
+        AnkiMinerConfig(),
+        dicts_root=tmp_path / "dicts",
+        known_words_db_path=tmp_path / "known_words.db",
+        history_db_path=tmp_path / "history.db",
+        stats_db_path=tmp_path / "stats.db",
+    )
+
+
+def test_create_services_wires_expression_audio_fetcher(base_config):
+    """create_services returns a Services whose expression_audio_fetcher is a
+    ChainedExpressionAudioFetcher wrapping (for the default jpod101-only chain)
+    one JPod101AudioFetcher with _delay == config.expression_audio_delay and
+    _cache_dir == ANKI_MINER_HOME / 'audio_cache' / 'jpod101'.
+    """
+    cfg = dataclasses.replace(base_config, expression_audio_delay=0.5)
+    services = service_factory.create_services(cfg)
+
+    fetcher = services.expression_audio_fetcher
+    assert isinstance(fetcher, ChainedExpressionAudioFetcher)
+    assert len(fetcher._fetchers) == 1
+    jpod = fetcher._fetchers[0]
+    assert isinstance(jpod, JPod101AudioFetcher)
+    assert jpod._delay == 0.5
+    assert jpod._cache_dir == ANKI_MINER_HOME / "audio_cache" / "jpod101"
+
+
+def test_create_episode_processor_wires_same_fetcher(base_config):
+    """create_episode_processor passes the expression_audio_fetcher from
+    create_services onto the EpisodeProcessor unchanged.
+    """
+
+    class _NullPresenter:
+        def show_info(self, msg: str) -> None:
+            pass
+
+        def show_warning(self, msg: str) -> None:
+            pass
+
+        def show_error(self, msg: str) -> None:
+            pass
+
+        def update_progress(self, current: int, total: int, msg: str = "") -> None:
+            pass
+
+        def show_result(self, result: object) -> None:
+            pass
+
+    cfg = dataclasses.replace(base_config, expression_audio_delay=0.3)
+    processor = service_factory.create_episode_processor(cfg, presenter=_NullPresenter())
+
+    fetcher = processor.expression_audio_fetcher
+    assert isinstance(fetcher, ChainedExpressionAudioFetcher)
+    assert len(fetcher._fetchers) == 1
+    jpod = fetcher._fetchers[0]
+    assert isinstance(jpod, JPod101AudioFetcher)
+    assert jpod._delay == 0.3
+    assert jpod._cache_dir == ANKI_MINER_HOME / "audio_cache" / "jpod101"
