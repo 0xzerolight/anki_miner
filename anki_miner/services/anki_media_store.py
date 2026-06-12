@@ -150,7 +150,8 @@ class AnkiMediaStore:
 
         Sets ``self.last_store_failures`` to the count of files that could
         not be stored so callers can surface it to the user instead of silently
-        creating cards with empty media fields.
+        creating cards with empty media fields.  Files whose source path was set
+        but vanished from disk before upload are also counted as failures.
 
         Args:
             word_data_list: List of CardPayload objects whose media should be uploaded
@@ -164,6 +165,14 @@ class AnkiMediaStore:
         # payloads — e.g. audiobook cover art on every card — is read and
         # base64-encoded once, not N times.
         actions_by_filename: dict[str, dict] = {}
+        # Track filenames that had a path on disk at pipeline time but vanished
+        # before we could upload them (e.g. user deleted audio_cache/jpod101/
+        # mid-run — the documented retry procedure for miss markers). These are
+        # distinct from legitimately absent media (filename or src_path is
+        # None/empty — silently skipped). Vanished files can't be uploaded but
+        # they should count as failures so the caller can warn the user about
+        # cards landing with empty fields.
+        vanished: set[str] = set()
         for item in word_data_list:
             media = item.media
             for filename, src_path in [
@@ -171,7 +180,15 @@ class AnkiMediaStore:
                 (media.audio_filename, media.audio_path),
                 (media.expression_audio_filename, media.expression_audio_path),
             ]:
-                if not filename or not src_path or not src_path.exists():
+                if not filename or not src_path:
+                    # Legitimately absent — no media for this field, stay silent.
+                    continue
+                if not src_path.exists():
+                    # Had a path but the file is gone; count as a failure unless
+                    # already deduped (first encounter owns the failure slot).
+                    if filename not in actions_by_filename and filename not in vanished:
+                        logger.warning("Media source file vanished before upload: %s", filename)
+                        vanished.add(filename)
                     continue
                 if filename in actions_by_filename:
                     continue
@@ -180,14 +197,14 @@ class AnkiMediaStore:
                     actions_by_filename[filename] = action
 
         if not actions_by_filename:
-            self.last_store_failures = 0
+            self.last_store_failures = len(vanished)
             return set()
 
         stored: set[str] = set()
         for chunk in _chunk_media_actions(list(actions_by_filename.items())):
             stored |= self._store_media_chunk(chunk)
 
-        self.last_store_failures = len(actions_by_filename) - len(stored)
+        self.last_store_failures = len(actions_by_filename) - len(stored) + len(vanished)
         return stored
 
     def upload_dict_media(self, word_data_list: list[CardPayload]) -> None:

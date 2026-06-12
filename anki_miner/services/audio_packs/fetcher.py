@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 import sqlite3
+from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.services.audio_packs import storage
@@ -56,17 +57,29 @@ class LocalAudioPackFetcher:
     # ExpressionAudioFetcher Protocol
     # ------------------------------------------------------------------
 
-    def fetch(self, mined_form: str, reading: str) -> Path | None:
+    def fetch(
+        self,
+        mined_form: str,
+        reading: str,
+        cancelled_check: Callable[[], bool] | None = None,
+    ) -> Path | None:
         """Return a cached copy of the best matching audio file, or None.
 
         Args:
             mined_form: Word as mined onto the card (kanji/surface form).
             reading: Kana reading of the word (may be empty).
+            cancelled_check: Optional zero-argument callable that returns True
+                when the caller has requested cancellation.  Consulted once at
+                entry (before the sqlite open) — local lookups are fast enough
+                that no further checkpoints are needed.  Never raises.
 
         Returns:
             Path to a cached audio file, or None if unavailable. Never raises.
         """
         if not mined_form:
+            return None
+
+        if cancelled_check is not None and cancelled_check():
             return None
 
         # 1. Cache hit: glob for any extension — suffix varies by pack format.

@@ -197,6 +197,22 @@ class EpisodeProcessor:
         external = self._external_cancel
         return external is not None and external()
 
+    @property
+    def _expression_audio_active(self) -> bool:
+        """True when the expression-audio stage should run and occupy a progress band.
+
+        The three-part gate from the Issue #73 design: fetcher injected AND
+        config toggle on AND the expression_audio Anki field mapped.  Checked
+        in two places — ``process_episode`` (band registration) and
+        ``_phase3_extract`` (band consumption) — via this property so the
+        conditions can't drift apart.
+        """
+        return (
+            self.expression_audio_fetcher is not None
+            and self.config.expression_audio_enabled
+            and bool(self.config.anki_fields.get("expression_audio"))
+        )
+
     # ------------------------------------------------------------------
     # Dictionary-resource facade
     #
@@ -528,24 +544,41 @@ class EpisodeProcessor:
         # the fetcher rate-limits and caches internally and never raises, so
         # the loop needs no try/except, no sleep, and no parallelism. Gated on
         # the toggle AND a mapped field — fetching audio no card would use is
-        # wasted network. Cancellation mirrors the extractor's cancelled_check;
-        # the caller's post-phase checkpoint owns the cancel result.
-        if (
-            self.expression_audio_fetcher is not None
-            and self.config.expression_audio_enabled
-            and self.config.anki_fields.get("expression_audio")
-            and media_results
-        ):
+        # wasted network. Cancellation: a cancelled_check lambda is passed into
+        # each fetch() call (mirrors the extractor's cancelled_check convention)
+        # so a slow/timing-out response does not stall the worker beyond the
+        # request timeout; the between-words self.cancelled check exits the loop
+        # early. The caller's post-phase checkpoint owns the cancel result.
+        #
+        # Progress note: on_start/on_complete MUST be called unconditionally
+        # when _expression_audio_active (even when media_results is empty) to
+        # consume the dedicated band that process_episode registered for this
+        # stage. Skipping them would cause StageWeightedProgress.on_start to
+        # advance into the wrong band on the next phase (definitions), silently
+        # stealing its weight. The gate must NOT include `media_results` here.
+        if self._expression_audio_active:
             fetched_count = 0
-            for word, media in media_results:
+            if progress_callback is not None:
+                progress_callback.on_start(len(media_results), "Fetching expression audio")
+            for i, (word, media) in enumerate(media_results):
                 if self.cancelled:
+                    if progress_callback is not None:
+                        progress_callback.on_complete()
                     return media_results
-                path = self.expression_audio_fetcher.fetch(word.mined_form, word.expression_reading)
+                path = self.expression_audio_fetcher.fetch(  # type: ignore[union-attr]
+                    word.mined_form,
+                    word.expression_reading,
+                    cancelled_check=lambda: self.cancelled,
+                )
                 if path is not None:
                     media.expression_audio_path = path
                     media.expression_audio_filename = path.name
                     fetched_count += 1
-            self.presenter.show_info(f"Expression audio: {fetched_count}/{len(media_results)} fetched")
+                if progress_callback is not None:
+                    progress_callback.on_progress(i + 1, f"Expression audio: {word.mined_form}")
+            if progress_callback is not None:
+                progress_callback.on_complete()
+            self.presenter.show_info(f"Expression audio: {fetched_count}/{len(media_results)} available")
 
         return media_results
 
@@ -824,7 +857,13 @@ class EpisodeProcessor:
             # [glossaries if mapped], cards.
             stage_progress = progress_callback
             if progress_callback is not None:
-                stage_weights = [0.40, 0.25]  # extract, definitions
+                # StageWeightedProgress normalizes these internally, so the
+                # individual values only express relative weight — sums need
+                # not equal 1.0.
+                stage_weights = [0.40]  # extract
+                if self._expression_audio_active:
+                    stage_weights.append(0.10)  # expression audio (right after extract)
+                stage_weights.append(0.25)  # definitions
                 if self.config.anki_fields.get("glossary"):
                     stage_weights.append(0.10)  # glossaries
                 stage_weights.append(0.25)  # cards

@@ -1,5 +1,6 @@
 """Protocol for expression (pronunciation) audio fetchers."""
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
@@ -17,12 +18,22 @@ class ExpressionAudioFetcher(Protocol):
     implementations.
     """
 
-    def fetch(self, mined_form: str, reading: str) -> Path | None:
+    def fetch(
+        self,
+        mined_form: str,
+        reading: str,
+        cancelled_check: Callable[[], bool] | None = None,
+    ) -> Path | None:
         """Fetch pronunciation audio for a word.
 
         Args:
             mined_form: Word as mined onto the card (kanji/surface form).
             reading: Kana reading of the word (may be empty).
+            cancelled_check: Optional zero-argument callable that returns True
+                when the caller has requested cancellation.  Implementations
+                consult it at safe checkpoints (composite fetchers also between
+                members) and return None promptly when it fires — never raising,
+                writing no cache artifacts for the cancelled word.
 
         Returns:
             Path to an audio file, or None if unavailable.  Never raises.
