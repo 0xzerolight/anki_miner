@@ -148,7 +148,9 @@ class EpisodeProcessor:
             expression_audio_fetcher: Optional pronunciation audio fetcher
                 (Issue #73). Only consulted in Phase 3 when
                 ``config.expression_audio_enabled`` is on AND the
-                ``expression_audio`` Anki field is mapped.
+                ``expression_audio`` Anki field is mapped.  ``None`` is
+                only valid for test construction; the service factory always
+                provides a (possibly empty-chain) fetcher.
         """
         self.config = config
         self.subtitle_parser = subtitle_parser

@@ -65,7 +65,7 @@ class AudioPackRegistry:
                 continue
             try:
                 meta = read_meta_cached(db)
-            except (sqlite3.DatabaseError, OSError) as exc:
+            except (sqlite3.Error, OSError) as exc:
                 logger.warning("Skipping corrupt audio pack %s: %s", child.name, exc)
                 continue
 
