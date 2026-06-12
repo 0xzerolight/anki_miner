@@ -1024,7 +1024,9 @@ class TestExtractCoverArt:
     def _expected_cover_name(media_file: Path) -> str:
         import hashlib
 
-        digest = hashlib.sha1(f"{media_file}{media_file.stat().st_size}".encode()).hexdigest()[:12]
+        digest = hashlib.sha1(f"{media_file}:{media_file.stat().st_size}".encode(), usedforsecurity=False).hexdigest()[
+            :12
+        ]
         return f"audiobook_cover_{digest}.jpg"
 
     def test_correct_ffmpeg_args_and_deterministic_filename(self, service, audiobook_file, tmp_path):
@@ -1043,7 +1045,7 @@ class TestExtractCoverArt:
         assert cmd[0] == "ffmpeg"
         assert "-y" in cmd
         assert cmd[cmd.index("-i") + 1] == str(audiobook_file)
-        assert cmd[cmd.index("-map") + 1] == "0:v"
+        assert cmd[cmd.index("-map") + 1] == "0:v:0"
         assert cmd[cmd.index("-frames:v") + 1] == "1"
         assert cmd[-1] == str(tmp_path / expected_name)
 
@@ -1236,6 +1238,39 @@ class TestAudioOnlyMode:
         mock_em.assert_called_once()
         _, kwargs = mock_em.call_args
         assert kwargs.get("audio_only") is True
+
+    def test_batch_forwards_proc_registry_to_extract_cover_art(
+        self, service, audiobook_file, make_tokenized_word, tmp_path
+    ):
+        """Cover extraction must join the batch's cancel registry so kill_all reaches it."""
+        from anki_miner.services.media_extractor import _FfmpegProcRegistry
+
+        words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
+
+        with (
+            patch.object(service, "extract_cover_art", return_value=None) as mock_cover,
+            patch.object(service, "extract_media", side_effect=self._fake_audio_extract(tmp_path)),
+        ):
+            service.extract_media_batch(audiobook_file, words, audio_only=True)
+
+        mock_cover.assert_called_once()
+        _, kwargs = mock_cover.call_args
+        assert isinstance(kwargs.get("proc_registry"), _FfmpegProcRegistry)
+
+    def test_precancelled_batch_skips_cover_art_and_returns_empty(
+        self, service, audiobook_file, make_tokenized_word, tmp_path
+    ):
+        """Cancellation set before the batch starts must not run cover extraction."""
+        words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
+
+        with (
+            patch.object(service, "extract_cover_art") as mock_cover,
+            patch.object(service, "extract_media", side_effect=self._fake_audio_extract(tmp_path)),
+        ):
+            result = service.extract_media_batch(audiobook_file, words, cancelled_check=lambda: True, audio_only=True)
+
+        mock_cover.assert_not_called()
+        assert result == []
 
     def test_default_batch_does_not_extract_cover_art(self, service, video_file, make_tokenized_word, tmp_path):
         """Regression: audio_only=False keeps the screenshot filter and skips cover art."""
