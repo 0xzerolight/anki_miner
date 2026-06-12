@@ -205,6 +205,11 @@ class MediaExtractorService:
         # Audiobooks have no video stream, so the Picture field uses the
         # embedded cover art (attached_pic) instead — extracted once per book,
         # shared by every card. None (no cover) leaves the field blank.
+        # Cover extraction runs synchronously before the polling loop, where
+        # proc_registry.kill_all() cannot reach it from this thread — so honour
+        # an already-set cancellation before starting it, mirroring the loop.
+        if cancelled_check and cancelled_check():
+            return []
         cover_path: Path | None = None
         if audio_only:
             output_dir = temp_folder if temp_folder is not None else self.config.media_temp_folder
@@ -294,7 +299,7 @@ class MediaExtractorService:
         """Extract embedded cover art (attached_pic stream) from an audiobook.
 
         Audiobook formats (.m4b/.mp3) commonly embed the cover as an
-        attached_pic video stream; ``-map 0:v -frames:v 1`` pulls it out as a
+        attached_pic video stream; ``-map 0:v:0 -frames:v 1`` pulls it out as a
         single JPEG. The filename is keyed on the source path + size so
         AnkiConnect dedups the media file across cards and runs.
 
@@ -312,7 +317,7 @@ class MediaExtractorService:
             logger.warning("Cover art extraction skipped, cannot stat %s: %s", media_file, e)
             return None
 
-        digest = hashlib.sha1(f"{media_file}{size}".encode()).hexdigest()[:12]
+        digest = hashlib.sha1(f"{media_file}:{size}".encode(), usedforsecurity=False).hexdigest()[:12]
         output_path = temp_folder / f"audiobook_cover_{digest}.jpg"
 
         cmd = [
@@ -321,7 +326,8 @@ class MediaExtractorService:
             "-i",
             str(media_file),
             "-map",
-            "0:v",  # attached_pic is exposed as a video stream
+            "0:v:0",  # attached_pic is exposed as a video stream; first only —
+            # the single-image muxer fails on multi-stream maps
             "-frames:v",
             "1",
             str(output_path),
