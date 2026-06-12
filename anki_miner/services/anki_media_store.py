@@ -166,6 +166,7 @@ class AnkiMediaStore:
             for filename, src_path in [
                 (media.screenshot_filename, media.screenshot_path),
                 (media.audio_filename, media.audio_path),
+                (media.expression_audio_filename, media.expression_audio_path),
             ]:
                 if not filename or not src_path or not src_path.exists():
                     continue

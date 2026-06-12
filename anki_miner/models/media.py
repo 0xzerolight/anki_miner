@@ -12,6 +12,10 @@ class MediaData:
     audio_path: Path | None = None
     screenshot_filename: str | None = None
     audio_filename: str | None = None
+    # Pronunciation audio for the mined expression itself (Issue #73),
+    # distinct from audio_*, which is the sentence clip cut from the video.
+    expression_audio_path: Path | None = None
+    expression_audio_filename: str | None = None
 
     @property
     def has_screenshot(self) -> bool:
@@ -23,10 +27,17 @@ class MediaData:
         """Check if audio exists."""
         return self.audio_path is not None and self.audio_path.exists()
 
+    @property
+    def has_expression_audio(self) -> bool:
+        """Check if expression (pronunciation) audio exists."""
+        return self.expression_audio_path is not None and self.expression_audio_path.exists()
+
     def __str__(self) -> str:
         parts = []
         if self.has_screenshot:
             parts.append(f"Screenshot: {self.screenshot_filename}")
         if self.has_audio:
             parts.append(f"Audio: {self.audio_filename}")
+        if self.has_expression_audio:
+            parts.append(f"Expression audio: {self.expression_audio_filename}")
         return ", ".join(parts) if parts else "No media"
