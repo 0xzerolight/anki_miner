@@ -27,7 +27,7 @@ ABOUT_BLURB = (
 )
 
 ABOUT_SHORTCUTS: list[tuple[str, str]] = [
-    ("Ctrl+1..6", "Switch tabs"),
+    ("Ctrl+1..7", "Switch tabs"),
     ("Ctrl+T", "Cycle favorite themes"),
     ("Ctrl+,", "Open Settings"),
     ("Ctrl+Shift+V", "Run system validation"),
