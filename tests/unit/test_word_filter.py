@@ -575,6 +575,74 @@ class TestWordFilterService:
             assert result[1].sentence == "line2"
             assert result[1].start_time == 4.0
 
+        def test_line_with_non_mineable_unknown_rejected(self, test_config):
+            """Issue #74 repro: a line holding the target plus an unknown that
+            optional filters removed (e.g. outside max_frequency_rank) is NOT
+            i+1 — the learner still can't read that other word."""
+            service = WordFilterService(test_config)
+            word = create_word("心")
+            # 拝謁 is unknown but was frequency-filtered out of mineable_unknowns.
+            line = self._line({"心", "拝謁"}, text="拝謁させていただき 心より御礼申し上げます")
+
+            result = service.filter_i_plus_one([word], [line], all_unknown_lemmas={"心", "拝謁"})
+
+            assert result == []
+
+        def test_genuine_i_plus_one_line_preferred_over_false_one(self, test_config):
+            """Target's earliest line has a hidden (non-mineable) unknown; a
+            later line with only known words wins instead."""
+            service = WordFilterService(test_config)
+            word = create_word("X")
+            lines = [
+                self._line({"X", "rare"}, text="false i+1", start=0.0, end=1.0),
+                self._line({"X"}, text="true i+1", start=20.0, end=22.0),
+            ]
+
+            result = service.filter_i_plus_one([word], lines, all_unknown_lemmas={"X", "rare"})
+
+            assert len(result) == 1
+            assert result[0].sentence == "true i+1"
+            assert result[0].start_time == 20.0
+
+        def test_all_unknown_lemmas_none_falls_back_to_targets(self, test_config):
+            """Without all_unknown_lemmas the check degrades to the target set
+            (pre-#74 behavior): non-target lemmas on the line are ignored."""
+            service = WordFilterService(test_config)
+            word = create_word("X")
+            line = self._line({"X", "rare"}, text="kept")
+
+            result = service.filter_i_plus_one([word], [line])
+
+            assert len(result) == 1
+            assert result[0].sentence == "kept"
+
+        def test_all_unknown_lemmas_missing_target_still_matches(self, test_config):
+            """Defensive union: a caller-supplied set that omits a target lemma
+            must not make that target unmatchable on its own line."""
+            service = WordFilterService(test_config)
+            word = create_word("X")
+            line = self._line({"X"}, text="solo line")
+
+            result = service.filter_i_plus_one([word], [line], all_unknown_lemmas={"unrelated"})
+
+            assert len(result) == 1
+            assert result[0].sentence == "solo line"
+
+        def test_line_with_only_non_target_unknown_sets_no_entry(self, test_config):
+            """A line whose single unknown is non-mineable produces no i+1
+            entry for anyone — and the target still finds its later line."""
+            service = WordFilterService(test_config)
+            word = create_word("X")
+            lines = [
+                self._line({"rare"}, text="non-target solo", start=0.0, end=1.0),
+                self._line({"X"}, text="target solo", start=5.0, end=6.0),
+            ]
+
+            result = service.filter_i_plus_one([word], lines, all_unknown_lemmas={"X", "rare"})
+
+            assert len(result) == 1
+            assert result[0].sentence == "target solo"
+
         def test_empty_mineable_unknowns(self, test_config):
             """No mineable unknowns — returns []."""
             service = WordFilterService(test_config)

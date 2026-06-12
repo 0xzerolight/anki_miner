@@ -1939,7 +1939,7 @@ class TestIPlusOneFilter:
         subtitle_parser = MagicMock()
         word_filter = MagicMock()
         word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        word_filter.filter_i_plus_one.side_effect = lambda words, idx: words
+        word_filter.filter_i_plus_one.side_effect = lambda words, idx, all_unknown_lemmas=None: words
         media_extractor = MagicMock()
         definition_service = MagicMock()
         anki_service = MagicMock()
@@ -2030,10 +2030,43 @@ class TestIPlusOneFilter:
 
         mock_services["word_filter"].deduplicate_by_sentence.assert_not_called()
         mock_services["word_filter"].filter_i_plus_one.assert_called_once()
-        # Filter receives the unknown words and the line_index from the parser.
+        # Filter receives the unknown words, the line_index from the parser,
+        # and the full unknown-lemma snapshot (Issue #74).
         call_args = mock_services["word_filter"].filter_i_plus_one.call_args
         assert call_args[0][0] == [word]
         assert call_args[0][1] == [line]
+        assert call_args.kwargs["all_unknown_lemmas"] == {"食べる"}
+
+    def test_i_plus_one_sees_lemmas_dropped_by_frequency_filter(self, test_config, mock_services, tmp_path):
+        """Issue #74: the all_unknown_lemmas snapshot is taken BEFORE the
+        frequency filter, so an unknown word outside max_frequency_rank stays
+        visible to the i+1 check even though it is no longer mineable."""
+        config = self._config_with_flag(test_config, flag=True)
+        config = replace(config, max_frequency_rank=100)
+        common = _make_word("食べる")
+        rare = _make_word("拝謁", start_time=5.0)
+        line = _make_line_lemmas(lemmas=("食べる",))
+
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = (
+            [common, rare],
+            [line],
+        )
+        self._wire_happy_pipeline(mock_services, common, _make_media())
+        mock_services["word_filter"].filter_unknown.return_value = [common, rare]
+        # Frequency filter drops the rare word before i+1 runs.
+        mock_services["word_filter"].filter_by_frequency.return_value = [common]
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        call_args = mock_services["word_filter"].filter_i_plus_one.call_args
+        assert call_args[0][0] == [common]
+        assert call_args.kwargs["all_unknown_lemmas"] == {"食べる", "拝謁"}
 
     def test_runs_dedup_when_flag_off(self, test_config, mock_services, tmp_path):
         """With flag off, dedup runs and filter_i_plus_one does not."""
@@ -2069,7 +2102,7 @@ class TestIPlusOneFilter:
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
         # Pretend i+1 keeps only word1.
-        mock_services["word_filter"].filter_i_plus_one.side_effect = lambda words, idx: [word1]
+        mock_services["word_filter"].filter_i_plus_one.side_effect = lambda words, idx, all_unknown_lemmas=None: [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
@@ -2631,7 +2664,7 @@ class TestPhase2FilterOrdering:
         # All Phase-2 filters pass through so each one actually fires and the
         # pipeline reaches the next; signatures differ (positional vs kwargs).
         word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        word_filter.filter_i_plus_one.side_effect = lambda words, idx: words
+        word_filter.filter_i_plus_one.side_effect = lambda words, idx, all_unknown_lemmas=None: words
         word_filter.filter_by_sentence_length.side_effect = lambda words, **kw: words
         word_filter.filter_by_script_type.side_effect = lambda words, **kw: words
         media_extractor = MagicMock()
