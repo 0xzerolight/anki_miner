@@ -8,6 +8,10 @@ Purely additive infrastructure: no Qt, no I/O at import time. The CSS text is
 read lazily on demand via :func:`load_preset_css`. The ``"none"`` preset (and
 any unknown id) resolves to ``""`` so callers can compose it with custom CSS
 without special-casing.
+
+Every preset rule is guarded by miner-only ``ol[data-count]`` markup so the
+CSS never restyles Yomitan-exported glossary HTML in a shared note type
+(double indentation); enforced by ``TestPresetYomitanLeak``.
 """
 
 from __future__ import annotations
