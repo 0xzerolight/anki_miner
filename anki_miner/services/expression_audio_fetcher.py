@@ -6,6 +6,7 @@ import logging
 import os
 import tempfile
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import requests
@@ -73,7 +74,12 @@ class JPod101AudioFetcher:
         # Session() does no network I/O — it is safe to create here.
         self._session = requests.Session()
 
-    def fetch(self, mined_form: str, reading: str) -> Path | None:
+    def fetch(
+        self,
+        mined_form: str,
+        reading: str,
+        cancelled_check: Callable[[], bool] | None = None,
+    ) -> Path | None:
         """Fetch pronunciation audio for a word.
 
         Args:
@@ -83,11 +89,21 @@ class JPod101AudioFetcher:
                 endpoint guesses a reading for the kanji, which picks the wrong
                 pronunciation for homographs (e.g. 辛い → からい vs つらい) and
                 caches that incorrect audio permanently under the word's key.
+            cancelled_check: Optional zero-argument callable that returns True
+                when the caller has requested cancellation.  Consulted after
+                the input guards, again immediately before ``time.sleep``, and
+                once more before the network request.  When it returns True this
+                method returns None immediately — no cache writes, no .miss
+                marker.  Mid-request cancellation is NOT attempted: the timeout
+                (10 s) already bounds the worst-case stall per word.
 
         Returns:
             Path to a cached mp3, or None if unavailable.
         """
         if not mined_form.strip() or not reading.strip():
+            return None
+
+        if cancelled_check is not None and cancelled_check():
             return None
 
         stem = safe_filename(f"jpod101_{mined_form}_{reading}")
@@ -114,7 +130,13 @@ class JPod101AudioFetcher:
                 except OSError:
                     pass
 
+            if cancelled_check is not None and cancelled_check():
+                return None
+
             time.sleep(self._delay)
+
+            if cancelled_check is not None and cancelled_check():
+                return None
 
             # Valid words 301-redirect to a CDN mp3; requests follows
             # redirects by default, so the final body is the audio itself.
