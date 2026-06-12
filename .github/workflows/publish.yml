@@ -26,19 +26,39 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          # Find completed ci.yml runs for this exact SHA and require one that
-          # concluded "success". The tag must point at a merged commit whose CI
-          # already ran on main; otherwise fail closed.
-          RUNS=$(gh api --paginate \
-            "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=completed" \
-            --jq '[.workflow_runs[].conclusion]')
-          echo "CI conclusions for ${GITHUB_SHA}: ${RUNS}"
-          if echo "$RUNS" | grep -q '"success"'; then
-            echo "Green CI run found for tagged commit."
-          else
-            echo "::error::No successful ci.yml run for ${GITHUB_SHA}. Tag a commit whose CI passed on main."
-            exit 1
-          fi
+          # Wait for ci.yml on this SHA and require a "success" conclusion. The
+          # tag is often pushed together with the commit, so the CI run may be
+          # queued, in progress, or not yet registered when this gate starts
+          # (v2.6.2 failed exactly that race). Still fail closed: no CI run
+          # within the grace window, or CI finishing without success, fails.
+          GRACE=300      # seconds for a CI run to appear at all
+          DEADLINE=1800  # seconds total for CI to finish
+          while :; do
+            RUNS=$(gh api --paginate \
+              "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}" \
+              --jq '[.workflow_runs[] | {status, conclusion}]')
+            SUCCESS=$(echo "$RUNS" | jq '[.[] | select(.conclusion == "success")] | length')
+            PENDING=$(echo "$RUNS" | jq '[.[] | select(.status != "completed")] | length')
+            TOTAL=$(echo "$RUNS" | jq 'length')
+            if [ "$SUCCESS" -gt 0 ]; then
+              echo "Green CI run found for tagged commit."
+              break
+            fi
+            if [ "$TOTAL" -gt 0 ] && [ "$PENDING" -eq 0 ]; then
+              echo "::error::CI completed without success for ${GITHUB_SHA}. Fix CI, then re-tag."
+              exit 1
+            fi
+            if [ "$TOTAL" -eq 0 ] && [ "$SECONDS" -ge "$GRACE" ]; then
+              echo "::error::No ci.yml run appeared for ${GITHUB_SHA} within ${GRACE}s. Tag a commit pushed to main."
+              exit 1
+            fi
+            if [ "$SECONDS" -ge "$DEADLINE" ]; then
+              echo "::error::Timed out waiting for CI on ${GITHUB_SHA}."
+              exit 1
+            fi
+            echo "CI not complete yet (runs: ${TOTAL}, pending: ${PENDING}); retrying in 30s..."
+            sleep 30
+          done
 
   build:
     needs: ci-gate
