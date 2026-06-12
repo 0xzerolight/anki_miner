@@ -2736,3 +2736,190 @@ class TestPhase2FilterOrdering:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         mock_services["word_filter"].filter_by_sentence_length.assert_not_called()
+
+
+class TestExpressionAudio:
+    """Phase-3 expression (pronunciation) audio fetching (Issue #73)."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    @staticmethod
+    def _enabled_config(test_config):
+        """test_config with the toggle on and the expression_audio field mapped."""
+        return replace(
+            test_config,
+            expression_audio_enabled=True,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+
+    @staticmethod
+    def _word(lemma, reading, start_time=1.0):
+        word = _make_word(lemma, start_time=start_time)
+        word.expression_reading = reading
+        return word
+
+    @staticmethod
+    def _wire_pipeline(mock_services, pairs):
+        words = [word for word, _ in pairs]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = pairs
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"] * len(words)
+        mock_services["anki_service"].create_cards_batch.return_value = len(words)
+
+    def test_enabled_fetches_per_word_and_fills_media(self, test_config, mock_services, tmp_path):
+        """Fetcher called with (mined_form, expression_reading); hits fill MediaData, misses stay None."""
+        config = self._enabled_config(test_config)
+        pairs = [
+            (self._word("食べる", "たべる"), _make_media("taberu")),
+            (self._word("走る", "はしる", 5.0), _make_media("hashiru")),
+        ]
+        self._wire_pipeline(mock_services, pairs)
+
+        audio_path = tmp_path / "jpod101_食べる_たべる.mp3"
+        fetcher = MagicMock()
+        fetcher.fetch.side_effect = [audio_path, None]
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.cards_created == 2
+        assert fetcher.fetch.call_count == 2
+        fetcher.fetch.assert_any_call("食べる", "たべる")
+        fetcher.fetch.assert_any_call("走る", "はしる")
+        hit_media = pairs[0][1]
+        assert hit_media.expression_audio_path == audio_path
+        assert hit_media.expression_audio_filename == audio_path.name
+        miss_media = pairs[1][1]
+        assert miss_media.expression_audio_path is None
+        assert miss_media.expression_audio_filename is None
+
+    def test_disabled_does_not_fetch(self, test_config, mock_services, tmp_path):
+        """expression_audio_enabled=False ⇒ fetcher never called, even with the field mapped."""
+        config = replace(
+            test_config,
+            expression_audio_enabled=False,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
+        self._wire_pipeline(mock_services, pairs)
+        fetcher = MagicMock()
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        fetcher.fetch.assert_not_called()
+
+    def test_blank_field_mapping_does_not_fetch(self, test_config, mock_services, tmp_path):
+        """Enabled but anki_fields['expression_audio'] blank ⇒ fetcher never called."""
+        config = replace(
+            test_config,
+            expression_audio_enabled=True,
+            anki_fields={**test_config.anki_fields, "expression_audio": ""},
+        )
+        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
+        self._wire_pipeline(mock_services, pairs)
+        fetcher = MagicMock()
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        fetcher.fetch.assert_not_called()
+
+    def test_no_fetcher_injected_no_crash(self, test_config, mock_services, tmp_path):
+        """Enabled + field mapped but fetcher=None ⇒ pipeline completes, no fetch."""
+        config = self._enabled_config(test_config)
+        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
+        self._wire_pipeline(mock_services, pairs)
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.cards_created == 1
+        assert pairs[0][1].expression_audio_path is None
+
+    def test_cancel_mid_loop_stops_fetching(self, test_config, mock_services, tmp_path):
+        """Cancellation between fetches stops the loop and yields a cancelled result."""
+        config = self._enabled_config(test_config)
+        pairs = [
+            (self._word("食べる", "たべる"), _make_media("taberu")),
+            (self._word("走る", "はしる", 5.0), _make_media("hashiru")),
+        ]
+        self._wire_pipeline(mock_services, pairs)
+
+        fetcher = MagicMock()
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+
+        def _fetch_then_cancel(mined_form, reading):
+            processor.cancel()
+            return tmp_path / "a.mp3"
+
+        fetcher.fetch.side_effect = _fetch_then_cancel
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert fetcher.fetch.call_count == 1
+        assert "Processing cancelled by user" in result.errors
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
+
+    def test_presenter_receives_summary_line(self, test_config, mock_services, tmp_path):
+        """Presenter gets the 'Expression audio: X/Y fetched' info line."""
+        config = self._enabled_config(test_config)
+        pairs = [
+            (self._word("食べる", "たべる"), _make_media("taberu")),
+            (self._word("走る", "はしる", 5.0), _make_media("hashiru")),
+        ]
+        self._wire_pipeline(mock_services, pairs)
+
+        fetcher = MagicMock()
+        fetcher.fetch.side_effect = [tmp_path / "a.mp3", None]
+        presenter = MagicMock()
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=presenter,
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        presenter.show_info.assert_any_call("Expression audio: 1/2 fetched")

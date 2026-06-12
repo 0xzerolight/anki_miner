@@ -211,6 +211,26 @@ def test_anki_fields_includes_source_default():
     assert cfg.anki_fields["source"] == ""
 
 
+class TestExpressionAudioConfig:
+    """Tests for expression audio config fields (Issue #73)."""
+
+    def test_expression_audio_enabled_defaults_false(self):
+        """expression_audio_enabled must default to False (opt-in feature)."""
+        cfg = AnkiMinerConfig()
+        assert cfg.expression_audio_enabled is False
+
+    def test_expression_audio_delay_defaults_0_2(self):
+        """expression_audio_delay must default to 0.2 seconds."""
+        cfg = AnkiMinerConfig()
+        assert cfg.expression_audio_delay == 0.2
+
+    def test_anki_fields_includes_expression_audio_default(self):
+        """anki_fields must include 'expression_audio' key defaulting to empty string."""
+        cfg = AnkiMinerConfig()
+        assert "expression_audio" in cfg.anki_fields
+        assert cfg.anki_fields["expression_audio"] == ""
+
+
 def test_dictionary_chain_replace():
     from dataclasses import replace
 
