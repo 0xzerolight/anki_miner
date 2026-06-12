@@ -1010,6 +1010,289 @@ class TestExtractMediaBatch:
         assert "ffmpeg exploded" in recording_progress.errors[0][1]
 
 
+class TestExtractCoverArt:
+    """Tests for extract_cover_art (audiobook attached_pic extraction)."""
+
+    @pytest.fixture
+    def audiobook_file(self, tmp_path):
+        """A fake audiobook file that exists on disk (stat must succeed)."""
+        f = tmp_path / "book.m4b"
+        f.write_bytes(b"fake-m4b-content")
+        return f
+
+    @staticmethod
+    def _expected_cover_name(media_file: Path) -> str:
+        import hashlib
+
+        digest = hashlib.sha1(f"{media_file}:{media_file.stat().st_size}".encode(), usedforsecurity=False).hexdigest()[
+            :12
+        ]
+        return f"audiobook_cover_{digest}.jpg"
+
+    def test_correct_ffmpeg_args_and_deterministic_filename(self, service, audiobook_file, tmp_path):
+        """Should map the attached_pic stream to a single jpg with a content-keyed name."""
+        mock_proc = _popen_mock()
+        expected_name = self._expected_cover_name(audiobook_file)
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            result = service.extract_cover_art(audiobook_file, tmp_path)
+
+        assert result == tmp_path / expected_name
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[0] == "ffmpeg"
+        assert "-y" in cmd
+        assert cmd[cmd.index("-i") + 1] == str(audiobook_file)
+        assert cmd[cmd.index("-map") + 1] == "0:v:0"
+        assert cmd[cmd.index("-frames:v") + 1] == "1"
+        assert cmd[-1] == str(tmp_path / expected_name)
+
+    def test_same_file_yields_same_filename_across_calls(self, service, audiobook_file, tmp_path):
+        """Deterministic name lets AnkiConnect dedup the cover across cards and runs."""
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc),
+            patch.object(Path, "exists", return_value=True),
+        ):
+            first = service.extract_cover_art(audiobook_file, tmp_path)
+            second = service.extract_cover_art(audiobook_file, tmp_path)
+
+        assert first is not None
+        assert first == second
+
+    def test_returns_none_on_ffmpeg_failure(self, service, audiobook_file, tmp_path):
+        """No attached_pic stream → ffmpeg exits non-zero → None."""
+        mock_proc = _popen_mock(returncode=1, stderr="Stream map '0:v' matches no streams")
+
+        with patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc):
+            result = service.extract_cover_art(audiobook_file, tmp_path)
+
+        assert result is None
+
+    def test_returns_none_when_output_missing_despite_success(self, service, audiobook_file, tmp_path):
+        """ffmpeg exit 0 but no file on disk → None."""
+        mock_proc = _popen_mock()
+
+        with patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc):
+            result = service.extract_cover_art(audiobook_file, tmp_path)
+
+        assert result is None
+
+    def test_returns_none_when_media_file_missing(self, service, tmp_path):
+        """Unstatable input file → None without spawning ffmpeg."""
+        ghost = tmp_path / "missing.m4b"
+
+        with patch(f"{MODULE}.subprocess.Popen") as mock_popen:
+            result = service.extract_cover_art(ghost, tmp_path)
+
+        assert result is None
+        mock_popen.assert_not_called()
+
+
+class TestAudioOnlyMode:
+    """Tests for audio_only mode (audiobook mining, Issue #71)."""
+
+    @pytest.fixture
+    def audiobook_file(self, tmp_path):
+        """A fake audiobook file that exists on disk."""
+        f = tmp_path / "book.m4b"
+        f.write_bytes(b"fake-m4b-content")
+        return f
+
+    def _fake_audio_extract(self, tmp_path):
+        """Build an extract_media side_effect producing audio-only MediaData."""
+
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            audio = tmp_path / f"{word.lemma}_audio.mp3"
+            audio.write_bytes(b"\xff\xfbfake-mp3")
+            return MediaData(audio_path=audio, audio_filename=audio.name)
+
+        return fake_extract
+
+    def test_extract_media_audio_only_skips_screenshot_ffmpeg(self, service, audiobook_file, make_tokenized_word):
+        """audio_only=True must never spawn a screenshot ffmpeg process."""
+        word = make_tokenized_word(lemma="食べる", start_time=1.0, duration=2.0)
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen") as mock_popen,
+            patch.object(service, "_extract_audio", return_value=True),
+        ):
+            result = service.extract_media(audiobook_file, word, audio_only=True)
+
+        # No ffmpeg spawned at all: screenshot skipped, audio mocked out.
+        mock_popen.assert_not_called()
+        assert result.screenshot_path is None
+        assert result.screenshot_filename is None
+        assert result.audio_path is not None
+
+    def test_default_audio_only_false_still_extracts_screenshot(self, service, audiobook_file, make_tokenized_word):
+        """Regression: without audio_only, the screenshot path runs as before."""
+        word = make_tokenized_word(lemma="食べる", start_time=1.0, duration=2.0)
+
+        with (
+            patch.object(service, "_extract_screenshot", return_value=True) as mock_ss,
+            patch.object(service, "_extract_audio", return_value=True),
+        ):
+            result = service.extract_media(audiobook_file, word)
+
+        mock_ss.assert_called_once()
+        assert result.screenshot_path is not None
+
+    def test_batch_extracts_cover_art_exactly_once(self, service, audiobook_file, make_tokenized_word, tmp_path):
+        """Cover art is per-book, not per-word: one extraction per batch."""
+        words = [
+            make_tokenized_word(lemma="食べる", start_time=1.0),
+            make_tokenized_word(lemma="飲む", start_time=3.0),
+            make_tokenized_word(lemma="読む", start_time=5.0),
+        ]
+        cover = tmp_path / "audiobook_cover_abc123def456.jpg"
+        cover.write_bytes(b"\xff\xd8fake-jpeg")
+
+        with (
+            patch.object(service, "extract_cover_art", return_value=cover) as mock_cover,
+            patch.object(service, "extract_media", side_effect=self._fake_audio_extract(tmp_path)),
+        ):
+            result = service.extract_media_batch(audiobook_file, words, audio_only=True)
+
+        mock_cover.assert_called_once()
+        assert len(result) == 3
+
+    def test_batch_assigns_shared_cover_to_every_word(self, service, audiobook_file, make_tokenized_word, tmp_path):
+        """Every word's MediaData carries the same cover path/filename."""
+        words = [
+            make_tokenized_word(lemma="食べる", start_time=1.0),
+            make_tokenized_word(lemma="飲む", start_time=3.0),
+        ]
+        cover = tmp_path / "audiobook_cover_abc123def456.jpg"
+        cover.write_bytes(b"\xff\xd8fake-jpeg")
+
+        with (
+            patch.object(service, "extract_cover_art", return_value=cover),
+            patch.object(service, "extract_media", side_effect=self._fake_audio_extract(tmp_path)),
+        ):
+            result = service.extract_media_batch(audiobook_file, words, audio_only=True)
+
+        assert len(result) == 2
+        for _, media in result:
+            assert media.screenshot_path == cover
+            assert media.screenshot_filename == cover.name
+
+    def test_batch_filter_keeps_has_audio_drops_audio_failed(
+        self, service, audiobook_file, make_tokenized_word, tmp_path
+    ):
+        """audio_only filter keys on has_audio: audio-failed words are dropped."""
+        words = [
+            make_tokenized_word(lemma="成功", start_time=1.0),
+            make_tokenized_word(lemma="失敗", start_time=3.0),
+        ]
+
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            if word.lemma == "成功":
+                audio = tmp_path / "ok.mp3"
+                audio.write_bytes(b"\xff\xfbfake-mp3")
+                return MediaData(audio_path=audio, audio_filename="ok.mp3")
+            return MediaData()  # audio extraction failed
+
+        with (
+            patch.object(service, "extract_cover_art", return_value=None),
+            patch.object(service, "extract_media", side_effect=fake_extract),
+        ):
+            result = service.extract_media_batch(audiobook_file, words, audio_only=True)
+
+        assert len(result) == 1
+        assert result[0][0].lemma == "成功"
+
+    def test_missing_cover_art_never_excludes_words(self, service, audiobook_file, make_tokenized_word, tmp_path):
+        """No embedded cover → screenshot fields stay None, words still kept."""
+        words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
+
+        with (
+            patch.object(service, "extract_cover_art", return_value=None),
+            patch.object(service, "extract_media", side_effect=self._fake_audio_extract(tmp_path)),
+        ):
+            result = service.extract_media_batch(audiobook_file, words, audio_only=True)
+
+        assert len(result) == 1
+        _, media = result[0]
+        assert media.screenshot_path is None
+        assert media.screenshot_filename is None
+        assert media.has_audio
+
+    def test_batch_forwards_audio_only_to_extract_media(self, service, audiobook_file, make_tokenized_word, tmp_path):
+        """extract_media_batch must pass audio_only=True to every extract_media call."""
+        words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
+
+        with (
+            patch.object(service, "extract_cover_art", return_value=None),
+            patch.object(service, "extract_media", side_effect=self._fake_audio_extract(tmp_path)) as mock_em,
+        ):
+            service.extract_media_batch(audiobook_file, words, audio_only=True)
+
+        mock_em.assert_called_once()
+        _, kwargs = mock_em.call_args
+        assert kwargs.get("audio_only") is True
+
+    def test_batch_forwards_proc_registry_to_extract_cover_art(
+        self, service, audiobook_file, make_tokenized_word, tmp_path
+    ):
+        """Cover extraction must join the batch's cancel registry so kill_all reaches it."""
+        from anki_miner.services.media_extractor import _FfmpegProcRegistry
+
+        words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
+
+        with (
+            patch.object(service, "extract_cover_art", return_value=None) as mock_cover,
+            patch.object(service, "extract_media", side_effect=self._fake_audio_extract(tmp_path)),
+        ):
+            service.extract_media_batch(audiobook_file, words, audio_only=True)
+
+        mock_cover.assert_called_once()
+        _, kwargs = mock_cover.call_args
+        assert isinstance(kwargs.get("proc_registry"), _FfmpegProcRegistry)
+
+    def test_precancelled_batch_skips_cover_art_and_returns_empty(
+        self, service, audiobook_file, make_tokenized_word, tmp_path
+    ):
+        """Cancellation set before the batch starts must not run cover extraction."""
+        words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
+
+        with (
+            patch.object(service, "extract_cover_art") as mock_cover,
+            patch.object(service, "extract_media", side_effect=self._fake_audio_extract(tmp_path)),
+        ):
+            result = service.extract_media_batch(audiobook_file, words, cancelled_check=lambda: True, audio_only=True)
+
+        mock_cover.assert_not_called()
+        assert result == []
+
+    def test_default_batch_does_not_extract_cover_art(self, service, video_file, make_tokenized_word, tmp_path):
+        """Regression: audio_only=False keeps the screenshot filter and skips cover art."""
+        words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
+
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            ss = tmp_path / "shot.jpg"
+            ss.write_bytes(b"\xff\xd8fake")
+            return MediaData(screenshot_path=ss, screenshot_filename="shot.jpg")
+
+        with (
+            patch.object(service, "extract_cover_art") as mock_cover,
+            patch.object(service, "extract_media", side_effect=fake_extract),
+        ):
+            result = service.extract_media_batch(video_file, words)
+
+        mock_cover.assert_not_called()
+        assert len(result) == 1
+
+
 # ---------------------------------------------------------------------------
 # Helper: import AudioStream from public API
 # ---------------------------------------------------------------------------
