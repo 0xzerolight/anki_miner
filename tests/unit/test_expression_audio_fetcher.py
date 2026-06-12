@@ -1,12 +1,14 @@
-"""Tests for JPod101AudioFetcher."""
+"""Tests for JPod101AudioFetcher and ChainedExpressionAudioFetcher."""
 
 import hashlib
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import requests
 
 from anki_miner.services.expression_audio_fetcher import (
     JPOD101_NOT_FOUND_SHA256,
+    ChainedExpressionAudioFetcher,
     JPod101AudioFetcher,
 )
 
@@ -225,3 +227,65 @@ class TestJPod101AudioFetcher:
     def test_not_found_hash_constant_value(self):
         """The placeholder hash matches the value Yomitan hardcodes."""
         assert JPOD101_NOT_FOUND_SHA256 == "ae6398b5a27bc8c0a771df6c907ade794be15518174773c58c7c7ddd17098906"
+
+
+class TestChainedExpressionAudioFetcher:
+    """Tests for ChainedExpressionAudioFetcher."""
+
+    def _stub(self, return_value: Path | None) -> object:
+        """Return a minimal stub fetcher that returns ``return_value``."""
+
+        class _Stub:
+            def __init__(self, rv: Path | None) -> None:
+                self._rv = rv
+                self.calls: list[tuple[str, str]] = []
+
+            def fetch(self, mined_form: str, reading: str) -> Path | None:
+                self.calls.append((mined_form, reading))
+                return self._rv
+
+        return _Stub(return_value)
+
+    def test_first_hit_returned_second_never_called(self, tmp_path):
+        """When the first fetcher returns a Path, the second is not consulted."""
+        audio = tmp_path / "word.mp3"
+        audio.touch()
+        first = self._stub(audio)
+        second = self._stub(tmp_path / "other.mp3")
+        chain = ChainedExpressionAudioFetcher([first, second])  # type: ignore[arg-type]
+
+        result = chain.fetch("食べる", "たべる")
+
+        assert result == audio
+        assert len(first.calls) == 1  # type: ignore[union-attr]
+        assert len(second.calls) == 0  # type: ignore[union-attr]
+
+    def test_first_none_second_consulted_and_returned(self, tmp_path):
+        """When the first fetcher returns None, the second is tried and its Path returned."""
+        audio = tmp_path / "word.mp3"
+        audio.touch()
+        first = self._stub(None)
+        second = self._stub(audio)
+        chain = ChainedExpressionAudioFetcher([first, second])  # type: ignore[arg-type]
+
+        result = chain.fetch("食べる", "たべる")
+
+        assert result == audio
+        assert len(first.calls) == 1  # type: ignore[union-attr]
+        assert len(second.calls) == 1  # type: ignore[union-attr]
+
+    def test_all_none_returns_none(self, tmp_path):
+        """When every fetcher returns None, the chain returns None."""
+        chain = ChainedExpressionAudioFetcher([self._stub(None), self._stub(None)])  # type: ignore[arg-type]
+
+        result = chain.fetch("食べる", "たべる")
+
+        assert result is None
+
+    def test_empty_chain_returns_none(self):
+        """An empty fetcher list returns None immediately."""
+        chain = ChainedExpressionAudioFetcher([])
+
+        result = chain.fetch("食べる", "たべる")
+
+        assert result is None
