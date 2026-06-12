@@ -263,6 +263,42 @@ class TestProcessEpisode:
             extra_fields={"source": expected_source},
         )
 
+    def test_audio_only_flag_reaches_extract_media_batch(self, processor, mock_services, tmp_path):
+        """audio_only=True is threaded down to extract_media_batch."""
+        video = tmp_path / "book.m4b"
+        sub = tmp_path / "book.srt"
+        word = _make_word()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor.process_episode(video, sub, audio_only=True)
+
+        me_kwargs = mock_services["media_extractor"].extract_media_batch.call_args.kwargs
+        assert me_kwargs["audio_only"] is True
+
+    def test_audio_only_defaults_false(self, processor, mock_services, tmp_path):
+        """Default process_episode call passes audio_only=False to the extractor."""
+        video = tmp_path / "ep01.mkv"
+        sub = tmp_path / "ep01.ass"
+        word = _make_word()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor.process_episode(video, sub)
+
+        me_kwargs = mock_services["media_extractor"].extract_media_batch.call_args.kwargs
+        assert me_kwargs.get("audio_only", False) is False
+
     def test_subtitle_parse_error_handling(self, processor, mock_services, tmp_path):
         """SubtitleParseError should be caught and returned as error."""
         mock_services["subtitle_parser"].parse_subtitle_file.side_effect = SubtitleParseError("parse failed")
