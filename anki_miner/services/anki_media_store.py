@@ -150,7 +150,8 @@ class AnkiMediaStore:
 
         Sets ``self.last_store_failures`` to the count of files that could
         not be stored so callers can surface it to the user instead of silently
-        creating cards with empty media fields.
+        creating cards with empty media fields.  Files whose source path was set
+        but vanished from disk before upload are also counted as failures.
 
         Args:
             word_data_list: List of CardPayload objects whose media should be uploaded
