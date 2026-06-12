@@ -27,10 +27,17 @@ class MediaData:
         """Check if audio exists."""
         return self.audio_path is not None and self.audio_path.exists()
 
+    @property
+    def has_expression_audio(self) -> bool:
+        """Check if expression (pronunciation) audio exists."""
+        return self.expression_audio_path is not None and self.expression_audio_path.exists()
+
     def __str__(self) -> str:
         parts = []
         if self.has_screenshot:
             parts.append(f"Screenshot: {self.screenshot_filename}")
         if self.has_audio:
             parts.append(f"Audio: {self.audio_filename}")
+        if self.has_expression_audio:
+            parts.append(f"Expression audio: {self.expression_audio_filename}")
         return ", ".join(parts) if parts else "No media"
