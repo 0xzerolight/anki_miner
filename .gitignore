@@ -79,3 +79,7 @@ Thumbs.db
 # Scratch output dir for demo-GIF regeneration (see gifs/gif-tools/README.md).
 # The tooling and the committed gifs/*.gif|mp4 are tracked; only scratch is hidden.
 gifs/test-gifs/
+
+# Logo design scratch (draft SVGs, downloaded fonts, generator scripts).
+# Only the picked logo is committed, into anki_miner/gui/resources/icons/.
+logo_drafts/
