@@ -490,7 +490,8 @@ class EpisodeProcessor:
         audio_track_override: int | None = None,
         audio_only: bool = False,
     ) -> list[tuple[TokenizedWord, MediaData]]:
-        """Phase 3: extract media (screenshots + audio) for each unknown word."""
+        """Phase 3: extract media (screenshots + audio; audio + cover art when
+        ``audio_only``) for each unknown word."""
         self.presenter.show_info("Step 3/5 — Extracting media from video")
         media_results: list[tuple[TokenizedWord, MediaData]] = self.media_extractor.extract_media_batch(
             video_file,
