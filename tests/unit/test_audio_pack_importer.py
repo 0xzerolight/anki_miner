@@ -11,7 +11,7 @@ import pytest
 from anki_miner.exceptions import SetupError
 from anki_miner.services.audio_packs.importer import (
     AudioPackImportResult,
-    _derive_pack_id,
+    derive_pack_id,
     import_audio_pack,
 )
 from anki_miner.services.audio_packs.storage import SCHEMA_VERSION, read_meta_cached
@@ -191,14 +191,14 @@ class TestDerivePackId:
         ],
     )
     def test_canonical_names(self, folder: str, expected: str):
-        assert _derive_pack_id(folder) == expected
+        assert derive_pack_id(folder) == expected
 
     def test_arbitrary_folder_slugified(self):
-        assert _derive_pack_id("My Audio Pack 2024") == "my-audio-pack-2024"
+        assert derive_pack_id("My Audio Pack 2024") == "my-audio-pack-2024"
 
     def test_arbitrary_folder_with_underscores(self):
         # underscores are non-alnum → replaced with hyphens
-        result = _derive_pack_id("some_pack_name")
+        result = derive_pack_id("some_pack_name")
         assert result == "some-pack-name"
 
     def test_pack_id_override_used(self, tmp_path: Path):
@@ -297,7 +297,7 @@ class TestZeroEntriesAndBadInput:
             encoding="utf-8",
         )
         dest = tmp_path / "out"
-        pack_id = _derive_pack_id(pack.name)
+        pack_id = derive_pack_id(pack.name)
 
         with pytest.raises(SetupError):
             import_audio_pack(pack, dest)
@@ -339,7 +339,7 @@ class TestCancellation:
         with pytest.raises(SetupError, match="cancelled"):
             import_audio_pack(pack, dest, cancel_check=lambda: True)
 
-        pack_id = _derive_pack_id(pack.name)
+        pack_id = derive_pack_id(pack.name)
         assert not (dest / pack_id).exists()
 
     def test_cancel_leaves_no_staging_leftovers(self, tmp_path: Path):
