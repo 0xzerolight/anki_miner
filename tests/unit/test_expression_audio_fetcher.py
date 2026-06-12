@@ -174,6 +174,33 @@ class TestJPod101AudioFetcher:
         assert ":" not in result.name
         assert "\\" not in result.name
 
+    def test_cache_dir_created_lazily_on_first_fetch(self, tmp_path):
+        """mkdir is NOT called in __init__; it runs lazily inside fetch()."""
+        cache_dir = tmp_path / "deep" / "nested" / "cache"
+        assert not cache_dir.exists()
+        fetcher = JPod101AudioFetcher(cache_dir=cache_dir, delay=0)
+        assert not cache_dir.exists(), "mkdir must not be called in __init__"
+
+        with patch(f"{MODULE}.requests.get", return_value=_response()):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is not None
+        assert cache_dir.exists()
+        assert result.parent == cache_dir
+
+    def test_write_bytes_oserror_returns_none_no_files_left(self, tmp_path):
+        """If writing the mp3 raises OSError, fetch returns None and leaves no files."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with (
+            patch(f"{MODULE}.requests.get", return_value=_response()),
+            patch("pathlib.Path.write_bytes", side_effect=OSError("disk full")),
+        ):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is None
+        assert not list(tmp_path.glob("*.mp3"))
+        assert not list(tmp_path.glob("*.miss"))
+
     def test_not_found_hash_constant_value(self):
         """The placeholder hash matches the value Yomitan hardcodes."""
         assert JPOD101_NOT_FOUND_SHA256 == "ae6398b5a27bc8c0a771df6c907ade794be15518174773c58c7c7ddd17098906"
