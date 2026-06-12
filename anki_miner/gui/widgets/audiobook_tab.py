@@ -294,8 +294,9 @@ class AudiobookTab(MiningTabBase):
 
         item = self._queue.add(Path(audio_text), Path(sub_text))
         self._render_new_item(item)
-        # Clear the audio picker first: its path_changed("") cannot re-trigger
-        # the auto-fill, so both fields end up empty for the next pair.
+        # Clearing is order-independent: _on_audio_path_changed bails on empty
+        # text, so the pickers can be cleared in any order without the
+        # auto-fill re-triggering.
         self.audio_selector.clear()
         self.subtitle_selector.clear()
         self._recompute_buttons()

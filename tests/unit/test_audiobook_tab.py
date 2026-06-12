@@ -228,6 +228,22 @@ class TestRunStartup:
         assert tab.worker_thread is not None
         tab.worker_thread.start.assert_called_once()
 
+    def test_mine_wires_worker_signals_to_slots(self, tab, tmp_path):
+        """Each worker signal is connected to the matching tab slot.
+
+        The worker is mocked, so a typo'd signal name in _start_run would
+        otherwise go unnoticed — assert every connect explicitly.
+        """
+        _add_pair(tab, tmp_path)
+        tab._on_mine_clicked()
+        worker = tab.worker_thread
+
+        worker.item_started.connect.assert_called_once_with(tab._on_item_started)
+        worker.item_progress.connect.assert_called_once_with(tab._on_item_progress)
+        worker.item_finished.connect.assert_called_once_with(tab._on_item_finished)
+        worker.queue_finished.connect.assert_called_once_with(tab._on_queue_finished)
+        worker.finished.connect.assert_called_once_with(tab._on_worker_finished)
+
     def test_preview_constructs_queue_worker_preview_true(self, tab, tmp_path):
         _add_pair(tab, tmp_path)
         queue_cls = tab._queue_worker_cls
@@ -418,6 +434,37 @@ class TestPerItemSignals:
         # Must not propagate.
         tab._on_item_finished(0, MagicMock(cards_created=1), None, 1)
         assert item.status == AudiobookItemStatus.COMPLETED
+
+    def test_item_started_out_of_range_idx_is_noop(self, tab, tmp_path):
+        """An idx beyond the run snapshot must not raise or touch any state."""
+        item = _add_pair(tab, tmp_path)
+        tab._on_mine_clicked()
+        status_before = tab.progress_widget.status_label.text()
+
+        tab._on_item_started(99)
+
+        assert item.status == AudiobookItemStatus.READY
+        assert tab.progress_widget.status_label.text() == status_before
+
+    def test_item_started_with_no_run_snapshot_is_noop(self, tab):
+        # No run started — _run_items is empty.
+        tab._on_item_started(99)
+        assert tab._queue.all_items() == []
+
+    def test_item_finished_out_of_range_idx_is_noop(self, tab, tmp_path):
+        item = _add_pair(tab, tmp_path)
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+
+        tab._on_item_finished(99, None, "err", 1)
+
+        assert item.status == AudiobookItemStatus.PROCESSING
+        assert item.error_message is None
+        tab._presenter.show_processing_result.assert_not_called()
+
+    def test_item_finished_with_no_run_snapshot_is_noop(self, tab):
+        tab._on_item_finished(99, None, "err", 1)
+        tab._presenter.show_processing_result.assert_not_called()
 
 
 class TestQueueFinished:
