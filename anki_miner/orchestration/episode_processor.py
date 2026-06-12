@@ -33,8 +33,8 @@ from anki_miner.utils import ensure_directory
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
     from anki_miner.models import LineLemmas
-    from anki_miner.services.expression_audio_fetcher import JPod101AudioFetcher
     from anki_miner.services.frequency_service import FrequencyService
     from anki_miner.services.known_word_db import KnownWordDB
     from anki_miner.services.pitch_accent_service import PitchAccentService
@@ -125,7 +125,7 @@ class EpisodeProcessor:
         wordset_service: WordsetService | None = None,
         stats_service: StatsService | None = None,
         youtube_fetcher: YouTubeFetcherService | None = None,
-        expression_audio_fetcher: JPod101AudioFetcher | None = None,
+        expression_audio_fetcher: ExpressionAudioFetcher | None = None,
     ):
         """Initialize the episode processor.
 
@@ -145,8 +145,8 @@ class EpisodeProcessor:
             stats_service: Optional statistics recording service
             youtube_fetcher: Optional YouTube fetcher service. Required for
                 ``process_youtube_url``; unused by ``process_episode``.
-            expression_audio_fetcher: Optional JPod101 pronunciation audio
-                fetcher (Issue #73). Only consulted in Phase 3 when
+            expression_audio_fetcher: Optional pronunciation audio fetcher
+                (Issue #73). Only consulted in Phase 3 when
                 ``config.expression_audio_enabled`` is on AND the
                 ``expression_audio`` Anki field is mapped.
         """

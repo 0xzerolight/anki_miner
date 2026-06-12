@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
@@ -53,7 +54,7 @@ class Services:
     word_list_service: WordListService | None
     wordset_service: WordsetService | None
     youtube_fetcher: YouTubeFetcherService
-    expression_audio_fetcher: JPod101AudioFetcher
+    expression_audio_fetcher: ExpressionAudioFetcher
     load_result: ServiceLoadResult
 
 
