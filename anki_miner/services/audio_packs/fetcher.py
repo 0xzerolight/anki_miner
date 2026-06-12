@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
 import sqlite3
 from pathlib import Path
 
@@ -41,6 +42,15 @@ class LocalAudioPackFetcher:
         self._pack_dir = pack_dir.resolve()
         self._pack_id = pack_id
         self._cache_dir = cache_dir
+
+    @property
+    def pack_id(self) -> str:
+        """Identifier for this audio pack (read-only).
+
+        Used by the service factory to align registry fetchers with
+        config chain entries when composing the final audio chain.
+        """
+        return self._pack_id
 
     # ------------------------------------------------------------------
     # ExpressionAudioFetcher Protocol
@@ -100,8 +110,6 @@ class LocalAudioPackFetcher:
             try:
                 self._cache_dir.mkdir(parents=True, exist_ok=True)
                 part_path = cache_path.with_suffix(orig_suffix + ".part")
-                import shutil
-
                 shutil.copy2(candidate, part_path)
                 os.replace(part_path, cache_path)
             except OSError as exc:
