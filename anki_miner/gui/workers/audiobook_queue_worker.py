@@ -18,8 +18,10 @@ mirrors too):
 * ``queue_finished()`` — fires once at the bottom of ``run()``. There is no
   early-return suppression path here: YouTube suppresses it only on
   mid-fetch cancellation, and there is no fetch stage. A cancel mid-mine
-  surfaces as a cancelled ``ProcessingResult`` (no exception):
-  ``item_finished`` fires for that item and the loop-top check then stops
+  propagates via the worker's ``_cancel_event``, handed to
+  ``process_episode`` as ``cancel_event``: the processor's next phase
+  checkpoint returns a cancelled ``ProcessingResult`` (no exception),
+  ``item_finished`` fires for that item, and the loop-top check then stops
   the queue, with ``queue_finished`` still emitted.
 """
 
@@ -166,4 +168,8 @@ class AudiobookQueueWorker(ProcessorOwningWorker):
             curation_callback=self._curation_callback,
             episode_name_override=item.audio_file.stem,
             series_name_override="Audiobook",
+            # Bridge Stop mid-mine into the processor's phase checkpoints.
+            # Must be the event, NOT processor.cancel(): the sticky
+            # _cancelled flag poisons the shared processor across runs.
+            cancel_event=self._cancel_event,
         )

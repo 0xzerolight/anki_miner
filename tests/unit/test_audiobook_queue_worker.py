@@ -211,8 +211,11 @@ def test_cancel_mid_queue_stops_before_next_item(make_worker, mock_processor):
     worker_box: dict = {}
 
     def _cancel_mid_mine(audio, sub, **kw):
-        # User pressed Stop mid-pipeline: processor returns a cancelled
-        # result (no raise); the loop-top check must stop the queue.
+        # User pressed Stop mid-pipeline: the worker's _cancel_event (passed
+        # to process_episode as cancel_event) makes the processor's next
+        # phase checkpoint return a cancelled result (no raise) — modelled
+        # here by the mock's return — and the loop-top check must then stop
+        # the queue.
         worker_box["worker"].cancel()
         return "R_CANCELLED"
 
@@ -304,6 +307,17 @@ def test_process_episode_kwargs(make_worker, mock_processor):
     assert call.kwargs["episode_name_override"] == "my_audiobook"
     assert call.kwargs["series_name_override"] == "Audiobook"
     assert call.kwargs["curation_callback"] is _curation
+
+
+def test_worker_cancel_event_passed_to_process_episode(make_worker, mock_processor):
+    """Stop mid-mine must reach the processor's checkpoints: the worker's own
+    _cancel_event is handed to process_episode as cancel_event (NOT the sticky
+    processor.cancel(), which would poison the shared processor across runs)."""
+    worker = make_worker(items=[_make_item()])
+    worker.run()
+
+    kwargs = mock_processor.process_episode.call_args.kwargs
+    assert kwargs["cancel_event"] is worker._cancel_event
 
 
 def test_none_curation_callback_passed_through(make_worker, mock_processor):
