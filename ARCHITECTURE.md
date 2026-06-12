@@ -201,13 +201,14 @@ The `__post_init__` method uses `object.__setattr__` to convert string paths to 
 
 ### Window Structure
 
-`MainWindow` contains a `QTabWidget` with six tabs (registered in `gui/app.py` as Episode Mining, Batch Mining, Deck Builder, YouTube, Analytics, Settings):
+`MainWindow` contains a `QTabWidget` with seven tabs (registered in `gui/app.py` as Episode Mining, Batch Mining, Deck Builder, YouTube, Audiobook, Analytics, Settings):
 1. **SingleEpisodeTab** ("Episode Mining"): file selectors (drag-and-drop), subtitle offset control, process/preview buttons, log widget, progress widget.
 2. **BatchProcessingTab** ("Batch Mining"): folder selection, `BatchQueue` management via queue panel, dual progress bars.
 3. **Deck Builder**: whole-anime deck mining over a corpus of subtitles, driven by `DeckBuilderWorker` (see Orchestration). Two phases (aggregate/select, then build) separated by a GUI confirm gate.
 4. **YouTubeTab** (`gui/widgets/youtube_tab.py`): URL input + Add button, `QListWidget` queue of `YouTubeQueueItemWidget` rows (per-row status glyph, title, duration, sub source line, remove button), action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. Deck/note-type/tags widgets are global (see `AnkiSettingsPanel`). URL classification (plain video, playlist, video-in-playlist, Mix) is done without network access by `utils/youtube_url.py` (`classify_youtube_url`); playlist URLs dispatch to `YouTubePlaylistResolveWorker` then `YouTubePlaylistProbeWorker`; mixed watch+list URLs show a choice dialog; playlists over the `youtube_playlist_max` cap show an over-cap confirm.
-5. **AnalyticsTab**: mining statistics dashboard (queries `StatsService`).
-6. **SettingsTab**: config editing with sub-panels (Anki, Media, Dictionary, Filtering, YouTube, Themes). Emits `config_changed` signal.
+5. **AudiobookTab** (`gui/widgets/audiobook_tab.py`): audio + subtitle file selectors (subtitle auto-filled from a same-stem `.srt`/`.vtt`/`.ass`/`.ssa` next to the audio file) + Add button, `QListWidget` queue of `AudiobookQueueItemWidget` rows, action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. No probe stage — local pairs enter the queue READY. Mining runs `process_episode` with `audio_only=True`: no per-word screenshots; embedded cover art is extracted once per book and shared as every card's Picture (blank if absent), and the keep/drop decision keys on audio clip success. Stats/history identity: `series_name_override="Audiobook"`, `episode_name_override=<audio file stem>`.
+6. **AnalyticsTab**: mining statistics dashboard (queries `StatsService`).
+7. **SettingsTab**: config editing with sub-panels (Anki, Media, Dictionary, Filtering, YouTube, Themes). Emits `config_changed` signal.
 
 ### Worker Threads
 
@@ -226,6 +227,8 @@ Worker implementations:
 - `YouTubePlaylistProbeWorker` (`gui/workers/youtube_playlist_probe_worker.py`): `CancellableWorker` that iterates a list of video URLs sequentially, calling `probe_metadata` for each and emitting `entry_probed` / `entry_failed` per entry. Cancellation is polled between entries; failures continue to the next URL.
 - `YouTubeQueueWorker` (`gui/workers/youtube_queue_worker.py`): `CancellableWorker` subclass that drives a list of `YouTubeQueueItem` through fetch + mine sequentially with retry-once on `YouTubeFetchError`. Per-attempt workspace allocation under `media_temp_folder/youtube/run-<uuid>/`.
 - `YouTubeQueueItemWidget` (`gui/widgets/youtube_queue_item_widget.py`): pure renderer for one `YouTubeQueueItem` in the queue list.
+- `AudiobookQueueWorker` (`gui/workers/audiobook_queue_worker.py`): `CancellableWorker` subclass that drives a list of `AudiobookQueueItem` through `process_episode(audio_only=True)` sequentially. No fetch stage, no retry, no workspace allocation. Cancellation propagates into the processor via `cancel_event`, so a Stop mid-mine resolves at the next phase checkpoint without poisoning the shared processor.
+- `AudiobookQueueItemWidget` (`gui/widgets/audiobook_queue_item_widget.py`): pure renderer for one `AudiobookQueueItem` in the queue list.
 - `PitchImportWorker` (`gui/workers/pitch_import_worker.py`): `CancellableWorker` that runs the Yomitan pitch-accent zip importer so the GUI stays responsive during a large import.
 - `DeckBuilderWorker` (`gui/workers/deck_builder_worker.py`): see Orchestration section.
 
