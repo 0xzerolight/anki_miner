@@ -548,6 +548,82 @@ class TestJPod101AudioFetcher:
         assert deterministic_part not in called_with_unique
 
     # ------------------------------------------------------------------
+    # Cancellation hook (Task 5)
+    # ------------------------------------------------------------------
+
+    def test_cancelled_check_true_at_entry_returns_none_no_network(self, tmp_path):
+        """cancelled_check returning True immediately ⇒ None, no network call, nothing written."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch("requests.Session.get") as mock_get:
+            result = fetcher.fetch("食べる", "たべる", cancelled_check=lambda: True)
+
+        assert result is None
+        mock_get.assert_not_called()
+        assert not list(tmp_path.glob("*.mp3"))
+        assert not list(tmp_path.glob("*.miss"))
+
+    def test_cancelled_check_false_proceeds_normally(self, tmp_path):
+        """cancelled_check returning False ⇒ fetch proceeds and returns the cached path."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch("requests.Session.get", return_value=_response()):
+            result = fetcher.fetch("食べる", "たべる", cancelled_check=lambda: False)
+
+        assert result is not None
+        assert result.exists()
+        assert result.suffix == ".mp3"
+
+    def test_cancelled_check_none_default_unchanged_behavior(self, tmp_path):
+        """Omitting cancelled_check (default None) leaves behavior unchanged."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch("requests.Session.get", return_value=_response()):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is not None
+        assert result.exists()
+
+    def test_cancelled_check_true_before_sleep_returns_none_no_network(self, tmp_path):
+        """cancelled_check checked before sleep — returns None without hitting network."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0.5)
+        call_count = 0
+
+        def _cancelled_after_first():
+            nonlocal call_count
+            call_count += 1
+            # First call = entry guard (returns False), second call = pre-sleep guard (returns True)
+            return call_count >= 2
+
+        with (
+            patch("requests.Session.get") as mock_get,
+            patch(f"{MODULE}.time.sleep") as mock_sleep,
+        ):
+            result = fetcher.fetch("食べる", "たべる", cancelled_check=_cancelled_after_first)
+
+        assert result is None
+        mock_get.assert_not_called()
+        mock_sleep.assert_not_called()
+
+    def test_cancelled_check_true_before_request_returns_none(self, tmp_path):
+        """cancelled_check checked before network request — returns None without fetching."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        call_count = 0
+
+        def _cancelled_before_request():
+            nonlocal call_count
+            call_count += 1
+            # entry=False, pre-sleep=False, pre-request=True
+            return call_count >= 3
+
+        with (
+            patch("requests.Session.get") as mock_get,
+            patch(f"{MODULE}.time.sleep"),
+        ):
+            result = fetcher.fetch("食べる", "たべる", cancelled_check=_cancelled_before_request)
+
+        assert result is None
+        mock_get.assert_not_called()
+        assert not list(tmp_path.glob("*.miss"))
+
+    # ------------------------------------------------------------------
     # Session reuse (Task 6)
     # ------------------------------------------------------------------
 

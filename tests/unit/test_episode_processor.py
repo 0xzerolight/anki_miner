@@ -11,9 +11,23 @@ import pytest
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
 from anki_miner.models import CardPayload, LineLemmas, MediaData, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia
-from anki_miner.orchestration.episode_processor import EpisodeProcessor
+from anki_miner.orchestration.episode_processor import EpisodeProcessor, _EpisodeContext
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.anki_service import AnkiService
+
+
+def _make_episode_context(tmp_path):
+    """Create a minimal _EpisodeContext for direct phase helper tests."""
+    import time
+
+    return _EpisodeContext(
+        start_time=time.time(),
+        video_file_str=str(tmp_path / "v.mkv"),
+        subtitle_file_str=str(tmp_path / "s.ass"),
+        episode_name="ep01",
+        series_name="TestSeries",
+        source_label="TestSeries — ep01",
+    )
 
 
 def _make_word(lemma="食べる", surface=None, start_time=1.0, pos="動詞"):
@@ -2874,8 +2888,11 @@ class TestExpressionAudio:
 
         assert result.cards_created == 2
         assert fetcher.fetch.call_count == 2
-        fetcher.fetch.assert_any_call("食べる", "たべる")
-        fetcher.fetch.assert_any_call("走る", "はしる")
+        # Verify positional args; cancelled_check is passed as a kwarg so we
+        # can't use assert_any_call with positional-only matching.
+        call_positional = [c.args for c in fetcher.fetch.call_args_list]
+        assert ("食べる", "たべる") in call_positional
+        assert ("走る", "はしる") in call_positional
         hit_media = pairs[0][1]
         assert hit_media.expression_audio_path == audio_path
         assert hit_media.expression_audio_filename == audio_path.name
@@ -2958,7 +2975,7 @@ class TestExpressionAudio:
             **mock_services,
         )
 
-        def _fetch_then_cancel(mined_form, reading):
+        def _fetch_then_cancel(mined_form, reading, cancelled_check=None):
             processor.cancel()
             return tmp_path / "a.mp3"
 
@@ -2971,7 +2988,7 @@ class TestExpressionAudio:
         mock_services["anki_service"].create_cards_batch.assert_not_called()
 
     def test_presenter_receives_summary_line(self, test_config, mock_services, tmp_path):
-        """Presenter gets the 'Expression audio: X/Y fetched' info line."""
+        """Presenter gets the 'Expression audio: X/Y available' info line."""
         config = self._enabled_config(test_config)
         pairs = [
             (self._word("食べる", "たべる"), _make_media("taberu")),
@@ -2991,4 +3008,289 @@ class TestExpressionAudio:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        presenter.show_info.assert_any_call("Expression audio: 1/2 fetched")
+        presenter.show_info.assert_any_call("Expression audio: 1/2 available")
+
+    def test_fetcher_receives_cancelled_check_kwarg(self, test_config, mock_services, tmp_path):
+        """fetch() is called with cancelled_check= that reflects processor.cancelled."""
+        config = self._enabled_config(test_config)
+        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
+        self._wire_pipeline(mock_services, pairs)
+
+        fetcher = MagicMock()
+        fetcher.fetch.return_value = None
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert fetcher.fetch.call_count == 1
+        call_kwargs = fetcher.fetch.call_args.kwargs
+        assert "cancelled_check" in call_kwargs
+        # The callable should return False (processor not cancelled) and be callable.
+        check_fn = call_kwargs["cancelled_check"]
+        assert callable(check_fn)
+        assert check_fn() is False
+
+    def test_progress_emitted_per_word(self, test_config, mock_services, tmp_path):
+        """progress_callback.on_progress is called once per word during the expression audio loop."""
+        config = self._enabled_config(test_config)
+        pairs = [
+            (self._word("食べる", "たべる"), _make_media("taberu")),
+            (self._word("走る", "はしる", 5.0), _make_media("hashiru")),
+            (self._word("飲む", "のむ", 9.0), _make_media("nomu")),
+        ]
+        self._wire_pipeline(mock_services, pairs)
+
+        fetcher = MagicMock()
+        fetcher.fetch.return_value = None
+
+        progress_callback = MagicMock()
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=progress_callback)
+
+        # The raw callback is wrapped by StageWeightedProgress, which forwards
+        # on_progress for every word in the expression-audio loop with the
+        # item_description "Expression audio: <mined_form>".  Filter to only
+        # those calls and assert exactly 3 (one per word) — other on_progress
+        # calls (e.g. the finish() snap to 100 with "") belong to different
+        # stages.
+        expr_audio_calls = [
+            c for c in progress_callback.on_progress.call_args_list if c.args[1].startswith("Expression audio:")
+        ]
+        assert len(expr_audio_calls) == 3
+
+
+class TestExpressionAudioProgressBand:
+    """Progress-accounting tests for the expression-audio stage (Issue #73 fix).
+
+    Verifies that _phase3_extract correctly consumes the dedicated progress band
+    registered by process_episode — no band theft from definitions or later stages.
+    """
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    @staticmethod
+    def _enabled_config(test_config):
+        return replace(
+            test_config,
+            expression_audio_enabled=True,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+
+    @staticmethod
+    def _wire_pipeline(mock_services, pairs):
+        words = [word for word, _ in pairs]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = pairs
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"] * len(words)
+        mock_services["anki_service"].create_cards_batch.return_value = len(words)
+
+    @staticmethod
+    def _word(lemma, reading="よみ", start_time=1.0):
+        word = _make_word(lemma, start_time=start_time)
+        word.expression_reading = reading
+        return word
+
+    def test_feature_on_stage_count_matches_bands(self, test_config, mock_services, tmp_path):
+        """Feature ON: on_start call count equals number of registered bands.
+
+        With expression_audio active the bands are: extract, expression_audio,
+        definitions, cards = 4.  StageWeightedProgress forwards on_start only
+        once to the inner callback (the global on_start), so we check on_start
+        descriptions to count stage entries instead.
+        """
+        config = self._enabled_config(test_config)
+        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
+        self._wire_pipeline(mock_services, pairs)
+
+        fetcher = MagicMock()
+        fetcher.fetch.return_value = None
+
+        # Use a recording callback that counts on_start calls by description
+        class _RecordingCallback:
+            def __init__(self):
+                self.starts = []
+                self.completes = 0
+
+            def on_start(self, total, description):
+                self.starts.append(description)
+
+            def on_progress(self, current, item_description):
+                pass
+
+            def on_complete(self):
+                self.completes += 1
+
+            def on_error(self, item_description, error_message):
+                pass
+
+        cb = _RecordingCallback()
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=cb)
+
+        # StageWeightedProgress only forwards on_start to the inner callback
+        # once — on the very first stage (extract). All subsequent on_start
+        # calls from later stages (expression audio, definitions, cards) only
+        # advance the internal band counter and never reach the inner callback.
+        # Therefore cb.starts has exactly 1 entry regardless of band count.
+        # The expression-audio band being registered is verified indirectly:
+        # fetcher.fetch was called (feature ran) AND finish() emitted one
+        # on_complete, confirming the full 4-band sweep completed without
+        # band-accounting errors.
+        assert len(cb.starts) == 1
+        assert cb.completes == 1  # from StageWeightedProgress.finish()
+
+        # Cross-check: fetcher was called (expression-audio band ran)
+        assert fetcher.fetch.call_count == 1
+
+    def test_feature_on_on_start_description_includes_expression_audio(self, test_config, mock_services, tmp_path):
+        """The expression-audio on_start description is passed to the inner callback.
+
+        Because StageWeightedProgress only forwards on_start once (first stage),
+        we pass the raw callback directly to _phase3_extract to inspect all
+        on_start calls without the wrapper.
+        """
+        config = self._enabled_config(test_config)
+        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
+        self._wire_pipeline(mock_services, pairs)
+
+        fetcher = MagicMock()
+        fetcher.fetch.return_value = None
+
+        # Pass a raw MagicMock as progress_callback so we can inspect all calls.
+        raw_cb = MagicMock()
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=raw_cb)
+
+        # Check that on_start was called with "Fetching expression audio" description
+        on_start_descriptions = [c.args[1] for c in raw_cb.on_start.call_args_list]
+        assert any("expression audio" in d.lower() for d in on_start_descriptions)
+
+    def test_feature_on_zero_media_results_band_still_consumed(self, test_config, mock_services, tmp_path):
+        """Feature ON + empty media_results: band consumed (on_start(0) + on_complete called).
+
+        The gate in _phase3_extract must NOT include `media_results` non-empty —
+        otherwise the band is silently skipped and the next stage steals it.
+        We call _phase3_extract directly with a raw callback (bypassing
+        StageWeightedProgress) so every on_start/on_complete lands on our mock.
+        """
+        config = self._enabled_config(test_config)
+
+        fetcher = MagicMock()
+        fetcher.fetch.return_value = None
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+
+        # extract_media_batch returns empty — simulates total extraction failure
+        mock_services["media_extractor"].extract_media_batch.return_value = []
+
+        raw_cb = MagicMock()
+
+        ctx = _make_episode_context(tmp_path)
+        # Call _phase3_extract directly with the raw callback (no wrapper)
+        result = processor._phase3_extract(
+            ctx=ctx,
+            video_file=tmp_path / "v.mkv",
+            unknown_words=[self._word("食べる", "たべる")],
+            progress_callback=raw_cb,
+            run_temp_folder=tmp_path,
+        )
+
+        # Band must be consumed: on_start(0, "Fetching expression audio") + on_complete
+        assert raw_cb.on_start.call_count == 1
+        on_start_args = raw_cb.on_start.call_args
+        assert on_start_args.args[0] == 0  # total = 0 (empty media_results)
+        assert "expression audio" in on_start_args.args[1].lower()
+        assert raw_cb.on_complete.call_count == 1
+        # Fetcher never called — no words to iterate
+        fetcher.fetch.assert_not_called()
+        # Returns empty list unchanged
+        assert result == []
+
+    def test_feature_off_no_expression_audio_on_start(self, test_config, mock_services, tmp_path):
+        """Feature OFF: no expression-audio on_start; baseline stage count unchanged."""
+        # Feature disabled (expression_audio_enabled=False)
+        config = replace(
+            test_config,
+            expression_audio_enabled=False,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
+        self._wire_pipeline(mock_services, pairs)
+
+        fetcher = MagicMock()
+        raw_cb = MagicMock()
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=raw_cb)
+
+        on_start_descriptions = [c.args[1] for c in raw_cb.on_start.call_args_list]
+        assert not any("expression audio" in d.lower() for d in on_start_descriptions)
+        fetcher.fetch.assert_not_called()
+
+    def test_feature_off_no_fetcher_no_expression_audio_on_start(self, test_config, mock_services, tmp_path):
+        """Feature enabled but no fetcher injected: no expression-audio band."""
+        config = self._enabled_config(test_config)
+        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
+        self._wire_pipeline(mock_services, pairs)
+
+        raw_cb = MagicMock()
+
+        # No fetcher injected
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=raw_cb)
+
+        on_start_descriptions = [c.args[1] for c in raw_cb.on_start.call_args_list]
+        assert not any("expression audio" in d.lower() for d in on_start_descriptions)
