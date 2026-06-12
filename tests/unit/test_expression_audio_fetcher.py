@@ -1,6 +1,8 @@
 """Tests for JPod101AudioFetcher."""
 
 import hashlib
+import os
+import time
 from unittest.mock import MagicMock, patch
 
 import requests
@@ -8,6 +10,7 @@ import requests
 from anki_miner.services.expression_audio_fetcher import (
     JPOD101_NOT_FOUND_SHA256,
     MAX_AUDIO_BYTES,
+    STALE_PART_AGE_SECONDS,
     JPod101AudioFetcher,
 )
 
@@ -198,12 +201,12 @@ class TestJPod101AudioFetcher:
         assert cache_dir.exists()
         assert result.parent == cache_dir
 
-    def test_write_bytes_oserror_returns_none_no_files_left(self, tmp_path):
-        """If writing the mp3 raises OSError, fetch returns None and leaves no files."""
+    def test_write_oserror_returns_none_no_files_left(self, tmp_path):
+        """If the atomic rename raises OSError, fetch returns None and cleans up the temp file."""
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
         with (
             patch(f"{MODULE}.requests.get", return_value=_response()),
-            patch("pathlib.Path.write_bytes", side_effect=OSError("disk full")),
+            patch(f"{MODULE}.os.replace", side_effect=OSError("cross-device link")),
         ):
             result = fetcher.fetch("食べる", "たべる")
 
@@ -421,3 +424,113 @@ class TestJPod101AudioFetcher:
             for r in caplog.records
             if r.levelno == logging.DEBUG
         ), f"No debug log emitted; records: {caplog.records}"
+
+    # ------------------------------------------------------------------
+    # Unique temp staging + stale .part sweep (Task 3)
+    # ------------------------------------------------------------------
+
+    def test_successful_fetch_leaves_no_part_files(self, tmp_path):
+        """After a successful fetch no *.part files remain in the cache dir."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.requests.get", return_value=_response()):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is not None
+        assert not list(tmp_path.glob("*.part"))
+
+    def test_stale_part_file_removed_before_fetch(self, tmp_path):
+        """A .part file older than STALE_PART_AGE_SECONDS is deleted by the next fetch."""
+        # Pre-seed a stale .part file.
+        stale = tmp_path / "leftover.part"
+        stale.write_bytes(b"garbage")
+        old_time = time.time() - (STALE_PART_AGE_SECONDS + 10)
+        os.utime(stale, (old_time, old_time))
+
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.requests.get", return_value=_response()):
+            fetcher.fetch("食べる", "たべる")
+
+        assert not stale.exists(), "stale .part file should have been removed"
+
+    def test_fresh_part_file_not_removed(self, tmp_path):
+        """A .part file with a current mtime is left alone (concurrent live download)."""
+        # Pre-seed a fresh .part file (current mtime — within the guard window).
+        fresh = tmp_path / "in_progress.part"
+        fresh.write_bytes(b"in-flight data")
+        # mtime defaults to now; explicitly set to ensure it is within threshold.
+        now = time.time()
+        os.utime(fresh, (now, now))
+
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.requests.get", return_value=_response()):
+            fetcher.fetch("食べる", "たべる")
+
+        assert fresh.exists(), "fresh .part file must not be removed"
+
+    def test_warm_cache_fetch_skips_part_sweep(self, tmp_path):
+        """A cache-hit fetch must NOT remove stale .part files.
+
+        The sweep only runs on cold paths (after both cache-hit checks fail).
+        A warm-cache hit returns before reaching the glob, so a stale .part
+        file in the same directory must survive untouched.
+        """
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        # Populate the cache with a valid mp3 first.
+        with patch(f"{MODULE}.requests.get", return_value=_response()):
+            first = fetcher.fetch("食べる", "たべる")
+        assert first is not None
+
+        # Plant a stale .part file after the cache is warm.
+        stale = tmp_path / "orphan.part"
+        stale.write_bytes(b"orphan")
+        old_time = time.time() - (STALE_PART_AGE_SECONDS + 10)
+        os.utime(stale, (old_time, old_time))
+
+        # Warm-cache fetch — must NOT touch the stale .part.
+        with (
+            patch(f"{MODULE}.requests.get") as mock_get,
+            patch(f"{MODULE}.time.sleep") as mock_sleep,
+        ):
+            second = fetcher.fetch("食べる", "たべる")
+
+        assert second == first
+        mock_get.assert_not_called()
+        mock_sleep.assert_not_called()
+        assert stale.exists(), "warm-cache hit must not remove stale .part files"
+
+    def test_staging_uses_unique_temp_name_not_deterministic(self, tmp_path):
+        """Staging goes through NamedTemporaryFile, not a deterministic .mp3.part path.
+
+        Asserts that (a) the fetcher calls tempfile.NamedTemporaryFile and (b) the
+        final cached mp3 contains the correct bytes — i.e. the unique-staging path
+        executed successfully end-to-end.
+        """
+        import tempfile as _tempfile
+
+        audio = b"ID3" + b"\x01\x02\x03" + b"\x00" * 50
+        called_with_unique = []
+
+        original_ntf = _tempfile.NamedTemporaryFile
+
+        def recording_ntf(**kwargs):
+            f = original_ntf(**kwargs)
+            called_with_unique.append(f.name)
+            return f
+
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with (
+            patch(f"{MODULE}.requests.get", return_value=_response(content=audio)),
+            patch(f"{MODULE}.tempfile.NamedTemporaryFile", side_effect=recording_ntf),
+        ):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is not None
+        assert result.read_bytes() == audio
+        # NamedTemporaryFile was called at least once (unique staging used).
+        assert len(called_with_unique) >= 1
+        # The deterministic name must NOT have been used as the staging file.
+        from anki_miner.utils.file_utils import safe_filename
+
+        stem = safe_filename("jpod101_食べる_たべる")
+        deterministic_part = str(tmp_path / f"{stem}.mp3.part")
+        assert deterministic_part not in called_with_unique

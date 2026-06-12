@@ -1,8 +1,10 @@
 """JapanesePod101 pronunciation audio fetcher with on-disk cache."""
 
+import contextlib
 import hashlib
 import logging
 import os
+import tempfile
 import time
 from pathlib import Path
 
@@ -22,6 +24,11 @@ JPOD101_NOT_FOUND_SHA256 = "ae6398b5a27bc8c0a771df6c907ade794be15518174773c58c7c
 # Real word audio is ~10–100 KB. 5 MB is a generous upper bound; anything
 # larger is almost certainly an error page or CDN redirect body.
 MAX_AUDIO_BYTES = 5 * 1024 * 1024
+
+# Stale .part files older than this threshold (seconds) are swept on each
+# fetch() call. Files younger than this are assumed to belong to a concurrent
+# in-progress download and are left alone.
+STALE_PART_AGE_SECONDS = 60
 
 
 def _is_mp3(body: bytes) -> bool:
@@ -81,10 +88,23 @@ class JPod101AudioFetcher:
 
         try:
             self._cache_dir.mkdir(parents=True, exist_ok=True)
+
             if mp3_path.exists() and mp3_path.stat().st_size > 0:
                 return mp3_path
             if miss_path.exists():
                 return None
+
+            # Sweep orphaned .part files left by previous crashes. Only runs on
+            # cold paths (cache miss), so warm-cache calls skip the glob entirely.
+            # Only removes files older than STALE_PART_AGE_SECONDS to avoid
+            # deleting a live stage file from a concurrent worker on the same word.
+            now = time.time()
+            for part_file in self._cache_dir.glob("*.part"):
+                try:
+                    if now - part_file.stat().st_mtime > STALE_PART_AGE_SECONDS:
+                        part_file.unlink()
+                except OSError:
+                    pass
 
             time.sleep(self._delay)
 
@@ -138,12 +158,26 @@ class JPod101AudioFetcher:
                 if not _is_mp3(body):
                     return None
 
-                # Write atomically: stage to a .part file then rename so a killed
-                # process cannot leave a truncated mp3 that passes the st_size > 0
-                # cache-hit check on the next run.
-                part_path = mp3_path.with_suffix(".mp3.part")
-                part_path.write_bytes(body)
-                os.replace(part_path, mp3_path)
+                # Write atomically: stage to a unique temp file then rename so
+                # a killed process cannot leave a truncated mp3 that passes the
+                # st_size > 0 cache-hit check on the next run. Unique names
+                # (via NamedTemporaryFile) prevent two concurrent workers
+                # fetching the same uncached word from interleaving writes into
+                # the same stage file and corrupting the cached result.
+                with tempfile.NamedTemporaryFile(dir=self._cache_dir, suffix=".part", delete=False) as tmp_fd:
+                    tmp_name = tmp_fd.name
+                    try:
+                        tmp_fd.write(body)
+                    except OSError:
+                        with contextlib.suppress(OSError):
+                            Path(tmp_name).unlink()
+                        raise
+                try:
+                    os.replace(tmp_name, mp3_path)
+                except OSError:
+                    with contextlib.suppress(OSError):
+                        Path(tmp_name).unlink()
+                    raise
                 return mp3_path
             finally:
                 response.close()
