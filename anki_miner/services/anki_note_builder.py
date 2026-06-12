@@ -31,6 +31,7 @@ OPTIONAL_FIELD_KEYS = {
     "pitch_category",
     "frequency",
     "source",
+    "expression_audio",
 }
 
 # Used to normalize a stored first-field value to the same key Anki dedups on.
@@ -112,6 +113,10 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
     if media.audio_filename and media.audio_filename in stored_files:
         audio_ref = f"[sound:{media.audio_filename}]"
 
+    expression_audio_ref = ""
+    if media.expression_audio_filename and media.expression_audio_filename in stored_files:
+        expression_audio_ref = f"[sound:{media.expression_audio_filename}]"
+
     # Sentence + SentenceFurigana use the bolded forms when the
     # config flag is on AND the parse pre-computed them. The
     # precomputed forms are already HTML-safe (per-token escape
@@ -141,6 +146,7 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         "glossary": glossary_html,
         "picture": picture_html,
         "audio": audio_ref,
+        "expression_audio": expression_audio_ref,
         "expression_furigana": html.escape(word.expression_furigana),
         "expression_reading": html.escape(word.expression_reading),
         "sentence_furigana": sentence_furigana_field,

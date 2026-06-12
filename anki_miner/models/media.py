@@ -12,6 +12,10 @@ class MediaData:
     audio_path: Path | None = None
     screenshot_filename: str | None = None
     audio_filename: str | None = None
+    # Pronunciation audio for the mined expression itself (Issue #73),
+    # distinct from audio_*, which is the sentence clip cut from the video.
+    expression_audio_path: Path | None = None
+    expression_audio_filename: str | None = None
 
     @property
     def has_screenshot(self) -> bool:
