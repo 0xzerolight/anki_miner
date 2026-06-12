@@ -68,6 +68,10 @@ class JPod101AudioFetcher:
         """
         self._cache_dir = cache_dir
         self._delay = max(0.0, delay)
+        # One Session is reused across all fetch() calls so that DNS, TCP, and
+        # TLS are established once and kept alive across sequential words.
+        # Session() does no network I/O — it is safe to create here.
+        self._session = requests.Session()
 
     def fetch(self, mined_form: str, reading: str) -> Path | None:
         """Fetch pronunciation audio for a word.
@@ -115,7 +119,7 @@ class JPod101AudioFetcher:
             # Valid words 301-redirect to a CDN mp3; requests follows
             # redirects by default, so the final body is the audio itself.
             # stream=True lets us cap the body size before buffering it all.
-            response = requests.get(
+            response = self._session.get(
                 JPOD101_AUDIO_URL,
                 params={"kanji": mined_form, "kana": reading},
                 timeout=10,
