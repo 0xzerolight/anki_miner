@@ -8,6 +8,7 @@ threading itself is not under test.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -57,12 +58,13 @@ def make_worker(mock_processor, test_config):
         items: list[AudiobookQueueItem] | None = None,
         curation_callback=None,
         preview_mode: bool = False,
+        config=None,
     ) -> AudiobookQueueWorker:
         if items is None:
             items = [_make_item()]
         return AudiobookQueueWorker(
             processor=mock_processor,
-            config=test_config,
+            config=config if config is not None else test_config,
             items=items,
             curation_callback=curation_callback,
             preview_mode=preview_mode,
@@ -248,7 +250,10 @@ def test_cancel_before_run_emits_queue_finished_only(make_worker, mock_processor
 # ---------------------------------------------------------------------------
 
 
-def test_curation_paths_published_before_processor_call(make_worker, mock_processor):
+def test_curation_paths_published_before_processor_call(make_worker, mock_processor, test_config):
+    # Nonzero offset: subtitle parsing applies config.subtitle_offset for all
+    # sources, so the worker must publish it — not a hardcoded 0.
+    config = replace(test_config, subtitle_offset=1.5)
     items = [_make_item("book01"), _make_item("book02")]
     observed: list[tuple] = []
     worker_box: dict = {}
@@ -260,22 +265,23 @@ def test_curation_paths_published_before_processor_call(make_worker, mock_proces
 
     mock_processor.process_episode.side_effect = _observe
 
-    worker = make_worker(items=items)
+    worker = make_worker(items=items, config=config)
     worker_box["worker"] = worker
     worker.run()
 
     assert observed == [
-        (items[0].audio_file, items[0].subtitle_file, 0),
-        (items[1].audio_file, items[1].subtitle_file, 0),
+        (items[0].audio_file, items[0].subtitle_file, 1.5),
+        (items[1].audio_file, items[1].subtitle_file, 1.5),
     ]
 
 
-def test_constructor_initial_curation_state(make_worker, mock_processor):
-    worker = make_worker(items=[])
+def test_constructor_initial_curation_state(make_worker, mock_processor, test_config):
+    config = replace(test_config, subtitle_offset=1.5)
+    worker = make_worker(items=[], config=config)
     assert worker.curation_processor is mock_processor
     assert worker._curation_video is None
     assert worker._curation_subtitle is None
-    assert worker._curation_offset == 0
+    assert worker._curation_offset == 1.5
 
 
 # ---------------------------------------------------------------------------
