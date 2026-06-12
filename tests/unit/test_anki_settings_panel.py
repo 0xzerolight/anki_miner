@@ -82,3 +82,37 @@ def test_populate_from_field_list_matches_source():
     panel = AnkiSettingsPanel()
     panel.populate_from_field_list(["Expression", "Sentence", "Source"])
     assert panel.get_card_fields()["source"] == "Source"
+
+
+def test_expression_audio_field_get_set_roundtrip():
+    panel = AnkiSettingsPanel()
+    panel.set_card_fields({"expression_audio": "ExpressionAudio"})
+    assert panel.get_card_fields()["expression_audio"] == "ExpressionAudio"
+
+
+def test_expression_audio_field_default_blank():
+    panel = AnkiSettingsPanel()
+    panel.set_card_fields({})
+    assert panel.get_card_fields()["expression_audio"] == ""
+
+
+def test_populate_from_field_list_matches_expression_audio():
+    panel = AnkiSettingsPanel()
+    panel.populate_from_field_list(["Expression", "SentenceAudio", "ExpressionAudio"])
+    fields = panel.get_card_fields()
+    assert fields["expression_audio"] == "ExpressionAudio"
+    # Sentence audio mapping must not be hijacked by the new keyword.
+    assert fields["audio"] == "SentenceAudio"
+
+
+def test_expression_audio_toggle_defaults_off():
+    panel = AnkiSettingsPanel()
+    assert panel.get_expression_audio_enabled() is False
+
+
+def test_expression_audio_toggle_get_set_roundtrip():
+    panel = AnkiSettingsPanel()
+    panel.set_expression_audio_enabled(True)
+    assert panel.get_expression_audio_enabled() is True
+    panel.set_expression_audio_enabled(False)
+    assert panel.get_expression_audio_enabled() is False
