@@ -2900,6 +2900,62 @@ class TestExpressionAudio:
         assert miss_media.expression_audio_path is None
         assert miss_media.expression_audio_filename is None
 
+    def test_miss_retries_with_lemma_for_variant_kanji_noun(self, test_config, mock_services, tmp_path):
+        """Surface-form miss ⇒ retry with the unidic lemma (canonical orthography).
+
+        Subtitle surface 噓 (variant kanji) is what JPod101 misses; the lemma
+        嘘 is what it indexes. mined_form == surface for nouns, so the retry
+        swaps the kanji while keeping the (unchanged) reading.
+        """
+        config = self._enabled_config(test_config)
+        word = _make_word(lemma="嘘", surface="噓", pos="名詞")
+        word.expression_reading = "うそ"
+        media = _make_media("uso")
+        pairs = [(word, media)]
+        self._wire_pipeline(mock_services, pairs)
+
+        # mined_form (噓) misses; lemma (嘘) hits.
+        audio_path = tmp_path / "jpod101_嘘_うそ.mp3"
+        fetcher = MagicMock()
+        fetcher.fetch.side_effect = [None, audio_path]
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.cards_created == 1
+        assert fetcher.fetch.call_count == 2
+        call_positional = [c.args for c in fetcher.fetch.call_args_list]
+        assert call_positional[0] == ("噓", "うそ")  # surface first
+        assert call_positional[1] == ("嘘", "うそ")  # lemma fallback
+        assert media.expression_audio_path == audio_path
+        assert media.expression_audio_filename == audio_path.name
+
+    def test_miss_no_lemma_retry_when_mined_form_equals_lemma(self, test_config, mock_services, tmp_path):
+        """Verbs mine as lemma (mined_form == lemma) ⇒ no redundant second fetch on miss."""
+        config = self._enabled_config(test_config)
+        # Default pos=動詞 ⇒ mined_form == lemma == 食べる.
+        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
+        self._wire_pipeline(mock_services, pairs)
+
+        fetcher = MagicMock()
+        fetcher.fetch.side_effect = [None]
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert fetcher.fetch.call_count == 1
+        assert pairs[0][1].expression_audio_path is None
+
     def test_disabled_does_not_fetch(self, test_config, mock_services, tmp_path):
         """expression_audio_enabled=False ⇒ fetcher never called, even with the field mapped."""
         config = replace(
