@@ -570,6 +570,18 @@ class EpisodeProcessor:
                     word.expression_reading,
                     cancelled_check=lambda: self.cancelled,
                 )
+                # Subtitle surface forms use variant kanji (噓/頰/今さら) that
+                # JPod101 does not index; the unidic lemma is the canonical
+                # orthography it does (嘘/頬/今更). Retry on miss with the lemma.
+                # The reading is unchanged, so the Issue #73 homograph guard
+                # still holds. mined_form == lemma for verbs/adjectives, so the
+                # guard skips the redundant second request.
+                if path is None and word.lemma and word.lemma != word.mined_form:
+                    path = self.expression_audio_fetcher.fetch(  # type: ignore[union-attr]
+                        word.lemma,
+                        word.expression_reading,
+                        cancelled_check=lambda: self.cancelled,
+                    )
                 if path is not None:
                     media.expression_audio_path = path
                     media.expression_audio_filename = path.name
