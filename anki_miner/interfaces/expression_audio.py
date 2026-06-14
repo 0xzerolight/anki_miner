@@ -39,3 +39,35 @@ class ExpressionAudioFetcher(Protocol):
             Path to an audio file, or None if unavailable.  Never raises.
         """
         ...
+
+    def fetch_candidates(
+        self,
+        candidates: list[tuple[str, str]],
+        cancelled_check: Callable[[], bool] | None = None,
+    ) -> Path | None:
+        """Fetch audio for the first resolvable ``(mined_form, reading)`` pair.
+
+        Tries each candidate form in order and returns the first hit.  The
+        candidate list is the audio retry ladder (surface form, katakana
+        variant, unidic lemma, lemma-katakana) — see
+        ``orchestration.episode_processor._expression_audio_candidates``.
+
+        This source-first ordering is the whole point: a leaf fetcher exhausts
+        ALL candidate forms before a composite chain falls through to a
+        lower-priority source.  Walking it candidate-first instead would let a
+        synthetic fallback (e.g. Google TTS) satisfy the surface form before a
+        higher-priority real-audio source ever sees the lemma it actually has.
+
+        Args:
+            candidates: Ordered ``(mined_form, reading)`` pairs to try.  An
+                empty list yields None.
+            cancelled_check: Optional zero-argument callable that returns True
+                when the caller has requested cancellation.  Consulted between
+                candidates (composite fetchers also between members) and
+                forwarded to each ``fetch``.  Returns None promptly when it
+                fires, writing no cache artifacts.  Never raises.
+
+        Returns:
+            Path to an audio file, or None if no candidate resolves.
+        """
+        ...
