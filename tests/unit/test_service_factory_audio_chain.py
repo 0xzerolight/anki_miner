@@ -17,6 +17,9 @@ from anki_miner.services.expression_audio_fetcher import (
     ChainedExpressionAudioFetcher,
     JPod101AudioFetcher,
 )
+from anki_miner.services.google_translate_audio_fetcher import (
+    GoogleTranslateAudioFetcher,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers (mirror test_audio_pack_registry.py style)
@@ -283,6 +286,74 @@ class TestBuildExpressionAudioFetcher:
         assert isinstance(fetcher._fetchers[1], JPod101AudioFetcher)
         assert isinstance(fetcher._fetchers[2], LocalAudioPackFetcher)
         assert fetcher._fetchers[2].pack_id == pack_b_id
+
+    def test_googletts_enabled_in_chain_after_jpod101(self, base_config):
+        """Enabled googletts entry yields a GoogleTranslateAudioFetcher after jpod101."""
+        cfg = dataclasses.replace(
+            base_config,
+            expression_audio_chain=(
+                AudioSourceEntry(kind="jpod101", enabled=True),
+                AudioSourceEntry(kind="googletts", enabled=True),
+            ),
+        )
+        fetcher = service_factory._build_expression_audio_fetcher(cfg)
+        assert isinstance(fetcher, ChainedExpressionAudioFetcher)
+        assert len(fetcher._fetchers) == 2
+        assert isinstance(fetcher._fetchers[0], JPod101AudioFetcher)
+        assert isinstance(fetcher._fetchers[1], GoogleTranslateAudioFetcher)
+
+    def test_googletts_before_jpod101_chain_order(self, base_config):
+        """Config ordering [googletts, jpod101] is preserved in the chain."""
+        cfg = dataclasses.replace(
+            base_config,
+            expression_audio_chain=(
+                AudioSourceEntry(kind="googletts", enabled=True),
+                AudioSourceEntry(kind="jpod101", enabled=True),
+            ),
+        )
+        fetcher = service_factory._build_expression_audio_fetcher(cfg)
+        assert isinstance(fetcher, ChainedExpressionAudioFetcher)
+        assert len(fetcher._fetchers) == 2
+        assert isinstance(fetcher._fetchers[0], GoogleTranslateAudioFetcher)
+        assert isinstance(fetcher._fetchers[1], JPod101AudioFetcher)
+
+    def test_googletts_disabled_excluded_from_chain(self, base_config):
+        """A disabled googletts entry is skipped; jpod101 still present."""
+        cfg = dataclasses.replace(
+            base_config,
+            expression_audio_chain=(
+                AudioSourceEntry(kind="jpod101", enabled=True),
+                AudioSourceEntry(kind="googletts", enabled=False),
+            ),
+        )
+        fetcher = service_factory._build_expression_audio_fetcher(cfg)
+        assert isinstance(fetcher, ChainedExpressionAudioFetcher)
+        assert len(fetcher._fetchers) == 1
+        assert isinstance(fetcher._fetchers[0], JPod101AudioFetcher)
+
+    def test_googletts_construction_no_disk_io(self, tmp_path, base_config):
+        """Building a chain with a googletts entry creates no cache dir at build time."""
+        googletts_cache = tmp_path / "audio_cache" / "googletts"
+        # Point ANKI_MINER_HOME at tmp_path so the googletts cache would land here.
+        import anki_miner.gui.utils.service_factory as sf
+
+        original_home = sf.ANKI_MINER_HOME
+        try:
+            sf.ANKI_MINER_HOME = tmp_path
+            cfg = dataclasses.replace(
+                base_config,
+                expression_audio_chain=(
+                    AudioSourceEntry(kind="jpod101", enabled=True),
+                    AudioSourceEntry(kind="googletts", enabled=True),
+                ),
+            )
+            fetcher = sf._build_expression_audio_fetcher(cfg)
+        finally:
+            sf.ANKI_MINER_HOME = original_home
+
+        assert isinstance(fetcher, ChainedExpressionAudioFetcher)
+        assert any(isinstance(f, GoogleTranslateAudioFetcher) for f in fetcher._fetchers)
+        assert not googletts_cache.exists(), "googletts cache dir must not be created at build time"
 
     def test_duplicate_pack_id_two_fetchers(self, tmp_path, base_config):
         """Two enabled entries with the same pack_id → chain has 2 fetchers (same object twice)."""

@@ -35,6 +35,7 @@ dependencies = [
     "yt-dlp>=2026.3.17,<2027.0.0",
     "psutil>=7.0.0",
     "packaging>=25.0",
+    "gtts>=2.5,<3",
 ]
 
 [project.optional-dependencies]
