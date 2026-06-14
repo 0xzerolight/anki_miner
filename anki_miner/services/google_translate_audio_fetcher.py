@@ -32,7 +32,11 @@ from pathlib import Path
 
 import gtts  # type: ignore[import-untyped]
 
-from anki_miner.services.expression_audio_fetcher import MAX_AUDIO_BYTES, _is_mp3
+from anki_miner.services.expression_audio_fetcher import (
+    MAX_AUDIO_BYTES,
+    _first_candidate_hit,
+    _is_mp3,
+)
 from anki_miner.utils.file_utils import safe_filename
 
 logger = logging.getLogger(__name__)
@@ -158,3 +162,11 @@ class GoogleTranslateAudioFetcher:
         except Exception as exc:
             logger.debug("google translate audio fetch failed for %s: %s", mined_form, exc)
             return None
+
+    def fetch_candidates(
+        self,
+        candidates: list[tuple[str, str]],
+        cancelled_check: Callable[[], bool] | None = None,
+    ) -> Path | None:
+        """Try each candidate form, returning the first synthesized hit."""
+        return _first_candidate_hit(self, candidates, cancelled_check)
