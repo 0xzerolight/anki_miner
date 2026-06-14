@@ -290,12 +290,15 @@ class TestAudioSourceEntry:
 class TestExpressionAudioChainConfig:
     """Tests for expression_audio_chain and audio_packs_root config fields."""
 
-    def test_expression_audio_chain_default_is_jpod101_only(self):
-        """Default chain must be exactly (AudioSourceEntry(kind='jpod101'),)."""
+    def test_expression_audio_chain_default(self):
+        """Default chain is jpod101 (enabled) then googletts (disabled)."""
         from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 
         cfg = AnkiMinerConfig()
-        assert cfg.expression_audio_chain == (AudioSourceEntry(kind="jpod101"),)
+        assert cfg.expression_audio_chain == (
+            AudioSourceEntry(kind="jpod101"),
+            AudioSourceEntry(kind="googletts", enabled=False),
+        )
 
     def test_audio_packs_root_default_ends_in_audio_packs(self):
         """audio_packs_root must default to a Path ending in 'audio_packs'."""
@@ -322,8 +325,8 @@ class TestExpressionAudioChainConfig:
         )
         updated = replace(cfg, expression_audio_chain=new_chain)
         assert updated.expression_audio_chain == new_chain
-        # Original unchanged
-        assert len(cfg.expression_audio_chain) == 1
+        # Original unchanged (jpod101 + disabled googletts)
+        assert len(cfg.expression_audio_chain) == 2
 
 
 class TestUiFontScale:

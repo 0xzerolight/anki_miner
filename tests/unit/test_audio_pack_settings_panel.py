@@ -192,6 +192,92 @@ def test_present_folder_no_missing_badge(qapp, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Google Translate (googletts) built-in row
+# ---------------------------------------------------------------------------
+
+
+def test_googletts_row_shows_synthetic_tts_display_name(qapp, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    panel.set_chain((AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),))
+    row = panel._row_widget(0)
+    assert row is not None
+    labels = row.findChildren(QLabel)
+    texts = [lbl.text() for lbl in labels]
+    assert any("Google Translate (synthetic TTS)" in t for t in texts), texts
+    assert any("online" in t for t in texts), texts
+
+
+def test_googletts_row_reflects_disabled_state(qapp, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    panel.set_chain((AudioSourceEntry(kind="googletts", pack_id=None, enabled=False),))
+    row = panel._row_widget(0)
+    assert row is not None
+    assert row.checkbox.isChecked() is False
+
+
+def test_googletts_row_not_removable(qapp, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    panel.set_chain(
+        (
+            AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
+            AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),
+        )
+    )
+    events: list[str] = []
+    panel.chain_changed.connect(lambda: events.append("changed"))
+
+    panel.remove(1)  # googletts → no-op
+    chain = panel.get_chain()
+    assert len(chain) == 2
+    assert any(e.kind == "googletts" for e in chain)
+    assert events == []
+
+
+def test_googletts_toggle_round_trips_in_get_chain(qapp, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    panel.set_chain((AudioSourceEntry(kind="googletts", pack_id=None, enabled=False),))
+
+    row = panel._row_widget(0)
+    assert row is not None
+    row.checkbox.setChecked(True)
+
+    chain = panel.get_chain()
+    assert chain[0].kind == "googletts"
+    assert chain[0].enabled is True
+
+
+def test_googletts_reorder_works(qapp, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    panel.set_chain(
+        (
+            AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),
+            AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),
+        )
+    )
+    panel.move_up(1)  # googletts to top
+    chain = panel.get_chain()
+    assert chain[0].kind == "googletts"
+    assert chain[1].kind == "jpod101"
+
+
+def test_right_click_googletts_row_shows_no_menu(qapp, monkeypatch, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    panel.set_chain((AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),))
+
+    constructed = _patch_menu_exec(monkeypatch, "Re-import…")
+
+    emitted: list[str] = []
+    panel.reimport_pack_requested.connect(emitted.append)
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+
+    assert constructed == [], "googletts row must not open a context menu"
+    assert emitted == []
+
+
+# ---------------------------------------------------------------------------
 # get_chain round-trip
 # ---------------------------------------------------------------------------
 

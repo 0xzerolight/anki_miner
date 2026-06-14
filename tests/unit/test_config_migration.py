@@ -158,11 +158,16 @@ def test_legacy_use_offline_dict_false_is_stripped(tmp_config: Path):
 
 
 def test_save_then_load_preserves_audio_chain(tmp_config: Path):
-    """A config with pack + jpod101 entries survives save/load unchanged."""
+    """A config with pack + jpod101 entries survives save/load unchanged.
+
+    A persisted chain that already contains a googletts entry is not
+    appended to again.
+    """
     chain = (
         AudioSourceEntry(kind="pack", pack_id="nhk16", enabled=True),
         AudioSourceEntry(kind="pack", pack_id="forvo-jp", enabled=False),
         AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),
+        AudioSourceEntry(kind="googletts", pack_id=None, enabled=False),
     )
     config = replace(AnkiMinerConfig(), expression_audio_chain=chain)
     GUIConfigManager.save_config(config)
@@ -171,12 +176,15 @@ def test_save_then_load_preserves_audio_chain(tmp_config: Path):
     assert loaded.expression_audio_chain == chain
 
 
-def test_absent_audio_chain_yields_jpod101_default(tmp_config: Path):
+def test_absent_audio_chain_yields_default(tmp_config: Path):
     """An old gui_config.json without expression_audio_chain uses the default."""
     tmp_config.write_text(json.dumps({"anki_deck_name": "MyDeck"}))
 
     loaded = GUIConfigManager.load_config()
-    assert loaded.expression_audio_chain == (AudioSourceEntry(kind="jpod101"),)
+    assert loaded.expression_audio_chain == (
+        AudioSourceEntry(kind="jpod101"),
+        AudioSourceEntry(kind="googletts", enabled=False),
+    )
 
 
 def test_migrate_expression_audio_chain_rebuilds_from_dicts():
@@ -185,6 +193,7 @@ def test_migrate_expression_audio_chain_rebuilds_from_dicts():
         "expression_audio_chain": [
             {"kind": "pack", "pack_id": "nhk16", "enabled": True},
             {"kind": "jpod101", "pack_id": None, "enabled": False},
+            {"kind": "googletts", "pack_id": None, "enabled": True},
         ]
     }
     result = GUIConfigManager._migrate_expression_audio_chain(data)
@@ -193,7 +202,49 @@ def test_migrate_expression_audio_chain_rebuilds_from_dicts():
     assert chain == (
         AudioSourceEntry(kind="pack", pack_id="nhk16", enabled=True),
         AudioSourceEntry(kind="jpod101", pack_id=None, enabled=False),
+        AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),
     )
+
+
+def test_migrate_expression_audio_chain_googletts_round_trip():
+    """A googletts dict rebuilds into an AudioSourceEntry preserving enabled."""
+    data = {
+        "expression_audio_chain": [
+            {"kind": "googletts", "pack_id": None, "enabled": True},
+        ]
+    }
+    result = GUIConfigManager._migrate_expression_audio_chain(data)
+    chain = result["expression_audio_chain"]
+    assert chain[0] == AudioSourceEntry(kind="googletts", pack_id=None, enabled=True)
+
+
+def test_migrate_expression_audio_chain_appends_missing_googletts():
+    """A persisted jpod101-only chain gains a disabled googletts entry."""
+    data = {
+        "expression_audio_chain": [
+            {"kind": "jpod101", "enabled": True},
+        ]
+    }
+    result = GUIConfigManager._migrate_expression_audio_chain(data)
+    chain = result["expression_audio_chain"]
+    assert len(chain) == 2
+    assert chain[-1] == AudioSourceEntry(kind="googletts", pack_id=None, enabled=False)
+
+
+def test_migrate_expression_audio_chain_no_duplicate_googletts():
+    """A chain already containing googletts is not appended to."""
+    data = {
+        "expression_audio_chain": [
+            {"kind": "jpod101", "enabled": True},
+            {"kind": "googletts", "enabled": True},
+        ]
+    }
+    result = GUIConfigManager._migrate_expression_audio_chain(data)
+    chain = result["expression_audio_chain"]
+    assert len(chain) == 2
+    assert sum(1 for e in chain if e.kind == "googletts") == 1
+    # Existing enabled flag preserved (not overwritten with a disabled dup).
+    assert chain[-1].enabled is True
 
 
 def test_migrate_expression_audio_chain_enabled_flag_defaults_true():
@@ -219,7 +270,10 @@ def test_migrate_expression_audio_chain_pack_id_none():
 
 
 def test_migrate_expression_audio_chain_skips_unknown_kinds():
-    """Entries with unknown kind values are silently dropped."""
+    """Entries with unknown kind values are silently dropped.
+
+    A disabled googletts entry is appended since the source chain had none.
+    """
     data = {
         "expression_audio_chain": [
             {"kind": "unknown_source", "pack_id": "foo"},
@@ -228,8 +282,9 @@ def test_migrate_expression_audio_chain_skips_unknown_kinds():
     }
     result = GUIConfigManager._migrate_expression_audio_chain(data)
     chain = result["expression_audio_chain"]
-    assert len(chain) == 1
+    assert len(chain) == 2
     assert chain[0].kind == "jpod101"
+    assert chain[1] == AudioSourceEntry(kind="googletts", enabled=False)
 
 
 def test_migrate_expression_audio_chain_absent_key_is_noop():

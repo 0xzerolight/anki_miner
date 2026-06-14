@@ -28,9 +28,11 @@ class AudioSourceEntry:
     Pack entries reference a local audio pack under
     ~/.anki_miner/audio_packs/<pack_id>/.
     JPod101 entries are the always-available online fallback; pack_id is None.
+    GoogleTTS entries are a synthetic Google Translate TTS online fallback;
+    pack_id is None (like jpod101).
     """
 
-    kind: Literal["pack", "jpod101"]
+    kind: Literal["pack", "jpod101", "googletts"]
     pack_id: str | None = None
     enabled: bool = True
 
@@ -134,9 +136,14 @@ class AnkiMinerConfig:
     expression_audio_enabled: bool = False
     expression_audio_delay: float = 0.2  # Seconds between audio fetch requests.
     # Ordered list of audio sources tried in priority order.
-    # Default is jpod101-only to preserve pre-feature behaviour exactly.
+    # The disabled googletts entry is present-but-off so the Settings UI can
+    # list it; disabled => skipped in the factory => byte-for-byte pre-feature
+    # behaviour (jpod101-only) is preserved exactly.
     expression_audio_chain: tuple["AudioSourceEntry", ...] = field(
-        default_factory=lambda: (AudioSourceEntry(kind="jpod101"),)
+        default_factory=lambda: (
+            AudioSourceEntry(kind="jpod101"),
+            AudioSourceEntry(kind="googletts", enabled=False),
+        )
     )
     audio_packs_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "audio_packs")
 
