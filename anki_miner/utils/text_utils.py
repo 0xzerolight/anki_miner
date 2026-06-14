@@ -48,6 +48,33 @@ def katakana_to_hiragana(text: str) -> str:
     return "".join(result)
 
 
+def hiragana_to_katakana(text: str) -> str:
+    """Convert hiragana characters to katakana.
+
+    Inverse of :func:`katakana_to_hiragana`.  The prolonged-sound mark ``ー``
+    and any already-katakana characters pass through unchanged, so the mapping
+    round-trips losslessly for plain kana readings.
+
+    Args:
+        text: Text potentially containing hiragana
+
+    Returns:
+        Text with hiragana converted to katakana
+    """
+    result = []
+    for ch in text:
+        if "ぁ" <= ch <= "ゖ":
+            result.append(chr(ord(ch) + 0x60))
+        else:
+            result.append(ch)
+    return "".join(result)
+
+
+def has_katakana(text: str) -> bool:
+    """Return True if *text* contains any katakana character."""
+    return any("ァ" <= ch <= "ヶ" for ch in text)
+
+
 def generate_furigana_from_tokens(tokens: Iterable[Any]) -> str:
     """Generate furigana-annotated text from an already-parsed token iterable.
 

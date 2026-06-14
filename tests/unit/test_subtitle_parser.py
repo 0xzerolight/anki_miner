@@ -362,6 +362,53 @@ class TestExpressionFuriganaSource:
         assert "破れ" not in called_texts  # not the surface form
 
 
+class TestLemmaReading:
+    """lemma_reading carries the lemma's OWN reading for the JPod101 audio retry.
+
+    Surface-mined nouns whose surface ≠ lemma must store the lemma reading
+    (探す→さがす), not the surface reading (探し→さがし); verbs reuse the
+    expression reading because mined_form already IS the lemma.
+    """
+
+    def _parse_one(self, test_config, tmp_path, line_text, token, reading_map):
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = line_text
+        mock_line.start = 1000
+        mock_line.end = 3000
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value="stub"),
+            patch(
+                "anki_miner.services.subtitle_parser.generate_reading",
+                side_effect=lambda s, _tagger: reading_map.get(s, s),
+            ),
+        ):
+            service = SubtitleParserService(test_config)
+            words = service.parse_subtitle_file(sub_file)
+        return words[0]
+
+    def test_surface_mined_noun_stores_lemma_reading(self, test_config, tmp_path):
+        token = _make_token("探し", "名詞", lemma="探す", kana="サガシ")
+        word = self._parse_one(test_config, tmp_path, "鍵を探し", token, {"探し": "さがし", "探す": "さがす"})
+        assert word.expression_reading == "さがし"  # surface reading
+        assert word.lemma_reading == "さがす"  # lemma's own reading
+
+    def test_verb_reuses_expression_reading(self, test_config, tmp_path):
+        token = _make_token("破れ", "動詞", lemma="破れる", kana="ヤブレ")
+        word = self._parse_one(test_config, tmp_path, "胸破れそう", token, {"破れる": "やぶれる"})
+        # mined_form == lemma for verbs ⇒ lemma_reading reuses expression_reading.
+        assert word.expression_reading == "やぶれる"
+        assert word.lemma_reading == "やぶれる"
+
+
 class TestFuriganaMemoization:
     """Per-parse memoization of generate_furigana / generate_reading / wrap_target_furigana.
 
