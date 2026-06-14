@@ -250,8 +250,8 @@ class AudioPackSettingsPanel(FormPanel):
         if index < 0 or index >= len(self._chain):
             return
         entry = self._chain[index]
-        if entry.kind == "jpod101":
-            return  # jpod101 can be disabled but not removed
+        if entry.kind in ("jpod101", "googletts"):
+            return  # built-in online sources can be disabled but not removed
 
         pack_id = entry.pack_id
         meta = self._view.get(pack_id) if (self._view is not None and pack_id) else None
@@ -293,7 +293,7 @@ class AudioPackSettingsPanel(FormPanel):
     def _on_row_context_menu(self, pos: QPoint) -> None:
         """Right-click a pack row to re-import it.
 
-        jpod101 rows have no menu — the online fallback can't be re-imported.
+        Built-in online rows (jpod101, googletts) have no menu — they can't be re-imported.
         """
         item = self._list.itemAt(pos)
         if item is None:
@@ -302,7 +302,7 @@ class AudioPackSettingsPanel(FormPanel):
         if index < 0 or index >= len(self._chain):
             return
         entry = self._chain[index]
-        if entry.kind == "jpod101" or entry.pack_id is None:
+        if entry.kind in ("jpod101", "googletts") or entry.pack_id is None:
             return
         # _view is always set after _rebuild_list; guard is belt-and-suspenders.
         meta = self._view.get(entry.pack_id) if self._view is not None else None
@@ -345,7 +345,12 @@ class AudioPackSettingsPanel(FormPanel):
                     fmt = meta.format if meta else ""
                     count = meta.entry_count if meta else 0
                     dir_missing = meta is not None and not meta.pack_dir_exists
-                else:
+                elif entry.kind == "googletts":
+                    display = "Google Translate (synthetic TTS)"
+                    fmt = "online"
+                    count = 0
+                    dir_missing = False
+                else:  # jpod101
                     display = "JapanesePod101 (online)"
                     fmt = "online"
                     count = 0
