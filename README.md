@@ -85,6 +85,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - Extensive filtering options (i+1 filter, frequency limits, word blacklist, subtitle regex filtering, wordset filtering, and more).
 - Offline Yomitan dictionary import (definitions, pitch accent, frequency data) with priority ordering.
+- Per-word expression audio on cards (native JapanesePod101, imported local audio packs, or Google Translate TTS) with a configurable source priority.
 - Definition styling presets (like Yomitan) or custom CSS.
 - Subtitle timing preview with adjustable offset.
 - Animated screenshots (see example card gifs).
