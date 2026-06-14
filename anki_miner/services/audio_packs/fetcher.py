@@ -10,6 +10,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.services.audio_packs import storage
+from anki_miner.services.expression_audio_fetcher import _first_candidate_hit
 from anki_miner.utils.file_utils import safe_filename
 
 logger = logging.getLogger(__name__)
@@ -152,6 +153,14 @@ class LocalAudioPackFetcher:
             return cache_path
 
         return None
+
+    def fetch_candidates(
+        self,
+        candidates: list[tuple[str, str]],
+        cancelled_check: Callable[[], bool] | None = None,
+    ) -> Path | None:
+        """Try each candidate form, returning the first pack hit."""
+        return _first_candidate_hit(self, candidates, cancelled_check)
 
     # ------------------------------------------------------------------
     # Helpers
