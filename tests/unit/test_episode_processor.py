@@ -2910,6 +2910,7 @@ class TestExpressionAudio:
         config = self._enabled_config(test_config)
         word = _make_word(lemma="嘘", surface="噓", pos="名詞")
         word.expression_reading = "うそ"
+        word.lemma_reading = "うそ"
         media = _make_media("uso")
         pairs = [(word, media)]
         self._wire_pipeline(mock_services, pairs)
@@ -2934,6 +2935,117 @@ class TestExpressionAudio:
         assert call_positional[1] == ("嘘", "うそ")  # lemma fallback
         assert media.expression_audio_path == audio_path
         assert media.expression_audio_filename == audio_path.name
+
+    def test_katakana_loanword_retries_with_katakana_reading(self, test_config, mock_services, tmp_path):
+        """Loanword hiragana-reading miss ⇒ retry with the katakana reading.
+
+        ``expression_reading`` is folded to hiragana for card display (ちっぷ),
+        but JPod101 indexes loanword audio under the katakana reading (チップ).
+        """
+        config = self._enabled_config(test_config)
+        word = _make_word(lemma="チップ", surface="チップ", pos="名詞")
+        word.expression_reading = "ちっぷ"
+        word.lemma_reading = "ちっぷ"
+        media = _make_media("chip")
+        pairs = [(word, media)]
+        self._wire_pipeline(mock_services, pairs)
+
+        audio_path = tmp_path / "jpod101_チップ_チップ.mp3"
+        fetcher = MagicMock()
+        fetcher.fetch.side_effect = [None, audio_path]
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.cards_created == 1
+        assert fetcher.fetch.call_count == 2
+        call_positional = [c.args for c in fetcher.fetch.call_args_list]
+        assert call_positional[0] == ("チップ", "ちっぷ")  # hiragana first
+        assert call_positional[1] == ("チップ", "チップ")  # katakana variant
+        assert media.expression_audio_path == audio_path
+
+    def test_surface_mined_noun_retries_with_lemma_reading(self, test_config, mock_services, tmp_path):
+        """Surface miss ⇒ lemma retry uses the lemma's OWN reading, not the surface reading.
+
+        Surface 探し/さがし misses; the canonical lemma is 探す/さがす. The retry
+        must swap BOTH kanji and reading — keeping さがし would still miss.
+        """
+        config = self._enabled_config(test_config)
+        word = _make_word(lemma="探す", surface="探し", pos="名詞")
+        word.expression_reading = "さがし"
+        word.lemma_reading = "さがす"
+        media = _make_media("sagasu")
+        pairs = [(word, media)]
+        self._wire_pipeline(mock_services, pairs)
+
+        audio_path = tmp_path / "jpod101_探す_さがす.mp3"
+        fetcher = MagicMock()
+        fetcher.fetch.side_effect = [None, audio_path]
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.cards_created == 1
+        assert fetcher.fetch.call_count == 2
+        call_positional = [c.args for c in fetcher.fetch.call_args_list]
+        assert call_positional[0] == ("探し", "さがし")  # surface form first
+        assert call_positional[1] == ("探す", "さがす")  # lemma + lemma reading
+        assert media.expression_audio_path == audio_path
+
+    def test_first_hit_short_circuits_retry_ladder(self, test_config, mock_services, tmp_path):
+        """A hit on the first candidate stops the ladder — no further fetches."""
+        config = self._enabled_config(test_config)
+        word = _make_word(lemma="チップ", surface="チップ", pos="名詞")
+        word.expression_reading = "ちっぷ"
+        word.lemma_reading = "ちっぷ"
+        media = _make_media("chip")
+        pairs = [(word, media)]
+        self._wire_pipeline(mock_services, pairs)
+
+        audio_path = tmp_path / "jpod101_チップ_ちっぷ.mp3"
+        fetcher = MagicMock()
+        fetcher.fetch.side_effect = [audio_path]
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert fetcher.fetch.call_count == 1
+        assert media.expression_audio_path == audio_path
+
+    def test_empty_reading_skips_fetch_entirely(self, test_config, mock_services, tmp_path):
+        """A word with no usable reading yields no candidates ⇒ fetcher never called."""
+        config = self._enabled_config(test_config)
+        word = _make_word(lemma="々", surface="々", pos="記号")
+        word.expression_reading = ""
+        word.lemma_reading = ""
+        pairs = [(word, _make_media("sym"))]
+        self._wire_pipeline(mock_services, pairs)
+        fetcher = MagicMock()
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        fetcher.fetch.assert_not_called()
 
     def test_miss_no_lemma_retry_when_mined_form_equals_lemma(self, test_config, mock_services, tmp_path):
         """Verbs mine as lemma (mined_form == lemma) ⇒ no redundant second fetch on miss."""
