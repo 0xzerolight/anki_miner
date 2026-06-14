@@ -40,6 +40,18 @@ def _response(
 class TestJPod101AudioFetcher:
     """Tests for JPod101AudioFetcher."""
 
+    def test_session_sets_browser_user_agent(self, tmp_path):
+        """The CDN 403s the default python-requests UA, so a browser UA is set.
+
+        Without this, valid words 301-redirect to a CDN that rejects
+        python-requests with 403 + HTML, every fetch returns None via the
+        transient path, and audio silently falls through to a synthetic source.
+        """
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        ua = fetcher._session.headers.get("User-Agent")
+        assert ua
+        assert not ua.lower().startswith("python-requests")
+
     def test_fetch_success_writes_mp3_and_returns_path(self, tmp_path):
         """Successful fetch downloads, caches, and returns the mp3 path."""
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
