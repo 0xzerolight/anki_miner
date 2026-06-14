@@ -2866,7 +2866,7 @@ class TestExpressionAudio:
         mock_services["anki_service"].create_cards_batch.return_value = len(words)
 
     def test_enabled_fetches_per_word_and_fills_media(self, test_config, mock_services, tmp_path):
-        """Fetcher called with (mined_form, expression_reading); hits fill MediaData, misses stay None."""
+        """Fetcher called with each word's candidate ladder; hits fill MediaData, misses stay None."""
         config = self._enabled_config(test_config)
         pairs = [
             (self._word("食べる", "たべる"), _make_media("taberu")),
@@ -2876,7 +2876,7 @@ class TestExpressionAudio:
 
         audio_path = tmp_path / "jpod101_食べる_たべる.mp3"
         fetcher = MagicMock()
-        fetcher.fetch.side_effect = [audio_path, None]
+        fetcher.fetch_candidates.side_effect = [audio_path, None]
 
         processor = EpisodeProcessor(
             config=config,
@@ -2887,12 +2887,12 @@ class TestExpressionAudio:
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         assert result.cards_created == 2
-        assert fetcher.fetch.call_count == 2
-        # Verify positional args; cancelled_check is passed as a kwarg so we
-        # can't use assert_any_call with positional-only matching.
-        call_positional = [c.args for c in fetcher.fetch.call_args_list]
-        assert ("食べる", "たべる") in call_positional
-        assert ("走る", "はしる") in call_positional
+        assert fetcher.fetch_candidates.call_count == 2
+        # The processor hands each word's full candidate ladder to the fetcher;
+        # source/candidate nesting (and first-hit selection) is the fetcher's job.
+        candidate_lists = [c.args[0] for c in fetcher.fetch_candidates.call_args_list]
+        assert [("食べる", "たべる")] in candidate_lists
+        assert [("走る", "はしる")] in candidate_lists
         hit_media = pairs[0][1]
         assert hit_media.expression_audio_path == audio_path
         assert hit_media.expression_audio_filename == audio_path.name
@@ -2915,10 +2915,11 @@ class TestExpressionAudio:
         pairs = [(word, media)]
         self._wire_pipeline(mock_services, pairs)
 
-        # mined_form (噓) misses; lemma (嘘) hits.
+        # Surface 噓 misses, lemma 嘘 hits — that selection is now internal to
+        # the fetcher; the processor only owns building the ladder.
         audio_path = tmp_path / "jpod101_嘘_うそ.mp3"
         fetcher = MagicMock()
-        fetcher.fetch.side_effect = [None, audio_path]
+        fetcher.fetch_candidates.return_value = audio_path
 
         processor = EpisodeProcessor(
             config=config,
@@ -2929,10 +2930,9 @@ class TestExpressionAudio:
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         assert result.cards_created == 1
-        assert fetcher.fetch.call_count == 2
-        call_positional = [c.args for c in fetcher.fetch.call_args_list]
-        assert call_positional[0] == ("噓", "うそ")  # surface first
-        assert call_positional[1] == ("嘘", "うそ")  # lemma fallback
+        assert fetcher.fetch_candidates.call_count == 1
+        candidates = fetcher.fetch_candidates.call_args.args[0]
+        assert candidates == [("噓", "うそ"), ("嘘", "うそ")]  # surface then lemma
         assert media.expression_audio_path == audio_path
         assert media.expression_audio_filename == audio_path.name
 
@@ -2952,7 +2952,7 @@ class TestExpressionAudio:
 
         audio_path = tmp_path / "jpod101_チップ_チップ.mp3"
         fetcher = MagicMock()
-        fetcher.fetch.side_effect = [None, audio_path]
+        fetcher.fetch_candidates.return_value = audio_path
 
         processor = EpisodeProcessor(
             config=config,
@@ -2963,10 +2963,9 @@ class TestExpressionAudio:
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         assert result.cards_created == 1
-        assert fetcher.fetch.call_count == 2
-        call_positional = [c.args for c in fetcher.fetch.call_args_list]
-        assert call_positional[0] == ("チップ", "ちっぷ")  # hiragana first
-        assert call_positional[1] == ("チップ", "チップ")  # katakana variant
+        assert fetcher.fetch_candidates.call_count == 1
+        candidates = fetcher.fetch_candidates.call_args.args[0]
+        assert candidates == [("チップ", "ちっぷ"), ("チップ", "チップ")]  # hiragana then katakana
         assert media.expression_audio_path == audio_path
 
     def test_surface_mined_noun_retries_with_lemma_reading(self, test_config, mock_services, tmp_path):
@@ -2985,7 +2984,7 @@ class TestExpressionAudio:
 
         audio_path = tmp_path / "jpod101_探す_さがす.mp3"
         fetcher = MagicMock()
-        fetcher.fetch.side_effect = [None, audio_path]
+        fetcher.fetch_candidates.return_value = audio_path
 
         processor = EpisodeProcessor(
             config=config,
@@ -2996,46 +2995,27 @@ class TestExpressionAudio:
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         assert result.cards_created == 1
-        assert fetcher.fetch.call_count == 2
-        call_positional = [c.args for c in fetcher.fetch.call_args_list]
-        assert call_positional[0] == ("探し", "さがし")  # surface form first
-        assert call_positional[1] == ("探す", "さがす")  # lemma + lemma reading
+        assert fetcher.fetch_candidates.call_count == 1
+        candidates = fetcher.fetch_candidates.call_args.args[0]
+        # Lemma retry swaps BOTH kanji and reading (探す/さがす, not 探す/さがし).
+        assert candidates == [("探し", "さがし"), ("探す", "さがす")]
         assert media.expression_audio_path == audio_path
 
-    def test_first_hit_short_circuits_retry_ladder(self, test_config, mock_services, tmp_path):
-        """A hit on the first candidate stops the ladder — no further fetches."""
-        config = self._enabled_config(test_config)
-        word = _make_word(lemma="チップ", surface="チップ", pos="名詞")
-        word.expression_reading = "ちっぷ"
-        word.lemma_reading = "ちっぷ"
-        media = _make_media("chip")
-        pairs = [(word, media)]
-        self._wire_pipeline(mock_services, pairs)
+    def test_empty_reading_yields_empty_candidate_ladder(self, test_config, mock_services, tmp_path):
+        """A word with no usable reading yields an empty candidate ladder.
 
-        audio_path = tmp_path / "jpod101_チップ_ちっぷ.mp3"
-        fetcher = MagicMock()
-        fetcher.fetch.side_effect = [audio_path]
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        assert fetcher.fetch.call_count == 1
-        assert media.expression_audio_path == audio_path
-
-    def test_empty_reading_skips_fetch_entirely(self, test_config, mock_services, tmp_path):
-        """A word with no usable reading yields no candidates ⇒ fetcher never called."""
+        ``fetch_candidates([])`` is a cheap no-op that returns None without
+        touching the network (the leaf's homograph guard handles the actual
+        skip — see test_expression_audio_fetcher)."""
         config = self._enabled_config(test_config)
         word = _make_word(lemma="々", surface="々", pos="記号")
         word.expression_reading = ""
         word.lemma_reading = ""
-        pairs = [(word, _make_media("sym"))]
+        media = _make_media("sym")
+        pairs = [(word, media)]
         self._wire_pipeline(mock_services, pairs)
         fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
 
         processor = EpisodeProcessor(
             config=config,
@@ -3045,17 +3025,19 @@ class TestExpressionAudio:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        fetcher.fetch.assert_not_called()
+        fetcher.fetch_candidates.assert_called_once()
+        assert fetcher.fetch_candidates.call_args.args[0] == []
+        assert media.expression_audio_path is None
 
     def test_miss_no_lemma_retry_when_mined_form_equals_lemma(self, test_config, mock_services, tmp_path):
-        """Verbs mine as lemma (mined_form == lemma) ⇒ no redundant second fetch on miss."""
+        """Verbs mine as lemma (mined_form == lemma) ⇒ single-form candidate ladder."""
         config = self._enabled_config(test_config)
         # Default pos=動詞 ⇒ mined_form == lemma == 食べる.
         pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
         self._wire_pipeline(mock_services, pairs)
 
         fetcher = MagicMock()
-        fetcher.fetch.side_effect = [None]
+        fetcher.fetch_candidates.return_value = None
 
         processor = EpisodeProcessor(
             config=config,
@@ -3065,7 +3047,9 @@ class TestExpressionAudio:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        assert fetcher.fetch.call_count == 1
+        assert fetcher.fetch_candidates.call_count == 1
+        # No redundant lemma duplicate when mined_form == lemma.
+        assert fetcher.fetch_candidates.call_args.args[0] == [("食べる", "たべる")]
         assert pairs[0][1].expression_audio_path is None
 
     def test_disabled_does_not_fetch(self, test_config, mock_services, tmp_path):
@@ -3087,7 +3071,7 @@ class TestExpressionAudio:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        fetcher.fetch.assert_not_called()
+        fetcher.fetch_candidates.assert_not_called()
 
     def test_blank_field_mapping_does_not_fetch(self, test_config, mock_services, tmp_path):
         """Enabled but anki_fields['expression_audio'] blank ⇒ fetcher never called."""
@@ -3108,7 +3092,7 @@ class TestExpressionAudio:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        fetcher.fetch.assert_not_called()
+        fetcher.fetch_candidates.assert_not_called()
 
     def test_no_fetcher_injected_no_crash(self, test_config, mock_services, tmp_path):
         """Enabled + field mapped but fetcher=None ⇒ pipeline completes, no fetch."""
@@ -3143,15 +3127,15 @@ class TestExpressionAudio:
             **mock_services,
         )
 
-        def _fetch_then_cancel(mined_form, reading, cancelled_check=None):
+        def _fetch_then_cancel(candidates, cancelled_check=None):
             processor.cancel()
             return tmp_path / "a.mp3"
 
-        fetcher.fetch.side_effect = _fetch_then_cancel
+        fetcher.fetch_candidates.side_effect = _fetch_then_cancel
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        assert fetcher.fetch.call_count == 1
+        assert fetcher.fetch_candidates.call_count == 1
         assert "Processing cancelled by user" in result.errors
         mock_services["anki_service"].create_cards_batch.assert_not_called()
 
@@ -3165,7 +3149,7 @@ class TestExpressionAudio:
         self._wire_pipeline(mock_services, pairs)
 
         fetcher = MagicMock()
-        fetcher.fetch.side_effect = [tmp_path / "a.mp3", None]
+        fetcher.fetch_candidates.side_effect = [tmp_path / "a.mp3", None]
         presenter = MagicMock()
 
         processor = EpisodeProcessor(
@@ -3185,7 +3169,7 @@ class TestExpressionAudio:
         self._wire_pipeline(mock_services, pairs)
 
         fetcher = MagicMock()
-        fetcher.fetch.return_value = None
+        fetcher.fetch_candidates.return_value = None
 
         processor = EpisodeProcessor(
             config=config,
@@ -3195,8 +3179,8 @@ class TestExpressionAudio:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        assert fetcher.fetch.call_count == 1
-        call_kwargs = fetcher.fetch.call_args.kwargs
+        assert fetcher.fetch_candidates.call_count == 1
+        call_kwargs = fetcher.fetch_candidates.call_args.kwargs
         assert "cancelled_check" in call_kwargs
         # The callable should return False (processor not cancelled) and be callable.
         check_fn = call_kwargs["cancelled_check"]
@@ -3214,7 +3198,7 @@ class TestExpressionAudio:
         self._wire_pipeline(mock_services, pairs)
 
         fetcher = MagicMock()
-        fetcher.fetch.return_value = None
+        fetcher.fetch_candidates.return_value = None
 
         progress_callback = MagicMock()
 
@@ -3298,7 +3282,7 @@ class TestExpressionAudioProgressBand:
         self._wire_pipeline(mock_services, pairs)
 
         fetcher = MagicMock()
-        fetcher.fetch.return_value = None
+        fetcher.fetch_candidates.return_value = None
 
         # Use a recording callback that counts on_start calls by description
         class _RecordingCallback:
@@ -3334,14 +3318,14 @@ class TestExpressionAudioProgressBand:
         # advance the internal band counter and never reach the inner callback.
         # Therefore cb.starts has exactly 1 entry regardless of band count.
         # The expression-audio band being registered is verified indirectly:
-        # fetcher.fetch was called (feature ran) AND finish() emitted one
+        # fetch_candidates was called (feature ran) AND finish() emitted one
         # on_complete, confirming the full 4-band sweep completed without
         # band-accounting errors.
         assert len(cb.starts) == 1
         assert cb.completes == 1  # from StageWeightedProgress.finish()
 
         # Cross-check: fetcher was called (expression-audio band ran)
-        assert fetcher.fetch.call_count == 1
+        assert fetcher.fetch_candidates.call_count == 1
 
     def test_feature_on_on_start_description_includes_expression_audio(self, test_config, mock_services, tmp_path):
         """The expression-audio on_start description is passed to the inner callback.
@@ -3355,7 +3339,7 @@ class TestExpressionAudioProgressBand:
         self._wire_pipeline(mock_services, pairs)
 
         fetcher = MagicMock()
-        fetcher.fetch.return_value = None
+        fetcher.fetch_candidates.return_value = None
 
         # Pass a raw MagicMock as progress_callback so we can inspect all calls.
         raw_cb = MagicMock()
@@ -3383,7 +3367,7 @@ class TestExpressionAudioProgressBand:
         config = self._enabled_config(test_config)
 
         fetcher = MagicMock()
-        fetcher.fetch.return_value = None
+        fetcher.fetch_candidates.return_value = None
 
         processor = EpisodeProcessor(
             config=config,
@@ -3414,7 +3398,7 @@ class TestExpressionAudioProgressBand:
         assert "expression audio" in on_start_args.args[1].lower()
         assert raw_cb.on_complete.call_count == 1
         # Fetcher never called — no words to iterate
-        fetcher.fetch.assert_not_called()
+        fetcher.fetch_candidates.assert_not_called()
         # Returns empty list unchanged
         assert result == []
 
@@ -3442,7 +3426,7 @@ class TestExpressionAudioProgressBand:
 
         on_start_descriptions = [c.args[1] for c in raw_cb.on_start.call_args_list]
         assert not any("expression audio" in d.lower() for d in on_start_descriptions)
-        fetcher.fetch.assert_not_called()
+        fetcher.fetch_candidates.assert_not_called()
 
     def test_feature_off_no_fetcher_no_expression_audio_on_start(self, test_config, mock_services, tmp_path):
         """Feature enabled but no fetcher injected: no expression-audio band."""

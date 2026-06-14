@@ -15,6 +15,7 @@ from anki_miner.services.expression_audio_fetcher import (
     STALE_PART_AGE_SECONDS,
     ChainedExpressionAudioFetcher,
     JPod101AudioFetcher,
+    _first_candidate_hit,
 )
 
 MODULE = "anki_miner.services.expression_audio_fetcher"
@@ -798,3 +799,158 @@ class TestChainedExpressionAudioFetcher:
         assert result is None
         assert len(first.calls) == 1  # type: ignore[union-attr]
         assert len(second.calls) == 0  # type: ignore[union-attr]
+
+
+class _CandidateStub:
+    """Stub fetcher: returns the mapped Path for matching ``(form, reading)`` pairs.
+
+    Implements both ``fetch`` (records every call) and ``fetch_candidates``
+    (delegates to the production helper) so it behaves like a real leaf.
+    ``hits=None`` means "hit on ANY candidate" (the synthetic-fallback shape).
+    """
+
+    def __init__(self, path, hits=None):
+        self._path = path
+        self._hits = hits  # set of (form, reading), or None = match anything
+        self.calls: list[tuple[str, str]] = []
+
+    def fetch(self, mined_form, reading, cancelled_check=None):
+        self.calls.append((mined_form, reading))
+        if self._hits is None or (mined_form, reading) in self._hits:
+            return self._path
+        return None
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        return _first_candidate_hit(self, candidates, cancelled_check)
+
+
+class TestFetchCandidates:
+    """Source-priority-outer / candidate-ladder-inner fetch_candidates."""
+
+    def test_leaf_tries_candidates_in_order_first_hit_wins(self, tmp_path):
+        """A leaf tries each candidate in order and returns on the first hit."""
+        audio = tmp_path / "lemma.mp3"
+        stub = _CandidateStub(audio, hits={("嘘", "うそ")})
+
+        result = stub.fetch_candidates([("噓", "うそ"), ("嘘", "うそ")])
+
+        assert result == audio
+        # Surface tried first (miss), then lemma (hit); no calls after the hit.
+        assert stub.calls == [("噓", "うそ"), ("嘘", "うそ")]
+
+    def test_leaf_all_miss_returns_none(self, tmp_path):
+        """A leaf that hits nothing returns None after trying every candidate."""
+        stub = _CandidateStub(tmp_path / "x.mp3", hits=set())
+
+        result = stub.fetch_candidates([("噓", "うそ"), ("嘘", "うそ")])
+
+        assert result is None
+        assert stub.calls == [("噓", "うそ"), ("嘘", "うそ")]
+
+    def test_leaf_empty_candidates_returns_none_without_fetch(self, tmp_path):
+        """An empty candidate ladder is a no-op — fetch is never called."""
+        stub = _CandidateStub(tmp_path / "x.mp3")
+
+        result = stub.fetch_candidates([])
+
+        assert result is None
+        assert stub.calls == []
+
+    def test_higher_priority_lemma_beats_lower_priority_surface(self, tmp_path):
+        """Regression for the inverted-nesting bug (Issue: JPod101 never used).
+
+        JPod101 misses the surface form but HAS the lemma; Google TTS (synthetic)
+        would hit the surface form.  Source priority must dominate: JPod101 must
+        try its lemma candidate BEFORE the chain ever falls through to googletts.
+        Before the fix, googletts satisfied the surface candidate first and
+        JPod101's lemma was never reached.
+        """
+        jpod_audio = tmp_path / "jpod101_嘘_うそ.mp3"
+        gtts_audio = tmp_path / "googletts_噓_うそ.mp3"
+        jpod = _CandidateStub(jpod_audio, hits={("嘘", "うそ")})  # only the lemma
+        googletts = _CandidateStub(gtts_audio, hits=None)  # any candidate (synthetic)
+        chain = ChainedExpressionAudioFetcher([jpod, googletts])  # type: ignore[list-item]
+
+        candidates = [("噓", "うそ"), ("嘘", "うそ")]  # surface, then lemma
+        result = chain.fetch_candidates(candidates)
+
+        assert result == jpod_audio
+        # JPod101 tried BOTH forms before the chain moved on.
+        assert jpod.calls == [("噓", "うそ"), ("嘘", "うそ")]
+        # Google TTS was never consulted — JPod101's lemma won.
+        assert googletts.calls == []
+
+    def test_falls_through_to_next_source_when_first_misses_all(self, tmp_path):
+        """When the first source misses every candidate, the next source is tried."""
+        gtts_audio = tmp_path / "googletts.mp3"
+        jpod = _CandidateStub(tmp_path / "never.mp3", hits=set())  # misses everything
+        googletts = _CandidateStub(gtts_audio, hits=None)
+        chain = ChainedExpressionAudioFetcher([jpod, googletts])  # type: ignore[list-item]
+
+        candidates = [("噓", "うそ"), ("嘘", "うそ")]
+        result = chain.fetch_candidates(candidates)
+
+        assert result == gtts_audio
+        assert jpod.calls == [("噓", "うそ"), ("嘘", "うそ")]  # all candidates tried
+        assert googletts.calls == [("噓", "うそ")]  # first candidate hits
+
+    def test_first_source_first_candidate_short_circuits(self, tmp_path):
+        """A hit on the first source's first candidate consults nothing further."""
+        audio = tmp_path / "hit.mp3"
+        jpod = _CandidateStub(audio, hits=None)
+        googletts = _CandidateStub(tmp_path / "other.mp3", hits=None)
+        chain = ChainedExpressionAudioFetcher([jpod, googletts])  # type: ignore[list-item]
+
+        result = chain.fetch_candidates([("噓", "うそ"), ("嘘", "うそ")])
+
+        assert result == audio
+        assert jpod.calls == [("噓", "うそ")]
+        assert googletts.calls == []
+
+    def test_empty_chain_returns_none(self):
+        """An empty source chain returns None."""
+        chain = ChainedExpressionAudioFetcher([])
+
+        assert chain.fetch_candidates([("噓", "うそ")]) is None
+
+    def test_cancelled_before_first_source_skips_all(self, tmp_path):
+        """cancelled_check True at entry ⇒ None, no source consulted."""
+        jpod = _CandidateStub(tmp_path / "x.mp3", hits=None)
+        chain = ChainedExpressionAudioFetcher([jpod])  # type: ignore[list-item]
+
+        result = chain.fetch_candidates([("噓", "うそ")], cancelled_check=lambda: True)
+
+        assert result is None
+        assert jpod.calls == []
+
+    def test_cancelled_between_candidates_in_leaf(self, tmp_path):
+        """A leaf stops its ladder when cancellation is observed between candidates."""
+        stub = _CandidateStub(tmp_path / "x.mp3", hits=set())
+        calls = 0
+
+        def _cancel_after_first() -> bool:
+            nonlocal calls
+            calls += 1
+            return calls >= 2  # False before candidate 1, True before candidate 2
+
+        result = stub.fetch_candidates([("噓", "うそ"), ("嘘", "うそ")], cancelled_check=_cancel_after_first)
+
+        assert result is None
+        assert stub.calls == [("噓", "うそ")]  # second candidate never tried
+
+    def test_jpod101_fetch_candidates_delegates_per_form(self, tmp_path):
+        """JPod101AudioFetcher.fetch_candidates tries each form via its own fetch."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        audio = tmp_path / "jpod101_嘘_うそ.mp3"
+
+        def _fake_fetch(mined_form, reading, cancelled_check=None):
+            return audio if (mined_form, reading) == ("嘘", "うそ") else None
+
+        with patch.object(fetcher, "fetch", side_effect=_fake_fetch) as mock_fetch:
+            result = fetcher.fetch_candidates([("噓", "うそ"), ("嘘", "うそ")])
+
+        assert result == audio
+        assert [c.args[:2] for c in mock_fetch.call_args_list] == [
+            ("噓", "うそ"),
+            ("嘘", "うそ"),
+        ]
