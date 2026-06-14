@@ -15,6 +15,7 @@ from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher, JPod101AudioFetcher
 from anki_miner.services.frequency_service import FrequencyService
+from anki_miner.services.google_translate_audio_fetcher import GoogleTranslateAudioFetcher
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.services.pitch_accent_service import PitchAccentService
@@ -117,6 +118,8 @@ def _build_expression_audio_fetcher(
     Constructs a :class:`~anki_miner.services.expression_audio_fetcher.ChainedExpressionAudioFetcher`
     whose members follow config order.  ``kind="jpod101"`` entries become
     :class:`~anki_miner.services.expression_audio_fetcher.JPod101AudioFetcher`;
+    ``kind="googletts"`` entries become
+    :class:`~anki_miner.services.google_translate_audio_fetcher.GoogleTranslateAudioFetcher`;
     ``kind="pack"`` entries are resolved against :class:`AudioPackRegistry`.
 
     I/O neutrality: ``AudioPackRegistry`` is only constructed + loaded when
@@ -138,6 +141,7 @@ def _build_expression_audio_fetcher(
         The list may be empty (all entries disabled) — the chain returns None.
     """
     jpod_cache = ANKI_MINER_HOME / "audio_cache" / "jpod101"
+    googletts_cache = ANKI_MINER_HOME / "audio_cache" / "googletts"
     pack_cache = ANKI_MINER_HOME / "audio_cache" / "local_packs"
 
     # Build registry only when needed — avoids disk scan for default config
@@ -160,6 +164,13 @@ def _build_expression_audio_fetcher(
             fetchers.append(
                 JPod101AudioFetcher(
                     cache_dir=jpod_cache,
+                    delay=config.expression_audio_delay,
+                )
+            )
+        elif entry.kind == "googletts":
+            fetchers.append(
+                GoogleTranslateAudioFetcher(
+                    cache_dir=googletts_cache,
                     delay=config.expression_audio_delay,
                 )
             )
