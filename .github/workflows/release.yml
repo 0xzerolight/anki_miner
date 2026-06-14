@@ -127,9 +127,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # BtbN/FFmpeg-Builds, pinned to an immutable dated autobuild tag.
-          URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-06-02-14-20/ffmpeg-n8.1.1-9-g58d4114d36-linux64-gpl-8.1.tar.xz"
-          SHA256="2c83e8cbaad6cd8474e58d59a1b9da999bc45f246e268ab5060921718f7f45e6"
+          # BtbN/FFmpeg-Builds. Pin a MONTHLY snapshot tag, never a daily one:
+          # BtbN prunes daily autobuilds after ~10 days (404), but keeps the
+          # last-of-month snapshot long-term (15+ months of history live).
+          URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-05-31-13-22/ffmpeg-n8.1.1-9-g58d4114d36-linux64-gpl-8.1.tar.xz"
+          SHA256="0d14781b885c491f5c3b799cbe7d3a26ba8a7eb01935483185e31ea7d79c8cd3"
           curl -fL "$URL" -o ffmpeg-dl.tar.xz
           echo "${SHA256}  ffmpeg-dl.tar.xz" | sha256sum -c -
           mkdir -p vendor/ffmpeg extracted
@@ -175,9 +177,11 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          # BtbN/FFmpeg-Builds, pinned to an immutable dated autobuild tag.
-          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-06-02-14-20/ffmpeg-n8.1.1-9-g58d4114d36-win64-gpl-8.1.zip"
-          $sha256 = "cf992c84e59809fab3a2077fd6a48796b10fef9e10a95cbbbe2b96d3b756b950"
+          # BtbN/FFmpeg-Builds. Pin a MONTHLY snapshot tag, never a daily one:
+          # BtbN prunes daily autobuilds after ~10 days (404), but keeps the
+          # last-of-month snapshot long-term (15+ months of history live).
+          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-05-31-13-22/ffmpeg-n8.1.1-9-g58d4114d36-win64-gpl-8.1.zip"
+          $sha256 = "7fe1bb1e76edf97b8ec9e84fb32b96d125d846135b6b9218af772f5af2bd9065"
           curl.exe -fL $url -o ffmpeg-dl.zip
           $actual = (Get-FileHash ffmpeg-dl.zip -Algorithm SHA256).Hash.ToLower()
           if ($actual -ne $sha256) {
