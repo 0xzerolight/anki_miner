@@ -606,15 +606,14 @@ class EpisodeProcessor:
                     if progress_callback is not None:
                         progress_callback.on_complete()
                     return media_results
-                path = None
-                for kanji, kana in _expression_audio_candidates(word):
-                    path = self.expression_audio_fetcher.fetch(  # type: ignore[union-attr]
-                        kanji,
-                        kana,
-                        cancelled_check=lambda: self.cancelled,
-                    )
-                    if path is not None:
-                        break
+                # Source-priority outer / candidate-ladder inner: each source
+                # tries ALL candidate forms before the chain falls through to a
+                # lower-priority source, so a synthetic fallback can't satisfy
+                # the surface form before JPod101 sees the lemma it actually has.
+                path = self.expression_audio_fetcher.fetch_candidates(  # type: ignore[union-attr]
+                    _expression_audio_candidates(word),
+                    cancelled_check=lambda: self.cancelled,
+                )
                 if path is not None:
                     media.expression_audio_path = path
                     media.expression_audio_filename = path.name

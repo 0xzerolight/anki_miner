@@ -51,6 +51,27 @@ def _is_mp3(body: bytes) -> bool:
     return bool(body[0] == 0xFF and (body[1] & 0xE0) == 0xE0)
 
 
+def _first_candidate_hit(
+    fetcher: "ExpressionAudioFetcher",
+    candidates: list[tuple[str, str]],
+    cancelled_check: Callable[[], bool] | None,
+) -> Path | None:
+    """Try each candidate via ``fetcher.fetch``, returning the first hit.
+
+    Shared leaf implementation of ``fetch_candidates``: a single source
+    exhausts its retry ladder (surface, katakana, lemma, ...) before the
+    caller moves on.  Checks ``cancelled_check`` between candidates so a leaf
+    used standalone honors cancellation like the composite does.
+    """
+    for mined_form, reading in candidates:
+        if cancelled_check is not None and cancelled_check():
+            return None
+        result = fetcher.fetch(mined_form, reading, cancelled_check)
+        if result is not None:
+            return result
+    return None
+
+
 class JPod101AudioFetcher:
     """Fetches word pronunciation audio from JapanesePod101.
 
@@ -223,6 +244,14 @@ class JPod101AudioFetcher:
             logger.debug("expression audio fetch failed for %s: %s", mined_form, exc)
             return None
 
+    def fetch_candidates(
+        self,
+        candidates: list[tuple[str, str]],
+        cancelled_check: Callable[[], bool] | None = None,
+    ) -> Path | None:
+        """Try each candidate form, returning the first JPod101 hit."""
+        return _first_candidate_hit(self, candidates, cancelled_check)
+
 
 class ChainedExpressionAudioFetcher:
     """Composite fetcher that walks a sequence of fetchers, first hit wins.
@@ -264,6 +293,27 @@ class ChainedExpressionAudioFetcher:
             if cancelled_check is not None and cancelled_check():
                 return None
             result = fetcher.fetch(mined_form, reading, cancelled_check)
+            if result is not None:
+                return result
+        return None
+
+    def fetch_candidates(
+        self,
+        candidates: list[tuple[str, str]],
+        cancelled_check: Callable[[], bool] | None = None,
+    ) -> Path | None:
+        """Return the first hit, source-priority outer / candidate-ladder inner.
+
+        Each member fetcher tries ALL candidate forms (via its own
+        ``fetch_candidates``) before the chain falls through to the next, lower-
+        priority source.  This is the fix for the inverted nesting that let a
+        synthetic fallback satisfy the surface form before a higher-priority
+        source ever saw the lemma it actually has.
+        """
+        for fetcher in self._fetchers:
+            if cancelled_check is not None and cancelled_check():
+                return None
+            result = fetcher.fetch_candidates(candidates, cancelled_check)
             if result is not None:
                 return result
         return None
