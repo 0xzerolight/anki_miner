@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtGui import QResizeEvent
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
@@ -75,14 +76,11 @@ def test_elide_middle_mode_keeps_both_ends() -> None:
 def test_reelides_on_resize() -> None:
     label = ElidingLabel()
     label.resize(2000, 20)
-    label.show()  # so resizeEvent is delivered when the geometry changes
-    _app.processEvents()
     label.setText(_LONG)
     assert label.text() == _LONG  # fits wide
-    label.resize(120, 20)  # shrink → resizeEvent re-elides
-    _app.processEvents()
-    try:
-        assert label.text().endswith("…")
-        assert label.full_text == _LONG
-    finally:
-        label.hide()
+    label.resize(120, 20)  # shrink → width() updates synchronously pre-show
+    # Deliver the resize event deterministically: offscreen QPA won't reliably
+    # deliver it via show()/processEvents() within one event loop pass.
+    QApplication.sendEvent(label, QResizeEvent(QSize(120, 20), QSize(2000, 20)))
+    assert label.text().endswith("…")
+    assert label.full_text == _LONG
