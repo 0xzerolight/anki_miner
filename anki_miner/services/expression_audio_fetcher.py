@@ -21,6 +21,18 @@ logger = logging.getLogger(__name__)
 
 JPOD101_AUDIO_URL = "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php"
 
+# Valid words 301-redirect to the CloudFront CDN (cdn.innovativelanguage.com),
+# which returns HTTP 403 + an HTML error page to the default
+# "python-requests/x.y" User-Agent. A browser-style UA is required — the same a
+# browser or Yomitan sends — otherwise EVERY present word fails the _is_mp3
+# check and falls through to a synthetic fallback. (Genuinely-absent words are
+# served the placeholder mp3 by the PHP endpoint directly, with no CDN redirect,
+# so they still produce a correct .miss even with the default UA — which is why
+# the symptom was "0 hits, a few misses, everything synthesized".)
+_BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+
 # JPod101 answers unknown words with HTTP 200 and a fixed "audio not
 # available" placeholder mp3. This is the SHA-256 of that placeholder
 # (same value Yomitan hardcodes) — matching bodies are treated as misses.
@@ -84,6 +96,10 @@ class JPod101AudioFetcher:
     Non-audio bodies such as HTML rate-limit pages are treated as transient
     failures — no ``.miss`` marker is written — so affected words are
     retried automatically on the next run.
+
+    The session sends a browser User-Agent: the CDN behind the endpoint's 301
+    redirect 403s the default ``python-requests`` UA (see
+    ``_BROWSER_USER_AGENT``).
     """
 
     def __init__(self, cache_dir: Path, delay: float = 0.2):
@@ -101,6 +117,10 @@ class JPod101AudioFetcher:
         # Not thread-safe; safe because each processor builds its own fetcher
         # (service_factory creates fresh Services per create_episode_processor call).
         self._session = requests.Session()
+        # The CDN behind the 301 redirect 403s the default python-requests UA;
+        # present a browser UA so valid words actually download (see
+        # _BROWSER_USER_AGENT note above).
+        self._session.headers.update({"User-Agent": _BROWSER_USER_AGENT})
 
     def fetch(
         self,
