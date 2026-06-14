@@ -129,9 +129,10 @@ class AudioPackRegistry:
           with a warning (pack was removed since config was written).
         * Packs whose ``pack_dir`` is missing on disk are skipped with a
           warning (audio files moved or external drive unplugged).
-        * ``kind="jpod101"`` entries are silently skipped here; they are
-          composed by the service factory (T7) around the list this method
-          returns.  Unlike ``DictionaryRegistry.build_provider_chain``, which
+        * Non-pack entries (``kind="jpod101"``, ``kind="googletts"``) are
+          silently skipped here; they are composed by the service factory (T7)
+          around the list this method returns.  Unlike
+          ``DictionaryRegistry.build_provider_chain``, which
           builds ``JishoProvider`` inline, this registry intentionally returns
           only local pack fetchers and carries no network-fetcher knowledge.
 
