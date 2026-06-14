@@ -15,6 +15,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 
+## [2.6.4] - 2026-06-14
+
+### Fixed
+- **Release builds no longer fail to fetch ffmpeg.** The Linux and Windows release jobs pinned a BtbN daily ffmpeg autobuild, which BtbN prunes after ~10 days, so the v2.6.3 build hit a 404 and produced no downloadable binaries. They now pin a BtbN month-end snapshot (kept long-term). No user-facing app changes; 2.6.4 ships the same application as 2.6.3 with working release binaries.
+
+
 ## [2.6.3] - 2026-06-14
 
 ### Added
