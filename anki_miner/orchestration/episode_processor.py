@@ -28,7 +28,7 @@ from anki_miner.services import (
     SubtitleParserService,
     WordFilterService,
 )
-from anki_miner.utils import ensure_directory
+from anki_miner.utils import ensure_directory, has_katakana, hiragana_to_katakana
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,47 @@ def _resolve_identity(override: str | None, default: str) -> str:
     string is honored as-is.
     """
     return override if override is not None else default
+
+
+def _expression_audio_candidates(word: TokenizedWord) -> list[tuple[str, str]]:
+    """Ordered ``(kanji, kana)`` query pairs for the JPod101 audio retry ladder.
+
+    Two failure modes the single-shot query missed:
+
+    * **Katakana loanwords.** JPod101 indexes loanword audio under the katakana
+      reading, but ``expression_reading`` is folded to hiragana for card
+      display (チップ→ちっぷ → miss).  Each query whose kanji form contains
+      katakana gets a katakana-reading variant (チップ→チップ → hit).
+    * **Surface-mined fallback.** Subtitle surface forms use variant kanji
+      (噓/頰/今さら) that JPod101 lacks; the unidic lemma is the canonical
+      orthography (嘘/頬/今更).  Surface-mined words fall back to the lemma with
+      the lemma's OWN reading (探す/さがす, not the surface 探す/さがし).
+
+    hiragana↔katakana is lossless and loanwords are unambiguous, so the katakana
+    variant carries no homograph risk (Issue #73).  Empty readings are dropped
+    (homograph guard) and duplicates are collapsed, so a verb whose
+    ``mined_form == lemma`` issues no redundant request.
+    """
+    pairs: list[tuple[str, str]] = [(word.mined_form, word.expression_reading)]
+    if word.lemma and word.lemma != word.mined_form:
+        pairs.append((word.lemma, word.lemma_reading))
+
+    candidates: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def _add(kanji: str, kana: str) -> None:
+        if not kanji or not kana:
+            return
+        pair = (kanji, kana)
+        if pair not in seen:
+            seen.add(pair)
+            candidates.append(pair)
+
+    for kanji, kana in pairs:
+        _add(kanji, kana)
+        if has_katakana(kanji):
+            _add(kanji, hiragana_to_katakana(kana))
+    return candidates
 
 
 def _format_timestamp(seconds: float) -> str:
@@ -565,23 +606,15 @@ class EpisodeProcessor:
                     if progress_callback is not None:
                         progress_callback.on_complete()
                     return media_results
-                path = self.expression_audio_fetcher.fetch(  # type: ignore[union-attr]
-                    word.mined_form,
-                    word.expression_reading,
-                    cancelled_check=lambda: self.cancelled,
-                )
-                # Subtitle surface forms use variant kanji (噓/頰/今さら) that
-                # JPod101 does not index; the unidic lemma is the canonical
-                # orthography it does (嘘/頬/今更). Retry on miss with the lemma.
-                # The reading is unchanged, so the Issue #73 homograph guard
-                # still holds. mined_form == lemma for verbs/adjectives, so the
-                # guard skips the redundant second request.
-                if path is None and word.lemma and word.lemma != word.mined_form:
+                path = None
+                for kanji, kana in _expression_audio_candidates(word):
                     path = self.expression_audio_fetcher.fetch(  # type: ignore[union-attr]
-                        word.lemma,
-                        word.expression_reading,
+                        kanji,
+                        kana,
                         cancelled_check=lambda: self.cancelled,
                     )
+                    if path is not None:
+                        break
                 if path is not None:
                     media.expression_audio_path = path
                     media.expression_audio_filename = path.name

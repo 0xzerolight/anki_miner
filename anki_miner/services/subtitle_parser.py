@@ -293,6 +293,12 @@ class SubtitleParserService:
         mined = lemma if pos in ("動詞", "形容詞") else surface
         expression_furigana = self._furigana(mined)
         expression_reading = self._reading(mined)
+        # Lemma reading for the JPod101 audio retry: when the surface form
+        # misses, the loop retries with the lemma kanji and needs the lemma's
+        # OWN reading (探す→さがす), not the surface reading (さがし). For
+        # verb/adjective mining ``mined`` already IS the lemma, so reuse the
+        # value instead of re-tokenizing.
+        lemma_reading = expression_reading if mined == lemma else self._reading(lemma)
 
         if self.config.bold_target_in_sentence:
             sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
@@ -311,6 +317,7 @@ class SubtitleParserService:
             duration=duration,
             expression_furigana=expression_furigana,
             expression_reading=expression_reading,
+            lemma_reading=lemma_reading,
             sentence_furigana=sentence_furigana,
             sentence_reading=sentence_reading,
             pos=word_token.feature.pos1,
