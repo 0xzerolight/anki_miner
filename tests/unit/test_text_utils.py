@@ -8,6 +8,8 @@ from anki_miner.utils.text_utils import (
     generate_furigana_from_tokens,
     generate_reading,
     generate_reading_from_tokens,
+    has_katakana,
+    hiragana_to_katakana,
     is_hiragana_only,
     is_katakana_only,
     katakana_to_hiragana,
@@ -95,6 +97,44 @@ class TestKatakanaToHiragana:
 
     def test_preserves_kanji(self):
         assert katakana_to_hiragana("漢字タベル") == "漢字たべる"
+
+
+class TestHiraganaToKatakana:
+    """Tests for hiragana_to_katakana function."""
+
+    def test_converts_basic_hiragana(self):
+        assert hiragana_to_katakana("たべる") == "タベル"
+
+    def test_preserves_katakana(self):
+        assert hiragana_to_katakana("タベル") == "タベル"
+
+    def test_preserves_long_vowel_mark(self):
+        assert hiragana_to_katakana("ぐれー") == "グレー"
+
+    def test_empty_string(self):
+        assert hiragana_to_katakana("") == ""
+
+    def test_mixed_hiragana_and_other(self):
+        assert hiragana_to_katakana("たべる123") == "タベル123"
+
+    def test_round_trips_with_katakana_to_hiragana(self):
+        for s in ("ちっぷ", "ぐれー", "さがす", "こーひー"):
+            assert katakana_to_hiragana(hiragana_to_katakana(s)) == s
+
+
+class TestHasKatakana:
+    """Tests for has_katakana predicate."""
+
+    def test_pure_katakana(self):
+        assert has_katakana("チップ")
+
+    def test_mixed_katakana_and_kanji(self):
+        assert has_katakana("ツギハギ状")
+
+    def test_no_katakana(self):
+        assert not has_katakana("食べる")
+        assert not has_katakana("さがす")
+        assert not has_katakana("")
 
 
 class TestGenerateFurigana:
