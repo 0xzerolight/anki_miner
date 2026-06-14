@@ -199,7 +199,7 @@ class GUIConfigManager:
     def _migrate_expression_audio_chain(data: dict[str, Any]) -> dict[str, Any]:
         """Rebuild AudioSourceEntry instances when an existing expression_audio_chain
         is loaded as list[dict] from JSON. Missing chains fall through to the
-        dataclass default (jpod101-only = exact pre-feature behaviour).
+        dataclass default (jpod101 enabled + googletts disabled = pre-feature behaviour).
         """
         from anki_miner.config import AudioSourceEntry
 
@@ -211,7 +211,7 @@ class GUIConfigManager:
         for item in raw_chain:
             if isinstance(item, dict):
                 kind = item.get("kind")
-                if kind in ("pack", "jpod101"):
+                if kind in ("pack", "jpod101", "googletts"):
                     chain.append(
                         AudioSourceEntry(
                             kind=kind,
@@ -221,6 +221,12 @@ class GUIConfigManager:
                     )
             elif isinstance(item, AudioSourceEntry):
                 chain.append(item)
+        # Append-if-missing: existing users whose persisted chain predates
+        # googletts gain a disabled entry so the Settings UI can list it.
+        # Disabled-by-default => factory skips it => pre-feature behaviour
+        # preserved; the entry only needs to exist for the UI.
+        if not any(entry.kind == "googletts" for entry in chain):
+            chain.append(AudioSourceEntry(kind="googletts", enabled=False))
         data["expression_audio_chain"] = tuple(chain)
         return data
 
