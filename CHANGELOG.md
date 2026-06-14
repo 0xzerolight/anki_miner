@@ -7,13 +7,47 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
-- **Local audio pack import** (Issue #73 follow-up). Settings → Audio → Add Audio Pack imports a [local-audio-yomichan](https://github.com/themoeway/local-audio-yomichan)-compatible audio directory (ajt_japanese, nhk16, forvo_ja, jpod_legacy / jpod_alternate formats). Packs are indexed into `~/.anki_miner/audio_packs/` — audio files stay where they are. When a pack is installed and enabled, its entries are queried before JapanesePod101, so offline audio takes priority; JPod101 remains the fallback for uncovered words. Multiple packs installed at once are queried in priority order (nhk16 > shinmeikai8 > forvo > jpod > jpod_alternate). Packs can be reordered, disabled, or removed (index only — audio files are never deleted). JPod101 is still the zero-setup default when no packs are installed.
 
 ### Changed
 
 ### Fixed
 
 ### Removed
+
+
+## [2.6.3] - 2026-06-14
+
+### Added
+- **Expression (word-level) audio on cards** (Issue #73). Opt-in native pronunciation audio for each card's Expression. Map an Anki field under Settings → Anki → Auxiliary Data Fields (auto-detects a note field named "expression_audio"), enable it in Settings → Audio, and every mined card gets a recorded reading of its word. The feature is triple-gated (an audio fetcher injected **and** expression audio enabled **and** the field mapped), so a default config writes byte-for-byte the same cards as before. Audio identity keys on the card's Expression form plus its reading, so homographs don't collide and words with no reading are skipped. Works across Episode, Batch, Deck Builder, YouTube, and Audiobook mining.
+- **Configurable audio source chain** (Settings → Audio). Expression audio is fetched through an ordered chain of sources — imported local audio packs, then JapanesePod101, then Google Translate — each of which can be enabled, disabled, or reordered. The first source to return audio for a word wins. JapanesePod101 stays the zero-setup default.
+  - **Local audio pack import.** Settings → Audio → Add Audio Pack imports a [local-audio-yomichan](https://github.com/themoeway/local-audio-yomichan)-compatible audio directory (ajt_japanese, nhk16, forvo_ja, jpod_legacy / jpod_alternate formats). Packs are indexed into `~/.anki_miner/audio_packs/` — the audio files themselves stay where they are. Multiple packs installed at once are queried in priority order (nhk16 > shinmeikai8 > forvo > jpod > jpod_alternate); when a parent folder holds several packs they are all imported at once. Packs can be reordered, disabled, or removed (index only — audio files are never deleted).
+  - **Google Translate TTS source.** A free, no-key synthetic fallback for words no pack or JapanesePod101 covers. It is fed the kana reading (not the kanji), so pronunciation is correct and immune to homograph misreads. Disabled by default; shown in Settings → Audio as a built-in row that can be disabled but not removed.
+- **Audiobook mining tab.** Queue local audiobook + subtitle pairs and mine them audio-only: no per-word screenshots, and the book's embedded cover art stands in as every card's Picture. Subtitles auto-fill from a same-stem file next to the audio. Stats and history record under a distinct Audiobook identity so audiobook runs don't mix with episode or YouTube history.
+
+### Changed
+- **Audio fetches reuse a single HTTP session.** Expression-audio lookups now share one `requests` session per run instead of opening a new connection per word, cutting handshake overhead on large mines.
+
+### Fixed
+- **JapanesePod101 audio downloads no longer 403 from the CDN.** Requests now send a browser User-Agent, so the audio CDN stops rejecting them.
+- **Loanwords get the right JapanesePod101 audio.** The katakana reading is sent to the lookup, so words written in kana resolve correctly.
+- **JapanesePod101 retries on a surface-form miss.** When the surface form returns nothing, the lookup retries with the UniDic lemma before giving up.
+- **Audio sources are tried form-by-form, not source-by-source.** Each source is now tried against every candidate form of a word before moving on to the next source, so a higher-priority source isn't skipped just because the first form missed.
+- **Fetched audio is validated before it is cached** (MP3 magic bytes, size cap, HTTPS-only redirects), so a non-audio response can't poison the cache.
+- **Audio pack scan, fetch, and import edge cases hardened**, along with expression-audio cache writes and unique temp-file staging, so concurrent fetches and partial downloads don't clobber each other.
+- **The i+1 filter checks all unknown lemmas, not just mineable ones** (#74), so a sentence with a second unknown word is correctly held back.
+- **Card style presets are scoped to the miner's own glossary markup** so preset CSS no longer bleeds into unrelated content on the card.
+- **Duplicate media filenames are no longer re-encoded** in batch stores, avoiding redundant ffmpeg work within a run.
+- **A media-source file that vanished mid-run is counted as a store failure** instead of silently succeeding with no media.
+- **A corrupt `anki_fields` value survives config load.** A non-dict value is replaced with defaults instead of crashing startup.
+- **Negative delays are clamped and swallowed fetch errors are logged** instead of silently disappearing.
+
+### Maintenance
+- Internal refactors: an `ExpressionAudioFetcher` protocol with a chained fetcher implementation, and a shared queue mining-progress adapter extracted from the per-tab workers.
+- Release CI-gate now waits for an in-flight CI run instead of failing the release outright.
+- README title-icon polish; welcomed @Expri-commits to CONTRIBUTORS.md.
+
+### Removed
+- Obsolete `gifs/gif-tools/README.md`.
 
 
 ## [2.6.2] - 2026-06-12
