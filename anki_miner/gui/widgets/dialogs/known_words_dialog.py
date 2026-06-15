@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.services.known_word_db import KnownWordDB
 
@@ -139,7 +140,10 @@ class KnownWordsManagerDialog(QDialog):
         from PyQt6.QtWidgets import QFileDialog
 
         path_str, _ = QFileDialog.getSaveFileName(
-            self, "Export Known Words", "known_words.txt", "Text Files (*.txt);;All Files (*)"
+            self,
+            "Export Known Words",
+            str(Path(resolve_start_dir(None, file_mode=True)) / "known_words.txt"),
+            "Text Files (*.txt);;All Files (*)",
         )
         if not path_str:
             return
