@@ -19,9 +19,6 @@ from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.resources.styles.theme import Theme
 
-# QApplication instance needed to exercise apply_to_app.
-_app = QApplication.instance() or QApplication([])
-
 
 @pytest.fixture(autouse=True)
 def _clear_app_stylesheet():
@@ -62,28 +59,28 @@ class TestAlternatingRowStylesheet:
 class TestApplyToAppPalette:
     """Theme.apply_to_app must set the palette roles Qt's native row renderer consults."""
 
-    def test_alternate_base_matches_surface_alt(self):
-        Theme.apply_to_app(_app, "dark")
-        palette = _app.palette()
+    def test_alternate_base_matches_surface_alt(self, qapp):
+        Theme.apply_to_app(qapp, "dark")
+        palette = qapp.palette()
         expected = QColor(Theme.get_colors("dark")["surface-alt"])
         assert palette.color(QPalette.ColorRole.AlternateBase) == expected
 
-    def test_base_matches_surface(self):
-        Theme.apply_to_app(_app, "dark")
-        palette = _app.palette()
+    def test_base_matches_surface(self, qapp):
+        Theme.apply_to_app(qapp, "dark")
+        palette = qapp.palette()
         expected = QColor(Theme.get_colors("dark")["surface"])
         assert palette.color(QPalette.ColorRole.Base) == expected
 
-    def test_text_role_is_set(self):
-        Theme.apply_to_app(_app, "dark")
-        palette = _app.palette()
+    def test_text_role_is_set(self, qapp):
+        Theme.apply_to_app(qapp, "dark")
+        palette = qapp.palette()
         expected = QColor(Theme.get_colors("dark")["text"])
         assert palette.color(QPalette.ColorRole.Text) == expected
 
-    def test_light_mode_palette_switch(self):
+    def test_light_mode_palette_switch(self, qapp):
         """Switching modes must update AlternateBase, not leave it stuck on dark."""
-        Theme.apply_to_app(_app, "dark")
-        Theme.apply_to_app(_app, "light")
-        palette = _app.palette()
+        Theme.apply_to_app(qapp, "dark")
+        Theme.apply_to_app(qapp, "light")
+        palette = qapp.palette()
         expected = QColor(Theme.get_colors("light")["surface-alt"])
         assert palette.color(QPalette.ColorRole.AlternateBase) == expected
