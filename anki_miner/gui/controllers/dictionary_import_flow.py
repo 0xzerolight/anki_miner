@@ -9,6 +9,7 @@ stays one-way: tab → controller → workers/services.
 """
 
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
@@ -61,6 +62,7 @@ class DictionaryImportFlow:
         """Toggle import-trigger buttons. Prevents overlapping import workers."""
         self._panel._add_btn.setEnabled(enabled)
         self._panel._reimport_btn.setEnabled(enabled)
+        self._panel._restore_btn.setEnabled(enabled)
         self._panel.set_per_row_reimport_enabled(enabled)
 
     def _with_dict_at_top(self, dict_id: str) -> tuple[ChainEntry, ...]:
@@ -439,3 +441,54 @@ class DictionaryImportFlow:
 
         dlg.canceled.connect(on_cancel)
         launch_next()
+
+    def restore_unlisted(self) -> None:
+        """Re-add on-disk dictionaries that are absent from the chain config.
+
+        Recovers dicts present in ``dicts_root`` (with a valid, current-schema
+        index.sqlite) but missing from ``config.dictionary_chain`` — for example
+        after a config reset that overwrote ``gui_config.json``.  No re-import
+        is performed; the indexes already exist on disk and only the chain config
+        needs updating.
+        """
+        registry = DictionaryRegistry(self._get_config().dicts_root)
+        registry.load()
+        # Compare against the panel's current chain (not the frozen config) so
+        # that unsaved panel edits are respected — a dict the user just added via
+        # set_chain is already "listed" even before Save is clicked.
+        panel_config = replace(self._get_config(), dictionary_chain=self._panel.get_chain())
+        orphans = registry.unlisted(panel_config)
+
+        if not orphans:
+            QMessageBox.information(
+                self._parent,
+                "Nothing to restore",
+                "All on-disk dictionaries are already listed.",
+            )
+            return
+
+        body = (
+            "Found dictionaries on disk that aren't in your list:\n\n"
+            + "\n".join(f"  • {m.source_name}" for m in orphans)
+            + "\n\nAdd them to the dictionary list?"
+        )
+        reply = QMessageBox.question(
+            self._parent,
+            "Restore from Disk",
+            body,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        chain = list(self._panel.get_chain())
+        new_entries = [ChainEntry(kind="indexed", dict_id=m.dict_id, enabled=True) for m in orphans]
+        # Insert before the first jisho entry so the online fallback stays last.
+        # The UI only ever creates one jisho row; "first jisho wins" is fine.
+        insert_at = next((i for i, e in enumerate(chain) if e.kind == "jisho"), len(chain))
+        new_chain = tuple(chain[:insert_at] + new_entries + chain[insert_at:])
+
+        self._panel.refresh_registry()
+        self._panel.set_chain(new_chain)
+        self._persist_chain(new_chain)
