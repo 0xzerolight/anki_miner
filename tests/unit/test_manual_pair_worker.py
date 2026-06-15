@@ -3,12 +3,7 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from PyQt6.QtCore import QCoreApplication
-
 from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
-
-# Qt needs a core application for signal connection. Created once per process.
-_app = QCoreApplication.instance() or QCoreApplication([])
 
 
 def _pair(tmp_path, n):
@@ -19,7 +14,7 @@ def _pair(tmp_path, n):
     return SimpleNamespace(video=v, subtitle=s)
 
 
-def test_curation_attrs_and_callback_forwarded(tmp_path):
+def test_curation_attrs_and_callback_forwarded(tmp_path, qapp):
     captured = {}
     cb = MagicMock(name="curation_callback")
 
@@ -47,7 +42,7 @@ def test_curation_attrs_and_callback_forwarded(tmp_path):
     assert captured["callback"] is cb
 
 
-def test_curation_attrs_advance_per_pair(tmp_path):
+def test_curation_attrs_advance_per_pair(tmp_path, qapp):
     seen = []
     proc = MagicMock()
     proc.config = SimpleNamespace(subtitle_offset=0.0)
@@ -78,7 +73,7 @@ def _ok_processor():
     return proc
 
 
-def test_cancel_propagates_to_processor(tmp_path):
+def test_cancel_propagates_to_processor(tmp_path, qapp):
     """cancel() sets the worker flag AND forwards to the processor."""
     proc = _ok_processor()
     worker = ManualPairWorkerThread(proc, [_pair(tmp_path, 1)], progress_callback=None)
@@ -89,7 +84,7 @@ def test_cancel_propagates_to_processor(tmp_path):
     proc.cancel.assert_called_once_with()
 
 
-def test_cancel_before_run_skips_processing_and_emit(tmp_path):
+def test_cancel_before_run_skips_processing_and_emit(tmp_path, qapp):
     """A pre-run cancel returns immediately: no pairs processed, no result."""
     proc = _ok_processor()
     worker = ManualPairWorkerThread(proc, [_pair(tmp_path, 1)], progress_callback=None)
@@ -103,7 +98,7 @@ def test_cancel_before_run_skips_processing_and_emit(tmp_path):
     assert results == []
 
 
-def test_partial_results_discarded_when_cancelled_mid_batch(tmp_path):
+def test_partial_results_discarded_when_cancelled_mid_batch(tmp_path, qapp):
     """Cancelling between pairs discards the accumulated partial results.
 
     Pin the contract: the result_ready emit is guarded by check_cancelled(),
@@ -136,7 +131,7 @@ def test_partial_results_discarded_when_cancelled_mid_batch(tmp_path):
     assert results == []
 
 
-def test_per_pair_error_reported_and_batch_continues(tmp_path):
+def test_per_pair_error_reported_and_batch_continues(tmp_path, qapp):
     """A pair that raises reports via progress.on_error; the batch keeps going
     and the surviving result is still emitted (per-pair errors are not fatal)."""
     proc = MagicMock()
@@ -167,7 +162,7 @@ def test_per_pair_error_reported_and_batch_continues(tmp_path):
     progress.on_complete.assert_called_once()
 
 
-def test_outer_exception_emitted_on_error_signal(tmp_path):
+def test_outer_exception_emitted_on_error_signal(tmp_path, qapp):
     """An exception OUTSIDE the per-pair try (e.g. progress.on_start raising)
     is surfaced on the worker's error signal rather than crashing the thread."""
     proc = _ok_processor()
@@ -183,7 +178,7 @@ def test_outer_exception_emitted_on_error_signal(tmp_path):
     assert errors == ["callback exploded"]
 
 
-def test_successful_batch_emits_all_results(tmp_path):
+def test_successful_batch_emits_all_results(tmp_path, qapp):
     """The happy path emits a list with one ProcessingResult per pair."""
     proc = MagicMock()
     proc.config = SimpleNamespace(subtitle_offset=0.0)

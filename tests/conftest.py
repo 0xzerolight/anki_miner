@@ -3,6 +3,9 @@
 import importlib
 import os
 from pathlib import Path
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
 from unittest.mock import MagicMock
 
 import pytest

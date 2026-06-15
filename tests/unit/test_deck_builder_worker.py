@@ -17,20 +17,12 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers import deck_builder_worker as dbw_module
 from anki_miner.gui.workers.deck_builder_worker import DeckBuilderWorker
 from anki_miner.models.deck_build import DeckBuildRequest, DeckSelectionMode
 from anki_miner.models.word import TokenizedWord
 from anki_miner.utils.file_pairing import FilePair
-
-
-@pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 def _make_word(lemma: str) -> TokenizedWord:

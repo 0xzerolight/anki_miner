@@ -8,31 +8,31 @@ from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
 
-# QApplication needed for widget instantiation.
-_app = QApplication.instance() or QApplication([])
-
 _LONG = (
     "This is a very long status line that will not fit inside a narrow label and "
     "therefore must be elided down to a single truncated line ending in an ellipsis."
 )
 
 
-def test_full_text_returns_original() -> None:
+def test_full_text_returns_original(qtbot) -> None:
     label = ElidingLabel()
+    qtbot.addWidget(label)
     label.setText("hello world")
     assert label.full_text == "hello world"
 
 
-def test_short_text_fits_no_tooltip() -> None:
+def test_short_text_fits_no_tooltip(qtbot) -> None:
     label = ElidingLabel()
+    qtbot.addWidget(label)
     label.resize(2000, 20)  # plenty of room
     label.setText("short")
     assert label.text() == "short"
     assert label.toolTip() == ""
 
 
-def test_long_text_is_elided_with_ellipsis() -> None:
+def test_long_text_is_elided_with_ellipsis(qtbot) -> None:
     label = ElidingLabel()
+    qtbot.addWidget(label)
     label.resize(120, 20)  # narrow — forces elision
     label.setText(_LONG)
     assert label.text().endswith("…")
@@ -41,16 +41,18 @@ def test_long_text_is_elided_with_ellipsis() -> None:
     assert label.full_text == _LONG
 
 
-def test_long_text_sets_tooltip_to_full_text() -> None:
+def test_long_text_sets_tooltip_to_full_text(qtbot) -> None:
     label = ElidingLabel()
+    qtbot.addWidget(label)
     label.resize(120, 20)
     label.setText(_LONG)
     assert label.toolTip() == _LONG
 
 
-def test_newlines_collapsed_in_display_but_kept_in_full_text_and_tooltip() -> None:
+def test_newlines_collapsed_in_display_but_kept_in_full_text_and_tooltip(qtbot) -> None:
     multiline = "line one\nline two\nline three"
     label = ElidingLabel()
+    qtbot.addWidget(label)
     label.resize(2000, 20)  # wide enough that nothing is elided
     label.setText(multiline)
     # Displayed string is one line — newlines collapsed to spaces.
@@ -62,9 +64,10 @@ def test_newlines_collapsed_in_display_but_kept_in_full_text_and_tooltip() -> No
     assert label.toolTip() == multiline
 
 
-def test_elide_middle_mode_keeps_both_ends() -> None:
+def test_elide_middle_mode_keeps_both_ends(qtbot) -> None:
     path = "/home/user/very/long/path/to/some/deeply/nested/file_name_here.mkv"
     label = ElidingLabel(mode=Qt.TextElideMode.ElideMiddle)
+    qtbot.addWidget(label)
     label.resize(160, 20)
     label.setText(path)
     shown = label.text()
@@ -73,8 +76,9 @@ def test_elide_middle_mode_keeps_both_ends() -> None:
     assert shown.endswith(".mkv")
 
 
-def test_reelides_on_resize() -> None:
+def test_reelides_on_resize(qtbot) -> None:
     label = ElidingLabel()
+    qtbot.addWidget(label)
     label.resize(2000, 20)
     label.setText(_LONG)
     assert label.text() == _LONG  # fits wide

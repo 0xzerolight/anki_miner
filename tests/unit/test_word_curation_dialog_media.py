@@ -15,16 +15,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     CurationMediaContext,
     WordCurationDialog,
 )
 from anki_miner.models import TokenizedWord
-
-# Ensure a QApplication exists for all widget tests.
-_app = QApplication.instance() or QApplication([])
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -103,35 +99,41 @@ def existing_video(tmp_path):
 class TestBackwardCompat:
     """Existing call sites must remain unaffected by the new optional args."""
 
-    def test_positional_words_only(self, words):
+    def test_positional_words_only(self, qtbot, words):
         """WordCurationDialog(words) constructs without error."""
         dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
         assert dlg is not None
 
-    def test_positional_words_and_parent(self, words):
+    def test_positional_words_and_parent(self, qtbot, words):
         """WordCurationDialog(words, parent) with explicit parent works."""
         dlg = WordCurationDialog(words, None)
+        qtbot.addWidget(dlg)
         assert dlg is not None
 
-    def test_no_player_pane(self, words):
+    def test_no_player_pane(self, qtbot, words):
         """No media_context → player_widget attribute absent."""
         dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
         assert not hasattr(dlg, "player_widget")
 
-    def test_no_dict_pane(self, words):
+    def test_no_dict_pane(self, qtbot, words):
         """No lookup_fn → definition_view attribute absent."""
         dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
         assert not hasattr(dlg, "definition_view")
 
-    def test_get_selected_words_works(self, words):
+    def test_get_selected_words_works(self, qtbot, words):
         """get_selected_words() returns all words (all checked by default)."""
         dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
         selected = dlg.get_selected_words()
         assert len(selected) == len(words)
 
-    def test_get_selected_words_after_deselect(self, words):
+    def test_get_selected_words_after_deselect(self, qtbot, words):
         """Deselect all then check get_selected_words returns empty."""
         dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
         dlg._deselect_all()
         assert dlg.get_selected_words() == []
 
@@ -141,7 +143,7 @@ class TestBackwardCompat:
 # ---------------------------------------------------------------------------
 
 
-def _build_dialog_with_mock_player(words, ctx, lookup_fn=None):
+def _build_dialog_with_mock_player(qtbot, words, ctx, lookup_fn=None):
     """Build a dialog with the player widget replaced by a MagicMock stub.
 
     We patch ``_create_player_widget`` so the splitter receives a real QWidget
@@ -151,6 +153,8 @@ def _build_dialog_with_mock_player(words, ctx, lookup_fn=None):
     from PyQt6.QtWidgets import QWidget
 
     # QSplitter.addWidget needs a real QWidget subclass instance.
+    # Don't addWidget(real_stub): it becomes a child of the dialog's splitter
+    # and is deleted when the dialog is closed; qtbot must not close it again.
     real_stub = QWidget()
 
     with patch.object(
@@ -159,6 +163,7 @@ def _build_dialog_with_mock_player(words, ctx, lookup_fn=None):
         return_value=real_stub,
     ):
         dlg = WordCurationDialog(words, media_context=ctx, lookup_fn=lookup_fn)
+    qtbot.addWidget(dlg)
 
     # Swap to a free MagicMock so seek_seconds / pause are trackable.
     mock_player = MagicMock()
@@ -169,29 +174,29 @@ def _build_dialog_with_mock_player(words, ctx, lookup_fn=None):
 class TestPlayerSeek:
     """Row focus triggers seek_seconds(word.start_time) after timer fires."""
 
-    def test_seek_called_on_row_select(self, words, existing_video):
+    def test_seek_called_on_row_select(self, qtbot, words, existing_video):
         ctx = _make_media_context(video_file=existing_video)
-        dlg, mock_player = _build_dialog_with_mock_player(words, ctx)
+        dlg, mock_player = _build_dialog_with_mock_player(qtbot, words, ctx)
 
         _select_row(dlg, 0)
         _fire_timer(dlg)
 
         mock_player.seek_seconds.assert_called_once_with(words[0].start_time)
 
-    def test_pause_called_after_seek(self, words, existing_video):
+    def test_pause_called_after_seek(self, qtbot, words, existing_video):
         """After seek, the player must be paused (show frame, don't autoplay)."""
         ctx = _make_media_context(video_file=existing_video)
-        dlg, mock_player = _build_dialog_with_mock_player(words, ctx)
+        dlg, mock_player = _build_dialog_with_mock_player(qtbot, words, ctx)
 
         _select_row(dlg, 0)
         _fire_timer(dlg)
 
         mock_player.pause.assert_called_once()
 
-    def test_seek_correct_word_after_sort(self, words, existing_video):
+    def test_seek_correct_word_after_sort(self, qtbot, words, existing_video):
         """After table sort, row 0 may map to a different word; seek must use the right one."""
         ctx = _make_media_context(video_file=existing_video)
-        dlg, mock_player = _build_dialog_with_mock_player(words, ctx)
+        dlg, mock_player = _build_dialog_with_mock_player(qtbot, words, ctx)
 
         # Select row 1 and verify the correct word's start_time is sought
         # (row index ≠ original word index after sorting).
@@ -218,9 +223,9 @@ def _find_table_shortcut(dialog: WordCurationDialog, key_str: str):
 class TestPlayPauseHotkey:
     """Issue #55 — Space toggles the player; the dialog routes it to the widget."""
 
-    def test_space_shortcut_toggles_player(self, words, existing_video):
+    def test_space_shortcut_toggles_player(self, qtbot, words, existing_video):
         ctx = _make_media_context(video_file=existing_video)
-        dlg, mock_player = _build_dialog_with_mock_player(words, ctx)
+        dlg, mock_player = _build_dialog_with_mock_player(qtbot, words, ctx)
 
         shortcut = _find_table_shortcut(dlg, "Space")
         assert shortcut is not None
@@ -228,9 +233,10 @@ class TestPlayPauseHotkey:
 
         mock_player.toggle_play_pause.assert_called_once()
 
-    def test_toggle_play_pause_noop_without_player(self, words):
+    def test_toggle_play_pause_noop_without_player(self, qtbot, words):
         """Dict/table-only dialog: _toggle_play_pause must not raise."""
         dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
         dlg._toggle_play_pause()  # no player pane → no-op
 
 
@@ -242,7 +248,7 @@ class TestPlayPauseHotkey:
 class TestDictionaryLookup:
     """Dictionary entries appear in definition_view; cache prevents re-calls."""
 
-    def test_lookup_renders_provider_name(self, words):
+    def test_lookup_renders_provider_name(self, qtbot, words):
         call_count = 0
 
         def fake_lookup(lemma: str) -> list[tuple[str, str]]:
@@ -251,6 +257,7 @@ class TestDictionaryLookup:
             return [("JMdict", "<div>to eat</div>")]
 
         dlg = WordCurationDialog(words, lookup_fn=fake_lookup)
+        qtbot.addWidget(dlg)
 
         _select_row(dlg, 0)
         _fire_timer(dlg)
@@ -258,7 +265,7 @@ class TestDictionaryLookup:
         html = dlg.definition_view.toHtml()
         assert "JMdict" in html
 
-    def test_lookup_cached_on_second_select(self, words):
+    def test_lookup_cached_on_second_select(self, qtbot, words):
         """Selecting the same row twice should invoke lookup_fn only once."""
         call_count = 0
 
@@ -268,6 +275,7 @@ class TestDictionaryLookup:
             return [("JMdict", "<div>x</div>")]
 
         dlg = WordCurationDialog(words, lookup_fn=fake_lookup)
+        qtbot.addWidget(dlg)
 
         _select_row(dlg, 0)
         _fire_timer(dlg)
@@ -277,9 +285,10 @@ class TestDictionaryLookup:
 
         assert call_count == 1, f"Expected 1 lookup call, got {call_count}"
 
-    def test_empty_result_shows_grey_placeholder(self, words):
+    def test_empty_result_shows_grey_placeholder(self, qtbot, words):
         """Empty lookup result → grey 'No offline dictionary entry' placeholder."""
         dlg = WordCurationDialog(words, lookup_fn=lambda lemma: [])
+        qtbot.addWidget(dlg)
 
         _select_row(dlg, 0)
         _fire_timer(dlg)
@@ -287,7 +296,7 @@ class TestDictionaryLookup:
         html = dlg.definition_view.toHtml()
         assert "No offline dictionary entry" in html
 
-    def test_empty_result_is_cached(self, words):
+    def test_empty_result_is_cached(self, qtbot, words):
         """Even empty results are cached so lookup_fn is called only once."""
         call_count = 0
 
@@ -297,6 +306,7 @@ class TestDictionaryLookup:
             return []
 
         dlg = WordCurationDialog(words, lookup_fn=empty_lookup)
+        qtbot.addWidget(dlg)
 
         _select_row(dlg, 0)
         _fire_timer(dlg)
@@ -314,7 +324,7 @@ class TestDictionaryLookup:
 class TestLookupUsesLemma:
     """For a verb where lemma != mined_form, lookup_fn receives the lemma."""
 
-    def test_lookup_uses_lemma_not_mined_form(self):
+    def test_lookup_uses_lemma_not_mined_form(self, qtbot):
         # surface=食べ, lemma=食べる, pos=動詞 → mined_form = lemma = 食べる
         # Use a case where surface differs from lemma more clearly.
         word = TokenizedWord(
@@ -353,6 +363,7 @@ class TestLookupUsesLemma:
             return []
 
         dlg = WordCurationDialog([word2], lookup_fn=capturing_lookup)
+        qtbot.addWidget(dlg)
         _select_row(dlg, 0)
         _fire_timer(dlg)
 
@@ -369,17 +380,19 @@ class TestLookupUsesLemma:
 class TestMissingVideo:
     """Nonexistent video → no player pane, no crash; table + dict still work."""
 
-    def test_nonexistent_video_no_crash(self, words):
+    def test_nonexistent_video_no_crash(self, qtbot, words):
         ctx = _make_media_context(video_file=Path("/nonexistent/file.mkv"))
         dlg = WordCurationDialog(words, media_context=ctx)
+        qtbot.addWidget(dlg)
         assert dlg is not None
 
-    def test_nonexistent_video_no_player_widget(self, words):
+    def test_nonexistent_video_no_player_widget(self, qtbot, words):
         ctx = _make_media_context(video_file=Path("/nonexistent/file.mkv"))
         dlg = WordCurationDialog(words, media_context=ctx)
+        qtbot.addWidget(dlg)
         assert not hasattr(dlg, "player_widget")
 
-    def test_nonexistent_video_dict_still_works(self, words):
+    def test_nonexistent_video_dict_still_works(self, qtbot, words):
         """Even with bad video, dict lookup renders correctly."""
         ctx = _make_media_context(video_file=Path("/nonexistent/file.mkv"))
         call_count = 0
@@ -390,6 +403,7 @@ class TestMissingVideo:
             return [("JMdict", "<div>test</div>")]
 
         dlg = WordCurationDialog(words, media_context=ctx, lookup_fn=fake_lookup)
+        qtbot.addWidget(dlg)
 
         _select_row(dlg, 0)
         _fire_timer(dlg)
@@ -397,21 +411,24 @@ class TestMissingVideo:
         assert call_count == 1
         assert "JMdict" in dlg.definition_view.toHtml()
 
-    def test_none_video_file_no_player_widget(self, words):
+    def test_none_video_file_no_player_widget(self, qtbot, words):
         """video_file=None in context → no player pane."""
         ctx = _make_media_context(video_file=None)
         dlg = WordCurationDialog(words, media_context=ctx)
+        qtbot.addWidget(dlg)
         assert not hasattr(dlg, "player_widget")
 
-    def test_none_media_context_no_player_widget(self, words):
+    def test_none_media_context_no_player_widget(self, qtbot, words):
         """media_context=None → no player pane."""
         dlg = WordCurationDialog(words, media_context=None)
+        qtbot.addWidget(dlg)
         assert not hasattr(dlg, "player_widget")
 
-    def test_table_still_functional_with_bad_video(self, words):
+    def test_table_still_functional_with_bad_video(self, qtbot, words):
         """Table selection/deselection works even when video is missing."""
         ctx = _make_media_context(video_file=Path("/nonexistent/file.mkv"))
         dlg = WordCurationDialog(words, media_context=ctx)
+        qtbot.addWidget(dlg)
 
         dlg._deselect_all()
         assert dlg.get_selected_words() == []
@@ -428,27 +445,28 @@ class TestMissingVideo:
 class TestStopOnClose:
     """Closing/rejecting the dialog must stop the embedded player."""
 
-    def test_stop_called_on_reject(self, words, existing_video):
+    def test_stop_called_on_reject(self, qtbot, words, existing_video):
         """player_widget.stop() is called when the dialog is rejected (Cancel path)."""
         ctx = _make_media_context(video_file=existing_video)
-        dlg, mock_player = _build_dialog_with_mock_player(words, ctx)
+        dlg, mock_player = _build_dialog_with_mock_player(qtbot, words, ctx)
 
         dlg.reject()
 
         mock_player.stop.assert_called_once()
 
-    def test_stop_called_on_accept(self, words, existing_video):
+    def test_stop_called_on_accept(self, qtbot, words, existing_video):
         """player_widget.stop() is called when the dialog is accepted (Confirm path)."""
         ctx = _make_media_context(video_file=existing_video)
-        dlg, mock_player = _build_dialog_with_mock_player(words, ctx)
+        dlg, mock_player = _build_dialog_with_mock_player(qtbot, words, ctx)
 
         dlg.accept()
 
         mock_player.stop.assert_called_once()
 
-    def test_stop_not_called_when_no_player(self, words):
+    def test_stop_not_called_when_no_player(self, qtbot, words):
         """Without a player pane, reject() must not raise."""
         dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
         # Should not raise even though player_widget is absent.
         dlg.reject()
 
@@ -461,7 +479,7 @@ class TestStopOnClose:
 class TestDebounceCoalescing:
     """Rapid _on_row_focus_changed calls must produce only one lookup/seek."""
 
-    def test_rapid_changes_coalesce_to_last_row(self, words):
+    def test_rapid_changes_coalesce_to_last_row(self, qtbot, words):
         """Two rapid focus changes → only the final word is looked up after the timer fires."""
         received: list[str] = []
 
@@ -470,6 +488,7 @@ class TestDebounceCoalescing:
             return []
 
         dlg = WordCurationDialog(words, lookup_fn=capturing_lookup)
+        qtbot.addWidget(dlg)
 
         # Simulate rapid row changes — set pending word for row 0 then row 1
         # without firing the timer in between (just like fast arrow-key scrolling).
@@ -483,9 +502,10 @@ class TestDebounceCoalescing:
         assert len(received) == 1, f"Expected 1 lookup call, got {len(received)}"
         assert received[0] == words[1].lemma
 
-    def test_timer_is_restarted_not_duplicated(self, words):
+    def test_timer_is_restarted_not_duplicated(self, qtbot, words):
         """After two rapid selections the timer must still be single-shot."""
         dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
 
         _select_row(dlg, 0)
         _select_row(dlg, 1)

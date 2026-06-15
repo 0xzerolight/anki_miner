@@ -9,15 +9,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
-
-
-@pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 def _make_worker(qapp, audio_track_override=..., **kwargs):

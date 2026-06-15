@@ -11,14 +11,9 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.models.stats import DifficultyEntry, MiningSession, OverallStats
-
-# QApplication required for any Qt widget test.
-_app = QApplication.instance() or QApplication([])
-
 
 LONG_SERIES = "Tatoeba Saigo ni Hitori Dake Aitsu ga Nokottara Sore wa Boku da"
 LONG_EPISODE = f"{LONG_SERIES} - Episode 17 - The Very Long Subtitle That Gets Truncated"
@@ -60,8 +55,9 @@ def stats_service() -> MagicMock:
 
 
 @pytest.fixture
-def tab(stats_service: MagicMock):
+def tab(stats_service: MagicMock, qtbot):
     widget = AnalyticsTab(stats_service)
+    qtbot.addWidget(widget)
     widget.refresh_data()
     yield widget
     widget.deleteLater()

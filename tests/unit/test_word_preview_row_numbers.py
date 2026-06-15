@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.models import TokenizedWord
-
-_app = QApplication.instance() or QApplication([])
 
 
 @pytest.fixture
@@ -37,9 +34,10 @@ def sample_words() -> list[TokenizedWord]:
 
 
 def test_vertical_header_has_fixed_size_preventing_clip(
-    test_config: AnkiMinerConfig, sample_words: list[TokenizedWord]
+    qtbot, test_config: AnkiMinerConfig, sample_words: list[TokenizedWord]
 ):
     dialog = WordPreviewDialog(sample_words, test_config)
+    qtbot.addWidget(dialog)
     try:
         v_header = dialog.table.verticalHeader()
         assert v_header is not None

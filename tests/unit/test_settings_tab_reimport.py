@@ -12,22 +12,19 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
 
-# QApplication required for any Qt widget test.
-_app = QApplication.instance() or QApplication([])
-
 
 @pytest.fixture
-def tab(test_config: AnkiMinerConfig):
+def tab(test_config: AnkiMinerConfig, qtbot):
     """Instantiate a SettingsTab against the shared test config."""
     widget = SettingsTab(test_config)
+    qtbot.addWidget(widget)
     yield widget
-    widget.deleteLater()
 
 
 @pytest.fixture
