@@ -5,7 +5,6 @@ import dataclasses
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.utils import service_factory
 from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher, JPod101AudioFetcher
 
@@ -37,7 +36,7 @@ def test_create_services_wires_expression_audio_fetcher(base_config):
     jpod = fetcher._fetchers[0]
     assert isinstance(jpod, JPod101AudioFetcher)
     assert jpod._delay == 0.5
-    assert jpod._cache_dir == ANKI_MINER_HOME / "audio_cache" / "jpod101"
+    assert jpod._cache_dir == service_factory.ANKI_MINER_HOME / "audio_cache" / "jpod101"
 
 
 def test_create_episode_processor_wires_same_fetcher(base_config):
@@ -70,4 +69,4 @@ def test_create_episode_processor_wires_same_fetcher(base_config):
     jpod = fetcher._fetchers[0]
     assert isinstance(jpod, JPod101AudioFetcher)
     assert jpod._delay == 0.3
-    assert jpod._cache_dir == ANKI_MINER_HOME / "audio_cache" / "jpod101"
+    assert jpod._cache_dir == service_factory.ANKI_MINER_HOME / "audio_cache" / "jpod101"

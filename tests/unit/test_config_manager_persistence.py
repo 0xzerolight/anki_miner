@@ -103,3 +103,26 @@ class TestAtomicSave:
         GUIConfigManager.save_config(create_default_config())
         assert tmp_config.exists()
         assert not tmp_config.with_suffix(tmp_config.suffix + ".tmp").exists()
+
+    def test_backup_rotation_preserves_prior_config(self, tmp_config: Path):
+        """The previous good config is rotated to .bak before each overwrite.
+
+        First save has nothing to back up; the second save's .bak must hold the
+        FIRST config's contents (one-overwrite recovery), not the second's.
+        """
+        import json
+
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+
+        # First save: nothing existed, so no backup is created.
+        GUIConfigManager.save_config(replace(create_default_config(), theme="dark"))
+        assert not bak_path.exists()
+
+        # Second save overwrites; the prior (dark) config rotates to .bak.
+        GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+
+        assert tmp_config.exists()
+        assert json.loads(tmp_config.read_text(encoding="utf-8"))["theme"] == "light"
+
+        assert bak_path.exists()
+        assert json.loads(bak_path.read_text(encoding="utf-8"))["theme"] == "dark"
