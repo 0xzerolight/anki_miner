@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import shutil
@@ -279,6 +280,28 @@ class EpisodeProcessor:
         for not invoking it mid-run.
         """
         self.definition_service.close()
+
+    def close(self) -> None:
+        """Release ALL per-run resources held by this processor.
+
+        Closes the dictionary provider sqlite handles AND the expression-audio
+        fetcher's ``requests.Session`` (when an audio fetcher is present).
+
+        A fresh ``EpisodeProcessor`` is built for every mining run, but its
+        resources were never released, so on Windows the leaked sqlite handles
+        and audio Session sockets from run N accumulate and collide with run
+        N+1's GUI-thread service construction — the app hard-freezes when a
+        user mines single episodes back-to-back in one session. The mining tabs
+        and the batch queue worker call this between sequential runs to drop
+        those handles/sockets before any new ones are opened. Safe only on an
+        idle processor; callers must not invoke it mid-run.
+        """
+        self.definition_service.close()
+        if self.expression_audio_fetcher is not None:
+            close = getattr(self.expression_audio_fetcher, "close", None)
+            if callable(close):
+                with contextlib.suppress(Exception):
+                    close()
 
     def _allocate_run_temp_folder(self) -> Path:
         """Create an isolated temp directory for a single episode run.
