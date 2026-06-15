@@ -155,9 +155,32 @@ Anki Miner checks GitHub for new releases on startup (toggle in Settings). When 
 | Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
 | AV1 video won't preview  | In-app preview is disabled for AV1 to avoid decoder error spam. Mining still works normally — only the preview is skipped. |
 
+## Roadmap
+
+List of ideas for future versions of Anki Miner.
+Add to the list — [Open an issue](https://github.com/0xzerolight/anki_miner/issues).
+Discuss the roadmap — [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
+
+- **Features**:
+  - UI language selection.
+  - Local subtitle creation tab: Opt-in tab to locally generate subtitles.
+  - Card modification tab: Modifying content in existing Anki cards.
+  - Media library: Expand Analytics tab to display local media library across all media forms.
+  - Reading tab: Mine manga and books.
+
+- **Improvements**:
+  - Improved user onboarding.
+
+- **Researching/Under consideration**:
+  - Android port.
+
+- **Long-term**:
+  - Beyond Japanese: Mining other languages.
+
 ## Contributing
 
-Contributions are welcome — bug fixes, dictionary integrations, GUI polish, doc improvements, all sizes.
+Contributions of any kind are welcome.
+If you want to support the project, please share it with others who may benefit from it.
 
 - New here? Start with [CONTRIBUTING.md](CONTRIBUTING.md).
 - Architecture overview: [ARCHITECTURE.md](ARCHITECTURE.md).
