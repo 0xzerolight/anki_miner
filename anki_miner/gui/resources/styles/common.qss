@@ -863,6 +863,11 @@ QHeaderView::section:vertical {
     border-color: ${color-border};
 }
 
+QTableCornerButton::section {
+    background-color: ${color-background};
+    border: 1px solid ${color-border};
+}
+
 /* --- Scroll Bars --- */
 
 QScrollBar:vertical, QScrollBar:horizontal {
