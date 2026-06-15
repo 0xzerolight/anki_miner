@@ -141,7 +141,7 @@ class MainWindow(QMainWindow):
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
-        self.setWindowTitle("Anki Miner - Japanese Vocabulary Mining Tool")
+        self.setWindowTitle("Anki Miner")
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self.resize(WINDOW_DEFAULT_WIDTH, WINDOW_DEFAULT_HEIGHT)
 
