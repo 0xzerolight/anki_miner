@@ -13,15 +13,9 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.workers.audiobook_queue_worker import AudiobookQueueWorker
 from anki_miner.models.audiobook_queue import AudiobookQueueItem
-
-# Qt needs an application for signals. Use a full QApplication (not
-# QCoreApplication) so widget tests in the same process — when this module is
-# imported first — can still construct QWidgets instead of hard-aborting.
-_app = QApplication.instance() or QApplication([])
 
 
 class _SignalCapture:
@@ -51,7 +45,7 @@ def mock_processor():
 
 
 @pytest.fixture
-def make_worker(mock_processor, test_config):
+def make_worker(qapp, mock_processor, test_config):
     """Factory producing an AudiobookQueueWorker with sensible defaults."""
 
     def _make(

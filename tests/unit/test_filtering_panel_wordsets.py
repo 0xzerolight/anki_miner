@@ -6,25 +6,23 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
 
-# QApplication must exist before any widget is instantiated.
-_app = QApplication.instance() or QApplication([])
 
-
-def test_wordset_checkboxes_built_from_catalog():
+def test_wordset_checkboxes_built_from_catalog(qtbot):
     panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
     assert set(panel.wordset_checkboxes.keys()) >= {"surnames", "given-names", "place-names", "org-product"}
 
 
-def test_get_set_excluded_wordsets_roundtrip():
+def test_get_set_excluded_wordsets_roundtrip(qtbot):
     panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
     panel.set_excluded_wordsets(("surnames", "place-names"))
     assert set(panel.get_excluded_wordsets()) == {"surnames", "place-names"}
 
 
-def test_default_no_wordsets_checked():
+def test_default_no_wordsets_checked(qtbot):
     panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
     assert panel.get_excluded_wordsets() == ()

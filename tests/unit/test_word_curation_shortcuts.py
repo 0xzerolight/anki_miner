@@ -11,9 +11,6 @@ from PyQt6.QtWidgets import QApplication, QTableWidget
 
 from anki_miner.models import TokenizedWord
 
-# QApplication instance needed for any widget test
-_app = QApplication.instance() or QApplication([])
-
 
 def _make_words(count=3):
     """Create a list of test TokenizedWords."""
@@ -37,12 +34,13 @@ def _make_words(count=3):
 
 
 @pytest.fixture
-def dialog():
+def dialog(qtbot):
     """Create a WordCurationDialog with test words."""
     from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 
     words = _make_words(3)
     dlg = WordCurationDialog(words)
+    qtbot.addWidget(dlg)
     return dlg
 
 
@@ -307,7 +305,7 @@ class TestPlayPauseAndToggleKeys:
 class TestFrequencyColumnSort:
     """Issue #6 regression — frequency column must sort numerically, not lexically."""
 
-    def test_frequency_sorts_numerically(self):
+    def test_frequency_sorts_numerically(self, qtbot):
         from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 
         # Ranks chosen to expose the bug: lexical sort gives 1,10,100,2,20,3.
@@ -327,11 +325,12 @@ class TestFrequencyColumnSort:
                 )
             )
         dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
         dlg.table.sortItems(5, Qt.SortOrder.AscendingOrder)
         sorted_ranks = [int(dlg.table.item(r, 5).text()) for r in range(dlg.table.rowCount())]
         assert sorted_ranks == sorted(ranks)
 
-    def test_frequency_none_sorts_last_ascending(self):
+    def test_frequency_none_sorts_last_ascending(self, qtbot):
         from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 
         words = [
@@ -367,6 +366,7 @@ class TestFrequencyColumnSort:
             ),
         ]
         dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
         dlg.table.sortItems(5, Qt.SortOrder.AscendingOrder)
         texts = [dlg.table.item(r, 5).text() for r in range(dlg.table.rowCount())]
         assert texts == ["5", "50", "-"]
@@ -375,22 +375,23 @@ class TestFrequencyColumnSort:
 class TestAddToKnownWords:
     """Issue #42 — 'Add to Known Words' from the curator."""
 
-    def _dialog_with_callback(self):
+    def _dialog_with_callback(self, qtbot):
         from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 
         captured: list[set[str]] = []
         dlg = WordCurationDialog(_make_words(3), mark_known_callback=lambda forms: captured.append(forms) or len(forms))
+        qtbot.addWidget(dlg)
         return dlg, captured
 
-    def test_calls_callback_with_mined_forms_of_selected_rows(self):
-        dlg, captured = self._dialog_with_callback()
+    def test_calls_callback_with_mined_forms_of_selected_rows(self, qtbot):
+        dlg, captured = self._dialog_with_callback(qtbot)
         mined = dlg.table.item(0, 1).text()
         _select_rows(dlg, [0])
         dlg._on_add_to_known()
         assert captured == [{mined}]
 
-    def test_marked_rows_are_unchecked_and_excluded(self):
-        dlg, _ = self._dialog_with_callback()
+    def test_marked_rows_are_unchecked_and_excluded(self, qtbot):
+        dlg, _ = self._dialog_with_callback(qtbot)
         mined = dlg.table.item(0, 1).text()
         _select_rows(dlg, [0])
         dlg._on_add_to_known()
@@ -398,38 +399,39 @@ class TestAddToKnownWords:
         # Excluded from the run's selection.
         assert mined not in {w.mined_form for w in dlg.get_selected_words()}
 
-    def test_marked_row_struck_through(self):
-        dlg, _ = self._dialog_with_callback()
+    def test_marked_row_struck_through(self, qtbot):
+        dlg, _ = self._dialog_with_callback(qtbot)
         _select_rows(dlg, [0])
         dlg._on_add_to_known()
         assert dlg.table.item(0, 1).font().strikeOut() is True
 
-    def test_marked_row_cannot_be_rechecked_by_select_all(self):
-        dlg, _ = self._dialog_with_callback()
+    def test_marked_row_cannot_be_rechecked_by_select_all(self, qtbot):
+        dlg, _ = self._dialog_with_callback(qtbot)
         _select_rows(dlg, [0])
         dlg._on_add_to_known()
         dlg._select_all()  # acts on all visible rows
         assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Unchecked
 
-    def test_falls_back_to_current_row_when_no_selection(self):
-        dlg, captured = self._dialog_with_callback()
+    def test_falls_back_to_current_row_when_no_selection(self, qtbot):
+        dlg, captured = self._dialog_with_callback(qtbot)
         _select_rows(dlg, [])
         dlg.table.setCurrentCell(1, 0)
         mined = dlg.table.item(1, 1).text()
         dlg._on_add_to_known()
         assert captured == [{mined}]
 
-    def test_noop_without_target(self):
-        dlg, captured = self._dialog_with_callback()
+    def test_noop_without_target(self, qtbot):
+        dlg, captured = self._dialog_with_callback(qtbot)
         _select_rows(dlg, [])
         dlg.table.setCurrentCell(-1, -1)
         dlg._on_add_to_known()
         assert captured == []
 
-    def test_works_without_callback(self):
+    def test_works_without_callback(self, qtbot):
         from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 
         dlg = WordCurationDialog(_make_words(3))
+        qtbot.addWidget(dlg)
         _select_rows(dlg, [0])
         dlg._on_add_to_known()  # must not raise
         assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Unchecked

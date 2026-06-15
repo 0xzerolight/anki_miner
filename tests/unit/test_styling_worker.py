@@ -17,14 +17,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from PyQt6.QtCore import QCoreApplication
-
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.gui.workers.styling_worker import StylingWorker
 from anki_miner.services.dictionary.card_styling import BEGIN_MARKER, END_MARKER
-
-# Qt needs a core application for signal connection. Created once per process.
-_app = QCoreApplication.instance() or QCoreApplication([])
 
 
 class _Capture:

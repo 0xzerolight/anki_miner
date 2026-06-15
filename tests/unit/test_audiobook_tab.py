@@ -29,18 +29,14 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.models.audiobook_queue import AudiobookItemStatus
 
-# QApplication instance needed for any widget test.
-_app = QApplication.instance() or QApplication([])
-
 
 @pytest.fixture
-def tab(test_config: AnkiMinerConfig):
+def tab(qtbot, test_config: AnkiMinerConfig):
     """Instantiate an AudiobookTab with a patched queue worker class.
 
     ``AudiobookQueueWorker`` is patched at the module where it is looked up
@@ -54,6 +50,7 @@ def tab(test_config: AnkiMinerConfig):
             processor=MagicMock(name="EpisodeProcessor"),
             presenter=MagicMock(name="Presenter"),
         )
+        qtbot.addWidget(widget)
         widget._queue_worker_cls = queue_cls  # type: ignore[attr-defined]
         try:
             yield widget
@@ -293,7 +290,7 @@ class TestRunStartup:
 class TestDeferredProcessor:
     """Tab accepts ``processor=None`` and rebuilds lazily via service_factory."""
 
-    def test_constructs_with_none_processor(self, test_config: AnkiMinerConfig):
+    def test_constructs_with_none_processor(self, qtbot, test_config: AnkiMinerConfig):
         sentinel = MagicMock(name="StatsService")
         with patch("anki_miner.gui.widgets.audiobook_tab.AudiobookQueueWorker", autospec=False):
             widget = AudiobookTab(
@@ -302,13 +299,14 @@ class TestDeferredProcessor:
                 presenter=MagicMock(name="Presenter"),
                 stats_service=sentinel,
             )
+            qtbot.addWidget(widget)
             try:
                 assert widget._processor is None
                 assert widget._stats_service is sentinel
             finally:
                 widget.deleteLater()
 
-    def test_lazy_rebuild_threads_stats_service(self, test_config: AnkiMinerConfig, tmp_path):
+    def test_lazy_rebuild_threads_stats_service(self, qtbot, test_config: AnkiMinerConfig, tmp_path):
         sentinel_stats = MagicMock(name="StatsService")
         with (
             patch("anki_miner.gui.widgets.audiobook_tab.AudiobookQueueWorker", autospec=False) as q_cls,
@@ -324,6 +322,7 @@ class TestDeferredProcessor:
                 presenter=MagicMock(name="Presenter"),
                 stats_service=sentinel_stats,
             )
+            qtbot.addWidget(widget)
             try:
                 _add_pair(widget, tmp_path)
                 widget._on_mine_clicked()

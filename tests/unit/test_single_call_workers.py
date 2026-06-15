@@ -19,15 +19,10 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from PyQt6.QtCore import QCoreApplication
-
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
 from anki_miner.gui.workers.update_worker import UpdateWorkerThread
 from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
-
-# Qt needs a core application for signal connection. Created once per process.
-_app = QCoreApplication.instance() or QCoreApplication([])
 
 
 class _Capture:

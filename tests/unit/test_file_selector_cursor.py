@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.widgets.enhanced.file_selector import FileSelector
-
-_app = QApplication.instance() or QApplication([])
 
 LONG_PATH = "/home/light/Downloads/Code Geass - Roze of the Recapture S01 1080p Dual Audio WEBRip DD+ x265-EMBER/[EMBER] Code Geass - Dakkan no Roze - 01.mkv"
 
 
 @pytest.fixture
-def widget():
+def widget(qtbot):
     w = FileSelector(label="Video File")
+    qtbot.addWidget(w)
     yield w
     w.deleteLater()
 
