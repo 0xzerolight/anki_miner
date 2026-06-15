@@ -41,7 +41,7 @@ def _detect_target() -> str:
     # AppImage runtime sets the APPIMAGE env var before Python starts. sys.frozen
     # is also True on AppImage (PyInstaller-built), so the APPIMAGE check MUST
     # come before any sys.frozen branches — otherwise AppImage users get matched
-    # as plain linux-frozen and pointed at the .deb/.tar.gz instead.
+    # as plain linux-frozen and pointed at the .deb instead.
     if os.environ.get("APPIMAGE"):
         return "appimage"
     if getattr(sys, "frozen", False):
@@ -53,12 +53,13 @@ def _detect_target() -> str:
     return "pip"
 
 
-# Asset name patterns for each target. linux-frozen has two patterns: prefer
-# .deb (which integrates with the system package manager); fall back to the
-# portable tar.gz when no .deb is published.
+# Asset name patterns for each target. linux-frozen matches the .deb (every
+# Linux frozen bundle now installs via .deb); AppImage installs match through
+# the separate "appimage" target. If no matching asset exists, _pick_asset
+# returns None and the caller points the banner at the release page.
 _TARGET_PATTERNS: dict[str, tuple[str, ...]] = {
     "windows-frozen": ("*-Windows-x86_64-Setup.exe",),
-    "linux-frozen": ("anki-miner_*_amd64.deb", "AnkiMiner-Linux-x86_64.tar.gz"),
+    "linux-frozen": ("anki-miner_*_amd64.deb",),
     "appimage": ("*-x86_64.AppImage",),
     "macos-frozen": ("AnkiMiner-macOS-arm64.tar.gz",),
 }

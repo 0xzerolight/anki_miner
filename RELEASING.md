@@ -40,11 +40,9 @@ Maintainer-facing release SOP. Contributors should not need to run any of these 
 
 7. **Verify the Release page.** Check that all expected assets attached:
 
-   - `AnkiMiner-*-Linux-x86_64.tar.gz`
    - `AnkiMiner-*-Linux-x86_64.AppImage`
    - `anki-miner_*_amd64.deb`
    - `AnkiMiner-*-Setup.exe`
-   - `AnkiMiner-Windows-x86_64.zip`
    - `AnkiMiner-macOS-arm64.tar.gz`
 
    And that PyPI lists the new version: <https://pypi.org/project/anki-miner/>.
