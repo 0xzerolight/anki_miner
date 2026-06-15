@@ -73,6 +73,16 @@ def test_pitch_checkbox_tooltip_is_helper_text(qapp, tmp_path):
     assert panel.use_pitch_accent_checkbox.toolTip() == "Looks up and writes pitch patterns to mapped fields."
 
 
+def test_frequency_widgets_live_on_dictionary_panel(qapp, tmp_path):
+    # The frequency file selector + enable toggle were moved here from the
+    # Filtering panel (Dictionaries-tab reorg); the max-rank threshold stays
+    # in Filtering.
+    panel = DictionarySettingsPanel(tmp_path)
+    assert hasattr(panel, "frequency_selector")
+    assert hasattr(panel, "use_frequency_checkbox")
+    assert panel.use_frequency_checkbox.text() == "Enable Frequency Data"
+
+
 def test_reorder_moves_entry_up(qapp, monkeypatch, tmp_path):
     panel = DictionarySettingsPanel(tmp_path)
     panel.set_chain(
