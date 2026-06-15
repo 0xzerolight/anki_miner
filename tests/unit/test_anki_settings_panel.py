@@ -6,16 +6,12 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
 
-# QApplication must exist before any widget is instantiated.
-_app = QApplication.instance() or QApplication([])
 
-
-def test_glossary_field_get_set_roundtrip():
+def test_glossary_field_get_set_roundtrip(qtbot):
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
 
     panel.set_card_fields(
         {
@@ -39,65 +35,75 @@ def test_glossary_field_get_set_roundtrip():
     assert out["glossary"] == "Glossary"
 
 
-def test_glossary_field_default_blank():
+def test_glossary_field_default_blank(qtbot):
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     # Setter called with no glossary key — widget should default to "".
     panel.set_card_fields({})
     assert panel.get_card_fields()["glossary"] == ""
 
 
-def test_populate_from_field_list_matches_glossary():
+def test_populate_from_field_list_matches_glossary(qtbot):
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     panel.populate_from_field_list(["Expression", "Sentence", "MainDefinition", "Glossary"])
     assert panel.get_card_fields()["glossary"] == "Glossary"
 
 
-def test_get_card_fields_includes_source():
+def test_get_card_fields_includes_source(qtbot):
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     panel.source_field_input.setText("MySource")
     assert panel.get_card_fields()["source"] == "MySource"
 
 
-def test_set_card_fields_populates_source():
+def test_set_card_fields_populates_source(qtbot):
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     panel.set_card_fields({"source": "MySource"})
     assert panel.source_field_input.text() == "MySource"
 
 
-def test_source_field_get_set_roundtrip():
+def test_source_field_get_set_roundtrip(qtbot):
     """Regression guard: source must survive set -> get (else dropped on save)."""
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     panel.set_card_fields({"source": "Origin"})
     out = panel.get_card_fields()
     assert out["source"] == "Origin"
 
 
-def test_source_field_default_blank():
+def test_source_field_default_blank(qtbot):
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     panel.set_card_fields({})
     assert panel.get_card_fields()["source"] == ""
 
 
-def test_populate_from_field_list_matches_source():
+def test_populate_from_field_list_matches_source(qtbot):
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     panel.populate_from_field_list(["Expression", "Sentence", "Source"])
     assert panel.get_card_fields()["source"] == "Source"
 
 
-def test_expression_audio_field_get_set_roundtrip():
+def test_expression_audio_field_get_set_roundtrip(qtbot):
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     panel.set_card_fields({"expression_audio": "ExpressionAudio"})
     assert panel.get_card_fields()["expression_audio"] == "ExpressionAudio"
 
 
-def test_expression_audio_field_default_blank():
+def test_expression_audio_field_default_blank(qtbot):
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     panel.set_card_fields({})
     assert panel.get_card_fields()["expression_audio"] == ""
 
 
-def test_populate_from_field_list_matches_expression_audio():
+def test_populate_from_field_list_matches_expression_audio(qtbot):
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     panel.populate_from_field_list(["Expression", "SentenceAudio", "ExpressionAudio"])
     fields = panel.get_card_fields()
     assert fields["expression_audio"] == "ExpressionAudio"
@@ -105,16 +111,18 @@ def test_populate_from_field_list_matches_expression_audio():
     assert fields["audio"] == "SentenceAudio"
 
 
-def test_expression_audio_has_no_enable_checkbox():
+def test_expression_audio_has_no_enable_checkbox(qtbot):
     """The dedicated enable checkbox was removed; the field name is the switch."""
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     assert not hasattr(panel, "expression_audio_checkbox")
     assert not hasattr(panel, "get_expression_audio_enabled")
     assert not hasattr(panel, "set_expression_audio_enabled")
 
 
-def test_expression_audio_field_defaults_empty_and_roundtrips():
+def test_expression_audio_field_defaults_empty_and_roundtrips(qtbot):
     panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
     assert panel.get_card_fields()["expression_audio"] == ""
     panel.set_card_fields({"expression_audio": "ExpressionAudio"})
     assert panel.get_card_fields()["expression_audio"] == "ExpressionAudio"

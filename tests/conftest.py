@@ -1,5 +1,9 @@
 """Pytest configuration and shared fixtures."""
 
+import os
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
 from unittest.mock import MagicMock
 
 import pytest

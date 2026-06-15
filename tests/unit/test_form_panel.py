@@ -7,12 +7,10 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QApplication, QCheckBox, QLabel, QWidget
+from PyQt6.QtWidgets import QCheckBox, QLabel, QWidget
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base.form_panel import FormPanel
-
-_app = QApplication.instance() or QApplication([])
 
 
 def _find_helper_text_label(panel: FormPanel) -> QLabel | None:
@@ -23,9 +21,10 @@ def _find_helper_text_label(panel: FormPanel) -> QLabel | None:
     return None
 
 
-def test_helper_sets_tooltip_on_widget():
+def test_helper_sets_tooltip_on_widget(qtbot):
     """Helper text must be set as the widget's tooltip, not rendered inline."""
     panel = FormPanel("Test Panel")
+    qtbot.addWidget(panel)
     widget = QCheckBox("Bold target word")
     helper_text = "Matches the Yomitan {cloze-prefix}<b>{cloze-body}</b>{cloze-suffix} idiom."
     panel.add_field("", widget, helper=helper_text)
@@ -33,9 +32,10 @@ def test_helper_sets_tooltip_on_widget():
     assert widget.toolTip() == helper_text
 
 
-def test_helper_does_not_create_inline_label():
+def test_helper_does_not_create_inline_label(qtbot):
     """No child 'helper-text' QLabel should be created for field helper text."""
     panel = FormPanel("Test Panel")
+    qtbot.addWidget(panel)
     widget = QCheckBox("Bold target word")
     helper_text = "Matches the Yomitan {cloze-prefix}<b>{cloze-body}</b>{cloze-suffix} idiom."
     panel.add_field("", widget, helper=helper_text)
@@ -44,45 +44,50 @@ def test_helper_does_not_create_inline_label():
     assert helper_label is None, "No 'helper-text' QLabel should exist for field helper"
 
 
-def test_helper_plain_prose_sets_tooltip():
+def test_helper_plain_prose_sets_tooltip(qtbot):
     """Plain-prose helpers are also set as tooltip."""
     panel = FormPanel("Test Panel")
+    qtbot.addWidget(panel)
     widget = QCheckBox()
     panel.add_field("Label", widget, helper="Plain helper text with no markup")
 
     assert widget.toolTip() == "Plain helper text with no markup"
 
 
-def test_no_helper_leaves_tooltip_empty():
+def test_no_helper_leaves_tooltip_empty(qtbot):
     """Fields with no helper leave widget tooltip empty/unchanged."""
     panel = FormPanel("Test Panel")
+    qtbot.addWidget(panel)
     widget = QCheckBox()
     panel.add_field("Label", widget)
 
     assert widget.toolTip() == ""
 
 
-def test_field_without_helper_still_renders():
+def test_field_without_helper_still_renders(qtbot):
     """A field with no helper must still be added to the form."""
     panel = FormPanel("Test Panel")
+    qtbot.addWidget(panel)
     widget = QCheckBox()
     result = panel.add_field("Label", widget)
 
     assert result is widget
 
 
-def test_field_with_helper_returns_widget():
+def test_field_with_helper_returns_widget(qtbot):
     """add_field must return the input widget even when helper is provided."""
     panel = FormPanel("Test Panel")
+    qtbot.addWidget(panel)
     widget = QCheckBox()
     result = panel.add_field("Label", widget, helper="Some help")
 
     assert result is widget
 
 
-def test_field_with_helper_no_label_does_not_create_container():
+def test_field_with_helper_no_label_does_not_create_container(qtbot):
     """When label is empty and helper is set, no container QWidget should wrap the input."""
     panel = FormPanel("Test Panel")
+    qtbot.addWidget(panel)
     widget = QCheckBox()
     panel.add_field("", widget, helper="Some help")
 
@@ -106,22 +111,25 @@ def _find_section_label(panel: FormPanel, text: str) -> QLabel | None:
     return None
 
 
-def test_form_layout_spacing_is_xs():
+def test_form_layout_spacing_is_xs(qtbot):
     """_new_form_layout must use SPACING.xs (8) between form rows."""
     panel = FormPanel("Spacing Test")
+    qtbot.addWidget(panel)
     # _form_layout is the initial form layout created during _setup_ui
     assert panel._form_layout.spacing() == SPACING.xs
 
 
-def test_main_layout_spacing_is_xs():
+def test_main_layout_spacing_is_xs(qtbot):
     """_setup_ui must set main layout spacing to SPACING.xs (8)."""
     panel = FormPanel("Spacing Test")
+    qtbot.addWidget(panel)
     assert panel.main_layout.spacing() == SPACING.xs
 
 
-def test_section_heading_font_pixelsize_is_body_sm():
+def test_section_heading_font_pixelsize_is_body_sm(qtbot):
     """add_section heading QLabel must use FONT_SIZES.body_sm (13) pixel size."""
     panel = FormPanel("Section Test")
+    qtbot.addWidget(panel)
     panel.add_section("My Section")
 
     heading = _find_section_label(panel, "My Section")
@@ -129,9 +137,10 @@ def test_section_heading_font_pixelsize_is_body_sm():
     assert heading.font().pixelSize() == FONT_SIZES.body_sm
 
 
-def test_section_heading_font_weight_is_demibold():
+def test_section_heading_font_weight_is_demibold(qtbot):
     """add_section heading QLabel must keep DemiBold weight."""
     panel = FormPanel("Section Test")
+    qtbot.addWidget(panel)
     panel.add_section("My Section")
 
     heading = _find_section_label(panel, "My Section")

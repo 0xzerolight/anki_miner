@@ -16,22 +16,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.exceptions.youtube import VideoTooLongError, YouTubeFetchError
 from anki_miner.gui.workers.youtube_probe_worker import (
     YouTubeProbeWorker,
     _SingleCallProbeThread,
 )
 from anki_miner.models.youtube import VideoInfo
-
-# Must be QApplication, not QCoreApplication: the app object is a process-wide
-# singleton shared with widget tests. A bare QCoreApplication satisfies signals
-# here but poisons QApplication.instance() for any widget test that imports
-# later in the same process, aborting QWidget construction ("Cannot create a
-# QWidget without QApplication"). QApplication is a QCoreApplication, so signals
-# still work. Created once per process.
-_app = QApplication.instance() or QApplication([])
 
 
 def _make_video_info(video_id: str = "abc") -> VideoInfo:
@@ -62,7 +52,7 @@ class _SignalCapture:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_is_single_call_probe_thread() -> None:
+def test_probe_worker_is_single_call_probe_thread(qapp) -> None:
     """YouTubeProbeWorker rides the shared _SingleCallProbeThread body."""
     worker = YouTubeProbeWorker(fetcher=MagicMock(), url="u")
     assert isinstance(worker, _SingleCallProbeThread)
@@ -73,7 +63,7 @@ def test_probe_worker_is_single_call_probe_thread() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_success_emits_probe_done() -> None:
+def test_probe_worker_success_emits_probe_done(qapp) -> None:
     info = _make_video_info("vid1")
     fetcher = MagicMock()
     fetcher.probe_metadata.return_value = info
@@ -96,7 +86,7 @@ def test_probe_worker_success_emits_probe_done() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_fetch_error_emits_probe_error() -> None:
+def test_probe_worker_fetch_error_emits_probe_error(qapp) -> None:
     fetcher = MagicMock()
     fetcher.probe_metadata.side_effect = YouTubeFetchError("timeout")
 
@@ -113,7 +103,7 @@ def test_probe_worker_fetch_error_emits_probe_error() -> None:
     assert "timeout" in errored.calls[0][0]
 
 
-def test_probe_worker_video_too_long_emits_probe_error() -> None:
+def test_probe_worker_video_too_long_emits_probe_error(qapp) -> None:
     """VideoTooLongError (a fetch-time guard) surfaces as probe_error."""
     fetcher = MagicMock()
     fetcher.probe_metadata.side_effect = VideoTooLongError("video exceeds maximum duration")
@@ -128,7 +118,7 @@ def test_probe_worker_video_too_long_emits_probe_error() -> None:
     assert "maximum duration" in errored.calls[0][0]
 
 
-def test_probe_worker_generic_exception_emits_probe_error() -> None:
+def test_probe_worker_generic_exception_emits_probe_error(qapp) -> None:
     fetcher = MagicMock()
     fetcher.probe_metadata.side_effect = RuntimeError("json parse error")
 
@@ -150,7 +140,7 @@ def test_probe_worker_generic_exception_emits_probe_error() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_uses_fetcher_captured_at_construction() -> None:
+def test_probe_worker_uses_fetcher_captured_at_construction(qapp) -> None:
     """The worker uses the fetcher passed to __init__, not any later swap."""
     info = _make_video_info("z")
     fetcher_a = MagicMock()
@@ -171,7 +161,7 @@ def test_probe_worker_uses_fetcher_captured_at_construction() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_custom_timeout_forwarded() -> None:
+def test_probe_worker_custom_timeout_forwarded(qapp) -> None:
     fetcher = MagicMock()
     fetcher.probe_metadata.return_value = _make_video_info("a")
 
@@ -181,7 +171,7 @@ def test_probe_worker_custom_timeout_forwarded() -> None:
     fetcher.probe_metadata.assert_called_once_with("u", timeout_s=15.0)
 
 
-def test_probe_worker_default_timeout_is_60() -> None:
+def test_probe_worker_default_timeout_is_60(qapp) -> None:
     fetcher = MagicMock()
     fetcher.probe_metadata.return_value = _make_video_info("a")
 

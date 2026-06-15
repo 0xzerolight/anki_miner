@@ -17,36 +17,30 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 
 
 @pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
-@pytest.fixture
-def single_tab(qapp, test_config):
+def single_tab(qapp, qtbot, test_config):
     widget = SingleEpisodeTab(
         config=test_config,
         presenter=MagicMock(name="Presenter"),
         progress_callback=MagicMock(name="ProgressCallback"),
     )
+    qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
 
 
 @pytest.fixture
-def batch_tab(qapp, test_config):
+def batch_tab(qapp, qtbot, test_config):
     widget = BatchProcessingTab(
         config=test_config,
         presenter=MagicMock(name="Presenter"),
         progress_callback=MagicMock(name="ProgressCallback"),
     )
+    qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
 
