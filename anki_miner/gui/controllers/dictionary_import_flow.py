@@ -15,6 +15,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
@@ -73,7 +74,10 @@ class DictionaryImportFlow:
     def add_dict(self) -> None:
         """Prompt for a Yomitan zip and run the import worker."""
         zip_path_str, _ = QFileDialog.getOpenFileName(
-            self._parent, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)"
+            self._parent,
+            "Choose Yomitan dictionary zip",
+            resolve_start_dir(None, file_mode=True),
+            "Yomitan zip (*.zip)",
         )
         if not zip_path_str:
             return
@@ -127,7 +131,10 @@ class DictionaryImportFlow:
         and silently create a new one — we abort with a warning instead.
         """
         zip_path_str, _ = QFileDialog.getOpenFileName(
-            self._parent, "Choose Yomitan dictionary zip", "", "Yomitan zip (*.zip)"
+            self._parent,
+            "Choose Yomitan dictionary zip",
+            resolve_start_dir(None, file_mode=True),
+            "Yomitan zip (*.zip)",
         )
         if not zip_path_str:
             return
