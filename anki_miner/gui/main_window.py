@@ -68,6 +68,12 @@ class MainWindow(QMainWindow):
         """Initialize the main window."""
         super().__init__()
 
+        # In-memory re-entrancy guard for the deferred first-run setup offer.
+        # The 0ms timer below could otherwise fire inside a nested modal event
+        # loop (e.g. a freq-zip import) and re-enter on a half-built window.
+        # NOT the persisted first_run_setup_done flag — purely runtime.
+        self._first_run_setup_handled = False
+
         # Load configuration
         self.config = GUIConfigManager.load_config()
 
@@ -392,6 +398,13 @@ class MainWindow(QMainWindow):
         from anki_miner.gui.utils.resource_setup import should_offer_first_run_setup
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
         from anki_miner.gui.widgets.dialogs.welcome_dialog import WelcomeDialog
+
+        # Re-entrancy / idempotency guard: never run twice, and never re-enter if
+        # the 0ms timer fires inside a nested modal loop. Set before any work so a
+        # re-entrant fire during dialog.exec() bails out immediately.
+        if self._first_run_setup_handled:
+            return
+        self._first_run_setup_handled = True
 
         if not should_offer_first_run_setup(self.config):
             self.update_config(replace(self.config, first_run_setup_done=True))
