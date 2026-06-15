@@ -13,21 +13,14 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets.panels.queue_panel import QueuePanel
 from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
 
 
 @pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
-@pytest.fixture
-def panel(qapp):
+def panel(qapp, qtbot):
     p = QueuePanel()
+    qtbot.addWidget(p)
     yield p
     p.deleteLater()
 
