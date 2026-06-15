@@ -166,6 +166,37 @@ def test_resource_release_refusal_blocks_worker(tab, monkeypatch, stub_worker, t
     stub_worker.assert_not_called()
 
 
+def test_add_dict_opens_file_dialog_at_home(tab, monkeypatch, stub_worker):
+    """add_dict must pass home dir as the start-dir to getOpenFileName, never ''."""
+    captured: dict = {}
+
+    def fake_open(parent, title, start_dir, file_filter, *a, **kw):
+        captured["dir"] = start_dir
+        return ("", "")  # user cancels
+
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", fake_open)
+    tab._dict_import_flow.add_dict()
+
+    home = str(Path.home())
+    assert captured.get("dir") == home, f"Expected home={home!r}; got {captured.get('dir')!r}"
+    assert captured.get("dir") != "", "start dir must not be empty string"
+
+
+def test_reimport_dict_opens_file_dialog_at_home(tab, monkeypatch, stub_worker):
+    """reimport_dict must pass home dir as the start-dir to getOpenFileName."""
+    captured: dict = {}
+
+    def fake_open(parent, title, start_dir, file_filter, *a, **kw):
+        captured["dir"] = start_dir
+        return ("", "")  # user cancels
+
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", fake_open)
+    tab._dict_import_flow.reimport_dict("any-slot")
+
+    home = str(Path.home())
+    assert captured.get("dir") == home, f"Expected home={home!r}; got {captured.get('dir')!r}"
+
+
 def test_resource_release_runs_before_worker_start(tab, monkeypatch, stub_worker, tmp_path):
     """The release hook must fire strictly before DictionaryImportWorker is
     constructed, so cached sqlite handles are dropped before the importer

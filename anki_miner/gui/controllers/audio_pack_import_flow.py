@@ -17,6 +17,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.workers.audio_pack_import_worker import AudioPackImportWorker
 from anki_miner.services.audio_packs.formats import scan_importable_packs
@@ -102,7 +103,9 @@ class AudioPackImportFlow:
 
     def add_pack(self) -> None:
         """Prompt for a directory and import all detectable audio packs in it."""
-        chosen_dir = QFileDialog.getExistingDirectory(self._parent, "Choose audio pack folder", "")
+        chosen_dir = QFileDialog.getExistingDirectory(
+            self._parent, "Choose audio pack folder", resolve_start_dir(None, file_mode=False)
+        )
         if not chosen_dir:
             return
 
@@ -237,7 +240,9 @@ class AudioPackImportFlow:
         importer overwrites the existing index in-place, preserving the
         pack_id so the chain entry keeps pointing at it correctly.
         """
-        chosen_dir = QFileDialog.getExistingDirectory(self._parent, "Choose audio pack folder to re-import", "")
+        chosen_dir = QFileDialog.getExistingDirectory(
+            self._parent, "Choose audio pack folder to re-import", resolve_start_dir(None, file_mode=False)
+        )
         if not chosen_dir:
             return
 
