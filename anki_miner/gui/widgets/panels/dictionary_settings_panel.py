@@ -332,7 +332,7 @@ class DictionarySettingsPanel(FormPanel):
         self.frequency_selector = FileSelector(
             label="",
             file_mode=True,
-            file_filter="Frequency (*.csv *.tsv *.zip);;All Files (*)",
+            file_filter="Frequency list (*.csv *.tsv *.txt *.zip);;All Files (*)",
             placeholder="Select frequency list CSV/TSV or Yomitan zip...",
         )
         self.add_field(
