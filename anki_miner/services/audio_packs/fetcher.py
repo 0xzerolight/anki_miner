@@ -162,6 +162,17 @@ class LocalAudioPackFetcher:
         """Try each candidate form, returning the first pack hit."""
         return _first_candidate_hit(self, candidates, cancelled_check)
 
+    def close(self) -> None:
+        """No-op: sqlite connections are opened and closed per ``fetch`` call.
+
+        This fetcher holds no long-lived sqlite handle (see the connection
+        idiom in the class docstring), so there is nothing to release between
+        sequential mining runs. Present for uniform duck-typed ``close()``
+        fan-out from ChainedExpressionAudioFetcher.
+        """
+        # Nothing to close — each fetch opens its own short-lived connection.
+        pass
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
