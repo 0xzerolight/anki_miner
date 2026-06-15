@@ -89,22 +89,42 @@ def test_old_config_backfills_expression_audio_in_anki_fields(tmp_config: Path):
 
 
 def test_old_config_without_expression_audio_fields_gets_defaults(tmp_config: Path):
-    """A saved config missing expression_audio_enabled and expression_audio_delay
-    must fall through to dataclass defaults rather than crashing.
+    """A saved config missing expression_audio_delay must fall through to
+    dataclass defaults rather than crashing.
     """
     tmp_config.write_text(
         json.dumps(
             {
                 "anki_deck_name": "MyDeck",
-                # expression_audio_enabled / expression_audio_delay absent
+                # expression_audio_delay absent
             }
         )
     )
 
     loaded = GUIConfigManager.load_config()
     assert loaded.anki_deck_name == "MyDeck"
-    assert loaded.expression_audio_enabled is False
     assert loaded.expression_audio_delay == 0.2
+
+
+def test_obsolete_expression_audio_enabled_key_is_dropped(tmp_config: Path):
+    """A legacy config carrying the removed expression_audio_enabled flag must
+    load cleanly (the unknown key is dropped, not fatal), and a non-empty
+    expression_audio field name alone activates the feature.
+    """
+    tmp_config.write_text(
+        json.dumps(
+            {
+                "anki_deck_name": "MyDeck",
+                "expression_audio_enabled": True,  # removed field — must be ignored
+                "anki_fields": {"expression_audio": "ExpressionAudio"},
+            }
+        )
+    )
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.anki_deck_name == "MyDeck"
+    assert not hasattr(loaded, "expression_audio_enabled")
+    assert loaded.anki_fields["expression_audio"] == "ExpressionAudio"
 
 
 def test_null_anki_fields_does_not_raise(tmp_config: Path):

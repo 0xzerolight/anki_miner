@@ -105,14 +105,16 @@ def test_populate_from_field_list_matches_expression_audio():
     assert fields["audio"] == "SentenceAudio"
 
 
-def test_expression_audio_toggle_defaults_off():
+def test_expression_audio_has_no_enable_checkbox():
+    """The dedicated enable checkbox was removed; the field name is the switch."""
     panel = AnkiSettingsPanel()
-    assert panel.get_expression_audio_enabled() is False
+    assert not hasattr(panel, "expression_audio_checkbox")
+    assert not hasattr(panel, "get_expression_audio_enabled")
+    assert not hasattr(panel, "set_expression_audio_enabled")
 
 
-def test_expression_audio_toggle_get_set_roundtrip():
+def test_expression_audio_field_defaults_empty_and_roundtrips():
     panel = AnkiSettingsPanel()
-    panel.set_expression_audio_enabled(True)
-    assert panel.get_expression_audio_enabled() is True
-    panel.set_expression_audio_enabled(False)
-    assert panel.get_expression_audio_enabled() is False
+    assert panel.get_card_fields()["expression_audio"] == ""
+    panel.set_card_fields({"expression_audio": "ExpressionAudio"})
+    assert panel.get_card_fields()["expression_audio"] == "ExpressionAudio"
