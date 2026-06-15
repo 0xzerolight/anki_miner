@@ -34,16 +34,12 @@ from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus
 from anki_miner.utils.youtube_url import classify_youtube_url
-
-# QApplication instance needed for any widget test.
-_app = QApplication.instance() or QApplication([])
 
 
 def _make_video_info(
@@ -100,7 +96,7 @@ MIXED_URL = "https://www.youtube.com/watch?v=abcdefghijk&list=PLabcdefghijkl"
 
 
 @pytest.fixture
-def tab(test_config: AnkiMinerConfig):
+def tab(qtbot, test_config: AnkiMinerConfig):
     """Instantiate a YouTubeTab with patched probe/queue/playlist worker classes.
 
     Worker classes are patched at the module where they are looked up — the
@@ -136,6 +132,7 @@ def tab(test_config: AnkiMinerConfig):
             fetcher=MagicMock(name="Fetcher"),
             presenter=MagicMock(name="Presenter"),
         )
+        qtbot.addWidget(widget)
         widget._probe_worker_cls = probe_cls  # type: ignore[attr-defined]
         widget._queue_worker_cls = queue_cls  # type: ignore[attr-defined]
         widget._playlist_resolve_worker_cls = resolve_cls  # type: ignore[attr-defined]
@@ -368,7 +365,7 @@ class TestDeferredProcessor:
     mining sessions land in analytics.
     """
 
-    def test_constructs_with_none_processor(self, test_config: AnkiMinerConfig):
+    def test_constructs_with_none_processor(self, qtbot, test_config: AnkiMinerConfig):
         cfg = replace(test_config, youtube_max_duration_s=7200)
         sentinel = MagicMock(name="StatsService")
         with (
@@ -382,13 +379,14 @@ class TestDeferredProcessor:
                 presenter=MagicMock(name="Presenter"),
                 stats_service=sentinel,
             )
+            qtbot.addWidget(widget)
             try:
                 assert widget._processor is None
                 assert widget._stats_service is sentinel
             finally:
                 widget.deleteLater()
 
-    def test_lazy_rebuild_threads_stats_service(self, test_config: AnkiMinerConfig):
+    def test_lazy_rebuild_threads_stats_service(self, qtbot, test_config: AnkiMinerConfig):
         cfg = replace(test_config, youtube_max_duration_s=7200)
         sentinel_stats = MagicMock(name="StatsService")
         with (
@@ -409,6 +407,7 @@ class TestDeferredProcessor:
                 presenter=MagicMock(name="Presenter"),
                 stats_service=sentinel_stats,
             )
+            qtbot.addWidget(widget)
             try:
                 # Drive _start_run via the public Mine path: add a ready item,
                 # click Mine, and assert the lazy rebuild happened with stats.
@@ -425,7 +424,7 @@ class TestDeferredProcessor:
             finally:
                 widget.deleteLater()
 
-    def test_update_config_on_deferred_processor_keeps_stats_service(self, test_config: AnkiMinerConfig):
+    def test_update_config_on_deferred_processor_keeps_stats_service(self, qtbot, test_config: AnkiMinerConfig):
         """update_config before the first run must not drop stats_service (T-15).
 
         When the processor is still None (startup-deferred), the rebuild used
@@ -449,6 +448,7 @@ class TestDeferredProcessor:
                 presenter=MagicMock(name="Presenter"),
                 stats_service=sentinel_stats,
             )
+            qtbot.addWidget(widget)
             try:
                 widget.update_config(replace(cfg, youtube_max_duration_s=999))
 
