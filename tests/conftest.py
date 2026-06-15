@@ -9,6 +9,33 @@ from anki_miner.models import MediaData, TokenizedWord
 from anki_miner.presenters import NullPresenter, NullProgressCallback
 
 
+@pytest.fixture(autouse=True)
+def _drain_qt_deletes():
+    """Flush pending Qt deletions after each test to prevent cross-test leaks.
+
+    A widget torn down via ``deleteLater()`` is only *scheduled* for C++ destruction:
+    the actual ``~QObject`` runs when the event loop delivers a ``DeferredDelete`` event,
+    which a bare ``processEvents()`` does NOT flush. Without that flush a deleteLater'd
+    SettingsTab (and its still-running child ``QTimer``) survives into later tests; a
+    subsequent ``processEvents()`` (here, or in a test's ``QTest.qWait``) then delivers a
+    queued ``timeout`` signal to that half-freed widget's lambda -> segfault.
+
+    ``sendPostedEvents(None, DeferredDelete)`` drains every queued deletion synchronously,
+    destroying the C++ objects (and their child timers) at the test boundary. It is run
+    *before* ``processEvents`` so leaked widgets are gone before any other queued event is
+    delivered, and does not wall-clock-wait, so it never fires a pending singleShot.
+    """
+    yield
+    from PyQt6.QtCore import QEvent
+    from PyQt6.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if app is not None:
+        app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+        app.processEvents()
+        app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+
+
 @pytest.fixture
 def temp_dir(tmp_path):
     """Provide a temporary directory for test files."""
