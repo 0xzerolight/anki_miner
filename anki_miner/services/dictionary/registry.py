@@ -68,6 +68,27 @@ class DictionaryRegistry:
     def get(self, dict_id: str) -> DictMeta | None:
         return self._dicts.get(dict_id)
 
+    def unlisted(self, config: AnkiMinerConfig) -> list[DictMeta]:
+        """Return on-disk dicts not referenced by any entry in the config chain.
+
+        Only dicts with schema_ok=True are returned — schema-mismatched dicts
+        cannot be loaded and would be dropped by build_provider_chain anyway.
+        Results are sorted by dict_id for deterministic ordering.
+
+        A dict referenced by a *disabled* chain entry is still considered
+        listed (it has a visible, unchecked row the user can re-enable), so it
+        is excluded — unlisted() surfaces only dicts with no chain row at all.
+
+        Does NOT call load(); callers control when the scan happens.
+        """
+        chained_ids: set[str] = {
+            entry.dict_id for entry in config.dictionary_chain if entry.kind == "indexed" and entry.dict_id is not None
+        }
+        return sorted(
+            (meta for meta in self._dicts.values() if meta.dict_id not in chained_ids and meta.schema_ok),
+            key=lambda m: m.dict_id,
+        )
+
     def build_provider_chain(self, config: AnkiMinerConfig) -> list[DictionaryProvider]:
         """Build the ordered provider chain from config + disk state.
 
