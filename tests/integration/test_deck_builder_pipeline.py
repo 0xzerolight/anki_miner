@@ -39,8 +39,6 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers.deck_builder_worker import DeckBuilderWorker
 from anki_miner.models.deck_build import DeckBuildPreview, DeckBuildRequest, DeckSelectionMode
@@ -141,12 +139,6 @@ def _fake_extract_media_batch(
         return results
 
     return _side_effect
-
-
-@pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 @pytest.fixture

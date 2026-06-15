@@ -14,8 +14,6 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication  # noqa: E402
-
 from anki_miner.config import AnkiMinerConfig, ChainEntry  # noqa: E402
 from anki_miner.gui.widgets.settings_tab import SettingsTab  # noqa: E402
 from anki_miner.services.dictionary.storage import (  # noqa: E402
@@ -25,8 +23,6 @@ from anki_miner.services.dictionary.storage import (  # noqa: E402
     create_index,
     write_meta,
 )
-
-_app = QApplication.instance() or QApplication([])
 
 
 def _seed_yomitan_dict(root: Path, dict_id: str, source_name: str) -> None:
@@ -46,7 +42,7 @@ def _seed_yomitan_dict(root: Path, dict_id: str, source_name: str) -> None:
     )
 
 
-def test_settings_tab_scans_custom_dicts_root(tmp_path):
+def test_settings_tab_scans_custom_dicts_root(qtbot, tmp_path):
     """SettingsTab pointed at a non-default dicts_root must surface dicts found
     there (not silently fall back to ~/.anki_miner/dicts)."""
     external = tmp_path / "external_ssd_dicts"
@@ -63,23 +59,21 @@ def test_settings_tab_scans_custom_dicts_root(tmp_path):
     )
 
     widget = SettingsTab(config)
-    try:
-        panel = widget.dictionary_panel
-        assert panel.get_dicts_root() == external
+    qtbot.addWidget(widget)
+    panel = widget.dictionary_panel
+    assert panel.get_dicts_root() == external
 
-        # Force the panel's registry cache to (re)scan the configured root.
-        panel.refresh_registry()
-        panel.set_chain(config.dictionary_chain)
+    # Force the panel's registry cache to (re)scan the configured root.
+    panel.refresh_registry()
+    panel.set_chain(config.dictionary_chain)
 
-        row = panel._row_widget(0)
-        assert row is not None, "indexed row must render for the seeded dict"
+    row = panel._row_widget(0)
+    assert row is not None, "indexed row must render for the seeded dict"
 
-        from PyQt6.QtWidgets import QLabel
+    from PyQt6.QtWidgets import QLabel
 
-        label_texts = [lbl.text() for lbl in row.findChildren(QLabel)]
-        # source_name from meta surfaces — proves the registry scanned the
-        # custom root rather than missing the dict and rendering "(missing)".
-        assert any("My Custom Dict" in t for t in label_texts), label_texts
-        assert not any("(missing)" in t for t in label_texts)
-    finally:
-        widget.deleteLater()
+    label_texts = [lbl.text() for lbl in row.findChildren(QLabel)]
+    # source_name from meta surfaces — proves the registry scanned the
+    # custom root rather than missing the dict and rendering "(missing)".
+    assert any("My Custom Dict" in t for t in label_texts), label_texts
+    assert not any("(missing)" in t for t in label_texts)
