@@ -80,3 +80,122 @@ def test_release_idempotent(tab, facade_processor):
     assert tab.release_dictionary_resources() is True
     assert tab.release_dictionary_resources() is True
     assert facade_processor.definition_service.close.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# Sequential-rerun teardown (Windows back-to-back-mining freeze)
+# ---------------------------------------------------------------------------
+
+
+def _ready_tab_inputs(tab, tmp_path):
+    video = tmp_path / "ep01.mkv"
+    video.touch()
+    subs = tmp_path / "ep01.ass"
+    subs.touch()
+    tab.video_selector.get_path = MagicMock(return_value=str(video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+
+
+def test_rerun_closes_prior_processor_before_building_new_one(tab, tmp_path):
+    """Run N+1 closes run N's processor and joins its worker before any new processor is built."""
+    from unittest.mock import patch
+
+    _ready_tab_inputs(tab, tmp_path)
+
+    old_processor = MagicMock(name="OldProcessor")
+    old_worker = MagicMock(name="OldWorker")
+    old_worker.wait.return_value = True
+    old_worker.curation_processor = old_processor
+    tab.worker_thread = old_worker
+
+    new_worker = MagicMock(name="NewWorker")
+    new_processor = MagicMock(name="NewProcessor")
+
+    order: list[str] = []
+    old_processor.close.side_effect = lambda: order.append("old_close")
+
+    def _build_processor(*a, **k):
+        order.append("build_new")
+        return new_processor
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=new_worker),
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.create_episode_processor",
+            side_effect=_build_processor,
+        ),
+    ):
+        tab._start_processing(preview_mode=False)
+
+    # Old worker was cancelled and joined before the new processor was built.
+    old_worker.cancel.assert_called_once_with()
+    old_worker.wait.assert_called_once()
+    old_processor.close.assert_called_once_with()
+    assert order == ["old_close", "build_new"], order
+
+
+def test_rerun_with_no_prior_worker_does_not_crash(tab, tmp_path):
+    from unittest.mock import patch
+
+    _ready_tab_inputs(tab, tmp_path)
+    tab.worker_thread = None
+
+    with (
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.create_episode_processor",
+            return_value=MagicMock(),
+        ),
+    ):
+        tab._start_processing(preview_mode=False)  # must not raise
+
+
+def test_teardown_disconnects_finished_handler(tab, tmp_path):
+    """A late worker termination must not restore buttons mid-new-run."""
+    old_worker = MagicMock(name="OldWorker")
+    old_worker.wait.return_value = True
+    old_worker.curation_processor = MagicMock()
+    tab.worker_thread = old_worker
+
+    tab._teardown_previous_run("single-episode")
+
+    old_worker.finished.disconnect.assert_called_once_with(tab._restore_buttons)
+
+
+def test_rerun_skips_processor_close_on_join_timeout(tab, tmp_path):
+    """On wait() timeout the worker is still live; closing its sqlite handles
+    from the GUI thread would race the worker — so the close is SKIPPED while
+    the new processor is still built and ``self.worker_thread`` reassigned."""
+    from unittest.mock import patch
+
+    _ready_tab_inputs(tab, tmp_path)
+
+    old_processor = MagicMock(name="OldProcessor")
+    old_worker = MagicMock(name="OldWorker")
+    old_worker.wait.return_value = False  # join times out → worker still running
+    old_worker.curation_processor = old_processor
+    tab.worker_thread = old_worker
+
+    new_worker = MagicMock(name="NewWorker")
+    new_processor = MagicMock(name="NewProcessor")
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=new_worker),
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.create_episode_processor",
+            return_value=new_processor,
+        ),
+    ):
+        tab._start_processing(preview_mode=False)
+
+    old_worker.cancel.assert_called_once_with()
+    old_worker.wait.assert_called_once()
+    # MUST NOT close the old processor under a still-running worker.
+    old_processor.close.assert_not_called()
+    # New run still proceeds: processor built and worker reassigned.
+    assert tab.worker_thread is new_worker

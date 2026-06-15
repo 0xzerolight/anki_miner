@@ -532,3 +532,114 @@ def test_mid_loop_raise_does_not_abort_remaining_pairs_or_lose_cards(tmp_path):
     # Cards from pairs 1 and 3 are preserved (3 + 5), not discarded by the raise.
     assert results["finished"] == [8]
     assert item.status == QueueItemStatus.ERROR
+
+
+# ---------------------------------------------------------------------------
+# Per-item processor close() between sequential items (Windows freeze fix)
+# ---------------------------------------------------------------------------
+
+
+def test_each_item_processor_closed(tmp_path):
+    """A 2-item queue closes each item's processor; the prior one before the next is built."""
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "anime1", tmp_path / "subs1", "Show1")
+    queue.add_item(tmp_path / "anime2", tmp_path / "subs2", "Show2")
+
+    proc1 = MagicMock(name="proc1")
+    proc1.process_episode.return_value = _ok_result(cards=1)
+    proc2 = MagicMock(name="proc2")
+    proc2.process_episode.return_value = _ok_result(cards=1)
+
+    order: list[str] = []
+    proc1.close.side_effect = lambda: order.append("close1")
+    proc2.close.side_effect = lambda: order.append("close2")
+
+    built: list[MagicMock] = [proc1, proc2]
+
+    def _build(*a, **k):
+        proc = built.pop(0)
+        order.append(f"build:{proc._mock_name}")
+        return proc
+
+    worker = _make_worker_with_queue(queue)
+    _wire_status_slots(worker, queue)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            side_effect=_build,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    proc1.close.assert_called_once_with()
+    proc2.close.assert_called_once_with()
+    # proc1 is closed before proc2 is built; proc2 closed at the end.
+    assert order == ["build:proc1", "close1", "build:proc2", "close2"], order
+
+
+def test_processor_closed_on_exception_exit(tmp_path):
+    """The current processor is closed even when run() exits via an exception path."""
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+
+    proc = MagicMock(name="proc")
+
+    worker = _make_worker_with_queue(queue)
+    _wire_status_slots(worker, queue)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            side_effect=RuntimeError("pairing exploded"),
+        ),
+    ):
+        worker.run()
+
+    # The per-item try/except marks the item ERROR; the finally still closes proc.
+    proc.close.assert_called_once_with()
+
+
+def test_close_failure_does_not_abort_queue(tmp_path):
+    """A processor.close() that raises must not crash the queue loop."""
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "anime1", tmp_path / "subs1", "Show1")
+    queue.add_item(tmp_path / "anime2", tmp_path / "subs2", "Show2")
+
+    proc1 = MagicMock(name="proc1")
+    proc1.process_episode.return_value = _ok_result(cards=2)
+    proc1.close.side_effect = RuntimeError("close boom")
+    proc2 = MagicMock(name="proc2")
+    proc2.process_episode.return_value = _ok_result(cards=3)
+
+    built = [proc1, proc2]
+
+    worker = _make_worker_with_queue(queue)
+    results = _wire_status_slots(worker, queue)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            side_effect=lambda *a, **k: built.pop(0),
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    # Second item still processed despite first close() raising.
+    assert results["finished"] == [5], results["finished"]

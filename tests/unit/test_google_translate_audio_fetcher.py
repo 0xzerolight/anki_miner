@@ -275,3 +275,9 @@ class TestGoogleTranslateAudioFetcher:
 
         assert result is None
         assert any(r.levelno == logging.DEBUG for r in caplog.records)
+
+
+def test_close_is_noop_and_does_not_raise(tmp_path):
+    """close() is a documented no-op (gtts is per-call); must not raise."""
+    fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+    fetcher.close()  # no exception expected
