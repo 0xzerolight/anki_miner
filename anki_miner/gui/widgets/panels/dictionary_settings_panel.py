@@ -130,6 +130,7 @@ class DictionarySettingsPanel(FormPanel):
     reimport_jmdict_requested = pyqtSignal()
     reimport_dict_requested = pyqtSignal(str)
     reimport_all_requested = pyqtSignal()
+    rescan_requested = pyqtSignal()
     chain_changed = pyqtSignal()
     # Emitted once a dictionary has been successfully removed from both the
     # in-memory chain and disk. Distinct from ``chain_changed`` so the settings
@@ -280,6 +281,14 @@ class DictionarySettingsPanel(FormPanel):
         self._reimport_btn = QPushButton("Reimport All")
         self._reimport_btn.clicked.connect(self.reimport_all_requested.emit)
         buttons.addWidget(self._reimport_btn)
+
+        self._restore_btn = QPushButton("Restore from Disk")
+        self._restore_btn.setToolTip(
+            "Re-add dictionaries found in the storage folder that aren't in the "
+            "list above (e.g. after a settings reset). No re-import needed."
+        )
+        self._restore_btn.clicked.connect(self.rescan_requested.emit)
+        buttons.addWidget(self._restore_btn)
 
         self._up_btn = QPushButton("↑")
         self._up_btn.setToolTip("Move up in priority")
