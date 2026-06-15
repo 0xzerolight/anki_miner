@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication, QToolButton, QTreeWidget, QTreeWidgetItem
+from PyQt6.QtWidgets import QToolButton, QTreeWidget, QTreeWidgetItem
 
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
 from anki_miner.gui.widgets.panels.themes_panel import (
@@ -16,12 +16,6 @@ from anki_miner.gui.widgets.panels.themes_panel import (
     _STAR_OUTLINE,
     ThemesPanel,
 )
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 def _theme_dict(name: str, **overrides) -> dict:
@@ -51,13 +45,15 @@ def themes_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def panel(qapp, themes_dir: Path) -> ThemesPanel:
+def panel(qapp, qtbot, themes_dir: Path) -> ThemesPanel:
     Theme.initialize(
         active="catppuccin-mocha",
         favorites=("light",),
         shipped_dir=themes_dir,
     )
-    return ThemesPanel(themes_dir)
+    p = ThemesPanel(themes_dir)
+    qtbot.addWidget(p)
+    return p
 
 
 def _walk(item: QTreeWidgetItem):

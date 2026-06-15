@@ -12,13 +12,9 @@ Builds a real ``MainWindow`` (heavy startup patched out) with a real
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import ValidationIssue, ValidationResult
-
-# QApplication required for any Qt widget test.
-_app = QApplication.instance() or QApplication([])
 
 
 def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
@@ -35,14 +31,16 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
 
 
 @pytest.fixture
-def window_with_settings(monkeypatch, test_config):
+def window_with_settings(monkeypatch, test_config, qtbot):
     """MainWindow with a real SettingsTab inserted, like app.py wiring."""
     _patch_heavy_init(monkeypatch, test_config)
     from anki_miner.gui.main_window import MainWindow
     from anki_miner.gui.widgets.settings_tab import SettingsTab
 
     window = MainWindow()
+    qtbot.addWidget(window)
     settings_tab = SettingsTab(window.get_config())
+    qtbot.addWidget(settings_tab)
     window.tabs.addTab(settings_tab, "Settings")
     yield window, settings_tab
     window.deleteLater()
@@ -89,12 +87,13 @@ class TestValidationResultUpdatesBadge:
         window._on_validation_result(result)
         assert _badge_status(settings_tab) == "success"
 
-    def test_no_settings_tab_does_not_crash(self, monkeypatch, test_config):
+    def test_no_settings_tab_does_not_crash(self, monkeypatch, test_config, qtbot):
         """_on_validation_result must tolerate the Settings tab being absent."""
         _patch_heavy_init(monkeypatch, test_config)
         from anki_miner.gui.main_window import MainWindow
 
         window = MainWindow()
+        qtbot.addWidget(window)
         try:
             window._on_validation_result(_result(ankiconnect_ok=True))  # no Settings tab
         finally:

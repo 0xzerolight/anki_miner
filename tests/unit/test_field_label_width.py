@@ -7,36 +7,34 @@ section shares one label-column width so the input fields start at the same x.
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.widgets.base import field_label_width
 from anki_miner.gui.widgets.enhanced.file_selector import FileSelector
 
-_app = QApplication.instance() or QApplication([])
 
-
-def test_no_texts_returns_zero():
+def test_no_texts_returns_zero(qapp):
     assert field_label_width() == 0
 
 
-def test_single_text_is_positive():
+def test_single_text_is_positive(qapp):
     assert field_label_width("Subtitle Folder:") > 0
 
 
-def test_longer_text_is_at_least_as_wide():
+def test_longer_text_is_at_least_as_wide(qapp):
     short = field_label_width("Deck Name:")
     long = field_label_width("Anime Video Folder:")
     assert long >= short
 
 
-def test_width_is_max_across_texts():
+def test_width_is_max_across_texts(qapp):
     longest = field_label_width("Anime Video Folder:")
     grouped = field_label_width("Subtitle Folder:", "Anime Video Folder:", "Deck Name:")
     assert grouped == longest
 
 
-def test_file_selector_uses_fixed_label_width():
+def test_file_selector_uses_fixed_label_width(qtbot):
     w = FileSelector(label="Video File:", label_width=140)
+    qtbot.addWidget(w)
     try:
         assert w.label is not None
         assert w.label.minimumWidth() == 140
@@ -45,8 +43,9 @@ def test_file_selector_uses_fixed_label_width():
         w.deleteLater()
 
 
-def test_file_selector_falls_back_to_minimum_width():
+def test_file_selector_falls_back_to_minimum_width(qtbot):
     w = FileSelector(label="Video File:")
+    qtbot.addWidget(w)
     try:
         assert w.label is not None
         assert w.label.minimumWidth() == 100
@@ -54,8 +53,9 @@ def test_file_selector_falls_back_to_minimum_width():
         w.deleteLater()
 
 
-def test_file_selector_empty_label_has_no_label_widget():
+def test_file_selector_empty_label_has_no_label_widget(qtbot):
     w = FileSelector(label="", label_width=140)
+    qtbot.addWidget(w)
     try:
         assert w.label is None
     finally:
@@ -63,7 +63,7 @@ def test_file_selector_empty_label_has_no_label_widget():
 
 
 @pytest.mark.parametrize("texts", [("A:", "BB:"), ("Recent Files:", "Subtitle Offset:")])
-def test_grouped_width_fits_every_member(texts):
+def test_grouped_width_fits_every_member(qapp, texts):
     grouped = field_label_width(*texts)
     for t in texts:
         assert grouped >= field_label_width(t)

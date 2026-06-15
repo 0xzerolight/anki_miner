@@ -5,7 +5,6 @@ import threading
 import time
 from unittest.mock import patch
 
-import pytest
 from PyQt6.QtCore import Qt, QThread, QTimer
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
@@ -14,12 +13,6 @@ from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 
 MODULE = "anki_miner.gui.widgets._mining_tab_base"
-
-
-@pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 class _Bare(MiningTabBase):
@@ -53,13 +46,15 @@ def _drain_until(predicate, timeout_ms=3000, step_ms=10):
     return predicate()
 
 
-def test_default_build_curation_context_is_none_none(qapp):
+def test_default_build_curation_context_is_none_none(qapp, qtbot):
     tab = _Bare()
+    qtbot.addWidget(tab)
     assert tab._build_curation_context() == (None, None)
 
 
-def test_event_set_even_if_dialog_construction_raises(qapp):
+def test_event_set_even_if_dialog_construction_raises(qapp, qtbot):
     tab = _Bare()
+    qtbot.addWidget(tab)
     tab._init_curation_bridge()
     with (
         patch(
@@ -72,7 +67,7 @@ def test_event_set_even_if_dialog_construction_raises(qapp):
     assert tab._curation_event.is_set()
 
 
-def test_curation_bridge_delivers_dialog_on_gui_thread(qapp):
+def test_curation_bridge_delivers_dialog_on_gui_thread(qapp, qtbot):
     """A worker-thread _curation_bridge emit must run the dialog on the GUI thread.
 
     This is the highest-risk contract of Issue #60: the popup must NOT be touched
@@ -81,6 +76,7 @@ def test_curation_bridge_delivers_dialog_on_gui_thread(qapp):
     (same-thread) call would surface here.
     """
     tab = _Bare()
+    qtbot.addWidget(tab)
     tab._init_curation_bridge()
 
     recorded = {}
@@ -111,7 +107,7 @@ def test_curation_bridge_delivers_dialog_on_gui_thread(qapp):
     assert worker.result == ["picked"]
 
 
-def test_cancel_during_active_dialog_releases_worker(qapp):
+def test_cancel_during_active_dialog_releases_worker(qapp, qtbot):
     """Cancelling while the dialog is open must reject it and unblock the worker.
 
     The fake dialog's exec spins the event loop (like a real modal) until a
@@ -120,6 +116,7 @@ def test_cancel_during_active_dialog_releases_worker(qapp):
     an empty list, which means "confirmed with nothing selected").
     """
     tab = _Bare()
+    qtbot.addWidget(tab)
     tab._init_curation_bridge()
 
     state = {"rejected": False, "thread": None}
@@ -155,7 +152,7 @@ def test_cancel_during_active_dialog_releases_worker(qapp):
     assert worker.result is None  # cancelled → None (distinct from empty selection)
 
 
-def test_poison_curation_gate_releases_parked_worker(qapp):
+def test_poison_curation_gate_releases_parked_worker(qapp, qtbot):
     """A worker parked in _curation_event.wait() resumes with None after poisoning.
 
     Simulates app close: the GUI thread never spins its event loop (no
@@ -163,6 +160,7 @@ def test_poison_curation_gate_releases_parked_worker(qapp):
     _poison_curation_gate() must release the worker directly (T-01 deadlock fix).
     """
     tab = _Bare()
+    qtbot.addWidget(tab)
     tab._init_curation_bridge()
 
     # DirectConnection probe runs on the worker thread at emit time, right
@@ -188,7 +186,7 @@ def test_poison_curation_gate_releases_parked_worker(qapp):
     dialog_cls.assert_not_called()
 
 
-def test_curation_bridge_after_poison_returns_none_without_blocking(qapp):
+def test_curation_bridge_after_poison_returns_none_without_blocking(qapp, qtbot):
     """A worker that reaches the gate after poisoning falls through immediately.
 
     Covers the shutdown race where the worker passes its pipeline cancel
@@ -196,6 +194,7 @@ def test_curation_bridge_after_poison_returns_none_without_blocking(qapp):
     with nobody left to release it.
     """
     tab = _Bare()
+    qtbot.addWidget(tab)
     tab._init_curation_bridge()
     tab._poison_curation_gate()
 
@@ -206,9 +205,10 @@ def test_curation_bridge_after_poison_returns_none_without_blocking(qapp):
     assert emitted == []  # no request signal once the gate is poisoned
 
 
-def test_on_curation_requested_after_poison_releases_without_dialog(qapp):
+def test_on_curation_requested_after_poison_releases_without_dialog(qapp, qtbot):
     """Late slot delivery after poisoning releases the worker, no dialog."""
     tab = _Bare()
+    qtbot.addWidget(tab)
     tab._init_curation_bridge()
     tab._curation_event.clear()
     tab._poison_curation_gate()

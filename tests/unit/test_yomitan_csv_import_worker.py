@@ -6,19 +6,11 @@ import pytest
 
 pytest.importorskip("PyQt6.QtCore")
 
-from PyQt6.QtCore import QCoreApplication
-
 from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
 from anki_miner.services.frequency import YomitanFreqImportResult, import_yomitan_freq_zip
 from anki_miner.services.pitch_accent import YomitanPitchImportResult, import_yomitan_pitch_zip
 from tests.fixtures.frequency.build_yomitan_freq_fixture import build_yomitan_freq_zip
 from tests.fixtures.pitch.build_yomitan_pitch_fixture import build_yomitan_pitch_zip
-
-
-@pytest.fixture
-def qapp():
-    app = QCoreApplication.instance() or QCoreApplication([])
-    yield app
 
 
 class TestPitchImport:

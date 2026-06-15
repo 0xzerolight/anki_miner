@@ -22,12 +22,6 @@ from anki_miner.gui.widgets.panels.themes_panel import FONT_SCALE_PRESETS, Theme
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
-@pytest.fixture(scope="module")
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
 @pytest.fixture(autouse=True)
 def _reset_app_font_scale_state():
     """Reset the Theme scale AND clear any enlarged stylesheet the apply path
@@ -66,9 +60,10 @@ def themes_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def panel(qapp, themes_dir: Path):
+def panel(qapp, qtbot, themes_dir: Path):
     Theme.initialize(active="light", favorites=("light", "dark"), shipped_dir=themes_dir)
     p = ThemesPanel(themes_dir)
+    qtbot.addWidget(p)
     yield p
     # Reset font scale so it cannot leak into other tests on the singleton.
     Theme.set_font_scale(1.0)
@@ -148,21 +143,23 @@ class TestSyncFromTheme:
         assert captured == []
         assert Theme.get_font_scale() == 1.3
 
-    def test_initial_value_reflects_theme(self, qapp, themes_dir: Path) -> None:
+    def test_initial_value_reflects_theme(self, qapp, qtbot, themes_dir: Path) -> None:
         Theme.initialize(active="light", favorites=("light",), shipped_dir=themes_dir)
         Theme.set_font_scale(1.5)
         try:
             p = ThemesPanel(themes_dir)
+            qtbot.addWidget(p)
             assert p.font_scale_combo.currentData() == 150
         finally:
             Theme.set_font_scale(1.0)
 
 
 class TestSettingsTabForwarding:
-    def test_on_font_scale_changed_updates_config_and_emits(self, qapp, themes_dir: Path) -> None:
+    def test_on_font_scale_changed_updates_config_and_emits(self, qapp, qtbot, themes_dir: Path) -> None:
         Theme.initialize(active="light", favorites=("light",), shipped_dir=themes_dir)
         config = create_default_config()
         tab = SettingsTab(config)
+        qtbot.addWidget(tab)
         try:
             captured: list[object] = []
             tab.config_changed.connect(captured.append)
@@ -177,11 +174,12 @@ class TestSettingsTabForwarding:
         finally:
             Theme.set_font_scale(1.0)
 
-    def test_panel_signal_flows_into_config(self, qapp, themes_dir: Path) -> None:
+    def test_panel_signal_flows_into_config(self, qapp, qtbot, themes_dir: Path) -> None:
         # End-to-end: panel selection → settings_tab slot → config mutated.
         Theme.initialize(active="light", favorites=("light",), shipped_dir=themes_dir)
         config = replace(create_default_config(), themes_root=themes_dir)
         tab = SettingsTab(config)
+        qtbot.addWidget(tab)
         try:
             combo = tab.themes_panel.font_scale_combo
             idx = combo.findData(150)
