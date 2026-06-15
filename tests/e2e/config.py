@@ -58,11 +58,18 @@ class E2EConfig:
     runs_root: Path = field(default=None)  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
-        """Normalise paths and derive ``runs_root`` when unset.
+        """Normalise paths, validate the curation policy, derive ``runs_root``.
 
         Frozen dataclass: assignment goes through ``object.__setattr__`` (the
         supported pattern, see ``AnkiMinerConfig.__post_init__``).
         """
+        # Validate the curation policy up front so a misconfigured run can't
+        # silently mine nothing. ``first_n`` of 0 would behave like ``"none"``
+        # but give no signal, so it is rejected loudly.
+        if self.curation_policy not in ("all", "first_n", "none"):
+            raise ValueError(f"curation_policy must be one of 'all', 'first_n', 'none', got {self.curation_policy!r}")
+        if self.curation_policy == "first_n" and self.first_n <= 0:
+            raise ValueError(f"curation_policy 'first_n' requires first_n > 0, got {self.first_n}")
         if isinstance(self.test_home, str):
             object.__setattr__(self, "test_home", Path(self.test_home))
         # Derive runs_root from the (possibly env-overridden) test_home unless
