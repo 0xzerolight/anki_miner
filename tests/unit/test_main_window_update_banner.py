@@ -19,13 +19,9 @@ from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.services.update_checker import UpdateInfo
-
-# QApplication required for any Qt widget test.
-_app = QApplication.instance() or QApplication([])
 
 
 def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
@@ -42,12 +38,13 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
 
 
 @pytest.fixture
-def main_window(monkeypatch, test_config):
+def main_window(monkeypatch, test_config, qtbot):
     """Build a MainWindow without side-effect-heavy startup behaviour."""
     _patch_heavy_init(monkeypatch, test_config)
     from anki_miner.gui.main_window import MainWindow
 
     window = MainWindow()
+    qtbot.addWidget(window)
     yield window
     window.deleteLater()
 
