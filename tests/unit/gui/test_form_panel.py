@@ -8,19 +8,11 @@ under all the fields, instead of above its own fields.
 
 import os
 
-import pytest
-
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication, QCheckBox, QFormLayout, QLabel  # noqa: E402
+from PyQt6.QtWidgets import QCheckBox, QFormLayout, QLabel  # noqa: E402
 
 from anki_miner.gui.widgets.base.form_panel import FormPanel  # noqa: E402
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 def _layout_items(layout):
@@ -44,8 +36,9 @@ def _layout_sequence(layout):
     return sequence
 
 
-def test_section_heading_renders_above_its_fields(qapp):
+def test_section_heading_renders_above_its_fields(qapp, qtbot):
     panel = FormPanel("Test")
+    qtbot.addWidget(panel)
     panel.add_section("Alpha")
     panel.add_field("a-field", QCheckBox())
     panel.add_section("Beta")
@@ -60,8 +53,9 @@ def test_section_heading_renders_above_its_fields(qapp):
     assert labels == ["Alpha", "Beta"]
 
 
-def test_each_section_owns_its_own_form_layout(qapp):
+def test_each_section_owns_its_own_form_layout(qapp, qtbot):
     panel = FormPanel("Test")
+    qtbot.addWidget(panel)
     panel.add_section("Alpha")
     panel.add_field("a-field", QCheckBox())
     panel.add_section("Beta")
@@ -75,8 +69,9 @@ def test_each_section_owns_its_own_form_layout(qapp):
     assert beta.rowCount() == 2
 
 
-def test_fields_before_any_section_stay_in_initial_form(qapp):
+def test_fields_before_any_section_stay_in_initial_form(qapp, qtbot):
     panel = FormPanel("Test")
+    qtbot.addWidget(panel)
     panel.add_field("pre", QCheckBox())
     panel.add_section("Alpha")
     panel.add_field("post", QCheckBox())
