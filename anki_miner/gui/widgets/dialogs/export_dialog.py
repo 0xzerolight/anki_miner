@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.models.word import WordData
 from anki_miner.services.export_service import ExportService
@@ -198,7 +199,9 @@ class ExportDialog(QDialog):
         file_filter = _FILE_FILTERS.get(fmt_id, "All Files (*)")
         default_name = _DEFAULT_NAMES.get(fmt_id, "export.txt")
 
-        path, _ = QFileDialog.getSaveFileName(self, "Export Words", default_name, file_filter)
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export Words", str(Path(resolve_start_dir(None, file_mode=True)) / default_name), file_filter
+        )
         if path:
             self._output_path = Path(path)
             self._path_input.setText(path)

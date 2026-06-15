@@ -1,5 +1,9 @@
 """Tests for KnownWordsManagerDialog (Issue #42)."""
 
+from pathlib import Path
+
+from PyQt6.QtWidgets import QFileDialog
+
 from anki_miner.gui.widgets.dialogs.known_words_dialog import KnownWordsManagerDialog
 from anki_miner.services.known_word_db import KnownWordDB
 
@@ -101,3 +105,26 @@ class TestSearch:
         hidden = {dlg.word_list.item(r).text(): dlg.word_list.item(r).isHidden() for r in range(dlg.word_list.count())}
         assert hidden["カレー"] is False
         assert hidden["ラーメン"] is True
+
+
+class TestExportDialogStartDir:
+    def test_on_export_opens_save_dialog_at_home(self, qtbot, tmp_path, monkeypatch):
+        """_on_export must pass a path under home as the initial path arg to getSaveFileName."""
+        db = _db_with_user_words(tmp_path, user=("ラーメン",))
+        dlg = KnownWordsManagerDialog(db)
+        qtbot.addWidget(dlg)
+
+        captured: dict = {}
+
+        def fake_save(parent, title, initial_path, file_filter, *a, **kw):
+            captured["initial"] = initial_path
+            return ("", "")  # user cancels
+
+        monkeypatch.setattr(QFileDialog, "getSaveFileName", fake_save)
+        dlg._on_export()
+
+        home = str(Path.home())
+        initial = captured.get("initial", "")
+        assert initial.startswith(home), f"Expected initial path under home={home!r}; got {initial!r}"
+        assert initial != "", "initial path must not be empty"
+        assert "known_words.txt" in initial, f"suggested filename must be preserved; got {initial!r}"
