@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.base import ElidingLabel, make_label_fit_text
 
 
@@ -44,6 +45,7 @@ class FileSelector(QWidget):
         file_filter: str = "All Files (*)",
         placeholder: str = "",
         label_width: int | None = None,
+        default_dir: Path | str | None = None,
         parent=None,
     ):
         """Initialize the file selector.
@@ -56,6 +58,7 @@ class FileSelector(QWidget):
             label_width: Fixed width for the label column. When set, every
                 selector in a section can share one width so their input fields
                 line up. When None, falls back to a 100px minimum.
+            default_dir: Default directory the Browse dialog opens at when the field is empty.
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -64,6 +67,7 @@ class FileSelector(QWidget):
         self._file_filter = file_filter
         self._placeholder = placeholder
         self._label_width = label_width
+        self._default_dir = default_dir
         self._is_valid = False
 
         self._label_text = label
@@ -165,16 +169,17 @@ class FileSelector(QWidget):
 
     def _on_browse_clicked(self) -> None:
         """Handle browse button click."""
+        start_dir = resolve_start_dir(self.input.text(), file_mode=self._file_mode, default_dir=self._default_dir)
         if self._file_mode:
             # File selection
-            file_path, _ = QFileDialog.getOpenFileName(self, f"Select {self._label_text}", "", self._file_filter)
+            file_path, _ = QFileDialog.getOpenFileName(self, f"Select {self._label_text}", start_dir, self._file_filter)
             if file_path:
                 self.input.setText(file_path)
                 self.input.setCursorPosition(0)
                 self.input.setToolTip(file_path)
         else:
             # Folder selection
-            folder_path = QFileDialog.getExistingDirectory(self, f"Select {self._label_text}", "")
+            folder_path = QFileDialog.getExistingDirectory(self, f"Select {self._label_text}", start_dir)
             if folder_path:
                 self.input.setText(folder_path)
                 self.input.setCursorPosition(0)
