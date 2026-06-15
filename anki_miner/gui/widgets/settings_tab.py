@@ -192,6 +192,7 @@ class SettingsTab(QWidget):
         self.dictionary_panel.reimport_jmdict_requested.connect(self._dict_import_flow.reimport_jmdict)
         self.dictionary_panel.reimport_dict_requested.connect(self._dict_import_flow.reimport_dict)
         self.dictionary_panel.reimport_all_requested.connect(self._dict_import_flow.reimport_all)
+        self.dictionary_panel.rescan_requested.connect(self._dict_import_flow.restore_unlisted)
         # Persist immediately after a destructive remove so an orphan dict_id
         # doesn't reappear in gui_config.json on next launch (Issue #30). Use a
         # NARROW persist of just the chain — NOT the full Save pipeline (T-08):

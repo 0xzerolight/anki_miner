@@ -192,3 +192,94 @@ class TestDictionaryRegistry:
         assert len(chain) == 1
         assert isinstance(chain[0], JishoProvider)
         assert "stale-dict" in caplog.text or "schema" in caplog.text.lower()
+
+    # ------------------------------------------------------------------
+    # unlisted() tests
+    # ------------------------------------------------------------------
+
+    def test_unlisted_returns_disk_dict_not_in_chain(self, tmp_path: Path):
+        """A dict on disk that has no matching chain entry is returned."""
+        _seed_dict(tmp_path, "extra-dict", "Extra")
+        config = AnkiMinerConfig()
+        config = replace(config, dictionary_chain=())
+
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        result = registry.unlisted(config)
+
+        assert len(result) == 1
+        assert result[0].dict_id == "extra-dict"
+
+    def test_unlisted_excludes_dict_already_in_chain(self, tmp_path: Path):
+        """A dict referenced in the chain must not appear in unlisted()."""
+        _seed_dict(tmp_path, "jmdict-english", "JMdict")
+        config = AnkiMinerConfig()
+        config = replace(
+            config,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),),
+        )
+
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        result = registry.unlisted(config)
+
+        assert result == []
+
+    def test_unlisted_excludes_schema_mismatched_dict(self, tmp_path: Path):
+        """A dict with the wrong schema_version is excluded from unlisted()."""
+        folder = tmp_path / "stale-dict"
+        folder.mkdir(parents=True, exist_ok=True)
+        db = folder / "index.sqlite"
+        create_index(db)
+        write_meta(
+            db,
+            {
+                "schema_version": "999",
+                "source_name": "Stale",
+                "format": "yomitan",
+                "entry_count": "0",
+            },
+        )
+        config = AnkiMinerConfig()
+        config = replace(config, dictionary_chain=())
+
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        result = registry.unlisted(config)
+
+        assert result == []
+
+    def test_unlisted_excludes_dict_in_disabled_chain_entry(self, tmp_path: Path):
+        """A disabled chain entry still counts as listed (it has a re-enableable
+        row), so its dict must not appear in unlisted()."""
+        _seed_dict(tmp_path, "jmdict-english", "JMdict")
+        config = AnkiMinerConfig()
+        config = replace(
+            config,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=False),),
+        )
+
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        result = registry.unlisted(config)
+
+        assert result == []
+
+    def test_unlisted_returns_empty_when_all_dicts_in_chain(self, tmp_path: Path):
+        """When every on-disk dict appears in the chain, unlisted() is empty."""
+        _seed_dict(tmp_path, "dict-a", "Dict A")
+        _seed_dict(tmp_path, "dict-b", "Dict B")
+        config = AnkiMinerConfig()
+        config = replace(
+            config,
+            dictionary_chain=(
+                ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),
+                ChainEntry(kind="indexed", dict_id="dict-b", enabled=True),
+            ),
+        )
+
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        result = registry.unlisted(config)
+
+        assert result == []
