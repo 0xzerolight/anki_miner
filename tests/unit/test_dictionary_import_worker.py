@@ -6,16 +6,8 @@ import pytest
 
 pytest.importorskip("PyQt6.QtCore")
 
-from PyQt6.QtCore import QCoreApplication
-
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
-
-
-@pytest.fixture
-def qapp():
-    app = QCoreApplication.instance() or QCoreApplication([])
-    yield app
 
 
 def test_yomitan_import_emits_finished(tmp_path: Path, qapp):
