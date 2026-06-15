@@ -6,15 +6,9 @@ remove-button enable/disable, and signal emission in headless Qt mode.
 
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets.youtube_queue_item_widget import YouTubeQueueItemWidget
 from anki_miner.models.youtube import VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
-
-# QApplication needed for widget instantiation.
-_app = QApplication.instance() or QApplication([])
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -51,7 +45,7 @@ def _pending_item(url: str = "https://youtu.be/abc") -> YouTubeQueueItem:
 # ---------------------------------------------------------------------------
 
 
-def test_ready_duration_over_hour() -> None:
+def test_ready_duration_over_hour(qtbot) -> None:
     """H:MM:SS format kicks in at >= 3600 s."""
     item = _pending_item()
     item.video_info = _make_video_info(duration_s=3725)
@@ -59,6 +53,7 @@ def test_ready_duration_over_hour() -> None:
     item.resolved_sub_mode = "manual_only"
 
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     widget.update_from(item)
 
     assert widget.duration_label.text() == "1:02:05"
@@ -69,22 +64,25 @@ def test_ready_duration_over_hour() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_pending_item_title_contains_url() -> None:
+def test_pending_item_title_contains_url(qtbot) -> None:
     url = "https://youtu.be/abc123"
     item = _pending_item(url)
     widget = YouTubeQueueItemWidget(item)
+    qtbot.addWidget(widget)
 
     title_text = widget.title_label.full_text
     assert title_text == url
 
 
-def test_pending_item_remove_enabled() -> None:
+def test_pending_item_remove_enabled(qtbot) -> None:
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     assert widget.remove_button.isEnabled()
 
 
-def test_pending_item_no_duration_text() -> None:
+def test_pending_item_no_duration_text(qtbot) -> None:
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     assert widget.duration_label.text() == ""
 
 
@@ -93,15 +91,16 @@ def test_pending_item_no_duration_text() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probing_shows_placeholder() -> None:
+def test_probing_shows_placeholder(qtbot) -> None:
     item = YouTubeQueueItem(url="https://www.youtube.com/watch?v=xyz", status=YouTubeItemStatus.PROBING)
     widget = YouTubeQueueItemWidget(item)
+    qtbot.addWidget(widget)
     assert widget.title_label.full_text == "(probing...)"
     assert widget.duration_label.text() == ""
     assert widget.remove_button.isEnabled()
 
 
-def test_probing_with_display_title_shows_title() -> None:
+def test_probing_with_display_title_shows_title(qtbot) -> None:
     """Playlist expansion pre-sets display_title so PROBING rows show the entry title."""
     item = YouTubeQueueItem(
         url="https://www.youtube.com/watch?v=xyz",
@@ -109,6 +108,7 @@ def test_probing_with_display_title_shows_title() -> None:
         display_title="Episode 3 — 日本語",
     )
     widget = YouTubeQueueItemWidget(item)
+    qtbot.addWidget(widget)
     assert widget.title_label.full_text == "Episode 3 — 日本語 (probing...)"
     assert widget.duration_label.text() == ""
     assert widget.remove_button.isEnabled()
@@ -119,7 +119,7 @@ def test_probing_with_display_title_shows_title() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_ready_shows_video_title() -> None:
+def test_ready_shows_video_title(qtbot) -> None:
     item = _pending_item()
     info = _make_video_info(title="My Great Video")
     item.video_info = info
@@ -127,42 +127,46 @@ def test_ready_shows_video_title() -> None:
     item.resolved_sub_mode = "manual_only"
 
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     widget.update_from(item)
 
     assert widget.title_label.full_text == "My Great Video"
 
 
-def test_ready_duration_formatted() -> None:
+def test_ready_duration_formatted(qtbot) -> None:
     item = _pending_item()
     item.video_info = _make_video_info(duration_s=754)
     item.status = YouTubeItemStatus.READY
     item.resolved_sub_mode = "manual_only"
 
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     widget.update_from(item)
 
     assert widget.duration_label.text() == "12:34"
 
 
-def test_ready_manual_sub_source_line() -> None:
+def test_ready_manual_sub_source_line(qtbot) -> None:
     item = _pending_item()
     item.video_info = _make_video_info()
     item.status = YouTubeItemStatus.READY
     item.resolved_sub_mode = "manual_only"
 
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     widget.update_from(item)
 
     assert widget.sub_source_label.full_text == "Manual JA subs"
 
 
-def test_ready_auto_sub_source_line() -> None:
+def test_ready_auto_sub_source_line(qtbot) -> None:
     item = _pending_item()
     item.video_info = _make_video_info()
     item.status = YouTubeItemStatus.READY
     item.resolved_sub_mode = "auto_only"
 
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     widget.update_from(item)
 
     assert widget.sub_source_label.full_text == "Auto JA subs"
@@ -173,13 +177,14 @@ def test_ready_auto_sub_source_line() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_processing_remove_disabled() -> None:
+def test_processing_remove_disabled(qtbot) -> None:
     item = _pending_item()
     item.video_info = _make_video_info()
     item.status = YouTubeItemStatus.PROCESSING
     item.resolved_sub_mode = "manual_only"
 
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     widget.update_from(item)
 
     assert not widget.remove_button.isEnabled()
@@ -190,7 +195,7 @@ def test_processing_remove_disabled() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_completed_shows_card_count() -> None:
+def test_completed_shows_card_count(qtbot) -> None:
     item = _pending_item()
     item.video_info = _make_video_info()
     item.status = YouTubeItemStatus.COMPLETED
@@ -198,6 +203,7 @@ def test_completed_shows_card_count() -> None:
     item.cards_created = 42
 
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     widget.update_from(item)
 
     assert "42" in widget.sub_source_label.full_text
@@ -208,12 +214,13 @@ def test_completed_shows_card_count() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_error_shows_error_message() -> None:
+def test_probe_error_shows_error_message(qtbot) -> None:
     item = _pending_item()
     item.status = YouTubeItemStatus.PROBE_ERROR
     item.error_message = "Video unavailable"
 
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     widget.update_from(item)
 
     combined = widget.title_label.full_text + widget.sub_source_label.full_text
@@ -225,20 +232,21 @@ def test_probe_error_shows_error_message() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_error_shows_error_message() -> None:
+def test_error_shows_error_message(qtbot) -> None:
     item = _pending_item()
     item.video_info = _make_video_info(title="Some Video")
     item.status = YouTubeItemStatus.ERROR
     item.error_message = "Network timeout"
 
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     widget.update_from(item)
 
     combined = widget.title_label.full_text + widget.sub_source_label.full_text
     assert "Network timeout" in combined
 
 
-def test_error_without_video_info_falls_back_to_url() -> None:
+def test_error_without_video_info_falls_back_to_url(qtbot) -> None:
     """ERROR with no video_info shows item URL in the title and error in sub-source."""
     url = "https://www.youtube.com/watch?v=zzz"
     item = YouTubeQueueItem(
@@ -248,6 +256,7 @@ def test_error_without_video_info_falls_back_to_url() -> None:
         error_message="network timeout",
     )
     widget = YouTubeQueueItemWidget(item)
+    qtbot.addWidget(widget)
     assert widget.title_label.full_text == url
     assert "network timeout" in widget.sub_source_label.full_text
 
@@ -257,8 +266,9 @@ def test_error_without_video_info_falls_back_to_url() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_removed_signal_fires_on_click() -> None:
+def test_removed_signal_fires_on_click(qtbot) -> None:
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     fired: list[None] = []
     widget.removed.connect(lambda: fired.append(None))
 
@@ -272,12 +282,13 @@ def test_removed_signal_fires_on_click() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_removed_signal_not_fired_when_disabled() -> None:
+def test_removed_signal_not_fired_when_disabled(qtbot) -> None:
     item = _pending_item()
     item.video_info = _make_video_info()
     item.status = YouTubeItemStatus.PROCESSING
 
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     widget.update_from(item)
 
     fired: list[None] = []
@@ -293,7 +304,7 @@ def test_removed_signal_not_fired_when_disabled() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_long_multiline_probe_error_collapses_to_one_line() -> None:
+def test_long_multiline_probe_error_collapses_to_one_line(qtbot) -> None:
     """A long multi-line yt-dlp probe error must render on a single elided line.
 
     Regression for the Issue #64 screenshot: the row clipped multi-line error text
@@ -311,6 +322,7 @@ def test_long_multiline_probe_error_collapses_to_one_line() -> None:
     item.error_message = long_error
 
     widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
     widget.update_from(item)
 
     # Full error preserved verbatim (newline intact) for the tooltip.
