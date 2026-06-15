@@ -9,12 +9,9 @@ from __future__ import annotations
 
 import pytest
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtWidgets import QApplication, QToolButton, QWidget
+from PyQt6.QtWidgets import QToolButton, QWidget
 
 from anki_miner.config import AnkiMinerConfig
-
-# QApplication required for any Qt widget test.
-_app = QApplication.instance() or QApplication([])
 
 
 def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
@@ -31,12 +28,13 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
 
 
 @pytest.fixture
-def main_window(monkeypatch, test_config):
+def main_window(qtbot, monkeypatch, test_config):
     """Build a MainWindow without side-effect-heavy startup behaviour."""
     _patch_heavy_init(monkeypatch, test_config)
     from anki_miner.gui.main_window import MainWindow
 
     window = MainWindow()
+    qtbot.addWidget(window)
     yield window
     window.deleteLater()
 
@@ -132,13 +130,14 @@ def test_star_button_opens_repo_url(main_window, monkeypatch):
     assert captured[0].toString() == "https://github.com/0xzerolight/anki_miner"
 
 
-def test_about_dialog_builds_and_shows_version():
+def test_about_dialog_builds_and_shows_version(qtbot):
     """AboutDialog constructs headless and renders the version + tagline."""
     from PyQt6.QtWidgets import QLabel
 
     from anki_miner.gui.widgets.dialogs.about_dialog import ABOUT_TAGLINE, AboutDialog
 
     dialog = AboutDialog("9.9.9")
+    qtbot.addWidget(dialog)
     try:
         texts = [label.text() for label in dialog.findChildren(QLabel)]
         assert any("9.9.9" in t for t in texts)
