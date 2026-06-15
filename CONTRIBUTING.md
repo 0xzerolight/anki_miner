@@ -4,10 +4,10 @@ Thanks for helping out. Anki Miner is a solo-maintained Japanese mining tool, an
 
 ## Before you start
 
-- Please read the [Code of Conduct](CODE_OF_CONDUCT.md).
 - Bugs and feature requests: open an [Issue](https://github.com/0xzerolight/anki_miner/issues) using the appropriate template.
 - General questions and chat: use [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
 - Security vulnerabilities: see [SECURITY.md](SECURITY.md). Do not open a public issue.
+
 
 ## Development setup
 
