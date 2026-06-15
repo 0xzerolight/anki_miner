@@ -478,8 +478,12 @@ class SingleEpisodeTab(MiningTabBase):
         # then close its processor so no stale handle survives into the new run.
         self._teardown_previous_run()
 
-        # Create processor using service factory
+        # Create processor using service factory. DEBUG-logged so a Windows
+        # reporter running with debug logging can confirm which call blocks
+        # during the back-to-back-mining freeze.
+        logger.debug("building processor for %s", video_file)
         processor = create_episode_processor(config_with_offset, self.presenter, self.stats_service)
+        logger.debug("processor built for %s", video_file)
 
         # Create and start worker thread
         curation_cb = self._curation_bridge if not preview_mode else None
