@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import shutil
 from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,10 @@ class GUIConfigManager:
     def save_config(cls, config: AnkiMinerConfig) -> None:
         """Save configuration to JSON file.
 
+        Writes atomically (temp + os.replace) and rotates the prior good config
+        to ``gui_config.json.bak`` before each overwrite, so the previous
+        contents survive one bad write (one-overwrite recovery).
+
         Args:
             config: Configuration to save
 
@@ -49,10 +54,21 @@ class GUIConfigManager:
         # file intact until the new one is fully written; os.replace is atomic
         # on the same filesystem. The .tmp is unlinked if serialization raises
         # so a partial temp doesn't accumulate.
+        #
+        # Backup rotation: right before os.replace clobbers the existing file,
+        # copy the still-good current config to a sibling .bak (one-overwrite
+        # recovery — config isn't in git and os.replace keeps no backup, so a
+        # bad write once nuked a user's settings with no way back). copy2 runs
+        # inside the try, so if it fails we unlink the .tmp and re-raise without
+        # touching CONFIG_FILE — the original survives intact.
         tmp_path = cls.CONFIG_FILE.with_suffix(cls.CONFIG_FILE.suffix + ".tmp")
+        bak_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".bak")
         try:
             with tmp_path.open("w", encoding="utf-8") as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
+            # First-ever save has nothing to back up — skip silently.
+            if cls.CONFIG_FILE.exists():
+                shutil.copy2(cls.CONFIG_FILE, bak_path)
             os.replace(tmp_path, cls.CONFIG_FILE)
         except BaseException:
             tmp_path.unlink(missing_ok=True)
