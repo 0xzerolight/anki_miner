@@ -17,7 +17,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
@@ -30,9 +29,6 @@ from anki_miner.gui.widgets.panels.themes_panel import _STAR_FILLED, _STAR_OUTLI
 from anki_miner.models import TokenizedWord
 from anki_miner.models.stats import OverallStats
 from anki_miner.utils.file_pairing import FilePair
-
-_app = QApplication.instance() or QApplication([])
-
 
 # ---------------------------------------------------------------------------
 # Fix 1: AnalyticsTab.showEvent staleness cache + bulk-insert guards
@@ -55,10 +51,11 @@ def _make_stats_service() -> MagicMock:
     return service
 
 
-def test_analytics_showevent_skips_refresh_within_ttl():
+def test_analytics_showevent_skips_refresh_within_ttl(qtbot):
     """Two showEvents in rapid succession only trigger one stats query batch."""
     service = _make_stats_service()
     tab = AnalyticsTab(service)
+    qtbot.addWidget(tab)
     try:
         # Reset counters: __init__ does not auto-refresh; showEvent does.
         service.get_overall_stats.reset_mock()
@@ -72,10 +69,11 @@ def test_analytics_showevent_skips_refresh_within_ttl():
         tab.deleteLater()
 
 
-def test_analytics_showevent_refreshes_after_ttl():
+def test_analytics_showevent_refreshes_after_ttl(qtbot):
     """Show after TTL elapses triggers a fresh refresh."""
     service = _make_stats_service()
     tab = AnalyticsTab(service)
+    qtbot.addWidget(tab)
     try:
         tab.showEvent(None)  # type: ignore[arg-type]
         service.get_overall_stats.reset_mock()
@@ -87,10 +85,11 @@ def test_analytics_showevent_refreshes_after_ttl():
         tab.deleteLater()
 
 
-def test_analytics_refresh_button_forces_refresh():
+def test_analytics_refresh_button_forces_refresh(qtbot):
     """The Refresh button bypasses the staleness cache."""
     service = _make_stats_service()
     tab = AnalyticsTab(service)
+    qtbot.addWidget(tab)
     try:
         tab.refresh_data(force=False)
         service.get_overall_stats.reset_mock()
@@ -116,7 +115,7 @@ def _theme_dict(name: str, **overrides) -> dict:
 
 
 @pytest.fixture
-def themes_panel(tmp_path: Path) -> ThemesPanel:
+def themes_panel(qtbot, tmp_path: Path) -> ThemesPanel:
     import json
 
     d = tmp_path / "themes"
@@ -124,7 +123,9 @@ def themes_panel(tmp_path: Path) -> ThemesPanel:
     (d / "light.json").write_text(json.dumps(_theme_dict("Light")))
     (d / "dark.json").write_text(json.dumps(_theme_dict("Dark")))
     Theme.initialize(active="light", favorites=(), shipped_dir=d)
-    return ThemesPanel(d)
+    panel = ThemesPanel(d)
+    qtbot.addWidget(panel)
+    return panel
 
 
 def test_themes_star_toggle_does_not_call_populate(themes_panel: ThemesPanel):
@@ -144,7 +145,7 @@ def test_themes_star_toggle_updates_button_in_place(themes_panel: ThemesPanel):
     assert button.text() == _STAR_FILLED
 
 
-def test_themes_family_toggle_does_not_call_populate(tmp_path: Path):
+def test_themes_family_toggle_does_not_call_populate(qtbot, tmp_path: Path):
     """Family-level toggle also avoids the full tree rebuild."""
     import json
 
@@ -158,6 +159,7 @@ def test_themes_family_toggle_does_not_call_populate(tmp_path: Path):
     )
     Theme.initialize(active="catppuccin-mocha", favorites=(), shipped_dir=d)
     panel = ThemesPanel(d)
+    qtbot.addWidget(panel)
     try:
         with patch.object(panel, "_populate") as populate_spy:
             panel._toggle_family_favorites(("catppuccin-mocha", "catppuccin-latte"))
@@ -190,9 +192,12 @@ def sample_words() -> list[TokenizedWord]:
     ]
 
 
-def test_word_preview_search_debounces_keystrokes(test_config: AnkiMinerConfig, sample_words: list[TokenizedWord]):
+def test_word_preview_search_debounces_keystrokes(
+    qtbot, test_config: AnkiMinerConfig, sample_words: list[TokenizedWord]
+):
     """Three keystrokes in a row only run one filter+populate after the timer fires."""
     dialog = WordPreviewDialog(sample_words, test_config)
+    qtbot.addWidget(dialog)
     try:
         with patch.object(dialog, "_apply_search", wraps=dialog._apply_search) as apply_spy:
             dialog.search_input.setText("w")
@@ -209,9 +214,10 @@ def test_word_preview_search_debounces_keystrokes(test_config: AnkiMinerConfig, 
         dialog.deleteLater()
 
 
-def test_word_preview_populate_disables_updates(test_config: AnkiMinerConfig, sample_words: list[TokenizedWord]):
+def test_word_preview_populate_disables_updates(qtbot, test_config: AnkiMinerConfig, sample_words: list[TokenizedWord]):
     """_populate_table suspends repaints across the loop."""
     dialog = WordPreviewDialog(sample_words, test_config)
+    qtbot.addWidget(dialog)
     try:
         update_calls: list[bool] = []
         original = dialog.table.setUpdatesEnabled
@@ -234,11 +240,12 @@ def test_word_preview_populate_disables_updates(test_config: AnkiMinerConfig, sa
 # ---------------------------------------------------------------------------
 
 
-def test_dictionary_panel_rebuild_disables_updates(tmp_path: Path):
+def test_dictionary_panel_rebuild_disables_updates(qtbot, tmp_path: Path):
     """_rebuild_list suspends list repaints across the clear+populate."""
     dicts_root = tmp_path / "dicts"
     dicts_root.mkdir()
     panel = DictionarySettingsPanel(dicts_root=dicts_root)
+    qtbot.addWidget(panel)
     try:
         panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
         update_calls: list[bool] = []
@@ -261,7 +268,7 @@ def test_dictionary_panel_rebuild_disables_updates(tmp_path: Path):
 # ---------------------------------------------------------------------------
 
 
-def test_pair_preview_populate_disables_updates(tmp_path: Path):
+def test_pair_preview_populate_disables_updates(qtbot, tmp_path: Path):
     """Pair preview populates with repaints suspended."""
     # Create a couple of fake files so .stat() doesn't blow up.
     vid = tmp_path / "ep1.mkv"
@@ -275,6 +282,7 @@ def test_pair_preview_populate_disables_updates(tmp_path: Path):
     # populate (a False-then-True ordering during __init__ would have been
     # detected by Qt warnings, which pytest-qt would surface).
     dialog = PairPreviewDialog(pairs)
+    qtbot.addWidget(dialog)
     try:
         # Repaints back on after populate finished.
         assert dialog.table.updatesEnabled() is True
@@ -304,7 +312,7 @@ def _make_curation_words(count: int = 20) -> list[TokenizedWord]:
     ]
 
 
-def test_curation_uses_fixed_row_height():
+def test_curation_uses_fixed_row_height(qtbot):
     """Vertical header must use Fixed resize mode with 32px default section size at scale 1.0."""
     from PyQt6.QtWidgets import QHeaderView
 
@@ -312,6 +320,7 @@ def test_curation_uses_fixed_row_height():
     # (Issue #63), so the 32px assertion only holds at the unscaled baseline.
     Theme.set_font_scale(1.0)
     dialog = WordCurationDialog(_make_curation_words())
+    qtbot.addWidget(dialog)
     try:
         v_header = dialog.table.verticalHeader()
         assert v_header is not None
@@ -321,9 +330,10 @@ def test_curation_uses_fixed_row_height():
         dialog.deleteLater()
 
 
-def test_curation_search_debounces_keystrokes():
+def test_curation_search_debounces_keystrokes(qtbot):
     """Three keystrokes in a row only run one _apply_search after the timer fires."""
     dialog = WordCurationDialog(_make_curation_words())
+    qtbot.addWidget(dialog)
     try:
         with patch.object(dialog, "_apply_search", wraps=dialog._apply_search) as apply_spy:
             # Simulate rapid typing by setting the text field and calling _on_search_changed
@@ -341,10 +351,11 @@ def test_curation_search_debounces_keystrokes():
         dialog.deleteLater()
 
 
-def test_curation_apply_search_filters_same_rows_as_before():
+def test_curation_apply_search_filters_same_rows_as_before(qtbot):
     """_apply_search produces identical visibility to the old synchronous body."""
     words = _make_curation_words(10)
     dialog = WordCurationDialog(words)
+    qtbot.addWidget(dialog)
     try:
         # Search for 'word5' — should hide every row except the one whose
         # columns contain 'word5' (surface/lemma/reading/sentence).
