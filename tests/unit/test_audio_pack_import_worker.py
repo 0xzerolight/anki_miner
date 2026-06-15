@@ -10,16 +10,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtCore")
 
-from PyQt6.QtCore import QCoreApplication
-
 from anki_miner.gui.workers.audio_pack_import_worker import AudioPackImportWorker
-
-
-@pytest.fixture
-def qapp():
-    app = QCoreApplication.instance() or QCoreApplication([])
-    yield app
-
 
 # ---------------------------------------------------------------------------
 # Pack-building helpers (inline — mirrors test_audio_pack_importer.py)

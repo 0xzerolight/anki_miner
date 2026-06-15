@@ -4,7 +4,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
@@ -12,14 +11,10 @@ from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 
 
 @pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
-@pytest.fixture
-def tab(qapp):
-    return BatchProcessingTab(AnkiMinerConfig(), GUIPresenter(), GUIProgressCallback())
+def tab(qapp, qtbot):
+    widget = BatchProcessingTab(AnkiMinerConfig(), GUIPresenter(), GUIProgressCallback())
+    qtbot.addWidget(widget)
+    return widget
 
 
 def test_checkbox_default_unchecked(tab):
