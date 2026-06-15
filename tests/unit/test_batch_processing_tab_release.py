@@ -81,3 +81,38 @@ def test_release_idempotent(tab, facade_processor):
     assert tab.release_dictionary_resources() is True
     assert tab.release_dictionary_resources() is True
     assert facade_processor.definition_service.close.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# Sequential-rerun teardown (Windows back-to-back-mining freeze)
+# ---------------------------------------------------------------------------
+
+
+def test_teardown_joins_and_closes_prior_processor(tab):
+    """_teardown_previous_run cancels, joins, then closes the old processor."""
+    old_processor = MagicMock(name="OldProcessor")
+    old_worker = MagicMock(name="OldWorker")
+    old_worker.wait.return_value = True
+    old_worker.curation_processor = old_processor
+    tab.worker_thread = old_worker
+
+    tab._teardown_previous_run()
+
+    old_worker.finished.disconnect.assert_called_once_with(tab._restore_buttons)
+    old_worker.cancel.assert_called_once_with()
+    old_worker.wait.assert_called_once()
+    old_processor.close.assert_called_once_with()
+
+
+def test_teardown_no_worker_is_noop(tab):
+    tab.worker_thread = None
+    tab._teardown_previous_run()  # must not raise
+
+
+def test_teardown_tolerates_no_processor(tab):
+    old_worker = MagicMock(name="OldWorker")
+    old_worker.wait.return_value = True
+    old_worker.curation_processor = None
+    tab.worker_thread = old_worker
+    tab._teardown_previous_run()  # must not raise
+    old_worker.cancel.assert_called_once_with()

@@ -1,5 +1,7 @@
 """Worker thread for processing batch queue of multiple folder pairs."""
 
+import contextlib
+import logging
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -13,6 +15,8 @@ from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.batch_queue import BatchQueue, QueueItemStatus
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
+
+logger = logging.getLogger(__name__)
 
 
 class BatchQueueWorkerThread(ProcessorOwningWorker):
@@ -78,6 +82,22 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
         if self._current_processor is not None:
             self._current_processor.cancel()
 
+    def _close_current_processor(self) -> None:
+        """Release the current per-item processor's sqlite handles + Session.
+
+        Closing must never abort the queue, so any error is swallowed (the
+        processor is being discarded anyway). Between items this prevents run
+        N's leaked handles/sockets from accumulating into run N+1 — the Windows
+        back-to-back-mining freeze.
+        """
+        if self._current_processor is None:
+            return
+        with contextlib.suppress(Exception):
+            self._current_processor.close()
+        # Drop the reference so the finally-block close after the loop doesn't
+        # double-close a processor already released at the top of the next item.
+        self._current_processor = None
+
     def run(self):
         """Process all pending items in queue sequentially."""
         total_cards = 0
@@ -85,7 +105,19 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
 
         self.queue_started.emit(total_items)
 
+        try:
+            self._run_queue(total_cards)
+        finally:
+            # Close the final item's processor on every exit (normal, cancel,
+            # or exception) so its sqlite handles / Session don't leak.
+            self._close_current_processor()
+
+    def _run_queue(self, total_cards: int) -> None:
         while not self.check_cancelled():
+            # Close the previous item's processor before building the next
+            # item's, so handles never accumulate across items.
+            self._close_current_processor()
+
             item = self.batch_queue.get_next_pending()
             if item is None:
                 break  # No more pending items
