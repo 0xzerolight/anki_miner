@@ -41,6 +41,19 @@ def _scrub_pyinstaller_env() -> None:
             os.environ.pop(var, None)
 
 
+def _force_software_video_decode() -> None:
+    # Force Qt's FFmpeg backend to software-decode video. Qt otherwise tries
+    # CUDA/VAAPI hwaccel first and, on GPUs without AV1 hardware decode, floods
+    # per-frame errors + a blank frame instead of falling back to the bundled
+    # native software AV1 decoder (FFmpeg n7.1.2 ships it). An empty device-type
+    # list disables all HW decode backends; the "," form yields only empty,
+    # invalid tokens so no HW device is selected.
+    # https://doc.qt.io/qt-6/advanced-ffmpeg-configuration.html
+    # setdefault so power users can re-enable a working backend via the env.
+    # Preview plays short clips in a dialog, so software decode cost is negligible.
+    os.environ.setdefault("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", ",")
+
+
 def _run_bundled_smoke() -> int:
     """Env-var-gated smoke path for PyInstaller bundle validation.
 
@@ -95,6 +108,7 @@ def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) 
 def main():
     """Launch the Anki Miner GUI application."""
     _scrub_pyinstaller_env()
+    _force_software_video_decode()
 
     # Env-var-gated smoke path (PyInstaller bundled-binary validation).
     # Runs before Qt init so headless CI can verify yt-dlp extractor

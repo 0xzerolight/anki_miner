@@ -153,7 +153,7 @@ Anki Miner checks GitHub for new releases on startup (toggle in Settings). When 
 | No definitions found     | Add a Yomitan dictionary in Settings → Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |
 | Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.      |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
-| AV1 video won't preview  | In-app preview is disabled for AV1 to avoid decoder error spam. Mining still works normally — only the preview is skipped. |
+| AV1 preview stutters     | AV1 previews via software decode (hardware decode is disabled to avoid decoder error spam), so very high-resolution AV1 may play less smoothly. Mining is unaffected. |
 
 ## Roadmap
 

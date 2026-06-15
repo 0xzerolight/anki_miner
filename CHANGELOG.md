@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Window title shortened to "Anki Miner"** (was "Anki Miner - Japanese Vocabulary Mining Tool").
 
 ### Fixed
+- **AV1 video now previews in-app** instead of showing a "preview not available" notice. The bundled FFmpeg always had a native software AV1 decoder; the real fault was Qt trying hardware decode first and flooding errors on GPUs without AV1 support. Startup now forces software video decode (`QT_FFMPEG_DECODING_HW_DEVICE_TYPES`), so AV1 plays through the normal preview pipeline. Very high-resolution AV1 may play less smoothly under software decode.
 
 ### Removed
 - **Windows portable `.zip` and generic Linux `.tar.gz` downloads.** Releases now ship one download per platform: Windows `Setup.exe`, Linux `.deb` (Debian/Ubuntu) or AppImage (other distros), macOS arm64 `.tar.gz`, plus PyPI and source. The Setup.exe installs per-user without admin, and the AppImage is the self-contained portable Linux option.
