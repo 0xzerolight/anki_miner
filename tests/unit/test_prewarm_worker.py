@@ -6,15 +6,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtCore")
 
-from PyQt6.QtCore import QCoreApplication
-
 from anki_miner.gui.workers.prewarm_worker import PrewarmWorker
-
-
-@pytest.fixture
-def qapp():
-    app = QCoreApplication.instance() or QCoreApplication([])
-    yield app
 
 
 def test_prewarm_worker_runs_and_finishes(test_config, qapp):
