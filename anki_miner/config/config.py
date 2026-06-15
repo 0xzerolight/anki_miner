@@ -132,8 +132,9 @@ class AnkiMinerConfig:
 
     # Expression audio settings (Issue #73). Fetches word pronunciation audio
     # from an external endpoint and writes it to the expression_audio Anki field.
-    # Off by default (opt-in); expression_audio_delay mirrors jisho_delay.
-    expression_audio_enabled: bool = False
+    # Activation mirrors other optional fields (frequency, pitch): the feature
+    # is on iff anki_fields["expression_audio"] is non-empty. Off by default
+    # because that field defaults to "". expression_audio_delay mirrors jisho_delay.
     expression_audio_delay: float = 0.2  # Seconds between audio fetch requests.
     # Ordered list of audio sources tried in priority order.
     # The disabled googletts entry is present-but-off so the Settings UI can

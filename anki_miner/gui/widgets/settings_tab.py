@@ -257,11 +257,9 @@ class SettingsTab(QWidget):
         self.anki_panel.ankiconnect_url_input.setText(self.config.ankiconnect_url)
         self.anki_panel.anki_tags_input.setText(self.config.anki_tags)
 
-        # Anki card field mappings
+        # Anki card field mappings (expression_audio field name is the on/off
+        # switch for expression audio — Issue #73, no separate toggle).
         self.anki_panel.set_card_fields(self.config.anki_fields)
-
-        # Expression audio toggle (Issue #73)
-        self.anki_panel.set_expression_audio_enabled(self.config.expression_audio_enabled)
 
         # Card styling (Issue #44)
         self.anki_panel.set_card_style_preset(self.config.card_style_preset)
@@ -466,8 +464,6 @@ class SettingsTab(QWidget):
             anki_tags=self.anki_panel.anki_tags_input.text(),
             anki_fields=self.anki_panel.get_card_fields(),
             anki_word_field=self.anki_panel.get_card_fields().get("word", "Expression"),
-            # Expression audio toggle (Issue #73)
-            expression_audio_enabled=self.anki_panel.get_expression_audio_enabled(),
             # Card styling (Issue #44)
             card_style_preset=self.anki_panel.get_card_style_preset(),
             custom_card_css=self.anki_panel.get_custom_css(),
