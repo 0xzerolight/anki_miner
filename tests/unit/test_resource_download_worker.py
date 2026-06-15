@@ -164,8 +164,13 @@ def test_per_item_failure_isolation(tmp_path, monkeypatch):
 
 
 def test_pitch_routing_moves_temp_to_dest(tmp_path, monkeypatch):
+    # download_dir and pitch_csv live under separate subdirs to mirror the real
+    # cross-filesystem layout (temp dir vs ~/.anki_miner). The route uses
+    # shutil.move (not os.replace), which handles cross-device moves; this
+    # exercises its normal in-tree path and documents that intent.
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
+    pitch_csv = tmp_path / "anki_miner_home" / "pitch_accent.csv"
     expected = b"PITCH ACCENT TSV CONTENT"
 
     def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
@@ -175,14 +180,19 @@ def test_pitch_routing_moves_temp_to_dest(tmp_path, monkeypatch):
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
 
-    worker = _make_worker([PITCH_SPEC], tmp_path)
+    worker = ResourceDownloadWorker(
+        [PITCH_SPEC],
+        dicts_root=tmp_path / "dicts",
+        frequency_csv=tmp_path / "frequency.csv",
+        pitch_csv=pitch_csv,
+        download_dir=download_dir,
+    )
     _done, _progress, summaries = _connect_capture(worker)
 
     worker.run()
 
-    dest = tmp_path / "pitch_accent.csv"
-    assert dest.exists()
-    assert dest.read_bytes() == expected
+    assert pitch_csv.exists()  # parent dir created + file moved into place
+    assert pitch_csv.read_bytes() == expected
     assert summaries[0].succeeded[0].detail == "downloaded"
 
 
