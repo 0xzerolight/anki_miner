@@ -214,10 +214,11 @@ def test_anki_fields_includes_source_default():
 class TestExpressionAudioConfig:
     """Tests for expression audio config fields (Issue #73)."""
 
-    def test_expression_audio_enabled_defaults_false(self):
-        """expression_audio_enabled must default to False (opt-in feature)."""
+    def test_expression_audio_field_defaults_empty(self):
+        """expression_audio Anki field defaults to "" — feature off by default
+        (field-name presence is the on/off switch, no separate flag)."""
         cfg = AnkiMinerConfig()
-        assert cfg.expression_audio_enabled is False
+        assert cfg.anki_fields.get("expression_audio") == ""
 
     def test_expression_audio_delay_defaults_0_2(self):
         """expression_audio_delay must default to 0.2 seconds."""
