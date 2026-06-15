@@ -284,7 +284,7 @@ class TestFrequencyFailureLeavesPitchUntouched:
         # _capture_messagebox answers Yes by default so the import proceeds.
         tab.config = replace(tab.config, pitch_accent_path=existing_pitch)
         tab.dictionary_panel.pitch_accent_selector.set_path(str(pitch_zip))
-        tab.filtering_panel.frequency_selector.set_path(str(freq_zip))
+        tab.dictionary_panel.frequency_selector.set_path(str(freq_zip))
 
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
