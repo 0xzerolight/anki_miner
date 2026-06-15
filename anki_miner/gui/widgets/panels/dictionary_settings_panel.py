@@ -240,7 +240,10 @@ class DictionarySettingsPanel(FormPanel):
 
         self._reset_dicts_root_btn = QPushButton("Reset to default")
         self._reset_dicts_root_btn.clicked.connect(self._on_reset_dicts_root)
-        storage_layout.addWidget(self._reset_dicts_root_btn)
+        # FileSelector is two rows tall (input+Browse, then status caption); top-
+        # align so Reset lines up with the Browse button in the top row, not the
+        # HBox's default vertical center.
+        storage_layout.addWidget(self._reset_dicts_root_btn, alignment=Qt.AlignmentFlag.AlignTop)
 
         self.add_field(
             "Storage Folder",
