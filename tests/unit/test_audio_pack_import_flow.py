@@ -676,3 +676,39 @@ class TestAddPackPriorityOrdering:
                 if entry.kind == "pack" and entry.pack_id in ("nhk16", "forvo"):
                     pos = list(final_chain).index(entry)
                     assert pos < jpod_idx, f"{entry.pack_id} must be above jpod101; pos={pos} jpod={jpod_idx}"
+
+
+# ---------------------------------------------------------------------------
+# Browse start-dir: must open at home, never at "" / "/"
+# ---------------------------------------------------------------------------
+
+
+class TestBrowseStartDir:
+    def test_add_pack_opens_at_home(self, tab, monkeypatch, tmp_path):
+        """add_pack must pass home dir as the start-dir arg to getExistingDirectory."""
+        captured: dict = {}
+
+        def fake_dialog(parent, title, start_dir, *a, **kw):
+            captured["dir"] = start_dir
+            return ""  # user cancels — no worker needed
+
+        monkeypatch.setattr(QFileDialog, "getExistingDirectory", fake_dialog)
+        tab._audio_pack_import_flow.add_pack()
+
+        home = str(Path.home())
+        assert captured.get("dir") == home, f"Expected home={home!r}; got {captured.get('dir')!r}"
+        assert captured.get("dir") != "", "start dir must not be empty string"
+
+    def test_reimport_pack_opens_at_home(self, tab, monkeypatch):
+        """reimport_pack must pass home dir as the start-dir arg to getExistingDirectory."""
+        captured: dict = {}
+
+        def fake_dialog(parent, title, start_dir, *a, **kw):
+            captured["dir"] = start_dir
+            return ""  # user cancels
+
+        monkeypatch.setattr(QFileDialog, "getExistingDirectory", fake_dialog)
+        tab._audio_pack_import_flow.reimport_pack("any-pack-id")
+
+        home = str(Path.home())
+        assert captured.get("dir") == home, f"Expected home={home!r}; got {captured.get('dir')!r}"
