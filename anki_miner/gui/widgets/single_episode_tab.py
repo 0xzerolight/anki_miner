@@ -1,6 +1,5 @@
 """Single episode mining tab for GUI."""
 
-import contextlib
 import logging
 from collections.abc import Callable
 from dataclasses import replace
@@ -476,7 +475,7 @@ class SingleEpisodeTab(MiningTabBase):
         # collide with run N+1's GUI-thread service construction, hard-freezing
         # the app on back-to-back single-episode mines. Join the old worker,
         # then close its processor so no stale handle survives into the new run.
-        self._teardown_previous_run()
+        self._teardown_previous_run("single-episode")
 
         # Create processor using service factory. DEBUG-logged so a Windows
         # reporter running with debug logging can confirm which call blocks
@@ -501,29 +500,6 @@ class SingleEpisodeTab(MiningTabBase):
         self.worker_thread.error.connect(self._on_processing_error)
         self.worker_thread.finished.connect(self._restore_buttons)
         self.worker_thread.start()
-
-    def _teardown_previous_run(self) -> None:
-        """Join and close the prior run's worker + processor before a rerun.
-
-        Mirrors the deck-builder teardown idiom: disconnect the stale
-        ``finished`` → ``_restore_buttons`` handler so a late termination can't
-        restore buttons mid-new-run, cancel the worker, then bounded-join it
-        (reassigning ``self.worker_thread`` would otherwise drop the only
-        reference to a live QThread and crash). Once stopped, close the old
-        processor to release its sqlite handles + requests.Session so run N+1
-        can't collide with run N's leaked resources (Windows freeze).
-        """
-        if self.worker_thread is None:
-            return
-        with contextlib.suppress(TypeError, RuntimeError):
-            self.worker_thread.finished.disconnect(self._restore_buttons)
-        self.worker_thread.cancel()
-        if not self.worker_thread.wait(5000):
-            logger.warning("Lingering single-episode worker did not stop within 5 s; replacing it anyway")
-        old_processor = self.worker_thread.curation_processor
-        if old_processor is not None:
-            with contextlib.suppress(Exception):
-                old_processor.close()
 
     # Progress slots (_on_progress_start/update/complete) are inherited from
     # MiningTabBase, which drives the single ``progress_widget`` via the

@@ -9,6 +9,7 @@ genuinely shared scaffolding and leaves slot bodies to the subclasses via duck t
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import threading
 from collections.abc import Callable
@@ -31,6 +32,12 @@ if TYPE_CHECKING:
     from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
 logger = logging.getLogger(__name__)
+
+# Bounded join for a lingering worker before a rerun. A stuck worker must not
+# freeze the GUI forever, so the join is capped; on timeout we deliberately
+# leak the old run's handles rather than close them under a live thread (see
+# _teardown_previous_run).
+_WORKER_JOIN_TIMEOUT_MS = 5000
 
 
 class MiningTabBase(QWidget):
@@ -131,6 +138,47 @@ class MiningTabBase(QWidget):
         """Accept any drag move whose dragEnter the subclass already accepted."""
         if event is not None:
             event.acceptProposedAction()
+
+    # ------------------------------------------------------------------
+    # Worker teardown before a rerun (Windows back-to-back-mining freeze)
+    # ------------------------------------------------------------------
+
+    def _teardown_previous_run(self, label: str) -> None:
+        """Join and (only if joined) close the prior run's worker + processor.
+
+        Shared by ``SingleEpisodeTab`` and ``BatchProcessingTab`` (both subclass
+        this base and start ``ProcessorOwningWorker``s). Mirrors the deck-builder
+        teardown idiom: disconnect the stale ``finished`` → ``_restore_buttons``
+        handler so a late termination can't restore buttons mid-new-run (a no-op
+        when not connected, e.g. the batch queue path), cancel the worker, then
+        bounded-join it (reassigning ``self.worker_thread`` would otherwise drop
+        the only reference to a live QThread and crash with "QThread: Destroyed
+        while thread is still running").
+
+        A fresh processor is created per run and owns sqlite handles + a
+        ``requests.Session`` that were never released; on Windows those leak and
+        collide with the next run's GUI-thread service construction, freezing the
+        app on back-to-back mines. Closing the survivor here releases them — but
+        ONLY when the join actually succeeded. If ``wait`` times out the worker
+        is still running and may be mid-``process_episode`` using the processor's
+        sqlite connection / audio Session; closing it from the GUI thread then is
+        a concurrent-sqlite-close that can segfault or hard-freeze on Windows (the
+        same class of bug this guards against, relocated to the timeout path).
+        Leaking one run's handles is strictly safer; the dropped
+        ``self.worker_thread`` reference lets the orphaned worker self-finish.
+        """
+        if self.worker_thread is None:  # type: ignore[attr-defined]
+            return
+        with contextlib.suppress(TypeError, RuntimeError):
+            self.worker_thread.finished.disconnect(self._restore_buttons)  # type: ignore[attr-defined]
+        self.worker_thread.cancel()  # type: ignore[attr-defined]
+        joined = self.worker_thread.wait(_WORKER_JOIN_TIMEOUT_MS)  # type: ignore[attr-defined]
+        if not joined:
+            logger.warning("Lingering %s worker did not stop within 5 s; replacing it anyway", label)
+        old_processor = self.worker_thread.curation_processor  # type: ignore[attr-defined]
+        if joined and old_processor is not None:
+            with contextlib.suppress(Exception):
+                old_processor.close()
 
     # ------------------------------------------------------------------
     # Known/ignore list (Issue #42)
