@@ -96,7 +96,7 @@ def test_teardown_joins_and_closes_prior_processor(tab):
     old_worker.curation_processor = old_processor
     tab.worker_thread = old_worker
 
-    tab._teardown_previous_run()
+    tab._teardown_previous_run("batch")
 
     old_worker.finished.disconnect.assert_called_once_with(tab._restore_buttons)
     old_worker.cancel.assert_called_once_with()
@@ -106,7 +106,7 @@ def test_teardown_joins_and_closes_prior_processor(tab):
 
 def test_teardown_no_worker_is_noop(tab):
     tab.worker_thread = None
-    tab._teardown_previous_run()  # must not raise
+    tab._teardown_previous_run("batch")  # must not raise
 
 
 def test_teardown_tolerates_no_processor(tab):
@@ -114,5 +114,23 @@ def test_teardown_tolerates_no_processor(tab):
     old_worker.wait.return_value = True
     old_worker.curation_processor = None
     tab.worker_thread = old_worker
-    tab._teardown_previous_run()  # must not raise
+    tab._teardown_previous_run("batch")  # must not raise
     old_worker.cancel.assert_called_once_with()
+
+
+def test_teardown_skips_processor_close_on_join_timeout(tab):
+    """On wait() timeout the worker is still live; closing its sqlite handles
+    from the GUI thread would race the worker — so the close is SKIPPED. The
+    new run still proceeds (caller reassigns ``self.worker_thread``)."""
+    old_processor = MagicMock(name="OldProcessor")
+    old_worker = MagicMock(name="OldWorker")
+    old_worker.wait.return_value = False  # join times out → worker still running
+    old_worker.curation_processor = old_processor
+    tab.worker_thread = old_worker
+
+    tab._teardown_previous_run("batch")
+
+    old_worker.cancel.assert_called_once_with()
+    old_worker.wait.assert_called_once()
+    # MUST NOT close the old processor under a still-running worker.
+    old_processor.close.assert_not_called()
