@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from collections.abc import Callable
 from pathlib import Path
@@ -351,6 +352,11 @@ class BatchProcessingTab(MiningTabBase):
         # Log start
         self.presenter.show_info(f"Starting batch processing of {len(pairs)} episodes...")
 
+        # Tear down the previous run before building a new processor so leaked
+        # sqlite handles / Session sockets can't survive into this run (Windows
+        # back-to-back-mining freeze).
+        self._teardown_previous_run()
+
         # Create episode processor using service factory
         episode_processor = create_episode_processor(self.config, self.presenter, self.stats_service)
 
@@ -390,6 +396,10 @@ class BatchProcessingTab(MiningTabBase):
     def _start_queue_worker(self) -> None:
         """Create and start the queue worker thread."""
         from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
+
+        # Tear down any prior run before building the queue worker (Windows
+        # back-to-back-mining freeze: leaked sqlite/Session handles).
+        self._teardown_previous_run()
 
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
         self.worker_thread = BatchQueueWorkerThread(
@@ -474,6 +484,31 @@ class BatchProcessingTab(MiningTabBase):
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
         self.queue_panel.set_buttons_enabled(False)
+
+    def _teardown_previous_run(self) -> None:
+        """Join and close the prior run's worker + processor before a rerun.
+
+        Mirrors the deck-builder teardown idiom (shared by both the manual-pair
+        and queue start paths): disconnect the stale ``finished`` →
+        ``_restore_buttons`` handler (a no-op when not connected, e.g. the queue
+        path), cancel the worker, bounded-join it (so reassigning
+        ``self.worker_thread`` doesn't drop a live QThread), then close the old
+        processor to release its sqlite handles + requests.Session. The queue
+        worker exposes only its most-recent per-item processor via
+        ``curation_processor``; in-loop processors are closed by the worker
+        itself, so closing the survivor here suffices (Windows freeze).
+        """
+        if self.worker_thread is None:
+            return
+        with contextlib.suppress(TypeError, RuntimeError):
+            self.worker_thread.finished.disconnect(self._restore_buttons)
+        self.worker_thread.cancel()
+        if not self.worker_thread.wait(5000):
+            logger.warning("Lingering batch worker did not stop within 5 s; replacing it anyway")
+        old_processor = self.worker_thread.curation_processor
+        if old_processor is not None:
+            with contextlib.suppress(Exception):
+                old_processor.close()
 
     def _restore_buttons(self) -> None:
         """Restore normal button state after processing ends."""
