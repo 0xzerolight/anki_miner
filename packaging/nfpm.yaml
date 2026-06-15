@@ -22,7 +22,7 @@ overrides:
 contents:
   # Install the PyInstaller bundle to /opt/anki-miner/. Source is dist/deb-stage/
   # — a copy of dist/AnkiMiner/ with the bundled GPL ffmpeg/ffprobe removed (the
-  # deb relies on system ffmpeg). The AppImage and tarball still bundle ffmpeg.
+  # deb relies on system ffmpeg). The AppImage still bundles ffmpeg.
   - src: dist/deb-stage/
     dst: /opt/anki-miner/
     type: tree
