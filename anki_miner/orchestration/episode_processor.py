@@ -296,12 +296,16 @@ class EpisodeProcessor:
         those handles/sockets before any new ones are opened. Safe only on an
         idle processor; callers must not invoke it mid-run.
         """
+        # DEBUG-logged so a Windows reporter can confirm whether close() (vs the
+        # subsequent processor build) is where a back-to-back mine blocks.
+        logger.debug("closing processor resources")
         self.definition_service.close()
         if self.expression_audio_fetcher is not None:
             close = getattr(self.expression_audio_fetcher, "close", None)
             if callable(close):
                 with contextlib.suppress(Exception):
                     close()
+        logger.debug("closed processor resources")
 
     def _allocate_run_temp_folder(self) -> Path:
         """Create an isolated temp directory for a single episode run.
