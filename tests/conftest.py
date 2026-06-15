@@ -1,6 +1,5 @@
 """Pytest configuration and shared fixtures."""
 
-import importlib
 import os
 from pathlib import Path
 
@@ -14,69 +13,25 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import MediaData, TokenizedWord
 from anki_miner.presenters import NullPresenter, NullProgressCallback
 
+# Single source of truth for the home-isolation mechanism, shared with the
+# standalone (non-pytest) E2E runner which never sees this conftest. See
+# tests/_home_isolation.py for the full WHY (independent per-module
+# ``ANKI_MINER_HOME`` snapshots, the real-config-clobber bug it fixes).
+from tests._home_isolation import (
+    apply_home_patches as _apply_home_patches,
+)
+from tests._home_isolation import (
+    restore_home_patches as _restore_home_patches,
+)
+from tests._home_isolation import (
+    snapshot_home as _snapshot_home,
+)
+
 # The GENUINE user home, resolved at conftest import time BEFORE any test can
 # set ANKI_MINER_HOME. ``_guard_real_home`` watches this exact path so the env
 # patching done by ``_isolate_anki_home`` can never fool the tripwire into
 # watching the throwaway tmp dir instead of the real one.
 _REAL_ANKI_HOME = Path(os.path.expanduser("~")) / ".anki_miner"
-
-# Each entry: (module dotted path, attribute name, value-builder taking the tmp
-# home Path). Only patched when the module imports and the attribute already
-# exists, so an upstream refactor (renamed/removed binding) silently no-ops
-# instead of erroring inside the fixture. We patch each module's OWN bound name
-# because ``from ...paths import ANKI_MINER_HOME`` creates an independent binding
-# that patching ``paths.ANKI_MINER_HOME`` alone would not update.
-_HOME_CONSUMERS = (
-    ("anki_miner.config.paths", "ANKI_MINER_HOME", lambda home: home),
-    ("anki_miner.config.config", "ANKI_MINER_HOME", lambda home: home),
-    ("anki_miner.gui.utils.service_factory", "ANKI_MINER_HOME", lambda home: home),
-    ("anki_miner.gui.utils.recent_files", "ANKI_MINER_HOME", lambda home: home),
-    (
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel",
-        "ANKI_MINER_HOME",
-        lambda home: home,
-    ),
-    ("anki_miner.gui.controllers.zip_import_flow", "ANKI_MINER_HOME", lambda home: home),
-    ("anki_miner.services.history_service", "DEFAULT_DB_PATH", lambda home: home / "history.db"),
-)
-
-
-def _apply_home_patches(tmp_home: Path) -> list[tuple[object, str, object]]:
-    """Redirect every imported home snapshot + ``GUIConfigManager.CONFIG_FILE`` to
-    ``tmp_home``; return ``(obj, attr, original)`` triples for exact restoration.
-
-    Patches each module's OWN bound name (see ``_HOME_CONSUMERS``) because
-    ``from ...paths import ANKI_MINER_HOME`` snapshots an independent binding that
-    patching ``paths.ANKI_MINER_HOME`` alone would not update. Missing module/attr is
-    skipped so an upstream rename no-ops instead of erroring inside the fixture.
-    """
-    saved: list[tuple[object, str, object]] = []
-    for mod_path, attr, build in _HOME_CONSUMERS:
-        try:
-            module = importlib.import_module(mod_path)
-        except Exception:
-            continue
-        if not hasattr(module, attr):
-            continue
-        saved.append((module, attr, getattr(module, attr)))
-        setattr(module, attr, build(tmp_home))
-
-    # GUIConfigManager.CONFIG_FILE is a CLASS attribute, not a module global.
-    try:
-        cm_module = importlib.import_module("anki_miner.gui.utils.config_manager")
-        gcm_cls = getattr(cm_module, "GUIConfigManager", None)
-    except Exception:
-        gcm_cls = None
-    if gcm_cls is not None and hasattr(gcm_cls, "CONFIG_FILE"):
-        saved.append((gcm_cls, "CONFIG_FILE", gcm_cls.CONFIG_FILE))
-        gcm_cls.CONFIG_FILE = tmp_home / "gui_config.json"
-    return saved
-
-
-def _restore_home_patches(saved: list[tuple[object, str, object]]) -> None:
-    """Undo ``_apply_home_patches`` in reverse so stacked patches unwind cleanly."""
-    for obj, attr, original in reversed(saved):
-        setattr(obj, attr, original)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -159,28 +114,13 @@ def _isolate_anki_home(tmp_path_factory):
             os.environ.pop("ANKI_MINER_HOME", None)
 
 
-def _snapshot_home(root: Path) -> dict[str, tuple[int, float]]:
-    """Map every file under ``root`` to ``(size, mtime_ns)``; empty if absent."""
-    snap: dict[str, tuple[int, float]] = {}
-    if not root.exists():
-        return snap
-    for path in root.rglob("*"):
-        if path.is_file():
-            try:
-                st = path.stat()
-            except OSError:
-                continue
-            snap[str(path)] = (st.st_size, st.st_mtime_ns)
-    return snap
-
-
 @pytest.fixture(autouse=True)
 def _guard_real_home():
     """Tripwire: fail any test that mutates the genuine ``~/.anki_miner``.
 
     Defense-in-depth behind ``_isolate_anki_home``: with isolation active this should
     ALWAYS pass. It exists to catch a FUTURE regression (a new module that snapshots the
-    home path but isn't in ``_HOME_CONSUMERS``, say) before it silently clobbers a real
+    home path but isn't in ``HOME_CONSUMERS``, say) before it silently clobbers a real
     user's config again.
 
     It reads ``_REAL_ANKI_HOME`` — captured at conftest import time from
@@ -215,7 +155,7 @@ def _guard_real_home():
         pytest.fail(
             f"Test mutated the real anki_miner home {watched}! " + "; ".join(parts) + ". "
             "A module is writing to the user's real data dir — add its home-path "
-            "snapshot to _HOME_CONSUMERS in tests/conftest.py."
+            "snapshot to HOME_CONSUMERS in tests/_home_isolation.py."
         )
 
 
