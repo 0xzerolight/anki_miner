@@ -1,7 +1,6 @@
 """Word filtering settings panel."""
 
 import logging
-from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
@@ -61,39 +60,13 @@ class FilteringSettingsPanel(FormPanel):
         self._available_decks: list[str] = []
         super().__init__("Word Filtering", parent=parent)
         self._setup_fields()
-        self._connect_validation()
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
-        # Word Frequency section
+        # Word Frequency section. The frequency *file selector + enable toggle*
+        # now live in the Dictionaries tab (users think of the frequency list as
+        # a dictionary); only the max-rank threshold — a filter — stays here.
         self.add_section("Word Frequency")
-
-        # Frequency file path. Accepts CSV/TSV directly, or a Yomitan-format
-        # frequency zip — the latter is converted to CSV on Save (see
-        # SettingsTab._on_save_clicked).
-        self.frequency_selector = FileSelector(
-            label="",
-            file_mode=True,
-            file_filter="Frequency list (*.csv *.tsv *.txt *.zip);;All Files (*)",
-            placeholder="Select frequency list CSV/TSV or Yomitan zip...",
-        )
-        self.add_field(
-            "Frequency List File",
-            self.frequency_selector,
-            helper=(
-                "CSV/TSV with columns (word, rank), or a Yomitan-format "
-                "frequency zip (e.g. JPDB, BCCWJ). Yomitan zips are imported "
-                "into ~/.anki_miner/frequency.csv on Save."
-            ),
-        )
-
-        # Use frequency data checkbox
-        self.use_frequency_checkbox = QCheckBox("Enable Frequency Data")
-        self.add_field(
-            "",
-            self.use_frequency_checkbox,
-            helper="Enable to display word frequency rank on cards",
-        )
 
         # Max frequency rank
         self.max_frequency_spinbox = QSpinBox()
@@ -102,7 +75,9 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             "Max Frequency Rank",
             self.max_frequency_spinbox,
-            helper="Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words. Words missing from the frequency list are excluded.",
+            helper="Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words. "
+            "Words missing from the frequency list are excluded. Applies only when "
+            "frequency data is enabled (toggle in the Dictionaries tab).",
         )
 
         # Known Words Database section
@@ -441,31 +416,3 @@ class FilteringSettingsPanel(FormPanel):
         wanted = set(ids)
         for set_id, cb in self.wordset_checkboxes.items():
             cb.setChecked(set_id in wanted)
-
-    def _connect_validation(self) -> None:
-        """Connect file selector signals to validation handlers."""
-        self.frequency_selector.path_validated.connect(self._validate_frequency_file)
-
-    def _validate_frequency_file(self, is_valid: bool, path_str: str) -> None:
-        """Validate frequency file and show entry count.
-
-        For ``.zip`` paths we don't parse — the actual Yomitan import runs on
-        Save (where progress + error dialogs are wired). Showing a "will import"
-        hint here keeps the slow extract off the validation hot path.
-        """
-        if not is_valid or not path_str:
-            return
-
-        if path_str.lower().endswith(".zip"):
-            self.frequency_selector.status_label.setText(f"{Path(path_str).name} (Yomitan zip — will import on Save)")
-            return
-
-        try:
-            from anki_miner.services.frequency_service import FrequencyService
-
-            service = FrequencyService(Path(path_str))
-            service.load()
-            count = service.entry_count
-            self.frequency_selector.status_label.setText(f"{Path(path_str).name} ({count:,} entries)")
-        except Exception as e:
-            self.frequency_selector.status_label.setText(f"Could not parse file: {e}")

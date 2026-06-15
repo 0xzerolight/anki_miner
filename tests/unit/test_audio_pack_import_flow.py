@@ -431,7 +431,7 @@ class TestSettingsTabAudioPanelWiring:
 
     def test_audio_tab_after_dictionary(self, tab):
         labels = [tab.tab_widget.tabText(i) for i in range(tab.tab_widget.count())]
-        assert labels.index("Audio") > labels.index("Dictionary"), "Audio sub-tab must come after Dictionary"
+        assert labels.index("Audio") > labels.index("Dictionaries"), "Audio sub-tab must come after Dictionaries"
 
     def test_load_config_sets_chain_on_audio_panel(self, test_config: AnkiMinerConfig, tmp_path):
         chain = (
