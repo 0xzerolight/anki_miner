@@ -97,6 +97,12 @@ def _run_download_modal(parent: QWidget, config: AnkiMinerConfig, download_dir: 
     worker.item_progress.connect(on_item_progress)
     worker.item_done.connect(on_item_done)
     worker.finished_summary.connect(on_finished)
+    # Defensive: QThread's built-in `finished` (distinct from the custom
+    # `finished_summary`) always fires when run() returns. If run() ever exits
+    # without emitting finished_summary (e.g. an exception escaping the per-item
+    # try), this still unblocks the loop so the modal can't hang. finished_summary
+    # is emitted just before the thread ends, so the summary is captured first.
+    worker.finished.connect(loop.quit)
     dlg.canceled.connect(worker.cancel)
 
     worker.start()
