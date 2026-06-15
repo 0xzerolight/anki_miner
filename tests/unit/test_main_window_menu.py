@@ -27,6 +27,7 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
     monkeypatch.setattr(mw_module.MainWindow, "_run_validation", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
+    monkeypatch.setattr(mw_module.MainWindow, "_maybe_offer_first_run_setup", lambda self: None)
 
 
 @pytest.fixture
