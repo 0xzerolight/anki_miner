@@ -6,12 +6,13 @@ from dataclasses import replace
 from functools import partial
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
     QHBoxLayout,
+    QLabel,
     QMessageBox,
     QScrollArea,
     QTabWidget,
@@ -157,6 +158,16 @@ class SettingsTab(QWidget):
         self.save_button.clicked.connect(self._on_save_clicked)
         self.save_button.setToolTip("Save settings to disk (Ctrl+S)")
         button_layout.addWidget(self.save_button)
+
+        # Inline, non-modal save confirmation (replaces the old "Settings Saved"
+        # popup). Flashed by _flash_save_status() and auto-cleared by a timer.
+        self.save_status_label = QLabel("")
+        self.save_status_label.setObjectName("settings-save-status")
+        button_layout.addWidget(self.save_status_label)
+
+        self._save_status_timer = QTimer(self)
+        self._save_status_timer.setSingleShot(True)
+        self._save_status_timer.timeout.connect(lambda: self.save_status_label.setText(""))
 
         layout.addLayout(button_layout)
 
@@ -580,11 +591,17 @@ class SettingsTab(QWidget):
         # Emit signal to notify listeners of config change
         self.config = new_config
         self.config_changed.emit(new_config)
-        QMessageBox.information(
-            self,
-            "Settings Saved",
-            "Settings saved.",
-        )
+        self._flash_save_status("✓ Saved")
+
+    def _flash_save_status(self, text: str) -> None:
+        """Show a transient, non-modal confirmation beside the Save button.
+
+        Restarts the auto-clear timer on each call so repeated saves keep the
+        message visible for the full duration.
+        """
+        self.save_status_label.setText(text)
+        self._save_status_timer.stop()
+        self._save_status_timer.start(2500)
 
     def _resolve_pitch_accent_path(self) -> Path | None:
         """Resolve the pitch-accent selector for persistence (see the engine).
@@ -653,11 +670,7 @@ class SettingsTab(QWidget):
             self.config = create_default_config()
             self._load_config()
             self.config_changed.emit(self.config)
-            QMessageBox.information(
-                self,
-                "Settings Reset",
-                "Settings reset to defaults.",
-            )
+            self._flash_save_status("✓ Reset to defaults")
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration from external source.

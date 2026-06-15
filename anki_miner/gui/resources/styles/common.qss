@@ -522,6 +522,11 @@ QLabel#status-stats {
     font-size: ${font-size-caption}px;
 }
 
+QLabel#settings-save-status {
+    color: ${color-success};
+    font-weight: 500;
+}
+
 QLabel#status-indicator {
     padding: ${spacing-xxs}px ${spacing-xs}px;
     border-radius: 10px;
