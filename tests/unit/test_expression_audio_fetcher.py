@@ -966,3 +966,53 @@ class TestFetchCandidates:
             ("噓", "うそ"),
             ("嘘", "うそ"),
         ]
+
+
+class TestExpressionAudioClose:
+    """Tests for the resource-release close() methods (Windows freeze fix)."""
+
+    def test_jpod101_close_closes_session(self, tmp_path):
+        """JPod101AudioFetcher.close() closes its requests.Session."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch.object(fetcher._session, "close") as mock_close:
+            fetcher.close()
+        mock_close.assert_called_once_with()
+
+    def test_chained_close_fans_out_to_all_members(self, tmp_path):
+        """ChainedExpressionAudioFetcher.close() calls close() on every member."""
+        first = MagicMock()
+        second = MagicMock()
+        chain = ChainedExpressionAudioFetcher([first, second])  # type: ignore[list-item]
+
+        chain.close()
+
+        first.close.assert_called_once_with()
+        second.close.assert_called_once_with()
+
+    def test_chained_close_tolerates_member_without_close(self, tmp_path):
+        """A member lacking close() is skipped, not an error."""
+
+        class _NoClose:
+            def fetch(self, mined_form, reading, cancelled_check=None):
+                return None
+
+            def fetch_candidates(self, candidates, cancelled_check=None):
+                return None
+
+        closable = MagicMock()
+        chain = ChainedExpressionAudioFetcher([_NoClose(), closable])  # type: ignore[list-item]
+
+        chain.close()  # must not raise
+
+        closable.close.assert_called_once_with()
+
+    def test_chained_close_suppresses_member_exception(self, tmp_path):
+        """A member close() that raises does not abort the fan-out."""
+        boom = MagicMock()
+        boom.close.side_effect = RuntimeError("boom")
+        after = MagicMock()
+        chain = ChainedExpressionAudioFetcher([boom, after])  # type: ignore[list-item]
+
+        chain.close()  # must not raise
+
+        after.close.assert_called_once_with()

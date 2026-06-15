@@ -2660,6 +2660,55 @@ class TestDictionaryResourceFacade:
         assert processor.offline_lookup_fn is processor.definition_service.lookup_all_offline
 
 
+class TestProcessorClose:
+    """close() releases all per-run resources (Windows back-to-back-mining freeze)."""
+
+    def _make(self, test_config, audio_fetcher=None):
+        return EpisodeProcessor(
+            config=test_config,
+            subtitle_parser=MagicMock(),
+            word_filter=MagicMock(),
+            media_extractor=MagicMock(),
+            definition_service=MagicMock(),
+            anki_service=MagicMock(),
+            presenter=NullPresenter(),
+            expression_audio_fetcher=audio_fetcher,
+        )
+
+    def test_close_closes_definition_service(self, test_config):
+        proc = self._make(test_config)
+        proc.close()
+        proc.definition_service.close.assert_called_once_with()
+
+    def test_close_closes_audio_fetcher(self, test_config):
+        fetcher = MagicMock()
+        proc = self._make(test_config, audio_fetcher=fetcher)
+        proc.close()
+        proc.definition_service.close.assert_called_once_with()
+        fetcher.close.assert_called_once_with()
+
+    def test_close_with_no_audio_fetcher_is_safe(self, test_config):
+        proc = self._make(test_config, audio_fetcher=None)
+        proc.close()  # must not raise
+        proc.definition_service.close.assert_called_once_with()
+
+    def test_close_tolerates_audio_fetcher_without_close(self, test_config):
+        class _NoClose:
+            def fetch(self, *a, **k):
+                return None
+
+        proc = self._make(test_config, audio_fetcher=_NoClose())
+        proc.close()  # must not raise
+        proc.definition_service.close.assert_called_once_with()
+
+    def test_close_suppresses_audio_fetcher_close_exception(self, test_config):
+        fetcher = MagicMock()
+        fetcher.close.side_effect = RuntimeError("boom")
+        proc = self._make(test_config, audio_fetcher=fetcher)
+        proc.close()  # must not raise
+        proc.definition_service.close.assert_called_once_with()
+
+
 class TestPhase2FilterOrdering:
     """Pin the order of the Phase-2 optional filters.
 

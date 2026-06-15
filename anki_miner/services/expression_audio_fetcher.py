@@ -272,6 +272,16 @@ class JPod101AudioFetcher:
         """Try each candidate form, returning the first JPod101 hit."""
         return _first_candidate_hit(self, candidates, cancelled_check)
 
+    def close(self) -> None:
+        """Close the underlying ``requests.Session`` (sockets / file handles).
+
+        Called between sequential mining runs so the per-run Session does not
+        leak a live socket into the next run. On Windows those leaked sockets
+        accumulate and contribute to the GUI-thread freeze when a user mines
+        episodes back-to-back in one session.
+        """
+        self._session.close()
+
 
 class ChainedExpressionAudioFetcher:
     """Composite fetcher that walks a sequence of fetchers, first hit wins.
@@ -337,3 +347,17 @@ class ChainedExpressionAudioFetcher:
             if result is not None:
                 return result
         return None
+
+    def close(self) -> None:
+        """Fan out ``close()`` to every member fetcher that defines one.
+
+        ``close()`` is optional/duck-typed (not on the ExpressionAudioFetcher
+        Protocol), so members without it are skipped. Called between sequential
+        mining runs to release per-run sockets / sqlite handles before the next
+        run opens new ones (Windows back-to-back-mining freeze).
+        """
+        for fetcher in self._fetchers:
+            close = getattr(fetcher, "close", None)
+            if callable(close):
+                with contextlib.suppress(Exception):
+                    close()

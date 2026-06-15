@@ -469,8 +469,20 @@ class SingleEpisodeTab(MiningTabBase):
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
 
-        # Create processor using service factory
+        # Tear down the previous run's worker + processor BEFORE building new
+        # ones. A fresh processor is created per run and its sqlite handles /
+        # requests.Session were never released; on Windows those leak and
+        # collide with run N+1's GUI-thread service construction, hard-freezing
+        # the app on back-to-back single-episode mines. Join the old worker,
+        # then close its processor so no stale handle survives into the new run.
+        self._teardown_previous_run("single-episode")
+
+        # Create processor using service factory. DEBUG-logged so a Windows
+        # reporter running with debug logging can confirm which call blocks
+        # during the back-to-back-mining freeze.
+        logger.debug("building processor for %s", video_file)
         processor = create_episode_processor(config_with_offset, self.presenter, self.stats_service)
+        logger.debug("processor built for %s", video_file)
 
         # Create and start worker thread
         curation_cb = self._curation_bridge if not preview_mode else None
