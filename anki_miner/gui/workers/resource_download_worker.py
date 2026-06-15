@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
-import os
+import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -141,11 +141,14 @@ class ResourceDownloadWorker(CancellableWorker):
                         cancel_check=lambda: self.is_cancelled,
                         progress=self._progress_for(spec.id),
                     )
-                    count = getattr(freq_result, "entry_count", None)
-                    detail = f"{count} entries" if count is not None else "imported"
+                    detail = f"{freq_result.entry_count} entries"
                 elif spec.kind == "pitch":
                     self._pitch_csv.parent.mkdir(parents=True, exist_ok=True)
-                    os.replace(temp, self._pitch_csv)
+                    # shutil.move (not os.replace): download_dir and pitch_csv may
+                    # be on different filesystems (download_dir under the system
+                    # temp dir / tmpfs), where os.replace raises a cross-device
+                    # link error. shutil.move falls back to copy+unlink.
+                    shutil.move(str(temp), str(self._pitch_csv))
                     detail = "downloaded"
                 else:  # pragma: no cover — catalog kinds are constrained
                     raise ValueError(f"Unknown resource kind: {spec.kind!r}")
@@ -163,9 +166,10 @@ class ResourceDownloadWorker(CancellableWorker):
                 )
                 self.item_done.emit(spec.id, True, detail)
             except Exception as exc:  # noqa: BLE001 — isolate per-item failures
-                # If the download succeeded but routing failed, the temp still
-                # exists (the downloader only cleans up when IT raises). os.replace
-                # may also have consumed it. Best-effort unlink either way.
+                # Reached only when the route raised: download succeeded but the
+                # importer / pitch move failed, so the temp still exists (the
+                # downloader cleans up only when IT raises; a successful move or
+                # import never reaches here). Best-effort unlink.
                 if temp is not None:
                     with contextlib.suppress(OSError):
                         temp.unlink()
