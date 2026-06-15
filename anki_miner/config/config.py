@@ -258,6 +258,10 @@ class AnkiMinerConfig:
 
     # First-run flags (GUI-persisted; used to auto-create desktop shortcut once)
     first_run_shortcut_done: bool = False
+    # Set once the first-run recommended-resources setup has been offered (so the
+    # Welcome dialog never re-fires). Persisted automatically; absent in old
+    # configs defaults to False.
+    first_run_setup_done: bool = False
 
     # Performance settings
     max_parallel_workers: int = 6  # Number of parallel ffmpeg processes

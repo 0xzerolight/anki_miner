@@ -139,6 +139,11 @@ class MainWindow(QMainWindow):
         if not self.config.first_run_shortcut_done:
             QTimer.singleShot(0, self._maybe_create_shortcut_on_first_run)
 
+        # First-run recommended-resources offer (deferred so the window paints
+        # first). Only fires once; the flag is persisted in every branch below.
+        if not self.config.first_run_setup_done:
+            QTimer.singleShot(0, self._maybe_offer_first_run_setup)
+
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         self.setWindowTitle("Anki Miner")
@@ -212,6 +217,10 @@ class MainWindow(QMainWindow):
         shortcut_action = tools_menu.addAction("Create Desktop Shortcut...")
         assert shortcut_action is not None
         shortcut_action.triggered.connect(self._create_desktop_shortcut)
+
+        resources_action = tools_menu.addAction("Download Recommended Resources...")
+        assert resources_action is not None
+        resources_action.triggered.connect(self._download_recommended_resources)
 
         # Help menu
         help_menu = menu_bar.addMenu("&Help")
@@ -360,6 +369,44 @@ class MainWindow(QMainWindow):
         if not ShortcutService.shortcut_exists():
             ShortcutService.create_shortcut()
         self.update_config(replace(self.config, first_run_shortcut_done=True))
+
+    def _download_recommended_resources(self) -> None:
+        """Tools-menu handler: run the resource download dialog, apply result."""
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
+
+        new_config = run_resource_download(self, self.config)
+        if new_config is not None:
+            # update_config (not from_settings) propagates via config_refreshed
+            # to all tabs incl. Settings, and persists to disk.
+            self.update_config(new_config)
+
+    def _maybe_offer_first_run_setup(self) -> None:
+        """Offer the recommended-resources download on first launch; persist flag.
+
+        Mirrors ``_maybe_create_shortcut_on_first_run``: set-up users (who already
+        have frequency + pitch files) are never nagged — we just persist the flag
+        and return. Fresh installs see the Welcome dialog; if they choose to
+        download, the resulting config is folded in. In every branch the
+        first_run_setup_done flag is set and persisted exactly once.
+        """
+        from anki_miner.gui.utils.resource_setup import should_offer_first_run_setup
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
+        from anki_miner.gui.widgets.dialogs.welcome_dialog import WelcomeDialog
+
+        if not should_offer_first_run_setup(self.config):
+            self.update_config(replace(self.config, first_run_setup_done=True))
+            return
+
+        dialog = WelcomeDialog(self)
+        config = self.config
+        if dialog.exec() == WelcomeDialog.DialogCode.Accepted:
+            downloaded = run_resource_download(self, config)
+            if downloaded is not None:
+                config = downloaded
+
+        # Persist once, combining any downloaded config with the flag so we don't
+        # double-save or clobber the resource mutations.
+        self.update_config(replace(config, first_run_setup_done=True))
 
     def _show_about(self) -> None:
         """Show the About dialog."""
