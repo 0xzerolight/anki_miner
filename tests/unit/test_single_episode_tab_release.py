@@ -162,6 +162,40 @@ def test_teardown_disconnects_finished_handler(tab, tmp_path):
     old_worker.curation_processor = MagicMock()
     tab.worker_thread = old_worker
 
-    tab._teardown_previous_run()
+    tab._teardown_previous_run("single-episode")
 
     old_worker.finished.disconnect.assert_called_once_with(tab._restore_buttons)
+
+
+def test_rerun_skips_processor_close_on_join_timeout(tab, tmp_path):
+    """On wait() timeout the worker is still live; closing its sqlite handles
+    from the GUI thread would race the worker — so the close is SKIPPED while
+    the new processor is still built and ``self.worker_thread`` reassigned."""
+    from unittest.mock import patch
+
+    _ready_tab_inputs(tab, tmp_path)
+
+    old_processor = MagicMock(name="OldProcessor")
+    old_worker = MagicMock(name="OldWorker")
+    old_worker.wait.return_value = False  # join times out → worker still running
+    old_worker.curation_processor = old_processor
+    tab.worker_thread = old_worker
+
+    new_worker = MagicMock(name="NewWorker")
+    new_processor = MagicMock(name="NewProcessor")
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=new_worker),
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.create_episode_processor",
+            return_value=new_processor,
+        ),
+    ):
+        tab._start_processing(preview_mode=False)
+
+    old_worker.cancel.assert_called_once_with()
+    old_worker.wait.assert_called_once()
+    # MUST NOT close the old processor under a still-running worker.
+    old_processor.close.assert_not_called()
+    # New run still proceeds: processor built and worker reassigned.
+    assert tab.worker_thread is new_worker
