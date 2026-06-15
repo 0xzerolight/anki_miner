@@ -40,14 +40,14 @@ Please leave a ⭐ star if Anki Miner helped you - it helps others find it :).
 
 ### Download
 
-Grab the installer for your platform from the [latest release](https://github.com/0xzerolight/anki_miner/releases/latest):
+Grab the download for your platform from the [latest release](https://github.com/0xzerolight/anki_miner/releases/latest):
 
-| Platform | Installer | Portable |
-|----------|-----------|----------|
-| Windows | `AnkiMiner-*-Setup.exe` | `AnkiMiner-Windows-x86_64.zip` |
-| Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` | `AnkiMiner-*-Linux-x86_64.AppImage` |
-| Linux (other) | — | `AnkiMiner-Linux-x86_64.tar.gz` |
-| macOS (Apple Silicon) | — | `AnkiMiner-macOS-arm64.tar.gz` |
+| Platform | Download |
+|----------|----------|
+| Windows | `AnkiMiner-*-Setup.exe` |
+| macOS (Apple Silicon) | `AnkiMiner-macOS-arm64.tar.gz` |
+| Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
+| Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
 <details>
 <summary><strong>Install from PyPI (Python 3.11+)</strong></summary>

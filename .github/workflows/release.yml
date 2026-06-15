@@ -310,7 +310,7 @@ jobs:
           # The .deb relies on system ffmpeg (licenses/ffmpeg/README.md), so it
           # must NOT ship the bundled GPL ffmpeg the PyInstaller tree carries.
           # Stage a copy with ffmpeg/ffprobe stripped and package from it; the
-          # AppImage (built above) and tarball (built below) keep their ffmpeg.
+          # AppImage (built above) keeps its bundled ffmpeg.
           rm -rf dist/deb-stage
           cp -a dist/AnkiMiner dist/deb-stage
           # Strip both onedir layouts: _internal/bin/ (recent PyInstaller) and bin/.
@@ -327,17 +327,11 @@ jobs:
             --packager deb \
             --target dist/anki-miner_${{ steps.version.outputs.version }}_amd64.deb
 
-      - name: Create archive (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Create archive (macOS)
+        if: runner.os == 'macOS'
         run: |
           cd dist
           tar -czf ${{ matrix.artifact_name }}.tar.gz AnkiMiner/
-
-      - name: Create archive (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Compress-Archive -Path dist\AnkiMiner\* -DestinationPath dist\${{ matrix.artifact_name }}.zip
 
       # Per-OS explicit upload with if-no-files-found: error. A single catch-all
       # step with default 'warn' only fails when NOTHING matches, so a sibling
@@ -351,7 +345,6 @@ jobs:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
           path: |
-            dist/${{ matrix.artifact_name }}.tar.gz
             dist/AnkiMiner-${{ steps.version.outputs.version }}-Linux-x86_64.AppImage
             dist/anki-miner_${{ steps.version.outputs.version }}_amd64.deb
 
@@ -370,7 +363,6 @@ jobs:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
           path: |
-            dist/${{ matrix.artifact_name }}.zip
             dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
 
   release:
@@ -390,7 +382,6 @@ jobs:
           generate_release_notes: true
           files: |
             artifacts/**/*.tar.gz
-            artifacts/**/*.zip
             artifacts/**/*-Setup.exe
             artifacts/**/*.AppImage
             artifacts/**/*.deb

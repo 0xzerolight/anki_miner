@@ -121,7 +121,12 @@ class TestDetectTarget:
 
 
 def _make_assets() -> list[dict]:
-    """Realistic GitHub /releases/latest assets array (subset of fields)."""
+    """Realistic GitHub /releases/latest assets array (subset of fields).
+
+    Deliberately retains the now-dropped Windows .zip and Linux .tar.gz so
+    matcher tests prove those artifacts are *ignored* when present, not merely
+    absent.
+    """
     base = "https://github.com/0xzerolight/anki_miner/releases/download/v2.4.0/"
     return [
         {
@@ -164,12 +169,11 @@ class TestPickAsset:
         assert url is not None
         assert url.endswith("anki-miner_2.4.0_amd64.deb")
 
-    def test_linux_frozen_falls_back_to_tar_gz(self):
-        """When no .deb is published, fall back to the Linux tar.gz."""
+    def test_linux_frozen_no_deb_returns_none(self):
+        """No .deb published (e.g. only an old tarball) → None, so the caller
+        falls back to the release page."""
         assets = [a for a in _make_assets() if not a["name"].endswith(".deb")]
-        url = _pick_asset(assets, "linux-frozen")
-        assert url is not None
-        assert url.endswith("AnkiMiner-Linux-x86_64.tar.gz")
+        assert _pick_asset(assets, "linux-frozen") is None
 
     def test_appimage_picks_appimage(self):
         url = _pick_asset(_make_assets(), "appimage")
