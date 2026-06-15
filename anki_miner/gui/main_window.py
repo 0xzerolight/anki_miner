@@ -397,16 +397,21 @@ class MainWindow(QMainWindow):
             self.update_config(replace(self.config, first_run_setup_done=True))
             return
 
-        dialog = WelcomeDialog(self)
         config = self.config
-        if dialog.exec() == WelcomeDialog.DialogCode.Accepted:
-            downloaded = run_resource_download(self, config)
-            if downloaded is not None:
-                config = downloaded
-
-        # Persist once, combining any downloaded config with the flag so we don't
-        # double-save or clobber the resource mutations.
-        self.update_config(replace(config, first_run_setup_done=True))
+        try:
+            dialog = WelcomeDialog(self)
+            if dialog.exec() == WelcomeDialog.DialogCode.Accepted:
+                downloaded = run_resource_download(self, config)
+                if downloaded is not None:
+                    config = downloaded
+        finally:
+            # Persist once, combining any downloaded config with the flag so we
+            # don't double-save or clobber the resource mutations. The finally
+            # guarantees the flag is set even if the dialog/download raises, so
+            # the Welcome dialog never re-fires on the next launch. `config` is
+            # the post-download config when a download succeeded, else the
+            # original — so the flag lands on the right one.
+            self.update_config(replace(config, first_run_setup_done=True))
 
     def _show_about(self) -> None:
         """Show the About dialog."""
