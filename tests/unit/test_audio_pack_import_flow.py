@@ -17,14 +17,10 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
-
-# QApplication required for any Qt widget test.
-_app = QApplication.instance() or QApplication([])
-
 
 # ---------------------------------------------------------------------------
 # Pack-building helpers
@@ -70,11 +66,12 @@ def _make_ajt_pack(directory: Path, n_entries: int = 2) -> Path:
 
 
 @pytest.fixture
-def tab(test_config: AnkiMinerConfig, tmp_path):
+def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
     """SettingsTab with audio_packs_root pointing at tmp_path."""
     cfg = replace(test_config, audio_packs_root=tmp_path / "audio_packs")
     (tmp_path / "audio_packs").mkdir()
     widget = SettingsTab(cfg)
+    qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
 
@@ -433,7 +430,7 @@ class TestSettingsTabAudioPanelWiring:
         labels = [tab.tab_widget.tabText(i) for i in range(tab.tab_widget.count())]
         assert labels.index("Audio") > labels.index("Dictionaries"), "Audio sub-tab must come after Dictionaries"
 
-    def test_load_config_sets_chain_on_audio_panel(self, test_config: AnkiMinerConfig, tmp_path):
+    def test_load_config_sets_chain_on_audio_panel(self, test_config: AnkiMinerConfig, tmp_path, qtbot):
         chain = (
             AudioSourceEntry(kind="pack", pack_id="nhk16", enabled=True),
             AudioSourceEntry(kind="jpod101", enabled=False),
@@ -445,6 +442,7 @@ class TestSettingsTabAudioPanelWiring:
         )
         (tmp_path / "audio_packs").mkdir()
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             loaded = widget.audio_panel.get_chain()
             assert loaded == chain, f"Expected {chain}; got {loaded}"

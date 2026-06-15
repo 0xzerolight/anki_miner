@@ -11,17 +11,14 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from tests.unit.test_app_deck_builder_tab import _build_tabs
 
-_app = QApplication.instance() or QApplication([])
-
 
 @pytest.fixture
-def wired_window(monkeypatch, test_config):
+def wired_window(monkeypatch, test_config, qtbot):
     window, titles, tabs = _build_tabs(monkeypatch, test_config)
+    qtbot.addWidget(window)
     yield window, titles, tabs
     window.deleteLater()
 
