@@ -508,3 +508,11 @@ class TestDistinctCacheNames:
         assert r1 is not None
         assert r2 is not None
         assert r1.name != r2.name
+
+
+def test_close_is_noop_and_does_not_raise(tmp_path: Path):
+    """close() is a documented no-op (connections are per-fetch); must not raise."""
+    db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+    cache_dir = tmp_path / "cache"
+    fetcher = _make_fetcher(db, pack_dir, cache_dir)
+    fetcher.close()  # no exception expected

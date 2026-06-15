@@ -351,6 +351,11 @@ class BatchProcessingTab(MiningTabBase):
         # Log start
         self.presenter.show_info(f"Starting batch processing of {len(pairs)} episodes...")
 
+        # Tear down the previous run before building a new processor so leaked
+        # sqlite handles / Session sockets can't survive into this run (Windows
+        # back-to-back-mining freeze).
+        self._teardown_previous_run("batch")
+
         # Create episode processor using service factory
         episode_processor = create_episode_processor(self.config, self.presenter, self.stats_service)
 
@@ -390,6 +395,10 @@ class BatchProcessingTab(MiningTabBase):
     def _start_queue_worker(self) -> None:
         """Create and start the queue worker thread."""
         from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
+
+        # Tear down any prior run before building the queue worker (Windows
+        # back-to-back-mining freeze: leaked sqlite/Session handles).
+        self._teardown_previous_run("batch")
 
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
         self.worker_thread = BatchQueueWorkerThread(

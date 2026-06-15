@@ -170,3 +170,12 @@ class GoogleTranslateAudioFetcher:
     ) -> Path | None:
         """Try each candidate form, returning the first synthesized hit."""
         return _first_candidate_hit(self, candidates, cancelled_check)
+
+    def close(self) -> None:
+        """No-op: gtts opens a per-call connection, no persistent handle to release.
+
+        Present so the chain's duck-typed ``close()`` fan-out (between
+        sequential mining runs) treats this fetcher uniformly.
+        """
+        # Nothing to close — gtts manages its own per-synthesis HTTP request.
+        pass
