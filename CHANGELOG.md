@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+- **Window title shortened to "Anki Miner"** (was "Anki Miner - Japanese Vocabulary Mining Tool").
 
 ### Fixed
 
