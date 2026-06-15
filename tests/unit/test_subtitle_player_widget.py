@@ -503,79 +503,24 @@ class TestFormatTime:
         assert SubtitlePlayerWidget._format_time(4500000) == "75:00"
 
 
-class TestSetSourceCodecGate:
-    """set_source must skip the preview for codecs Qt's bundled FFmpeg can't decode.
+class TestSetSourceCreatesPlayer:
+    """set_source always builds a QMediaPlayer and hands it the source.
 
-    The anti-spam guarantee is that QMediaPlayer never receives an AV1 source —
-    so it never tries to decode and never floods stderr. We assert the player
-    class is *not* constructed for AV1.
+    There is no codec gate: AV1 (and everything else) is decoded by Qt's
+    bundled FFmpeg, which falls back to software decode because startup forces
+    QT_FFMPEG_DECODING_HW_DEVICE_TYPES (see app._force_software_video_decode).
     """
 
-    def test_av1_skips_player_and_shows_notice(self, fake_media_classes):
-        with (
-            patch(f"{MODULE}.get_primary_video_codec", return_value="av1"),
-            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None) as mock_find,
-        ):
+    def test_av1_creates_player(self, fake_media_classes):
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
             widget = SubtitlePlayerWidget()
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
-
-        # Qt never got the source -> no decode -> no spam.
-        fake_media_classes["player_cls"].assert_not_called()
-        assert widget.player is None
-        # ffprobe audio detection is short-circuited too.
-        mock_find.assert_not_called()
-        # UI reflects the disabled preview.
-        assert widget.notice_label.isVisibleTo(widget)
-        assert "AV1" in widget.notice_label.text()
-        assert not widget.play_button.isEnabled()
-        assert not widget.position_slider.isEnabled()
-
-    def test_av1_uppercase_codec_still_gated(self, fake_media_classes):
-        # get_primary_video_codec lowercases, but guard against a raw value too.
-        with (
-            patch(f"{MODULE}.get_primary_video_codec", return_value="av1"),
-            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
-        ):
-            widget = SubtitlePlayerWidget()
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
-        fake_media_classes["player_cls"].assert_not_called()
+            widget.set_source(Path("/tmp/av1.mkv"), [], 0.0)
+        fake_media_classes["player_cls"].assert_called_once()
+        assert widget.player is not None
 
     def test_supported_codec_creates_player(self, fake_media_classes):
-        with (
-            patch(f"{MODULE}.get_primary_video_codec", return_value="h264"),
-            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
-        ):
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
             widget = SubtitlePlayerWidget()
             widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
         fake_media_classes["player_cls"].assert_called_once()
         assert widget.player is not None
-        assert not widget.notice_label.isVisibleTo(widget)
-
-    def test_unknown_codec_none_creates_player(self, fake_media_classes):
-        # Probe failure -> None -> treated as supported (never disable a working preview).
-        with (
-            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
-            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
-        ):
-            widget = SubtitlePlayerWidget()
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
-        fake_media_classes["player_cls"].assert_called_once()
-
-    def test_reused_widget_recovers_after_av1(self, fake_media_classes):
-        # AV1 first (notice shown, controls disabled), then a supported source:
-        # the widget must restore the normal preview UI.
-        widget = SubtitlePlayerWidget()
-        with (
-            patch(f"{MODULE}.get_primary_video_codec", return_value="av1"),
-            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
-        ):
-            widget.set_source(Path("/tmp/av1.mkv"), [], 0.0)
-        with (
-            patch(f"{MODULE}.get_primary_video_codec", return_value="h264"),
-            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
-        ):
-            widget.set_source(Path("/tmp/h264.mkv"), [], 0.0)
-        assert widget.player is not None
-        assert not widget.notice_label.isVisibleTo(widget)
-        assert widget.play_button.isEnabled()
-        assert widget.position_slider.isEnabled()

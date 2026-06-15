@@ -9,7 +9,7 @@ from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.utils import find_japanese_audio_stream, get_primary_video_codec
+from anki_miner.utils import find_japanese_audio_stream
 
 logger = logging.getLogger(__name__)
 
@@ -23,15 +23,6 @@ class SubtitlePlayerWidget(QWidget):
     Owns QVideoWidget, overlay QLabel, position QSlider, time label, play/pause button,
     QMediaPlayer, and QAudioOutput. No player is created until set_source is called.
     """
-
-    # PyQt6's bundled FFmpeg has no working AV1 decoder. Loading an AV1 source
-    # produces an unrecoverable per-frame error flood (CUDA hwaccel attempts on
-    # GPUs without AV1 NVDEC, plus software-decode failures) and 0 frames — a
-    # blank preview plus hundreds of stderr lines. We detect the codec with
-    # ffprobe and skip the preview entirely for these, so QMediaPlayer never
-    # gets the source and never spams. Mining (a separate system-ffmpeg
-    # subprocess) is unaffected.
-    QT_PREVIEW_UNSUPPORTED_CODECS = frozenset({"av1"})
 
     def __init__(self, parent=None):
         """Initialize the player widget (no media until set_source is called).
@@ -62,14 +53,6 @@ class SubtitlePlayerWidget(QWidget):
         # Video widget
         self.video_widget = QVideoWidget()
         layout.addWidget(self.video_widget, 1)
-
-        # Notice shown in place of the video when the source codec can't be
-        # previewed (see QT_PREVIEW_UNSUPPORTED_CODECS). Hidden by default.
-        self.notice_label = QLabel()
-        self.notice_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.notice_label.setWordWrap(True)
-        self.notice_label.setVisible(False)
-        layout.addWidget(self.notice_label, 1)
 
         # Subtitle overlay label
         self.subtitle_label = QLabel()
@@ -149,16 +132,6 @@ class SubtitlePlayerWidget(QWidget):
         self._offset = offset
         self._audio_track_override = audio_track_override
 
-        # Probe the video codec before touching QMediaPlayer. If Qt's bundled
-        # FFmpeg can't decode it, skip the preview entirely (never call
-        # setSource) so it can't flood stderr. A probe failure returns None,
-        # which is treated as "supported" so we never disable a working preview.
-        codec = get_primary_video_codec(video_path, ffprobe_cmd=ffprobe_cmd)
-        if codec in self.QT_PREVIEW_UNSUPPORTED_CODECS:
-            self._show_unsupported_notice(codec)
-            return
-        self._clear_unsupported_notice()
-
         if audio_track_override is None:
             jp_stream = find_japanese_audio_stream(video_path, ffprobe_cmd=ffprobe_cmd)
             self._jp_audio_index = jp_stream.audio_index if jp_stream is not None else None
@@ -177,32 +150,6 @@ class SubtitlePlayerWidget(QWidget):
         self.player.tracksChanged.connect(self._on_tracks_changed)
 
         self.player.setSource(QUrl.fromLocalFile(str(video_path)))
-
-    def _show_unsupported_notice(self, codec: str) -> None:
-        """Disable the preview for a codec Qt can't decode, without loading it.
-
-        Leaves ``self.player`` as None (the control methods all no-op on None),
-        swaps the video area for an explanatory notice, and disables transport
-        controls. Crucially, this path never calls ``QMediaPlayer.setSource`` —
-        that is what keeps Qt's decoder from spamming stderr.
-        """
-        self.player = None
-        self.audio_output = None
-        self.notice_label.setText(f"In-app preview is not available for {codec.upper()} video.\nMining is unaffected.")
-        self.notice_label.setVisible(True)
-        self.video_widget.setVisible(False)
-        self.play_button.setEnabled(False)
-        self.position_slider.setEnabled(False)
-        self.position_slider.setRange(0, 0)
-        self.time_label.setText("--:-- / --:--")
-
-    def _clear_unsupported_notice(self) -> None:
-        """Restore the normal preview UI (for a reused widget loading a new source)."""
-        self.notice_label.setVisible(False)
-        self.video_widget.setVisible(True)
-        self.play_button.setEnabled(True)
-        self.position_slider.setEnabled(True)
-        self.time_label.setText("00:00 / 00:00")
 
     # ------------------------------------------------------------------
     # Public control API
