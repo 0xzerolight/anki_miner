@@ -8,23 +8,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.exceptions.youtube import VideoTooLongError, YouTubeFetchError
 from anki_miner.gui.workers.youtube_playlist_probe_worker import (
     YouTubePlaylistProbeWorker,
     YouTubePlaylistResolveWorker,
 )
 from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, VideoInfo
-
-# Must be QApplication, not QCoreApplication: the app object is a process-wide
-# singleton shared with widget tests. A bare QCoreApplication satisfies signals
-# here but poisons QApplication.instance() for any widget test that imports
-# later in the same process, aborting QWidget construction ("Cannot create a
-# QWidget without QApplication"). QApplication is a QCoreApplication, so signals
-# still work. Created once per process.
-_app = QApplication.instance() or QApplication([])
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -78,7 +67,7 @@ class _SignalCapture:
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_worker_success_emits_playlist_resolved() -> None:
+def test_resolve_worker_success_emits_playlist_resolved(qapp) -> None:
     info = _make_playlist_info(5)
     fetcher = MagicMock()
     fetcher.probe_playlist.return_value = info
@@ -101,7 +90,7 @@ def test_resolve_worker_success_emits_playlist_resolved() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_worker_exception_emits_playlist_error() -> None:
+def test_resolve_worker_exception_emits_playlist_error(qapp) -> None:
     fetcher = MagicMock()
     fetcher.probe_playlist.side_effect = YouTubeFetchError("timeout")
 
@@ -118,7 +107,7 @@ def test_resolve_worker_exception_emits_playlist_error() -> None:
     assert "timeout" in errored.calls[0][0]
 
 
-def test_resolve_worker_generic_exception_emits_playlist_error() -> None:
+def test_resolve_worker_generic_exception_emits_playlist_error(qapp) -> None:
     fetcher = MagicMock()
     fetcher.probe_playlist.side_effect = RuntimeError("unexpected")
 
@@ -137,7 +126,7 @@ def test_resolve_worker_generic_exception_emits_playlist_error() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_worker_uses_fetcher_captured_at_construction() -> None:
+def test_resolve_worker_uses_fetcher_captured_at_construction(qapp) -> None:
     """The worker uses the fetcher passed to __init__, not any later re-assignment."""
     info = _make_playlist_info(2)
     fetcher_a = MagicMock()
@@ -159,7 +148,7 @@ def test_resolve_worker_uses_fetcher_captured_at_construction() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_worker_custom_timeout_forwarded() -> None:
+def test_resolve_worker_custom_timeout_forwarded(qapp) -> None:
     fetcher = MagicMock()
     fetcher.probe_playlist.return_value = _make_playlist_info(1)
 
@@ -174,7 +163,7 @@ def test_resolve_worker_custom_timeout_forwarded() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_all_success_emits_entry_probed_in_order() -> None:
+def test_probe_worker_all_success_emits_entry_probed_in_order(qapp) -> None:
     urls = [f"https://www.youtube.com/watch?v=v{i}" for i in range(3)]
     infos = [_make_video_info(f"v{i}") for i in range(3)]
 
@@ -198,7 +187,7 @@ def test_probe_worker_all_success_emits_entry_probed_in_order() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_one_failure_emits_entry_failed_and_continues() -> None:
+def test_probe_worker_one_failure_emits_entry_failed_and_continues(qapp) -> None:
     urls = [
         "https://www.youtube.com/watch?v=a",
         "https://www.youtube.com/watch?v=b",
@@ -235,7 +224,7 @@ def test_probe_worker_one_failure_emits_entry_failed_and_continues() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_cancel_before_run_emits_nothing() -> None:
+def test_probe_worker_cancel_before_run_emits_nothing(qapp) -> None:
     fetcher = MagicMock()
     fetcher.probe_metadata.return_value = _make_video_info("x")
 
@@ -260,7 +249,7 @@ def test_probe_worker_cancel_before_run_emits_nothing() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_cancel_mid_run_stops_after_first_entry() -> None:
+def test_probe_worker_cancel_mid_run_stops_after_first_entry(qapp) -> None:
     """Cancelling inside the first probe_metadata call stops before the second entry."""
     urls = [
         "https://www.youtube.com/watch?v=first",
@@ -302,7 +291,7 @@ def test_probe_worker_cancel_mid_run_stops_after_first_entry() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_uses_fetcher_captured_at_construction() -> None:
+def test_probe_worker_uses_fetcher_captured_at_construction(qapp) -> None:
     info = _make_video_info("z")
     fetcher_a = MagicMock()
     fetcher_a.probe_metadata.return_value = info
@@ -322,7 +311,7 @@ def test_probe_worker_uses_fetcher_captured_at_construction() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_empty_urls_emits_nothing() -> None:
+def test_probe_worker_empty_urls_emits_nothing(qapp) -> None:
     fetcher = MagicMock()
     worker = YouTubePlaylistProbeWorker(fetcher=fetcher, urls=[])
 
@@ -343,7 +332,7 @@ def test_probe_worker_empty_urls_emits_nothing() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_custom_timeout_forwarded_to_each_probe() -> None:
+def test_probe_worker_custom_timeout_forwarded_to_each_probe(qapp) -> None:
     urls = ["https://www.youtube.com/watch?v=a", "https://www.youtube.com/watch?v=b"]
     fetcher = MagicMock()
     fetcher.probe_metadata.side_effect = [_make_video_info("a"), _make_video_info("b")]
@@ -360,7 +349,7 @@ def test_probe_worker_custom_timeout_forwarded_to_each_probe() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_probe_worker_generic_exception_emits_entry_failed() -> None:
+def test_probe_worker_generic_exception_emits_entry_failed(qapp) -> None:
     fetcher = MagicMock()
     fetcher.probe_metadata.side_effect = ValueError("json parse error")
 
@@ -375,7 +364,7 @@ def test_probe_worker_generic_exception_emits_entry_failed() -> None:
     assert "json parse error" in failed.calls[0][1]
 
 
-def test_probe_worker_video_too_long_emits_entry_failed_and_continues() -> None:
+def test_probe_worker_video_too_long_emits_entry_failed_and_continues(qapp) -> None:
     """An over-long video becomes entry_failed; the rest of the playlist still probes."""
     info = _make_video_info("ok_video_id")
     fetcher = MagicMock()

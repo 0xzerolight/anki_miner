@@ -9,11 +9,7 @@ refactor that reintroduces either regression surfaces in CI.
 
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.resources.styles.theme import Theme
-
-_app = QApplication.instance() or QApplication([])
 
 
 def _reset() -> None:

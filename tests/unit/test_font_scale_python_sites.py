@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import pytest
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles.theme import Theme
@@ -21,9 +20,6 @@ from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDial
 from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 from anki_miner.models import TokenizedWord
-
-# QApplication required for any Qt widget test.
-_app = QApplication.instance() or QApplication([])
 
 
 def _reset(font_scale: float = 1.0) -> None:
@@ -63,9 +59,10 @@ def _make_words(count: int = 3) -> list[TokenizedWord]:
 class TestCurationRowHeight:
     """WordCurationDialog row height scales with the global font scale."""
 
-    def test_row_height_at_scale_1_0_equals_base(self):
+    def test_row_height_at_scale_1_0_equals_base(self, qtbot):
         _reset(1.0)
         dlg = WordCurationDialog(_make_words(3))
+        qtbot.addWidget(dlg)
         try:
             vh = dlg.table.verticalHeader()
             assert vh is not None
@@ -73,9 +70,10 @@ class TestCurationRowHeight:
         finally:
             dlg.deleteLater()
 
-    def test_row_height_doubles_at_scale_2_0(self):
+    def test_row_height_doubles_at_scale_2_0(self, qtbot):
         _reset(2.0)
         dlg = WordCurationDialog(_make_words(3))
+        qtbot.addWidget(dlg)
         try:
             vh = dlg.table.verticalHeader()
             assert vh is not None
@@ -83,9 +81,10 @@ class TestCurationRowHeight:
         finally:
             dlg.deleteLater()
 
-    def test_make_font_scales_pixel_size(self):
+    def test_make_font_scales_pixel_size(self, qtbot):
         _reset(1.5)
         dlg = WordCurationDialog(_make_words(1))
+        qtbot.addWidget(dlg)
         try:
             assert dlg._make_font(16).pixelSize() == 24  # 16 * 1.5
         finally:
@@ -95,9 +94,10 @@ class TestCurationRowHeight:
 class TestPreviewRowHeight:
     """WordPreviewDialog row height + label fonts scale with the global font scale."""
 
-    def test_row_height_at_scale_1_0_equals_base(self, test_config: AnkiMinerConfig):
+    def test_row_height_at_scale_1_0_equals_base(self, qtbot, test_config: AnkiMinerConfig):
         _reset(1.0)
         dlg = WordPreviewDialog(_make_words(2), test_config)
+        qtbot.addWidget(dlg)
         try:
             vh = dlg.table.verticalHeader()
             assert vh is not None
@@ -105,9 +105,10 @@ class TestPreviewRowHeight:
         finally:
             dlg.deleteLater()
 
-    def test_row_height_doubles_at_scale_2_0(self, test_config: AnkiMinerConfig):
+    def test_row_height_doubles_at_scale_2_0(self, qtbot, test_config: AnkiMinerConfig):
         _reset(2.0)
         dlg = WordPreviewDialog(_make_words(2), test_config)
+        qtbot.addWidget(dlg)
         try:
             vh = dlg.table.verticalHeader()
             assert vh is not None
@@ -115,9 +116,10 @@ class TestPreviewRowHeight:
         finally:
             dlg.deleteLater()
 
-    def test_create_font_scales_pixel_size(self, test_config: AnkiMinerConfig):
+    def test_create_font_scales_pixel_size(self, qtbot, test_config: AnkiMinerConfig):
         _reset(1.5)
         dlg = WordPreviewDialog(_make_words(1), test_config)
+        qtbot.addWidget(dlg)
         try:
             font = dlg._create_font(16, QFont.Weight.Bold)
             assert font.pixelSize() == 24  # 16 * 1.5
@@ -128,17 +130,19 @@ class TestPreviewRowHeight:
 class TestSubtitleOverlayFont:
     """SubtitlePlayerWidget overlay font-size scales with the global font scale."""
 
-    def test_overlay_font_at_scale_1_0(self):
+    def test_overlay_font_at_scale_1_0(self, qtbot):
         _reset(1.0)
         widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
         try:
             assert "font-size: 18px" in widget.subtitle_label.styleSheet()
         finally:
             widget.deleteLater()
 
-    def test_overlay_font_doubles_at_scale_2_0(self):
+    def test_overlay_font_doubles_at_scale_2_0(self, qtbot):
         _reset(2.0)
         widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
         try:
             assert "font-size: 36px" in widget.subtitle_label.styleSheet()
         finally:

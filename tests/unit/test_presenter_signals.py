@@ -14,15 +14,10 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from PyQt6.QtCore import QCoreApplication
-
 from anki_miner.gui.presenters.gui_presenter import GUIPresenter
 from anki_miner.gui.presenters.gui_progress_callback import GUIProgressCallback
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.presenters import NullPresenter
-
-# Qt needs a core application for signal connection. Created once per process.
-_app = QCoreApplication.instance() or QCoreApplication([])
 
 
 class _Capture:
@@ -40,7 +35,7 @@ class _Capture:
 # ===========================================================================
 
 
-def test_show_info_emits_info_signal():
+def test_show_info_emits_info_signal(qapp):
     p = GUIPresenter()
     cap = _Capture()
     p.info_signal.connect(cap)
@@ -50,7 +45,7 @@ def test_show_info_emits_info_signal():
     assert cap.calls == [("hello",)]
 
 
-def test_show_success_emits_success_signal():
+def test_show_success_emits_success_signal(qapp):
     p = GUIPresenter()
     cap = _Capture()
     p.success_signal.connect(cap)
@@ -60,7 +55,7 @@ def test_show_success_emits_success_signal():
     assert cap.calls == [("done",)]
 
 
-def test_show_warning_emits_warning_signal():
+def test_show_warning_emits_warning_signal(qapp):
     p = GUIPresenter()
     cap = _Capture()
     p.warning_signal.connect(cap)
@@ -70,7 +65,7 @@ def test_show_warning_emits_warning_signal():
     assert cap.calls == [("careful",)]
 
 
-def test_show_error_emits_error_signal():
+def test_show_error_emits_error_signal(qapp):
     p = GUIPresenter()
     cap = _Capture()
     p.error_signal.connect(cap)
@@ -80,7 +75,7 @@ def test_show_error_emits_error_signal():
     assert cap.calls == [("broken",)]
 
 
-def test_show_validation_result_emits_validation_signal_with_same_object():
+def test_show_validation_result_emits_validation_signal_with_same_object(qapp):
     p = GUIPresenter()
     cap = _Capture()
     p.validation_result_signal.connect(cap)
@@ -92,7 +87,7 @@ def test_show_validation_result_emits_validation_signal_with_same_object():
     assert cap.calls[0][0] is result
 
 
-def test_show_processing_result_emits_processing_signal_with_same_object():
+def test_show_processing_result_emits_processing_signal_with_same_object(qapp):
     p = GUIPresenter()
     cap = _Capture()
     p.processing_result_signal.connect(cap)
@@ -104,7 +99,7 @@ def test_show_processing_result_emits_processing_signal_with_same_object():
     assert cap.calls[0][0] is result
 
 
-def test_show_word_preview_emits_word_preview_signal_with_same_list():
+def test_show_word_preview_emits_word_preview_signal_with_same_list(qapp):
     p = GUIPresenter()
     cap = _Capture()
     p.word_preview_signal.connect(cap)
@@ -117,12 +112,12 @@ def test_show_word_preview_emits_word_preview_signal_with_same_list():
     assert cap.calls[0][0] == words
 
 
-def test_gui_presenter_satisfies_runtime_checkable_protocol():
+def test_gui_presenter_satisfies_runtime_checkable_protocol(qapp):
     """The Qt presenter structurally satisfies the runtime-checkable protocol."""
     assert isinstance(GUIPresenter(), PresenterProtocol)
 
 
-def test_null_presenter_satisfies_runtime_checkable_protocol():
+def test_null_presenter_satisfies_runtime_checkable_protocol(qapp):
     """The silent test presenter satisfies the same protocol."""
     assert isinstance(NullPresenter(), PresenterProtocol)
 
@@ -132,7 +127,7 @@ def test_null_presenter_satisfies_runtime_checkable_protocol():
 # ===========================================================================
 
 
-def test_on_start_emits_start_signal_with_total_and_description():
+def test_on_start_emits_start_signal_with_total_and_description(qapp):
     cb = GUIProgressCallback()
     cap = _Capture()
     cb.start_signal.connect(cap)
@@ -142,7 +137,7 @@ def test_on_start_emits_start_signal_with_total_and_description():
     assert cap.calls == [(10, "Extracting")]
 
 
-def test_on_progress_emits_progress_signal_with_current_and_description():
+def test_on_progress_emits_progress_signal_with_current_and_description(qapp):
     cb = GUIProgressCallback()
     cap = _Capture()
     cb.progress_signal.connect(cap)
@@ -152,7 +147,7 @@ def test_on_progress_emits_progress_signal_with_current_and_description():
     assert cap.calls == [(3, "word-03")]
 
 
-def test_on_complete_emits_complete_signal_with_no_args():
+def test_on_complete_emits_complete_signal_with_no_args(qapp):
     cb = GUIProgressCallback()
     cap = _Capture()
     cb.complete_signal.connect(cap)
@@ -162,7 +157,7 @@ def test_on_complete_emits_complete_signal_with_no_args():
     assert cap.calls == [()]
 
 
-def test_on_error_emits_error_signal_with_item_and_message():
+def test_on_error_emits_error_signal_with_item_and_message(qapp):
     cb = GUIProgressCallback()
     cap = _Capture()
     cb.error_signal.connect(cap)

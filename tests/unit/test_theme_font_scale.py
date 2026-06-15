@@ -2,12 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.resources.styles.theme import Theme
-
-# Ensure a QApplication instance exists for any Qt-touching code paths.
-_app = QApplication.instance() or QApplication([])
 
 
 def _reset(font_scale: float = 1.0) -> None:

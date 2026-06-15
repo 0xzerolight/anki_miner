@@ -14,15 +14,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.services.pitch_accent import YomitanPitchImportResult
-
-# QApplication required for any Qt widget test.
-_app = QApplication.instance() or QApplication([])
 
 
 @pytest.fixture
@@ -35,8 +32,9 @@ def pitch_home(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def tab(test_config: AnkiMinerConfig, pitch_home: Path):
+def tab(test_config: AnkiMinerConfig, pitch_home: Path, qtbot):
     widget = SettingsTab(test_config)
+    qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
 

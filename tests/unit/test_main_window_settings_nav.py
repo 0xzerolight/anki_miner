@@ -15,12 +15,9 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QTabWidget, QWidget
+from PyQt6.QtWidgets import QTabWidget, QWidget
 
 from anki_miner.config import AnkiMinerConfig
-
-# QApplication required for any Qt widget test.
-_app = QApplication.instance() or QApplication([])
 
 
 def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
@@ -44,12 +41,13 @@ class _SettingsStub(QTabWidget):
         self.open_themes_subtab = Mock()
 
 
-def _build_window(monkeypatch, test_config):
+def _build_window(qtbot, monkeypatch, test_config):
     """MainWindow with the real Analytics-before-Settings main-tab layout."""
     _patch_heavy_init(monkeypatch, test_config)
     from anki_miner.gui.main_window import MainWindow
 
     window = MainWindow()
+    qtbot.addWidget(window)
     # Reproduce app.py order: 0..3 placeholders, 4 = Analytics, 5 = Settings.
     window.tabs.clear()
     for label in ("Episode Mining", "Batch Mining", "Deck Builder", "YouTube"):
@@ -62,8 +60,8 @@ def _build_window(monkeypatch, test_config):
 
 
 @pytest.fixture
-def window_tabs(monkeypatch, test_config):
-    window, analytics, settings = _build_window(monkeypatch, test_config)
+def window_tabs(qtbot, monkeypatch, test_config):
+    window, analytics, settings = _build_window(qtbot, monkeypatch, test_config)
     yield window, analytics, settings
     window.deleteLater()
 
@@ -82,12 +80,13 @@ def test_open_settings_lands_on_settings(window_tabs):
     assert window.tabs.currentWidget() is settings
 
 
-def test_settings_tab_index_falls_back_to_label(monkeypatch, test_config):
+def test_settings_tab_index_falls_back_to_label(qtbot, monkeypatch, test_config):
     """A settings-like widget without open_themes_subtab is still found by label."""
     _patch_heavy_init(monkeypatch, test_config)
     from anki_miner.gui.main_window import MainWindow
 
     window = MainWindow()
+    qtbot.addWidget(window)
     try:
         window.tabs.clear()
         window.tabs.addTab(QWidget(), "Analytics")

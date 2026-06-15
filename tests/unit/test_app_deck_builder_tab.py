@@ -16,11 +16,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
-
-_app = QApplication.instance() or QApplication([])
 
 
 def _patch_heavy_init(monkeypatch, test_config):
@@ -138,8 +134,9 @@ def _build_tabs(monkeypatch, test_config):
 
 
 @pytest.fixture
-def wired_window(monkeypatch, test_config):
+def wired_window(monkeypatch, test_config, qtbot):
     window, titles, tabs = _build_tabs(monkeypatch, test_config)
+    qtbot.addWidget(window)
     yield window, titles, tabs
     window.deleteLater()
 

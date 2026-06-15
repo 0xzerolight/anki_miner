@@ -8,7 +8,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication, QLabel, QMessageBox
+from PyQt6.QtWidgets import QLabel, QMessageBox
 
 from anki_miner.config import AudioSourceEntry
 from anki_miner.gui.widgets.panels import audio_pack_settings_panel as asp_mod
@@ -79,12 +79,6 @@ def _make_meta(
 
 
 @pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
-@pytest.fixture
 def confirm_remove(monkeypatch):
     """Auto-accept the 'Remove audio pack' QMessageBox confirmation."""
     monkeypatch.setattr(
@@ -124,8 +118,9 @@ def _patch_menu_exec(monkeypatch, action_label: str | None):
 # ---------------------------------------------------------------------------
 
 
-def test_set_chain_renders_correct_row_count(qapp, tmp_path):
+def test_set_chain_renders_correct_row_count(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="ajt-pack", enabled=True),
@@ -135,8 +130,9 @@ def test_set_chain_renders_correct_row_count(qapp, tmp_path):
     assert panel._list.count() == 2
 
 
-def test_jpod101_row_shows_online_display_name(qapp, tmp_path):
+def test_jpod101_row_shows_online_display_name(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),))
     row = panel._row_widget(0)
     assert row is not None
@@ -146,9 +142,10 @@ def test_jpod101_row_shows_online_display_name(qapp, tmp_path):
     assert any("online" in t for t in texts)
 
 
-def test_pack_row_shows_format_and_entry_count(qapp, tmp_path):
+def test_pack_row_shows_format_and_entry_count(qapp, qtbot, tmp_path):
     meta = _make_meta("ajt-pack", fmt="ajt", source="AJT Japanese", entry_count=5000)
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (AudioSourceEntry(kind="pack", pack_id="ajt-pack", enabled=True),),
         registry_meta={"ajt-pack": meta},
@@ -161,9 +158,10 @@ def test_pack_row_shows_format_and_entry_count(qapp, tmp_path):
     assert any("5,000" in t for t in texts), texts
 
 
-def test_missing_folder_badge_shown(qapp, tmp_path):
+def test_missing_folder_badge_shown(qapp, qtbot, tmp_path):
     meta = _make_meta("missing-pack", pack_dir_exists=False)
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (AudioSourceEntry(kind="pack", pack_id="missing-pack", enabled=True),),
         registry_meta={"missing-pack": meta},
@@ -176,9 +174,10 @@ def test_missing_folder_badge_shown(qapp, tmp_path):
     assert any("folder missing" in t for t in texts), texts
 
 
-def test_present_folder_no_missing_badge(qapp, tmp_path):
+def test_present_folder_no_missing_badge(qapp, qtbot, tmp_path):
     meta = _make_meta("good-pack", pack_dir_exists=True)
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (AudioSourceEntry(kind="pack", pack_id="good-pack", enabled=True),),
         registry_meta={"good-pack": meta},
@@ -196,8 +195,9 @@ def test_present_folder_no_missing_badge(qapp, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_googletts_row_shows_synthetic_tts_display_name(qapp, tmp_path):
+def test_googletts_row_shows_synthetic_tts_display_name(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),))
     row = panel._row_widget(0)
     assert row is not None
@@ -207,16 +207,18 @@ def test_googletts_row_shows_synthetic_tts_display_name(qapp, tmp_path):
     assert any("online" in t for t in texts), texts
 
 
-def test_googletts_row_reflects_disabled_state(qapp, tmp_path):
+def test_googletts_row_reflects_disabled_state(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="googletts", pack_id=None, enabled=False),))
     row = panel._row_widget(0)
     assert row is not None
     assert row.checkbox.isChecked() is False
 
 
-def test_googletts_row_not_removable(qapp, tmp_path):
+def test_googletts_row_not_removable(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -233,8 +235,9 @@ def test_googletts_row_not_removable(qapp, tmp_path):
     assert events == []
 
 
-def test_googletts_toggle_round_trips_in_get_chain(qapp, tmp_path):
+def test_googletts_toggle_round_trips_in_get_chain(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="googletts", pack_id=None, enabled=False),))
 
     row = panel._row_widget(0)
@@ -246,8 +249,9 @@ def test_googletts_toggle_round_trips_in_get_chain(qapp, tmp_path):
     assert chain[0].enabled is True
 
 
-def test_googletts_reorder_works(qapp, tmp_path):
+def test_googletts_reorder_works(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),
@@ -260,8 +264,9 @@ def test_googletts_reorder_works(qapp, tmp_path):
     assert chain[1].kind == "jpod101"
 
 
-def test_right_click_googletts_row_shows_no_menu(qapp, monkeypatch, tmp_path):
+def test_right_click_googletts_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),))
 
     constructed = _patch_menu_exec(monkeypatch, "Re-import…")
@@ -282,8 +287,9 @@ def test_right_click_googletts_row_shows_no_menu(qapp, monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_get_chain_round_trips_after_toggle(qapp, tmp_path):
+def test_get_chain_round_trips_after_toggle(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -299,8 +305,9 @@ def test_get_chain_round_trips_after_toggle(qapp, tmp_path):
     assert chain[1].enabled is True
 
 
-def test_get_chain_round_trips_after_reorder(qapp, tmp_path):
+def test_get_chain_round_trips_after_reorder(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -319,8 +326,9 @@ def test_get_chain_round_trips_after_reorder(qapp, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_move_up_moves_row_and_emits_signal(qapp, tmp_path):
+def test_move_up_moves_row_and_emits_signal(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -337,8 +345,9 @@ def test_move_up_moves_row_and_emits_signal(qapp, tmp_path):
     assert events == ["changed"]
 
 
-def test_move_down_moves_row_and_emits_signal(qapp, tmp_path):
+def test_move_down_moves_row_and_emits_signal(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -355,8 +364,9 @@ def test_move_down_moves_row_and_emits_signal(qapp, tmp_path):
     assert events == ["changed"]
 
 
-def test_edge_reorder_calls_are_noops(qapp, tmp_path):
+def test_edge_reorder_calls_are_noops(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -378,9 +388,10 @@ def test_edge_reorder_calls_are_noops(qapp, tmp_path):
     assert chain[1].kind == "jpod101"
 
 
-def test_checkbox_toggle_preserved_on_reorder(qapp, tmp_path):
+def test_checkbox_toggle_preserved_on_reorder(qapp, qtbot, tmp_path):
     """get_chain() re-sync before mutation must preserve toggle state."""
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -406,8 +417,9 @@ def test_checkbox_toggle_preserved_on_reorder(qapp, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_jpod101_row_not_removable(qapp, tmp_path):
+def test_jpod101_row_not_removable(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -422,12 +434,13 @@ def test_jpod101_row_not_removable(qapp, tmp_path):
     assert events == []
 
 
-def test_pack_row_removable_emits_signals(qapp, tmp_path, confirm_remove):
+def test_pack_row_removable_emits_signals(qapp, qtbot, tmp_path, confirm_remove):
     pack_dir = tmp_path / "a"
     pack_dir.mkdir()
     (pack_dir / "index.sqlite").write_bytes(b"placeholder")
 
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -448,13 +461,14 @@ def test_pack_row_removable_emits_signals(qapp, tmp_path, confirm_remove):
     assert removed == [None]
 
 
-def test_remove_deletes_index_dir_on_disk(qapp, tmp_path, confirm_remove):
+def test_remove_deletes_index_dir_on_disk(qapp, qtbot, tmp_path, confirm_remove):
     """remove() must delete packs_root/<pack_id>/ (the index dir)."""
     pack_dir = tmp_path / "a"
     pack_dir.mkdir()
     (pack_dir / "index.sqlite").write_bytes(b"placeholder")
 
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -468,7 +482,7 @@ def test_remove_deletes_index_dir_on_disk(qapp, tmp_path, confirm_remove):
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
-def test_remove_cancelled_keeps_pack_and_chain(qapp, monkeypatch, tmp_path):
+def test_remove_cancelled_keeps_pack_and_chain(qapp, qtbot, monkeypatch, tmp_path):
     monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.No,
@@ -478,6 +492,7 @@ def test_remove_cancelled_keeps_pack_and_chain(qapp, monkeypatch, tmp_path):
     (pack_dir / "index.sqlite").write_bytes(b"placeholder")
 
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -498,9 +513,10 @@ def test_remove_cancelled_keeps_pack_and_chain(qapp, monkeypatch, tmp_path):
     assert removed == []
 
 
-def test_remove_tolerates_missing_index_folder(qapp, tmp_path, confirm_remove):
+def test_remove_tolerates_missing_index_folder(qapp, qtbot, tmp_path, confirm_remove):
     """If the index folder is already gone, remove() drops the in-memory entry."""
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="ghost", enabled=True),
@@ -513,7 +529,7 @@ def test_remove_tolerates_missing_index_folder(qapp, tmp_path, confirm_remove):
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
-def test_remove_failed_rmtree_does_not_emit_pack_removed(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_remove_failed_rmtree_does_not_emit_pack_removed(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     pack_dir = tmp_path / "a"
     pack_dir.mkdir()
     (pack_dir / "index.sqlite").write_bytes(b"placeholder")
@@ -529,6 +545,7 @@ def test_remove_failed_rmtree_does_not_emit_pack_removed(qapp, monkeypatch, tmp_
     monkeypatch.setattr(asp_mod, "_robust_rmtree", _always_fail)
 
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -544,7 +561,7 @@ def test_remove_failed_rmtree_does_not_emit_pack_removed(qapp, monkeypatch, tmp_
     assert [e.pack_id for e in panel.get_chain()[:1]] == ["a"], "failed remove must leave chain intact"
 
 
-def test_remove_retries_on_transient_permission_error(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_remove_retries_on_transient_permission_error(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     """_robust_rmtree retry path: first call raises PermissionError, second succeeds."""
     pack_dir = tmp_path / "a"
     pack_dir.mkdir()
@@ -568,6 +585,7 @@ def test_remove_retries_on_transient_permission_error(qapp, monkeypatch, tmp_pat
     )
 
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -589,7 +607,7 @@ def test_remove_retries_on_transient_permission_error(qapp, monkeypatch, tmp_pat
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
-def test_remove_confirm_dialog_mentions_audio_files_untouched(qapp, monkeypatch, tmp_path):
+def test_remove_confirm_dialog_mentions_audio_files_untouched(qapp, qtbot, monkeypatch, tmp_path):
     """The confirm dialog must reassure the user that audio files are untouched."""
     bodies: list[str] = []
 
@@ -606,6 +624,7 @@ def test_remove_confirm_dialog_mentions_audio_files_untouched(qapp, monkeypatch,
     pack_dir.mkdir()
 
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="pack", pack_id="a", enabled=True),))
     panel.remove(0)
 
@@ -621,8 +640,9 @@ def test_remove_confirm_dialog_mentions_audio_files_untouched(qapp, monkeypatch,
 # ---------------------------------------------------------------------------
 
 
-def test_checkbox_toggle_emits_chain_changed(qapp, tmp_path):
+def test_checkbox_toggle_emits_chain_changed(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
@@ -639,8 +659,9 @@ def test_checkbox_toggle_emits_chain_changed(qapp, tmp_path):
     assert events == [None]
 
 
-def test_checkbox_reflected_in_get_chain(qapp, tmp_path):
+def test_checkbox_reflected_in_get_chain(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="pack", pack_id="a", enabled=True),))
 
     row = panel._row_widget(0)
@@ -656,8 +677,9 @@ def test_checkbox_reflected_in_get_chain(qapp, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_add_button_emits_add_pack_requested(qapp, tmp_path):
+def test_add_button_emits_add_pack_requested(qapp, qtbot, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     fired: list[None] = []
     panel.add_pack_requested.connect(lambda: fired.append(None))
 
@@ -671,9 +693,10 @@ def test_add_button_emits_add_pack_requested(qapp, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_right_click_pack_row_emits_reimport_signal(qapp, monkeypatch, tmp_path):
+def test_right_click_pack_row_emits_reimport_signal(qapp, qtbot, monkeypatch, tmp_path):
     _make_pack_on_disk(tmp_path, "ajt-pack", fmt="ajt", source="AJT Japanese")
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="ajt-pack", enabled=True),
@@ -694,8 +717,9 @@ def test_right_click_pack_row_emits_reimport_signal(qapp, monkeypatch, tmp_path)
     assert emitted == ["ajt-pack"]
 
 
-def test_right_click_jpod101_row_shows_no_menu(qapp, monkeypatch, tmp_path):
+def test_right_click_jpod101_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),))
 
     constructed = _patch_menu_exec(monkeypatch, "Re-import…")
@@ -711,10 +735,11 @@ def test_right_click_jpod101_row_shows_no_menu(qapp, monkeypatch, tmp_path):
     assert emitted == []
 
 
-def test_right_click_remove_action_removes_pack(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_right_click_remove_action_removes_pack(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     """Right-click → Remove delegates to self.remove()."""
     _make_pack_on_disk(tmp_path, "a", fmt="ajt", source="Pack A")
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="pack", pack_id="a", enabled=True),))
 
     _patch_menu_exec(monkeypatch, "Remove")
@@ -730,10 +755,11 @@ def test_right_click_remove_action_removes_pack(qapp, monkeypatch, tmp_path, con
     assert panel._list.count() == 0
 
 
-def test_right_click_pack_row_no_meta_shows_no_menu(qapp, monkeypatch, tmp_path):
+def test_right_click_pack_row_no_meta_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
     """Context menu is skipped when registry meta lookup returns None for the pack."""
     # Use registry_meta={} so the pack_id has no entry — meta lookup returns None.
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (AudioSourceEntry(kind="pack", pack_id="unknown-pack", enabled=True),),
         registry_meta={},
@@ -757,10 +783,11 @@ def test_right_click_pack_row_no_meta_shows_no_menu(qapp, monkeypatch, tmp_path)
 # ---------------------------------------------------------------------------
 
 
-def test_set_chain_with_registry_meta_uses_injected_meta(qapp, tmp_path):
+def test_set_chain_with_registry_meta_uses_injected_meta(qapp, qtbot, tmp_path):
     """set_chain(registry_meta=...) must use the supplied meta, not scan disk."""
     meta = _make_meta("nhk", fmt="nhk16", source="NHK Daily", entry_count=999)
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (AudioSourceEntry(kind="pack", pack_id="nhk", enabled=True),),
         registry_meta={"nhk": meta},
@@ -780,8 +807,9 @@ def test_set_chain_with_registry_meta_uses_injected_meta(qapp, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             AudioSourceEntry(kind="pack", pack_id="a", enabled=True),

@@ -6,15 +6,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.controllers.background_tasks import _needs_jmdict_migration
-
-
-@pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 def test_needs_migration_when_xml_present_and_no_sqlite(tmp_path: Path):

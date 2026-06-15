@@ -6,20 +6,17 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
-# QApplication required for any Qt widget test.
-_app = QApplication.instance() or QApplication([])
-
 
 @pytest.fixture
-def tab(test_config: AnkiMinerConfig):
+def tab(test_config: AnkiMinerConfig, qtbot):
     """Instantiate a SettingsTab against the shared test config."""
     widget = SettingsTab(test_config)
+    qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
 
@@ -62,8 +59,9 @@ class TestYouTubePanelValueHelpers:
             ("safari", "Safari"),
         ],
     )
-    def test_set_and_get_cookies_browser(self, value, expected_label):
+    def test_set_and_get_cookies_browser(self, value, expected_label, qtbot):
         panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
         try:
             panel.set_cookies_from_browser(value)
             assert panel.cookies_browser_combo.currentText() == expected_label
@@ -71,16 +69,18 @@ class TestYouTubePanelValueHelpers:
         finally:
             panel.deleteLater()
 
-    def test_unknown_cookie_value_falls_back_to_none(self):
+    def test_unknown_cookie_value_falls_back_to_none(self, qtbot):
         panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
         try:
             panel.set_cookies_from_browser("netscape")  # type: ignore[arg-type]
             assert panel.get_cookies_from_browser() is None
         finally:
             panel.deleteLater()
 
-    def test_set_and_get_cookies_file_round_trip(self, tmp_path):
+    def test_set_and_get_cookies_file_round_trip(self, tmp_path, qtbot):
         panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
         try:
             cookies = tmp_path / "cookies.txt"
             panel.set_cookies_file(cookies)
@@ -88,15 +88,17 @@ class TestYouTubePanelValueHelpers:
         finally:
             panel.deleteLater()
 
-    def test_cookies_file_defaults_to_empty(self):
+    def test_cookies_file_defaults_to_empty(self, qtbot):
         panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
         try:
             assert panel.get_cookies_file() == ""
         finally:
             panel.deleteLater()
 
-    def test_set_cookies_file_none_clears_field(self, tmp_path):
+    def test_set_cookies_file_none_clears_field(self, tmp_path, qtbot):
         panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
         try:
             panel.set_cookies_file(tmp_path / "cookies.txt")
             panel.set_cookies_file(None)
@@ -116,8 +118,9 @@ class TestYouTubePanelValueHelpers:
             (36001, 600),  # clamped to the spinbox maximum
         ],
     )
-    def test_set_and_get_max_duration(self, seconds, expected_minutes):
+    def test_set_and_get_max_duration(self, seconds, expected_minutes, qtbot):
         panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
         try:
             panel.set_max_duration_seconds(seconds)
             assert panel.max_duration_spinbox.value() == expected_minutes
@@ -136,8 +139,9 @@ class TestYouTubePanelValueHelpers:
             (500, 500),
         ],
     )
-    def test_set_and_get_playlist_max(self, value, expected):
+    def test_set_and_get_playlist_max(self, value, expected, qtbot):
         panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
         try:
             panel.set_playlist_max(value)
             assert panel.playlist_max_spinbox.value() == expected
@@ -212,22 +216,24 @@ class TestSettingsTabRoundTrip:
 
         assert "Reset to defaults" in tab.save_status_label.text()
 
-    def test_load_config_reflects_playlist_max(self, test_config):
+    def test_load_config_reflects_playlist_max(self, test_config, qtbot):
         cfg = replace(test_config, youtube_playlist_max=42)
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             assert widget.youtube_panel.get_playlist_max() == 42
             assert widget.youtube_panel.playlist_max_spinbox.value() == 42
         finally:
             widget.deleteLater()
 
-    def test_load_config_reflects_existing_values(self, test_config):
+    def test_load_config_reflects_existing_values(self, test_config, qtbot):
         cfg = replace(
             test_config,
             youtube_cookies_from_browser="chrome",
             youtube_max_duration_s=1800,
         )
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             assert widget.youtube_panel.get_cookies_from_browser() == "chrome"
             assert widget.youtube_panel.get_max_duration_seconds() == 1800
@@ -235,10 +241,11 @@ class TestSettingsTabRoundTrip:
         finally:
             widget.deleteLater()
 
-    def test_load_config_reflects_cookies_file(self, test_config, tmp_path):
+    def test_load_config_reflects_cookies_file(self, test_config, tmp_path, qtbot):
         cookies = tmp_path / "cookies.txt"
         cfg = replace(test_config, youtube_cookies_file=cookies)
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             assert widget.youtube_panel.get_cookies_file() == str(cookies)
         finally:
@@ -295,9 +302,10 @@ class TestSettingsTabRoundTrip:
 class TestIPlusOneFilterRoundTrip:
     """Load/save round-trip for the i+1 sentence filter checkbox."""
 
-    def test_loads_use_i_plus_one_filter_from_config(self, test_config: AnkiMinerConfig):
+    def test_loads_use_i_plus_one_filter_from_config(self, test_config: AnkiMinerConfig, qtbot):
         cfg_on = replace(test_config, use_i_plus_one_filter=True)
         widget = SettingsTab(cfg_on)
+        qtbot.addWidget(widget)
         try:
             assert widget.filtering_panel.use_i_plus_one_checkbox.isChecked() is True
         finally:
@@ -305,6 +313,7 @@ class TestIPlusOneFilterRoundTrip:
 
         cfg_off = replace(test_config, use_i_plus_one_filter=False)
         widget = SettingsTab(cfg_off)
+        qtbot.addWidget(widget)
         try:
             assert widget.filtering_panel.use_i_plus_one_checkbox.isChecked() is False
         finally:
@@ -334,9 +343,10 @@ class TestIPlusOneFilterRoundTrip:
 class TestAnkiTagsRoundTrip:
     """Load/save round-trip for the anki_tags QLineEdit on the Anki settings panel."""
 
-    def test_loads_anki_tags_from_config(self, test_config: AnkiMinerConfig):
+    def test_loads_anki_tags_from_config(self, test_config: AnkiMinerConfig, qtbot):
         cfg = replace(test_config, anki_tags="custom tag")
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             assert widget.anki_panel.anki_tags_input.text() == "custom tag"
         finally:
@@ -368,18 +378,19 @@ class TestExpressionAudioRoundTrip:
         # test_config does not map expression_audio (default "" → feature off).
         assert tab.anki_panel.expression_audio_field_input.text() == ""
 
-    def test_loads_expression_audio_from_config(self, test_config: AnkiMinerConfig):
+    def test_loads_expression_audio_from_config(self, test_config: AnkiMinerConfig, qtbot):
         cfg = replace(
             test_config,
             anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
         )
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             assert widget.anki_panel.expression_audio_field_input.text() == "ExpressionAudio"
         finally:
             widget.deleteLater()
 
-    def test_saves_expression_audio_to_config(self, tab, monkeypatch):
+    def test_saves_expression_audio_to_config(self, tab, monkeypatch, qtbot):
         from PyQt6.QtWidgets import QMessageBox
 
         monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
@@ -395,6 +406,7 @@ class TestExpressionAudioRoundTrip:
 
         # Saved config reloads into a fresh tab with values preserved.
         widget = SettingsTab(received[0])
+        qtbot.addWidget(widget)
         try:
             assert widget.anki_panel.expression_audio_field_input.text() == "ExpressionAudio"
         finally:
@@ -418,7 +430,7 @@ class TestExpressionAudioRoundTrip:
 class TestSentenceLengthFilterRoundTrip:
     """Load/save round-trip for the sentence-length filter widgets (Issue #33)."""
 
-    def test_loads_sentence_length_filter_from_config(self, test_config: AnkiMinerConfig):
+    def test_loads_sentence_length_filter_from_config(self, test_config: AnkiMinerConfig, qtbot):
         cfg = replace(
             test_config,
             use_sentence_length_filter=True,
@@ -426,6 +438,7 @@ class TestSentenceLengthFilterRoundTrip:
             max_sentence_chars=60,
         )
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             assert widget.filtering_panel.use_sentence_length_checkbox.isChecked() is True
             assert widget.filtering_panel.max_sentence_duration_spinbox.value() == pytest.approx(7.5)
@@ -455,17 +468,18 @@ class TestSentenceLengthFilterRoundTrip:
 class TestDictsRootRoundTrip:
     """Load/save round-trip for the Issue #45 dictionary storage folder picker."""
 
-    def test_loads_dicts_root_from_config(self, test_config: AnkiMinerConfig, tmp_path):
+    def test_loads_dicts_root_from_config(self, test_config: AnkiMinerConfig, tmp_path, qtbot):
         custom = tmp_path / "custom_dicts"
         custom.mkdir()
         cfg = replace(test_config, dicts_root=custom)
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             assert widget.dictionary_panel.get_dicts_root() == custom
         finally:
             widget.deleteLater()
 
-    def test_save_propagates_new_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+    def test_save_propagates_new_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch, qtbot):
         from PyQt6.QtWidgets import QMessageBox
 
         monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
@@ -474,6 +488,7 @@ class TestDictsRootRoundTrip:
         starting.mkdir()
         cfg = replace(test_config, dicts_root=starting)
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             received: list[AnkiMinerConfig] = []
             widget.config_changed.connect(received.append)
@@ -489,7 +504,7 @@ class TestDictsRootRoundTrip:
         finally:
             widget.deleteLater()
 
-    def test_save_rejects_nonexistent_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+    def test_save_rejects_nonexistent_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch, qtbot):
         """Picking a path that vanished between selection and save must surface a
         warning and abort — never write Path('') to the config."""
         from PyQt6.QtWidgets import QMessageBox
@@ -498,6 +513,7 @@ class TestDictsRootRoundTrip:
         starting.mkdir()
         cfg = replace(test_config, dicts_root=starting)
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             warnings: list[tuple] = []
             monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: warnings.append(args) or 0)
@@ -514,7 +530,7 @@ class TestDictsRootRoundTrip:
         finally:
             widget.deleteLater()
 
-    def test_save_syncs_panel_dicts_root_to_new_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+    def test_save_syncs_panel_dicts_root_to_new_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch, qtbot):
         """After saving a changed Storage Folder, the dictionary panel's
         ``_dicts_root`` must follow so refresh_registry()/remove() target the new
         location — not the stale old one until restart (T-07)."""
@@ -526,6 +542,7 @@ class TestDictsRootRoundTrip:
         starting.mkdir()
         cfg = replace(test_config, dicts_root=starting)
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             new_root = tmp_path / "new_root"
             new_root.mkdir()
@@ -556,7 +573,9 @@ class TestDictsRootRoundTrip:
         finally:
             widget.deleteLater()
 
-    def test_save_unchanged_dicts_root_does_not_reset_panel(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+    def test_save_unchanged_dicts_root_does_not_reset_panel(
+        self, test_config: AnkiMinerConfig, tmp_path, monkeypatch, qtbot
+    ):
         """When the root is unchanged the panel must not be needlessly re-synced
         (only the changed-root path calls set_dicts_root) — T-07 scope guard."""
         from PyQt6.QtWidgets import QMessageBox
@@ -567,6 +586,7 @@ class TestDictsRootRoundTrip:
         starting.mkdir()
         cfg = replace(test_config, dicts_root=starting)
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             calls: list[Path] = []
             real_set = widget.dictionary_panel.set_dicts_root
@@ -584,7 +604,7 @@ class TestDictsRootRoundTrip:
         finally:
             widget.deleteLater()
 
-    def test_save_rejects_unwritable_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch):
+    def test_save_rejects_unwritable_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch, qtbot):
         """A read-only directory must be rejected at Save so the user is not
         silently committed to a path the importers can't write to."""
         from PyQt6.QtWidgets import QMessageBox
@@ -595,6 +615,7 @@ class TestDictsRootRoundTrip:
         readonly.mkdir()
         cfg = replace(test_config, dicts_root=starting)
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             warnings: list[tuple] = []
             monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: warnings.append(args) or 0)
@@ -627,7 +648,7 @@ class TestDictionaryRemovedPersistsNarrowly:
     pipeline whose unrelated validation aborts would orphan the removed dict_id
     in gui_config.json (Issue #30 / T-08)."""
 
-    def test_removed_persists_chain_despite_failing_validation(self, test_config, tmp_path, monkeypatch):
+    def test_removed_persists_chain_despite_failing_validation(self, test_config, tmp_path, monkeypatch, qtbot):
         """A stale (deleted) cookies file would abort the full Save at its
         validation gate — but the chain change after a destructive remove must
         still be persisted, with no warning dialog."""
@@ -644,6 +665,7 @@ class TestDictionaryRemovedPersistsNarrowly:
             ),
         )
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             warnings: list[tuple] = []
             monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(a) or 0)
@@ -663,7 +685,7 @@ class TestDictionaryRemovedPersistsNarrowly:
         finally:
             widget.deleteLater()
 
-    def test_removed_does_not_commit_unrelated_pending_edit(self, test_config, monkeypatch):
+    def test_removed_does_not_commit_unrelated_pending_edit(self, test_config, monkeypatch, qtbot):
         """The success path of the full Save commits ALL panels' unsaved edits.
         The narrow persist must touch only dictionary_chain — a typed-but-unsaved
         deck name must not leak into the persisted config."""
@@ -678,6 +700,7 @@ class TestDictionaryRemovedPersistsNarrowly:
             ),
         )
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
             monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: None)
@@ -704,7 +727,7 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
     path is None — otherwise Reset-to-Defaults leaves the old path visible and
     the next Save reads it back, re-persisting the stale path (T-11)."""
 
-    def test_reset_clears_selectors_and_next_save_persists_none(self, test_config, tmp_path, monkeypatch):
+    def test_reset_clears_selectors_and_next_save_persists_none(self, test_config, tmp_path, monkeypatch, qtbot):
         from PyQt6.QtWidgets import QMessageBox
 
         bl = tmp_path / "blacklist.txt"
@@ -713,6 +736,7 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
         wl.write_text("b\n", encoding="utf-8")
         cfg = replace(test_config, blacklist_path=bl, whitelist_path=wl)
         widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
         try:
             # Loaded paths are visible.
             assert widget.filtering_panel.blacklist_selector.get_path() == str(bl)
@@ -738,12 +762,13 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
         finally:
             widget.deleteLater()
 
-    def test_update_config_to_none_clears_previously_loaded_path(self, test_config, tmp_path):
+    def test_update_config_to_none_clears_previously_loaded_path(self, test_config, tmp_path, qtbot):
         """A programmatic update_config that drops the path must also clear the
         selector (the same _load_config branch Reset relies on)."""
         bl = tmp_path / "blacklist.txt"
         bl.write_text("a\n", encoding="utf-8")
         widget = SettingsTab(replace(test_config, blacklist_path=bl))
+        qtbot.addWidget(widget)
         try:
             assert widget.filtering_panel.blacklist_selector.get_path() == str(bl)
             widget.update_config(replace(test_config, blacklist_path=None))
