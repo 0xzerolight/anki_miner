@@ -3,17 +3,13 @@
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QLabel, QRadioButton
+from PyQt6.QtWidgets import QLabel, QRadioButton
 
 from anki_miner.gui.widgets.dialogs.audio_tracks_dialog import (
     AudioTracksDialog,
     _format_channels,
 )
 from anki_miner.utils.audio_track_detector import AudioStream
-
-# One QApplication per process; reuse if already created.
-_app = QApplication.instance() or QApplication([])
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -74,12 +70,13 @@ def test_format_channels(channels: int | None, expected: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_multi_track_render() -> None:
+def test_multi_track_render(qtbot) -> None:
     jp = _stream(0, language="jpn", codec="aac", channels=2)
     en = _stream(1, language="eng", codec="ac3", channels=6)
     en_com = _stream(2, language="eng", codec="aac", channels=2)
 
     dialog = AudioTracksDialog([jp, en, en_com], current_override=None, auto_detected=jp)
+    qtbot.addWidget(dialog)
     radios = _radios(dialog)
 
     assert len(radios) == 4  # 1 Auto + 3 tracks
@@ -100,12 +97,13 @@ def test_multi_track_render() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_multi_track_preselect_override() -> None:
+def test_multi_track_preselect_override(qtbot) -> None:
     jp = _stream(0, language="jpn")
     en = _stream(1, language="eng")
     en_com = _stream(2, language="eng")
 
     dialog = AudioTracksDialog([jp, en, en_com], current_override=1, auto_detected=jp)
+    qtbot.addWidget(dialog)
     radios = _radios(dialog)
 
     auto_radio = radios[0]
@@ -121,12 +119,13 @@ def test_multi_track_preselect_override() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_multi_track_apply_round_trip() -> None:
+def test_multi_track_apply_round_trip(qtbot) -> None:
     jp = _stream(0, language="jpn")
     en = _stream(1, language="eng")
     fr = _stream(2, language="fra")
 
     dialog = AudioTracksDialog([jp, en, fr], current_override=None, auto_detected=jp)
+    qtbot.addWidget(dialog)
     radios = _radios(dialog)
 
     # radios[0] = Auto, radios[1]=jp(0), radios[2]=en(1), radios[3]=fr(2)
@@ -141,12 +140,13 @@ def test_multi_track_apply_round_trip() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_auto_round_trip() -> None:
+def test_auto_round_trip(qtbot) -> None:
     jp = _stream(0, language="jpn")
     en = _stream(1, language="eng")
     fr = _stream(2, language="fra")
 
     dialog = AudioTracksDialog([jp, en, fr], current_override=1, auto_detected=jp)
+    qtbot.addWidget(dialog)
     radios = _radios(dialog)
 
     radios[0].setChecked(True)  # Auto
@@ -160,12 +160,13 @@ def test_auto_round_trip() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_cancel_preserves_override() -> None:
+def test_cancel_preserves_override(qtbot) -> None:
     jp = _stream(0, language="jpn")
     en = _stream(1, language="eng")
     fr = _stream(2, language="fra")
 
     dialog = AudioTracksDialog([jp, en, fr], current_override=1, auto_detected=jp)
+    qtbot.addWidget(dialog)
     radios = _radios(dialog)
 
     # Select a different track but reject
@@ -180,11 +181,12 @@ def test_cancel_preserves_override() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_auto_detect_none_label() -> None:
+def test_auto_detect_none_label(qtbot) -> None:
     jp = _stream(0, language="jpn")
     en = _stream(1, language="eng")
 
     dialog = AudioTracksDialog([jp, en], current_override=None, auto_detected=None)
+    qtbot.addWidget(dialog)
     auto_radio = _radios(dialog)[0]
 
     assert "no Japanese track found" in auto_radio.text()
@@ -195,9 +197,10 @@ def test_auto_detect_none_label() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_single_track_variant() -> None:
+def test_single_track_variant(qtbot) -> None:
     stream = _stream(0, language="jpn", codec="aac", channels=2)
     dialog = AudioTracksDialog([stream], current_override=None, auto_detected=stream)
+    qtbot.addWidget(dialog)
 
     assert len(_radios(dialog)) == 0
     assert dialog.selected_override() is None
@@ -211,8 +214,9 @@ def test_single_track_variant() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_zero_track_variant() -> None:
+def test_zero_track_variant(qtbot) -> None:
     dialog = AudioTracksDialog([], current_override=None, auto_detected=None)
+    qtbot.addWidget(dialog)
 
     assert dialog.selected_override() is None
 
@@ -225,14 +229,16 @@ def test_zero_track_variant() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_single_track_returns_none_even_with_override() -> None:
+def test_single_track_returns_none_even_with_override(qtbot) -> None:
     stream = _stream(0, language="jpn", codec="aac", channels=2)
     dialog = AudioTracksDialog([stream], current_override=5, auto_detected=stream)
+    qtbot.addWidget(dialog)
     assert dialog.selected_override() is None
 
 
-def test_zero_track_returns_none_even_with_override() -> None:
+def test_zero_track_returns_none_even_with_override(qtbot) -> None:
     dialog = AudioTracksDialog([], current_override=5, auto_detected=None)
+    qtbot.addWidget(dialog)
     assert dialog.selected_override() is None
 
 
@@ -241,11 +247,12 @@ def test_zero_track_returns_none_even_with_override() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_stale_current_override_falls_back_to_none() -> None:
+def test_stale_current_override_falls_back_to_none(qtbot) -> None:
     s0 = _stream(0, language="jpn")
     s1 = _stream(1, language="eng")
 
     dialog = AudioTracksDialog([s0, s1], current_override=99, auto_detected=s0)
+    qtbot.addWidget(dialog)
 
     assert dialog.selected_override() is None
     auto_radio = _radios(dialog)[0]
@@ -257,11 +264,12 @@ def test_stale_current_override_falls_back_to_none() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_title_tag_appended() -> None:
+def test_title_tag_appended(qtbot) -> None:
     jp = _stream(0, language="jpn", title="Director's Commentary")
     en = _stream(1, language="eng")
 
     dialog = AudioTracksDialog([jp, en], current_override=None, auto_detected=en)
+    qtbot.addWidget(dialog)
     radios = _radios(dialog)
 
     # radios[1] is the jp track (audio_index=0)
