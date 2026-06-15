@@ -124,7 +124,7 @@ class SettingsTab(QWidget):
         # Add tabs with scroll areas for each panel
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.anki_panel), "Anki")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.media_panel), "Media")
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.dictionary_panel), "Dictionary")
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.dictionary_panel), "Dictionaries")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.audio_panel), "Audio")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), "Filtering")
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), "YouTube")
@@ -297,9 +297,10 @@ class SettingsTab(QWidget):
         self.dictionary_panel.use_pitch_accent_checkbox.setChecked(self.config.use_pitch_accent)
         self.anki_panel.set_pitch_category_format(self.config.pitch_category_format)
 
-        # Frequency settings
-        self.filtering_panel.frequency_selector.set_path(str(self.config.frequency_list_path))
-        self.filtering_panel.use_frequency_checkbox.setChecked(self.config.use_frequency_data)
+        # Frequency settings — file selector + enable toggle moved to the
+        # Dictionaries tab; the max-rank threshold stays in Filtering.
+        self.dictionary_panel.frequency_selector.set_path(str(self.config.frequency_list_path))
+        self.dictionary_panel.use_frequency_checkbox.setChecked(self.config.use_frequency_data)
         self.filtering_panel.max_frequency_spinbox.setValue(self.config.max_frequency_rank)
 
         # Known words database settings
@@ -498,7 +499,7 @@ class SettingsTab(QWidget):
             # Frequency settings — frequency_list_path is overwritten below
             # with the resolver's result once both staged imports commit.
             frequency_list_path=self.config.frequency_list_path,
-            use_frequency_data=self.filtering_panel.use_frequency_checkbox.isChecked(),
+            use_frequency_data=self.dictionary_panel.use_frequency_checkbox.isChecked(),
             max_frequency_rank=self.filtering_panel.max_frequency_spinbox.value(),
             # Known words database settings
             use_known_words_db=self.filtering_panel.use_known_words_db_checkbox.isChecked(),
@@ -633,7 +634,7 @@ class SettingsTab(QWidget):
         each return.
         """
         return self._zip_import_flow.run_modal_zip_import(
-            selector=self.filtering_panel.frequency_selector,
+            selector=self.dictionary_panel.frequency_selector,
             dest_name="frequency.csv",
             worker_factory=partial(YomitanCsvImportWorker, import_yomitan_freq_zip),
             worker_slot_attr="_active_freq_worker",

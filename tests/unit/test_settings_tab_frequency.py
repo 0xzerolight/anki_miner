@@ -88,7 +88,7 @@ class TestPassthroughBranches:
     def test_empty_path_returns_empty_path(self, tab, monkeypatch):
         _capture_messagebox(monkeypatch)
         calls = _stub_importer(monkeypatch)
-        tab.filtering_panel.frequency_selector.set_path("")
+        tab.dictionary_panel.frequency_selector.set_path("")
 
         out = tab._resolve_frequency_path()
 
@@ -100,7 +100,7 @@ class TestPassthroughBranches:
         calls = _stub_importer(monkeypatch)
         csv = tmp_path / "freq.csv"
         csv.write_text("word,rank\n猫,1\n", encoding="utf-8")
-        tab.filtering_panel.frequency_selector.set_path(str(csv))
+        tab.dictionary_panel.frequency_selector.set_path(str(csv))
 
         out = tab._resolve_frequency_path()
 
@@ -122,7 +122,7 @@ class TestOverwritePrompt:
         calls = _stub_importer(monkeypatch)
         zip_path = tmp_path / "freq.zip"
         zip_path.write_bytes(b"")  # contents irrelevant — importer is stubbed
-        tab.filtering_panel.frequency_selector.set_path(str(zip_path))
+        tab.dictionary_panel.frequency_selector.set_path(str(zip_path))
 
         out = tab._resolve_frequency_path()
 
@@ -147,7 +147,7 @@ class TestOverwritePrompt:
         )
         zip_path = tmp_path / "freq.zip"
         zip_path.write_bytes(b"")
-        tab.filtering_panel.frequency_selector.set_path(str(zip_path))
+        tab.dictionary_panel.frequency_selector.set_path(str(zip_path))
 
         out = tab._resolve_frequency_path()
 
@@ -168,7 +168,7 @@ class TestWorkerOutcomes:
         calls = _stub_importer(monkeypatch, result=result)
         zip_path = tmp_path / "jpdb.zip"
         zip_path.write_bytes(b"")
-        tab.filtering_panel.frequency_selector.set_path(str(zip_path))
+        tab.dictionary_panel.frequency_selector.set_path(str(zip_path))
 
         out = tab._resolve_frequency_path()
 
@@ -184,7 +184,7 @@ class TestWorkerOutcomes:
         tab._commit_pending_csv_imports()
         assert (freq_home / "frequency.csv").exists()
         assert not (freq_home / "frequency.csv.pending").exists()
-        assert tab.filtering_panel.frequency_selector.get_path() == str(freq_home / "frequency.csv")
+        assert tab.dictionary_panel.frequency_selector.get_path() == str(freq_home / "frequency.csv")
         assert len(captured["information"]) == 1
         assert "JPDB" in captured["information"][0][1]
         assert "skipped 3" in captured["information"][0][1]
@@ -194,7 +194,7 @@ class TestWorkerOutcomes:
         _stub_importer(monkeypatch, error=SetupError("Invalid index.json: bad"))
         zip_path = tmp_path / "bad.zip"
         zip_path.write_bytes(b"")
-        tab.filtering_panel.frequency_selector.set_path(str(zip_path))
+        tab.dictionary_panel.frequency_selector.set_path(str(zip_path))
 
         out = tab._resolve_frequency_path()
 
@@ -207,7 +207,7 @@ class TestWorkerOutcomes:
         _stub_importer(monkeypatch, error=SetupError("Import cancelled"))
         zip_path = tmp_path / "freq.zip"
         zip_path.write_bytes(b"")
-        tab.filtering_panel.frequency_selector.set_path(str(zip_path))
+        tab.dictionary_panel.frequency_selector.set_path(str(zip_path))
 
         out = tab._resolve_frequency_path()
 
@@ -228,7 +228,7 @@ class TestNoReimportOnSecondSave:
         _stub_importer(monkeypatch, result=result)
         zip_path = tmp_path / "freq.zip"
         zip_path.write_bytes(b"")
-        tab.filtering_panel.frequency_selector.set_path(str(zip_path))
+        tab.dictionary_panel.frequency_selector.set_path(str(zip_path))
 
         tab._resolve_frequency_path()
         # Commit promotes the staged import and updates the selector to the CSV.
