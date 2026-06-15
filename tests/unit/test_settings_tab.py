@@ -358,21 +358,23 @@ class TestAnkiTagsRoundTrip:
 
 
 class TestExpressionAudioRoundTrip:
-    """Load/save round-trip for the expression audio toggle + field (Issue #73)."""
+    """Load/save round-trip for the expression audio field (Issue #73).
 
-    def test_toggle_defaults_to_config_default(self, tab):
-        # test_config does not override expression_audio_enabled (default False).
-        assert tab.anki_panel.get_expression_audio_enabled() is False
+    The dedicated enable checkbox was removed; the field name is the on/off
+    switch (like Frequency/Pitch).
+    """
+
+    def test_field_defaults_blank(self, tab):
+        # test_config does not map expression_audio (default "" → feature off).
+        assert tab.anki_panel.expression_audio_field_input.text() == ""
 
     def test_loads_expression_audio_from_config(self, test_config: AnkiMinerConfig):
         cfg = replace(
             test_config,
-            expression_audio_enabled=True,
             anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
         )
         widget = SettingsTab(cfg)
         try:
-            assert widget.anki_panel.get_expression_audio_enabled() is True
             assert widget.anki_panel.expression_audio_field_input.text() == "ExpressionAudio"
         finally:
             widget.deleteLater()
@@ -385,18 +387,15 @@ class TestExpressionAudioRoundTrip:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.anki_panel.set_expression_audio_enabled(True)
         tab.anki_panel.expression_audio_field_input.setText("ExpressionAudio")
         tab._on_save_clicked()
 
         assert len(received) == 1
-        assert received[0].expression_audio_enabled is True
         assert received[0].anki_fields["expression_audio"] == "ExpressionAudio"
 
         # Saved config reloads into a fresh tab with values preserved.
         widget = SettingsTab(received[0])
         try:
-            assert widget.anki_panel.get_expression_audio_enabled() is True
             assert widget.anki_panel.expression_audio_field_input.text() == "ExpressionAudio"
         finally:
             widget.deleteLater()
@@ -413,7 +412,6 @@ class TestExpressionAudioRoundTrip:
         tab._on_save_clicked()
 
         assert len(received) == 1
-        assert received[0].expression_audio_enabled is False
         assert received[0].anki_fields["expression_audio"] == ""
 
 

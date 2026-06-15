@@ -5,7 +5,6 @@ from typing import Literal, cast
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -182,21 +181,16 @@ class AnkiSettingsPanel(FormPanel):
         self.audio_field_input.setPlaceholderText("SentenceAudio")
         self.add_field("Audio Field", self.audio_field_input, helper="Stores the sentence audio clip.")
 
-        # Expression audio toggle + field (Issue #73). Kept adjacent so the
-        # enable/destination pairing is obvious.
-        self.expression_audio_checkbox = QCheckBox("Enable expression audio")
-        self.add_field(
-            "Expression Audio",
-            self.expression_audio_checkbox,
-            helper="Plays word audio from imported audio packs first, JapanesePod101 online as fallback.",
-        )
-
+        # Expression audio field (Issue #73). Field-name presence is the on/off
+        # switch (like Frequency/Pitch) — leave blank to disable. Sources are
+        # ordered under Audio settings (packs first, JapanesePod101 fallback).
         self.expression_audio_field_input = QLineEdit()
         self.expression_audio_field_input.setPlaceholderText("ExpressionAudio")
         self.add_field(
             "Expression Audio Field",
             self.expression_audio_field_input,
-            helper="Stores the word pronunciation audio clip.",
+            helper="Stores the word pronunciation audio clip; leave blank to disable. "
+            "Sources are configured under Audio settings.",
         )
 
         # Expression Furigana field
@@ -588,14 +582,6 @@ class AnkiSettingsPanel(FormPanel):
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.frequency_field_input.setText(fields.get("frequency", ""))
         self.source_field_input.setText(fields.get("source", ""))
-
-    def get_expression_audio_enabled(self) -> bool:
-        """Return whether expression audio fetching is enabled."""
-        return self.expression_audio_checkbox.isChecked()
-
-    def set_expression_audio_enabled(self, enabled: bool) -> None:
-        """Set the expression audio fetch toggle."""
-        self.expression_audio_checkbox.setChecked(enabled)
 
     def get_pitch_category_format(self) -> Literal["jp", "romaji"]:
         """Return the selected pitch category format ("jp" or "romaji")."""

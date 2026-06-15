@@ -187,10 +187,9 @@ class EpisodeProcessor:
             youtube_fetcher: Optional YouTube fetcher service. Required for
                 ``process_youtube_url``; unused by ``process_episode``.
             expression_audio_fetcher: Optional pronunciation audio fetcher
-                (Issue #73). Only consulted in Phase 3 when
-                ``config.expression_audio_enabled`` is on AND the
-                ``expression_audio`` Anki field is mapped.  ``None`` is
-                only valid for test construction; the service factory always
+                (Issue #73). Only consulted in Phase 3 when the
+                ``expression_audio`` Anki field is mapped (non-empty).  ``None``
+                is only valid for test construction; the service factory always
                 provides a (possibly empty-chain) fetcher.
         """
         self.config = config
@@ -242,17 +241,14 @@ class EpisodeProcessor:
     def _expression_audio_active(self) -> bool:
         """True when the expression-audio stage should run and occupy a progress band.
 
-        The three-part gate from the Issue #73 design: fetcher injected AND
-        config toggle on AND the expression_audio Anki field mapped.  Checked
-        in two places — ``process_episode`` (band registration) and
-        ``_phase3_extract`` (band consumption) — via this property so the
-        conditions can't drift apart.
+        The two-part gate (Issue #73, simplified): fetcher injected AND the
+        expression_audio Anki field mapped (non-empty). The field name is the
+        sole on/off switch, matching the frequency/pitch optional fields — no
+        dedicated enable flag. Checked in two places — ``process_episode``
+        (band registration) and ``_phase3_extract`` (band consumption) — via
+        this property so the conditions can't drift apart.
         """
-        return (
-            self.expression_audio_fetcher is not None
-            and self.config.expression_audio_enabled
-            and bool(self.config.anki_fields.get("expression_audio"))
-        )
+        return self.expression_audio_fetcher is not None and bool(self.config.anki_fields.get("expression_audio"))
 
     # ------------------------------------------------------------------
     # Dictionary-resource facade
