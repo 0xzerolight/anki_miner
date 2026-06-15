@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 
 ### Removed
+- **Windows portable `.zip` and generic Linux `.tar.gz` downloads.** Releases now ship one download per platform: Windows `Setup.exe`, Linux `.deb` (Debian/Ubuntu) or AppImage (other distros), macOS arm64 `.tar.gz`, plus PyPI and source. The Setup.exe installs per-user without admin, and the AppImage is the self-contained portable Linux option.
 
 
 ## [2.6.4] - 2026-06-14
