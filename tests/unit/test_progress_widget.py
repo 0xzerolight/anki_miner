@@ -13,20 +13,13 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 
 
 @pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
-@pytest.fixture
-def widget(qapp):
+def widget(qapp, qtbot):
     w = ProgressWidget()
+    qtbot.addWidget(w)
     yield w
     w.deleteLater()
 

@@ -8,24 +8,17 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 
 
 @pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
-@pytest.fixture
-def tab(qapp, test_config):
+def tab(qapp, qtbot, test_config):
     widget = SingleEpisodeTab(
         config=test_config,
         presenter=MagicMock(name="Presenter"),
         progress_callback=MagicMock(name="ProgressCallback"),
     )
+    qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
 
@@ -183,7 +176,7 @@ def test_tracks_clicked_keeps_override_on_cancel(tab, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_tracks_clicked_passes_resolved_ffprobe(qapp, test_config, tmp_path):
+def test_tracks_clicked_passes_resolved_ffprobe(qapp, qtbot, test_config, tmp_path):
     import dataclasses
 
     from anki_miner.utils import ffmpeg_resolver
@@ -197,6 +190,7 @@ def test_tracks_clicked_passes_resolved_ffprobe(qapp, test_config, tmp_path):
         presenter=MagicMock(name="Presenter"),
         progress_callback=MagicMock(name="ProgressCallback"),
     )
+    qtbot.addWidget(widget)
     try:
         ffmpeg_resolver._clear_cache()
         fake_video = tmp_path / "ep01.mkv"
@@ -455,7 +449,7 @@ def test_curation_requested_passes_media_context_and_lookup_fn(tab, facade_proce
     assert tab._curation_event.is_set()
 
 
-def test_curation_media_context_uses_resolved_ffprobe(qapp, test_config, tmp_path):
+def test_curation_media_context_uses_resolved_ffprobe(qapp, qtbot, test_config, tmp_path):
     """CurationMediaContext carries the resolved ffprobe path when config overrides it."""
     import dataclasses
 
@@ -472,6 +466,7 @@ def test_curation_media_context_uses_resolved_ffprobe(qapp, test_config, tmp_pat
         presenter=MagicMock(name="Presenter"),
         progress_callback=MagicMock(name="ProgressCallback"),
     )
+    qtbot.addWidget(tab)
     try:
         ffmpeg_resolver._clear_cache()
         tab._init_worker_thread = MagicMock()
