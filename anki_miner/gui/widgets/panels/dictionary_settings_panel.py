@@ -234,6 +234,7 @@ class DictionarySettingsPanel(FormPanel):
             label="",
             file_mode=False,
             placeholder="Select dictionary storage folder...",
+            default_dir=ANKI_MINER_HOME / "dicts",
         )
         self.dicts_root_selector.set_path(str(self._dicts_root))
         storage_layout.addWidget(self.dicts_root_selector, 1)
@@ -305,6 +306,7 @@ class DictionarySettingsPanel(FormPanel):
             file_mode=True,
             file_filter="Pitch accent (*.csv *.tsv *.txt *.zip);;All Files (*)",
             placeholder="Select pitch accent CSV/TSV or Yomitan zip...",
+            default_dir=ANKI_MINER_HOME,
         )
         self.add_field(
             "Pitch Accent File",
@@ -334,6 +336,7 @@ class DictionarySettingsPanel(FormPanel):
             file_mode=True,
             file_filter="Frequency list (*.csv *.tsv *.txt *.zip);;All Files (*)",
             placeholder="Select frequency list CSV/TSV or Yomitan zip...",
+            default_dir=ANKI_MINER_HOME,
         )
         self.add_field(
             "Frequency List File",
