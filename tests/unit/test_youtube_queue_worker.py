@@ -12,7 +12,6 @@ from dataclasses import replace
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.exceptions.youtube import YouTubeFetchError
 from anki_miner.gui.workers.youtube_queue_worker import (
@@ -34,12 +33,6 @@ def _make_video_info(video_id: str = "abc", title: str = "Some Title") -> VideoI
         is_live=False,
         is_age_restricted=False,
     )
-
-
-# Qt needs an application for signals. Use a full QApplication (not
-# QCoreApplication) so widget tests in the same process — when this module is
-# imported first — can still construct QWidgets instead of hard-aborting.
-_app = QApplication.instance() or QApplication([])
 
 
 class _SignalCapture:
@@ -83,7 +76,7 @@ def _make_item(
 
 
 @pytest.fixture
-def make_worker(mock_processor, youtube_config):
+def make_worker(qapp, mock_processor, youtube_config):
     """Factory producing a YouTubeQueueWorker with sensible defaults."""
 
     def _make(
@@ -439,7 +432,7 @@ def test_each_attempt_gets_unique_workspace_and_is_cleaned(make_worker, mock_pro
 # ---------------------------------------------------------------------------
 
 
-def test_bot_detection_error_workspace_cleaned(mock_processor, youtube_config):
+def test_bot_detection_error_workspace_cleaned(qapp, mock_processor, youtube_config):
     """BotDetectionError (subclass of YouTubeFetchError) follows the retry+cleanup path."""
     from anki_miner.exceptions.youtube import BotDetectionError
 
@@ -653,7 +646,7 @@ def test_mining_progress_adapter_handles_zero_total():
 # ---------------------------------------------------------------------------
 
 
-def test_curation_processor_and_offset_set_from_constructor(mock_processor, youtube_config):
+def test_curation_processor_and_offset_set_from_constructor(qapp, mock_processor, youtube_config):
     """curation_processor and _curation_offset are initialised from constructor args."""
     worker = YouTubeQueueWorker(
         processor=mock_processor,
@@ -689,7 +682,7 @@ def test_on_fetched_kwarg_passed_to_process_youtube_url(make_worker, mock_proces
     assert on_fetched.__self__ is worker
 
 
-def test_capture_curation_media_populates_video_and_subtitle(mock_processor, youtube_config, tmp_path):
+def test_capture_curation_media_populates_video_and_subtitle(qapp, mock_processor, youtube_config, tmp_path):
     """Invoking _capture_curation_media sets _curation_video and _curation_subtitle."""
     from anki_miner.models.youtube import FetchedMedia
 
@@ -714,7 +707,7 @@ def test_capture_curation_media_populates_video_and_subtitle(mock_processor, you
     assert worker._curation_subtitle == sub_path
 
 
-def test_on_fetched_invoked_populates_curation_paths(mock_processor, youtube_config, tmp_path):
+def test_on_fetched_invoked_populates_curation_paths(qapp, mock_processor, youtube_config, tmp_path):
     """End-to-end: when process_youtube_url calls on_fetched, _curation_* attrs are set."""
     from anki_miner.models.youtube import FetchedMedia
 

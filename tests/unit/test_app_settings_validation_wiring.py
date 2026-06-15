@@ -11,12 +11,8 @@ cannot silently regress.
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig
-
-# QApplication required for any Qt widget test.
-_app = QApplication.instance() or QApplication([])
 
 
 def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
@@ -32,7 +28,7 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
 
 
 @pytest.fixture
-def wired(monkeypatch, test_config):
+def wired(monkeypatch, test_config, qtbot):
     """MainWindow + SettingsTab joined by the production wiring helper."""
     # _run_validation is replaced with a recorder rather than the no-op patch
     # used elsewhere, so the test can observe the wiring firing it.
@@ -45,7 +41,9 @@ def wired(monkeypatch, test_config):
     monkeypatch.setattr(MainWindow, "_run_validation", lambda self: calls.append(True))
 
     window = MainWindow()
+    qtbot.addWidget(window)
     settings_tab = SettingsTab(window.get_config())
+    qtbot.addWidget(settings_tab)
     app_module._connect_settings_validation(window, settings_tab)
     # MainWindow.__init__ runs a startup validation; drop that call so each
     # test observes only the validation its own signal emit triggers.

@@ -21,24 +21,17 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 
 
 @pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
-@pytest.fixture
-def tab(qapp, test_config):
+def tab(qapp, qtbot, test_config):
     widget = DeckBuilderTab(
         config=test_config,
         presenter=MagicMock(name="Presenter"),
         progress_callback=MagicMock(name="ProgressCallback"),
     )
+    qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
 

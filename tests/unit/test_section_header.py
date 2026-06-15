@@ -11,20 +11,13 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets.enhanced.section_header import SectionHeader
 
 
-@pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
-def test_section_header_has_right_margin(qapp):
+def test_section_header_has_right_margin(qapp, qtbot):
     """Right margin must be > 0 so the action button has breathing room."""
     header = SectionHeader(title="Multi-Anime Queue", action_text="Add Series")
+    qtbot.addWidget(header)
     try:
         margins = header.layout().contentsMargins()
         assert margins.right() > 0
@@ -32,9 +25,10 @@ def test_section_header_has_right_margin(qapp):
         header.deleteLater()
 
 
-def test_section_header_without_action_also_has_right_margin(qapp):
+def test_section_header_without_action_also_has_right_margin(qapp, qtbot):
     """Right margin applies to all headers, not just those with action buttons."""
     header = SectionHeader(title="Section")
+    qtbot.addWidget(header)
     try:
         margins = header.layout().contentsMargins()
         assert margins.right() > 0

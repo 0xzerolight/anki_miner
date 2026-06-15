@@ -19,13 +19,11 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
-
-_app = QApplication.instance() or QApplication([])
 
 
 def _make_dict_on_disk(
@@ -56,7 +54,7 @@ def _make_dict_on_disk(
 
 
 @pytest.fixture
-def tab_for_reimport_all(test_config: AnkiMinerConfig, tmp_path: Path):
+def tab_for_reimport_all(test_config: AnkiMinerConfig, tmp_path: Path, qtbot):
     """SettingsTab with dicts_root + jmdict_path scoped to tmp_path."""
     cfg = replace(
         test_config,
@@ -65,6 +63,7 @@ def tab_for_reimport_all(test_config: AnkiMinerConfig, tmp_path: Path):
     )
     (tmp_path / "dicts").mkdir(parents=True, exist_ok=True)
     widget = SettingsTab(cfg)
+    qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
 

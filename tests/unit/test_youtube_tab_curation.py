@@ -20,14 +20,10 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.models.youtube import VideoInfo
-
-# QApplication instance needed for any widget test.
-_app = QApplication.instance() or QApplication([])
 
 
 def _make_video_info() -> VideoInfo:
@@ -43,7 +39,7 @@ def _make_video_info() -> VideoInfo:
 
 
 @pytest.fixture
-def tab(test_config: AnkiMinerConfig):
+def tab(test_config: AnkiMinerConfig, qtbot):
     """A YouTubeTab with patched probe/queue worker classes (no real threads)."""
     cfg = replace(test_config, youtube_max_duration_s=7200, youtube_cookies_from_browser=None)
 
@@ -59,11 +55,9 @@ def tab(test_config: AnkiMinerConfig):
             fetcher=MagicMock(name="Fetcher"),
             presenter=MagicMock(name="Presenter"),
         )
+        qtbot.addWidget(widget)
         widget._queue_worker_cls = queue_cls  # type: ignore[attr-defined]
-        try:
-            yield widget
-        finally:
-            widget.deleteLater()
+        yield widget
 
 
 def _add_ready_item(tab, url: str = "https://www.youtube.com/watch?v=abc"):

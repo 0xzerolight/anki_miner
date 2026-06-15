@@ -9,13 +9,9 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtGui import QFont  # noqa: E402
-from PyQt6.QtWidgets import QApplication  # noqa: E402
 
 from anki_miner.gui.resources.styles.theme import Theme  # noqa: E402
 from anki_miner.gui.utils.fonts import make_scaled_font  # noqa: E402
-
-# Ensure a QApplication instance exists for Qt-touching code paths.
-_app = QApplication.instance() or QApplication([])
 
 
 def _reset(font_scale: float = 1.0) -> None:
@@ -26,7 +22,7 @@ def _reset(font_scale: float = 1.0) -> None:
 
 
 @pytest.fixture(autouse=True)
-def reset_theme():
+def reset_theme(qapp):
     """Reset Theme font scale to 1.0 before and after each test."""
     _reset(1.0)
     yield

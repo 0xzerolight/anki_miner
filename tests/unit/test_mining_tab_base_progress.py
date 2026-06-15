@@ -13,16 +13,8 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication
-
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
-
-
-@pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 class _StubTab(MiningTabBase):
@@ -34,8 +26,9 @@ class _StubTab(MiningTabBase):
 
 
 @pytest.fixture
-def tab(qapp):
+def tab(qapp, qtbot):
     w = _StubTab()
+    qtbot.addWidget(w)
     yield w
     w.deleteLater()
 

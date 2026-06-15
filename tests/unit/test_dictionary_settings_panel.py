@@ -9,7 +9,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.panels import dictionary_settings_panel as dsp_mod
@@ -43,12 +43,6 @@ def _make_dict_on_disk(
 
 
 @pytest.fixture
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
-@pytest.fixture
 def confirm_remove(monkeypatch):
     """Auto-accept the 'Remove dictionary' QMessageBox confirmation."""
     monkeypatch.setattr(
@@ -57,8 +51,9 @@ def confirm_remove(monkeypatch):
     )
 
 
-def test_panel_renders_default_chain(qapp, monkeypatch, tmp_path):
+def test_panel_renders_default_chain(qapp, qtbot, monkeypatch, tmp_path):
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(AnkiMinerConfig().dictionary_chain)
     chain = panel.get_chain()
     # Default has two entries; one indexed (missing on disk -> keeps entry), one jisho
@@ -66,25 +61,28 @@ def test_panel_renders_default_chain(qapp, monkeypatch, tmp_path):
     assert chain[1].kind == "jisho"
 
 
-def test_pitch_checkbox_tooltip_is_helper_text(qapp, tmp_path):
+def test_pitch_checkbox_tooltip_is_helper_text(qapp, qtbot, tmp_path):
     # After the helper->tooltip migration the redundant explicit setToolTip
     # was removed so the richer add_field helper is the single tooltip.
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     assert panel.use_pitch_accent_checkbox.toolTip() == "Looks up and writes pitch patterns to mapped fields."
 
 
-def test_frequency_widgets_live_on_dictionary_panel(qapp, tmp_path):
+def test_frequency_widgets_live_on_dictionary_panel(qapp, qtbot, tmp_path):
     # The frequency file selector + enable toggle were moved here from the
     # Filtering panel (Dictionaries-tab reorg); the max-rank threshold stays
     # in Filtering.
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     assert hasattr(panel, "frequency_selector")
     assert hasattr(panel, "use_frequency_checkbox")
     assert panel.use_frequency_checkbox.text() == "Enable Frequency Data"
 
 
-def test_reorder_moves_entry_up(qapp, monkeypatch, tmp_path):
+def test_reorder_moves_entry_up(qapp, qtbot, monkeypatch, tmp_path):
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -98,8 +96,9 @@ def test_reorder_moves_entry_up(qapp, monkeypatch, tmp_path):
     assert chain[1].dict_id == "a"
 
 
-def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -128,8 +127,9 @@ def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, monkeypatch, tmp
     assert len(events) == 4
 
 
-def test_jisho_remove_is_noop(qapp, monkeypatch, tmp_path):
+def test_jisho_remove_is_noop(qapp, qtbot, monkeypatch, tmp_path):
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -147,8 +147,9 @@ def test_jisho_remove_is_noop(qapp, monkeypatch, tmp_path):
     assert events == []
 
 
-def test_edge_reorder_calls_are_noops(qapp, monkeypatch, tmp_path):
+def test_edge_reorder_calls_are_noops(qapp, qtbot, monkeypatch, tmp_path):
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -171,10 +172,11 @@ def test_edge_reorder_calls_are_noops(qapp, monkeypatch, tmp_path):
     assert chain[1].kind == "jisho"
 
 
-def test_checkbox_toggle_preserved_on_reorder(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_checkbox_toggle_preserved_on_reorder(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     """The implementer's deviation: get_chain()-resync before mutation must
     preserve a user's checkbox toggle across move_up/move_down/remove."""
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -218,7 +220,7 @@ def test_checkbox_toggle_preserved_on_reorder(qapp, monkeypatch, tmp_path, confi
     assert chain[1].enabled is False
 
 
-def test_remove_deletes_dict_folder_on_disk(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_remove_deletes_dict_folder_on_disk(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     """Regression: remove() must delete dicts_root/<dict_id>/ so a re-add of the
     same dict does not hit the importer's 'already exists' guard."""
     dict_dir = tmp_path / "a"
@@ -226,6 +228,7 @@ def test_remove_deletes_dict_folder_on_disk(qapp, monkeypatch, tmp_path, confirm
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
 
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -240,7 +243,7 @@ def test_remove_deletes_dict_folder_on_disk(qapp, monkeypatch, tmp_path, confirm
     assert [e.kind for e in chain] == ["jisho"]
 
 
-def test_remove_cancelled_keeps_dict_and_chain(qapp, monkeypatch, tmp_path):
+def test_remove_cancelled_keeps_dict_and_chain(qapp, qtbot, monkeypatch, tmp_path):
     """Clicking 'No' on the confirm dialog must leave both disk + chain intact."""
     monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
@@ -252,6 +255,7 @@ def test_remove_cancelled_keeps_dict_and_chain(qapp, monkeypatch, tmp_path):
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
 
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -270,12 +274,13 @@ def test_remove_cancelled_keeps_dict_and_chain(qapp, monkeypatch, tmp_path):
     assert events == [], "cancel must not emit chain_changed"
 
 
-def test_remove_tolerates_missing_dict_folder(qapp, tmp_path, confirm_remove):
+def test_remove_tolerates_missing_dict_folder(qapp, qtbot, tmp_path, confirm_remove):
     """If the dict folder is already gone (e.g. user deleted it manually), remove()
     should still drop the in-memory entry instead of erroring."""
     # No folder created on disk.
 
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="ghost", enabled=True),
@@ -289,7 +294,7 @@ def test_remove_tolerates_missing_dict_folder(qapp, tmp_path, confirm_remove):
     assert [e.kind for e in chain] == ["jisho"]
 
 
-def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, tmp_path):
+def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, qtbot, tmp_path):
     """A Yomitan dictionary with outdated schema_version renders the stale UI."""
     _make_dict_on_disk(
         tmp_path,
@@ -299,6 +304,7 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, tmp_path):
         source_name="Stale Yomi",
     )
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="stale-yomi", enabled=True),
@@ -330,7 +336,7 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, tmp_path):
     assert jmdict_fired == [], "Yomitan row must not fire the JMdict signal"
 
 
-def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, tmp_path):
+def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, qtbot, tmp_path):
     """A JMdict dictionary with outdated schema_version wires the per-row button
     to the existing reimport_jmdict_requested signal, not the new generic one."""
     _make_dict_on_disk(
@@ -341,6 +347,7 @@ def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, tmp_path):
         source_name="JMdict (English)",
     )
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
@@ -363,7 +370,7 @@ def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, tmp_path):
     assert generic_fired == [], "JMdict row must not fire the generic signal"
 
 
-def test_current_schema_row_has_no_stale_ui(qapp, tmp_path):
+def test_current_schema_row_has_no_stale_ui(qapp, qtbot, tmp_path):
     """A dictionary at the current schema_version renders clean: no ⚠, no italic
     suffix, no Re-import button."""
     _make_dict_on_disk(
@@ -374,6 +381,7 @@ def test_current_schema_row_has_no_stale_ui(qapp, tmp_path):
         source_name="Fresh Yomi",
     )
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="fresh-yomi", enabled=True),
@@ -394,16 +402,18 @@ def test_current_schema_row_has_no_stale_ui(qapp, tmp_path):
     assert not any("re-import to refresh" in t for t in label_texts)
 
 
-def test_global_button_labeled_reimport_all(qapp, tmp_path):
+def test_global_button_labeled_reimport_all(qapp, qtbot, tmp_path):
     """The top-level button reads 'Reimport All', not the legacy 'Reimport JMdict'."""
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     assert panel._reimport_btn.text() == "Reimport All"
 
 
-def test_reimport_all_signal_fires_on_button_click(qapp, tmp_path):
+def test_reimport_all_signal_fires_on_button_click(qapp, qtbot, tmp_path):
     """Clicking the top-level button emits the new reimport_all_requested signal,
     not the per-row reimport_jmdict_requested signal."""
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
 
     all_fired: list[None] = []
     panel.reimport_all_requested.connect(lambda: all_fired.append(None))
@@ -442,7 +452,7 @@ def _patch_menu_exec(monkeypatch, action_label: str | None):
     return constructed
 
 
-def test_right_click_non_stale_yomitan_row_emits_reimport_dict_requested(qapp, monkeypatch, tmp_path):
+def test_right_click_non_stale_yomitan_row_emits_reimport_dict_requested(qapp, qtbot, monkeypatch, tmp_path):
     """Right-clicking a current-schema Yomitan row → Re-import… emits the
     per-dict signal so legacy users (no source.zip) have a discoverable seed path."""
     _make_dict_on_disk(
@@ -453,6 +463,7 @@ def test_right_click_non_stale_yomitan_row_emits_reimport_dict_requested(qapp, m
         source_name="Fresh Yomi",
     )
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="fresh-yomi", enabled=True),
@@ -476,7 +487,7 @@ def test_right_click_non_stale_yomitan_row_emits_reimport_dict_requested(qapp, m
     assert jmdict_fired == [], "Yomitan row must not fire the JMdict signal"
 
 
-def test_right_click_jmdict_row_emits_reimport_jmdict_requested(qapp, monkeypatch, tmp_path):
+def test_right_click_jmdict_row_emits_reimport_jmdict_requested(qapp, qtbot, monkeypatch, tmp_path):
     """Right-clicking a JMdict row → Re-import… emits the JMdict-specific
     signal (which uses the configured XML path, not a file picker)."""
     _make_dict_on_disk(
@@ -487,6 +498,7 @@ def test_right_click_jmdict_row_emits_reimport_jmdict_requested(qapp, monkeypatc
         source_name="JMdict (English)",
     )
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
@@ -509,7 +521,7 @@ def test_right_click_jmdict_row_emits_reimport_jmdict_requested(qapp, monkeypatc
     assert generic_fired == [], "JMdict row must not fire the generic signal"
 
 
-def test_remove_emits_dictionary_removed_signal(qapp, tmp_path, confirm_remove):
+def test_remove_emits_dictionary_removed_signal(qapp, qtbot, tmp_path, confirm_remove):
     """remove() must fire dictionary_removed so settings_tab can persist the
     chain to gui_config.json without waiting for the user to click Save."""
     dict_dir = tmp_path / "a"
@@ -517,6 +529,7 @@ def test_remove_emits_dictionary_removed_signal(qapp, tmp_path, confirm_remove):
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
 
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -531,7 +544,7 @@ def test_remove_emits_dictionary_removed_signal(qapp, tmp_path, confirm_remove):
     assert removed == [None]
 
 
-def test_remove_cancelled_does_not_emit_dictionary_removed(qapp, monkeypatch, tmp_path):
+def test_remove_cancelled_does_not_emit_dictionary_removed(qapp, qtbot, monkeypatch, tmp_path):
     """Cancelling the confirm dialog must not fire dictionary_removed — nothing
     on disk changed, so we don't want settings_tab to persist."""
     monkeypatch.setattr(
@@ -543,6 +556,7 @@ def test_remove_cancelled_does_not_emit_dictionary_removed(qapp, monkeypatch, tm
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
 
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -557,7 +571,7 @@ def test_remove_cancelled_does_not_emit_dictionary_removed(qapp, monkeypatch, tm
     assert removed == []
 
 
-def test_remove_failed_rmtree_does_not_emit_dictionary_removed(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_remove_failed_rmtree_does_not_emit_dictionary_removed(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     """If rmtree exhausts its retries we abort early; dictionary_removed must
     not fire because the chain mutation also did not happen."""
     dict_dir = tmp_path / "a"
@@ -578,6 +592,7 @@ def test_remove_failed_rmtree_does_not_emit_dictionary_removed(qapp, monkeypatch
     monkeypatch.setattr(dsp_mod.time, "sleep", lambda _s: None)
 
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -594,7 +609,7 @@ def test_remove_failed_rmtree_does_not_emit_dictionary_removed(qapp, monkeypatch
     assert [e.dict_id for e in chain[:1]] == ["a"], "failed remove must leave chain intact"
 
 
-def test_remove_retries_transient_oserror(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_remove_retries_transient_oserror(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     """A flake on the first rmtree attempt should be absorbed by the retry loop
     and succeed without surfacing an error dialog (Win11 sqlite-handle race)."""
     dict_dir = tmp_path / "a"
@@ -620,6 +635,7 @@ def test_remove_retries_transient_oserror(qapp, monkeypatch, tmp_path, confirm_r
     )
 
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -665,7 +681,7 @@ def test_on_rmtree_error_reraises_non_permission(tmp_path):
         dsp_mod._on_rmtree_error(_always_oserror, str(target), None)
 
 
-def test_release_callback_returning_false_aborts_remove(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     """When the release callback says no (mining run in flight), the panel
     must show a warning and leave the dictionary on disk untouched."""
     dict_dir = tmp_path / "a"
@@ -682,6 +698,7 @@ def test_release_callback_returning_false_aborts_remove(qapp, monkeypatch, tmp_p
     )
 
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -702,7 +719,7 @@ def test_release_callback_returning_false_aborts_remove(qapp, monkeypatch, tmp_p
     assert [e.dict_id for e in panel.get_chain()[:1]] == ["a"]
 
 
-def test_release_callback_runs_before_rmtree(qapp, monkeypatch, tmp_path, confirm_remove):
+def test_release_callback_runs_before_rmtree(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     """The release callback must fire strictly before rmtree so cached sqlite
     handles are dropped first (Issue #30 Win11 file-lock ordering)."""
     dict_dir = tmp_path / "a"
@@ -724,6 +741,7 @@ def test_release_callback_runs_before_rmtree(qapp, monkeypatch, tmp_path, confir
     monkeypatch.setattr(dsp_mod.shutil, "rmtree", _spy_rmtree)
 
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -738,7 +756,7 @@ def test_release_callback_runs_before_rmtree(qapp, monkeypatch, tmp_path, confir
     assert not dict_dir.exists()
 
 
-def test_remove_without_release_callback_still_works(qapp, tmp_path, confirm_remove):
+def test_remove_without_release_callback_still_works(qapp, qtbot, tmp_path, confirm_remove):
     """Unwired panel (tests, headless) must keep the pre-Issue-#30 behaviour:
     skip the release step entirely and just delete."""
     dict_dir = tmp_path / "a"
@@ -746,6 +764,7 @@ def test_remove_without_release_callback_still_works(qapp, tmp_path, confirm_rem
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
 
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
@@ -780,9 +799,10 @@ def test_robust_rmtree_exhausts_retries_and_raises(monkeypatch, tmp_path):
     assert attempts["n"] == 3
 
 
-def test_right_click_jisho_row_shows_no_menu(qapp, monkeypatch, tmp_path):
+def test_right_click_jisho_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
     """Jisho is an online fallback — no zip, no re-import, no menu."""
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
 
     constructed = _patch_menu_exec(monkeypatch, "Re-import…")
@@ -801,17 +821,19 @@ def test_right_click_jisho_row_shows_no_menu(qapp, monkeypatch, tmp_path):
     assert jmdict_fired == []
 
 
-def test_request_resource_release_returns_true_when_unset(qapp, tmp_path):
+def test_request_resource_release_returns_true_when_unset(qapp, qtbot, tmp_path):
     """Headless/test setups never wire the release callback; the proxy must
     treat 'no callback' as a successful no-op so re-import flows do not stall."""
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     assert panel.request_resource_release() is True
 
 
-def test_request_resource_release_proxies_callback_return(qapp, tmp_path):
+def test_request_resource_release_proxies_callback_return(qapp, qtbot, tmp_path):
     """The proxy forwards the callback's return value verbatim so settings_tab
     can branch on True/False (mining run in flight refuses with False)."""
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
 
     calls = {"n": 0}
 
@@ -830,17 +852,19 @@ def test_request_resource_release_proxies_callback_return(qapp, tmp_path):
 # === Issue #45: configurable dictionary storage path ===
 
 
-def test_dicts_root_selector_populated_from_constructor(qapp, tmp_path):
+def test_dicts_root_selector_populated_from_constructor(qapp, qtbot, tmp_path):
     """The storage-folder selector must display the path passed to __init__
     so the Settings tab reflects whatever dicts_root is on the live config."""
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     assert panel.dicts_root_selector.get_path() == str(tmp_path)
 
 
-def test_get_dicts_root_returns_selector_value(qapp, tmp_path):
+def test_get_dicts_root_returns_selector_value(qapp, qtbot, tmp_path):
     """get_dicts_root reads from the selector so settings_tab sees the user's
     in-progress pick (not the value the panel was constructed with)."""
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
 
     new_path = tmp_path / "elsewhere"
     new_path.mkdir()
@@ -849,20 +873,22 @@ def test_get_dicts_root_returns_selector_value(qapp, tmp_path):
     assert panel.get_dicts_root() == new_path
 
 
-def test_get_dicts_root_falls_back_to_internal_when_selector_empty(qapp, tmp_path):
+def test_get_dicts_root_falls_back_to_internal_when_selector_empty(qapp, qtbot, tmp_path):
     """An empty selector must collapse to the panel's last-known _dicts_root,
     never to Path('') — otherwise the save flow would silently rewrite the
     storage root to the cwd."""
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     panel.dicts_root_selector.set_path("")
 
     assert panel.get_dicts_root() == tmp_path
 
 
-def test_set_dicts_root_updates_selector(qapp, tmp_path):
+def test_set_dicts_root_updates_selector(qapp, qtbot, tmp_path):
     """Updating dicts_root externally (e.g. config reload) must refresh the
     visible field so the UI doesn't drift from the saved config."""
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
 
     new_path = tmp_path / "new"
     new_path.mkdir()
@@ -872,12 +898,13 @@ def test_set_dicts_root_updates_selector(qapp, tmp_path):
     assert panel.get_dicts_root() == new_path
 
 
-def test_reset_dicts_root_button_restores_default(qapp, tmp_path):
+def test_reset_dicts_root_button_restores_default(qapp, qtbot, tmp_path):
     """The Reset button must repopulate the selector with ANKI_MINER_HOME/dicts
     so users can roll back a mistaken pick without restarting."""
     from anki_miner.config.paths import ANKI_MINER_HOME
 
     panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
     other = tmp_path / "other"
     other.mkdir()
     panel.dicts_root_selector.set_path(str(other))
