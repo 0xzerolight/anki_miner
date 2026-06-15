@@ -2842,10 +2842,9 @@ class TestExpressionAudio:
 
     @staticmethod
     def _enabled_config(test_config):
-        """test_config with the toggle on and the expression_audio field mapped."""
+        """test_config with the expression_audio field mapped (the on switch)."""
         return replace(
             test_config,
-            expression_audio_enabled=True,
             anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
         )
 
@@ -3052,32 +3051,11 @@ class TestExpressionAudio:
         assert fetcher.fetch_candidates.call_args.args[0] == [("食べる", "たべる")]
         assert pairs[0][1].expression_audio_path is None
 
-    def test_disabled_does_not_fetch(self, test_config, mock_services, tmp_path):
-        """expression_audio_enabled=False ⇒ fetcher never called, even with the field mapped."""
-        config = replace(
-            test_config,
-            expression_audio_enabled=False,
-            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
-        )
-        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
-        self._wire_pipeline(mock_services, pairs)
-        fetcher = MagicMock()
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        fetcher.fetch_candidates.assert_not_called()
-
     def test_blank_field_mapping_does_not_fetch(self, test_config, mock_services, tmp_path):
-        """Enabled but anki_fields['expression_audio'] blank ⇒ fetcher never called."""
+        """Blank anki_fields['expression_audio'] ⇒ fetcher never called (the
+        field name is the sole on/off switch)."""
         config = replace(
             test_config,
-            expression_audio_enabled=True,
             anki_fields={**test_config.anki_fields, "expression_audio": ""},
         )
         pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
@@ -3249,7 +3227,6 @@ class TestExpressionAudioProgressBand:
     def _enabled_config(test_config):
         return replace(
             test_config,
-            expression_audio_enabled=True,
             anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
         )
 
@@ -3404,11 +3381,10 @@ class TestExpressionAudioProgressBand:
 
     def test_feature_off_no_expression_audio_on_start(self, test_config, mock_services, tmp_path):
         """Feature OFF: no expression-audio on_start; baseline stage count unchanged."""
-        # Feature disabled (expression_audio_enabled=False)
+        # Feature disabled via blank expression_audio field (the on/off switch).
         config = replace(
             test_config,
-            expression_audio_enabled=False,
-            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+            anki_fields={**test_config.anki_fields, "expression_audio": ""},
         )
         pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
         self._wire_pipeline(mock_services, pairs)
