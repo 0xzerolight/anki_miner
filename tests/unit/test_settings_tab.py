@@ -182,6 +182,36 @@ class TestSettingsTabRoundTrip:
         assert len(received) == 1
         assert received[0].youtube_playlist_max == 250
 
+    def test_save_flashes_inline_status_not_popup(self, tab, monkeypatch):
+        """A successful save shows the inline label, not a modal popup."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        def _fail(*_a, **_k):
+            raise AssertionError("save must not show a modal popup")
+
+        monkeypatch.setattr(QMessageBox, "information", _fail)
+
+        assert tab.save_status_label.text() == ""
+        tab._on_save_clicked()
+
+        assert "Saved" in tab.save_status_label.text()
+        assert tab._save_status_timer.isActive()
+
+    def test_reset_flashes_inline_status(self, tab, monkeypatch):
+        """A confirmed reset shows the inline label, not the old info popup."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+        monkeypatch.setattr(
+            QMessageBox,
+            "information",
+            lambda *a, **k: (_ for _ in ()).throw(AssertionError("reset must not show a modal popup")),
+        )
+
+        tab._on_reset_clicked()
+
+        assert "Reset to defaults" in tab.save_status_label.text()
+
     def test_load_config_reflects_playlist_max(self, test_config):
         cfg = replace(test_config, youtube_playlist_max=42)
         widget = SettingsTab(cfg)
