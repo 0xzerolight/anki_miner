@@ -196,6 +196,7 @@ def live_anki(tmp_path: Path):
         gateway.delete_test_deck()
 
 
+@pytest.mark.e2e
 def test_process_creates_cards_live(tmp_path: Path, qtbot, live_anki) -> None:
     """Real card creation against a live Anki test deck (skips when Anki is down).
 
