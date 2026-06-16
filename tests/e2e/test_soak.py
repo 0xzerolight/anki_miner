@@ -135,6 +135,8 @@ def test_crossprocess_preview_soak(isolated_home: Path, tmp_path: Path) -> None:
     assert "parent_disk_deltas" in loaded["config"]
 
 
+@pytest.mark.e2e
+@pytest.mark.soak
 def test_live_process_soak_skips_when_anki_down(isolated_home: Path, tmp_path: Path) -> None:
     """A live (Process, faithful) soak skips cleanly when Anki is unreachable.
 
