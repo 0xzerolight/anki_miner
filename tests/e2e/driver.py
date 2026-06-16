@@ -248,3 +248,31 @@ class EpisodeTabDriver:
         # Best-effort: also release any dict handles the tab's facade tracks.
         with contextlib.suppress(Exception):
             self.tab.release_dictionary_resources()
+
+    def dispose(self) -> None:
+        """FINAL cleanup: stop the worker AND release the tab QWidget.
+
+        Distinct from :meth:`teardown`:
+
+        * :meth:`teardown` = between-runs worker cleanup ONLY. The SAME tab is
+          reused for the next session in the in-process soak loop, so teardown
+          must NEVER delete it.
+        * :meth:`dispose` = final disposal after the LAST session. It runs the
+          worker teardown and THEN schedules the tab widget for C++ destruction
+          via ``close()`` + ``deleteLater()`` so the conftest ``_drain_qt_deletes``
+          net can actually flush the object instead of leaking an untracked
+          top-level widget (the documented pytest-qt segfault hazard).
+
+        Idempotent and safe to call when no tab/worker exists.
+        """
+        with contextlib.suppress(Exception):
+            self.teardown()
+        tab = getattr(self, "tab", None)
+        if tab is None:
+            return
+        with contextlib.suppress(Exception):
+            tab.close()
+        with contextlib.suppress(Exception):
+            tab.deleteLater()
+        # Drop our reference so a second dispose() is a no-op.
+        self.tab = None  # type: ignore[assignment]
