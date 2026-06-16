@@ -85,7 +85,10 @@ class SubtitlePlayerWidget(QWidget):
 
         # Connect the video-sink signal once; the sink belongs to the QVideoWidget
         # and persists across player instances, so we wire it here rather than per-source.
-        self.video_widget.videoSink().videoFrameChanged.connect(self._on_video_frame_changed)
+        # videoSink() is typed Optional but a constructed QVideoWidget always has one.
+        video_sink = self.video_widget.videoSink()
+        if video_sink is not None:
+            video_sink.videoFrameChanged.connect(self._on_video_frame_changed)
 
         # Subtitle overlay label
         self.subtitle_label = QLabel()
