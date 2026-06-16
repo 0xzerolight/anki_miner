@@ -157,9 +157,9 @@ Anki Miner checks GitHub for new releases on startup (toggle in Settings). When 
 
 ## Roadmap
 
-List of ideas for future versions of Anki Miner.
-Add to the list — [Open an issue](https://github.com/0xzerolight/anki_miner/issues).
-Discuss the roadmap — [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
+List of ideas for future versions of Anki Miner. Not in priority order. Feature requests take precedence.
+- Suggest a feature — [Open an issue](https://github.com/0xzerolight/anki_miner/issues).
+- Discuss the roadmap — [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
 
 - **Features**:
   - UI language selection.
@@ -169,7 +169,7 @@ Discuss the roadmap — [Discussions](https://github.com/0xzerolight/anki_miner/
   - Reading tab: Mine manga and books.
 
 - **Improvements**:
-  - Improved user onboarding.
+  - Improved user onboarding: automatic recommended resource fetching, easier setup.
 
 - **Researching/Under consideration**:
   - Android port.
