@@ -687,7 +687,7 @@ class TestAv1WatchdogFallback:
         assert not widget._av1_watchdog.isActive(), "Non-AV1 source must not arm the watchdog"
 
     def test_non_av1_no_fallback_on_timeout_call(self, qtbot, fake_media_classes):
-        """Even if the timeout fires for a non-AV1 source, no fallback is shown."""
+        """Even if the timeout handler is called directly for a non-AV1 source, no fallback is shown."""
         with (
             patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
             patch(f"{MODULE}.get_primary_video_codec", return_value="hevc"),
@@ -696,12 +696,15 @@ class TestAv1WatchdogFallback:
             qtbot.addWidget(widget)
             widget.set_source(Path("/tmp/hevc.mkv"), [], 0.0)
 
-        # _got_video_frame is False, but _is_av1 is also False — timeout handler checks
-        # only _got_video_frame, so fallback is still shown if called directly.
-        # The important guarantee is that the watchdog is never armed for non-AV1,
-        # so the timeout can't fire in production.  This test verifies the arming gate.
+        # Watchdog is never armed for non-AV1 sources.
         widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
         assert not widget._av1_watchdog.isActive()
+
+        # Even a direct call to the timeout handler must be a no-op when _is_av1 is False.
+        widget._on_av1_watchdog_timeout()
+        assert not widget.video_widget.isHidden(), "video_widget must stay visible for non-AV1"
+        assert widget._av1_notice_label.isHidden(), "fallback notice must remain hidden for non-AV1"
+        assert widget._av1_open_button.isHidden(), "open-external button must remain hidden for non-AV1"
 
     # ------------------------------------------------------------------
     # 4. set_source resets fallback state for a new source

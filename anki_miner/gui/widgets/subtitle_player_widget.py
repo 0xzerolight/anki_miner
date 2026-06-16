@@ -329,7 +329,7 @@ class SubtitlePlayerWidget(QWidget):
         The player is stopped and the fallback notice + open-externally button
         are shown in place of the video widget.
         """
-        if not self._got_video_frame:
+        if self._is_av1 and not self._got_video_frame:
             logger.info("AV1 watchdog fired — no decoded frame within 2 s; " "switching to external-player fallback")
             if self.player is not None:
                 self.player.stop()
