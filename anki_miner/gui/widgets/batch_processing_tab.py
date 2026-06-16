@@ -234,9 +234,9 @@ class BatchProcessingTab(MiningTabBase):
         self.preview_pairs_button.setToolTip("Preview video/subtitle pairs before processing")
         button_layout.addWidget(self.preview_pairs_button)
 
-        self.process_pairs_button = ModernButton("Process All Pairs", variant="primary")
+        self.process_pairs_button = ModernButton("Process Folder", variant="primary")
         self.process_pairs_button.clicked.connect(self._process_pairs)
-        self.process_pairs_button.setToolTip("Process all discovered episode pairs")
+        self.process_pairs_button.setToolTip("Process every episode pair found in the selected folders")
         button_layout.addWidget(self.process_pairs_button)
 
         self.cancel_button = ModernButton("Cancel", variant="danger")
