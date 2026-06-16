@@ -38,6 +38,15 @@ __all__ = ["main"]
 _QAPP = None
 
 
+def _anki_down(e2e: E2EConfig) -> int:
+    """Print the one-line Anki-unreachable error to stderr and return exit code 2."""
+    print(
+        f"ERROR: Anki not reachable at {e2e.ankiconnect_url} — start Anki with AnkiConnect",
+        file=sys.stderr,
+    )
+    return 2
+
+
 def _build_config(args: argparse.Namespace) -> E2EConfig:
     """Build ``E2EConfig.from_env()`` applying any trivial CLI overrides."""
     e2e = E2EConfig.from_env()
@@ -86,11 +95,7 @@ def _cmd_smoke(args: argparse.Namespace) -> int:
             test_home=e2e.test_home,
         )
     except AnkiUnreachableError:
-        print(
-            f"ERROR: Anki not reachable at {e2e.ankiconnect_url} — start Anki with AnkiConnect",
-            file=sys.stderr,
-        )
-        return 2
+        return _anki_down(e2e)
     return _emit(soak, run_dir)
 
 
@@ -99,10 +104,16 @@ def _cmd_soak(args: argparse.Namespace) -> int:
     e2e = _build_config(args)
     # See _cmd_smoke: re-assert home env + patch transitively-imported snapshots.
     set_test_home(e2e.test_home)
-    if args.policy == "first_n":
-        e2e = dataclasses.replace(e2e, curation_policy="first_n", first_n=args.first_n)
-    elif args.policy != "all":
-        e2e = dataclasses.replace(e2e, curation_policy=args.policy)
+    try:
+        if args.policy == "first_n":
+            e2e = dataclasses.replace(e2e, curation_policy="first_n", first_n=args.first_n)
+        elif args.policy != "all":
+            e2e = dataclasses.replace(e2e, curation_policy=args.policy)
+    except ValueError as exc:
+        # E2EConfig.__post_init__ rejects e.g. `--policy first_n` without a
+        # positive `--first-n`. Surface a clean one-line error, not a traceback.
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
 
     run_dir = RunDir(e2e.runs_root, label=f"soak-{args.mode}")
     runner = run_crossprocess_soak if args.mode == "crossprocess" else run_inprocess_soak
@@ -116,11 +127,7 @@ def _cmd_soak(args: argparse.Namespace) -> int:
             test_home=e2e.test_home,
         )
     except AnkiUnreachableError:
-        print(
-            f"ERROR: Anki not reachable at {e2e.ankiconnect_url} — start Anki with AnkiConnect",
-            file=sys.stderr,
-        )
-        return 2
+        return _anki_down(e2e)
     return _emit(soak, run_dir)
 
 
@@ -132,11 +139,7 @@ def _cmd_cleanup(args: argparse.Namespace) -> int:
         gateway.ping()
         gateway.delete_test_deck()
     except AnkiUnreachableError:
-        print(
-            f"ERROR: Anki not reachable at {e2e.ankiconnect_url} — start Anki with AnkiConnect",
-            file=sys.stderr,
-        )
-        return 2
+        return _anki_down(e2e)
     print(f"Deleted test deck {e2e.deck_name!r}.")
     return 0
 

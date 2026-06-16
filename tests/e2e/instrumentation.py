@@ -90,11 +90,15 @@ _SQLITE_DB_NAMES = ("known_words.db", "history.db", "stats.db")
 #: Sustained growth in any of these is a leak suspect and is flagged.
 SUSPECT_METRICS = ("top_level_widgets", "python_threads", "qthread_pool_active", "temp_files")
 
+#: SQLite DB names that legitimately grow each session (keys into
+#: ``StateSnapshot.sqlite_rows``). ``known_words.db`` is included because the
+#: known-words cache is additive across sessions. Single source of truth so the
+#: per-DB context loop in ``detect_divergence`` can't drift from EXPECTED_GROWERS.
+_EXPECTED_DB_NAMES = ("history.db", "stats.db", "known_words.db")
+
 #: Metrics that legitimately grow as mining creates cards. Their growth is
-#: reported but never flagged. The sqlite entries are keyed by db name to match
-#: ``StateSnapshot.sqlite_rows``; ``known_words.db`` is included because the
-#: known-words cache is additive across sessions.
-EXPECTED_GROWERS = ("anki_test_deck_count", "history.db", "stats.db", "known_words.db")
+#: reported but never flagged.
+EXPECTED_GROWERS = ("anki_test_deck_count", *_EXPECTED_DB_NAMES)
 
 #: Fraction of session-to-session gaps that must show a positive delta for a
 #: suspect metric to count as "monotonically growing". 0.75 means "positive in
@@ -408,7 +412,7 @@ def detect_divergence(
             expected_deltas["anki_test_deck_count"] = last.anki_test_deck_count - first.anki_test_deck_count
         else:
             expected_deltas["anki_test_deck_count"] = None
-        for db_name in ("history.db", "stats.db", "known_words.db"):
+        for db_name in _EXPECTED_DB_NAMES:
             vals = _sqlite_series(snapshots, db_name)
             expected_deltas[db_name] = vals[-1] - vals[0]
 

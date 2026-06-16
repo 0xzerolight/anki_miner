@@ -139,6 +139,20 @@ def test_exit_restores_on_exception(qapp, qtbot):
     assert base.WordCurationDialog is original
 
 
+def test_full_window_patches_and_restores_extra_dialogs(qapp, qtbot):
+    """full_window=True also patches ResultsDialog + WelcomeDialog, then restores."""
+    import anki_miner.gui.main_window as main_window
+    import anki_miner.gui.widgets.dialogs.welcome_dialog as welcome
+
+    orig_results = main_window.ResultsDialog
+    orig_welcome = welcome.WelcomeDialog
+    with AutoCurationResponder(policy="all", full_window=True):
+        assert main_window.ResultsDialog is not orig_results
+        assert welcome.WelcomeDialog is not orig_welcome
+    assert main_window.ResultsDialog is orig_results
+    assert welcome.WelcomeDialog is orig_welcome
+
+
 def test_dialogcode_accepted_is_real_enum(qapp, qtbot):
     """The fake's DialogCode.Accepted must be the real enum member.
 
