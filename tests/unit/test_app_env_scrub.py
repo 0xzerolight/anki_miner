@@ -3,26 +3,7 @@
 import os
 import sys
 
-from anki_miner.gui.app import _force_software_video_decode, _scrub_pyinstaller_env
-
-_HW_VAR = "QT_FFMPEG_DECODING_HW_DEVICE_TYPES"
-
-
-def test_forces_software_decode_when_unset(monkeypatch):
-    monkeypatch.delenv(_HW_VAR, raising=False)
-
-    _force_software_video_decode()
-
-    # Empty device-type list (",") disables all Qt FFmpeg HW decode backends.
-    assert os.environ[_HW_VAR] == ","
-
-
-def test_does_not_override_user_value(monkeypatch):
-    monkeypatch.setenv(_HW_VAR, "cuda")
-
-    _force_software_video_decode()
-
-    assert os.environ[_HW_VAR] == "cuda"
+from anki_miner.gui.app import _scrub_pyinstaller_env
 
 
 def test_frozen_restores_orig(monkeypatch):
