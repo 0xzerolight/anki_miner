@@ -88,8 +88,8 @@ def test_committed_subtitle_asset_exists() -> None:
     assert path.stat().st_size > 0
 
 
-def test_write_test_srt_is_parseable_srt(tmp_path: Path) -> None:
-    """write_test_srt emits a well-formed SRT (index, arrow timing, blank gaps)."""
+def test_write_test_srt_has_srt_structure(tmp_path: Path) -> None:
+    """write_test_srt emits SRT structure (one arrow-timing line per cue, in-window)."""
     srt = fixtures_subtitle.write_test_srt(tmp_path / "e2e.srt")
     text = srt.read_text(encoding="utf-8")
     # One numbered block per line, each with an SRT arrow timing.
@@ -119,6 +119,9 @@ def test_subtitle_yields_expected_lemmas(tmp_path: Path) -> None:
     assert lemmas == fixtures_subtitle.EXPECTED_LEMMAS
     # Every expected lemma has a reading entry the dict fixture can seed from.
     assert set(fixtures_subtitle.LEMMA_READINGS) == set(fixtures_subtitle.EXPECTED_LEMMAS)
+    # Reading VALUES must also match: a MeCab/unidic change that altered a lemma's
+    # reading would otherwise silently rot LEMMA_READINGS (and the seeded dict).
+    assert {w.lemma: w.lemma_reading for w in words} == fixtures_subtitle.LEMMA_READINGS
 
 
 # --------------------------------------------------------------------------- #
