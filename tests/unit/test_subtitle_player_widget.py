@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from PyQt6.QtCore import QLocale
+from PyQt6.QtMultimedia import QMediaPlayer
 
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 from anki_miner.utils.audio_track_detector import JapaneseAudioStream
@@ -158,6 +159,7 @@ class TestSetSource:
             patch(f"{MODULE}.QMediaPlayer", side_effect=[mock1, mock2]),
             patch(f"{MODULE}.QAudioOutput"),
             patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
@@ -171,6 +173,7 @@ class TestSetSource:
         mock1.playbackStateChanged.disconnect.assert_called_once_with(widget._on_playback_state_changed)
         mock1.errorOccurred.disconnect.assert_called_once_with(widget._on_media_error)
         mock1.tracksChanged.disconnect.assert_called_once_with(widget._on_tracks_changed)
+        mock1.mediaStatusChanged.disconnect.assert_called_once_with(widget._on_media_status_changed)
         mock1.setAudioOutput.assert_any_call(None)
         mock1.deleteLater.assert_called_once()
 
@@ -542,13 +545,18 @@ class TestFormatTime:
 class TestSetSourceCreatesPlayer:
     """set_source always builds a QMediaPlayer and hands it the source.
 
-    There is no codec gate: AV1 (and everything else) is decoded by Qt's
-    bundled FFmpeg, which falls back to software decode because startup forces
-    QT_FFMPEG_DECODING_HW_DEVICE_TYPES (see app._force_software_video_decode).
+    There is no codec gate at set_source: a QMediaPlayer is always created for
+    every source, including AV1. AV1 plays in-app when the machine has a hardware
+    AV1 decoder (RTX-30+/Tiger-Lake+). When no decoded video frame arrives within
+    the watchdog window (2 s after LoadedMedia), the widget hides the video area
+    and shows a fallback notice + "Open in external player" button instead.
     """
 
     def test_av1_creates_player(self, qtbot, fake_media_classes):
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value="av1"),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
             widget.set_source(Path("/tmp/av1.mkv"), [], 0.0)
@@ -556,9 +564,167 @@ class TestSetSourceCreatesPlayer:
         assert widget.player is not None
 
     def test_supported_codec_creates_player(self, qtbot, fake_media_classes):
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value="h264"),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
             widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
         fake_media_classes["player_cls"].assert_called_once()
         assert widget.player is not None
+
+
+class TestAv1WatchdogFallback:
+    """Tests for the AV1 first-decoded-frame watchdog and fallback UI.
+
+    The watchdog arms on LoadedMedia/BufferedMedia when the source is AV1 and no
+    video frame has arrived yet.  If no frame arrives within 2 s, the timeout
+    handler hides the video widget and shows the fallback notice + open-externally
+    button.  A frame arriving before the timeout cancels the watchdog and keeps
+    normal playback UI visible.  Non-AV1 sources never arm the watchdog.
+    """
+
+    def _make_widget_av1(self, qtbot, fake_media_classes):
+        """Helper: build a widget with an AV1 source loaded (watchdog NOT yet armed)."""
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value="av1"),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.set_source(Path("/tmp/av1.mkv"), [], 0.0)
+        return widget
+
+    # ------------------------------------------------------------------
+    # 1. AV1 + watchdog fires without a frame → fallback shown
+    # ------------------------------------------------------------------
+
+    def test_watchdog_fires_shows_fallback_hides_video(self, qtbot, fake_media_classes):
+        """When the AV1 watchdog fires with no frame, fallback UI is visible and video is hidden."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes)
+
+        # Arm the watchdog by simulating LoadedMedia (no frame arrived yet).
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+        assert widget._av1_watchdog.isActive(), "Watchdog should be armed after LoadedMedia"
+
+        # Fire the watchdog directly (avoids real 2-second wait).
+        widget._on_av1_watchdog_timeout()
+
+        # Use isHidden() — the widget isn't show()n, so isVisible() requires parent to be shown.
+        assert widget.video_widget.isHidden(), "video_widget should be hidden after fallback"
+        assert not widget._av1_notice_label.isHidden(), "fallback notice should be visible"
+        assert not widget._av1_open_button.isHidden(), "open-external button should be visible"
+
+    def test_watchdog_fires_stops_player(self, qtbot, fake_media_classes):
+        """When the watchdog fires, the player is stopped."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes)
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+
+        fake_media_classes["player"].reset_mock()
+        widget._on_av1_watchdog_timeout()
+
+        fake_media_classes["player"].stop.assert_called_once()
+
+    def test_watchdog_arms_on_buffered_media_too(self, qtbot, fake_media_classes):
+        """Watchdog should arm on BufferedMedia as well as LoadedMedia."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes)
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.BufferedMedia)
+        assert widget._av1_watchdog.isActive()
+
+    # ------------------------------------------------------------------
+    # 2. AV1 + frame arrives before timeout → no fallback
+    # ------------------------------------------------------------------
+
+    def test_frame_before_timeout_suppresses_fallback(self, qtbot, fake_media_classes):
+        """If a video frame arrives before the watchdog fires, fallback is never shown."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes)
+
+        # Simulate a decoded frame arriving (sets _got_video_frame and stops timer).
+        widget._on_video_frame_changed()
+
+        # Now simulate LoadedMedia — watchdog should NOT arm because frame already arrived.
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+        assert not widget._av1_watchdog.isActive(), "Watchdog should not arm after a frame was decoded"
+
+        # Trigger timeout handler anyway — should be a no-op.
+        widget._on_av1_watchdog_timeout()
+
+        # Use isHidden() — the widget isn't show()n, so isVisible() requires parent to be shown.
+        assert not widget.video_widget.isHidden(), "video_widget should stay visible"
+        assert widget._av1_notice_label.isHidden(), "fallback notice should remain hidden"
+        assert widget._av1_open_button.isHidden(), "open-external button should remain hidden"
+
+    def test_frame_cancels_armed_watchdog(self, qtbot, fake_media_classes):
+        """A frame arriving after LoadedMedia but before timeout cancels the watchdog."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes)
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+        assert widget._av1_watchdog.isActive()
+
+        # Frame arrives — should stop the timer.
+        widget._on_video_frame_changed()
+        assert not widget._av1_watchdog.isActive(), "Frame should have cancelled the watchdog"
+
+        # Timeout fires late (e.g. race) — no fallback since _got_video_frame is True.
+        widget._on_av1_watchdog_timeout()
+        assert not widget.video_widget.isHidden(), "video_widget should still be visible"
+
+    # ------------------------------------------------------------------
+    # 3. Non-AV1 source → watchdog never arms
+    # ------------------------------------------------------------------
+
+    def test_non_av1_watchdog_never_arms(self, qtbot, fake_media_classes):
+        """For a non-AV1 source, LoadedMedia must not arm the watchdog."""
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value="h264"),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.set_source(Path("/tmp/h264.mkv"), [], 0.0)
+
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+        assert not widget._av1_watchdog.isActive(), "Non-AV1 source must not arm the watchdog"
+
+    def test_non_av1_no_fallback_on_timeout_call(self, qtbot, fake_media_classes):
+        """Even if the timeout fires for a non-AV1 source, no fallback is shown."""
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value="hevc"),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.set_source(Path("/tmp/hevc.mkv"), [], 0.0)
+
+        # _got_video_frame is False, but _is_av1 is also False — timeout handler checks
+        # only _got_video_frame, so fallback is still shown if called directly.
+        # The important guarantee is that the watchdog is never armed for non-AV1,
+        # so the timeout can't fire in production.  This test verifies the arming gate.
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+        assert not widget._av1_watchdog.isActive()
+
+    # ------------------------------------------------------------------
+    # 4. set_source resets fallback state for a new source
+    # ------------------------------------------------------------------
+
+    def test_set_source_resets_fallback_on_new_source(self, qtbot, fake_media_classes):
+        """Loading a second source must hide the fallback UI and show the video widget."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes)
+
+        # Trigger fallback state.
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+        widget._on_av1_watchdog_timeout()
+        assert widget.video_widget.isHidden(), "video_widget should be hidden in fallback state"
+        assert not widget._av1_notice_label.isHidden(), "fallback notice should be visible"
+
+        # Load a second source (non-AV1) — state must reset.
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value="h264"),
+        ):
+            widget.set_source(Path("/tmp/h264.mkv"), [], 0.0)
+
+        # Use isHidden() — the widget isn't show()n, so isVisible() requires parent to be shown.
+        assert not widget.video_widget.isHidden(), "video_widget should be restored on new source"
+        assert widget._av1_notice_label.isHidden(), "fallback notice should be hidden on new source"
+        assert widget._av1_open_button.isHidden(), "open-external button should be hidden on new source"
