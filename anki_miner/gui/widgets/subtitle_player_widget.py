@@ -3,18 +3,24 @@
 import logging
 from pathlib import Path
 
-from PyQt6.QtCore import QLocale, Qt, QUrl
+from PyQt6.QtCore import QLocale, Qt, QTimer, QUrl
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtMultimedia import QAudioOutput, QMediaMetaData, QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.utils import find_japanese_audio_stream
+from anki_miner.utils import find_japanese_audio_stream, get_primary_video_codec
 
 logger = logging.getLogger(__name__)
 
 # Base subtitle-overlay font size (px) at scale 1.0.
 _BASE_OVERLAY_FONT_PX = 18
+
+# Resolved at import time so they remain correct even when QMediaPlayer is
+# patched in unit tests (which replaces the module-level name with a MagicMock).
+_LOADED_MEDIA = QMediaPlayer.MediaStatus.LoadedMedia
+_BUFFERED_MEDIA = QMediaPlayer.MediaStatus.BufferedMedia
 
 
 class SubtitlePlayerWidget(QWidget):
@@ -42,6 +48,16 @@ class SubtitlePlayerWidget(QWidget):
         self.player: QMediaPlayer | None = None
         self.audio_output: QAudioOutput | None = None
 
+        # AV1 watchdog state — populated by set_source
+        self._video_path: Path | None = None
+        self._is_av1: bool = False
+        self._got_video_frame: bool = False
+
+        # Single-shot watchdog: fires 2 s after LoadedMedia/BufferedMedia if no frame decoded.
+        self._av1_watchdog = QTimer(self)
+        self._av1_watchdog.setSingleShot(True)
+        self._av1_watchdog.timeout.connect(self._on_av1_watchdog_timeout)
+
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -53,6 +69,23 @@ class SubtitlePlayerWidget(QWidget):
         # Video widget
         self.video_widget = QVideoWidget()
         layout.addWidget(self.video_widget, 1)
+
+        # AV1 fallback UI — hidden by default; shown when the watchdog fires on an
+        # undecodable AV1 source (GPU can't hardware-decode AV1 on this machine).
+        self._av1_notice_label = QLabel("This video uses AV1, which your system can't decode for in-app preview.")
+        self._av1_notice_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._av1_notice_label.setWordWrap(True)
+        self._av1_notice_label.setVisible(False)
+        layout.addWidget(self._av1_notice_label)
+
+        self._av1_open_button = QPushButton("Open in external player")
+        self._av1_open_button.setVisible(False)
+        self._av1_open_button.clicked.connect(self._open_in_external_player)
+        layout.addWidget(self._av1_open_button)
+
+        # Connect the video-sink signal once; the sink belongs to the QVideoWidget
+        # and persists across player instances, so we wire it here rather than per-source.
+        self.video_widget.videoSink().videoFrameChanged.connect(self._on_video_frame_changed)
 
         # Subtitle overlay label
         self.subtitle_label = QLabel()
@@ -123,10 +156,22 @@ class SubtitlePlayerWidget(QWidget):
             self.player.playbackStateChanged.disconnect(self._on_playback_state_changed)
             self.player.errorOccurred.disconnect(self._on_media_error)
             self.player.tracksChanged.disconnect(self._on_tracks_changed)
+            self.player.mediaStatusChanged.disconnect(self._on_media_status_changed)
             self.player.setAudioOutput(None)
             self.player.deleteLater()
             self.player = None
             self.audio_output = None
+
+        # Reset per-source watchdog state and restore normal video widget visibility.
+        self._video_path = video_path
+        self._got_video_frame = False
+        self._av1_watchdog.stop()
+        self._av1_notice_label.setVisible(False)
+        self._av1_open_button.setVisible(False)
+        self.video_widget.setVisible(True)
+
+        # Probe the video codec so we know whether to arm the watchdog on LoadedMedia.
+        self._is_av1 = get_primary_video_codec(video_path, ffprobe_cmd=ffprobe_cmd) == "av1"
 
         self.subtitle_entries = subtitle_entries
         self._offset = offset
@@ -148,6 +193,7 @@ class SubtitlePlayerWidget(QWidget):
         self.player.playbackStateChanged.connect(self._on_playback_state_changed)
         self.player.errorOccurred.connect(self._on_media_error)
         self.player.tracksChanged.connect(self._on_tracks_changed)
+        self.player.mediaStatusChanged.connect(self._on_media_status_changed)
 
         self.player.setSource(QUrl.fromLocalFile(str(video_path)))
 
@@ -246,6 +292,55 @@ class SubtitlePlayerWidget(QWidget):
         """
         self.subtitle_label.setText(f"Video error: {error_string}")
         self.subtitle_label.setVisible(True)
+
+    def _on_video_frame_changed(self) -> None:
+        """Record that at least one decoded video frame has arrived from the sink.
+
+        Connected once in _setup_ui to ``QVideoWidget.videoSink().videoFrameChanged``.
+        Setting this flag prevents the AV1 watchdog from triggering the fallback UI
+        when a frame is successfully decoded.
+        """
+        self._got_video_frame = True
+        self._av1_watchdog.stop()
+
+    def _on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
+        """Arm the AV1 watchdog when the media is loaded and the source is AV1.
+
+        Design assumption: Qt presents the first decoded frame at LoadedMedia even
+        while paused, so a hardware-decodable AV1 source sets ``_got_video_frame``
+        before or shortly after LoadedMedia arrives, and the watchdog never fires.
+        A source whose codec Qt cannot decode never produces a frame — the watchdog
+        fires after the timeout and reveals the fallback UI.
+
+        The watchdog is only armed when ``_is_av1`` is True; non-AV1 sources skip
+        this path entirely.
+
+        Args:
+            status: The new QMediaPlayer media status.
+        """
+        if status in (_LOADED_MEDIA, _BUFFERED_MEDIA) and self._is_av1 and not self._got_video_frame:
+            self._av1_watchdog.start(2000)
+
+    def _on_av1_watchdog_timeout(self) -> None:
+        """Handle the AV1 watchdog firing after no decoded frame arrived.
+
+        If ``_got_video_frame`` is still False when this fires, the AV1 video
+        could not be decoded (no hardware decoder available on this machine).
+        The player is stopped and the fallback notice + open-externally button
+        are shown in place of the video widget.
+        """
+        if not self._got_video_frame:
+            logger.info("AV1 watchdog fired — no decoded frame within 2 s; " "switching to external-player fallback")
+            if self.player is not None:
+                self.player.stop()
+            self.video_widget.setVisible(False)
+            self._av1_notice_label.setVisible(True)
+            self._av1_open_button.setVisible(True)
+
+    def _open_in_external_player(self) -> None:
+        """Open the current video source in the OS default media player."""
+        if self._video_path is not None:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._video_path)))
 
     def _on_position_changed(self, position: int) -> None:
         """Handle media position change.
