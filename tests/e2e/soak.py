@@ -256,8 +256,10 @@ def run_one_session(
     report.delta = diff_snapshots(snap_pre, snap_post)
 
     if own_driver:
+        # An own-driver is never reused, so fully dispose it (releases the tab
+        # QWidget, not just the worker — see EpisodeTabDriver.dispose).
         with contextlib.suppress(Exception):
-            driver.teardown()
+            driver.dispose()
 
     return report
 
@@ -418,8 +420,13 @@ def run_inprocess_soak(
                     driver.teardown()
                 _drain_qt_deletes()
         finally:
+            # Final disposal of the reused tab: dispose() releases the tab
+            # QWidget (deleteLater) which teardown() deliberately does not, then
+            # drain Qt deferred-deletes so its C++ object is destroyed within
+            # this call rather than leaking to end-of-session.
             with contextlib.suppress(Exception):
-                driver.teardown()
+                driver.dispose()
+            _drain_qt_deletes()
             # Keep the deck on failure (for inspection); clean it otherwise.
             if gateway is not None and not any_failed:
                 with contextlib.suppress(Exception):
