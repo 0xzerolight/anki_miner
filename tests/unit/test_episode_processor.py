@@ -363,6 +363,83 @@ class TestProcessEpisode:
 
         assert result.cards_created == 1
 
+    def test_mid_batch_failure_preserves_partial_card_ids(self, test_config, mock_services, tmp_path):
+        """OVH-008: mid-batch AnkiConnectionError → partial IDs from completed
+        batches are harvested from last_created_note_ids and returned in the
+        result so the Undo button can appear.
+        """
+        from anki_miner.exceptions import AnkiConnectionError
+
+        batch1_ids = [101, 102, 103]
+        words = [_make_word("食べる")]
+        media = _make_media("taberu")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+
+        # Simulate: create_cards_batch raises mid-run but the AnkiService finally
+        # has already stashed batch-1 IDs in last_created_note_ids.
+        def _raise_mid_batch(card_data, progress_callback=None):
+            mock_services["anki_service"].last_created_note_ids = batch1_ids
+            raise AnkiConnectionError("Anki connection lost on batch 2")
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _raise_mid_batch
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.card_ids == batch1_ids
+        assert result.cards_created == len(batch1_ids)
+        assert result.success is False
+        assert any("3 card" in e for e in result.errors)
+
+    def test_early_phase_failure_does_not_attribute_prior_episode_ids(self, test_config, mock_services, tmp_path):
+        """OVH-008 correctness guard: a failure in phase 1-4 (before
+        create_cards_batch runs) must NOT attribute the PREVIOUS episode's IDs.
+
+        The processor resets last_created_note_ids at the START of
+        process_episode so stale IDs from an earlier run are cleared before
+        the except handler reads them.
+        """
+        prior_episode_ids = [201, 202]
+
+        # First episode succeeds and leaves IDs in last_created_note_ids.
+        words = [_make_word("食べる")]
+        media = _make_media("taberu")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 2
+        mock_services["anki_service"].last_created_note_ids = prior_episode_ids
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Second episode: phase 1 (subtitle parsing) fails BEFORE create_cards_batch.
+        # last_created_note_ids still holds prior_episode_ids from the first run
+        # until process_episode's early reset clears it.
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = RuntimeError("parse crash")
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.card_ids == []
+        assert result.cards_created == 0
+        assert result.success is False
+
 
 class TestOptionalServices:
     """Tests for EpisodeProcessor with optional pitch accent and frequency services."""
@@ -774,8 +851,14 @@ class TestKnownWordDBIntegration:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
-        mock_services["anki_service"].last_created_note_ids = [12345]
+
+        # Simulate what the real create_cards_batch does: set last_created_note_ids
+        # as a side effect (the process_episode early reset clears any pre-call value).
+        def _create_batch(card_data, progress_callback=None):
+            mock_services["anki_service"].last_created_note_ids = [12345]
+            return 1
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
         processor = EpisodeProcessor(
             config=replace(test_config, use_known_words_db=True),
@@ -1385,8 +1468,14 @@ class TestStatsServiceIntegration:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
-        mock_services["anki_service"].last_created_note_ids = [12345]
+
+        # Simulate what the real create_cards_batch does: set last_created_note_ids
+        # as a side effect (the process_episode early reset clears any pre-call value).
+        def _create_batch(card_data, progress_callback=None):
+            mock_services["anki_service"].last_created_note_ids = [12345]
+            return 1
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
         processor = EpisodeProcessor(
             config=test_config,
