@@ -141,6 +141,17 @@ class MediaExtractorService:
         screenshot_path = output_dir / screenshot_file
         audio_path = output_dir / audio_file
 
+        # OVH-049: two separate ffmpeg invocations each re-open the source
+        # container.  Merging them into one ``-i input -map 0:v -map 0:a``
+        # with two outputs would halve container-open cost, but it is
+        # behavior-sensitive: the single -ss seek position is shared, so
+        # the screenshot frame timing and audio window could shift relative
+        # to the current per-invocation seeks (static screenshot uses
+        # ``-ss before -i`` fast seek; audio uses a different start/duration
+        # with padding applied).  Without a benchmark harness on real
+        # multi-GB MKV sources, the container-open cost is unquantified and
+        # the precision/quality risk is non-zero.  Deferred; leave as-is.
+
         # Extract screenshot (skipped for audiobooks — no video stream to grab)
         screenshot_success = False
         if not audio_only:
@@ -269,10 +280,28 @@ class MediaExtractorService:
                             media_data_list.append((word, media))
                             if progress_callback:
                                 progress_callback.on_progress(completed, f"Extracting media: {word.lemma}")
+                            # OVH-044: screenshot succeeded but audio failed (default
+                            # mode only).  The card is still kept — that is the
+                            # intended curation policy — but the silent gap in the
+                            # Audio field is surfaced to the GUI error band.
+                            # audio_only mode is untouched: its keep decision already
+                            # keys on has_audio, so a word reaching here always has
+                            # audio.
+                            if not audio_only and not media.has_audio and progress_callback:
+                                progress_callback.on_error(word.lemma, "audio extraction failed")
                         else:
                             skip_reason = "No audio" if audio_only else "No screenshot"
                             if progress_callback:
                                 progress_callback.on_progress(completed, f"{skip_reason}: {word.lemma}")
+                            # OVH-043: word dropped because the primary medium
+                            # failed (screenshot in default mode, audio in
+                            # audio_only mode).  A frame can always be grabbed at a
+                            # valid timestamp, so a screenshot miss is a real ffmpeg
+                            # failure, not a clean skip.  Surface it via on_error so
+                            # the GUI error band shows it; on_error is non-fatal and
+                            # does not abort the run.
+                            if progress_callback:
+                                progress_callback.on_error(word.lemma, "media extraction failed — see log")
 
                     except Exception as e:
                         if progress_callback:
