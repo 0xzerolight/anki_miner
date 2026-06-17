@@ -46,10 +46,10 @@ from __future__ import annotations
 
 import logging
 import shutil
+import tempfile
 import threading
 from collections.abc import Callable
 from pathlib import Path
-from uuid import uuid4
 
 from PyQt6.QtCore import pyqtSignal
 
@@ -202,12 +202,18 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
     def _allocate_workspace(self) -> Path:
         """Create and return a fresh per-attempt workspace directory.
 
-        ``exist_ok=False`` is deliberate: UUID collisions are astronomically
-        unlikely, and silently reusing a stale directory would leak prior-run
-        files into this run.
+        The intermediate ``youtube`` directory is created with mode 0o700 and
+        the leaf workspace is allocated via ``tempfile.mkdtemp`` (also 0o700),
+        mirroring ``episode_processor._allocate_run_temp_folder``.  Explicit
+        modes are used rather than relying on the process umask so
+        cookie-authenticated files never land world-readable (OVH-062).
         """
-        workspace = self._config.media_temp_folder / "youtube" / f"run-{uuid4().hex}"
-        workspace.mkdir(parents=True, exist_ok=False)
+        youtube_dir = self._config.media_temp_folder / "youtube"
+        youtube_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        # Enforce 0o700 even if the directory already exists with a looser mode
+        # (e.g. created by an older version of the app).
+        youtube_dir.chmod(0o700)
+        workspace = Path(tempfile.mkdtemp(prefix="run-", dir=youtube_dir))
         return workspace
 
     def _mine_one(self, idx: int, item: YouTubeQueueItem, workspace: Path) -> object:
