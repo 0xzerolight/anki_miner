@@ -400,6 +400,78 @@ class TestLookupMany:
                 conn.close()
 
 
+# ---------------------------------------------------------------------------
+# OVH-027: score-based ranking in storage layer
+# ---------------------------------------------------------------------------
+
+
+class TestScoreOrdering:
+    """score DESC must be the leading non-term tiebreak in _LOOKUP_SQL and
+    mirrored in lookup_many's Python sort."""
+
+    def test_higher_score_survives_limit(self, tmp_path: Path):
+        """6 rows sharing the same term: top 5 by score DESC survive LIMIT 5."""
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        rows = [
+            DictRow(term="テスト", reading="てすと", content=f"<div>s{s}</div>", score=s, sequence=s)
+            for s in range(1, 7)
+        ]
+        bulk_insert(db_path, rows)
+
+        conn = open_readonly(db_path)
+        try:
+            results = lookup(conn, "テスト")
+            contents = [c for c, _ in results]
+        finally:
+            conn.close()
+
+        assert len(results) == 5
+        assert "<div>s6</div>" in contents  # highest score must survive
+        assert "<div>s1</div>" not in contents  # lowest score must be dropped
+
+    def test_lookup_many_mirrors_lookup_score_order(self, tmp_path: Path):
+        """lookup_many must reproduce the same score-ordered results as lookup."""
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        rows = [
+            DictRow(term="テスト", reading="てすと", content=f"<div>s{s}</div>", score=s, sequence=s)
+            for s in range(1, 7)
+        ]
+        bulk_insert(db_path, rows)
+
+        conn = open_readonly(db_path)
+        try:
+            single = lookup(conn, "テスト")
+            batch = lookup_many(conn, ["テスト"])["テスト"]
+        finally:
+            conn.close()
+
+        assert batch == single
+
+    def test_score_zero_preserves_sequence_order(self, tmp_path: Path):
+        """All score=0 rows (JMdict): existing sequence-based ordering still governs."""
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        rows = [
+            DictRow(term="水", reading="みず", content=f"<div>w{i}</div>", score=0, sequence=i) for i in range(1, 7)
+        ]
+        bulk_insert(db_path, rows)
+
+        conn = open_readonly(db_path)
+        try:
+            results = lookup(conn, "水")
+            contents = [c for c, _ in results]
+        finally:
+            conn.close()
+
+        assert len(results) == 5
+        # sequence 1..5 win; sequence 6 is dropped
+        assert "<div>w1</div>" in contents
+        assert "<div>w5</div>" in contents
+        assert "<div>w6</div>" not in contents
+
+
 class TestMeta:
     def test_write_then_read(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"
