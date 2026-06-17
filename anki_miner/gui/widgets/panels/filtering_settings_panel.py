@@ -1,6 +1,8 @@
 """Word filtering settings panel."""
 
 import logging
+from dataclasses import replace
+from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
@@ -416,3 +418,233 @@ class FilteringSettingsPanel(FormPanel):
         wanted = set(ids)
         for set_id, cb in self.wordset_checkboxes.items():
             cb.setChecked(set_id in wanted)
+
+    # --- Max frequency rank ---
+
+    def get_max_frequency_rank(self) -> int:
+        """Return the max frequency rank value."""
+        return self.max_frequency_spinbox.value()
+
+    def set_max_frequency_rank(self, value: int) -> None:
+        """Set the max frequency rank spinbox."""
+        self.max_frequency_spinbox.setValue(value)
+
+    # --- Known words DB ---
+
+    def get_use_known_words_db(self) -> bool:
+        """Return whether the local known-words DB is enabled."""
+        return self.use_known_words_db_checkbox.isChecked()
+
+    def set_use_known_words_db(self, value: bool) -> None:
+        """Set the use-known-words-DB checkbox."""
+        self.use_known_words_db_checkbox.setChecked(value)
+
+    # --- Word lists ---
+
+    def get_blacklist_path(self) -> Path | None:
+        """Return the blacklist path (None when the field is empty)."""
+        raw = self.blacklist_selector.get_path()
+        return Path(raw) if raw else None
+
+    def set_blacklist_path(self, value: Path | None) -> None:
+        """Set the blacklist file selector (clears when ``value`` is None)."""
+        self.blacklist_selector.set_path(str(value) if value else "")
+
+    def get_use_blacklist(self) -> bool:
+        """Return whether the blacklist is enabled."""
+        return self.use_blacklist_checkbox.isChecked()
+
+    def set_use_blacklist(self, value: bool) -> None:
+        """Set the blacklist-enabled checkbox."""
+        self.use_blacklist_checkbox.setChecked(value)
+
+    def get_whitelist_path(self) -> Path | None:
+        """Return the whitelist path (None when the field is empty)."""
+        raw = self.whitelist_selector.get_path()
+        return Path(raw) if raw else None
+
+    def set_whitelist_path(self, value: Path | None) -> None:
+        """Set the whitelist file selector (clears when ``value`` is None)."""
+        self.whitelist_selector.set_path(str(value) if value else "")
+
+    def get_use_whitelist(self) -> bool:
+        """Return whether the whitelist is enabled."""
+        return self.use_whitelist_checkbox.isChecked()
+
+    def set_use_whitelist(self, value: bool) -> None:
+        """Set the whitelist-enabled checkbox."""
+        self.use_whitelist_checkbox.setChecked(value)
+
+    # --- Subtitle regex ---
+
+    def get_subtitle_regex_filter(self) -> str:
+        """Return the subtitle regex pattern."""
+        return self.subtitle_regex_edit.text()
+
+    def set_subtitle_regex_filter(self, value: str) -> None:
+        """Set the subtitle regex pattern field."""
+        self.subtitle_regex_edit.setText(value)
+
+    def get_subtitle_regex_replacement(self) -> str:
+        """Return the subtitle regex replacement string."""
+        return self.subtitle_replacement_edit.text()
+
+    def set_subtitle_regex_replacement(self, value: str) -> None:
+        """Set the subtitle regex replacement field."""
+        self.subtitle_replacement_edit.setText(value)
+
+    def get_use_subtitle_regex_filter(self) -> bool:
+        """Return whether the subtitle regex filter is enabled."""
+        return self.use_subtitle_regex_checkbox.isChecked()
+
+    def set_use_subtitle_regex_filter(self, value: bool) -> None:
+        """Set the subtitle regex filter checkbox."""
+        self.use_subtitle_regex_checkbox.setChecked(value)
+
+    # --- Deduplication ---
+
+    def get_deduplicate_sentences(self) -> bool:
+        """Return whether sentence deduplication is enabled."""
+        return self.deduplicate_sentences_checkbox.isChecked()
+
+    def set_deduplicate_sentences(self, value: bool) -> None:
+        """Set the deduplicate-sentences checkbox."""
+        self.deduplicate_sentences_checkbox.setChecked(value)
+
+    # --- Script type ---
+
+    def get_exclude_hiragana_only_words(self) -> bool:
+        """Return whether hiragana-only words are excluded."""
+        return self.exclude_hiragana_only_checkbox.isChecked()
+
+    def set_exclude_hiragana_only_words(self, value: bool) -> None:
+        """Set the exclude-hiragana-only checkbox."""
+        self.exclude_hiragana_only_checkbox.setChecked(value)
+
+    def get_exclude_katakana_only_words(self) -> bool:
+        """Return whether katakana-only words are excluded."""
+        return self.exclude_katakana_only_checkbox.isChecked()
+
+    def set_exclude_katakana_only_words(self, value: bool) -> None:
+        """Set the exclude-katakana-only checkbox."""
+        self.exclude_katakana_only_checkbox.setChecked(value)
+
+    # --- i+1 filter ---
+
+    def get_use_i_plus_one_filter(self) -> bool:
+        """Return whether the i+1 sentence filter is enabled."""
+        return self.use_i_plus_one_checkbox.isChecked()
+
+    def set_use_i_plus_one_filter(self, value: bool) -> None:
+        """Set the i+1 filter checkbox."""
+        self.use_i_plus_one_checkbox.setChecked(value)
+
+    # --- Sentence length ---
+
+    def get_use_sentence_length_filter(self) -> bool:
+        """Return whether the sentence length filter is enabled."""
+        return self.use_sentence_length_checkbox.isChecked()
+
+    def set_use_sentence_length_filter(self, value: bool) -> None:
+        """Set the sentence length filter checkbox."""
+        self.use_sentence_length_checkbox.setChecked(value)
+
+    def get_max_sentence_duration_seconds(self) -> float:
+        """Return the max sentence duration (seconds)."""
+        return self.max_sentence_duration_spinbox.value()
+
+    def set_max_sentence_duration_seconds(self, value: float) -> None:
+        """Set the max sentence duration spinbox."""
+        self.max_sentence_duration_spinbox.setValue(value)
+
+    def get_max_sentence_chars(self) -> int:
+        """Return the max sentence character count."""
+        return self.max_sentence_chars_spinbox.value()
+
+    def set_max_sentence_chars(self, value: int) -> None:
+        """Set the max sentence chars spinbox."""
+        self.max_sentence_chars_spinbox.setValue(value)
+
+    # --- Card formatting ---
+
+    def get_bold_target_in_sentence(self) -> bool:
+        """Return whether the target word is bolded in the sentence field."""
+        return self.bold_target_in_sentence_checkbox.isChecked()
+
+    def set_bold_target_in_sentence(self, value: bool) -> None:
+        """Set the bold-target-in-sentence checkbox."""
+        self.bold_target_in_sentence_checkbox.setChecked(value)
+
+    # --- Add-deck button enable/disable (used by AnkiProbeController) ---
+
+    def set_add_deck_button_enabled(self, enabled: bool) -> None:
+        """Enable or disable the Add Deck button."""
+        self.add_deck_button.setEnabled(enabled)
+
+    # ------------------------------------------------------------------
+    # Config marshalling contract (OVH-019)
+    # ------------------------------------------------------------------
+
+    def load_from_config(self, config) -> None:
+        """Populate all widgets from ``config``.
+
+        Called by :meth:`SettingsTab._load_config` as part of the panel loop.
+        Word-list selectors always set the value (including '' when the path is
+        None) so Reset-to-Defaults clears a previously visible path (T-11).
+        """
+        self.set_max_frequency_rank(config.max_frequency_rank)
+        self.set_use_known_words_db(config.use_known_words_db)
+        self.set_excluded_decks(config.excluded_decks)
+        self.set_excluded_wordsets(config.excluded_wordsets)
+        # T-11: always set (including '' for None) so Reset-to-Defaults clears
+        # the selector; without this the stale path stays visible and the next
+        # Save re-reads it back via get_path().
+        self.set_blacklist_path(config.blacklist_path)
+        self.set_use_blacklist(config.use_blacklist)
+        self.set_whitelist_path(config.whitelist_path)
+        self.set_use_whitelist(config.use_whitelist)
+        self.set_subtitle_regex_filter(config.subtitle_regex_filter)
+        self.set_subtitle_regex_replacement(config.subtitle_regex_replacement)
+        self.set_use_subtitle_regex_filter(config.use_subtitle_regex_filter)
+        self.set_deduplicate_sentences(config.deduplicate_sentences)
+        self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
+        self.set_exclude_katakana_only_words(config.exclude_katakana_only_words)
+        self.set_use_i_plus_one_filter(config.use_i_plus_one_filter)
+        self.set_use_sentence_length_filter(config.use_sentence_length_filter)
+        self.set_max_sentence_duration_seconds(config.max_sentence_duration_seconds)
+        self.set_max_sentence_chars(config.max_sentence_chars)
+        self.set_bold_target_in_sentence(config.bold_target_in_sentence)
+
+    def contribute(self, config):
+        """Return a new config with this panel's fields applied.
+
+        Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
+        Called by :meth:`SettingsTab._on_save_clicked` as part of the contribute fold.
+
+        Note: ``subtitle_regex_filter`` and ``use_subtitle_regex_filter`` are
+        read here (behind the accessors) but the *validation* of the regex pattern
+        stays in :meth:`SettingsTab._on_save_clicked` — it runs before the fold
+        so any invalid pattern aborts Save before ``contribute`` is ever called.
+        """
+        return replace(
+            config,
+            max_frequency_rank=self.get_max_frequency_rank(),
+            use_known_words_db=self.get_use_known_words_db(),
+            excluded_decks=self.get_excluded_decks(),
+            excluded_wordsets=self.get_excluded_wordsets(),
+            blacklist_path=self.get_blacklist_path(),
+            use_blacklist=self.get_use_blacklist(),
+            whitelist_path=self.get_whitelist_path(),
+            use_whitelist=self.get_use_whitelist(),
+            subtitle_regex_filter=self.get_subtitle_regex_filter(),
+            subtitle_regex_replacement=self.get_subtitle_regex_replacement(),
+            use_subtitle_regex_filter=self.get_use_subtitle_regex_filter(),
+            deduplicate_sentences=self.get_deduplicate_sentences(),
+            exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
+            exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
+            use_i_plus_one_filter=self.get_use_i_plus_one_filter(),
+            use_sentence_length_filter=self.get_use_sentence_length_filter(),
+            max_sentence_duration_seconds=self.get_max_sentence_duration_seconds(),
+            max_sentence_chars=self.get_max_sentence_chars(),
+            bold_target_in_sentence=self.get_bold_target_in_sentence(),
+        )

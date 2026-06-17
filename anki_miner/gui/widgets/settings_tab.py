@@ -6,6 +6,7 @@ import re
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
@@ -41,6 +42,19 @@ from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWor
 from anki_miner.services.frequency import import_yomitan_freq_zip
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent import import_yomitan_pitch_zip
+
+
+@runtime_checkable
+class _SavePathPanel(Protocol):
+    """Structural interface for panels that participate in the Save round-trip.
+
+    Implemented by :class:`AnkiSettingsPanel`, :class:`MediaSettingsPanel`,
+    :class:`FilteringSettingsPanel`, and :class:`YouTubeSettingsPanel`.
+    """
+
+    def load_from_config(self, config: AnkiMinerConfig) -> None: ...
+
+    def contribute(self, config: AnkiMinerConfig) -> AnkiMinerConfig: ...
 
 
 class SettingsTab(QWidget):
@@ -116,6 +130,16 @@ class SettingsTab(QWidget):
             filtering_panel=self.filtering_panel,
             get_config=lambda: self.config,
         )
+        # Ordered list of panels that participate in the Save round-trip.
+        # _load_config calls load_from_config on each; _on_save_clicked folds
+        # contribute() over them.  Dictionary/audio chain panels and ThemesPanel
+        # are intentionally excluded — they persist via their own signals.
+        self._save_panels: list[_SavePathPanel] = [
+            self.anki_panel,
+            self.media_panel,
+            self.filtering_panel,
+            self.youtube_panel,
+        ]
         self._connect_signals()
         self._load_config()
 
@@ -273,106 +297,37 @@ class SettingsTab(QWidget):
         return scroll_area
 
     def _load_config(self) -> None:
-        """Load current configuration into UI."""
-        # Anki settings
-        self.anki_panel.deck_input.setText(self.config.anki_deck_name)
-        self.anki_panel.note_type_input.setText(self.config.anki_note_type)
-        self.anki_panel.ankiconnect_url_input.setText(self.config.ankiconnect_url)
-        self.anki_panel.anki_tags_input.setText(self.config.anki_tags)
+        """Load current configuration into UI.
 
-        # Anki card field mappings (expression_audio field name is the on/off
-        # switch for expression audio — Issue #73, no separate toggle).
-        self.anki_panel.set_card_fields(self.config.anki_fields)
+        Save-path panels (Anki, Media, Filtering, YouTube) are loaded via the
+        symmetric ``load_from_config`` contract so each panel owns its fields
+        in one place (OVH-019).  Dictionary/audio chain panels and the
+        top-level update checkbox persist via their own paths and are handled
+        directly here.
+        """
+        # Save-path panels — each owns its field list.
+        for panel in self._save_panels:
+            panel.load_from_config(self.config)
 
-        # Card styling (Issue #44)
-        self.anki_panel.set_card_style_preset(self.config.card_style_preset)
-        self.anki_panel.set_custom_css(self.config.custom_card_css)
-
-        # Media settings
-        self.media_panel.audio_format_combo.setCurrentText(self.config.audio_format)
-        self.media_panel.audio_bitrate_spinbox.setValue(self.config.audio_bitrate)
-        self.media_panel.audio_padding_spinbox.setValue(self.config.audio_padding)
-        self.media_panel.screenshot_offset_spinbox.setValue(self.config.screenshot_offset)
-        self.media_panel.max_workers_spinbox.setValue(self.config.max_parallel_workers)
-
-        # Animated screenshot settings
-        self.media_panel.animated_checkbox.setChecked(self.config.screenshot_animated)
-        self.media_panel.animated_format_combo.setCurrentText(self.config.screenshot_animated_format)
-        self.media_panel.animated_duration_spinbox.setValue(self.config.screenshot_animated_clip_duration)
-        self.media_panel.animated_match_audio_checkbox.setChecked(self.config.screenshot_animated_match_audio)
-        self.media_panel.animated_fps_spinbox.setValue(self.config.screenshot_animated_fps)
-        self.media_panel.animated_height_spinbox.setValue(self.config.screenshot_animated_height)
-        self.media_panel.animated_quality_spinbox.setValue(self.config.screenshot_animated_quality)
-        self.media_panel._set_animated_enabled(self.config.screenshot_animated)
-        self.media_panel._set_match_audio(self.config.screenshot_animated_match_audio)
-
-        # Dictionary chain
+        # Dictionary chain (not part of the Save round-trip — persisted
+        # immediately via chain_changed / _persist_chain_change).
         self.dictionary_panel.set_dicts_root(self.config.dicts_root)
         self.dictionary_panel.set_chain(self.config.dictionary_chain)
 
-        # Audio source chain
+        # Audio source chain (same — immediate persist via its own signal).
         self.audio_panel.set_chain(self.config.expression_audio_chain)
 
-        # Pitch accent settings
+        # Pitch accent settings — file selector lives in the Dictionaries tab.
         self.dictionary_panel.pitch_accent_selector.set_path(str(self.config.pitch_accent_path))
         self.dictionary_panel.use_pitch_accent_checkbox.setChecked(self.config.use_pitch_accent)
-        self.anki_panel.set_pitch_category_format(self.config.pitch_category_format)
 
-        # Frequency settings — file selector + enable toggle moved to the
-        # Dictionaries tab; the max-rank threshold stays in Filtering.
+        # Frequency settings — file selector + enable toggle live in the
+        # Dictionaries tab; the max-rank threshold is owned by filtering_panel
+        # and already loaded via its load_from_config above.
         self.dictionary_panel.frequency_selector.set_path(str(self.config.frequency_list_path))
         self.dictionary_panel.use_frequency_checkbox.setChecked(self.config.use_frequency_data)
-        self.filtering_panel.max_frequency_spinbox.setValue(self.config.max_frequency_rank)
 
-        # Known words database settings
-        self.filtering_panel.use_known_words_db_checkbox.setChecked(self.config.use_known_words_db)
-        self.filtering_panel.set_excluded_decks(self.config.excluded_decks)
-        self.filtering_panel.set_excluded_wordsets(self.config.excluded_wordsets)
-
-        # Word list settings. Always set the selector — including to "" when the
-        # path is None — so Reset-to-Defaults (or any update_config that drops
-        # the path) clears the field. Without the else-branch the stale path
-        # stayed visible and the next Save read it back via get_path(), silently
-        # re-persisting it (T-11).
-        self.filtering_panel.blacklist_selector.set_path(
-            str(self.config.blacklist_path) if self.config.blacklist_path else ""
-        )
-        self.filtering_panel.use_blacklist_checkbox.setChecked(self.config.use_blacklist)
-        self.filtering_panel.whitelist_selector.set_path(
-            str(self.config.whitelist_path) if self.config.whitelist_path else ""
-        )
-        self.filtering_panel.use_whitelist_checkbox.setChecked(self.config.use_whitelist)
-
-        # Subtitle text filtering settings (Issue #8)
-        self.filtering_panel.subtitle_regex_edit.setText(self.config.subtitle_regex_filter)
-        self.filtering_panel.subtitle_replacement_edit.setText(self.config.subtitle_regex_replacement)
-        self.filtering_panel.use_subtitle_regex_checkbox.setChecked(self.config.use_subtitle_regex_filter)
-
-        # Deduplication settings
-        self.filtering_panel.deduplicate_sentences_checkbox.setChecked(self.config.deduplicate_sentences)
-
-        # Script-type filters (Issue #57)
-        self.filtering_panel.exclude_hiragana_only_checkbox.setChecked(self.config.exclude_hiragana_only_words)
-        self.filtering_panel.exclude_katakana_only_checkbox.setChecked(self.config.exclude_katakana_only_words)
-
-        # i+1 sentence filter setting
-        self.filtering_panel.use_i_plus_one_checkbox.setChecked(self.config.use_i_plus_one_filter)
-
-        # Sentence length filter (Issue #33)
-        self.filtering_panel.use_sentence_length_checkbox.setChecked(self.config.use_sentence_length_filter)
-        self.filtering_panel.max_sentence_duration_spinbox.setValue(self.config.max_sentence_duration_seconds)
-        self.filtering_panel.max_sentence_chars_spinbox.setValue(self.config.max_sentence_chars)
-
-        # Card formatting (Issue #20)
-        self.filtering_panel.bold_target_in_sentence_checkbox.setChecked(self.config.bold_target_in_sentence)
-
-        # YouTube settings
-        self.youtube_panel.set_cookies_from_browser(self.config.youtube_cookies_from_browser)
-        self.youtube_panel.set_cookies_file(self.config.youtube_cookies_file)
-        self.youtube_panel.set_max_duration_seconds(self.config.youtube_max_duration_s)
-        self.youtube_panel.set_playlist_max(self.config.youtube_playlist_max)
-
-        # Update settings
+        # Update settings — standalone checkbox outside all panels.
         self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
 
     def open_themes_subtab(self) -> None:
@@ -457,8 +412,8 @@ class SettingsTab(QWidget):
         # Validate subtitle regex filter before saving so we never persist a
         # pattern that crashes the parser. Only validate when the user has
         # enabled the filter; an unchecked invalid pattern is harmless.
-        subtitle_regex = self.filtering_panel.subtitle_regex_edit.text()
-        use_subtitle_regex = self.filtering_panel.use_subtitle_regex_checkbox.isChecked()
+        subtitle_regex = self.filtering_panel.get_subtitle_regex_filter()
+        use_subtitle_regex = self.filtering_panel.get_use_subtitle_regex_filter()
         if use_subtitle_regex and subtitle_regex:
             try:
                 re.compile(subtitle_regex)
@@ -470,8 +425,8 @@ class SettingsTab(QWidget):
                 )
                 return
 
-        # Build the candidate config from all panels FIRST, then run the
-        # pitch-zip and frequency-zip imports LAST so any current or future
+        # Build the candidate config from all Save-path panels FIRST, then run
+        # the pitch-zip and frequency-zip imports LAST so any current or future
         # pre-import validation step has a chance to abort before we touch
         # ~/.anki_miner/pitch_accent.csv or ~/.anki_miner/frequency.csv on
         # disk. The imports stage to ``.pending`` siblings and only promote
@@ -479,33 +434,22 @@ class SettingsTab(QWidget):
         # _commit_pending_csv_imports), so a frequency failure can't leave a
         # half-written pitch_accent.csv (T-10). See review of commit 63ffcd9
         # finding #2.
+        #
+        # Fold: each panel's contribute() returns a new frozen config with its
+        # own fields applied.  Panels outside the Save round-trip (dictionary /
+        # audio chain, themes) are handled separately below.
+        new_config = self.config
+        for panel in self._save_panels:
+            new_config = panel.contribute(new_config)
+
+        # Non-panel fields that live in _on_save_clicked scope:
+        # - dicts_root validated and resolved above
+        # - pitch_accent_path / frequency_list_path deferred to zip-import resolver
+        # - dictionary/audio chain — persisted immediately via their own signals
+        # - update-settings handled per the was/now_enabled logic above
         new_config = replace(
-            self.config,
-            # Anki settings
-            anki_deck_name=self.anki_panel.deck_input.text(),
-            anki_note_type=self.anki_panel.note_type_input.text(),
-            ankiconnect_url=self.anki_panel.ankiconnect_url_input.text(),
-            anki_tags=self.anki_panel.anki_tags_input.text(),
-            anki_fields=self.anki_panel.get_card_fields(),
-            anki_word_field=self.anki_panel.get_card_fields().get("word", "Expression"),
-            # Card styling (Issue #44)
-            card_style_preset=self.anki_panel.get_card_style_preset(),
-            custom_card_css=self.anki_panel.get_custom_css(),
-            # Media settings
-            audio_format=self.media_panel.audio_format_combo.currentText(),
-            audio_bitrate=self.media_panel.audio_bitrate_spinbox.value(),
-            audio_padding=self.media_panel.audio_padding_spinbox.value(),
-            screenshot_offset=self.media_panel.screenshot_offset_spinbox.value(),
-            max_parallel_workers=self.media_panel.max_workers_spinbox.value(),
-            # Animated screenshot settings
-            screenshot_animated=self.media_panel.animated_checkbox.isChecked(),
-            screenshot_animated_format=self.media_panel.animated_format_combo.currentText(),
-            screenshot_animated_clip_duration=(self.media_panel.animated_duration_spinbox.value()),
-            screenshot_animated_match_audio=self.media_panel.animated_match_audio_checkbox.isChecked(),
-            screenshot_animated_fps=self.media_panel.animated_fps_spinbox.value(),
-            screenshot_animated_height=self.media_panel.animated_height_spinbox.value(),
-            screenshot_animated_quality=self.media_panel.animated_quality_spinbox.value(),
-            # Dictionary chain — chain is the single source of truth now
+            new_config,
+            # Dictionary chain — chain is the single source of truth now.
             dictionary_chain=self.dictionary_panel.get_chain(),
             # Dictionary storage folder (Issue #45). Validated above; reuse of
             # current value passes through unchanged.
@@ -514,55 +458,13 @@ class SettingsTab(QWidget):
             # with the resolver's result once both staged imports commit.
             pitch_accent_path=self.config.pitch_accent_path,
             use_pitch_accent=self.dictionary_panel.use_pitch_accent_checkbox.isChecked(),
-            pitch_category_format=self.anki_panel.get_pitch_category_format(),
             # Frequency settings — frequency_list_path is overwritten below
             # with the resolver's result once both staged imports commit.
             frequency_list_path=self.config.frequency_list_path,
             use_frequency_data=self.dictionary_panel.use_frequency_checkbox.isChecked(),
-            max_frequency_rank=self.filtering_panel.max_frequency_spinbox.value(),
-            # Known words database settings
-            use_known_words_db=self.filtering_panel.use_known_words_db_checkbox.isChecked(),
-            excluded_decks=self.filtering_panel.get_excluded_decks(),
-            excluded_wordsets=self.filtering_panel.get_excluded_wordsets(),
-            # Word list settings
-            blacklist_path=(
-                Path(self.filtering_panel.blacklist_selector.get_path())
-                if self.filtering_panel.blacklist_selector.get_path()
-                else None
-            ),
-            use_blacklist=self.filtering_panel.use_blacklist_checkbox.isChecked(),
-            whitelist_path=(
-                Path(self.filtering_panel.whitelist_selector.get_path())
-                if self.filtering_panel.whitelist_selector.get_path()
-                else None
-            ),
-            use_whitelist=self.filtering_panel.use_whitelist_checkbox.isChecked(),
-            # Subtitle text filtering settings (Issue #8)
-            subtitle_regex_filter=subtitle_regex,
-            subtitle_regex_replacement=self.filtering_panel.subtitle_replacement_edit.text(),
-            use_subtitle_regex_filter=use_subtitle_regex,
-            # Deduplication settings
-            deduplicate_sentences=self.filtering_panel.deduplicate_sentences_checkbox.isChecked(),
-            # Script-type filters (Issue #57)
-            exclude_hiragana_only_words=self.filtering_panel.exclude_hiragana_only_checkbox.isChecked(),
-            exclude_katakana_only_words=self.filtering_panel.exclude_katakana_only_checkbox.isChecked(),
-            # i+1 sentence filter setting
-            use_i_plus_one_filter=self.filtering_panel.use_i_plus_one_checkbox.isChecked(),
-            # Sentence length filter (Issue #33)
-            use_sentence_length_filter=self.filtering_panel.use_sentence_length_checkbox.isChecked(),
-            max_sentence_duration_seconds=self.filtering_panel.max_sentence_duration_spinbox.value(),
-            max_sentence_chars=self.filtering_panel.max_sentence_chars_spinbox.value(),
-            # Card formatting (Issue #20)
-            bold_target_in_sentence=self.filtering_panel.bold_target_in_sentence_checkbox.isChecked(),
-            # Audio source chain
+            # Audio source chain — persisted immediately via chain_changed, but
+            # also included in the full Save so it is always in sync.
             expression_audio_chain=self.audio_panel.get_chain(),
-            # YouTube settings
-            youtube_cookies_from_browser=self.youtube_panel.get_cookies_from_browser(),
-            youtube_cookies_file=(
-                Path(self.youtube_panel.get_cookies_file()) if self.youtube_panel.get_cookies_file() else None
-            ),
-            youtube_max_duration_s=self.youtube_panel.get_max_duration_seconds(),
-            youtube_playlist_max=self.youtube_panel.get_playlist_max(),
             # Update settings
             check_for_updates=now_enabled,
             skipped_update_version=skipped_update_version,
