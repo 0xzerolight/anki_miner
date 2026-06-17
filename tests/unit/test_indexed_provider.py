@@ -344,3 +344,229 @@ def test_indexed_provider_is_offline(tmp_path):
     db_path = tmp_path / "dummy.sqlite"
     provider = IndexedDictProvider(dict_id="x", db_path=db_path)
     assert provider.is_online is False
+
+
+# ---------------------------------------------------------------------------
+# OVH-026: kana lookup duplicate-content dedup
+# ---------------------------------------------------------------------------
+
+
+class TestKanaDedup:
+    """A kana lookup that matches BOTH the kanji-keyed row (via reading col) and the
+    reading-keyed row (via term col) must NOT render the same gloss twice."""
+
+    def test_kana_lookup_renders_gloss_once(self, tmp_path: Path):
+        """にほん: one row with term='日本', reading='にほん' produces one gloss, not two."""
+        db = tmp_path / "test.sqlite"
+        _seed_db(
+            db,
+            [
+                DictRow(
+                    term="日本",
+                    reading="にほん",
+                    content='<li class="gloss-item">Japan</li>',
+                    tags="n",
+                    sequence=1,
+                )
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        result = provider.lookup("にほん")
+        assert result is not None
+        # Gloss must appear exactly once in the rendered HTML
+        assert result.count('<li class="gloss-item">Japan</li>') == 1
+
+    def test_kana_lookup_many_renders_gloss_once(self, tmp_path: Path):
+        """lookup_many path also deduplicates identical content rows."""
+        db = tmp_path / "test.sqlite"
+        _seed_db(
+            db,
+            [
+                DictRow(
+                    term="日本",
+                    reading="にほん",
+                    content='<li class="gloss-item">Japan</li>',
+                    tags="n",
+                    sequence=1,
+                )
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        result = provider.lookup_many(["にほん"])["にほん"]
+        assert result is not None
+        assert result.count('<li class="gloss-item">Japan</li>') == 1
+
+    def test_dedup_produces_same_result_as_single_lookup(self, tmp_path: Path):
+        """lookup_many and lookup must agree after dedup (byte-identical)."""
+        db = tmp_path / "test.sqlite"
+        _seed_db(
+            db,
+            [
+                DictRow(
+                    term="日本",
+                    reading="にほん",
+                    content='<li class="gloss-item">Japan</li>',
+                    tags="n",
+                    sequence=1,
+                )
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        assert provider.lookup_many(["にほん"])["にほん"] == provider.lookup("にほん")
+
+    def test_distinct_content_rows_all_render(self, tmp_path: Path):
+        """Multiple rows with DIFFERENT content still all render (dedup is content-keyed)."""
+        db = tmp_path / "test.sqlite"
+        _seed_db(
+            db,
+            [
+                DictRow(
+                    term="橋",
+                    reading="はし",
+                    content='<li class="gloss-item">bridge</li>',
+                    tags="n",
+                    sequence=1,
+                ),
+                DictRow(
+                    term="箸",
+                    reading="はし",
+                    content='<li class="gloss-item">chopsticks</li>',
+                    tags="n",
+                    sequence=2,
+                ),
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        result = provider.lookup("はし")
+        assert result is not None
+        assert '<li class="gloss-item">bridge</li>' in result
+        assert '<li class="gloss-item">chopsticks</li>' in result
+
+    def test_dedup_still_unions_tags(self, tmp_path: Path):
+        """When a duplicate content row has extra tags, they must be UNIONed in."""
+        db = tmp_path / "test.sqlite"
+        # Two rows with SAME content but different tags (simulates double-keyed import)
+        _seed_db(
+            db,
+            [
+                DictRow(
+                    term="日本語",
+                    reading="にほんご",
+                    content='<li class="gloss-item">Japanese</li>',
+                    tags="n lang",
+                    sequence=1,
+                ),
+                DictRow(
+                    term="にほんご",
+                    reading=None,
+                    content='<li class="gloss-item">Japanese</li>',
+                    tags="common",
+                    sequence=2,
+                ),
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        result = provider.lookup("にほんご")
+        assert result is not None
+        # Content appears exactly once
+        assert result.count('<li class="gloss-item">Japanese</li>') == 1
+        # Tags from both rows should be unioned (n, lang, common)
+        assert "n" in result
+        assert "lang" in result
+        assert "common" in result
+
+
+# ---------------------------------------------------------------------------
+# OVH-027: score-based ranking
+# ---------------------------------------------------------------------------
+
+
+class TestScoreRanking:
+    """Higher-scored entries must survive LIMIT 5 and lead lower-scored ones."""
+
+    def test_higher_score_entry_leads_lower_score_after_limit(self, tmp_path: Path):
+        """With 6 rows sharing the same term, the top-5 by score DESC win."""
+        db = tmp_path / "test.sqlite"
+        # 6 rows: scores 1..6 (higher = more relevant). Without score ordering,
+        # insertion order / id would pick scores 1-5, dropping score=6.
+        rows = [
+            DictRow(
+                term="テスト",
+                reading="てすと",
+                content=f'<li class="gloss-item">sense-score-{s}</li>',
+                tags="",
+                score=s,
+                sequence=s,
+            )
+            for s in range(1, 7)
+        ]
+        _seed_db(db, rows)
+
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        result = provider.lookup("テスト")
+        assert result is not None
+        # score=6 (highest) must be present
+        assert "sense-score-6" in result
+        # score=1 (lowest) should have been dropped by LIMIT 5
+        assert "sense-score-1" not in result
+
+    def test_score_ranking_consistent_in_lookup_many(self, tmp_path: Path):
+        """lookup_many must apply the same score-based ordering as lookup."""
+        db = tmp_path / "test.sqlite"
+        rows = [
+            DictRow(
+                term="テスト",
+                reading="てすと",
+                content=f'<li class="gloss-item">sense-score-{s}</li>',
+                tags="",
+                score=s,
+                sequence=s,
+            )
+            for s in range(1, 7)
+        ]
+        _seed_db(db, rows)
+
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        # byte-identical to lookup
+        assert provider.lookup_many(["テスト"])["テスト"] == provider.lookup("テスト")
+
+    def test_jmdict_score_zero_no_op(self, tmp_path: Path):
+        """All score=0 rows (JMdict): ordering unchanged by the new score key."""
+        db = tmp_path / "test.sqlite"
+        rows = [
+            DictRow(
+                term="水",
+                reading="みず",
+                content=f'<li class="gloss-item">water-{i}</li>',
+                tags="",
+                score=0,
+                sequence=i,
+            )
+            for i in range(1, 7)
+        ]
+        _seed_db(db, rows)
+
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        single = provider.lookup("水")
+        batch = provider.lookup_many(["水"])["水"]
+        assert single == batch  # consistent with each other
+        # The first 5 by sequence (1..5) win; sequence=6 is dropped
+        assert "water-1" in single
+        assert "water-5" in single
+        assert "water-6" not in single
