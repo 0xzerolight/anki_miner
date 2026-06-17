@@ -371,8 +371,12 @@ class TokenInclusionRule:
             stripped = surface.replace("ッ", "").replace("ー", "").replace("・", "")
             unique_chars = set(stripped)
 
-            # If only 1-2 unique characters, likely onomatopoeia
-            if len(unique_chars) <= 2 and len(surface) <= 4:
+            # If only 1-2 unique characters, likely onomatopoeia/mimetic word.
+            # Gate on 副詞 (adverb) POS: mimetic/onomatopoeic words (ドキドキ,
+            # ふわふわ) are tagged as adverbs; 2-char katakana NOUNS (ビル, バス,
+            # ドア) are legitimate loanwords and must fall through to the ≥2-char
+            # acceptance floor below.
+            if pos1 == "副詞" and len(unique_chars) <= 2 and len(surface) <= 4:
                 return False
 
             # If ends in small tsu and is short, likely sound effect

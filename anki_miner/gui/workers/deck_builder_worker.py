@@ -196,8 +196,10 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                 )
                 # Cross-phase tokenization cache: reuse the Phase-1 parser whose
                 # per-file line cache was filled by aggregate() → count_lemmas
-                # above, so Phase 2's parse_subtitle_file* hits the cache instead
-                # of re-running MeCab over every file a second time. The reuse is
+                # above.  The parser's _line_cache holds up to _LINE_CACHE_MAX_FILES
+                # entries keyed by resolved path, so Phase 2's parse_subtitle_file*
+                # replays cached line-state instead of re-running MeCab over the
+                # corpus a second time (one MeCab pass total, not two). The reuse is
                 # byte-identical only while cfg leaves every parse-relevant field
                 # untouched (it overrides anki_deck_name / include_known_words /
                 # bypass_optional_filters / allow_duplicate_cards, none of which
