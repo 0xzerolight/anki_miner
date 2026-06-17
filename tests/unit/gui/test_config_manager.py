@@ -88,7 +88,7 @@ class TestAllowedPosMigration:
 
         config = GUIConfigManager.load_config()
 
-        assert config.allowed_pos == ["名詞", "動詞"]
+        assert list(config.allowed_pos) == ["名詞", "動詞"]
 
     def test_migrate_allowed_pos_already_has_pronouns(self, tmp_path, monkeypatch):
         """A list that already contains 代名詞 must not be rewritten."""
@@ -102,7 +102,7 @@ class TestAllowedPosMigration:
 
         config = GUIConfigManager.load_config()
 
-        assert config.allowed_pos == existing
+        assert list(config.allowed_pos) == existing
 
 
 class TestAnkiTagsRoundTrip:

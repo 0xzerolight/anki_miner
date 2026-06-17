@@ -1,10 +1,13 @@
 """GUI configuration persistence manager."""
 
+import dataclasses
 import json
 import logging
 import os
 import shutil
-from dataclasses import asdict, fields
+import types
+import typing
+from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
@@ -41,8 +44,12 @@ class GUIConfigManager:
         # Ensure directory exists
         cls.CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-        # Convert config to dict
-        config_dict = asdict(config)
+        # Convert config to dict.
+        # anki_fields is stored as MappingProxyType (for immutability).
+        # dataclasses.asdict uses deepcopy on non-dataclass fields, and
+        # MappingProxyType is not picklable/deepcopy-able in CPython —
+        # so we use a custom serializer instead of asdict.
+        config_dict = cls._config_to_serializable_dict(config)
 
         # Convert Path objects to strings
         config_dict = cls._paths_to_strings(config_dict)
@@ -350,6 +357,28 @@ class GUIConfigManager:
         return data
 
     @staticmethod
+    def _config_to_serializable_dict(config: AnkiMinerConfig) -> dict[str, Any]:
+        """Convert an AnkiMinerConfig to a plain dict suitable for JSON serialization.
+
+        Unlike ``dataclasses.asdict``, this handles the MappingProxyType stored
+        in ``anki_fields`` (asdict deepcopies non-dataclass fields and
+        MappingProxyType is not deepcopy-able in CPython).  All other fields are
+        handled exactly as asdict would: dataclass instances are recursed into,
+        tuples and lists are element-wise converted.
+        """
+
+        def _to_serializable(value: Any) -> Any:
+            if isinstance(value, types.MappingProxyType):
+                return {k: _to_serializable(v) for k, v in value.items()}
+            if dataclasses.is_dataclass(value) and not isinstance(value, type):
+                return {f.name: _to_serializable(getattr(value, f.name)) for f in dataclasses.fields(value)}
+            if isinstance(value, (list, tuple)):
+                return [_to_serializable(item) for item in value]
+            return value
+
+        return {f.name: _to_serializable(getattr(config, f.name)) for f in fields(config)}
+
+    @staticmethod
     def _paths_to_strings(data: dict[str, Any]) -> dict[str, Any]:
         """Convert Path objects to strings in a dict.
 
@@ -372,8 +401,33 @@ class GUIConfigManager:
         return result
 
     @staticmethod
+    def _path_field_names() -> frozenset[str]:
+        """Return the set of AnkiMinerConfig field names whose type is Path or Path | None.
+
+        Derived from the dataclass type annotations at call time so it stays in
+        sync with the dataclass automatically — no hand-maintained list that can
+        drift as new Path fields are added.
+        """
+        hints = typing.get_type_hints(AnkiMinerConfig)
+        result: set[str] = set()
+        for name, hint in hints.items():
+            # Plain Path field, or a union containing Path (Path | None / Optional[Path])
+            is_path = hint is Path
+            is_union_with_path = (
+                isinstance(hint, types.UnionType)  # Python 3.10+: Path | None
+                or typing.get_origin(hint) is typing.Union  # Optional[Path]
+            ) and Path in typing.get_args(hint)
+            if is_path or is_union_with_path:
+                result.add(name)
+        return frozenset(result)
+
+    @staticmethod
     def _strings_to_paths(data: dict[str, Any]) -> dict[str, Any]:
         """Convert string paths back to Path objects.
+
+        The set of path keys is derived from AnkiMinerConfig field annotations
+        (fields whose type is Path or Path | None) so it can never drift as new
+        Path fields are added to the dataclass.
 
         Args:
             data: Dictionary with string paths
@@ -381,21 +435,7 @@ class GUIConfigManager:
         Returns:
             Dictionary with appropriate strings converted to Path objects
         """
-        # Keys that should be converted to Path objects
-        path_keys = {
-            "media_temp_folder",
-            "jmdict_path",
-            "dicts_root",
-            "audio_packs_root",
-            "pitch_accent_path",
-            "frequency_list_path",
-            "known_words_db_path",
-            "blacklist_path",
-            "whitelist_path",
-            "stats_db_path",
-            "history_db_path",
-            "themes_root",
-        }
+        path_keys = GUIConfigManager._path_field_names()
 
         result: dict[str, Any] = {}
         for key, value in data.items():
