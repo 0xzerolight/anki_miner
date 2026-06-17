@@ -33,7 +33,7 @@ from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 logger = logging.getLogger(__name__)
 
 
-def _on_rmtree_error(func, path, exc_info):
+def _on_rmtree_error(func, path, _exc_info):
     """rmtree onerror handler: clear the read-only bit then retry once.
 
     Windows refuses to delete read-only files; Yomitan zip extractions sometimes
