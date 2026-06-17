@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # Windows-lock robustness helpers — duplicated from dictionary_settings_panel.py
 # (same pattern, deliberate copy rather than cross-panel import per audio_packs
 # deliberate-decoupling precedent).
-def _on_rmtree_error(func, path, exc_info):
+def _on_rmtree_error(func, path, _exc_info):
     """rmtree onerror handler: clear the read-only bit then retry once.
 
     Windows refuses to delete read-only files; sqlite-backed index dirs sometimes
