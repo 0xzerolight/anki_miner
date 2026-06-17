@@ -9,6 +9,7 @@ except tuple).
 from __future__ import annotations
 
 import builtins
+import types
 from dataclasses import replace
 from pathlib import Path
 
@@ -126,3 +127,77 @@ class TestAtomicSave:
 
         assert bak_path.exists()
         assert json.loads(bak_path.read_text(encoding="utf-8"))["theme"] == "dark"
+
+
+class TestRoundTripImmutabilityAndPaths:
+    """OVH-018 + OVH-031/OVH-072: save→load round-trip for all Path fields and
+    immutable collection fields."""
+
+    def test_all_path_fields_survive_round_trip(self, tmp_config: Path, tmp_path: Path):
+        """Every Path-typed field must come back as Path (or None) after save→load.
+
+        Covers the four previously-omitted fields (OVH-031/OVH-072):
+        youtube_cookies_file, youtube_ffmpeg_location, ffmpeg_location, ffprobe_location.
+        """
+        cfg = replace(
+            create_default_config(),
+            youtube_cookies_file=tmp_path / "cookies.txt",
+            youtube_ffmpeg_location=tmp_path / "ytffmpeg",
+            ffmpeg_location=tmp_path / "ffmpeg",
+            ffprobe_location=tmp_path / "ffprobe",
+        )
+        GUIConfigManager.save_config(cfg)
+        loaded = GUIConfigManager.load_config()
+
+        # Spot-check the four previously-omitted Path|None fields
+        assert isinstance(loaded.youtube_cookies_file, Path)
+        assert loaded.youtube_cookies_file == tmp_path / "cookies.txt"
+        assert isinstance(loaded.youtube_ffmpeg_location, Path)
+        assert loaded.youtube_ffmpeg_location == tmp_path / "ytffmpeg"
+        assert isinstance(loaded.ffmpeg_location, Path)
+        assert loaded.ffmpeg_location == tmp_path / "ffmpeg"
+        assert isinstance(loaded.ffprobe_location, Path)
+        assert loaded.ffprobe_location == tmp_path / "ffprobe"
+
+        # Also verify the always-present Path fields are still Path objects
+        assert isinstance(loaded.jmdict_path, Path)
+        assert isinstance(loaded.dicts_root, Path)
+        assert isinstance(loaded.audio_packs_root, Path)
+        assert isinstance(loaded.pitch_accent_path, Path)
+        assert isinstance(loaded.frequency_list_path, Path)
+        assert isinstance(loaded.known_words_db_path, Path)
+        assert isinstance(loaded.history_db_path, Path)
+        assert isinstance(loaded.stats_db_path, Path)
+        assert isinstance(loaded.log_path, Path)
+        assert isinstance(loaded.themes_root, Path)
+        assert isinstance(loaded.media_temp_folder, Path)
+
+    def test_anki_fields_round_trips_correctly(self, tmp_config: Path):
+        """anki_fields must survive save→load with correct values and as MappingProxyType."""
+        custom_fields = dict(create_default_config().anki_fields)
+        custom_fields["word"] = "CustomExpr"
+        custom_fields["sentence"] = "CustomSent"
+        cfg = AnkiMinerConfig(anki_fields=custom_fields)
+
+        GUIConfigManager.save_config(cfg)
+        loaded = GUIConfigManager.load_config()
+
+        assert isinstance(loaded.anki_fields, types.MappingProxyType)
+        assert loaded.anki_fields["word"] == "CustomExpr"
+        assert loaded.anki_fields["sentence"] == "CustomSent"
+
+    def test_allowed_pos_round_trips_as_tuple(self, tmp_config: Path):
+        """allowed_pos must come back as a tuple after save→load."""
+        cfg = AnkiMinerConfig(allowed_pos=("名詞", "動詞"))
+        GUIConfigManager.save_config(cfg)
+        loaded = GUIConfigManager.load_config()
+        assert isinstance(loaded.allowed_pos, tuple)
+        assert loaded.allowed_pos == ("名詞", "動詞")
+
+    def test_excluded_subtypes_round_trips_as_tuple(self, tmp_config: Path):
+        """excluded_subtypes must come back as a tuple after save→load."""
+        cfg = AnkiMinerConfig(excluded_subtypes=("非自立", "数詞"))
+        GUIConfigManager.save_config(cfg)
+        loaded = GUIConfigManager.load_config()
+        assert isinstance(loaded.excluded_subtypes, tuple)
+        assert loaded.excluded_subtypes == ("非自立", "数詞")
