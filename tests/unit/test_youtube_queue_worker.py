@@ -8,6 +8,8 @@ threading itself is not under test.
 
 from __future__ import annotations
 
+import os
+import sys
 from dataclasses import replace
 from unittest.mock import MagicMock
 
@@ -814,3 +816,60 @@ def test_workspace_alloc_failure_is_per_item_not_queue_killer(make_worker, mock_
     assert idx0 == 0 and res0 is None and "OSError" in err0
     assert idx1 == 1 and res1 == "R_B" and err1 is None
     assert len(caps["queue_finished"].calls) == 1
+
+
+# ---------------------------------------------------------------------------
+# OVH-062 — workspace permissions
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits not applicable on Windows")
+def test_allocate_workspace_mode_0o700(make_worker):
+    """OVH-062: the allocated workspace must have mode 0o700 (owner-only).
+
+    Cookie-authenticated video/subtitle downloads land in this directory;
+    world-readable permissions would expose them to other local users.
+    """
+    worker = make_worker()
+    workspace = worker._allocate_workspace()
+    try:
+        mode = os.stat(workspace).st_mode & 0o777
+        assert mode == 0o700, f"workspace mode is {oct(mode)}, expected 0o700"
+    finally:
+        import shutil
+
+        shutil.rmtree(workspace, ignore_errors=True)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits not applicable on Windows")
+def test_allocate_workspace_intermediate_dir_mode_0o700(make_worker):
+    """OVH-062: the intermediate 'youtube' directory must also be 0o700."""
+    worker = make_worker()
+    workspace = worker._allocate_workspace()
+    try:
+        youtube_dir = workspace.parent
+        mode = os.stat(youtube_dir).st_mode & 0o777
+        assert mode == 0o700, f"youtube dir mode is {oct(mode)}, expected 0o700"
+    finally:
+        import shutil
+
+        shutil.rmtree(workspace, ignore_errors=True)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits not applicable on Windows")
+def test_allocate_workspace_tightens_preexisting_dir(make_worker, youtube_config, tmp_path):
+    """OVH-062: an already-existing 'youtube' dir with loose permissions is tightened."""
+    # Pre-create the directory with world-readable mode.
+    youtube_dir = youtube_config.media_temp_folder / "youtube"
+    youtube_dir.mkdir(parents=True, exist_ok=True)
+    youtube_dir.chmod(0o755)
+
+    worker = make_worker()
+    workspace = worker._allocate_workspace()
+    try:
+        mode = os.stat(youtube_dir).st_mode & 0o777
+        assert mode == 0o700, f"youtube dir mode after chmod: {oct(mode)}, expected 0o700"
+    finally:
+        import shutil
+
+        shutil.rmtree(workspace, ignore_errors=True)
