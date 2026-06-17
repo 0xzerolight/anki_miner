@@ -63,6 +63,8 @@ class _FakeWorker:
         self.cancel_called = False
         self.wait_called = False
         self.wait_called_with: int | None = None
+        # SingleEpisodeTab.release_dictionary_resources checks this attribute.
+        self.curation_processor = None
 
     def isRunning(self) -> bool:  # noqa: N802 (Qt convention)
         return self._running
@@ -117,6 +119,7 @@ class _FakeYouTubeTab(YouTubeTab):
         QWidget.__init__(self)
         self.worker_thread: _FakeWorker | None = _FakeWorker(running=worker_running)
         self.shutdown_called = False
+        self._processor = None  # needed by inherited release_dictionary_resources
 
     def shutdown(self) -> None:
         self.shutdown_called = True
@@ -133,6 +136,7 @@ class _FakeAudiobookTab(AudiobookTab):
         QWidget.__init__(self)
         self.worker_thread: _FakeWorker | None = _FakeWorker(running=worker_running)
         self.shutdown_called = False
+        self._processor = None  # needed by inherited release_dictionary_resources
 
     def shutdown(self) -> None:
         self.shutdown_called = True
@@ -146,6 +150,7 @@ class _FakeEpisodeTab(SingleEpisodeTab):
 
         QWidget.__init__(self)
         self.worker_thread = _FakeWorker(running=worker_running, wait_result=wait_result)
+        self._processor = None  # needed by inherited release_dictionary_resources
 
 
 class _FakeBatchTab(BatchProcessingTab):
@@ -156,6 +161,7 @@ class _FakeBatchTab(BatchProcessingTab):
 
         QWidget.__init__(self)
         self.worker_thread = _FakeWorker(running=worker_running)
+        self._processor = None  # needed by inherited release_dictionary_resources
 
 
 class _FakeDeckBuilderTab(DeckBuilderTab):
@@ -166,6 +172,7 @@ class _FakeDeckBuilderTab(DeckBuilderTab):
 
         QWidget.__init__(self)
         self.worker_thread: _FakeWorker | None = _FakeWorker(running=worker_running)
+        self._processor = None  # needed by inherited release_dictionary_resources
 
 
 class _FakeSettingsTab(SettingsTab):
@@ -531,3 +538,89 @@ class TestCloseEventJoinTimeoutPolicy:
 
         assert quit_calls == [True]
         assert not main_window.background_tasks._close_poll_timer.isActive()
+
+
+# ---------------------------------------------------------------------------
+# OVH-061 — closeEvent calls release_dictionary_resources after worker join
+# ---------------------------------------------------------------------------
+
+
+class TestCloseEventReleasesDictResources:
+    """closeEvent must call release_dictionary_resources() before event.accept()
+    so dict sqlite handles are freed deterministically on every idle shutdown
+    (OVH-061 / Issue #30 Windows file-lock)."""
+
+    def test_release_dict_resources_called_on_close(self, main_window, monkeypatch):
+        """release_dictionary_resources() is called during idle closeEvent."""
+        release_calls: list = []
+        monkeypatch.setattr(
+            main_window,
+            "release_dictionary_resources",
+            lambda: release_calls.append(True) or True,
+        )
+
+        event = _trigger_close(main_window)
+
+        assert release_calls, "release_dictionary_resources() was not called at close"
+        event.accept.assert_called_once()
+
+    def test_release_dict_resources_after_worker_join(self, main_window, monkeypatch):
+        """release_dictionary_resources() runs AFTER the worker join, not before.
+
+        Calling it before is unsafe — a live thread might still be reading
+        through the sqlite handles.
+        """
+        call_order: list[str] = []
+
+        worker = _FakeWorker(running=True)
+        real_cancel = worker.cancel
+        real_wait = worker.wait
+
+        def recording_cancel():
+            call_order.append("cancel")
+            return real_cancel()
+
+        def recording_wait(*a, **kw):
+            call_order.append("join")
+            return real_wait(*a, **kw)
+
+        worker.cancel = recording_cancel
+        worker.wait = recording_wait
+
+        monkeypatch.setattr(
+            main_window,
+            "release_dictionary_resources",
+            lambda: call_order.append("release") or True,
+        )
+
+        # Insert the running worker via a fake tab.
+        tab = _FakeEpisodeTab(worker_running=True)
+        tab.worker_thread = worker
+        main_window.tabs.addTab(tab, "Episode")
+
+        _trigger_close(main_window)
+
+        assert "join" in call_order
+        assert "release" in call_order
+        assert call_order.index("join") < call_order.index(
+            "release"
+        ), f"Expected join before release; got order={call_order}"
+
+    def test_release_dict_resources_not_called_on_deferred_close(self, main_window, monkeypatch):
+        """When a laggard worker defers the close, release_dictionary_resources()
+        must NOT run — the thread is still live and the handles are still in use."""
+        release_calls: list = []
+        monkeypatch.setattr(
+            main_window,
+            "release_dictionary_resources",
+            lambda: release_calls.append(True) or True,
+        )
+
+        # A laggard worker whose wait() times out → close is deferred.
+        tab = _FakeEpisodeTab(worker_running=True, wait_result=False)
+        main_window.tabs.addTab(tab, "Episode")
+
+        event = _trigger_close(main_window)
+
+        event.accept.assert_not_called()  # close is deferred
+        assert release_calls == [], "release must not run while a laggard is still live"

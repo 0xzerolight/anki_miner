@@ -15,6 +15,7 @@ confirm gate:
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import threading
 from collections.abc import Callable
@@ -133,12 +134,31 @@ class DeckBuilderWorker(ProcessorOwningWorker):
         # the cancellation flag and return.
         self._confirm_event.set()
 
+    def _close_superseded_processor(self) -> None:
+        """Close and discard the current per-pair processor before building the next.
+
+        Mirrors ``BatchQueueWorkerThread._close_current_processor``: errors are
+        swallowed (the processor is being discarded) so a close failure never
+        aborts the build.  The reference is dropped so ``_current_processor``
+        always points at the live proc (or None) — not one already released.
+
+        The FINAL processor is NOT closed here; it is left open as the survivor
+        (``curation_processor``) for DeckBuilderTab's post-build in-app lookups.
+        ``base`` is closed separately in the ``run()`` finally.
+        """
+        if self._current_processor is None:
+            return
+        with contextlib.suppress(Exception):
+            self._current_processor.close()
+        self._current_processor = None
+
     # ------------------------------------------------------------------ #
     # Worker body
     # ------------------------------------------------------------------ #
 
     def run(self) -> None:
         """Run the aggregate → preview → (gated) build flow."""
+        base: EpisodeProcessor | None = None
         try:
             # Phase 1: aggregate + preview. Every step here is slow (processor
             # construction: seconds; aggregate: MeCab over the whole corpus,
@@ -175,6 +195,13 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                     break
                 name = pair.video.stem
                 self.item_started.emit(name)
+
+                # Close the PREVIOUS per-pair processor before building the next.
+                # This prevents sqlite handles + requests.Session from accumulating
+                # across all pairs (the Windows back-to-back-freeze class).
+                # The final processor is NOT closed here — it survives as the
+                # ``curation_processor`` survivor for DeckBuilderTab.
+                self._close_superseded_processor()
 
                 cfg = replace(
                     self.config,
@@ -262,6 +289,14 @@ class DeckBuilderWorker(ProcessorOwningWorker):
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
             logger.exception("DeckBuilderWorker unhandled exception")
             self.error.emit(str(e))
+        finally:
+            # Always close ``base`` on every exit (success / cancel / exception).
+            # ``base`` owns its own definition_service (dict sqlite) + audio
+            # requests.Session; closing it does NOT touch the shared
+            # subtitle_parser, so the survivor (_current_processor) keeps working.
+            if base is not None:
+                with contextlib.suppress(Exception):
+                    base.close()
 
     # ------------------------------------------------------------------ #
     # Helpers
