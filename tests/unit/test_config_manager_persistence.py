@@ -27,36 +27,105 @@ def tmp_config(tmp_path: Path, monkeypatch):
 
 
 class TestLoadResilience:
-    def test_partial_write_truncation_falls_back_to_defaults(self, tmp_config: Path, caplog):
-        """A power-loss-truncated (invalid-JSON) file must load defaults + warn.
+    def test_corrupt_primary_recovers_from_bak(self, tmp_config: Path, caplog):
+        """A corrupt primary must be recovered from .bak rather than defaulting.
 
-        Pins the existing JSONDecodeError fallback so the new OSError branch
-        doesn't regress it.
+        Sequence: save "dark" (no .bak yet) → save "light" (dark rotates to .bak)
+        → corrupt primary → load_config must return "dark" from .bak.
         """
-        # Save a valid config, then corrupt it as a crash mid-write would.
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+
+        # First save: no .bak produced.
         GUIConfigManager.save_config(replace(create_default_config(), theme="dark"))
-        tmp_config.write_text('{"theme": "dark", "anki_dec', encoding="utf-8")
+        # Second save: primary becomes "light", .bak holds "dark".
+        GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+        assert bak_path.exists()
+
+        # Corrupt the primary file.
+        tmp_config.write_text('{"theme": "light", CORRUPT', encoding="utf-8")
 
         with caplog.at_level("WARNING"):
             loaded = GUIConfigManager.load_config()
 
         assert isinstance(loaded, AnkiMinerConfig)
-        assert loaded.theme == create_default_config().theme  # defaults, not "dark"
-        assert any("Invalid config" in r.message for r in caplog.records)
+        assert loaded.theme == "dark"  # recovered from .bak, not defaults
+        assert any(".bak" in r.message for r in caplog.records)
 
-    def test_unreadable_file_oserror_falls_back_to_defaults(self, tmp_config: Path, monkeypatch, caplog):
-        """An OSError while reading (e.g. chmod 000) must NOT crash startup."""
+    def test_corrupt_primary_no_bak_falls_back_to_defaults(self, tmp_config: Path, caplog):
+        """Primary corrupt, .bak absent → return defaults, no raise."""
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+
+        # Only one save → no .bak is written.
+        GUIConfigManager.save_config(replace(create_default_config(), theme="dark"))
+        assert not bak_path.exists()
+
+        tmp_config.write_text('{"theme": CORRUPT', encoding="utf-8")
+
+        with caplog.at_level("WARNING"):
+            loaded = GUIConfigManager.load_config()
+
+        assert isinstance(loaded, AnkiMinerConfig)
+        assert loaded.theme == create_default_config().theme
+        assert any("default" in r.message.lower() for r in caplog.records)
+
+    def test_corrupt_primary_corrupt_bak_falls_back_to_defaults(self, tmp_config: Path, caplog):
+        """Both primary and .bak corrupt → return defaults, no raise."""
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+
+        GUIConfigManager.save_config(replace(create_default_config(), theme="dark"))
+        GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+        assert bak_path.exists()
+
+        tmp_config.write_text("{CORRUPT PRIMARY", encoding="utf-8")
+        bak_path.write_text("{CORRUPT BAK", encoding="utf-8")
+
+        with caplog.at_level("WARNING"):
+            loaded = GUIConfigManager.load_config()
+
+        assert isinstance(loaded, AnkiMinerConfig)
+        assert loaded.theme == create_default_config().theme
+        assert any("default" in r.message.lower() for r in caplog.records)
+
+    def test_unreadable_file_oserror_recovers_from_bak(self, tmp_config: Path, monkeypatch, caplog):
+        """An OSError while reading the primary must try .bak before defaulting."""
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+
+        # Two saves so that .bak holds "dark" while primary holds "light".
+        GUIConfigManager.save_config(replace(create_default_config(), theme="dark"))
+        GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+        assert bak_path.exists()
+
+        real_open = builtins.open
+
+        def boom(self_path, *args, **kwargs):
+            # Only the primary config file read raises; .bak and everything else
+            # passes through.
+            mode = args[0] if args else kwargs.get("mode", "r")
+            if Path(self_path) == tmp_config and "r" in mode:
+                raise OSError("Permission denied")
+            return real_open(self_path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "open", lambda self, *a, **k: boom(self, *a, **k))
+
+        with caplog.at_level("WARNING"):
+            loaded = GUIConfigManager.load_config()
+
+        assert isinstance(loaded, AnkiMinerConfig)
+        assert loaded.theme == "dark"  # recovered from .bak
+        assert any(".bak" in r.message for r in caplog.records)
+
+    def test_unreadable_primary_no_bak_falls_back_to_defaults(self, tmp_config: Path, monkeypatch, caplog):
+        """An OSError while reading (e.g. chmod 000), no .bak → fall back to defaults."""
         tmp_config.write_text('{"theme": "dark"}', encoding="utf-8")
 
         real_open = builtins.open
 
         def boom(self_path, *args, **kwargs):
-            # Only the config file read raises; everything else passes through.
-            if Path(self_path) == tmp_config and "r" in (args[0] if args else kwargs.get("mode", "r")):
+            mode = args[0] if args else kwargs.get("mode", "r")
+            if Path(self_path) == tmp_config and "r" in mode:
                 raise OSError("Permission denied")
             return real_open(self_path, *args, **kwargs)
 
-        # Path.open delegates to io.open/builtins.open; patch at the Path level.
         monkeypatch.setattr(Path, "open", lambda self, *a, **k: boom(self, *a, **k))
 
         with caplog.at_level("WARNING"):
@@ -64,7 +133,7 @@ class TestLoadResilience:
 
         assert isinstance(loaded, AnkiMinerConfig)
         assert loaded.theme == create_default_config().theme
-        assert any("config file" in r.message.lower() for r in caplog.records)
+        assert any("config" in r.message.lower() for r in caplog.records)
 
 
 class TestAtomicSave:
