@@ -791,8 +791,7 @@ QProgressBar {
 }
 
 QProgressBar::chunk {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                                stop:0 ${color-primary}, stop:1 ${color-secondary});
+    background-color: ${color-primary};
 }
 
 /* --- Tables --- */
@@ -1197,14 +1196,6 @@ QLabel#queue-status-badge[status="processing"] {
 QLabel#queue-status-badge[status="complete"] {
     background-color: ${color-badge-success-bg};
     color: ${color-badge-success-text};
-}
-
-QProgressBar#queue-progress {
-    background-color: ${color-border};
-}
-
-QProgressBar#queue-progress::chunk {
-    background-color: ${color-primary};
 }
 
 /* --- Settings Tab --- */
