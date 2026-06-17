@@ -569,12 +569,16 @@ class EpisodeProcessor:
                 )
 
         # Record difficulty data if stats service available.
+        # OVH-024: use the pre-filter comprehension-unknown count (all_unknown_lemmas),
+        # NOT the post-filter mineable count (unknown_words). difficulty_score measures
+        # how hard the episode is to comprehend; i+1/frequency filters can collapse
+        # unknown_words to a handful, making a hard episode appear near-zero difficulty.
         if self.stats_service and self.stats_service.is_available():
             self.stats_service.record_difficulty(
                 series_name=ctx.series_name,
                 episode_name=ctx.episode_name,
                 total_words=len(all_words),
-                unknown_words=len(unknown_words),
+                unknown_words=len(all_unknown_lemmas),
                 unique_words=len(all_words),
             )
 
