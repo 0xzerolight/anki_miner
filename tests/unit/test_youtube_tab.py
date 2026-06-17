@@ -366,6 +366,29 @@ class TestProbeOutcomes:
         assert tab.preview_button.isEnabled()
         assert tab.mine_button.isEnabled()
 
+    def test_probe_finished_removes_worker_and_calls_delete_later(self, tab):
+        """_on_probe_finished removes the handle from _probe_workers and calls
+        deleteLater() so the finished QThread's C++ object is reclaimed promptly
+        instead of lingering until the tab is destroyed (OVH-058)."""
+        tab.url_edit.setText("https://youtu.be/abc123")
+        tab._on_add_clicked()
+
+        assert len(tab._add_flow._probe_workers) == 1
+        probe = tab._add_flow._probe_workers[0]
+
+        tab._add_flow._on_probe_finished(probe)
+
+        assert probe not in tab._add_flow._probe_workers
+        probe.deleteLater.assert_called_once()
+
+    def test_probe_finished_unknown_probe_still_calls_delete_later(self, tab):
+        """_on_probe_finished calls deleteLater even when the probe is not in
+        the list (defensive: finished signal fired after a race removal)."""
+        stray = MagicMock(name="StrayProbe")
+        tab._add_flow._on_probe_finished(stray)
+
+        stray.deleteLater.assert_called_once()
+
 
 class TestDeferredProcessor:
     """Startup-deferral contract: tab accepts ``processor=None`` and rebuilds
