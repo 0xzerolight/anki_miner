@@ -682,14 +682,18 @@ class SettingsTab(QWidget):
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close (T-12).
 
-        Stable hook consumed by ``MainWindow.closeEvent``: yields the three
-        short-lived AnkiConnect probe workers (fetch fields, fetch decks,
-        apply/remove styling), which T-66 lifted into
-        :class:`AnkiProbeController` — this method delegates there. See
-        :meth:`AnkiProbeController.iter_close_workers` for the join-policy
-        rationale.
+        Chains the three AnkiConnect probe workers (T-66) with the active
+        import workers from all three import flows (OVH-004, 059, 060) so
+        ``BackgroundTaskController._join_worker_for_close`` sees every live
+        Settings-tab QThread.  ``None`` entries (idle flows) are filtered
+        by ``_join_worker_for_close``.
         """
-        return self._anki_probe.iter_close_workers()
+        return (
+            *self._anki_probe.iter_close_workers(),
+            *self._dict_import_flow.iter_close_workers(),
+            *self._audio_pack_import_flow.iter_close_workers(),
+            *self._zip_import_flow.iter_close_workers(),
+        )
 
     def shutdown(self) -> None:
         """Cancel every running AnkiConnect worker (cancel only, no wait).
