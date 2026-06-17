@@ -10,7 +10,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from PyQt6.QtWidgets import QLabel, QMessageBox
 
-from anki_miner.config import AudioSourceEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.widgets.panels import audio_pack_settings_panel as asp_mod
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.services.audio_packs.registry import AudioPackMeta
@@ -703,6 +703,9 @@ def test_right_click_pack_row_emits_reimport_signal(qapp, qtbot, monkeypatch, tm
             AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),
         )
     )
+    # Registry scan is deferred to first showEvent (OVH-053); trigger it so
+    # _on_row_context_menu can resolve meta from the registry.
+    panel.show()
 
     constructed = _patch_menu_exec(monkeypatch, "Re-import…")
 
@@ -741,6 +744,8 @@ def test_right_click_remove_action_removes_pack(qapp, qtbot, monkeypatch, tmp_pa
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="pack", pack_id="a", enabled=True),))
+    # Registry scan is deferred to first showEvent (OVH-053).
+    panel.show()
 
     _patch_menu_exec(monkeypatch, "Remove")
 
@@ -835,3 +840,79 @@ def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, qtbot, monkeypat
     row.checkbox.setChecked(not row.checkbox.isChecked())
     assert events[-1] == "changed"
     assert len(events) == 4
+
+
+# ---------------------------------------------------------------------------
+# OVH-053 — registry scan deferred to first showEvent
+# ---------------------------------------------------------------------------
+
+
+class TestShowEventDeferral:
+    """AudioPackSettingsPanel defers AudioPackRegistry.load() off the paint
+    path (OVH-053): constructing the panel + calling set_chain must NOT scan
+    the registry; only the first showEvent triggers the scan."""
+
+    def test_construction_does_not_call_registry_load(self, qapp, qtbot, tmp_path, monkeypatch):
+        """Constructing the panel (including _load_config's set_chain call) must
+        not call AudioPackRegistry.load()."""
+        from anki_miner.services.audio_packs.registry import AudioPackRegistry
+
+        load_calls: list[None] = []
+        real_load = AudioPackRegistry.load
+
+        def _spy_load(self):
+            load_calls.append(None)
+            return real_load(self)
+
+        monkeypatch.setattr(AudioPackRegistry, "load", _spy_load)
+
+        panel = AudioPackSettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(AnkiMinerConfig().expression_audio_chain)
+
+        assert load_calls == [], "AudioPackRegistry.load() must not run before first showEvent"
+
+    def test_first_show_event_triggers_exactly_one_scan(self, qapp, qtbot, tmp_path, monkeypatch):
+        """The first showEvent must trigger exactly one AudioPackRegistry.load()."""
+        from anki_miner.services.audio_packs.registry import AudioPackRegistry
+
+        load_calls: list[None] = []
+        real_load = AudioPackRegistry.load
+
+        def _spy_load(self):
+            load_calls.append(None)
+            return real_load(self)
+
+        monkeypatch.setattr(AudioPackRegistry, "load", _spy_load)
+
+        panel = AudioPackSettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(AnkiMinerConfig().expression_audio_chain)
+
+        assert load_calls == []
+        panel.show()
+        assert len(load_calls) == 1, "First showEvent must trigger exactly one registry scan"
+
+    def test_second_show_event_does_not_rescan(self, qapp, qtbot, tmp_path, monkeypatch):
+        """Showing the panel a second time must not re-scan (guard prevents it)."""
+        from anki_miner.services.audio_packs.registry import AudioPackRegistry
+
+        load_calls: list[None] = []
+        real_load = AudioPackRegistry.load
+
+        def _spy_load(self):
+            load_calls.append(None)
+            return real_load(self)
+
+        monkeypatch.setattr(AudioPackRegistry, "load", _spy_load)
+
+        panel = AudioPackSettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(AnkiMinerConfig().expression_audio_chain)
+
+        panel.show()
+        assert len(load_calls) == 1
+
+        panel.hide()
+        panel.show()
+        assert len(load_calls) == 1, "Second showEvent must not re-scan"

@@ -117,6 +117,11 @@ class AudiobookTab(MiningTabBase):
         # ``MainWindow.closeEvent`` which looks up ``getattr(tab, "worker_thread")``.
         self.worker_thread: AudiobookQueueWorker | None = None
 
+        # Set when a config change arrives while a worker is running (OVH-056).
+        # _on_worker_finished reconciles: drops the cached processor so the
+        # next _start_run rebuilds with the new config.
+        self._config_dirty: bool = False
+
         # Snapshot of the items handed to the active worker, in order.
         # Indexed by the worker's per-item idx signals; frozen at _start_run
         # so mid-run removals of COMPLETED rows don't shift the mapping.
@@ -460,6 +465,10 @@ class AudiobookTab(MiningTabBase):
         Fires after ``run()`` returns regardless of path (success, mid-mine
         cancel, unhandled exception), so worker state and the progress widget
         always recover instead of stranding a stale label / a leaked handle.
+
+        Reconciles a deferred config change (OVH-056): if ``_config_dirty`` is
+        set, close + null the processor so the next _start_run rebuilds with
+        the config that arrived mid-run.
         """
         self.worker_thread = None
         self._run_items = []
@@ -467,6 +476,11 @@ class AudiobookTab(MiningTabBase):
         self.stop_button.setEnabled(True)
         self.progress_widget.reset()
         self._recompute_buttons()
+        if self._config_dirty:
+            if self._processor is not None:
+                self._processor.close()
+                self._processor = None
+            self._config_dirty = False
 
     # ------------------------------------------------------------------
     # Remove + clear
@@ -608,8 +622,14 @@ class AudiobookTab(MiningTabBase):
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Adopt a new frozen config and refresh config-dependent services.
 
-        Only rebuilds the processor when no run is active — DefinitionService
-        caches a provider chain that may have an open SQLite connection.
+        For the processor — which owns open SQLite handles + a requests.Session —
+        uses a lazy-drop strategy instead of an eager rebuild (OVH-014):
+
+        * If idle: close() + null the cached processor so the next _start_run
+          rebuilds with the current config (off the incidental-refresh path).
+        * If busy: set ``_config_dirty`` instead of touching the running
+          processor — closing providers under a live worker crashes the run
+          (OVH-056).  ``_on_worker_finished`` reconciles after the run ends.
 
         Args:
             config: New frozen configuration.
@@ -617,25 +637,16 @@ class AudiobookTab(MiningTabBase):
         self._config = config
 
         worker_busy = self.worker_thread is not None and self.worker_thread.isRunning()
-        if not worker_busy and self._presenter is not None:
-            old_processor = self._processor
-            # Thread the tab's own stats service through, not
-            # ``getattr(self._processor, …)``: a config change before the first
-            # run (processor still startup-deferred / None) would otherwise pass
-            # None and silently disable stats.db for the session (T-15). Mirrors
-            # the lazy rebuild in _start_run.
-            self._processor = create_episode_processor(
-                config,
-                self._presenter,
-                stats_service=self._stats_service,  # type: ignore[arg-type]
-            )
-            # Full close of the discarded processor: dict sqlite handles AND the
-            # expression-audio requests.Session (release_dictionary_resources()
-            # was dict-only and leaked the Session — OVH-055).  Issue #30
-            # Windows file-lock is covered by close() which calls
-            # release_dictionary_resources() internally.
-            if old_processor is not None:
-                old_processor.close()
+        if worker_busy:
+            # Mark dirty; reconcile in _on_worker_finished (OVH-056).
+            self._config_dirty = True
+        else:
+            # Lazy drop: close the old processor (dict sqlite + audio Session —
+            # OVH-055; Issue #30) and null it out.  _start_run rebuilds when
+            # None, threading stats_service through (T-15).
+            if self._processor is not None:
+                self._processor.close()
+                self._processor = None
 
     def release_dictionary_resources(self) -> bool:
         """Close any cached dictionary handles so the file can be deleted.

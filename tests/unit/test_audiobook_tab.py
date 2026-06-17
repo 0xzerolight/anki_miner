@@ -689,39 +689,68 @@ class TestCurationContext:
 class TestUpdateConfig:
     """update_config rebuilds the processor only when idle."""
 
-    def test_update_config_rebuilds_when_idle(self, tab, test_config):
-        new_cfg = replace(test_config, subtitle_offset=2.5)
+    def test_update_config_idle_drops_processor_to_none(self, tab, test_config):
+        """update_config when idle drops processor to None (lazy-drop, OVH-014).
+
+        No eager rebuild — _start_run will rebuild on the next Mine/Preview.
+        The old processor must be fully closed (OVH-055, Issue #30).
+        """
         old_processor = tab._processor
-        new_processor = MagicMock(name="NewProcessor")
+        new_cfg = replace(test_config, subtitle_offset=2.5)
         with patch(
             "anki_miner.gui.widgets.audiobook_tab.create_episode_processor",
-            return_value=new_processor,
-        ):
+        ) as mock_create:
             tab.update_config(new_cfg)
 
         assert tab._config is new_cfg
-        assert tab._processor is new_processor
-        # Old processor fully closed (dict sqlite + audio Session) — OVH-055 +
-        # Issue #30. close() covers both; release_dictionary_resources() was dict-only.
+        # Lazy-drop: processor is None; no eager rebuild on the config-refresh path.
+        assert tab._processor is None
+        mock_create.assert_not_called()
+        # Old processor fully closed (dict sqlite + audio Session — OVH-055).
         old_processor.close.assert_called_once()
         old_processor.release_dictionary_resources.assert_not_called()
 
-    def test_update_config_skips_processor_rebuild_during_run(self, tab, test_config, tmp_path):
+    def test_update_config_busy_sets_dirty_flag(self, tab, test_config, tmp_path):
+        """update_config while a worker runs sets _config_dirty; processor untouched (OVH-056)."""
         _add_pair(tab, tmp_path)
         tab._on_mine_clicked()
         tab.worker_thread.isRunning.return_value = True  # type: ignore[union-attr]
         original_processor = tab._processor
 
         new_cfg = replace(test_config, subtitle_offset=2.5)
-        new_processor = MagicMock(name="NewProcessor")
         with patch(
             "anki_miner.gui.widgets.audiobook_tab.create_episode_processor",
-            return_value=new_processor,
-        ):
+        ) as mock_create:
             tab.update_config(new_cfg)
 
         assert tab._config is new_cfg
         assert tab._processor is original_processor
+        # Dirty flag set so _on_worker_finished can reconcile.
+        assert tab._config_dirty is True
+        # The running processor must NOT have been touched.
+        original_processor.close.assert_not_called()
+        mock_create.assert_not_called()
+
+    def test_worker_finished_reconciles_dirty_config(self, tab, test_config, tmp_path):
+        """_on_worker_finished closes+nulls processor when _config_dirty (OVH-056)."""
+        _add_pair(tab, tmp_path)
+        tab._on_mine_clicked()
+        tab.worker_thread.isRunning.return_value = True
+        original_processor = tab._processor
+
+        # Simulate config arriving mid-run.
+        new_cfg = replace(test_config, subtitle_offset=2.5)
+        tab.update_config(new_cfg)
+        assert tab._config_dirty is True
+
+        # Simulate run ending.
+        tab.worker_thread.isRunning.return_value = False
+        tab._on_worker_finished()
+
+        # Processor closed + nulled; dirty flag cleared.
+        original_processor.close.assert_called_once()
+        assert tab._processor is None
+        assert tab._config_dirty is False
 
 
 class TestReleaseDictionaryResources:
