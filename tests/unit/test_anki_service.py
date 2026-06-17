@@ -3071,3 +3071,116 @@ class TestVerifyCardTarget:
             pytest.raises(AnkiConnectionError, match="Anki is down"),
         ):
             service.verify_card_target()
+
+
+# ---------------------------------------------------------------------------
+# TestNullSlotSkipCount (OVH-040)
+# ---------------------------------------------------------------------------
+
+
+class TestNullSlotSkipCount:
+    """Null slots in addNotes result are counted and surfaced honestly (OVH-040).
+
+    AnkiConnect's common path for a duplicate (or other silent rejection) is a
+    ``null`` slot in the result array, NOT a top-level error.  Prior to this
+    fix, those were invisible — the user saw "Successfully created N cards" with
+    M silently missing.  Now null slots are counted in
+    ``last_skipped_duplicates`` and an INFO log line is emitted with the
+    user-facing wording "note(s) were not created (likely already in your
+    collection)".
+    """
+
+    def _make_word_data(self, make_tokenized_word, n=1):
+        items = []
+        for i in range(n):
+            word = make_tokenized_word(lemma=f"word_{i}")
+            items.append(CardPayload(word=word, media=MediaData(), definition=f"def_{i}"))
+        return items
+
+    def test_null_slots_counted_in_last_skipped_duplicates(self, test_config, make_tokenized_word):
+        """addNotes returning some null slots must fold them into last_skipped_duplicates."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=5)
+
+        # 3 created, 2 null (silent rejections)
+        resp = _mock_response(result=[100, None, 102, None, 104])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            result = service.create_cards_batch(items)
+
+        assert result == 3
+        assert service.last_skipped_duplicates == 2
+
+    def test_null_slots_emit_info_log(self, test_config, make_tokenized_word, caplog):
+        """At least one null slot must emit an INFO log with the approved wording."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=3)
+
+        resp = _mock_response(result=[100, None, 102])
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            caplog.at_level(logging.INFO, logger="anki_miner.services.anki_service"),
+        ):
+            service.create_cards_batch(items)
+
+        messages = " ".join(r.message for r in caplog.records)
+        assert "were not created" in messages
+        assert "likely already in your collection" in messages
+
+    def test_all_success_batch_reports_zero_skips(self, test_config, make_tokenized_word):
+        """When all notes succeed (no null slots), last_skipped_duplicates must be 0."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=3)
+
+        resp = _mock_response(result=[100, 101, 102])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            result = service.create_cards_batch(items)
+
+        assert result == 3
+        assert service.last_skipped_duplicates == 0
+
+    def test_null_slots_not_double_counted_on_per_note_recovery(self, test_config, make_tokenized_word):
+        """When the per-note recovery path ran, null slots are NOT counted again.
+
+        The recovery path already attributed each None slot via batch_skipped;
+        adding null_slots on top would double-count.
+        """
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=3)
+
+        # addNotes raises a top-level duplicate error; per-note retry: ok, dup, ok.
+        batch_dup = _mock_response(error=["cannot create note because it is a duplicate"])
+        note0 = _mock_response(result=100)
+        note1_dup = _mock_response(error="cannot create note because it is a duplicate")
+        note2 = _mock_response(result=102)
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[batch_dup, note0, note1_dup, note2],
+        ):
+            service.create_cards_batch(items)
+
+        # Recovery path: 1 explicit skip — must NOT be inflated to 2 by null-slot count.
+        assert service.last_skipped_duplicates == 1
+
+    def test_null_slots_accumulated_across_multiple_batches(self, test_config, make_tokenized_word):
+        """Null slots from multiple addNotes batches are summed into one counter."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=200)  # two 100-note batches
+
+        # Batch 1: 99 created, 1 null; batch 2: 98 created, 2 nulls
+        batch1_ids = list(range(99)) + [None]
+        batch2_ids = list(range(99, 197)) + [None, None]
+        batch1_resp = _mock_response(result=batch1_ids)
+        batch2_resp = _mock_response(result=batch2_ids)
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[batch1_resp, batch2_resp],
+        ):
+            result = service.create_cards_batch(items)
+
+        assert result == 197
+        assert service.last_skipped_duplicates == 3
