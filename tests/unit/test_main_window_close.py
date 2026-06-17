@@ -179,9 +179,14 @@ class _FakeSettingsTab(SettingsTab):
     """
 
     def __init__(self, *, fields_running=False, decks_running=False, styling_running=False, wait_result=True) -> None:
+        from unittest.mock import MagicMock
+
         from PyQt6.QtWidgets import QWidget
 
         from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
+        from anki_miner.gui.controllers.audio_pack_import_flow import AudioPackImportFlow
+        from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
+        from anki_miner.gui.controllers.zip_import_flow import ZipImportFlow
 
         QWidget.__init__(self)
         self._anki_probe = AnkiProbeController(
@@ -193,6 +198,21 @@ class _FakeSettingsTab(SettingsTab):
         self._anki_probe._fetch_fields_worker = _FakeWorker(running=fields_running, wait_result=wait_result)
         self._anki_probe._fetch_decks_worker = _FakeWorker(running=decks_running, wait_result=wait_result)
         self._anki_probe._styling_worker = _FakeWorker(running=styling_running, wait_result=wait_result)
+        # Import-flow controllers with idle (None) workers (OVH-004, 059, 060).
+        self._dict_import_flow = DictionaryImportFlow(
+            parent=self,
+            panel=MagicMock(),
+            get_config=MagicMock(),
+            persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
+        )
+        self._audio_pack_import_flow = AudioPackImportFlow(
+            parent=self,
+            panel=MagicMock(),
+            get_config=MagicMock(),
+            persist_chain=MagicMock(),
+        )
+        self._zip_import_flow = ZipImportFlow(self)
 
 
 def _trigger_close(window) -> MagicMock:
@@ -335,6 +355,70 @@ class TestCloseEventSettingsTab:
         event = _trigger_close(main_window)
 
         assert tab._anki_probe._styling_worker.cancel_called
+        event.accept.assert_not_called()
+        event.ignore.assert_called_once()
+
+
+class TestCloseEventSettingsTabImportFlowWorkers:
+    """Import-flow workers (OVH-004, 059, 060) must be cancelled + joined at closeEvent."""
+
+    def test_running_dict_import_worker_cancelled(self, main_window):
+        tab = _FakeSettingsTab()
+        w = _FakeWorker(running=True)
+        tab._dict_import_flow._active_import_worker = w
+        main_window.tabs.addTab(tab, "Settings")
+
+        event = _trigger_close(main_window)
+
+        assert w.cancel_called
+        assert w.wait_called_with == 2000
+        event.accept.assert_called_once()
+
+    def test_running_audio_pack_import_worker_cancelled(self, main_window):
+        tab = _FakeSettingsTab()
+        w = _FakeWorker(running=True)
+        tab._audio_pack_import_flow._active_import_worker = w
+        main_window.tabs.addTab(tab, "Settings")
+
+        event = _trigger_close(main_window)
+
+        assert w.cancel_called
+        assert w.wait_called_with == 2000
+        event.accept.assert_called_once()
+
+    def test_running_zip_freq_worker_cancelled(self, main_window):
+        tab = _FakeSettingsTab()
+        w = _FakeWorker(running=True)
+        tab._zip_import_flow._active_freq_worker = w
+        main_window.tabs.addTab(tab, "Settings")
+
+        event = _trigger_close(main_window)
+
+        assert w.cancel_called
+        assert w.wait_called_with == 2000
+        event.accept.assert_called_once()
+
+    def test_running_zip_pitch_worker_cancelled(self, main_window):
+        tab = _FakeSettingsTab()
+        w = _FakeWorker(running=True)
+        tab._zip_import_flow._active_pitch_worker = w
+        main_window.tabs.addTab(tab, "Settings")
+
+        event = _trigger_close(main_window)
+
+        assert w.cancel_called
+        assert w.wait_called_with == 2000
+        event.accept.assert_called_once()
+
+    def test_import_flow_laggard_defers_close(self, main_window):
+        tab = _FakeSettingsTab()
+        w = _FakeWorker(running=True, wait_result=False)
+        tab._dict_import_flow._active_import_worker = w
+        main_window.tabs.addTab(tab, "Settings")
+
+        event = _trigger_close(main_window)
+
+        assert w.cancel_called
         event.accept.assert_not_called()
         event.ignore.assert_called_once()
 

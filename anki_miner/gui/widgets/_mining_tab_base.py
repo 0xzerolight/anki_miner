@@ -169,6 +169,17 @@ class MiningTabBase(QWidget):
         """
         if self.worker_thread is None:  # type: ignore[attr-defined]
             return
+        # Defensively release any open curation dialog and poison the gate
+        # BEFORE cancelling / joining the worker (OVH-081).  A worker parked
+        # in ``_curation_event.wait()`` would never exit from cancel() alone —
+        # the event keeps it blocked.  Poisoning here makes teardown safe
+        # regardless of caller state (not just when _is_processing guards it).
+        # Guard with hasattr: only SingleEpisodeTab and BatchProcessingTab call
+        # _teardown_previous_run, both of which initialize the curation bridge,
+        # but test fakes and future subclasses may not.
+        if hasattr(self, "_curation_event"):
+            self._cancel_active_curation_dialog()
+            self._poison_curation_gate()
         with contextlib.suppress(TypeError, RuntimeError):
             self.worker_thread.finished.disconnect(self._restore_buttons)  # type: ignore[attr-defined]
         self.worker_thread.cancel()  # type: ignore[attr-defined]
@@ -341,6 +352,29 @@ class MiningTabBase(QWidget):
         finally:
             self._active_curation_dialog = None
             self._curation_event.set()
+
+    def shutdown(self) -> None:
+        """Cancel any open curation dialog and poison the gate (OVH-003).
+
+        Generic base implementation called by ``BackgroundTaskController.shutdown``
+        for every tab that exposes a curation bridge (Single, Batch, YouTube,
+        Audiobook).  Ensures a worker parked in ``_curation_event.wait()``
+        is released so the bounded close-join can complete without deadlocking.
+
+        No-op when ``_init_curation_bridge`` has not been called (e.g. tabs
+        that don't use the curation flow, or test fakes that bypass ``__init__``).
+
+        ``YouTubeTab`` and ``AudiobookTab`` override this to also cancel their
+        queue workers; both already call ``_cancel_active_curation_dialog()`` and
+        ``_poison_curation_gate()`` in their overrides, so they do NOT need to call
+        ``super().shutdown()`` — their poison paths are already correct and more
+        precise (cancel → poison, in that order).  Subclasses that add no extra
+        teardown may rely on this base implementation directly.
+        """
+        if not hasattr(self, "_curation_event"):
+            return
+        self._cancel_active_curation_dialog()
+        self._poison_curation_gate()
 
     def _cancel_active_curation_dialog(self) -> None:
         """Reject any open curation dialog so the worker doesn't hang on cancel.
