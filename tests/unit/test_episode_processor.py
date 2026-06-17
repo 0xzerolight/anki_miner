@@ -1281,10 +1281,53 @@ class TestStatsServiceIntegration:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        # Verify difficulty was recorded with correct counts
+        # Verify difficulty was recorded with correct counts.
+        # With no optional filters active, all_unknown_lemmas == unknown_words (1).
         call_args = mock_stats.record_difficulty.call_args
         assert call_args.kwargs["total_words"] == 2  # len(all_words)
-        assert call_args.kwargs["unknown_words"] == 1  # len(unknown_words)
+        assert call_args.kwargs["unknown_words"] == 1  # len(all_unknown_lemmas) == 1
+
+    def test_difficulty_uses_pre_filter_unknown_count(self, test_config, mock_services, tmp_path):
+        """OVH-024: record_difficulty must use the pre-filter comprehension-unknown
+        count (all_unknown_lemmas), not the post-filter mineable count.
+
+        With i+1 or frequency filters active the mineable set can collapse to a
+        handful; difficulty_score would then report near-zero for a hard episode.
+        """
+        # Enable frequency filter so it shrinks unknown_words from 2 → 1.
+        config = replace(test_config, max_frequency_rank=100)
+
+        common = _make_word("食べる")  # stays after frequency filter
+        rare = _make_word("拝謁", start_time=5.0)  # dropped by frequency filter
+
+        mock_stats = MagicMock()
+        mock_stats.is_available.return_value = True
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [common, rare]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        # Both words are unknown (pre-filter set = 2).
+        mock_services["word_filter"].filter_unknown.return_value = [common, rare]
+        # Frequency filter drops the rare word → mineable set = 1.
+        mock_services["word_filter"].filter_by_frequency.return_value = [common]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(common, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        call_kwargs = mock_stats.record_difficulty.call_args.kwargs
+        # Pre-filter unknown count (2) must be used, not the post-filter count (1).
+        assert (
+            call_kwargs["unknown_words"] == 2
+        ), "record_difficulty must use all_unknown_lemmas (pre-filter), not unknown_words (post-filter)"
+        assert call_kwargs["total_words"] == 2  # len(all_words) unchanged
 
     def test_no_crash_without_stats_service(self, test_config, mock_services, tmp_path):
         """Processing should work fine without stats_service."""
