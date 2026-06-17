@@ -311,6 +311,9 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, qtbot, tmp_pa
             ChainEntry(kind="jisho", dict_id=None, enabled=True),
         )
     )
+    # Registry scan is deferred to first showEvent (OVH-053); trigger it now so
+    # the row metadata is populated before inspecting row content.
+    panel.show()
 
     row = panel._row_widget(0)
     assert row is not None
@@ -354,6 +357,8 @@ def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, qtbot, tmp_path):
             ChainEntry(kind="jisho", dict_id=None, enabled=True),
         )
     )
+    # Registry scan is deferred to first showEvent (OVH-053).
+    panel.show()
 
     row = panel._row_widget(0)
     assert row is not None
@@ -388,6 +393,8 @@ def test_current_schema_row_has_no_stale_ui(qapp, qtbot, tmp_path):
             ChainEntry(kind="jisho", dict_id=None, enabled=True),
         )
     )
+    # Registry scan is deferred to first showEvent (OVH-053).
+    panel.show()
 
     row = panel._row_widget(0)
     assert row is not None
@@ -470,6 +477,9 @@ def test_right_click_non_stale_yomitan_row_emits_reimport_dict_requested(qapp, q
             ChainEntry(kind="jisho", dict_id=None, enabled=True),
         )
     )
+    # Registry scan is deferred to first showEvent (OVH-053); trigger it so
+    # _on_row_context_menu can resolve meta from the registry.
+    panel.show()
 
     constructed = _patch_menu_exec(monkeypatch, "Re-import…")
 
@@ -505,6 +515,8 @@ def test_right_click_jmdict_row_emits_reimport_jmdict_requested(qapp, qtbot, mon
             ChainEntry(kind="jisho", dict_id=None, enabled=True),
         )
     )
+    # Registry scan is deferred to first showEvent (OVH-053).
+    panel.show()
 
     _patch_menu_exec(monkeypatch, "Re-import…")
 
@@ -912,3 +924,79 @@ def test_reset_dicts_root_button_restores_default(qapp, qtbot, tmp_path):
     panel._reset_dicts_root_btn.click()
 
     assert panel.get_dicts_root() == ANKI_MINER_HOME / "dicts"
+
+
+# ---------------------------------------------------------------------------
+# OVH-053 — registry scan deferred to first showEvent
+# ---------------------------------------------------------------------------
+
+
+class TestShowEventDeferral:
+    """DictionarySettingsPanel defers DictionaryRegistry.load() off the paint
+    path (OVH-053): constructing the panel + calling set_chain must NOT scan
+    the registry; only the first showEvent triggers the scan."""
+
+    def test_construction_does_not_call_registry_load(self, qapp, qtbot, tmp_path, monkeypatch):
+        """Constructing the panel (including _load_config's set_chain call) must
+        not call DictionaryRegistry.load()."""
+        from anki_miner.services.dictionary.registry import DictionaryRegistry
+
+        load_calls: list[None] = []
+        real_load = DictionaryRegistry.load
+
+        def _spy_load(self):
+            load_calls.append(None)
+            return real_load(self)
+
+        monkeypatch.setattr(DictionaryRegistry, "load", _spy_load)
+
+        panel = DictionarySettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(AnkiMinerConfig().dictionary_chain)
+
+        assert load_calls == [], "DictionaryRegistry.load() must not run before first showEvent"
+
+    def test_first_show_event_triggers_exactly_one_scan(self, qapp, qtbot, tmp_path, monkeypatch):
+        """The first showEvent must trigger exactly one DictionaryRegistry.load()."""
+        from anki_miner.services.dictionary.registry import DictionaryRegistry
+
+        load_calls: list[None] = []
+        real_load = DictionaryRegistry.load
+
+        def _spy_load(self):
+            load_calls.append(None)
+            return real_load(self)
+
+        monkeypatch.setattr(DictionaryRegistry, "load", _spy_load)
+
+        panel = DictionarySettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(AnkiMinerConfig().dictionary_chain)
+
+        assert load_calls == []
+        panel.show()
+        assert len(load_calls) == 1, "First showEvent must trigger exactly one registry scan"
+
+    def test_second_show_event_does_not_rescan(self, qapp, qtbot, tmp_path, monkeypatch):
+        """Showing the panel a second time must not re-scan (guard prevents it)."""
+        from anki_miner.services.dictionary.registry import DictionaryRegistry
+
+        load_calls: list[None] = []
+        real_load = DictionaryRegistry.load
+
+        def _spy_load(self):
+            load_calls.append(None)
+            return real_load(self)
+
+        monkeypatch.setattr(DictionaryRegistry, "load", _spy_load)
+
+        panel = DictionarySettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(AnkiMinerConfig().dictionary_chain)
+
+        panel.show()
+        assert len(load_calls) == 1
+
+        panel.hide()
+        panel.show()
+        assert len(load_calls) == 1, "Second showEvent must not re-scan"

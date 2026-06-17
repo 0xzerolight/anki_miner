@@ -456,21 +456,23 @@ class TestDeferredProcessor:
                 widget.deleteLater()
 
     def test_update_config_on_deferred_processor_keeps_stats_service(self, qtbot, test_config: AnkiMinerConfig):
-        """update_config before the first run must not drop stats_service (T-15).
+        """update_config (lazy-drop) + _start_run must preserve stats_service (T-15).
 
-        When the processor is still None (startup-deferred), the rebuild used
-        ``getattr(None, "stats_service", None)`` -> None, silently disabling
-        stats.db recording for the session. The tab's own stats service must
-        be threaded through instead.
+        With the lazy-drop strategy: update_config when idle drops _processor to
+        None (no eager rebuild).  The T-15 fix lives in _start_run — it always
+        passes self._stats_service, never reads it from the old processor — so
+        an update_config on a None processor must not lose the service reference.
+        Verified here by driving _start_run after the config update.
         """
         cfg = replace(test_config, youtube_max_duration_s=7200)
         sentinel_stats = MagicMock(name="StatsService")
         with (
             patch("anki_miner.gui.widgets.youtube_playlist_flow.YouTubeProbeWorker", autospec=False),
-            patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker", autospec=False),
+            patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker", autospec=False) as q_cls,
             patch("anki_miner.gui.widgets.youtube_tab.create_youtube_fetcher", return_value=MagicMock()),
             patch("anki_miner.gui.widgets.youtube_tab.create_episode_processor") as mock_create,
         ):
+            q_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
             mock_create.return_value = MagicMock(name="RebuiltProcessor")
             widget = YouTubeTab(
                 config=cfg,
@@ -481,7 +483,18 @@ class TestDeferredProcessor:
             )
             qtbot.addWidget(widget)
             try:
+                # Lazy drop: update_config must NOT call create_episode_processor.
                 widget.update_config(replace(cfg, youtube_max_duration_s=999))
+                assert mock_create.call_count == 0
+                assert widget._processor is None
+                assert widget._stats_service is sentinel_stats
+
+                # The next _start_run rebuilds and threads stats_service through.
+                widget.url_edit.setText("https://youtu.be/abc")
+                widget._on_add_clicked()
+                item = widget._queue.all_items()[-1]
+                widget._add_flow._on_probe_done(item, _make_video_info())
+                widget._on_mine_clicked()
 
                 assert mock_create.call_count == 1
                 assert mock_create.call_args.kwargs["stats_service"] is sentinel_stats
@@ -958,25 +971,35 @@ class TestIdxSnapshotBug:
 class TestUpdateConfig:
     """update_config rebuilds services but never mid-run."""
 
-    def test_update_config_rebuilds_when_idle(self, tab, test_config):
+    def test_update_config_idle_drops_processor_to_none(self, tab, test_config):
+        """update_config when idle drops processor to None (lazy-drop, OVH-014).
+
+        No eager rebuild — _start_run will rebuild on the next Mine/Preview.
+        The old processor must be fully closed (OVH-055, Issue #30).
+        """
+        old_processor = tab._processor
         new_cfg = replace(test_config, youtube_max_duration_s=999)
         new_fetcher = MagicMock(name="NewFetcher")
-        new_processor = MagicMock(name="NewProcessor")
         with (
             patch("anki_miner.gui.widgets.youtube_tab.create_youtube_fetcher", return_value=new_fetcher),
-            patch("anki_miner.gui.widgets.youtube_tab.create_episode_processor", return_value=new_processor),
+            patch("anki_miner.gui.widgets.youtube_tab.create_episode_processor") as mock_create,
         ):
             tab.update_config(new_cfg)
 
         assert tab._config is new_cfg
         assert tab._fetcher is new_fetcher
-        assert tab._processor is new_processor
+        # Lazy-drop: processor is None; no eager rebuild on the config-refresh path.
+        assert tab._processor is None
+        mock_create.assert_not_called()
+        # Old processor fully closed (dict sqlite + audio Session — OVH-055).
+        old_processor.close.assert_called_once()
         # The add-flow controller adopts the same snapshot + fetcher, so
         # future probes classify against the updated limits.
         assert tab._add_flow._config is new_cfg
         assert tab._add_flow._fetcher is new_fetcher
 
-    def test_update_config_skips_processor_rebuild_during_run(self, tab, test_config):
+    def test_update_config_busy_sets_dirty_flag(self, tab, test_config):
+        """update_config while a worker runs sets _config_dirty; processor untouched (OVH-056)."""
         _add_ready_item(tab)
         tab._on_mine_clicked()
         worker = tab.worker_thread
@@ -993,9 +1016,37 @@ class TestUpdateConfig:
         ):
             tab.update_config(new_cfg)
 
-        # Fetcher always rebuilt; processor preserved because the worker is busy.
+        # Fetcher always rebuilt; processor preserved (live worker is using it).
         assert tab._fetcher is new_fetcher
         assert tab._processor is original_processor
+        # Dirty flag set so _on_worker_finished can reconcile.
+        assert tab._config_dirty is True
+        # The running processor must NOT have been touched.
+        original_processor.close.assert_not_called()
+
+    def test_worker_finished_reconciles_dirty_config(self, tab, test_config):
+        """_on_worker_finished closes+nulls processor when _config_dirty (OVH-056)."""
+        _add_ready_item(tab)
+        tab._on_mine_clicked()
+        worker = tab.worker_thread
+        worker.isRunning.return_value = True
+        original_processor = tab._processor
+
+        # Simulate config arriving mid-run.
+        new_cfg = replace(test_config, youtube_max_duration_s=999)
+        with patch("anki_miner.gui.widgets.youtube_tab.create_youtube_fetcher", return_value=MagicMock()):
+            tab.update_config(new_cfg)
+
+        assert tab._config_dirty is True
+
+        # Simulate run ending.
+        worker.isRunning.return_value = False
+        tab._on_worker_finished()
+
+        # Processor closed + nulled; dirty flag cleared.
+        original_processor.close.assert_called_once()
+        assert tab._processor is None
+        assert tab._config_dirty is False
 
 
 # ---------------------------------------------------------------------------

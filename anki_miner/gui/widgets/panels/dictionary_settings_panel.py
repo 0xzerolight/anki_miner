@@ -11,6 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
+from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
@@ -151,7 +152,23 @@ class DictionarySettingsPanel(FormPanel):
         # of the app to close cached sqlite handles (Issue #30, Win11 lock).
         # Returns True on success, False if a mining run is in flight.
         self._release_callback: Callable[[], bool] | None = None
+        # Guard: registry scan deferred to first showEvent so it does not run
+        # on the GUI thread before the window paints (OVH-053).
+        self._scanned: bool = False
         self._setup_fields()
+
+    def showEvent(self, event: QShowEvent) -> None:  # type: ignore[override]
+        """Trigger the first registry scan when the panel becomes visible.
+
+        Defers DictionaryRegistry.load() off the app startup / first-paint
+        path (OVH-053).  Subsequent showEvent calls are no-ops; explicit
+        refreshes (refresh_registry, set_dicts_root, set_chain) call
+        _rebuild_list directly and bypass this guard.
+        """
+        super().showEvent(event)
+        if not self._scanned:
+            self._scanned = True
+            self._rebuild_list()
 
     def set_release_callback(self, cb: Callable[[], bool] | None) -> None:
         """Wire the pre-remove resource-release hook.
@@ -536,14 +553,18 @@ class DictionarySettingsPanel(FormPanel):
             self._list.clear()
             # Lazy-construct + cache. refresh_registry() invalidates after an
             # import. Repeated reorder/toggle ticks reuse the same scan.
-            if self._registry is None:
+            # OVH-053: defer the disk scan until the panel has been shown at
+            # least once (showEvent sets _scanned); before first paint the rows
+            # render without registry metadata — a safe no-content state since
+            # the list is never visible until the Settings tab is opened.
+            if self._registry is None and self._scanned:
                 self._registry = DictionaryRegistry(self._dicts_root)
                 self._registry.load()
-            registry = self._registry
+            registry = self._registry  # may be None before first show (OVH-053)
             for entry in self._chain:
                 meta: DictMeta | None = None
                 if entry.kind == "indexed":
-                    meta = registry.get(entry.dict_id) if entry.dict_id else None
+                    meta = registry.get(entry.dict_id) if (registry is not None and entry.dict_id) else None
                     display = meta.source_name if meta else (entry.dict_id or "(missing)")
                     fmt = meta.format if meta else "missing"
                     count = meta.entry_count if meta else 0
