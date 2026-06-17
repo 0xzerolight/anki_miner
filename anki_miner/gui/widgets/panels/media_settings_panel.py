@@ -1,5 +1,7 @@
 """Media extraction settings panel."""
 
+from dataclasses import replace
+
 from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QSpinBox
 
 from anki_miner.gui.widgets.base import FormPanel
@@ -160,3 +162,149 @@ class MediaSettingsPanel(FormPanel):
         """
         feature_on = self.animated_checkbox.isChecked()
         self.animated_duration_spinbox.setEnabled(feature_on and not match)
+
+    # ------------------------------------------------------------------
+    # Accessors (config <-> widget conversion)
+    # ------------------------------------------------------------------
+
+    def get_audio_format(self) -> str:
+        """Return the selected audio format."""
+        return self.audio_format_combo.currentText()
+
+    def set_audio_format(self, value: str) -> None:
+        """Set the audio format combo."""
+        self.audio_format_combo.setCurrentText(value)
+
+    def get_audio_bitrate(self) -> int:
+        """Return the audio bitrate (kbps)."""
+        return self.audio_bitrate_spinbox.value()
+
+    def set_audio_bitrate(self, value: int) -> None:
+        """Set the audio bitrate spinbox."""
+        self.audio_bitrate_spinbox.setValue(value)
+
+    def get_audio_padding(self) -> float:
+        """Return the audio padding (seconds)."""
+        return self.audio_padding_spinbox.value()
+
+    def set_audio_padding(self, value: float) -> None:
+        """Set the audio padding spinbox."""
+        self.audio_padding_spinbox.setValue(value)
+
+    def get_screenshot_offset(self) -> float:
+        """Return the screenshot offset (seconds)."""
+        return self.screenshot_offset_spinbox.value()
+
+    def set_screenshot_offset(self, value: float) -> None:
+        """Set the screenshot offset spinbox."""
+        self.screenshot_offset_spinbox.setValue(value)
+
+    def get_max_parallel_workers(self) -> int:
+        """Return the max parallel workers value."""
+        return self.max_workers_spinbox.value()
+
+    def set_max_parallel_workers(self, value: int) -> None:
+        """Set the max parallel workers spinbox."""
+        self.max_workers_spinbox.setValue(value)
+
+    def get_screenshot_animated(self) -> bool:
+        """Return whether animated screenshots are enabled."""
+        return self.animated_checkbox.isChecked()
+
+    def set_screenshot_animated(self, value: bool) -> None:
+        """Set the animated screenshots checkbox and update dependent widgets."""
+        self.animated_checkbox.setChecked(value)
+        self._set_animated_enabled(value)
+
+    def get_screenshot_animated_format(self) -> str:
+        """Return the animated screenshot format."""
+        return self.animated_format_combo.currentText()
+
+    def set_screenshot_animated_format(self, value: str) -> None:
+        """Set the animated screenshot format combo."""
+        self.animated_format_combo.setCurrentText(value)
+
+    def get_screenshot_animated_clip_duration(self) -> float:
+        """Return the animated clip duration (seconds)."""
+        return self.animated_duration_spinbox.value()
+
+    def set_screenshot_animated_clip_duration(self, value: float) -> None:
+        """Set the animated clip duration spinbox."""
+        self.animated_duration_spinbox.setValue(value)
+
+    def get_screenshot_animated_match_audio(self) -> bool:
+        """Return whether match-audio duration is enabled."""
+        return self.animated_match_audio_checkbox.isChecked()
+
+    def set_screenshot_animated_match_audio(self, value: bool) -> None:
+        """Set the match-audio checkbox and update dependent widgets."""
+        self.animated_match_audio_checkbox.setChecked(value)
+        self._set_match_audio(value)
+
+    def get_screenshot_animated_fps(self) -> int:
+        """Return the animated screenshot FPS."""
+        return self.animated_fps_spinbox.value()
+
+    def set_screenshot_animated_fps(self, value: int) -> None:
+        """Set the animated screenshot FPS spinbox."""
+        self.animated_fps_spinbox.setValue(value)
+
+    def get_screenshot_animated_height(self) -> int:
+        """Return the animated screenshot height (px)."""
+        return self.animated_height_spinbox.value()
+
+    def set_screenshot_animated_height(self, value: int) -> None:
+        """Set the animated screenshot height spinbox."""
+        self.animated_height_spinbox.setValue(value)
+
+    def get_screenshot_animated_quality(self) -> int:
+        """Return the animated screenshot quality (0-100)."""
+        return self.animated_quality_spinbox.value()
+
+    def set_screenshot_animated_quality(self, value: int) -> None:
+        """Set the animated screenshot quality spinbox."""
+        self.animated_quality_spinbox.setValue(value)
+
+    # ------------------------------------------------------------------
+    # Config marshalling contract (OVH-019)
+    # ------------------------------------------------------------------
+
+    def load_from_config(self, config) -> None:
+        """Populate all widgets from ``config``.
+
+        Called by :meth:`SettingsTab._load_config` as part of the panel loop.
+        """
+        self.set_audio_format(config.audio_format)
+        self.set_audio_bitrate(config.audio_bitrate)
+        self.set_audio_padding(config.audio_padding)
+        self.set_screenshot_offset(config.screenshot_offset)
+        self.set_max_parallel_workers(config.max_parallel_workers)
+        self.set_screenshot_animated(config.screenshot_animated)
+        self.set_screenshot_animated_format(config.screenshot_animated_format)
+        self.set_screenshot_animated_clip_duration(config.screenshot_animated_clip_duration)
+        self.set_screenshot_animated_match_audio(config.screenshot_animated_match_audio)
+        self.set_screenshot_animated_fps(config.screenshot_animated_fps)
+        self.set_screenshot_animated_height(config.screenshot_animated_height)
+        self.set_screenshot_animated_quality(config.screenshot_animated_quality)
+
+    def contribute(self, config):
+        """Return a new config with this panel's fields applied.
+
+        Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
+        Called by :meth:`SettingsTab._on_save_clicked` as part of the contribute fold.
+        """
+        return replace(
+            config,
+            audio_format=self.get_audio_format(),
+            audio_bitrate=self.get_audio_bitrate(),
+            audio_padding=self.get_audio_padding(),
+            screenshot_offset=self.get_screenshot_offset(),
+            max_parallel_workers=self.get_max_parallel_workers(),
+            screenshot_animated=self.get_screenshot_animated(),
+            screenshot_animated_format=self.get_screenshot_animated_format(),
+            screenshot_animated_clip_duration=self.get_screenshot_animated_clip_duration(),
+            screenshot_animated_match_audio=self.get_screenshot_animated_match_audio(),
+            screenshot_animated_fps=self.get_screenshot_animated_fps(),
+            screenshot_animated_height=self.get_screenshot_animated_height(),
+            screenshot_animated_quality=self.get_screenshot_animated_quality(),
+        )
