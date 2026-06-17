@@ -714,10 +714,13 @@ class EpisodeProcessor:
         glossaries: list[str | None],
         pitch_data: list[tuple[str | None, str | None]],
         progress_callback: ProgressCallback | None,
-    ) -> tuple[int, list[int]]:
+    ) -> tuple[int, list[int], list[str]]:
         """Phase 5: build CardPayloads and submit them to Anki.
 
-        Returns ``(cards_created, created_note_ids)``.
+        Returns ``(cards_created, created_note_ids, mined_forms)`` where
+        ``mined_forms`` is the list of ``mined_form`` strings for the cards
+        that were created — carried onto ``ProcessingResult`` so the Undo
+        callback can revert ``source='mined'`` rows in known_words.db (OVH-030).
         """
         self.presenter.show_info("Step 5/5 — Creating Anki cards")
         card_data: list[CardPayload] = []
@@ -775,6 +778,12 @@ class EpisodeProcessor:
                 f"(same Expression as an existing card or another word in this batch)."
             )
 
+        # Collect mined_forms from the cards that were actually submitted.
+        # Stored as mined_form (POS-aware) to match what Anki records in the
+        # Expression field (Issue #5). Returned to the caller so process_episode
+        # can stamp ProcessingResult.mined_forms for the Undo path (OVH-030).
+        mined_words: set[str] = {payload.word.mined_form for payload in card_data}
+
         # Add newly mined words to known word DB.
         # Store mined_form so the local DB matches what Anki stores in the
         # Expression first field (POS-aware via mined_form); Issue #5.
@@ -786,7 +795,6 @@ class EpisodeProcessor:
         # a failure (T-19). The cache is additive and self-heals on the next
         # run, so dropping this one write is safe; warn and keep the result.
         if self.known_word_db and self.known_word_db.is_available() and card_data:
-            mined_words = {payload.word.mined_form for payload in card_data}
             try:
                 self.known_word_db.add_words(mined_words, source="mined")
             except sqlite3.OperationalError as e:
@@ -797,7 +805,7 @@ class EpisodeProcessor:
                     e,
                 )
 
-        return cards_created, created_note_ids
+        return cards_created, created_note_ids, sorted(mined_words)
 
     def process_episode(
         self,
@@ -980,12 +988,16 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            cards_created, created_note_ids = self._phase5_create(
+            cards_created, created_note_ids, mined_forms = self._phase5_create(
                 ctx, media_results, definitions, glossaries, pitch_data, stage_progress
             )
             if isinstance(stage_progress, StageWeightedProgress):
                 stage_progress.finish()
-            result = ctx.build_result(cards_created=cards_created, card_ids=created_note_ids)
+            result = ctx.build_result(
+                cards_created=cards_created,
+                card_ids=created_note_ids,
+                mined_forms=mined_forms,
+            )
             self._record_session(ctx, result)
             return result
 

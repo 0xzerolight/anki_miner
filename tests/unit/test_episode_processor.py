@@ -3709,3 +3709,176 @@ class TestExpressionAudioProgressBand:
 
         on_start_descriptions = [c.args[1] for c in raw_cb.on_start.call_args_list]
         assert not any("expression audio" in d.lower() for d in on_start_descriptions)
+
+
+# ---------------------------------------------------------------------------
+# OVH-023 / OVH-038 — guard record_difficulty against locked stats.db
+# ---------------------------------------------------------------------------
+
+
+class TestRecordDifficultyGuard:
+    """A locked stats.db during _phase2_filter must not abort process_episode (OVH-023/038)."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _make_stats_service(self, tmp_path):
+        from anki_miner.services.stats_service import StatsService
+
+        svc = StatsService(tmp_path / "stats.db")
+        svc.load()
+        return svc
+
+    def test_locked_stats_db_does_not_abort_run(self, test_config, mock_services, tmp_path):
+        """record_difficulty raising OperationalError must be caught in _phase2_filter;
+        process_episode still returns a valid result instead of raising."""
+        import sqlite3
+
+        stats = self._make_stats_service(tmp_path)
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=stats,
+            **mock_services,
+        )
+
+        with patch.object(
+            stats,
+            "record_difficulty",
+            side_effect=sqlite3.OperationalError("database is locked"),
+        ):
+            result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # The run must succeed — cards were created despite the locked stats.db.
+        assert result.cards_created == 1
+        assert result.success is True
+
+    def test_difficulty_recorded_when_db_available(self, test_config, mock_services, tmp_path):
+        """Sanity: record_difficulty is called when the stats service is healthy."""
+        stats = self._make_stats_service(tmp_path)
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=stats,
+            **mock_services,
+        )
+
+        with patch.object(stats, "record_difficulty", wraps=stats.record_difficulty) as spy:
+            processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        spy.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# OVH-030 — mined_forms populated on ProcessingResult
+# ---------------------------------------------------------------------------
+
+
+class TestMinedFormsOnResult:
+    """ProcessingResult.mined_forms is populated on a successful run (OVH-030)."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_mined_forms_populated_on_success(self, test_config, mock_services, tmp_path):
+        """mined_forms on the result must contain the mined_form of every created card."""
+        # Verb: mined_form == lemma; noun: mined_form == surface.
+        verb = TokenizedWord(
+            surface="食べた",
+            lemma="食べる",
+            reading="タベル",
+            sentence="食べた",
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+            pos="動詞",
+        )
+        noun = TokenizedWord(
+            surface="猫",
+            lemma="猫",
+            reading="ネコ",
+            sentence="猫だ",
+            start_time=4.0,
+            end_time=6.0,
+            duration=2.0,
+            pos="名詞",
+        )
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [verb, noun]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [verb, noun]
+        mock_services["media_extractor"].extract_media_batch.return_value = [
+            (verb, _make_media("taberu")),
+            (noun, _make_media("neko")),
+        ]
+        mock_services["definition_service"].get_definitions_batch.return_value = [
+            "1. to eat",
+            "1. cat",
+        ]
+        mock_services["anki_service"].create_cards_batch.return_value = 2
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.cards_created == 2
+        # verb mined_form == lemma; noun mined_form == surface
+        assert set(result.mined_forms) == {"食べる", "猫"}
+
+    def test_mined_forms_empty_when_no_cards_created(self, test_config, mock_services, tmp_path):
+        """mined_forms must be empty when no words are found."""
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.mined_forms == []

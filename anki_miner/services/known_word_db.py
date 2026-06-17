@@ -142,14 +142,21 @@ class KnownWordDB:
         added = self.add_words(new_words, source="anki")
         return (added, len(existing) + added)
 
-    def remove_words(self, words: set[str]) -> int:
+    def remove_words(self, words: set[str], source: str | None = None) -> int:
         """Delete specific words from the database (Issue #42).
 
         Used by the Manage Known Words dialog to remove individual user-added
-        entries.
+        entries, and by the Undo callback to revert ``source='mined'`` rows
+        without touching ``source='user'`` or ``source='anki'`` rows (OVH-030).
 
         Args:
             words: Set of lemma strings to remove.
+            source: When given, only rows whose ``source`` matches this value
+                are removed.  When ``None`` (default), all rows matching the
+                lemma are removed regardless of source.  Pass ``source='mined'``
+                from the Undo path to scope removal to the session's newly mined
+                rows and leave user-curated (Issue #42) and Anki-synced rows
+                untouched.
 
         Returns:
             Number of rows actually removed.
@@ -159,7 +166,13 @@ class KnownWordDB:
 
         with closing(sqlite3.connect(self._db_path)) as conn:
             before = self._count(conn)
-            conn.executemany("DELETE FROM known_words WHERE lemma = ?", [(w,) for w in words])
+            if source is None:
+                conn.executemany("DELETE FROM known_words WHERE lemma = ?", [(w,) for w in words])
+            else:
+                conn.executemany(
+                    "DELETE FROM known_words WHERE lemma = ? AND source = ?",
+                    [(w, source) for w in words],
+                )
             conn.commit()
             after = self._count(conn)
             return before - after

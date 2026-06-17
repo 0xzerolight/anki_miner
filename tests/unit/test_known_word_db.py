@@ -500,3 +500,70 @@ class TestUnwritableParent:
                 db.initialize()
         finally:
             os.chmod(ro, stat.S_IRWXU)
+
+
+# ---------------------------------------------------------------------------
+# OVH-030 — remove_words with source filter
+# ---------------------------------------------------------------------------
+
+
+class TestRemoveWordsSourceFilter:
+    """remove_words(source=...) deletes only rows with matching source (OVH-030).
+
+    Issue #42 invariant: source='user' rows are NEVER touched by the 'mined'
+    removal path; a word present under both 'mined' and 'anki' keeps its 'anki' row.
+    """
+
+    @pytest.fixture
+    def db(self, tmp_path):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        return db
+
+    def test_remove_mined_leaves_user_row(self, db):
+        """Removing source='mined' must never delete source='user' entries."""
+        # Add as mined first (INSERT OR IGNORE), then upgrade to user.
+        db.add_words({"食べる"}, source="mined")
+        # Manually insert a user row for a different word.
+        db.add_words({"ラーメン"}, source="user")
+
+        removed = db.remove_words({"食べる", "ラーメン"}, source="mined")
+
+        assert removed == 1  # only the mined row
+        assert db.get_known_words() == {"ラーメン"}
+        assert db.get_words_by_source("user") == {"ラーメン"}
+
+    def test_remove_mined_leaves_anki_row(self, db):
+        """A word stored as 'anki' is not touched when removing source='mined'."""
+        db.add_words({"走る"}, source="anki")
+
+        removed = db.remove_words({"走る"}, source="mined")
+
+        assert removed == 0
+        assert db.get_known_words() == {"走る"}
+
+    def test_remove_mined_only_removes_mined(self, db):
+        """Only mined rows are removed when source='mined' is specified."""
+        db.add_words({"猫"}, source="mined")
+        db.add_words({"犬"}, source="anki")
+
+        removed = db.remove_words({"猫", "犬"}, source="mined")
+
+        assert removed == 1
+        assert db.get_known_words() == {"犬"}
+
+    def test_remove_without_source_removes_all_matching(self, db):
+        """Without a source filter, all rows for the given lemmas are removed."""
+        db.add_words({"食べる"}, source="mined")
+        db.add_words({"飲む"}, source="anki")
+
+        removed = db.remove_words({"食べる", "飲む"})
+
+        assert removed == 2
+        assert db.get_known_words() == set()
+
+    def test_remove_empty_set_returns_zero(self, db):
+        """Removing an empty set is a no-op."""
+        db.add_words({"食べる"}, source="mined")
+        assert db.remove_words(set(), source="mined") == 0
+        assert db.word_count() == 1
