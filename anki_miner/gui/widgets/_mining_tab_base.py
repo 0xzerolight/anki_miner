@@ -358,7 +358,7 @@ class MiningTabBase(QWidget):
             # until GC — OVH-016 / Issue #55 multimedia teardown.
             # Guard for the case where dialog construction raised before the
             # name was bound (NameError would be silently swallowed otherwise).
-            with contextlib.suppress(NameError):
+            with contextlib.suppress(NameError, AttributeError):
                 dialog.deleteLater()
 
     def shutdown(self) -> None:
