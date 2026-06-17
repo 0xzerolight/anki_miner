@@ -48,7 +48,6 @@ class SubtitlePlayerWidget(QWidget):
         self.audio_output: QAudioOutput | None = None
 
         # AV1 watchdog state — populated by set_source
-        self._video_path: Path | None = None
         self._is_av1: bool = False
         self._got_video_frame: bool = False
 
@@ -160,7 +159,6 @@ class SubtitlePlayerWidget(QWidget):
             self.audio_output = None
 
         # Reset per-source watchdog state and restore normal video widget visibility.
-        self._video_path = video_path
         self._got_video_frame = False
         self._av1_watchdog.stop()
         self._av1_notice_label.setVisible(False)
