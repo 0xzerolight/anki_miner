@@ -100,23 +100,37 @@ class IndexedDictProvider:
     def _render(self, rows: list[tuple[str, str]]) -> str | None:
         """Assemble Lapis-shape HTML from (content, tags) rows. Returns None
         when there are no rows. Shared by lookup and lookup_many to guarantee
-        byte-identical output."""
+        byte-identical output.
+
+        Deduplication (OVH-026): some dictionaries double-key the same entry —
+        once under a kanji term with a kana reading, and again under the kana
+        term alone. Both rows carry identical ``content``. We keep the first-seen
+        row for each unique content blob and still UNION the tags from all
+        duplicate rows, so no information is lost.
+        """
         if not rows:
             return None
 
-        # Build tag union preserving first-seen order across all hits.
+        # Build tag union preserving first-seen order across all hits,
+        # and deduplicate rows with identical content (keep first seen).
         ordered_tags: list[str] = []
         seen_tags: set[str] = set()
-        for _content, tags in rows:
-            if not tags:
-                continue
-            for tag in tags.split(" "):
-                if tag and tag not in seen_tags:
-                    seen_tags.add(tag)
-                    ordered_tags.append(tag)
+        seen_content: set[str] = set()
+        unique_rows: list[tuple[str, str]] = []
+        for content, tags in rows:
+            # Always union in the tags, even from duplicate-content rows.
+            if tags:
+                for tag in tags.split(" "):
+                    if tag and tag not in seen_tags:
+                        seen_tags.add(tag)
+                        ordered_tags.append(tag)
+            # Only keep the first occurrence of each distinct content blob.
+            if content not in seen_content:
+                seen_content.add(content)
+                unique_rows.append((content, tags))
 
         # Merge gloss-item blobs by simple concatenation (renderer emits <li class="gloss-item">…</li>).
-        merged = "".join(content for content, _tags in rows)
+        merged = "".join(content for content, _tags in unique_rows)
 
         # Count gloss-items. Use prefix without closing '>' so future class additions still match.
         item_count = merged.count('<li class="gloss-item"')

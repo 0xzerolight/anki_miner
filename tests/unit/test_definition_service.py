@@ -354,6 +354,19 @@ class TestGetGlossary:
         unavail.lookup.assert_not_called()
 
 
+def make_batch_offline_provider(name="BatchOff", available=True, table=None):
+    """Mock offline provider supporting lookup_many (for OVH-050 tests)."""
+    table = table or {}
+    p = MagicMock()
+    p.name = name
+    p.is_online = False
+    p.is_available.return_value = available
+    p.load.return_value = True
+    p.lookup.side_effect = lambda w: table.get(w)
+    p.lookup_many.side_effect = lambda words: {w: table.get(w) for w in words}
+    return p
+
+
 class TestGetGlossariesBatch:
     """Tests for DefinitionService.get_glossaries_batch."""
 
@@ -371,6 +384,107 @@ class TestGetGlossariesBatch:
     def test_empty_list_returns_empty_list(self, test_config):
         service = DefinitionService(test_config, providers=[])
         assert service.get_glossaries_batch([]) == []
+
+    def test_progress_callback_fires(self, test_config, recording_progress):
+        responses = {"a": "<div>a</div>", "b": None}
+        p = make_provider("M", available=True)
+        p.is_online = False
+        p.lookup.side_effect = lambda w: responses.get(w)
+        service = DefinitionService(test_config, providers=[p])
+
+        service.get_glossaries_batch(["a", "b"], progress_callback=recording_progress)
+
+        assert recording_progress.starts[0] == (2, "Fetching glossary entries")
+        assert recording_progress.progresses[0] == (1, "Glossary found: a")
+        assert recording_progress.progresses[1] == (2, "No glossary: b")
+        assert recording_progress.completes == 1
+
+
+# ---------------------------------------------------------------------------
+# OVH-050: get_glossaries_batch batch fast-path
+# ---------------------------------------------------------------------------
+
+
+class TestGetGlossariesBatchFastPath:
+    """get_glossaries_batch must use lookup_many for offline providers that expose it,
+    and output must be byte-identical to the per-word baseline."""
+
+    def test_lookup_many_called_instead_of_per_word_lookup(self, test_config):
+        """For an offline provider with lookup_many, per-word lookup must NOT be called."""
+        p = make_batch_offline_provider("Off", table={"x": "<div>x</div>", "y": "<div>y</div>"})
+        service = DefinitionService(test_config, providers=[p])
+
+        results = service.get_glossaries_batch(["x", "y"])
+
+        # batch path was used
+        p.lookup_many.assert_called_once()
+        # per-word lookup must not have been called for these words
+        p.lookup.assert_not_called()
+        assert results == ["<div>x</div>", "<div>y</div>"]
+
+    def test_output_byte_identical_to_per_word_path(self, test_config):
+        """Batch output == per-word-loop output."""
+        table = {"a": "<div>A</div>", "b": "<div>B</div>", "c": None}
+        p = make_batch_offline_provider("Off", table=table)
+        service = DefinitionService(test_config, providers=[p])
+
+        batch_results = service.get_glossaries_batch(["a", "b", "c"])
+
+        # Build per-word baseline directly
+        per_word = [p.lookup(w) for w in ["a", "b", "c"]]
+        assert batch_results == per_word
+
+    def test_two_offline_providers_both_use_batch(self, test_config):
+        """Both offline providers with lookup_many are batched; per-word lookup not called."""
+        p1 = make_batch_offline_provider("Off1", table={"x": "<div>X1</div>"})
+        p2 = make_batch_offline_provider("Off2", table={"x": "<div>X2</div>", "y": "<div>Y2</div>"})
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        results = service.get_glossaries_batch(["x", "y"])
+
+        p1.lookup.assert_not_called()
+        p2.lookup.assert_not_called()
+        # x hits both providers → concatenated; y hits only p2
+        assert results == ["<div>X1</div><div>X2</div>", "<div>Y2</div>"]
+
+    def test_online_provider_still_falls_back_per_word(self, test_config):
+        """Online provider (no lookup_many on chain) remains per-word for misses."""
+        offline = make_batch_offline_provider("Off", table={"x": "<div>X</div>"})
+        online = make_provider("Jisho", return_value="<div>J</div>")
+        online.is_online = True
+        service = DefinitionService(test_config, providers=[offline, online])
+
+        results = service.get_glossaries_batch(["x", "z"])
+
+        # x has offline hit → online not consulted for x
+        online.lookup.assert_called_once_with("z")
+        assert results == ["<div>X</div>", "<div>J</div>"]
+
+    def test_missing_words_are_none(self, test_config):
+        """Words with no provider hits produce None."""
+        p = make_batch_offline_provider("Off", table={})
+        service = DefinitionService(test_config, providers=[p])
+
+        assert service.get_glossaries_batch(["missing"]) == [None]
+
+    def test_unavailable_batch_provider_skipped(self, test_config):
+        """Unavailable providers are skipped even if they have lookup_many."""
+        p = make_batch_offline_provider("Off", available=False, table={"x": "<div>X</div>"})
+        service = DefinitionService(test_config, providers=[p])
+
+        results = service.get_glossaries_batch(["x"])
+        assert results == [None]
+        p.lookup_many.assert_not_called()
+
+    def test_provider_without_lookup_many_falls_back_to_per_word(self, test_config):
+        """Legacy offline providers lacking lookup_many still use per-word lookup."""
+        legacy = make_provider("Legacy", return_value="<div>L</div>")
+        legacy.is_online = False
+        service = DefinitionService(test_config, providers=[legacy])
+
+        results = service.get_glossaries_batch(["x"])
+        legacy.lookup.assert_called_once_with("x")
+        assert results == ["<div>L</div>"]
 
 
 class TestClose:
