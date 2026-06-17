@@ -679,6 +679,12 @@ class MainWindow(QMainWindow):
             self.background_tasks.defer_close(event, laggards)
             return
 
+        # Release persistent per-tab processor dict handles before accepting
+        # the close so SQLite connections are freed deterministically rather
+        # than at Python GC.  Safe here: all workers are joined above so no
+        # live thread is reading through these handles (OVH-061 / Issue #30).
+        self.release_dictionary_resources()
+
         # Save configuration before closing
         GUIConfigManager.save_config(self.config)
         event.accept()

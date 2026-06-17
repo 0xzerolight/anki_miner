@@ -1407,3 +1407,39 @@ class TestAskPlaylistChoice:
         assert choice == "cancel"
         labels = [c.args[0] for c in instance.addButton.call_args_list if isinstance(c.args[0], str)]
         assert labels == ["Just this video", "Add first 3 of more than 3"]
+
+
+# ---------------------------------------------------------------------------
+# OVH-055 — on-rebuild discard uses close(), not release_dictionary_resources
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateConfigClosesDiscardedProcessor:
+    """OVH-055: when update_config rebuilds the processor, the discarded old
+    processor must be fully closed (close(), not just release_dictionary_resources())
+    so its expression-audio requests.Session is released in addition to dict handles."""
+
+    def test_update_config_calls_close_on_discarded_processor(self, tab, test_config):
+        """On idle rebuild, the old processor receives close(), not release_dictionary_resources."""
+        old_processor = tab._processor  # MagicMock set by fixture
+
+        new_cfg = replace(test_config, youtube_max_duration_s=999)
+        new_processor = MagicMock(name="NewProcessor")
+        with (
+            patch("anki_miner.gui.widgets.youtube_tab.create_youtube_fetcher", return_value=MagicMock()),
+            patch("anki_miner.gui.widgets.youtube_tab.create_episode_processor", return_value=new_processor),
+        ):
+            tab.update_config(new_cfg)
+
+        old_processor.close.assert_called_once()
+        old_processor.release_dictionary_resources.assert_not_called()
+
+    def test_update_config_skips_close_when_processor_is_none(self, tab, test_config):
+        """If no processor yet (startup-deferred), update_config must not raise."""
+        tab._processor = None
+        new_cfg = replace(test_config, youtube_max_duration_s=999)
+        with (
+            patch("anki_miner.gui.widgets.youtube_tab.create_youtube_fetcher", return_value=MagicMock()),
+            patch("anki_miner.gui.widgets.youtube_tab.create_episode_processor", return_value=MagicMock()),
+        ):
+            tab.update_config(new_cfg)  # must not raise

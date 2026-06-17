@@ -94,6 +94,9 @@ def test_curation_bridge_delivers_dialog_on_gui_thread(qapp, qtbot):
         def get_selected_words(self):
             return ["picked"]
 
+        def deleteLater(self):  # noqa: N802
+            pass
+
     worker = _CurationWorker(tab, ["w1", "w2"])
     with patch(f"{MODULE}.WordCurationDialog", _FakeDialog):
         worker.start()
@@ -138,6 +141,9 @@ def test_cancel_during_active_dialog_releases_worker(qapp, qtbot):
 
         def get_selected_words(self):  # pragma: no cover - not reached on reject
             return ["should-not-be-used"]
+
+        def deleteLater(self):  # noqa: N802
+            pass
 
     worker = _CurationWorker(tab, ["w1"])
     with patch(f"{MODULE}.WordCurationDialog", _BlockingFakeDialog):
@@ -219,3 +225,62 @@ def test_on_curation_requested_after_poison_releases_without_dialog(qapp, qtbot)
     dialog_cls.assert_not_called()
     assert tab._curation_event.is_set()
     assert tab._curation_result is None
+
+
+# ---------------------------------------------------------------------------
+# OVH-016 — WordCurationDialog deleteLater scheduling
+# ---------------------------------------------------------------------------
+
+
+def test_on_curation_requested_schedules_dialog_delete_later(qapp, qtbot):
+    """OVH-016: after exec() the dialog is scheduled for deletion via deleteLater()
+    so its Qt widget tree (table, player stack) is freed deterministically instead
+    of accumulating per-session until Python GC."""
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+
+    delete_later_called = []
+
+    class _FakeDialog:
+        DialogCode = WordCurationDialog.DialogCode
+
+        def exec(self):
+            return WordCurationDialog.DialogCode.Accepted
+
+        def get_selected_words(self):
+            return []
+
+        def deleteLater(self):  # noqa: N802
+            delete_later_called.append(True)
+
+    with patch(f"{MODULE}.WordCurationDialog", return_value=_FakeDialog()):
+        tab._on_curation_requested(["w1"])
+
+    assert delete_later_called, "deleteLater() was not called on the curation dialog"
+
+
+def test_on_curation_requested_schedules_delete_later_on_reject(qapp, qtbot):
+    """deleteLater must also be called when the dialog is rejected (None result)."""
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+
+    delete_later_called = []
+
+    class _FakeDialog:
+        DialogCode = WordCurationDialog.DialogCode
+
+        def exec(self):
+            return WordCurationDialog.DialogCode.Rejected
+
+        def get_selected_words(self):  # pragma: no cover
+            return []
+
+        def deleteLater(self):  # noqa: N802
+            delete_later_called.append(True)
+
+    with patch(f"{MODULE}.WordCurationDialog", return_value=_FakeDialog()):
+        tab._on_curation_requested(["w1"])
+
+    assert delete_later_called, "deleteLater() must be called on rejection too"

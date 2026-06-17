@@ -701,8 +701,10 @@ class TestUpdateConfig:
 
         assert tab._config is new_cfg
         assert tab._processor is new_processor
-        # Old chain closed explicitly (Issue #30, Win11 file lock).
-        old_processor.release_dictionary_resources.assert_called_once()
+        # Old processor fully closed (dict sqlite + audio Session) — OVH-055 +
+        # Issue #30. close() covers both; release_dictionary_resources() was dict-only.
+        old_processor.close.assert_called_once()
+        old_processor.release_dictionary_resources.assert_not_called()
 
     def test_update_config_skips_processor_rebuild_during_run(self, tab, test_config, tmp_path):
         _add_pair(tab, tmp_path)
@@ -738,3 +740,39 @@ class TestReleaseDictionaryResources:
 
         assert tab.release_dictionary_resources() is False
         assert tab._processor is not None
+
+
+# ---------------------------------------------------------------------------
+# OVH-055 — on-rebuild discard uses close(), not release_dictionary_resources
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateConfigClosesDiscardedProcessor:
+    """OVH-055: when update_config rebuilds the processor, the discarded old
+    processor must be fully closed (close(), not just release_dictionary_resources())
+    so its expression-audio requests.Session is released in addition to dict handles."""
+
+    def test_update_config_calls_close_on_discarded_processor(self, tab, test_config):
+        """On idle rebuild, the old processor receives close(), not release_dictionary_resources."""
+        old_processor = tab._processor  # MagicMock from fixture
+
+        new_cfg = replace(test_config, subtitle_offset=2.5)
+        new_processor = MagicMock(name="NewProcessor")
+        with patch(
+            "anki_miner.gui.widgets.audiobook_tab.create_episode_processor",
+            return_value=new_processor,
+        ):
+            tab.update_config(new_cfg)
+
+        old_processor.close.assert_called_once()
+        old_processor.release_dictionary_resources.assert_not_called()
+
+    def test_update_config_skips_close_when_processor_is_none(self, tab, test_config):
+        """If no processor yet (startup-deferred), update_config must not raise."""
+        tab._processor = None
+        new_cfg = replace(test_config, subtitle_offset=2.5)
+        with patch(
+            "anki_miner.gui.widgets.audiobook_tab.create_episode_processor",
+            return_value=MagicMock(),
+        ):
+            tab.update_config(new_cfg)  # must not raise

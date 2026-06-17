@@ -629,11 +629,13 @@ class AudiobookTab(MiningTabBase):
                 self._presenter,
                 stats_service=self._stats_service,  # type: ignore[arg-type]
             )
-            # Close the old chain explicitly — replacing the ref is not enough
-            # on Windows where sqlite handles keep the index.sqlite file locked
-            # until GC eventually runs (Issue #30).
+            # Full close of the discarded processor: dict sqlite handles AND the
+            # expression-audio requests.Session (release_dictionary_resources()
+            # was dict-only and leaked the Session — OVH-055).  Issue #30
+            # Windows file-lock is covered by close() which calls
+            # release_dictionary_resources() internally.
             if old_processor is not None:
-                old_processor.release_dictionary_resources()
+                old_processor.close()
 
     def release_dictionary_resources(self) -> bool:
         """Close any cached dictionary handles so the file can be deleted.
