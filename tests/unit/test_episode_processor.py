@@ -408,31 +408,26 @@ class TestProcessEpisode:
         The processor resets last_created_note_ids at the START of
         process_episode so stale IDs from an earlier run are cleared before
         the except handler reads them.
+
+        Guard strength: stale IDs are injected directly onto anki_service
+        IMMEDIATELY BEFORE the crashing call — the reset at the top of
+        process_episode is the ONLY thing that can clear them, so removing
+        that line makes this test fail.
         """
-        prior_episode_ids = [201, 202]
-
-        # First episode succeeds and leaves IDs in last_created_note_ids.
-        words = [_make_word("食べる")]
-        media = _make_media("taberu")
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = words
-        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 2
-        mock_services["anki_service"].last_created_note_ids = prior_episode_ids
-
         processor = EpisodeProcessor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
         )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        # Second episode: phase 1 (subtitle parsing) fails BEFORE create_cards_batch.
-        # last_created_note_ids still holds prior_episode_ids from the first run
-        # until process_episode's early reset clears it.
+        # Phase 1 crashes before create_cards_batch ever runs.
         mock_services["subtitle_parser"].parse_subtitle_file.side_effect = RuntimeError("parse crash")
+
+        # Plant stale IDs directly on anki_service right before the call.
+        # No prior process_episode run touches them — only the reset inside
+        # process_episode can clear them before the except handler reads the
+        # attribute.
+        mock_services["anki_service"].last_created_note_ids = [201, 202]
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
