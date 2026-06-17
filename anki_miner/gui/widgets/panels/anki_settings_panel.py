@@ -1,5 +1,6 @@
 """Anki configuration settings panel."""
 
+from collections.abc import Mapping
 from typing import Literal, cast
 
 from PyQt6.QtCore import pyqtSignal
@@ -561,7 +562,7 @@ class AnkiSettingsPanel(FormPanel):
             "source": self.source_field_input.text().strip(),
         }
 
-    def set_card_fields(self, fields: dict) -> None:
+    def set_card_fields(self, fields: Mapping[str, str]) -> None:
         """Set the card field mappings.
 
         Args:

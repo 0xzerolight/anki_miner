@@ -1,6 +1,9 @@
 """Tests for config module."""
 
+import types
 from pathlib import Path
+
+import pytest
 
 from anki_miner.config import AnkiMinerConfig
 
@@ -367,3 +370,55 @@ class TestUiFontScale:
         """Exactly 2.0 must not be altered."""
         cfg = AnkiMinerConfig(ui_font_scale=2.0)
         assert cfg.ui_font_scale == 2.0
+
+
+class TestFrozenConfigImmutability:
+    """OVH-018: verify the three previously-mutable fields are now immutable."""
+
+    def test_anki_fields_is_mapping_proxy(self):
+        """anki_fields must be stored as a MappingProxyType, not a plain dict."""
+        cfg = AnkiMinerConfig()
+        assert isinstance(cfg.anki_fields, types.MappingProxyType)
+
+    def test_anki_fields_mutation_raises(self):
+        """Mutating anki_fields in place must raise TypeError."""
+        cfg = AnkiMinerConfig()
+        with pytest.raises(TypeError):
+            cfg.anki_fields["word"] = "Hacked"  # type: ignore[index]
+
+    def test_anki_fields_read_access_unchanged(self):
+        """Read operations on anki_fields must still work as before."""
+        cfg = AnkiMinerConfig()
+        assert cfg.anki_fields["word"] == "Expression"
+        assert cfg.anki_fields.get("sentence") == "Sentence"
+        assert "word" in cfg.anki_fields
+        assert list(cfg.anki_fields.values())  # iteration works
+
+    def test_allowed_pos_is_tuple(self):
+        """allowed_pos must be stored as a tuple."""
+        cfg = AnkiMinerConfig()
+        assert isinstance(cfg.allowed_pos, tuple)
+
+    def test_excluded_subtypes_is_tuple(self):
+        """excluded_subtypes must be stored as a tuple."""
+        cfg = AnkiMinerConfig()
+        assert isinstance(cfg.excluded_subtypes, tuple)
+
+    def test_allowed_pos_json_list_coerced_to_tuple(self):
+        """A list passed as allowed_pos (JSON round-trip) is coerced to tuple."""
+        cfg = AnkiMinerConfig(allowed_pos=["名詞", "動詞"])
+        assert isinstance(cfg.allowed_pos, tuple)
+        assert cfg.allowed_pos == ("名詞", "動詞")
+
+    def test_excluded_subtypes_json_list_coerced_to_tuple(self):
+        """A list passed as excluded_subtypes (JSON round-trip) is coerced to tuple."""
+        cfg = AnkiMinerConfig(excluded_subtypes=["非自立", "数詞"])
+        assert isinstance(cfg.excluded_subtypes, tuple)
+        assert cfg.excluded_subtypes == ("非自立", "数詞")
+
+    def test_anki_fields_dict_input_wrapped_as_proxy(self):
+        """A plain dict passed as anki_fields must be wrapped in MappingProxyType."""
+        fields_dict = {"word": "VocabExpr", "sentence": "Sent"}
+        cfg = AnkiMinerConfig(anki_fields=fields_dict)
+        assert isinstance(cfg.anki_fields, types.MappingProxyType)
+        assert cfg.anki_fields["word"] == "VocabExpr"
