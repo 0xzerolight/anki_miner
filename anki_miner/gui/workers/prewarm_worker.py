@@ -12,9 +12,11 @@ faster. It is *pure best-effort*:
   singleton so the unidic-lite load + lattice init is paid here, on the
   shared tagger that mining actually reuses — not on a throwaway instance.
   Construction is double-checked-locked, so warming it from this thread while
-  the GUI thread may also call ``get_shared_tagger()`` is safe; the
-  single-flight invariant only forbids concurrent ``.parse()`` during a live
-  mine, which a prewarm-before-first-mine never does.
+  the GUI thread may also call ``get_shared_tagger()`` is safe.  The returned
+  ``LockedTagger`` serialises concurrent ``.parse()`` / ``__call__`` calls via
+  an ``threading.RLock``, so the old single-flight assumption is no longer
+  load-bearing.  Prewarm still does NOT run a warm ``.parse()``; it only pays
+  the construction cost.
 - For the dictionary chain it constructs a THROWAWAY ``DictionaryRegistry`` to
   force the sqlite page cache / meta sidecars into memory, then discards it —
   cross-thread sqlite connection reuse during a live mine is needless risk.
@@ -72,11 +74,11 @@ class PrewarmWorker(QThread):
         try:
             # Build the SHARED tagger singleton (the one mining reuses); this
             # loads unidic-lite, the dominant first-use cost. Do NOT discard it.
-            # We deliberately do NOT run a warm `.parse()` here: a MeCab tagger
-            # is not safe for concurrent `.parse()` on one instance, and a parse
-            # on this background thread could race a mining worker's parse on the
-            # same singleton if the user clicks Mine during prewarm (see the
-            # single-flight note in services/tagger.py).
+            # We deliberately do NOT run a warm `.parse()` here — only the
+            # construction cost is paid.  Post-construction, the LockedTagger
+            # wrapper in services/tagger.py serialises concurrent parses, so
+            # any `.parse()` here would just add unnecessary work without
+            # benefiting from a warmer tagger (the lattice state is not cached).
             get_shared_tagger()
 
             # Warm the sqlite page cache / meta sidecars for the configured
