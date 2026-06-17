@@ -8,6 +8,7 @@ from anki_miner.services.update_checker import (
     UpdateInfo,
     _detect_target,
     _pick_asset,
+    _validate_github_url,
 )
 
 # ---------------------------------------------------------------------------
@@ -320,14 +321,15 @@ class TestCheckForUpdate:
         monkeypatch.delenv("APPIMAGE", raising=False)
         monkeypatch.setattr("anki_miner.services.update_checker.sys.frozen", False, raising=False)
 
-        self._mock_urlopen(mock_urlopen, self._make_response("v2.4.0", "https://example.com"))
+        release_url = "https://github.com/0xzerolight/anki_miner/releases/tag/v2.4.0"
+        self._mock_urlopen(mock_urlopen, self._make_response("v2.4.0", release_url))
 
         checker = UpdateChecker("2.0.4")
         result = checker.check_for_update()
 
         assert result is not None
         assert result.asset_url is None
-        assert result.release_page_url == "https://example.com"
+        assert result.release_page_url == release_url
 
     @patch("anki_miner.services.update_checker.urllib.request.urlopen")
     def test_user_agent_header_sent(self, mock_urlopen):
@@ -354,3 +356,138 @@ class TestCheckForUpdate:
         result = UpdateChecker("2.0.4").check_for_update()
         assert result is not None
         assert result.release_notes == ""
+
+
+# ---------------------------------------------------------------------------
+# OVH-064 — URL scheme + host allowlist
+# ---------------------------------------------------------------------------
+
+
+class TestValidateGithubUrl:
+    """Unit tests for the _validate_github_url helper (OVH-064)."""
+
+    def test_github_com_https_accepted(self):
+        assert _validate_github_url("https://github.com/0xzerolight/anki_miner/releases/tag/v3.0.0") is True
+
+    def test_objects_githubusercontent_https_accepted(self):
+        url = "https://objects.githubusercontent.com/github-production-release-asset/abc123/AnkiMiner-2.4.0-x86_64.AppImage"
+        assert _validate_github_url(url) is True
+
+    def test_api_github_com_https_accepted(self):
+        assert _validate_github_url("https://api.github.com/repos/foo/bar/releases/latest") is True
+
+    def test_http_rejected(self):
+        assert _validate_github_url("http://github.com/foo/bar/releases") is False
+
+    def test_file_scheme_rejected(self):
+        assert _validate_github_url("file:///etc/passwd") is False
+
+    def test_smb_scheme_rejected(self):
+        assert _validate_github_url("smb://evil.example.com/share") is False
+
+    def test_off_allowlist_host_rejected(self):
+        assert _validate_github_url("https://evil.example.com/releases/v3.0.0") is False
+
+    def test_empty_string_rejected(self):
+        assert _validate_github_url("") is False
+
+    def test_non_string_rejected(self):
+        assert _validate_github_url(None) is False  # type: ignore[arg-type]
+
+    def test_custom_scheme_rejected(self):
+        assert _validate_github_url("myapp://github.com/path") is False
+
+
+class TestPickAssetUrlValidation:
+    """_pick_asset must reject browser_download_url values not on the allowlist (OVH-064)."""
+
+    def test_off_allowlist_browser_download_url_returns_none(self):
+        assets = [
+            {
+                "name": "anki-miner_2.4.0_amd64.deb",
+                "browser_download_url": "https://evil.example.com/malware.deb",
+            }
+        ]
+        assert _pick_asset(assets, "linux-frozen") is None
+
+    def test_file_scheme_browser_download_url_returns_none(self):
+        assets = [
+            {
+                "name": "anki-miner_2.4.0_amd64.deb",
+                "browser_download_url": "file:///etc/passwd",
+            }
+        ]
+        assert _pick_asset(assets, "linux-frozen") is None
+
+    def test_valid_objects_githubusercontent_accepted(self):
+        url = "https://objects.githubusercontent.com/github-production-release-asset/abc/anki-miner_2.4.0_amd64.deb"
+        assets = [{"name": "anki-miner_2.4.0_amd64.deb", "browser_download_url": url}]
+        result = _pick_asset(assets, "linux-frozen")
+        assert result == url
+
+    def test_valid_github_com_accepted(self):
+        url = "https://github.com/0xzerolight/anki_miner/releases/download/v2.4.0/anki-miner_2.4.0_amd64.deb"
+        assets = [{"name": "anki-miner_2.4.0_amd64.deb", "browser_download_url": url}]
+        result = _pick_asset(assets, "linux-frozen")
+        assert result == url
+
+
+class TestCheckForUpdateUrlValidation:
+    """check_for_update must sanitise html_url against the allowlist (OVH-064)."""
+
+    def _make_response(self, html_url: str, browser_download_url: str | None = None) -> bytes:
+        asset_url = (
+            browser_download_url
+            or "https://github.com/0xzerolight/anki_miner/releases/download/v3.0.0/anki-miner_3.0.0_amd64.deb"
+        )
+        payload = {
+            "tag_name": "v3.0.0",
+            "html_url": html_url,
+            "body": "",
+            "assets": [{"name": "anki-miner_3.0.0_amd64.deb", "browser_download_url": asset_url}],
+        }
+        return json.dumps(payload).encode("utf-8")
+
+    def _mock_urlopen(self, mock, body: bytes) -> None:
+        response = MagicMock()
+        response.read.return_value = body
+        response.__enter__ = lambda s: s
+        response.__exit__ = MagicMock(return_value=False)
+        mock.return_value = response
+
+    @patch("anki_miner.services.update_checker.urllib.request.urlopen")
+    def test_off_allowlist_html_url_replaced_with_empty(self, mock_urlopen, monkeypatch):
+        """A tampered html_url (off-allowlist host) must be replaced with '' (fail-closed)."""
+        monkeypatch.delenv("APPIMAGE", raising=False)
+        monkeypatch.setattr("anki_miner.services.update_checker.sys.frozen", False, raising=False)
+
+        self._mock_urlopen(mock_urlopen, self._make_response("https://evil.example.com/malware"))
+
+        result = UpdateChecker("2.0.4").check_for_update()
+        assert result is not None
+        assert result.release_page_url == ""
+
+    @patch("anki_miner.services.update_checker.urllib.request.urlopen")
+    def test_valid_github_html_url_preserved(self, mock_urlopen, monkeypatch):
+        """A valid github.com html_url must pass through unchanged."""
+        monkeypatch.delenv("APPIMAGE", raising=False)
+        monkeypatch.setattr("anki_miner.services.update_checker.sys.frozen", False, raising=False)
+
+        valid_url = "https://github.com/0xzerolight/anki_miner/releases/tag/v3.0.0"
+        self._mock_urlopen(mock_urlopen, self._make_response(valid_url))
+
+        result = UpdateChecker("2.0.4").check_for_update()
+        assert result is not None
+        assert result.release_page_url == valid_url
+
+    @patch("anki_miner.services.update_checker.urllib.request.urlopen")
+    def test_file_scheme_html_url_replaced_with_empty(self, mock_urlopen, monkeypatch):
+        """file:// html_url must be fail-closed."""
+        monkeypatch.delenv("APPIMAGE", raising=False)
+        monkeypatch.setattr("anki_miner.services.update_checker.sys.frozen", False, raising=False)
+
+        self._mock_urlopen(mock_urlopen, self._make_response("file:///etc/passwd"))
+
+        result = UpdateChecker("2.0.4").check_for_update()
+        assert result is not None
+        assert result.release_page_url == ""
