@@ -477,13 +477,23 @@ class AnkiService:
                     )
         finally:
             # Record whatever batches completed (all of them on success, the
-            # earlier ones on a mid-run failure) and invalidate the vocab
-            # cache if any card was created so the filter reflects the new
-            # collection. Runs before the exception re-raises.
+            # earlier ones on a mid-run failure). Runs before the exception
+            # re-raises.
             self.last_created_note_ids = all_created_ids
             self.last_skipped_duplicates = skipped_duplicates
-            if total_created > 0:
-                self.invalidate_existing_vocabulary_cache()
+            # Incremental merge: if the cache is already populated and cards were
+            # created, union the just-carded mined_forms into it so subsequent
+            # episodes (within the same batch run or the same manual-pair session)
+            # get a cheap cache hit instead of a full collection re-scan.
+            # Merging attempted mined_forms is safe — a skipped duplicate is
+            # already in the collection, so it belongs in the cache.
+            # When the cache is None (not yet populated), leave it None so
+            # the next get_existing_vocabulary scans normally.
+            if total_created > 0 and self._existing_vocab_cache is not None:
+                for item in word_data_list:
+                    key = _strip_for_dedup(item.word.mined_form)
+                    if key and _JAPANESE_RE.search(key):
+                        self._existing_vocab_cache.add(key)
 
         if progress_callback:
             progress_callback.on_complete()

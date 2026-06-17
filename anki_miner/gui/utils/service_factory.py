@@ -197,7 +197,11 @@ def _build_expression_audio_fetcher(
     return ChainedExpressionAudioFetcher(fetchers)
 
 
-def create_services(config: AnkiMinerConfig, subtitle_parser: SubtitleParserService | None = None) -> Services:
+def create_services(
+    config: AnkiMinerConfig,
+    subtitle_parser: SubtitleParserService | None = None,
+    anki_service: AnkiService | None = None,
+) -> Services:
     """Create all services needed for episode processing.
 
     Args:
@@ -209,6 +213,12 @@ def create_services(config: AnkiMinerConfig, subtitle_parser: SubtitleParserServ
             parse-relevant config matches ``config`` (offset / bold target /
             allowed POS / excluded subtypes / regex-filter fields); the parser
             reads only those, so reuse is byte-identical for a matching config.
+        anki_service: Optional pre-built :class:`AnkiService` to reuse.
+            When provided the existing instance (and its populated vocab cache)
+            is reused rather than constructing a fresh one. The batch queue
+            worker passes a single shared instance so the cache survives across
+            all items in the run. Default ``None`` preserves single-episode and
+            deck-builder behaviour (a fresh instance per call).
 
     Returns:
         A frozen :class:`Services` bundle holding every constructed
@@ -229,7 +239,8 @@ def create_services(config: AnkiMinerConfig, subtitle_parser: SubtitleParserServ
     # Build the provider chain + DefinitionService (gated eager-load shared with
     # PrewarmWorker via build_definition_service).
     definition_service = build_definition_service(config, load_result)
-    anki_service = AnkiService(config)
+    if anki_service is None:
+        anki_service = AnkiService(config)
     youtube_fetcher = YouTubeFetcherService(config=config)
     expression_audio_fetcher = _build_expression_audio_fetcher(config, load_result)
 
@@ -336,6 +347,7 @@ def create_episode_processor(
     presenter: PresenterProtocol,
     stats_service: StatsService | None = None,
     subtitle_parser: SubtitleParserService | None = None,
+    anki_service: AnkiService | None = None,
 ) -> EpisodeProcessor:
     """Create an EpisodeProcessor with all required services.
 
@@ -346,11 +358,15 @@ def create_episode_processor(
         subtitle_parser: Optional pre-built parser to reuse (see
             :func:`create_services`); the Deck Builder passes its Phase-1 parser
             here to reuse the filled tokenization cache in Phase 2.
+        anki_service: Optional pre-built :class:`AnkiService` to reuse across
+            multiple calls (see :func:`create_services`). The batch queue worker
+            passes a single shared instance to preserve the populated vocab
+            cache across all queue items. Default ``None`` builds a fresh one.
 
     Returns:
         Configured EpisodeProcessor instance
     """
-    services = create_services(config, subtitle_parser=subtitle_parser)
+    services = create_services(config, subtitle_parser=subtitle_parser, anki_service=anki_service)
 
     # Surface service load feedback to the user
     for msg in services.load_result.info:
