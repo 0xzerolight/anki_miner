@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
+from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
@@ -100,9 +101,15 @@ def _configure_logging(log_path: Path) -> None:
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
     handler.setFormatter(fmt)
+    # Root logger at WARNING so third-party libs (yt-dlp, fugashi, …) only
+    # write WARNING+ to the file; the project namespace gets full DEBUG coverage.
+    # A record must clear both its logger's effective level AND the handler's
+    # level — setting the handler to DEBUG here means the handler itself never
+    # silences anything; filtering happens at the logger level.
     root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
+    root.setLevel(logging.WARNING)
     root.addHandler(handler)
+    logging.getLogger("anki_miner").setLevel(logging.DEBUG)
 
 
 def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) -> None:
@@ -134,8 +141,6 @@ def main():
     # Attach the rotating file handler before anything else runs so that
     # bootstrap errors (dict scan, MeCab init, AnkiConnect probe) are captured.
     # Uses the default path; the config is not loaded yet.
-    from anki_miner.config.paths import ANKI_MINER_HOME
-
     _configure_logging(ANKI_MINER_HOME / "anki_miner.log")
 
     # Enable high DPI scaling

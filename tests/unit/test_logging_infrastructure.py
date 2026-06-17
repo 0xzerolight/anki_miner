@@ -133,6 +133,81 @@ class TestConfigureLogging:
                 h.close()
                 root.removeHandler(h)
 
+    def test_root_logger_level_is_warning(self, tmp_path):
+        """_configure_logging sets root logger to WARNING (not DEBUG)."""
+        configure_logging = self._import_configure_logging()
+        log_path = tmp_path / "app.log"
+
+        root = logging.getLogger()
+        handlers_before = list(root.handlers)
+        root_level_before = root.level
+        added: list[logging.Handler] = []
+        try:
+            configure_logging(log_path)
+            added = [h for h in root.handlers if h not in handlers_before]
+            assert root.level == logging.WARNING
+        finally:
+            root.setLevel(root_level_before)
+            for h in added:
+                h.close()
+                root.removeHandler(h)
+
+    def test_anki_miner_logger_level_is_debug(self, tmp_path):
+        """_configure_logging sets the anki_miner namespace logger to DEBUG."""
+        configure_logging = self._import_configure_logging()
+        log_path = tmp_path / "app.log"
+
+        root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
+        handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
+        added: list[logging.Handler] = []
+        try:
+            configure_logging(log_path)
+            added = [h for h in root.handlers if h not in handlers_before]
+            assert am_logger.level == logging.DEBUG
+        finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
+            for h in added:
+                h.close()
+                root.removeHandler(h)
+
+    def test_third_party_debug_not_written_anki_miner_debug_is(self, tmp_path):
+        """Third-party DEBUG records are suppressed; anki_miner DEBUG records reach the file."""
+        configure_logging = self._import_configure_logging()
+        log_path = tmp_path / "app.log"
+
+        root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
+        handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
+        added: list[logging.Handler] = []
+        try:
+            configure_logging(log_path)
+            added = [h for h in root.handlers if h not in handlers_before]
+
+            # third-party DEBUG (propagates up to root; root is WARNING → dropped)
+            logging.getLogger("yt_dlp").debug("third-party-debug-noise")
+            # anki_miner DEBUG (anki_miner logger is DEBUG → passes through to root handler)
+            logging.getLogger("anki_miner.some_module").debug("anki-miner-debug-record")
+
+            for h in added:
+                h.flush()
+
+            content = "" if not log_path.exists() else log_path.read_text(encoding="utf-8")
+
+            assert "third-party-debug-noise" not in content, "Third-party DEBUG leaked into log"
+            assert "anki-miner-debug-record" in content, "anki_miner DEBUG was not captured"
+        finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
+            for h in added:
+                h.close()
+                root.removeHandler(h)
+
 
 # ---------------------------------------------------------------------------
 # Worker exception → logger.exception tests
