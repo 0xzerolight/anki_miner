@@ -44,6 +44,7 @@ Cancel semantics deliberately mirror the spec:
 
 from __future__ import annotations
 
+import logging
 import shutil
 import threading
 from collections.abc import Callable
@@ -61,6 +62,8 @@ from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.models.youtube_queue import YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
+
+logger = logging.getLogger(__name__)
 
 
 class YouTubeQueueWorker(ProcessorOwningWorker):
@@ -184,6 +187,7 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
                     if attempt == 0:
                         continue  # retry once
                 except Exception as exc:  # noqa: BLE001 - surface any other failure to GUI
+                    logger.exception("YouTubeQueueWorker item failed")
                     last_error = f"{type(exc).__name__}: {exc}"
                     break
                 finally:

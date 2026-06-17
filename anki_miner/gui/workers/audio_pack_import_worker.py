@@ -12,6 +12,7 @@ Note: the audio pack importer's progress callback takes a single string
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Callable
 
@@ -19,6 +20,8 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.audio_packs.importer import import_audio_pack
+
+logger = logging.getLogger(__name__)
 
 
 class AudioPackImportWorker(CancellableWorker):
@@ -90,4 +93,5 @@ class AudioPackImportWorker(CancellableWorker):
             }
             self.import_finished.emit(result.pack_id, meta)
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
+            logger.exception("AudioPackImportWorker unhandled exception")
             self.failed.emit(str(exc))

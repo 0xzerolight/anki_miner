@@ -1,5 +1,6 @@
 """Worker thread for processing manually-paired video/subtitle files."""
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -8,6 +9,8 @@ from PyQt6.QtCore import pyqtSignal
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.orchestration import EpisodeProcessor
+
+logger = logging.getLogger(__name__)
 
 
 class ManualPairWorkerThread(ProcessorOwningWorker):
@@ -96,6 +99,7 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
 
                 except Exception as e:
                     # Report error for this pair but continue
+                    logger.exception("ManualPairWorkerThread pair %s failed", pair.video.name)
                     if self.progress_callback:
                         self.progress_callback.on_error(pair.video.name, str(e))
 
@@ -107,5 +111,6 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
                 self.result_ready.emit(results)
 
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+            logger.exception("ManualPairWorkerThread unhandled exception")
             if not self.check_cancelled():
                 self.error.emit(str(e))

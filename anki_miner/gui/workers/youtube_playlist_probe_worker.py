@@ -36,11 +36,15 @@ same pattern as :class:`YouTubeProbeWorker`.
 
 from __future__ import annotations
 
+import logging
+
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.gui.workers.youtube_probe_worker import _SingleCallProbeThread
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+
+logger = logging.getLogger(__name__)
 
 
 class YouTubePlaylistResolveWorker(_SingleCallProbeThread):
@@ -144,4 +148,5 @@ class YouTubePlaylistProbeWorker(CancellableWorker):
                 info = self._fetcher.probe_metadata(url, timeout_s=self._timeout_s)
                 self.entry_probed.emit(idx, info)
             except Exception as exc:  # noqa: BLE001 - incl. VideoTooLongError, YouTubeFetchError
+                logger.exception("YouTubePlaylistProbeWorker entry %d failed", idx)
                 self.entry_failed.emit(idx, str(exc))

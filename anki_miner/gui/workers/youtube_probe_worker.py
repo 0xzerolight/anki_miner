@@ -19,9 +19,13 @@ signals and the single call they make.
 
 from __future__ import annotations
 
+import logging
+
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+
+logger = logging.getLogger(__name__)
 
 
 class _SingleCallProbeThread(QThread):
@@ -52,6 +56,7 @@ class _SingleCallProbeThread(QThread):
         try:
             result = self._do_call()
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
+            logger.exception("YouTubeProbeWorker unhandled exception")
             self._emit_error(str(exc))
         else:
             self._emit_result(result)

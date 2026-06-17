@@ -15,6 +15,7 @@ confirm gate:
 
 from __future__ import annotations
 
+import logging
 import threading
 from collections.abc import Callable
 from dataclasses import replace
@@ -29,6 +30,8 @@ from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.deck_build import DeckBuildRequest
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.corpus_aggregator import aggregate, select
+
+logger = logging.getLogger(__name__)
 
 # Config fields SubtitleParserService actually reads. Phase 2 reuses Phase 1's
 # parser (with its filled per-file tokenization cache); that's only sound while
@@ -255,6 +258,7 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                 return
             self.build_finished.emit(total, preview.projected_coverage_pct)
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
+            logger.exception("DeckBuilderWorker unhandled exception")
             self.error.emit(str(e))
 
     # ------------------------------------------------------------------ #
