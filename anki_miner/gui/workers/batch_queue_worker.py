@@ -177,6 +177,7 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                         # AND dropped cards already created for earlier pairs from the
                         # count. Record the failure and continue (mirrors
                         # ManualPairWorkerThread's per-pair except).
+                        logger.exception("BatchQueueWorker pair %s failed", pair.video.name)
                         failed_pairs.append((pair.video.name, str(e)))
                         continue
                     cards_for_item += result.cards_created
@@ -211,6 +212,7 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                     self.item_completed.emit(item.id, cards_for_item)
 
             except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+                logger.exception("BatchQueueWorker item %s failed", item.id)
                 item.status = QueueItemStatus.ERROR
                 item.error_message = str(e)
                 self.item_failed.emit(item.id, str(e))

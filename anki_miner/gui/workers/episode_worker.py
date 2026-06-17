@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from PyQt6.QtCore import pyqtSignal
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.orchestration import EpisodeProcessor
+
+logger = logging.getLogger(__name__)
 
 
 class EpisodeWorkerThread(ProcessorOwningWorker):
@@ -86,6 +89,7 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
                 self.result_ready.emit(result)
 
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+            logger.exception("EpisodeWorkerThread unhandled exception")
             if not self.check_cancelled():
                 error_msg = f"Error processing episode: {str(e)}"
                 self.error.emit(error_msg)
