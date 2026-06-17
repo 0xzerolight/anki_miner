@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.services.definition_service import DefinitionService
 
@@ -673,58 +671,55 @@ class TestLookupAllOffline:
 
 
 class TestProviderRaisesMidChain:
-    """A provider raising DURING a lookup (NOT during load/close) PROPAGATES.
+    """A provider raising DURING a lookup is skipped (degrade-and-warn, OVH-046).
 
-    Documented decision pending — pins what the code does TODAY. Unlike
     ``ensure_loaded`` (which wraps ``provider.load`` in try/except) and
-    ``close`` (which wraps ``provider.close``), the per-word ``lookup`` /
-    batch ``lookup_many`` calls in ``get_definitions_batch``, ``get_glossary``,
-    ``get_glossaries_batch``, and ``lookup_all_offline`` are NOT guarded. A
-    raising provider therefore aborts the whole call: the exception reaches the
-    caller and any words an EARLIER provider already resolved are lost (no
-    partial result). If the desired behaviour ever becomes skip-and-continue,
-    these tests are the ones to flip.
+    ``close`` (which wraps ``provider.close``) already guard per-provider calls.
+    The per-word ``lookup`` / batch ``lookup_many`` calls in
+    ``get_definitions_batch``, ``get_glossary``, ``get_glossaries_batch``, and
+    ``lookup_all_offline`` now match that pattern: a raising provider is logged,
+    treated as a miss, and the chain continues — earlier hits are preserved.
     """
 
-    def test_get_definitions_batch_per_word_propagates(self, test_config):
+    def test_get_definitions_batch_per_word_skip_and_continue(self, test_config):
         p = make_provider("Boom")
         p.lookup.side_effect = RuntimeError("provider boom")
         service = DefinitionService(test_config, providers=[p])
 
-        with pytest.raises(RuntimeError, match="provider boom"):
-            service.get_definitions_batch(["x"])
+        result = service.get_definitions_batch(["x"])
+        assert result == [None]
 
-    def test_get_definitions_batch_lookup_many_propagates(self, test_config):
+    def test_get_definitions_batch_lookup_many_skip_and_continue(self, test_config):
         p = make_batch_provider("BatchBoom")
         p.lookup_many.side_effect = RuntimeError("batch boom")
         service = DefinitionService(test_config, providers=[p])
 
-        with pytest.raises(RuntimeError, match="batch boom"):
-            service.get_definitions_batch(["x"])
+        result = service.get_definitions_batch(["x"])
+        assert result == [None]
 
-    def test_earlier_provider_hits_are_lost_when_later_provider_raises(self, test_config):
-        """No partial result: a hit from p1 is discarded when p2 raises."""
+    def test_earlier_provider_hits_survive_when_later_provider_raises(self, test_config):
+        """Earlier hit is preserved when a later provider raises."""
         p_ok = make_provider("OK")
         p_ok.lookup.side_effect = lambda w: "hit-a" if w == "a" else None
         p_boom = make_provider("Boom")
         p_boom.lookup.side_effect = RuntimeError("second boom")
         service = DefinitionService(test_config, providers=[p_ok, p_boom])
 
-        with pytest.raises(RuntimeError, match="second boom"):
-            # "a" resolves on p_ok, "b" falls through to p_boom which raises.
-            service.get_definitions_batch(["a", "b"])
+        # "a" resolves on p_ok; "b" falls through to p_boom which raises — skipped.
+        result = service.get_definitions_batch(["a", "b"])
+        assert result == ["hit-a", None]
 
-    def test_get_glossary_offline_propagates(self, test_config):
+    def test_get_glossary_offline_skip_and_continue(self, test_config):
         p = make_provider("Boom", return_value=None)
         p.is_online = False
         p.lookup.side_effect = RuntimeError("glossary boom")
         service = DefinitionService(test_config, providers=[p])
 
-        with pytest.raises(RuntimeError, match="glossary boom"):
-            service.get_glossary("x")
+        result = service.get_glossary("x")
+        assert result is None
 
-    def test_get_glossary_online_propagates_after_offline_miss(self, test_config):
-        """The online fallback raising also propagates (offline missed first)."""
+    def test_get_glossary_online_skip_after_offline_miss(self, test_config):
+        """The online fallback raising is also skipped (offline missed first)."""
         offline = make_provider("Off", return_value=None)
         offline.is_online = False
         online = make_provider("Jisho")
@@ -732,23 +727,35 @@ class TestProviderRaisesMidChain:
         online.lookup.side_effect = RuntimeError("online boom")
         service = DefinitionService(test_config, providers=[offline, online])
 
-        with pytest.raises(RuntimeError, match="online boom"):
-            service.get_glossary("x")
+        result = service.get_glossary("x")
+        assert result is None
 
-    def test_get_glossaries_batch_propagates(self, test_config):
+    def test_get_glossaries_batch_skip_and_continue(self, test_config):
         p = make_provider("Boom", return_value=None)
         p.is_online = False
         p.lookup.side_effect = RuntimeError("glossaries boom")
         service = DefinitionService(test_config, providers=[p])
 
-        with pytest.raises(RuntimeError, match="glossaries boom"):
-            service.get_glossaries_batch(["x"])
+        result = service.get_glossaries_batch(["x"])
+        assert result == [None]
 
-    def test_lookup_all_offline_propagates(self, test_config):
+    def test_lookup_all_offline_skip_and_continue(self, test_config):
         p = make_provider("Boom")
         p.is_online = False
         p.lookup.side_effect = RuntimeError("offline boom")
         service = DefinitionService(test_config, providers=[p])
 
-        with pytest.raises(RuntimeError, match="offline boom"):
-            service.lookup_all_offline("x")
+        result = service.lookup_all_offline("x")
+        assert result == []
+
+    def test_raising_provider_warned_in_log(self, test_config, caplog):
+        """A raising provider emits a warning log."""
+        import logging
+
+        p = make_provider("BadProv")
+        p.lookup.side_effect = RuntimeError("kaboom")
+        service = DefinitionService(test_config, providers=[p])
+
+        caplog.set_level(logging.WARNING)
+        service.get_definitions_batch(["w"])
+        assert "BadProv" in caplog.text

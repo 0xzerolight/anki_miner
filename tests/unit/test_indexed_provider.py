@@ -1,6 +1,9 @@
 """Tests for the IndexedDictProvider."""
 
+import logging
+import sqlite3
 from pathlib import Path
+from unittest.mock import patch
 
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.storage import (
@@ -570,3 +573,74 @@ class TestScoreRanking:
         assert "water-1" in single
         assert "water-5" in single
         assert "water-6" not in single
+
+
+# ---------------------------------------------------------------------------
+# OVH-047: IndexedDictProvider degrades on sqlite3.DatabaseError at query time
+# ---------------------------------------------------------------------------
+
+
+class TestIndexedDictProviderDatabaseErrorGuard:
+    """A corrupt page that only surfaces on first query must degrade to a miss,
+    not propagate the DatabaseError to the caller (OVH-047)."""
+
+    def _make_loaded_provider(self, tmp_path: Path) -> IndexedDictProvider:
+        db = tmp_path / "test.sqlite"
+        _seed_db(db, [DictRow(term="食べる", reading="たべる", content="<li>eat</li>", sequence=1)])
+        provider = IndexedDictProvider("test-dict", db, display_name="Test")
+        provider.load()
+        assert provider.is_available()
+        return provider
+
+    def test_lookup_returns_none_on_database_error(self, tmp_path: Path, caplog):
+        """lookup() catches sqlite3.DatabaseError and returns None."""
+        provider = self._make_loaded_provider(tmp_path)
+        with patch(
+            "anki_miner.services.dictionary.providers.indexed_provider.storage_lookup",
+            side_effect=sqlite3.DatabaseError("database disk image is malformed"),
+        ):
+            caplog.set_level(logging.WARNING)
+            result = provider.lookup("食べる")
+
+        assert result is None
+        assert "test-dict" in caplog.text
+
+    def test_lookup_many_returns_all_miss_on_database_error(self, tmp_path: Path, caplog):
+        """lookup_many() catches sqlite3.DatabaseError and returns all-miss dict."""
+        provider = self._make_loaded_provider(tmp_path)
+        with patch(
+            "anki_miner.services.dictionary.providers.indexed_provider.storage_lookup_many",
+            side_effect=sqlite3.DatabaseError("database disk image is malformed"),
+        ):
+            caplog.set_level(logging.WARNING)
+            result = provider.lookup_many(["食べる", "水"])
+
+        assert result == {"食べる": None, "水": None}
+        assert "test-dict" in caplog.text
+
+    def test_lookup_logs_dict_id_and_db_path(self, tmp_path: Path, caplog):
+        """Warning log includes dict_id AND db_path for diagnostics."""
+        provider = self._make_loaded_provider(tmp_path)
+        with patch(
+            "anki_miner.services.dictionary.providers.indexed_provider.storage_lookup",
+            side_effect=sqlite3.DatabaseError("malformed"),
+        ):
+            caplog.set_level(logging.WARNING)
+            provider.lookup("x")
+
+        assert "test-dict" in caplog.text
+        # db_path is included (as string)
+        assert str(tmp_path / "test.sqlite") in caplog.text
+
+    def test_lookup_many_logs_dict_id_and_db_path(self, tmp_path: Path, caplog):
+        """lookup_many warning log includes dict_id AND db_path."""
+        provider = self._make_loaded_provider(tmp_path)
+        with patch(
+            "anki_miner.services.dictionary.providers.indexed_provider.storage_lookup_many",
+            side_effect=sqlite3.DatabaseError("malformed"),
+        ):
+            caplog.set_level(logging.WARNING)
+            provider.lookup_many(["x"])
+
+        assert "test-dict" in caplog.text
+        assert str(tmp_path / "test.sqlite") in caplog.text
