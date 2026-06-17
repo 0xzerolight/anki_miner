@@ -80,6 +80,9 @@ def _make_fake_curation_dialog(responder: AutoCurationResponder) -> type:
         def reject(self) -> None:  # pragma: no cover - cancel path; not hit on accept
             """No-op: the cancel path calls this on an open dialog."""
 
+        def deleteLater(self) -> None:  # match QDialog surface for teardown guard
+            pass
+
     return _FakeCurationDialog
 
 
