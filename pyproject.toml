@@ -145,3 +145,40 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+[tool.vulture]
+# Deadcode scan config. Run bare `vulture` to pick these up.
+paths = ["anki_miner"]
+min_confidence = 80
+# Qt virtual-method overrides are invoked by the C++ event loop, not by any
+# Python caller vulture can see, so it reports them as unused. These names are
+# always Qt overrides — listing them keeps real dead code visible while
+# silencing the recurring false positives. Not a catch-all glob on purpose.
+ignore_names = [
+    "changeEvent",
+    "closeEvent",
+    "contextMenuEvent",
+    "dragEnterEvent",
+    "dragLeaveEvent",
+    "dragMoveEvent",
+    "dropEvent",
+    "enterEvent",
+    "eventFilter",
+    "focusInEvent",
+    "focusOutEvent",
+    "hideEvent",
+    "keyPressEvent",
+    "keyReleaseEvent",
+    "leaveEvent",
+    "minimumSizeHint",
+    "mouseDoubleClickEvent",
+    "mouseMoveEvent",
+    "mousePressEvent",
+    "mouseReleaseEvent",
+    "moveEvent",
+    "paintEvent",
+    "resizeEvent",
+    "showEvent",
+    "sizeHint",
+    "wheelEvent",
+]
