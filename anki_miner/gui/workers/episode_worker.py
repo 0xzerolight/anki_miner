@@ -22,13 +22,20 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
     the GUI responsive. It emits signals when finished or when an error occurs.
 
     Inherits thread-safe cancellation from CancellableWorker.
+
+    Processor construction: either supply a pre-built ``processor`` directly, or
+    supply a ``processor_factory`` and leave ``processor=None``.  When a factory
+    is given the processor is built at the START of ``run()`` on the worker thread,
+    so the GUI thread is never blocked by the registry scan / sqlite opens / CSV
+    parses that happen during construction (mirrors the DeckBuilder precedent).
+    A factory that raises surfaces on the existing ``error`` signal.
     """
 
     result_ready = pyqtSignal(object)  # ProcessingResult
 
     def __init__(
         self,
-        processor: EpisodeProcessor,
+        processor: EpisodeProcessor | None,
         video_file: Path,
         subtitle_file: Path,
         preview_mode: bool,
@@ -37,11 +44,13 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
         parent=None,
         *,
         audio_track_override: int | None = None,
+        processor_factory: Callable[[], EpisodeProcessor] | None = None,
     ):
         """Initialize the episode worker thread.
 
         Args:
-            processor: Episode processor instance
+            processor: Episode processor instance, or None when processor_factory
+                is provided (the processor is then built at run() start).
             video_file: Path to video file
             subtitle_file: Path to subtitle file
             preview_mode: If True, only preview words without creating cards
@@ -50,9 +59,17 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
             parent: Optional parent QObject
             audio_track_override: If set, forces the given audio_index instead of
                 auto-detecting the Japanese track. None means auto-detect.
+            processor_factory: Zero-arg callable that returns an EpisodeProcessor.
+                Mutually exclusive with a non-None ``processor``.  When supplied,
+                the processor is constructed on the worker thread inside run().
         """
+        if processor is not None and processor_factory is not None:
+            raise ValueError("Provide either processor or processor_factory, not both")
+        if processor is None and processor_factory is None:
+            raise ValueError("Either processor or processor_factory must be provided")
         super().__init__(parent)
         self.processor = processor
+        self._processor_factory = processor_factory
         self.video_file = video_file
         self.subtitle_file = subtitle_file
         self.preview_mode = preview_mode
@@ -62,19 +79,27 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
-        """The constructor-supplied processor (typed contract for GUI readers)."""
+        """The processor for this run (None before run() has built it via factory)."""
         return self.processor
 
     def cancel(self) -> None:
-        """Cancel processing, propagating to the processor."""
+        """Cancel processing, propagating to the processor if one exists."""
         super().cancel()
-        self.processor.cancel()
+        if self.processor is not None:
+            self.processor.cancel()
 
     def run(self) -> None:
         """Execute episode processing in background thread."""
         try:
             if self.check_cancelled():
                 return
+
+            # Build the processor on the worker thread when a factory was supplied.
+            # This keeps the GUI thread free of the slow registry/sqlite/CSV work
+            # that happens during EpisodeProcessor construction.
+            if self.processor is None:
+                assert self._processor_factory is not None  # validated in __init__
+                self.processor = self._processor_factory()
 
             result = self.processor.process_episode(
                 self.video_file,
