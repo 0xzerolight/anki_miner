@@ -270,6 +270,9 @@ class AnkiMinerConfig:
     # Analytics settings
     stats_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "stats.db")
 
+    # Logging
+    log_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "anki_miner.log")
+
     # --- YouTube ---
     youtube_max_duration_s: int = 7200
     youtube_max_height: int = 720
@@ -329,6 +332,8 @@ class AnkiMinerConfig:
             object.__setattr__(self, "stats_db_path", Path(self.stats_db_path))
         if isinstance(self.history_db_path, str):
             object.__setattr__(self, "history_db_path", Path(self.history_db_path))
+        if isinstance(self.log_path, str):
+            object.__setattr__(self, "log_path", Path(self.log_path))
         if isinstance(self.youtube_cookies_file, str):
             object.__setattr__(
                 self,

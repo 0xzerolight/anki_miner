@@ -173,7 +173,7 @@ class ResourceDownloadWorker(CancellableWorker):
                 if temp is not None:
                     with contextlib.suppress(OSError):
                         temp.unlink()
-                logger.debug("resource %s failed: %s", spec.id, exc)
+                logger.debug("resource %s failed: %s", spec.id, exc, exc_info=True)
                 summary.results.append(
                     ResourceDownloadResult(
                         spec_id=spec.id,

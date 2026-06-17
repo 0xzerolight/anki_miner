@@ -1,9 +1,13 @@
 """Worker thread for checking application updates."""
 
+import logging
+
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.update_checker import UpdateChecker
+
+logger = logging.getLogger(__name__)
 
 
 class UpdateWorkerThread(CancellableWorker):
@@ -42,5 +46,6 @@ class UpdateWorkerThread(CancellableWorker):
                 # take the single config-write code path either way.
                 self.result_ready.emit(info)
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+            logger.exception("UpdateWorkerThread unhandled exception")
             if not self.check_cancelled():
                 self.error.emit(f"Error checking for updates: {e}")

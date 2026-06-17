@@ -1,7 +1,10 @@
 """Main GUI application entry point."""
 
+import logging
 import os
 import sys
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
@@ -76,6 +79,32 @@ def _run_bundled_smoke() -> int:
     return 0
 
 
+def _configure_logging(log_path: Path) -> None:
+    """Attach a RotatingFileHandler to the root logger.
+
+    Called once from main() so all modules that already call
+    ``logging.getLogger(__name__)`` have their records captured to disk.
+    Two 2 MB backup files → at most ~6 MB on disk at any time.
+    """
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    handler = RotatingFileHandler(
+        log_path,
+        maxBytes=2 * 1024 * 1024,
+        backupCount=2,
+        encoding="utf-8",
+        delay=True,
+    )
+    handler.setLevel(logging.DEBUG)
+    fmt = logging.Formatter(
+        "%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    )
+    handler.setFormatter(fmt)
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+    root.addHandler(handler)
+
+
 def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) -> None:
     """Connect the Settings tab's validation requests to the window (T-53).
 
@@ -101,6 +130,13 @@ def main():
     # bundling without spinning up a display.
     if os.environ.get("ANKI_MINER_SMOKE") == "youtube":
         sys.exit(_run_bundled_smoke())
+
+    # Attach the rotating file handler before anything else runs so that
+    # bootstrap errors (dict scan, MeCab init, AnkiConnect probe) are captured.
+    # Uses the default path; the config is not loaded yet.
+    from anki_miner.config.paths import ANKI_MINER_HOME
+
+    _configure_logging(ANKI_MINER_HOME / "anki_miner.log")
 
     # Enable high DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)

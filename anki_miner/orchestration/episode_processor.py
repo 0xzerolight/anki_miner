@@ -970,6 +970,7 @@ class EpisodeProcessor:
             self.presenter.show_error(f"Error: {e}")
             return ctx.build_result(total_words_found=0, new_words_found=0)
         except Exception as e:
+            logger.exception("EpisodeProcessor unhandled exception")
             ctx.errors.append(f"Unexpected error: {e}")
             self.presenter.show_error(f"Unexpected error: {e}")
             return ctx.build_result(total_words_found=0, new_words_found=0)

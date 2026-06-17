@@ -8,6 +8,7 @@ class's thread-safe ``is_cancelled`` flag.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Callable
 
@@ -16,6 +17,8 @@ from PyQt6.QtCore import pyqtSignal
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.dictionary.importers.jmdict_importer import import_jmdict_xml
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
+
+logger = logging.getLogger(__name__)
 
 
 class DictionaryImportWorker(CancellableWorker):
@@ -100,4 +103,5 @@ class DictionaryImportWorker(CancellableWorker):
             }
             self.import_finished.emit(result.dict_id, meta)
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
+            logger.exception("DictionaryImportWorker unhandled exception")
             self.failed.emit(str(exc))
