@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import sys
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
@@ -65,6 +66,33 @@ _TARGET_PATTERNS: dict[str, tuple[str, ...]] = {
 }
 
 
+# Allowlist for URLs surfaced to the user (asset downloads + release page).
+# Only HTTPS URLs on these hosts are accepted; everything else is fail-closed
+# (asset → None, release page → omitted from UpdateInfo).  (OVH-064)
+_GITHUB_URL_ALLOWLIST: frozenset[str] = frozenset(
+    {
+        "github.com",
+        "objects.githubusercontent.com",
+        "api.github.com",
+    }
+)
+
+
+def _validate_github_url(url: str) -> bool:
+    """Return True iff *url* is an https URL on the GitHub allowlist.
+
+    Fail-closed: any URL that doesn't satisfy scheme == "https" and netloc in
+    :data:`_GITHUB_URL_ALLOWLIST` is rejected.
+    """
+    if not isinstance(url, str) or not url:
+        return False
+    try:
+        parts = urllib.parse.urlsplit(url)
+    except ValueError:
+        return False
+    return parts.scheme == "https" and parts.netloc in _GITHUB_URL_ALLOWLIST
+
+
 def _pick_asset(assets: list[dict], target: str) -> str | None:
     """Pick the download URL for the asset matching the given target.
 
@@ -85,7 +113,7 @@ def _pick_asset(assets: list[dict], target: str) -> str | None:
             name = asset.get("name", "")
             if name and fnmatch.fnmatch(name, pattern):
                 url = asset.get("browser_download_url")
-                if isinstance(url, str) and url:
+                if isinstance(url, str) and _validate_github_url(url):
                     return url
     return None
 
@@ -132,7 +160,12 @@ class UpdateChecker:
                 data = json.loads(response.read().decode("utf-8"))
 
             tag_name = data.get("tag_name", "")
-            release_page_url = data.get("html_url", "")
+            # Validate html_url against the GitHub allowlist; fall back to ""
+            # (banner will omit a release-page link) if the URL is off-list.
+            # Fail-closed: a tampered response must not steer users to an
+            # arbitrary scheme or host via the update banner.  (OVH-064)
+            raw_release_page_url = data.get("html_url", "")
+            release_page_url = raw_release_page_url if _validate_github_url(raw_release_page_url) else ""
             release_notes = data.get("body") or ""
             assets = data.get("assets") or []
 
