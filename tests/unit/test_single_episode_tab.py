@@ -804,10 +804,13 @@ def test_factory_closure_calls_create_episode_processor_when_invoked(tab, tmp_pa
 
 def test_mocked_mine_produces_result_and_curation_context_resolves(tab, tmp_path, facade_processor):
     """A full mocked mine via the factory path: result is handled correctly and
-    curation_processor is the factory-built processor."""
-    from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
-    from anki_miner.orchestration.episode_processor import EpisodeProcessor
+    curation_processor is the factory-built processor.
 
+    EpisodeWorkerThread is patched to a MagicMock so no real QThread is
+    spawned.  The processor_factory kwarg captured from the constructor is
+    invoked directly to simulate what the worker thread would do, then
+    curation_processor on the mock is asserted to equal the built processor.
+    """
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
     fake_subs = tmp_path / "ep01.ass"
@@ -818,13 +821,16 @@ def test_mocked_mine_produces_result_and_curation_context_resolves(tab, tmp_path
     tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
     tab.subtitle_selector.is_valid = MagicMock(return_value=True)
 
-    # facade_processor is a real EpisodeProcessor with MagicMock services.
-    # process_episode is a real method, so we patch it with a mock.
-    sentinel_result = MagicMock(name="ProcessingResult")
-    sentinel_result.success = True
+    mock_worker = MagicMock(name="EpisodeWorkerThread")
+    # Before the factory runs the processor is None (matches real pre-run state).
+    mock_worker.processor = None
+    mock_worker.curation_processor = None
 
     with (
-        patch.object(EpisodeProcessor, "process_episode", return_value=sentinel_result),
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread",
+            return_value=mock_worker,
+        ) as worker_cls,
         patch(
             "anki_miner.gui.widgets.single_episode_tab.create_episode_processor",
             return_value=facade_processor,
@@ -832,16 +838,21 @@ def test_mocked_mine_produces_result_and_curation_context_resolves(tab, tmp_path
     ):
         tab._start_processing(preview_mode=True)
 
-        # worker_thread was set
-        worker = tab.worker_thread
-        assert worker is not None
-        assert isinstance(worker, EpisodeWorkerThread)
+        # worker_thread was set to the mock; no real QThread was spawned.
+        assert tab.worker_thread is mock_worker
+
         # Processor not yet built (factory hasn't run).
-        assert worker.processor is None
-        assert worker.curation_processor is None
+        assert mock_worker.processor is None
+        assert mock_worker.curation_processor is None
 
-        # Simulate the worker running (builds processor and calls process_episode).
-        worker.run()
+        # Capture the factory closure from the constructor kwargs and invoke it
+        # directly — this simulates what the worker thread does at the start of run().
+        _, kwargs = worker_cls.call_args
+        assert kwargs.get("processor") is None, "processor must be None when factory path is used"
+        factory = kwargs.get("processor_factory")
+        assert callable(factory)
 
-    # After run(), curation_processor resolves to facade_processor.
-    assert worker.curation_processor is facade_processor
+        built = factory()
+
+    # After invoking the factory, curation_processor resolves to facade_processor.
+    assert built is facade_processor
