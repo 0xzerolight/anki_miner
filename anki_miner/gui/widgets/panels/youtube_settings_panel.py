@@ -1,5 +1,8 @@
 """YouTube mining settings panel."""
 
+from dataclasses import replace
+from pathlib import Path
+
 from PyQt6.QtWidgets import QComboBox, QSpinBox
 
 from anki_miner.gui.widgets.base import FormPanel
@@ -139,3 +142,36 @@ class YouTubeSettingsPanel(FormPanel):
     def get_playlist_max(self) -> int:
         """Return the current playlist-max spinbox value."""
         return self.playlist_max_spinbox.value()
+
+    # ------------------------------------------------------------------
+    # Config marshalling contract (OVH-019)
+    # ------------------------------------------------------------------
+
+    def load_from_config(self, config) -> None:
+        """Populate all widgets from ``config``.
+
+        Called by :meth:`SettingsTab._load_config` as part of the panel loop.
+        """
+        self.set_cookies_from_browser(config.youtube_cookies_from_browser)
+        self.set_cookies_file(config.youtube_cookies_file)
+        self.set_max_duration_seconds(config.youtube_max_duration_s)
+        self.set_playlist_max(config.youtube_playlist_max)
+
+    def contribute(self, config):
+        """Return a new config with this panel's fields applied.
+
+        Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
+        Called by :meth:`SettingsTab._on_save_clicked` as part of the contribute fold.
+
+        Note: validation of ``cookies_file`` (file must exist when non-empty)
+        stays in :meth:`SettingsTab._on_save_clicked` — it runs before the fold
+        so an invalid path aborts Save before ``contribute`` is ever called.
+        """
+        cookies_file_str = self.get_cookies_file()
+        return replace(
+            config,
+            youtube_cookies_from_browser=self.get_cookies_from_browser(),
+            youtube_cookies_file=Path(cookies_file_str) if cookies_file_str else None,
+            youtube_max_duration_s=self.get_max_duration_seconds(),
+            youtube_playlist_max=self.get_playlist_max(),
+        )

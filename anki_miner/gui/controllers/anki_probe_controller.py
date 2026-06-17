@@ -103,12 +103,12 @@ class AnkiProbeController:
         if self._fetch_fields_worker is not None and self._fetch_fields_worker.isRunning():
             return
 
-        note_type = self._anki_panel.note_type_input.text().strip()
+        note_type = self._anki_panel.get_note_type().strip()
         if not note_type:
             self._anki_panel.set_notetype_status(False, "Enter a note type name before fetching fields")
             return
 
-        ankiconnect_url = self._anki_panel.ankiconnect_url_input.text().strip()
+        ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
         # Patch the live config with the user's in-flight input values so the
         # service hits the URL/note type currently shown in the form, not
         # whatever was last saved to disk.
@@ -127,7 +127,7 @@ class AnkiProbeController:
             return
 
         self._anki_panel.set_notetype_status(None, "Fetching fields from note type...")
-        self._anki_panel.fetch_fields_button.setEnabled(False)
+        self._anki_panel.set_fetch_fields_button_enabled(False)
 
         worker = FetchFieldsWorker(service, note_type, self._parent)
         self._fetch_fields_worker = worker
@@ -137,7 +137,7 @@ class AnkiProbeController:
 
     def _on_fetch_fields_finished(self, field_names: list[str]) -> None:
         """Populate the panel with the fetched field list (main-thread slot)."""
-        self._anki_panel.fetch_fields_button.setEnabled(True)
+        self._anki_panel.set_fetch_fields_button_enabled(True)
         if not field_names:
             # Empty list means AnkiConnect rejected the request or returned
             # nothing — most commonly the note type doesn't exist, or Anki
@@ -152,7 +152,7 @@ class AnkiProbeController:
 
     def _on_fetch_fields_error(self, message: str) -> None:
         """Surface an unexpected worker exception via the note-type status line."""
-        self._anki_panel.fetch_fields_button.setEnabled(True)
+        self._anki_panel.set_fetch_fields_button_enabled(True)
         self._anki_panel.set_notetype_status(False, message)
 
     # === Card styling (Issue #44) ===
@@ -178,12 +178,12 @@ class AnkiProbeController:
         if self._styling_worker is not None and self._styling_worker.isRunning():
             return
 
-        note_type = self._anki_panel.note_type_input.text().strip()
+        note_type = self._anki_panel.get_note_type().strip()
         if not note_type:
             self._anki_panel.set_styling_status(False, "Enter a note type name before applying styles")
             return
 
-        ankiconnect_url = self._anki_panel.ankiconnect_url_input.text().strip()
+        ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
         config = self._get_config()
         probe_config = replace(
             config,
@@ -235,7 +235,7 @@ class AnkiProbeController:
         if self._fetch_decks_worker is not None and self._fetch_decks_worker.isRunning():
             return
 
-        ankiconnect_url = self._anki_panel.ankiconnect_url_input.text().strip()
+        ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
         config = self._get_config()
         probe_config = replace(config, ankiconnect_url=ankiconnect_url or config.ankiconnect_url)
         try:
@@ -244,7 +244,7 @@ class AnkiProbeController:
             QMessageBox.warning(self._parent, "Add Deck", f"Cannot build AnkiService: {e}")
             return
 
-        self._filtering_panel.add_deck_button.setEnabled(False)
+        self._filtering_panel.set_add_deck_button_enabled(False)
         worker = FetchDecksWorker(service, self._parent)
         self._fetch_decks_worker = worker
         worker.result_ready.connect(self._on_fetch_decks_finished)
@@ -253,7 +253,7 @@ class AnkiProbeController:
 
     def _on_fetch_decks_finished(self, deck_names: list[str]) -> None:
         """Hand the fetched deck list to the panel, which opens the picker."""
-        self._filtering_panel.add_deck_button.setEnabled(True)
+        self._filtering_panel.set_add_deck_button_enabled(True)
         if not deck_names:
             QMessageBox.warning(
                 self._parent,
@@ -265,5 +265,5 @@ class AnkiProbeController:
 
     def _on_fetch_decks_error(self, message: str) -> None:
         """Surface an unexpected deck-fetch worker exception."""
-        self._filtering_panel.add_deck_button.setEnabled(True)
+        self._filtering_panel.set_add_deck_button_enabled(True)
         QMessageBox.warning(self._parent, "Add Deck", message)

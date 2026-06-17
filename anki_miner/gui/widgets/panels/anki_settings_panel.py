@@ -1,6 +1,7 @@
 """Anki configuration settings panel."""
 
 from collections.abc import Mapping
+from dataclasses import replace
 from typing import Literal, cast
 
 from PyQt6.QtCore import pyqtSignal
@@ -650,3 +651,81 @@ class AnkiSettingsPanel(FormPanel):
     def set_custom_css(self, value: str) -> None:
         """Set the custom CSS editor contents."""
         self.custom_css_edit.setPlainText(value)
+
+    # === Simple field accessors (OVH-020) ===
+
+    def get_deck_name(self) -> str:
+        """Return the deck name."""
+        return self.deck_input.text()
+
+    def set_deck_name(self, value: str) -> None:
+        """Set the deck name field."""
+        self.deck_input.setText(value)
+
+    def get_note_type(self) -> str:
+        """Return the note type name."""
+        return self.note_type_input.text()
+
+    def set_note_type(self, value: str) -> None:
+        """Set the note type field."""
+        self.note_type_input.setText(value)
+
+    def get_ankiconnect_url(self) -> str:
+        """Return the AnkiConnect URL."""
+        return self.ankiconnect_url_input.text()
+
+    def set_ankiconnect_url(self, value: str) -> None:
+        """Set the AnkiConnect URL field."""
+        self.ankiconnect_url_input.setText(value)
+
+    def get_anki_tags(self) -> str:
+        """Return the card tags string."""
+        return self.anki_tags_input.text()
+
+    def set_anki_tags(self, value: str) -> None:
+        """Set the card tags field."""
+        self.anki_tags_input.setText(value)
+
+    def set_fetch_fields_button_enabled(self, enabled: bool) -> None:
+        """Enable or disable the Fetch Fields button."""
+        self.fetch_fields_button.setEnabled(enabled)
+
+    # ------------------------------------------------------------------
+    # Config marshalling contract (OVH-019)
+    # ------------------------------------------------------------------
+
+    def load_from_config(self, config) -> None:
+        """Populate all widgets from ``config``.
+
+        Called by :meth:`SettingsTab._load_config` as part of the panel loop.
+        """
+        self.set_deck_name(config.anki_deck_name)
+        self.set_note_type(config.anki_note_type)
+        self.set_ankiconnect_url(config.ankiconnect_url)
+        self.set_anki_tags(config.anki_tags)
+        self.set_card_fields(config.anki_fields)
+        self.set_card_style_preset(config.card_style_preset)
+        self.set_custom_css(config.custom_card_css)
+        self.set_pitch_category_format(config.pitch_category_format)
+
+    def contribute(self, config):
+        """Return a new config with this panel's fields applied.
+
+        Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
+        Called by :meth:`SettingsTab._on_save_clicked` as part of the contribute fold.
+        ``anki_word_field`` is derived from ``anki_fields["word"]`` (same logic as
+        before — keeps the two in sync).
+        """
+        fields = self.get_card_fields()
+        return replace(
+            config,
+            anki_deck_name=self.get_deck_name(),
+            anki_note_type=self.get_note_type(),
+            ankiconnect_url=self.get_ankiconnect_url(),
+            anki_tags=self.get_anki_tags(),
+            anki_fields=fields,
+            anki_word_field=fields.get("word", "Expression"),
+            card_style_preset=self.get_card_style_preset(),
+            custom_card_css=self.get_custom_css(),
+            pitch_category_format=self.get_pitch_category_format(),
+        )
