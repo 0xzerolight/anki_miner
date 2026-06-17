@@ -549,7 +549,7 @@ class TestSetSourceCreatesPlayer:
     every source, including AV1. AV1 plays in-app when the machine has a hardware
     AV1 decoder (RTX-30+/Tiger-Lake+). When no decoded video frame arrives within
     the watchdog window (2 s after LoadedMedia), the widget hides the video area
-    and shows a fallback notice + "Open in external player" button instead.
+    and shows a fallback notice instead.
     """
 
     def test_av1_creates_player(self, qtbot, fake_media_classes):
@@ -580,9 +580,9 @@ class TestAv1WatchdogFallback:
 
     The watchdog arms on LoadedMedia/BufferedMedia when the source is AV1 and no
     video frame has arrived yet.  If no frame arrives within 2 s, the timeout
-    handler hides the video widget and shows the fallback notice + open-externally
-    button.  A frame arriving before the timeout cancels the watchdog and keeps
-    normal playback UI visible.  Non-AV1 sources never arm the watchdog.
+    handler hides the video widget and shows the fallback notice.  A frame
+    arriving before the timeout cancels the watchdog and keeps normal playback UI
+    visible.  Non-AV1 sources never arm the watchdog.
     """
 
     def _make_widget_av1(self, qtbot, fake_media_classes):
@@ -614,7 +614,6 @@ class TestAv1WatchdogFallback:
         # Use isHidden() — the widget isn't show()n, so isVisible() requires parent to be shown.
         assert widget.video_widget.isHidden(), "video_widget should be hidden after fallback"
         assert not widget._av1_notice_label.isHidden(), "fallback notice should be visible"
-        assert not widget._av1_open_button.isHidden(), "open-external button should be visible"
 
     def test_watchdog_fires_stops_player(self, qtbot, fake_media_classes):
         """When the watchdog fires, the player is stopped."""
@@ -653,7 +652,6 @@ class TestAv1WatchdogFallback:
         # Use isHidden() — the widget isn't show()n, so isVisible() requires parent to be shown.
         assert not widget.video_widget.isHidden(), "video_widget should stay visible"
         assert widget._av1_notice_label.isHidden(), "fallback notice should remain hidden"
-        assert widget._av1_open_button.isHidden(), "open-external button should remain hidden"
 
     def test_frame_cancels_armed_watchdog(self, qtbot, fake_media_classes):
         """A frame arriving after LoadedMedia but before timeout cancels the watchdog."""
@@ -704,7 +702,6 @@ class TestAv1WatchdogFallback:
         widget._on_av1_watchdog_timeout()
         assert not widget.video_widget.isHidden(), "video_widget must stay visible for non-AV1"
         assert widget._av1_notice_label.isHidden(), "fallback notice must remain hidden for non-AV1"
-        assert widget._av1_open_button.isHidden(), "open-external button must remain hidden for non-AV1"
 
     # ------------------------------------------------------------------
     # 4. set_source resets fallback state for a new source
@@ -730,4 +727,3 @@ class TestAv1WatchdogFallback:
         # Use isHidden() — the widget isn't show()n, so isVisible() requires parent to be shown.
         assert not widget.video_widget.isHidden(), "video_widget should be restored on new source"
         assert widget._av1_notice_label.isHidden(), "fallback notice should be hidden on new source"
-        assert widget._av1_open_button.isHidden(), "open-external button should be hidden on new source"
