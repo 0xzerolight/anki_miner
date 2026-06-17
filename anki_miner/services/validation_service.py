@@ -1,5 +1,6 @@
 """Service for validating system setup and dependencies."""
 
+import logging
 import subprocess
 import sys
 
@@ -11,6 +12,8 @@ from anki_miner.models import ValidationIssue, ValidationResult
 from anki_miner.services._ankiconnect import post_action
 from anki_miner.utils import ensure_directory
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
+
+logger = logging.getLogger(__name__)
 
 
 def _classify_resolved(base: str, resolved: str) -> str:
@@ -128,6 +131,7 @@ class ValidationService:
         try:
             ensure_directory(self.config.media_temp_folder)
         except Exception as e:
+            logger.exception("Unexpected error creating temp folder")
             issues.append(
                 ValidationIssue(
                     component="Temp Folder",
@@ -217,6 +221,7 @@ class ValidationService:
                 return False, "Connection to AnkiConnect timed out"
             return False, f"AnkiConnect error: {e}"
         except Exception as e:
+            logger.exception("Unexpected error checking AnkiConnect")
             return False, f"Unexpected error: {e}"
         return True, f"AnkiConnect v{version if version is not None else 'unknown'} is running"
 
@@ -252,6 +257,7 @@ class ValidationService:
         except subprocess.TimeoutExpired:
             return False, f"{name} check timed out"
         except Exception as e:
+            logger.exception("Unexpected error checking %s", name)
             return False, f"Unexpected error: {e}"
 
     def _check_ffmpeg(self) -> tuple[bool, str]:
@@ -303,6 +309,7 @@ class ValidationService:
                 return False, f"Error fetching decks: {msg[len(prefix):]}"
             return False, f"Error checking deck: {e}"
         except Exception as e:
+            logger.exception("Unexpected error checking deck existence")
             return False, f"Error checking deck: {e}"
 
         deck_name = self.config.anki_deck_name
@@ -337,6 +344,7 @@ class ValidationService:
                 return False, f"Error fetching models: {msg[len(prefix):]}"
             return False, f"Error checking note type: {e}"
         except Exception as e:
+            logger.exception("Unexpected error checking note type existence")
             return False, f"Error checking note type: {e}"
 
         note_type = self.config.anki_note_type
@@ -369,6 +377,7 @@ class ValidationService:
                 return False, f"Error fetching fields: {msg[len(prefix):]}"
             return False, f"Error checking fields: {e}"
         except Exception as e:
+            logger.exception("Unexpected error checking field names")
             return False, f"Error checking fields: {e}"
 
         actual_fields = set(actual_fields_list)
