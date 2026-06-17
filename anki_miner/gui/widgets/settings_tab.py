@@ -1,5 +1,6 @@
 """Settings tab with category organization using extracted panels."""
 
+import dataclasses
 import os
 import re
 from dataclasses import replace
@@ -56,6 +57,22 @@ class SettingsTab(QWidget):
 
     validation_requested = pyqtSignal()
     config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
+
+    # Fields written OUTSIDE the Settings Save path (theme selector, update
+    # banner, first-run flags).  An update_config call that touches ONLY these
+    # fields must NOT reload the panel widgets — that would destroy unsaved edits
+    # the user has made in the Settings tab (OVH-007).
+    _EXTERNAL_ONLY_FIELDS: frozenset[str] = frozenset(
+        {
+            "theme",
+            "theme_favorites",
+            "ui_font_scale",
+            "skipped_update_version",
+            "last_known_version",
+            "first_run_shortcut_done",
+            "first_run_setup_done",
+        }
+    )
 
     def __init__(self, config: AnkiMinerConfig, parent=None):
         """Initialize the settings tab.
@@ -193,15 +210,20 @@ class SettingsTab(QWidget):
         self.dictionary_panel.reimport_dict_requested.connect(self._dict_import_flow.reimport_dict)
         self.dictionary_panel.reimport_all_requested.connect(self._dict_import_flow.reimport_all)
         self.dictionary_panel.rescan_requested.connect(self._dict_import_flow.restore_unlisted)
-        # Persist immediately after a destructive remove so an orphan dict_id
-        # doesn't reappear in gui_config.json on next launch (Issue #30). Use a
-        # NARROW persist of just the chain — NOT the full Save pipeline (T-08):
-        # _on_save_clicked has unrelated early-return aborts (bad dicts_root,
-        # missing cookies file, invalid regex, pitch/freq import failure), any
-        # of which would skip persisting the removal and leave the deleted
-        # dict_id orphaned — the exact Issue #30 bug this wiring prevents — while
-        # its success path silently commits every panel's unsaved edits.
-        self.dictionary_panel.dictionary_removed.connect(
+        # Persist chain immediately after reorder/toggle or destructive remove.
+        # Use a NARROW persist of just the chain — NOT the full Save pipeline
+        # (T-08): _on_save_clicked has unrelated early-return aborts (bad
+        # dicts_root, missing cookies file, invalid regex, pitch/freq import
+        # failure), any of which would skip persisting a removal and leave the
+        # deleted dict_id orphaned — the exact Issue #30 bug this wiring
+        # prevents — while its success path silently commits every panel's
+        # unsaved edits.
+        # Removal also emits chain_changed (dictionary_settings_panel.py:498,
+        # before dictionary_removed at 499), so this single wiring covers it;
+        # wiring dictionary_removed too would persist the same chain twice.
+        # dictionary_removed stays unconnected until a consumer needs the
+        # removal-specific notification (OVH-032).
+        self.dictionary_panel.chain_changed.connect(
             lambda: self._persist_chain_change(self.dictionary_panel.get_chain())
         )
 
@@ -673,10 +695,27 @@ class SettingsTab(QWidget):
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration from external source.
 
+        Skips reloading the panel widgets when the incoming config differs from
+        the current one ONLY in externally-managed fields (theme, font scale,
+        first-run flags, update-banner fields — see ``_EXTERNAL_ONLY_FIELDS``).
+        This preserves unsaved edits the user has made in the Settings tab when,
+        for example, a theme change arrives via config_refreshed (OVH-007).
+
+        Genuinely panel-relevant changes (e.g. JMdict migration updates
+        dicts_root) still trigger the full reload.
+
         Args:
             config: New configuration to load
         """
+        changed = {
+            f.name for f in dataclasses.fields(config) if getattr(config, f.name) != getattr(self.config, f.name)
+        }
         self.config = config
+        if not changed or changed <= self._EXTERNAL_ONLY_FIELDS:
+            # No panel-relevant field changed: either identical config (no-op
+            # refresh) or every diff is in the externally-managed allowlist.
+            # Skip reload to preserve in-progress widget edits.
+            return
         self._load_config()
 
     def iter_close_workers(self) -> tuple:
