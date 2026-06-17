@@ -82,6 +82,56 @@ class GUIConfigManager:
             raise
 
     @classmethod
+    def _parse_and_migrate(cls, path: Path) -> AnkiMinerConfig:
+        """Parse a config JSON file and run all migration steps.
+
+        Raises:
+            json.JSONDecodeError: If the file contains invalid JSON.
+            TypeError, ValueError: If the parsed data cannot be coerced into
+                AnkiMinerConfig (e.g. wrong types, unexpected structure).
+            OSError: If the file cannot be read.
+        """
+        with path.open("r", encoding="utf-8") as f:
+            config_dict = json.load(f)
+
+        # Convert string paths back to Path objects
+        config_dict = cls._strings_to_paths(config_dict)
+
+        # Migrate old field names
+        config_dict = cls._migrate_field_names(config_dict)
+
+        # Backfill any anki_fields keys that are new since the config was saved
+        config_dict = cls._backfill_anki_fields(config_dict)
+
+        # Migrate pre-preset card-styling boolean → preset id
+        config_dict = cls._migrate_card_style_preset(config_dict)
+
+        # Migrate stale allowed_pos defaults (pre-v2.3.2 missing 代名詞)
+        config_dict = cls._migrate_allowed_pos(config_dict)
+
+        # Migrate legacy dictionary fields → dictionary_chain
+        config_dict = cls._migrate_dictionary_chain(config_dict)
+
+        # Migrate expression_audio_chain JSON dicts → AudioSourceEntry
+        config_dict = cls._migrate_expression_audio_chain(config_dict)
+
+        # Migrate theme key out of QSettings (only when the key is absent
+        # from the loaded dict — i.e. first launch after v2.5 upgrade).
+        config_dict = cls._migrate_theme_from_qsettings(config_dict)
+
+        # Drop keys not in the current dataclass (e.g., removed fields from old
+        # versions). Without this filter, AnkiMinerConfig(**config_dict) raises
+        # TypeError and the except below would silently reset the entire user
+        # config to defaults.
+        valid_keys = {f.name for f in fields(AnkiMinerConfig)}
+        dropped = set(config_dict) - valid_keys
+        if dropped:
+            logger.debug("Dropping unknown config keys: %s", sorted(dropped))
+        config_dict = {k: v for k, v in config_dict.items() if k in valid_keys}
+
+        return AnkiMinerConfig(**config_dict)
+
+    @classmethod
     def load_config(cls) -> AnkiMinerConfig:
         """Load configuration from JSON file.
 
@@ -89,8 +139,8 @@ class GUIConfigManager:
             Loaded configuration, or default configuration if file doesn't exist
 
         Note:
-            If the file exists but is invalid, falls back to default configuration
-            and logs a warning.
+            If the file exists but is invalid, attempts recovery from the .bak
+            file before falling back to default configuration.
         """
         if not cls.CONFIG_FILE.exists():
             default = create_default_config()
@@ -106,55 +156,22 @@ class GUIConfigManager:
             return default
 
         try:
-            with cls.CONFIG_FILE.open("r", encoding="utf-8") as f:
-                config_dict = json.load(f)
-
-            # Convert string paths back to Path objects
-            config_dict = cls._strings_to_paths(config_dict)
-
-            # Migrate old field names
-            config_dict = cls._migrate_field_names(config_dict)
-
-            # Backfill any anki_fields keys that are new since the config was saved
-            config_dict = cls._backfill_anki_fields(config_dict)
-
-            # Migrate pre-preset card-styling boolean → preset id
-            config_dict = cls._migrate_card_style_preset(config_dict)
-
-            # Migrate stale allowed_pos defaults (pre-v2.3.2 missing 代名詞)
-            config_dict = cls._migrate_allowed_pos(config_dict)
-
-            # Migrate legacy dictionary fields → dictionary_chain
-            config_dict = cls._migrate_dictionary_chain(config_dict)
-
-            # Migrate expression_audio_chain JSON dicts → AudioSourceEntry
-            config_dict = cls._migrate_expression_audio_chain(config_dict)
-
-            # Migrate theme key out of QSettings (only when the key is absent
-            # from the loaded dict — i.e. first launch after v2.5 upgrade).
-            config_dict = cls._migrate_theme_from_qsettings(config_dict)
-
-            # Drop keys not in the current dataclass (e.g., removed fields from old
-            # versions). Without this filter, AnkiMinerConfig(**config_dict) raises
-            # TypeError and the except below would silently reset the entire user
-            # config to defaults.
-            valid_keys = {f.name for f in fields(AnkiMinerConfig)}
-            dropped = set(config_dict) - valid_keys
-            if dropped:
-                logger.debug("Dropping unknown config keys: %s", sorted(dropped))
-            config_dict = {k: v for k, v in config_dict.items() if k in valid_keys}
-
-            # Create config from dict
-            return AnkiMinerConfig(**config_dict)
-
+            return cls._parse_and_migrate(cls.CONFIG_FILE)
         except (json.JSONDecodeError, TypeError, ValueError) as e:
-            # If config is invalid, return default
-            logger.warning(f"Invalid config file, using defaults: {e}")
-            return create_default_config()
+            logger.warning("gui_config.json invalid (%s); attempting .bak recovery", e)
         except OSError as e:
             # An unreadable file (permissions, transient I/O error) must not
-            # crash startup — fall back to defaults like the invalid-JSON path.
-            logger.warning(f"Could not read config file, using defaults: {e}")
+            # crash startup — try .bak before falling back to defaults.
+            logger.warning("gui_config.json unreadable (%s); attempting .bak recovery", e)
+
+        # One .bak attempt — no loop.
+        bak_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".bak")
+        try:
+            config = cls._parse_and_migrate(bak_path)
+            logger.warning("gui_config.json corrupt; recovered from .bak")
+            return config
+        except (json.JSONDecodeError, TypeError, ValueError, OSError) as bak_err:
+            logger.warning("gui_config.json.bak also unusable (%s); using defaults", bak_err)
             return create_default_config()
 
     # Pre-v2.3.2 default for allowed_pos (lacked 代名詞). Used to detect untouched
