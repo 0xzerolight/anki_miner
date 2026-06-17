@@ -877,6 +877,14 @@ class EpisodeProcessor:
         # (the 2e0cc13 perf win).
         self.media_extractor.invalidate_audio_stream_cache(video_file)
 
+        # Reset the partial-IDs accumulator before this episode's run so that
+        # if the episode fails mid-batch the except handlers harvest ONLY IDs
+        # created during THIS run, not any stale IDs left over from a prior
+        # episode on the same processor instance (OVH-008). create_cards_batch
+        # resets it again at its own start — this guard is belt-and-suspenders
+        # for the case where the failure happens before phase 5 even runs.
+        self.anki_service.last_created_note_ids = []
+
         # Bridge the caller's cancel_event into this run's cancellation
         # checkpoints for the duration of this call only: the phase
         # checkpoints below and the media extractor's cancelled_check consult
@@ -971,13 +979,33 @@ class EpisodeProcessor:
 
         except AnkiMinerException as e:
             ctx.errors.append(str(e))
+            partial_ids = list(self.anki_service.last_created_note_ids)
+            if partial_ids:
+                ctx.errors.append(
+                    f"Run failed after creating {len(partial_ids)} card(s); " f"they remain in Anki and can be undone."
+                )
             self.presenter.show_error(f"Error: {e}")
-            return ctx.build_result(total_words_found=0, new_words_found=0)
+            return ctx.build_result(
+                total_words_found=0,
+                new_words_found=0,
+                cards_created=len(partial_ids),
+                card_ids=partial_ids,
+            )
         except Exception as e:
             logger.exception("EpisodeProcessor unhandled exception")
             ctx.errors.append(f"Unexpected error: {e}")
+            partial_ids = list(self.anki_service.last_created_note_ids)
+            if partial_ids:
+                ctx.errors.append(
+                    f"Run failed after creating {len(partial_ids)} card(s); " f"they remain in Anki and can be undone."
+                )
             self.presenter.show_error(f"Unexpected error: {e}")
-            return ctx.build_result(total_words_found=0, new_words_found=0)
+            return ctx.build_result(
+                total_words_found=0,
+                new_words_found=0,
+                cards_created=len(partial_ids),
+                card_ids=partial_ids,
+            )
         finally:
             if cancel_event is not None:
                 self._external_cancel = None
