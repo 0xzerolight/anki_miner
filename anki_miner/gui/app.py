@@ -140,8 +140,15 @@ def main():
 
     # Attach the rotating file handler before anything else runs so that
     # bootstrap errors (dict scan, MeCab init, AnkiConnect probe) are captured.
-    # Uses the default path; the config is not loaded yet.
-    _configure_logging(ANKI_MINER_HOME / "anki_miner.log")
+    # Load (or fall back to default) config now — GUIConfigManager has no Qt
+    # dependency and can be called before QApplication — so we honour
+    # config.log_path rather than the hardcoded default.
+    try:
+        _early_config = GUIConfigManager.load_config()
+        _log_path = _early_config.log_path
+    except Exception:
+        _log_path = ANKI_MINER_HOME / "anki_miner.log"
+    _configure_logging(_log_path)
 
     # Enable high DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)

@@ -295,3 +295,178 @@ class TestWorkerExceptionLogging:
             )
 
         assert any(r.exc_info is not None for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# OVH-041 — validation_service generic except blocks emit logger.exception
+# ---------------------------------------------------------------------------
+
+
+class TestValidationServiceExceptionLogging:
+    """Generic except Exception blocks in ValidationService emit traceback via logger."""
+
+    def _make_service(self):
+        from anki_miner.config import AnkiMinerConfig
+        from anki_miner.services.validation_service import ValidationService
+
+        return ValidationService(AnkiMinerConfig())
+
+    def test_check_ankiconnect_unexpected_exception_logs_traceback(self, caplog):
+        """_check_ankiconnect generic except logs exc_info."""
+        from unittest.mock import patch
+
+        svc = self._make_service()
+        with (
+            patch(
+                "anki_miner.services.validation_service.post_action",
+                side_effect=RuntimeError("boom"),
+            ),
+            caplog.at_level(logging.ERROR, logger="anki_miner.services.validation_service"),
+        ):
+            ok, msg = svc._check_ankiconnect()
+
+        assert not ok
+        assert "Unexpected error" in msg
+        assert any(r.exc_info is not None for r in caplog.records)
+
+    def test_check_tool_unexpected_exception_logs_traceback(self, caplog):
+        """_check_tool (ffmpeg/ffprobe) generic except logs exc_info."""
+        from unittest.mock import patch
+
+        svc = self._make_service()
+        with (
+            patch(
+                "anki_miner.services.validation_service.subprocess.run",
+                side_effect=OSError("disk error"),
+            ),
+            caplog.at_level(logging.ERROR, logger="anki_miner.services.validation_service"),
+        ):
+            ok, msg = svc._check_tool("ffmpeg", "ffmpeg")
+
+        assert not ok
+        assert any(r.exc_info is not None for r in caplog.records)
+
+    def test_check_deck_exists_unexpected_exception_logs_traceback(self, caplog):
+        """_check_deck_exists generic except logs exc_info."""
+        from unittest.mock import patch
+
+        svc = self._make_service()
+        with (
+            patch(
+                "anki_miner.services.validation_service.post_action",
+                side_effect=RuntimeError("unexpected"),
+            ),
+            caplog.at_level(logging.ERROR, logger="anki_miner.services.validation_service"),
+        ):
+            ok, msg = svc._check_deck_exists()
+
+        assert not ok
+        assert any(r.exc_info is not None for r in caplog.records)
+
+    def test_check_note_type_exists_unexpected_exception_logs_traceback(self, caplog):
+        """_check_note_type_exists generic except logs exc_info."""
+        from unittest.mock import patch
+
+        svc = self._make_service()
+        with (
+            patch(
+                "anki_miner.services.validation_service.post_action",
+                side_effect=RuntimeError("unexpected"),
+            ),
+            caplog.at_level(logging.ERROR, logger="anki_miner.services.validation_service"),
+        ):
+            ok, msg = svc._check_note_type_exists()
+
+        assert not ok
+        assert any(r.exc_info is not None for r in caplog.records)
+
+    def test_check_field_names_exist_unexpected_exception_logs_traceback(self, caplog):
+        """_check_field_names_exist generic except logs exc_info."""
+        from unittest.mock import patch
+
+        svc = self._make_service()
+        with (
+            patch(
+                "anki_miner.services.validation_service.post_action",
+                side_effect=RuntimeError("unexpected"),
+            ),
+            caplog.at_level(logging.ERROR, logger="anki_miner.services.validation_service"),
+        ):
+            ok, msg = svc._check_field_names_exist()
+
+        assert not ok
+        assert any(r.exc_info is not None for r in caplog.records)
+
+    def test_validate_setup_temp_folder_unexpected_exception_logs_traceback(self, caplog):
+        """validate_setup temp-folder generic except logs exc_info (never raises)."""
+        from unittest.mock import patch
+
+        svc = self._make_service()
+        with (
+            patch(
+                "anki_miner.services.validation_service.ensure_directory",
+                side_effect=PermissionError("no write"),
+            ),
+            caplog.at_level(logging.ERROR, logger="anki_miner.services.validation_service"),
+        ):
+            result = svc.validate_setup()
+
+        # Never-raises contract: returns a ValidationResult, not an exception
+        assert result is not None
+        assert any(r.exc_info is not None for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# OVH-010 tail — main() uses config.log_path
+# ---------------------------------------------------------------------------
+
+
+class TestMainUsesConfigLogPath:
+    """main() passes config.log_path (not the hardcoded default) to _configure_logging."""
+
+    def test_main_passes_config_log_path_to_configure_logging(self, tmp_path):
+        """_configure_logging is called with the path from GUIConfigManager.load_config()."""
+        from unittest.mock import MagicMock, patch
+
+        custom_log = tmp_path / "custom" / "app.log"
+
+        mock_config = MagicMock()
+        mock_config.log_path = custom_log
+
+        captured: list[Path] = []
+
+        def fake_configure_logging(path: Path) -> None:
+            captured.append(path)
+
+        with (
+            patch(
+                "anki_miner.gui.app.GUIConfigManager.load_config",
+                return_value=mock_config,
+            ),
+            patch("anki_miner.gui.app._configure_logging", side_effect=fake_configure_logging),
+            patch("anki_miner.gui.app.QApplication"),
+            patch("anki_miner.gui.app.MainWindow"),
+            patch("anki_miner.gui.app.GUIPresenter"),
+            patch("anki_miner.gui.app.GUIProgressCallback"),
+            patch("anki_miner.gui.app.StatsService"),
+            patch("anki_miner.gui.app.Theme"),
+            patch("anki_miner.gui.app.SingleEpisodeTab"),
+            patch("anki_miner.gui.app.BatchProcessingTab"),
+            patch("anki_miner.gui.app.DeckBuilderTab"),
+            patch("anki_miner.gui.app.YouTubeTab"),
+            patch("anki_miner.gui.app.AudiobookTab"),
+            patch("anki_miner.gui.app.AnalyticsTab"),
+            patch("anki_miner.gui.app.SettingsTab"),
+            patch("anki_miner.gui.app.create_youtube_fetcher"),
+            patch("anki_miner.gui.app._connect_settings_validation"),
+            patch("sys.exit"),
+        ):
+            try:
+                from anki_miner.gui import app as app_module
+
+                app_module.main()
+            except Exception:
+                pass  # We only care that _configure_logging was called
+
+        assert len(captured) >= 1, "_configure_logging was never called"
+        assert captured[0] == custom_log, f"Expected _configure_logging({custom_log!r}), got {captured[0]!r}"

@@ -243,6 +243,13 @@ class MainWindow(QMainWindow):
         assert check_updates_action is not None
         check_updates_action.triggered.connect(self._check_for_updates)
 
+        help_menu.addSeparator()
+
+        open_log_action = help_menu.addAction("Open Log Folder")
+        assert open_log_action is not None
+        open_log_action.setToolTip("Open the folder containing anki_miner.log in your file manager")
+        open_log_action.triggered.connect(self._open_log_folder)
+
         # Top-right corner of the menu bar holds a small button bar. A QMenuBar
         # allows only one corner widget per corner, so both buttons live inside
         # a container QWidget laid out horizontally.
@@ -356,6 +363,15 @@ class MainWindow(QMainWindow):
         from PyQt6.QtGui import QDesktopServices
 
         QDesktopServices.openUrl(QUrl("https://github.com/0xzerolight/anki_miner"))
+
+    def _open_log_folder(self) -> None:
+        """Open the log folder in the system file manager (Help → Open Log Folder)."""
+        from PyQt6.QtCore import QUrl
+        from PyQt6.QtGui import QDesktopServices
+
+        log_folder = self.config.log_path.parent
+        log_folder.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_folder)))
 
     def _create_desktop_shortcut(self) -> None:
         """Create a desktop shortcut via ShortcutService and report the result."""
