@@ -283,3 +283,70 @@ class TestMilestones:
     def test_milestones_returns_empty_when_not_initialized(self, tmp_path):
         service = StatsService(tmp_path / "stats.db")
         assert service.get_milestones() == []
+
+
+class TestBusyTimeout:
+    """PRAGMA busy_timeout is issued on every connection (OVH-023/038)."""
+
+    def test_busy_timeout_pragma_issued_on_connect(self, tmp_path):
+        """_connect must execute ``PRAGMA busy_timeout`` on the raw connection
+        so brief reader/writer contention waits instead of raising immediately.
+
+        We patch ``sqlite3.connect`` to return a MagicMock so we can assert
+        that ``.execute`` was called with the PRAGMA before any other SQL.
+        The MagicMock replaces the context-manager behaviour of the connection
+        (``__enter__``/``__exit__``).
+        """
+        import sqlite3
+        from unittest.mock import MagicMock, patch
+
+        service = StatsService(tmp_path / "stats.db")
+        service.load()
+
+        mock_conn = MagicMock(spec=sqlite3.Connection)
+        # Make `with conn:` work (the contextmanager uses `with conn:` internally)
+        mock_conn.__enter__ = lambda self: self
+        mock_conn.__exit__ = MagicMock(return_value=False)
+        # execute("SELECT ...") inside get_overall_stats needs a fetchable cursor
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {
+            "total_sessions": 0,
+            "total_cards": 0,
+            "total_words": 0,
+            "total_unknown": 0,
+            "total_time": 0.0,
+            "series_count": 0,
+        }
+        mock_conn.execute.return_value = mock_cursor
+        # row_factory assignment must not raise
+        type(mock_conn).row_factory = MagicMock()
+
+        with patch("anki_miner.services.stats_service.sqlite3.connect", return_value=mock_conn):
+            service.get_overall_stats()
+
+        # The very first execute call on the connection must be the PRAGMA.
+        all_calls = mock_conn.execute.call_args_list
+        first_sql = all_calls[0].args[0].strip() if all_calls else ""
+        assert "PRAGMA busy_timeout" in first_sql, (
+            f"Expected PRAGMA busy_timeout as the first execute call; got: {first_sql!r}. "
+            f"All calls: {[c.args[0].strip() for c in all_calls]}"
+        )
+
+
+class TestRecordDifficultyRaises:
+    """record_difficulty propagates OperationalError so the caller can guard it (OVH-023/038)."""
+
+    def test_locked_db_raises_operational_error(self, tmp_path):
+        """record_difficulty must propagate sqlite3.OperationalError — the episode_processor
+        call-site is the guard; stats_service itself stays a simple wrapper."""
+        import sqlite3
+        from unittest.mock import patch
+
+        service = StatsService(tmp_path / "stats.db")
+        service.load()
+
+        with patch.object(service, "_connect", side_effect=sqlite3.OperationalError("database is locked")):
+            import pytest as _pytest
+
+            with _pytest.raises(sqlite3.OperationalError):
+                service.record_difficulty("Show", "ep01", 100, 20, 80)

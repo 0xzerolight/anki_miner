@@ -573,14 +573,26 @@ class EpisodeProcessor:
         # NOT the post-filter mineable count (unknown_words). difficulty_score measures
         # how hard the episode is to comprehend; i+1/frequency filters can collapse
         # unknown_words to a handful, making a hard episode appear near-zero difficulty.
+        #
+        # A locked stats.db (Anki or a parallel run) raises OperationalError here.
+        # Do NOT let it bubble into process_episode's generic except — that would
+        # report cards_created=0 with no note IDs, turning a successful run into an
+        # apparent failure. Dropping one difficulty row is safe; warn and continue.
         if self.stats_service and self.stats_service.is_available():
-            self.stats_service.record_difficulty(
-                series_name=ctx.series_name,
-                episode_name=ctx.episode_name,
-                total_words=len(all_words),
-                unknown_words=len(all_unknown_lemmas),
-                unique_words=len(all_words),
-            )
+            try:
+                self.stats_service.record_difficulty(
+                    series_name=ctx.series_name,
+                    episode_name=ctx.episode_name,
+                    total_words=len(all_words),
+                    unknown_words=len(all_unknown_lemmas),
+                    unique_words=len(all_words),
+                )
+            except sqlite3.OperationalError as e:
+                logger.warning(
+                    "Could not record difficulty for %s in stats.db (%s); " "the run will continue.",
+                    ctx.episode_name,
+                    e,
+                )
 
         ctx.new_words_found = len(unknown_words)
         return unknown_words

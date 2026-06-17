@@ -80,6 +80,10 @@ class StatsService:
     def _connect(self):
         conn = sqlite3.connect(str(self._db_path))
         conn.row_factory = sqlite3.Row
+        # Wait up to 5 s before raising OperationalError on a busy DB so brief
+        # reader/writer contention (Anki reading stats.db, parallel run) retries
+        # instead of failing immediately. Keep the existing journal mode as-is.
+        conn.execute("PRAGMA busy_timeout = 5000")
         try:
             with conn:  # commit on success, rollback on exception
                 yield conn
