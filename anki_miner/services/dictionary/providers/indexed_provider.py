@@ -84,7 +84,16 @@ class IndexedDictProvider:
     def lookup(self, word: str) -> str | None:
         if self._conn is None:
             return None
-        return self._render(storage_lookup(self._conn, word))
+        try:
+            return self._render(storage_lookup(self._conn, word))
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Dictionary '%s' (%s) raised DatabaseError during lookup; treating as miss: %s",
+                self.dict_id,
+                self._db_path,
+                e,
+            )
+            return None
 
     def lookup_many(self, words: list[str]) -> dict[str, str | None]:
         """Batch lookup. Runs one IN-clause query per dictionary (chunked),
@@ -92,7 +101,16 @@ class IndexedDictProvider:
         :meth:`lookup`, so single and batch results are byte-identical."""
         if self._conn is None:
             return dict.fromkeys(words)
-        rows_by_word = storage_lookup_many(self._conn, words)
+        try:
+            rows_by_word = storage_lookup_many(self._conn, words)
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Dictionary '%s' (%s) raised DatabaseError during lookup_many; treating as all-miss: %s",
+                self.dict_id,
+                self._db_path,
+                e,
+            )
+            return dict.fromkeys(words)
         # storage_lookup_many keys by unique requested words; re-expand to every
         # requested word (preserving duplicates) for caller convenience.
         return {w: self._render(rows_by_word.get(w, [])) for w in words}

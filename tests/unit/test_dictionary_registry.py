@@ -3,6 +3,7 @@
 import logging
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
@@ -283,3 +284,43 @@ class TestDictionaryRegistry:
         result = registry.unlisted(config)
 
         assert result == []
+
+
+# ---------------------------------------------------------------------------
+# OVH-048: registry.load() OSError guard
+# ---------------------------------------------------------------------------
+
+
+class TestDictionaryRegistryOSErrorGuard:
+    """An OSError during dicts_root scan must yield an empty registry (no raise)."""
+
+    def test_iterdir_oserror_yields_empty_registry(self, tmp_path: Path, caplog):
+        """When iterdir() raises OSError, load() returns without raising and
+        the registry stays empty."""
+        _seed_dict(tmp_path, "good-dict", "Good Dict")
+
+        caplog.set_level(logging.WARNING)
+        registry = DictionaryRegistry(tmp_path)
+        with patch.object(Path, "iterdir", side_effect=OSError("permission denied")):
+            registry.load()
+
+        # Registry must be empty — no entries loaded.
+        assert registry.get("good-dict") is None
+
+    def test_iterdir_oserror_logs_warning(self, tmp_path: Path, caplog):
+        """An OSError during scan emits a warning containing the root path."""
+        caplog.set_level(logging.WARNING)
+        registry = DictionaryRegistry(tmp_path)
+        with patch.object(Path, "iterdir", side_effect=OSError("stale NFS")):
+            registry.load()
+
+        assert str(tmp_path) in caplog.text
+
+    def test_is_dir_oserror_yields_empty_registry(self, tmp_path: Path, caplog):
+        """When is_dir() raises OSError, load() returns without raising."""
+        caplog.set_level(logging.WARNING)
+        registry = DictionaryRegistry(tmp_path)
+        with patch.object(Path, "is_dir", side_effect=OSError("permission denied")):
+            registry.load()
+
+        assert registry.get("anything") is None

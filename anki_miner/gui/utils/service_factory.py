@@ -83,7 +83,15 @@ def build_definition_service(
         The constructed DefinitionService (loaded iff an indexed entry is on).
     """
     registry = DictionaryRegistry(config.dicts_root)
-    registry.load()
+    try:
+        registry.load()
+    except OSError as e:
+        # OSError here means the registry guard inside load() didn't catch it
+        # (shouldn't happen after OVH-048 fix, but belt-and-suspenders).
+        msg = f"Could not scan dictionaries folder: {e}"
+        logger.warning(msg)
+        if load_result is not None:
+            load_result.warnings.append(msg)
     providers = registry.build_provider_chain(config)
     definition_service = DefinitionService(config, providers=providers)
 

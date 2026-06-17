@@ -35,9 +35,18 @@ class DictionaryRegistry:
 
     def load(self) -> None:
         self._dicts.clear()
-        if not self._root.is_dir():
+        try:
+            if not self._root.is_dir():
+                return
+            children = sorted(self._root.iterdir())
+        except OSError as e:
+            logger.warning(
+                "Could not scan dictionaries folder '%s': %s — no offline dicts will be loaded",
+                self._root,
+                e,
+            )
             return
-        for child in sorted(self._root.iterdir()):
+        for child in children:
             if not child.is_dir():
                 continue
             db = child / "index.sqlite"
