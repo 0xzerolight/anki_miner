@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 
 from PyQt6.QtCore import QLocale, Qt, QTimer, QUrl
-from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtMultimedia import QAudioOutput, QMediaMetaData, QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
@@ -77,11 +76,6 @@ class SubtitlePlayerWidget(QWidget):
         self._av1_notice_label.setWordWrap(True)
         self._av1_notice_label.setVisible(False)
         layout.addWidget(self._av1_notice_label)
-
-        self._av1_open_button = QPushButton("Open in external player")
-        self._av1_open_button.setVisible(False)
-        self._av1_open_button.clicked.connect(self._open_in_external_player)
-        layout.addWidget(self._av1_open_button)
 
         # Connect the video-sink signal once; the sink belongs to the QVideoWidget
         # and persists across player instances, so we wire it here rather than per-source.
@@ -170,7 +164,6 @@ class SubtitlePlayerWidget(QWidget):
         self._got_video_frame = False
         self._av1_watchdog.stop()
         self._av1_notice_label.setVisible(False)
-        self._av1_open_button.setVisible(False)
         self.video_widget.setVisible(True)
 
         # Probe the video codec so we know whether to arm the watchdog on LoadedMedia.
@@ -329,21 +322,15 @@ class SubtitlePlayerWidget(QWidget):
 
         If ``_got_video_frame`` is still False when this fires, the AV1 video
         could not be decoded (no hardware decoder available on this machine).
-        The player is stopped and the fallback notice + open-externally button
-        are shown in place of the video widget.
+        The player is stopped and the fallback notice is shown in place of the
+        video widget.
         """
         if self._is_av1 and not self._got_video_frame:
-            logger.info("AV1 watchdog fired — no decoded frame within 2 s; " "switching to external-player fallback")
+            logger.info("AV1 watchdog fired — no decoded frame within 2 s; showing AV1 fallback notice")
             if self.player is not None:
                 self.player.stop()
             self.video_widget.setVisible(False)
             self._av1_notice_label.setVisible(True)
-            self._av1_open_button.setVisible(True)
-
-    def _open_in_external_player(self) -> None:
-        """Open the current video source in the OS default media player."""
-        if self._video_path is not None:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._video_path)))
 
     def _on_position_changed(self, position: int) -> None:
         """Handle media position change.
