@@ -333,6 +333,7 @@ class PlaylistAddController:
         """Drop the probe handle once its QThread emits finished."""
         with contextlib.suppress(ValueError):
             self._probe_workers.remove(probe)
+        probe.deleteLater()
 
     # ------------------------------------------------------------------
     # Playlist resolve + expansion (Issue #70)
