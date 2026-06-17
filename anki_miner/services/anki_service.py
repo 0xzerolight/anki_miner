@@ -58,10 +58,16 @@ class AnkiService:
         """
         self.config = config
         self.last_created_note_ids: list[int] = []
-        # Number of notes skipped as duplicates during the last
-        # create_cards_batch call (only counts the per-note recovery path; the
-        # common case where AnkiConnect returns a null slot is not attributable
-        # to a specific cause). Read by the pipeline to report skips.
+        # Number of notes not created during the last create_cards_batch call.
+        # Combines both sources:
+        #   - null slots in the addNotes result array (common path: most likely a
+        #     duplicate but could be another silent rejection — not attributable
+        #     to a specific cause, so we word it as "not created" to the user)
+        #   - per-note recovery path skips (top-level duplicate error fallback)
+        # Prior behaviour counted only the recovery-path skips; null-slot gaps
+        # were silent. An unexplained created-vs-submitted gap on every
+        # duplicate-heavy re-run is worse than imperfect attribution, so we now
+        # surface all of them. Read by the pipeline to report skips.
         self.last_skipped_duplicates: int = 0
         # Number of media files (screenshots/audio) that could not be stored in
         # Anki during the last create_cards_batch call. Read by the pipeline to
@@ -445,6 +451,7 @@ class AnkiService:
                 # to abort the entire run with zero cards. Recover from that case by
                 # retrying per-note and skipping only the duplicates; any other
                 # error still propagates to the pipeline boundary.
+                used_per_note_recovery = False
                 try:
                     note_ids = (
                         post_action(
@@ -464,9 +471,24 @@ class AnkiService:
                     )
                     note_ids, batch_skipped = self._add_notes_individually(notes)
                     skipped_duplicates += batch_skipped
+                    used_per_note_recovery = True
 
-                # Count successful creations (non-null IDs)
+                # Count successful creations (non-null IDs).  Null slots in the
+                # addNotes result are AnkiConnect's common way to signal a
+                # silent rejection — most often a duplicate, but the protocol
+                # gives no per-slot reason code, so we attribute them as
+                # "not created" rather than definitively "duplicate".
+                # Skip null-slot counting when the per-note recovery path ran —
+                # that path already attributed each None slot explicitly.
                 batch_created = sum(1 for nid in note_ids if nid is not None)
+                if not used_per_note_recovery:
+                    null_slots = len(notes) - batch_created
+                    skipped_duplicates += null_slots
+                    if null_slots > 0:
+                        logger.info(
+                            "%d note(s) were not created (likely already in your collection).",
+                            null_slots,
+                        )
                 total_created += batch_created
                 all_created_ids.extend(nid for nid in note_ids if nid is not None)
 
@@ -499,7 +521,8 @@ class AnkiService:
             progress_callback.on_complete()
         if skipped_duplicates > 0:
             logger.info(
-                "Skipped %d note(s) Anki flagged as duplicates (existing card or same-batch).", skipped_duplicates
+                "%d note(s) were not created (likely already in your collection).",
+                skipped_duplicates,
             )
         if self.config.bold_target_in_sentence and word_data_list:
             logger.info(
