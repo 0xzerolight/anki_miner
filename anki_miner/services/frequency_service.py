@@ -9,22 +9,70 @@ from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
 
 logger = logging.getLogger(__name__)
 
+# Header first-column values that unambiguously declare (word, rank) column order.
+# The Yomitan freq importer writes ``['term', 'rank']`` as its header; we recognise
+# both ``term`` and ``word`` so user-exported variants are also covered.
+_WORD_FIRST_HEADER_COLS = {"term", "word"}
 
-def _extract_word_rank(row: list[str]) -> tuple[str, int | None]:
+
+def _is_word_first_header(row: list[str]) -> bool:
+    """Return True when the header's first column names the word column.
+
+    Detects the column-order contract written by the Yomitan freq importer
+    (``['term', 'rank']``) so that FrequencyService can skip the ambiguous
+    int-first auto-detect for those files.
+    """
+    return bool(row) and row[0].strip().lower() in _WORD_FIRST_HEADER_COLS
+
+
+def _extract_word_rank(row: list[str], *, word_first: bool = False) -> tuple[str, int | None]:
     """Extract a word and numeric rank from a row with any number of columns.
 
-    First tries the standard 2-column orderings ``(rank, word)`` then
-    ``(word, rank)`` using only columns 0 and 1. For rows with more than
-    two columns (e.g. ``term, reading, frequency, …``) falls back to a
-    column-position-agnostic scan: the first non-numeric cell becomes the
-    word and the first numeric cell becomes the rank.
+    When *word_first* is True the caller has already determined that col-0 is
+    the word (e.g. because the file carries a recognised header whose first
+    column is ``term`` or ``word``).  In that case the ambiguous int-first
+    auto-detect path is skipped, which prevents fullwidth / ASCII digit-only
+    terms like ``'１０'`` or ``'2020'`` from being misread as rank values in
+    the standard 2-column case.
+
+    For 2-column ``word_first`` files: ``(col-0, int(col-1))``.
+    For 3+-column ``word_first`` files: col-0 is fixed as the word; the first
+    numeric cell among the remaining columns becomes the rank.  This supports
+    multi-column exports like ``term, reading, frequency, …`` where the word is
+    always in col-0 but the rank is not in col-1.
+
+    Without *word_first*, the legacy auto-detect logic is preserved:
+    ``(rank, word)`` is tried first, then ``(word, rank)``, then a
+    column-position-agnostic scan for files with 3+ columns.
 
     Args:
         row: CSV/TSV row as list of strings.
+        word_first: When True, treat col-0 as the word and skip int-first detect.
 
     Returns:
         Tuple of (word, rank) or ("", None) if no valid pair found.
     """
+    if word_first:
+        word = row[0].strip() if row else ""
+        if not word:
+            return "", None
+        if len(row) == 2:
+            # Standard importer output: (word, rank) — col-1 must be numeric.
+            try:
+                return word, int(row[1].strip())
+            except ValueError:
+                return "", None
+        # Multi-column with word-first header: scan cols 1+ for the first int.
+        for cell in row[1:]:
+            val = cell.strip()
+            if not val:
+                continue
+            try:
+                return word, int(val)
+            except ValueError:
+                continue
+        return "", None
+
     # Try standard 2-column formats first: (rank, word) then (word, rank)
     try:
         rank = int(row[0].strip())
@@ -114,15 +162,19 @@ class FrequencyService:
 
                 reader = csv.reader(f, delimiter=delimiter)
                 first_row = True
+                word_first = False
                 for row in reader:
                     if len(row) < 2:
                         continue
                     if first_row:
                         first_row = False
                         if is_header_row(row):
+                            # Detect importer-written headers that declare the word
+                            # column unambiguously so we can skip int-first auto-detect.
+                            word_first = _is_word_first_header(row)
                             continue
 
-                    word, rank = _extract_word_rank(row)
+                    word, rank = _extract_word_rank(row, word_first=word_first)
                     if word and rank is not None and word not in data:
                         data[word] = rank
 

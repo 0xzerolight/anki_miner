@@ -545,6 +545,117 @@ class TestOptionalServices:
         assert extra_fields["frequency"] == "500"
 
 
+class TestPitchLemmaReading:
+    """Regression tests for OVH-025: pitch lookup should use lemma_reading, not surface reading.
+
+    When a word's surface form has a different reading from its lemma (e.g. a
+    conjugated verb), the pitch mora-count / category must be derived from the
+    lemma reading, not the surface reading.
+    """
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def test_lemma_reading_passed_to_pitch_service(self, test_config, mock_services, tmp_path):
+        """When lemma_reading is set, pitch lookup receives lemma_reading, not surface reading."""
+        # Construct a word where surface reading differs from lemma reading.
+        # e.g. surface "食べた" (surface reading "タベタ") but lemma "食べる"
+        # with lemma_reading "タベル".
+        word = TokenizedWord(
+            surface="食べた",
+            lemma="食べる",
+            reading="タベタ",  # surface kana — must NOT reach pitch service
+            sentence="食べたのテスト",
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+            pos="動詞",
+            lemma_reading="タベル",  # lemma kana — must be passed to pitch service
+        )
+
+        mock_pitch = MagicMock()
+        mock_pitch.is_available.return_value = True
+        mock_pitch.lookup_batch_detailed.return_value = [("0", "平板")]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            pitch_accent_service=mock_pitch,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Verify the pitch service received the lemma reading, not the surface reading.
+        call_args = mock_pitch.lookup_batch_detailed.call_args
+        words_arg = call_args[0][0]  # First positional arg is the list of tuples.
+        assert len(words_arg) == 1
+        lemma, reading, pos = words_arg[0]
+        assert lemma == "食べる"
+        assert reading == "タベル", (
+            f"Expected lemma_reading 'タベル', got '{reading}' — " "surface reading must not reach pitch lookup"
+        )
+        assert pos == "動詞"
+
+    def test_falls_back_to_surface_reading_when_lemma_reading_empty(self, test_config, mock_services, tmp_path):
+        """When lemma_reading is empty, surface reading is used as fallback (common case)."""
+        word = TokenizedWord(
+            surface="食べる",
+            lemma="食べる",
+            reading="タベル",  # surface reading
+            sentence="食べるのテスト",
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+            pos="動詞",
+            lemma_reading="",  # empty — common case, should fall back to reading
+        )
+
+        mock_pitch = MagicMock()
+        mock_pitch.is_available.return_value = True
+        mock_pitch.lookup_batch_detailed.return_value = [("0", "平板")]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            pitch_accent_service=mock_pitch,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        call_args = mock_pitch.lookup_batch_detailed.call_args
+        words_arg = call_args[0][0]
+        lemma, reading, pos = words_arg[0]
+        assert lemma == "食べる"
+        assert reading == "タベル", f"Expected surface reading 'タベル' as fallback, got '{reading}'"
+
+
 class TestKnownWordDBIntegration:
     """Tests for EpisodeProcessor with known_word_db."""
 
