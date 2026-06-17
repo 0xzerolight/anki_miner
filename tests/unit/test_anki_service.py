@@ -519,12 +519,13 @@ class TestCreateCardsBatch:
     def test_mid_run_batch_failure_persists_earlier_batches(self, test_config, make_tokenized_word):
         """A non-duplicate failure in a later batch must not discard earlier
         batches' results: their note IDs stay recorded (so Undo works) and the
-        vocab cache is invalidated (it is now stale), while the error still
-        propagates to the pipeline boundary."""
+        vocab cache is merged (not wiped) with the batch's mined_forms so the
+        filter stays accurate, while the error still propagates to the pipeline
+        boundary."""
         service = AnkiService(test_config)
         items = self._make_word_data(make_tokenized_word, n=150)  # 2 batches (100 + 50)
 
-        # Prime the vocab cache so we can assert it gets invalidated.
+        # Prime the vocab cache.
         service._existing_vocab_cache = {"既知"}
 
         # Batch 1 succeeds with ids 0..99; batch 2 raises a non-duplicate error.
@@ -542,8 +543,12 @@ class TestCreateCardsBatch:
 
         # Batch-1 cards exist in Anki — their IDs must be recorded for Undo.
         assert service.last_created_note_ids == list(range(100))
-        # The cache reflected the pre-run collection and is now stale.
-        assert service._existing_vocab_cache is None
+        # Cache stays populated (not None) and the batch's mined_form is merged in.
+        # _make_word_data creates words with surface="食べる" (default), so all
+        # items have mined_form="食べる" (pos=None → surface).
+        assert service._existing_vocab_cache is not None
+        assert "食べる" in service._existing_vocab_cache
+        assert "既知" in service._existing_vocab_cache
 
     def test_non_duplicate_error_during_per_note_fallback_propagates(self, test_config, make_tokenized_word):
         """If a non-duplicate error surfaces while recovering per-note, raise it."""
@@ -745,6 +750,121 @@ class TestCreateCardsBatch:
         note = mock_post.call_args[1]["json"]["params"]["notes"][0]
         sentence_field = config.anki_fields["sentence"]
         assert note["fields"][sentence_field] == "A &amp; B"
+
+
+# ---------------------------------------------------------------------------
+# TestVocabCacheMergeOnCreate (OVH-052)
+# ---------------------------------------------------------------------------
+
+
+class TestVocabCacheMergeOnCreate:
+    """create_cards_batch merges new mined_forms into the cache instead of wiping it
+    (OVH-052: incremental merge so episodes 2..N get a cache hit, not a full rescan).
+    """
+
+    def _make_japanese_word_data(self, make_tokenized_word, surface="食べる", n=1):
+        """Helper producing payloads whose mined_form is a Japanese string."""
+        items = []
+        for i in range(n):
+            word = make_tokenized_word(surface=surface, lemma=surface, pos=None)
+            media = MediaData()
+            items.append(CardPayload(word=word, media=media, definition=f"def_{i}"))
+        return items
+
+    def test_cache_populated_and_contains_new_mined_form_after_create(self, test_config, make_tokenized_word):
+        """After get_existing_vocabulary populates the cache and create_cards_batch
+        creates cards, the cache must be POPULATED (not None) and CONTAIN the
+        newly carded mined_form."""
+        service = AnkiService(test_config)
+
+        # Populate the cache via get_existing_vocabulary
+        find_resp = _mock_response(result=[1])
+        notes_resp = _mock_response(result=[{"fields": {"word": {"value": "既知"}}}])
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            vocab = service.get_existing_vocabulary()
+        assert "既知" in vocab
+        assert service._existing_vocab_cache is not None
+
+        # Create a card for 食べる
+        items = self._make_japanese_word_data(make_tokenized_word, surface="食べる")
+        add_resp = _mock_response(result=[100])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=add_resp):
+            created = service.create_cards_batch(items)
+
+        assert created == 1
+        # Cache must still be populated (not wiped) and contain the new word
+        assert service._existing_vocab_cache is not None
+        assert "食べる" in service._existing_vocab_cache
+        assert "既知" in service._existing_vocab_cache
+
+    def test_no_full_rescan_after_create_when_cache_populated(self, test_config, make_tokenized_word):
+        """get_existing_vocabulary called after a create must NOT re-query AnkiConnect
+        (the merge keeps the cache populated so the fast-path is taken)."""
+        service = AnkiService(test_config)
+
+        # Populate the cache
+        find_resp = _mock_response(result=[1])
+        notes_resp = _mock_response(result=[{"fields": {"word": {"value": "既知"}}}])
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            service.get_existing_vocabulary()
+
+        # Create a card
+        items = self._make_japanese_word_data(make_tokenized_word, surface="食べる")
+        add_resp = _mock_response(result=[100])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=add_resp):
+            service.create_cards_batch(items)
+
+        # Second get_existing_vocabulary — no HTTP call should happen (cache hit)
+        with patch("anki_miner.services._ankiconnect.requests.post") as mock_post:
+            vocab = service.get_existing_vocabulary()
+
+        mock_post.assert_not_called()
+        assert "食べる" in vocab
+        assert "既知" in vocab
+
+    def test_cache_stays_none_when_unpopulated_before_create(self, test_config, make_tokenized_word):
+        """When the cache has never been populated (None), a create must leave it
+        None — the next get_existing_vocabulary scans normally."""
+        service = AnkiService(test_config)
+        assert service._existing_vocab_cache is None
+
+        items = self._make_japanese_word_data(make_tokenized_word, surface="食べる")
+        add_resp = _mock_response(result=[100])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=add_resp):
+            service.create_cards_batch(items)
+
+        # Cache must still be None; next call will do a full scan
+        assert service._existing_vocab_cache is None
+
+    def test_delete_notes_still_invalidates_cache(self, test_config, make_tokenized_word):
+        """delete_notes (undo path) must still wipe the cache completely."""
+        service = AnkiService(test_config)
+        service._existing_vocab_cache = {"食べる", "既知"}
+
+        del_resp = _mock_response(result=None)
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=del_resp):
+            service.delete_notes([100])
+
+        assert service._existing_vocab_cache is None
+
+    def test_merged_values_match_get_existing_vocabulary_normalization(self, test_config, make_tokenized_word):
+        """The merged key must be _strip_for_dedup(mined_form) — identical to what
+        get_existing_vocabulary would return for a note whose first field is that
+        mined_form, so dedup semantics are unchanged."""
+        from anki_miner.services.anki_service import _strip_for_dedup
+
+        service = AnkiService(test_config)
+        service._existing_vocab_cache = set()
+
+        # Use a surface with markup-like content that _strip_for_dedup normalizes
+        surface = "食べる"
+        items = self._make_japanese_word_data(make_tokenized_word, surface=surface)
+        add_resp = _mock_response(result=[1])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=add_resp):
+            service.create_cards_batch(items)
+
+        expected_key = _strip_for_dedup(surface)
+        assert expected_key in service._existing_vocab_cache
 
 
 # ---------------------------------------------------------------------------
@@ -2570,13 +2690,19 @@ class TestExistingVocabCache:
         # Should re-query after invalidation
         assert mock_pa2.call_count > 0
 
-    def test_create_cards_batch_invalidates_on_success(self, test_config, make_tokenized_word):
-        """create_cards_batch must invalidate the cache when cards are created."""
+    def test_create_cards_batch_merges_on_success(self, test_config, make_tokenized_word):
+        """create_cards_batch must MERGE (not wipe) the cache when cards are created.
+
+        The cache stays populated and the new mined_form is union-ed in so that
+        subsequent episodes in the same session hit the cache instead of re-scanning
+        the whole collection (OVH-052).
+        """
         service = AnkiService(test_config)
-        # Warm the cache
-        service._existing_vocab_cache = {"食べる"}
+        # Warm the cache with an existing word
+        service._existing_vocab_cache = {"既知"}
         assert service._existing_vocab_cache is not None
 
+        # make_tokenized_word defaults: surface="食べる", pos=None → mined_form="食べる"
         word = make_tokenized_word()
         media = MediaData()
         resp = _mock_response(result=[12345])
@@ -2584,7 +2710,11 @@ class TestExistingVocabCache:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             service.create_cards_batch([CardPayload(word=word, media=media, definition="def")])
 
-        assert service._existing_vocab_cache is None
+        # Cache is still populated (not None) and contains both the pre-existing
+        # word and the newly created one.
+        assert service._existing_vocab_cache is not None
+        assert "既知" in service._existing_vocab_cache
+        assert "食べる" in service._existing_vocab_cache
 
     def test_create_cards_batch_no_invalidation_when_zero_created(self, test_config, make_tokenized_word):
         """Cache must NOT be invalidated when all note IDs come back null (zero created)."""
