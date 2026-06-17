@@ -260,6 +260,14 @@ class TestAddUrlRejection:
         assert len(tab._queue.all_items()) == 1
         assert probe_cls.call_count == 1
 
+    def test_bare_video_id_normalised_to_watch_url(self, tab):
+        """OVH-036: bare id must be normalised to a canonical watch URL so that
+        the item classifies correctly in playlist dedup (classify_youtube_url)."""
+        tab.url_edit.setText("dQw4w9WgXcQ")
+        tab._on_add_clicked()
+        item = tab._queue.all_items()[-1]
+        assert item.url == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
 
 class TestProbeOutcomes:
     """Probe done/error flip the item's status and refresh buttons."""
@@ -1195,6 +1203,43 @@ class TestPlaylistDedupe:
         _resolve_playlist(tab, PLAYLIST_URL, pl)
 
         assert [i.video_id for i in tab._queue.all_items()] == ["vid00000000", "vid00000001"]
+
+    def test_bare_id_single_add_deduped_by_playlist_expansion(self, tab):
+        """OVH-036: a still-PROBING bare-id single add must be recognised by the
+        playlist dedup so the same video isn't fetched twice.
+
+        Before the fix, ``item.url`` was the raw bare id (e.g. ``"dQw4w9WgXcQ"``);
+        ``classify_youtube_url("dQw4w9WgXcQ")`` → host not YouTube → video_id None,
+        so ``existing_ids.discard(None)`` silently dropped it and a playlist
+        containing that id added a duplicate row.  After the fix, bare ids are
+        normalised to ``https://www.youtube.com/watch?v=<id>`` at enqueue time so
+        the item URL always classifies and the dedup fires.
+        """
+        # Add as a bare id — it must land in PROBING state (no probe done yet)
+        # so video_id is None on the item (normal probe-not-complete state).
+        bare_id = "dQw4w9WgXcQ"
+        tab.url_edit.setText(bare_id)
+        tab._on_add_clicked()
+        bare_item = tab._queue.all_items()[-1]
+        # Still probing: video_id not yet populated by a probe result.
+        assert bare_item.video_id is None
+        assert bare_item.status == YouTubeItemStatus.PROBING
+
+        # Expand a playlist that contains the same video id.
+        pl = PlaylistInfo(
+            playlist_id="PLtest",
+            title="P",
+            entries=(_make_playlist_entry(video_id=bare_id),),
+            total_count=None,
+        )
+        tab.url_edit.setText(PLAYLIST_URL)
+        tab._on_add_clicked()
+        _resolve_playlist(tab, PLAYLIST_URL, pl)
+
+        # The bare-id item should survive; the playlist duplicate must be skipped.
+        items = tab._queue.all_items()
+        assert len(items) == 1, "Duplicate playlist entry must have been deduped"
+        assert "Skipped 1 already-queued video(s)." in tab.log_widget.text_edit.toPlainText()
 
     def test_all_duplicates_skips_probe_worker(self, tab):
         pl = _make_playlist_info(n=2)
