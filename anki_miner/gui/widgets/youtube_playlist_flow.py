@@ -225,6 +225,10 @@ class PlaylistAddController:
 
         # "video" and "unknown" both fall through to the single-video probe
         # path — yt-dlp remains the final validator for unrecognised URLs.
+        # Normalise a bare 11-char video id to a canonical watch URL so that
+        # item.url always classifies correctly in playlist dedup (OVH-036).
+        if _BARE_VIDEO_ID_RE.match(url.strip()):
+            url = f"https://www.youtube.com/watch?v={url.strip()}"
         self._add_single_url(url)
 
     def invalidate_pending(self) -> None:
