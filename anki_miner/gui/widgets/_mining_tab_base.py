@@ -352,6 +352,14 @@ class MiningTabBase(QWidget):
         finally:
             self._active_curation_dialog = None
             self._curation_event.set()
+            # Schedule the dialog for deletion so its Qt widget tree (table,
+            # QTextBrowser, embedded SubtitlePlayerWidget + QMediaPlayer) is
+            # freed deterministically rather than accumulating per mining session
+            # until GC — OVH-016 / Issue #55 multimedia teardown.
+            # Guard for the case where dialog construction raised before the
+            # name was bound (NameError would be silently swallowed otherwise).
+            with contextlib.suppress(NameError):
+                dialog.deleteLater()
 
     def shutdown(self) -> None:
         """Cancel any open curation dialog and poison the gate (OVH-003).
