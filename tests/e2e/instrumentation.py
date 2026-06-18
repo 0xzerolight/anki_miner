@@ -88,6 +88,10 @@ import psutil  # type: ignore[import-untyped]
 if TYPE_CHECKING:  # avoid a hard import cycle / Anki dependency at import time
     from tests.e2e.anki_gateway import AnkiGateway
 
+# Import the media-temp basename so the defensive default in capture_snapshot
+# derives from the same single source of truth as build_app_config.
+from tests.e2e.app_config import MEDIA_TEMP_BASENAME as _MEDIA_TEMP_BASENAME
+
 __all__ = [
     "EXPECTED_GROWERS",
     "MONOTONIC_MIN_FRACTION",
@@ -282,8 +286,8 @@ def capture_snapshot(
         test_home: Isolated home dir holding the pipeline's SQLite DBs
             (``known_words.db`` / ``history.db`` / ``stats.db``).
         media_temp_folder: The processor's media-temp folder. Defaults to
-            ``test_home / "media_temp"`` (matching ``app_config.build_app_config``)
-            when omitted.
+            ``test_home / MEDIA_TEMP_BASENAME`` (the shared constant from
+            ``app_config``) when omitted.
         gateway: Optional :class:`AnkiGateway` for the deck count. ``None`` (or an
             unreachable Anki) leaves ``anki_test_deck_count`` as ``None``.
         index: Session ordinal recorded on the snapshot.
@@ -295,7 +299,7 @@ def capture_snapshot(
         Anki degrades the deck count to ``None``.
     """
     test_home = Path(test_home)
-    media_temp = Path(media_temp_folder) if media_temp_folder is not None else test_home / "media_temp"
+    media_temp = Path(media_temp_folder) if media_temp_folder is not None else test_home / _MEDIA_TEMP_BASENAME
 
     widgets, pool_active = _count_qt_state()
     sqlite_rows = {name: _count_sqlite_rows(test_home / name) for name in _SQLITE_DB_NAMES}
