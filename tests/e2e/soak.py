@@ -477,12 +477,19 @@ def _child_cmd(
     out: Path,
     preview: bool,
     bypass_known_words: bool,
+    run_dir: Path | None = None,
 ) -> list[str]:
     """Build the argv list for a ``--one-session`` child process.
 
     Pure (no I/O, no subprocess) so it can be unit-tested in isolation.
     All four parent config overrides (policy, first_n, deck, ankiconnect_url)
     are forwarded so the child does not silently fall back to defaults.
+
+    Args:
+        run_dir: When given, forwarded as ``--run-dir`` so the child writes
+            its artifacts into the PARENT's run dir instead of creating its own
+            timestamped subdir. Co-locates child screenshots with the parent
+            report so ``SessionReport.screenshot`` resolves under the parent dir.
     """
     cmd = [
         sys.executable,
@@ -504,6 +511,8 @@ def _child_cmd(
         "--ankiconnect-url",
         e2e.ankiconnect_url,
     ]
+    if run_dir is not None:
+        cmd.extend(["--run-dir", str(run_dir)])
     if preview:
         cmd.append("--preview")
     if bypass_known_words:
@@ -519,6 +528,7 @@ def _run_child_session(
     preview: bool,
     bypass_known_words: bool,
     child_json: Path,
+    run_dir: RunDir,
 ) -> SessionReport:
     """Spawn one fresh ``--one-session`` subprocess and read back its SessionReport.
 
@@ -529,6 +539,9 @@ def _run_child_session(
 
     A timeout / non-zero exit / unreadable JSON is recorded as ``ok=False`` with a
     stderr tail rather than raising, so a flaky child does not abort the soak.
+
+    ``run_dir`` is the PARENT's run dir: forwarded to the child via ``--run-dir`` so
+    the child writes its screenshot there instead of creating its own timestamped dir.
     """
     cmd = _child_cmd(
         e2e,
@@ -537,6 +550,7 @@ def _run_child_session(
         out=child_json,
         preview=preview,
         bypass_known_words=bypass_known_words,
+        run_dir=run_dir.path,
     )
 
     # ANKI_MINER_KEEP_TEMP is intentionally NOT forced here: temp is cleaned after
@@ -656,6 +670,7 @@ def run_crossprocess_soak(
                     preview=preview,
                     bypass_known_words=bypass_known_words,
                     child_json=child_json,
+                    run_dir=run_dir,
                 )
                 reports.append(report)
                 any_failed = any_failed or not report.ok
@@ -717,6 +732,10 @@ def _main(argv: list[str] | None = None) -> int:
     parser.add_argument("--first-n", type=int, default=0)
     parser.add_argument("--deck", default=None)
     parser.add_argument("--ankiconnect-url", default=None)
+    # When given, the child writes its artifacts into the PARENT's run dir (no
+    # new timestamped subdir is created), co-locating screenshots with the parent
+    # report so SessionReport.screenshot resolves under the parent run_dir.path.
+    parser.add_argument("--run-dir", default=None, type=Path)
     args = parser.parse_args(argv)
 
     test_home = Path(args.home)
@@ -740,7 +759,12 @@ def _main(argv: list[str] | None = None) -> int:
     if args.ankiconnect_url is not None:
         e2e_kwargs["ankiconnect_url"] = args.ankiconnect_url
     e2e = E2EConfig(**e2e_kwargs)
-    run_dir = RunDir(e2e.runs_root, label=f"child-{args.index}")
+    # Use the parent's run dir when given (avoids creating a separate child dir);
+    # fall back to a labelled child subdir for standalone/debugging invocations.
+    if args.run_dir is not None:
+        run_dir = RunDir.adopt(args.run_dir)
+    else:
+        run_dir = RunDir(e2e.runs_root, label=f"child-{args.index}")
     gateway = _maybe_gateway(e2e, preview=args.preview)
 
     report = run_one_session(

@@ -78,6 +78,53 @@ def test_rundir_save_png_from_pixmap(tmp_path: Path, qtbot) -> None:
     assert out.is_file() and out.stat().st_size > 0
 
 
+def test_rundir_adopt_uses_exact_dir_no_subdir(tmp_path: Path) -> None:
+    """RunDir.adopt wraps an existing dir as-is — no new timestamped subdir created."""
+    target = tmp_path / "exact_dir"
+    target.mkdir()
+    run = RunDir.adopt(target)
+    assert run.path == target
+    # No child dirs created under target.
+    assert list(target.iterdir()) == []
+
+
+def test_rundir_adopt_creates_dir_if_absent(tmp_path: Path) -> None:
+    """RunDir.adopt creates the directory (with parents) when it does not exist."""
+    target = tmp_path / "missing" / "nested"
+    run = RunDir.adopt(target)
+    assert run.path == target
+    assert target.is_dir()
+
+
+def test_rundir_adopt_writes_into_given_dir(tmp_path: Path) -> None:
+    """Artifacts written through RunDir.adopt land directly in the given dir."""
+    target = tmp_path / "parent_run"
+    target.mkdir()
+    run = RunDir.adopt(target)
+    p = run.save_json("meta", {"ok": True})
+    assert p.parent == target
+    assert p.name == "01_meta.json"
+
+
+def test_rundir_adopt_step_counter_starts_at_zero(tmp_path: Path) -> None:
+    """RunDir.adopt's step counter starts at 0, unaffected by existing files."""
+    target = tmp_path / "existing"
+    target.mkdir()
+    # Pre-populate with a file that looks like a step artifact.
+    (target / "99_old.json").write_text("{}")
+    run = RunDir.adopt(target)
+    p = run.save_json("first", {})
+    assert p.name == "01_first.json"
+
+
+def test_rundir_default_still_creates_subdir(tmp_path: Path) -> None:
+    """Normal RunDir(runs_root) still creates a new timestamped subdir (unchanged)."""
+    runs_root = tmp_path / "runs"
+    run = RunDir(runs_root)
+    assert run.path.parent == runs_root
+    assert run.path != runs_root
+
+
 # --------------------------------------------------------------------------
 # build_app_config mapping
 # --------------------------------------------------------------------------
