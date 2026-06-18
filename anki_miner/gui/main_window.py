@@ -281,12 +281,12 @@ class MainWindow(QMainWindow):
         menu_bar.setCornerWidget(corner_widget, Qt.Corner.TopRightCorner)
 
     def _setup_shortcuts(self) -> None:
-        """Set up global keyboard shortcuts."""
-        # Tab switching shortcuts (Ctrl+1..Ctrl+7, one per tab in order)
-        for i in range(1, 8):
-            shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
-            shortcut.activated.connect(lambda idx=i - 1: self._switch_to_tab(idx))
+        """Set up global keyboard shortcuts.
 
+        Per-tab Ctrl+N shortcuts are NOT created here — they depend on the live
+        tab count and are created by :meth:`setup_tab_shortcuts`, which app.py
+        calls once all tabs have been registered via :func:`register_mining_tab`.
+        """
         # Theme toggle (Ctrl+T)
         theme_shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
         theme_shortcut.activated.connect(self._cycle_theme)
@@ -298,6 +298,18 @@ class MainWindow(QMainWindow):
         # System validation (Ctrl+Shift+V)
         validation_shortcut = QShortcut(QKeySequence("Ctrl+Shift+V"), self)
         validation_shortcut.activated.connect(self._run_validation)
+
+    def setup_tab_shortcuts(self) -> None:
+        """Create one Ctrl+N shortcut per registered tab, driven by the live tab count.
+
+        Called by app.py after all tabs have been registered so the count is
+        final.  Creating these in :meth:`_setup_shortcuts` (which runs in
+        ``__init__``, before app.py adds any tabs) would under-count and leave
+        the later tabs unreachable.
+        """
+        for i in range(1, self.tabs.count() + 1):
+            shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
+            shortcut.activated.connect(lambda idx=i - 1: self._switch_to_tab(idx))
 
     def _switch_to_tab(self, index: int) -> None:
         """Switch to tab at given index.

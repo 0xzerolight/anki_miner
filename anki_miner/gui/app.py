@@ -5,11 +5,13 @@ import os
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QWidget
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
@@ -112,6 +114,50 @@ def _configure_logging(log_path: Path) -> None:
     logging.getLogger("anki_miner").setLevel(logging.DEBUG)
 
 
+@runtime_checkable
+class _HasUpdateConfig(Protocol):
+    """Structural type for tab widgets that accept config updates."""
+
+    def update_config(self, config: AnkiMinerConfig) -> None: ...
+
+
+def register_mining_tab(window: "MainWindow", tab: "_HasUpdateConfig", presenter: "GUIPresenter", label: str) -> None:
+    """Register a mining tab and wire its presenter to the main window.
+
+    One call replaces the hand-repeated boilerplate that used to appear at
+    three separate sites in ``main()``:
+
+    1. ``window.tabs.addTab(tab, label)``
+    2. Six presenter-signal → ``window._on_*`` handler connections.
+    3. ``window.config_refreshed`` → ``tab.update_config`` (non-settings refreshes,
+       e.g. JMdict migration finishing in the background).
+
+    The ``settings_tab.config_changed`` → ``tab.update_config`` connection is NOT
+    wired here because ``SettingsTab`` does not yet exist when mining tabs are
+    registered.  That connection is handled at ``SettingsTab`` construction time
+    in ``main()`` — it iterates over ``window.tabs`` (excluding the Settings tab
+    itself) to avoid repeating every tab name.
+
+    Args:
+        window: The :class:`MainWindow` instance.
+        tab: The tab widget to add; must expose ``update_config``.
+        presenter: The :class:`GUIPresenter` for this tab.
+        label: The text label for the tab.
+    """
+    assert isinstance(tab, QWidget), "tab must be a QWidget"
+
+    window.tabs.addTab(tab, label)
+
+    presenter.info_signal.connect(window._on_info_message)
+    presenter.success_signal.connect(window._on_success_message)
+    presenter.warning_signal.connect(window._on_warning_message)
+    presenter.error_signal.connect(window._on_error_message)
+    presenter.processing_result_signal.connect(window._on_processing_result)
+    presenter.word_preview_signal.connect(window._on_word_preview)
+
+    window.config_refreshed.connect(tab.update_config)
+
+
 def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) -> None:
     """Connect the Settings tab's validation requests to the window (T-53).
 
@@ -183,7 +229,9 @@ def main():
     # and the user sees feedback while disk I/O finishes.
     stats_service = StatsService(window.get_config().stats_db_path)
 
-    # Create per-tab presenters and progress callbacks to avoid cross-tab signal pollution
+    # Create per-tab presenters and progress callbacks to avoid cross-tab signal pollution.
+    # register_mining_tab() handles: addTab + six presenter-signal connections +
+    # window.config_refreshed → tab.update_config.
     episode_presenter = GUIPresenter(window)
     episode_progress = GUIProgressCallback(window)
     episode_tab = SingleEpisodeTab(
@@ -192,7 +240,7 @@ def main():
         episode_progress,
         stats_service=stats_service,
     )
-    window.tabs.addTab(episode_tab, "Episode Mining")
+    register_mining_tab(window, episode_tab, episode_presenter, "Episode Mining")
 
     batch_presenter = GUIPresenter(window)
     batch_progress = GUIProgressCallback(window)
@@ -202,7 +250,7 @@ def main():
         batch_progress,
         stats_service=stats_service,
     )
-    window.tabs.addTab(batch_tab, "Batch Mining")
+    register_mining_tab(window, batch_tab, batch_presenter, "Batch Mining")
 
     deck_builder_presenter = GUIPresenter(window)
     deck_builder_progress = GUIProgressCallback(window)
@@ -212,16 +260,7 @@ def main():
         deck_builder_progress,
         stats_service=stats_service,
     )
-    window.tabs.addTab(deck_builder_tab, "Deck Builder")
-
-    # Connect mining-tab presenters to MainWindow status bar handlers
-    for presenter in (episode_presenter, batch_presenter, deck_builder_presenter):
-        presenter.info_signal.connect(window._on_info_message)
-        presenter.success_signal.connect(window._on_success_message)
-        presenter.warning_signal.connect(window._on_warning_message)
-        presenter.error_signal.connect(window._on_error_message)
-        presenter.processing_result_signal.connect(window._on_processing_result)
-        presenter.word_preview_signal.connect(window._on_word_preview)
+    register_mining_tab(window, deck_builder_tab, deck_builder_presenter, "Deck Builder")
 
     # YouTube tab (uses its own presenter + shared stats service). The
     # processor is built lazily on the first Mine click so the dictionary
@@ -238,15 +277,7 @@ def main():
         presenter=youtube_presenter,
         stats_service=stats_service,
     )
-    window.tabs.addTab(youtube_tab, "YouTube")
-
-    # Route YouTube tab presenter through the main window status bar handlers
-    youtube_presenter.info_signal.connect(window._on_info_message)
-    youtube_presenter.success_signal.connect(window._on_success_message)
-    youtube_presenter.warning_signal.connect(window._on_warning_message)
-    youtube_presenter.error_signal.connect(window._on_error_message)
-    youtube_presenter.processing_result_signal.connect(window._on_processing_result)
-    youtube_presenter.word_preview_signal.connect(window._on_word_preview)
+    register_mining_tab(window, youtube_tab, youtube_presenter, "YouTube")
 
     # Audiobook tab (Issue #71). Same lazy-processor pattern as YouTube:
     # processor=None defers the dictionary-chain build to the first Mine
@@ -258,30 +289,24 @@ def main():
         presenter=audiobook_presenter,
         stats_service=stats_service,
     )
-    window.tabs.addTab(audiobook_tab, "Audiobook")
+    register_mining_tab(window, audiobook_tab, audiobook_presenter, "Audiobook")
 
-    # Route Audiobook tab presenter through the main window status bar handlers
-    audiobook_presenter.info_signal.connect(window._on_info_message)
-    audiobook_presenter.success_signal.connect(window._on_success_message)
-    audiobook_presenter.warning_signal.connect(window._on_warning_message)
-    audiobook_presenter.error_signal.connect(window._on_error_message)
-    audiobook_presenter.processing_result_signal.connect(window._on_processing_result)
-    audiobook_presenter.word_preview_signal.connect(window._on_word_preview)
-
-    # Analytics tab
+    # Analytics tab (non-mining: no presenter, no update_config wiring)
     analytics_tab = AnalyticsTab(stats_service)
     window.tabs.addTab(analytics_tab, "Analytics")
 
     settings_tab = SettingsTab(window.get_config())
     # from_settings=True suppresses the config_refreshed re-emit: SettingsTab
-    # and the mining tabs are notified directly on the next four lines, so a
+    # and the mining tabs are notified directly on the next lines, so a
     # re-emit would only reload SettingsTab's panels mid-save (re-entrancy).
     settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg, from_settings=True))
-    settings_tab.config_changed.connect(episode_tab.update_config)
-    settings_tab.config_changed.connect(batch_tab.update_config)
-    settings_tab.config_changed.connect(deck_builder_tab.update_config)
-    settings_tab.config_changed.connect(youtube_tab.update_config)
-    settings_tab.config_changed.connect(audiobook_tab.update_config)
+    # Wire config_changed to every mining tab registered via register_mining_tab.
+    # Iterating over window.tabs (skipping Analytics and Settings themselves)
+    # avoids repeating each tab name here.
+    for i in range(window.tabs.count()):
+        tab_widget = window.tabs.widget(i)
+        if tab_widget is not None and hasattr(tab_widget, "update_config"):
+            settings_tab.config_changed.connect(tab_widget.update_config)
     # Make Test Connection + the deck/note-type sync buttons live: they all
     # emit SettingsTab.validation_requested, which was previously connected to
     # nothing (T-53). Routing it to _run_validation also drives the Anki
@@ -301,15 +326,14 @@ def main():
     window.tabs.addTab(settings_tab, "Settings")
 
     # Non-Settings config refreshes (e.g. JMdict migration finishing in the
-    # background) must propagate to tabs that cache services. Without this,
-    # the first-launch user who needs the legacy XML migrated would see all
-    # lookups go to Jisho until the next restart.
+    # background) must propagate to SettingsTab so its panels don't go stale.
+    # Mining tabs are already wired via register_mining_tab's config_refreshed
+    # connection.
     window.config_refreshed.connect(settings_tab.update_config)
-    window.config_refreshed.connect(episode_tab.update_config)
-    window.config_refreshed.connect(batch_tab.update_config)
-    window.config_refreshed.connect(deck_builder_tab.update_config)
-    window.config_refreshed.connect(youtube_tab.update_config)
-    window.config_refreshed.connect(audiobook_tab.update_config)
+
+    # All tabs are now registered — create the count-driven Ctrl+N shortcuts.
+    # This must come AFTER all addTab calls so self.tabs.count() is final.
+    window.setup_tab_shortcuts()
 
     # Show window first so the user sees the UI immediately; then run the
     # deferred init (stats DB open) on the next event loop tick. The
