@@ -24,6 +24,7 @@ from tests._home_isolation import restore_home_patches, set_test_home
 from tests.e2e.anki_gateway import AnkiGateway, AnkiUnreachableError
 from tests.e2e.artifacts import RunDir
 from tests.e2e.config import E2EConfig
+from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS
 from tests.e2e.soak import (
     SessionReport,
     SoakReport,
@@ -488,6 +489,70 @@ def test_inprocess_soak_no_fresh_home_leaves_files(isolated_home: Path, tmp_path
     )
 
     assert sentinel.is_file(), "fresh_home=False must not remove pre-existing files"
+
+
+# --------------------------------------------------------------------------
+# Mined word-set assertions in the soak loop (Task 13)
+# --------------------------------------------------------------------------
+
+
+def test_session_report_records_mined_forms_in_bypass_soak(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+    """Each SessionReport.mined_forms == set(EXPECTED_LEMMAS) in bypass preview soak.
+
+    A tokenizer regression that changes WHICH words are mined (same count, wrong
+    set) would set session.ok=False + a descriptive error — caught before it
+    reaches production.
+    """
+    e2e = E2EConfig(test_home=isolated_home)
+    run_dir = RunDir(tmp_path / "runs", label="mined-set-soak")
+
+    soak = run_inprocess_soak(
+        e2e,
+        sessions=2,
+        preview=True,
+        bypass_known_words=True,
+        run_dir=run_dir,
+        test_home=isolated_home,
+    )
+
+    assert soak.verdict == "PASS", f"soak FAIL: {[s.errors for s in soak.sessions]}"
+    for s in soak.sessions:
+        assert s.ok, f"session {s.index} failed: {s.errors}"
+        # mined_forms field is populated.
+        assert s.mined_forms, f"session {s.index}: mined_forms is empty"
+        # Set matches EXPECTED_LEMMAS exactly in bypass mode.
+        assert set(s.mined_forms) == set(EXPECTED_LEMMAS), (
+            f"session {s.index} mined-set mismatch:\n"
+            f"  observed={sorted(s.mined_forms)}\n"
+            f"  expected={sorted(EXPECTED_LEMMAS)}\n"
+            f"  extra={sorted(set(s.mined_forms) - set(EXPECTED_LEMMAS))}\n"
+            f"  missing={sorted(set(EXPECTED_LEMMAS) - set(s.mined_forms))}"
+        )
+
+
+def test_session_report_mined_forms_in_report_json(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+    """mined_forms is serialised into report.json and round-trips cleanly.
+
+    Verifies the new field is JSON-friendly (list[str]) so report.json always
+    carries the mined set for post-hoc inspection.
+    """
+    e2e = E2EConfig(test_home=isolated_home)
+    run_dir = RunDir(tmp_path / "runs", label="mined-json")
+
+    run_inprocess_soak(
+        e2e,
+        sessions=1,
+        preview=True,
+        bypass_known_words=True,
+        run_dir=run_dir,
+        test_home=isolated_home,
+    )
+
+    loaded = json.loads((run_dir.path / "report.json").read_text(encoding="utf-8"))
+    session = loaded["sessions"][0]
+    assert "mined_forms" in session, "mined_forms key absent from report.json session"
+    assert isinstance(session["mined_forms"], list)
+    assert set(session["mined_forms"]) == set(EXPECTED_LEMMAS)
 
 
 @pytest.mark.e2e

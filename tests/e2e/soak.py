@@ -71,7 +71,7 @@ from tests.e2e.curation import AutoCurationResponder
 from tests.e2e.driver import E2EMiningError, E2ETimeout, EpisodeTabDriver
 from tests.e2e.fixtures_dictionary import seed_offline_dict
 from tests.e2e.fixtures_media import get_test_video
-from tests.e2e.fixtures_subtitle import get_test_srt
+from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS, get_test_srt
 from tests.e2e.instrumentation import (
     StateSnapshot,
     capture_snapshot,
@@ -125,6 +125,9 @@ class SessionReport:
     #: values are ``{"expected": ..., "actual": ..., "ok": bool}``.  Empty when
     #: the run did not reach the GUI-check step (e.g. timed out before result).
     gui_checks: dict = field(default_factory=dict)
+    #: Mined forms observed in this session (from ``ProcessingResult.mined_forms``).
+    #: Empty when the run did not reach the mined-set check (e.g. timed out).
+    mined_forms: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -392,6 +395,33 @@ def run_one_session(
                 report.errors.append(
                     f"GUI check failed [{name}]: expected={c['expected']!r} actual={c['actual']!r} — {c['desc']}"
                 )
+
+        # Mined word-set assertion: record observed forms and flag divergence.
+        # Only assert when the run completed ok (don't add noise to an already-failed run).
+        report.mined_forms = sorted(result.mined_forms)
+        if result.success:
+            observed = set(result.mined_forms)
+            expected = set(EXPECTED_LEMMAS)
+            if bypass_known_words:
+                # All words mined deterministically — set must match exactly.
+                if observed != expected:
+                    extra = observed - expected
+                    missing = expected - observed
+                    report.ok = False
+                    report.errors.append(
+                        f"mined-set mismatch (bypass): "
+                        f"observed={sorted(observed)!r}, "
+                        f"extra={sorted(extra)!r}, "
+                        f"missing={sorted(missing)!r}"
+                    )
+            else:
+                # Faithful mode: known-words subtraction yields a subset.
+                if not observed <= expected:
+                    spurious = observed - expected
+                    report.ok = False
+                    report.errors.append(
+                        f"mined-set not a subset (faithful): " f"spurious={sorted(spurious)!r} not in EXPECTED_LEMMAS"
+                    )
     except (E2ETimeout, E2EMiningError) as exc:
         report.ok = False
         report.errors = [f"{type(exc).__name__}: {exc}"]
