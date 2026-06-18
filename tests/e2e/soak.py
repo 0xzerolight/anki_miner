@@ -37,6 +37,14 @@ Parent vs. child snapshot semantics (cross-process)
 The :class:`SoakReport` for cross-process keeps the CHILDREN's ``snapshot_post``
 in ``sessions`` (so ``detect_divergence`` sees per-child in-process numbers), and
 records the parent disk deltas alongside in ``config`` context.
+
+Temp media and ``temp_files``
+-----------------------------
+Temp media is cleaned after each session (``EpisodeProcessor`` default, mirroring
+production). ``ANKI_MINER_KEEP_TEMP`` is NOT forced by the harness, so
+``temp_files`` in the snapshot is a genuine leak metric: it is non-zero between
+sessions only if a cleanup bug prevents the temp folder from being removed. To
+retain temp media for debugging, export ``ANKI_MINER_KEEP_TEMP=1`` before running.
 """
 
 from __future__ import annotations
@@ -471,6 +479,11 @@ def _run_child_session(
 ) -> SessionReport:
     """Spawn one fresh ``--one-session`` subprocess and read back its SessionReport.
 
+    Temp media is NOT kept by default — the child cleans up after itself, mirroring
+    production. This makes ``temp_files`` a genuine inter-session leak signal. If the
+    operator has exported ``ANKI_MINER_KEEP_TEMP=1``, it passes through from the
+    parent env for forensic media retention.
+
     A timeout / non-zero exit / unreadable JSON is recorded as ``ok=False`` with a
     stderr tail rather than raising, so a flaky child does not abort the soak.
     """
@@ -491,11 +504,14 @@ def _run_child_session(
     if bypass_known_words:
         cmd.append("--bypass-known-words")
 
+    # ANKI_MINER_KEEP_TEMP is intentionally NOT forced here: temp is cleaned after
+    # each child session (mirroring production), so temp_files is a genuine leak
+    # signal. If the parent env already exports it (operator debugging), it passes
+    # through via **os.environ.
     env = {
         **os.environ,
         "ANKI_MINER_HOME": str(test_home),
         "QT_QPA_PLATFORM": "offscreen",
-        "ANKI_MINER_KEEP_TEMP": "1",
     }
 
     try:
