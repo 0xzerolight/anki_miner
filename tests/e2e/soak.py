@@ -68,7 +68,7 @@ from tests.e2e.app_config import build_app_config
 from tests.e2e.artifacts import RunDir
 from tests.e2e.config import E2EConfig
 from tests.e2e.curation import AutoCurationResponder
-from tests.e2e.driver import E2EMiningError, E2ETimeout, EpisodeTabDriver
+from tests.e2e.driver import CancelOutcome, E2EMiningError, E2ETimeout, EpisodeTabDriver
 from tests.e2e.fixtures_dictionary import seed_offline_dict
 from tests.e2e.fixtures_media import get_test_video
 from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS, get_test_srt
@@ -128,6 +128,9 @@ class SessionReport:
     #: Mined forms observed in this session (from ``ProcessingResult.mined_forms``).
     #: Empty when the run did not reach the mined-set check (e.g. timed out).
     mined_forms: list[str] = field(default_factory=list)
+    #: Cancel-path outcome when this session injected a cancel (else ``{}``).
+    #: Keys: ``cancelled`` / ``joined`` / ``buttons_idle`` — see ``CancelOutcome``.
+    cancel_outcome: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -295,6 +298,49 @@ def _check_gui_state(
     return checks
 
 
+def _run_cancel_session(
+    driver: EpisodeTabDriver,
+    *,
+    report: SessionReport,
+    preview: bool,
+    delay_s: float,
+    timeout_s: float,
+    index: int,
+) -> None:
+    """Drive a cancel-injected run and record the outcome on ``report``.
+
+    Starts the run (preview or process), schedules a Cancel ``delay_s`` seconds
+    in, and waits for the worker to FINISH (a cancelled run emits no result/error,
+    only ``finished``). Asserts the run-end invariants: the worker joined (no
+    leaked thread) AND the tab returned to idle (reusable for the next session).
+    Either failing sets ``report.ok = False`` with a message. The cancel is
+    allowed to lose the race against a very fast run — that is recorded, not
+    failed (see ``EpisodeTabDriver.cancel_and_wait``).
+    """
+    if preview:
+        driver.click_preview()
+    else:
+        driver.click_process()
+
+    outcome: CancelOutcome = driver.cancel_and_wait(delay_s=delay_s, timeout_s=timeout_s)
+    report.cancel_outcome = {
+        "cancelled": outcome.cancelled,
+        "joined": outcome.joined,
+        "buttons_idle": outcome.buttons_idle,
+    }
+    report.screenshot = driver.screenshot(f"session-{index}-cancel").name
+
+    # Run-end invariants: a cancel that leaks the worker thread or leaves the tab
+    # stuck (cancel button still showing / process disabled) is the bug class.
+    report.ok = True
+    if not outcome.joined:
+        report.ok = False
+        report.errors.append("cancel: worker thread did not join (leaked/stuck thread)")
+    if not outcome.buttons_idle:
+        report.ok = False
+        report.errors.append("cancel: tab did not return to idle after cancel (stuck UI)")
+
+
 def run_one_session(
     e2e: E2EConfig,
     *,
@@ -305,6 +351,7 @@ def run_one_session(
     index: int,
     driver: EpisodeTabDriver | None = None,
     gateway: AnkiGateway | None = None,
+    inject_cancel: float | None = None,
 ) -> SessionReport:
     """Mine one episode and return a :class:`SessionReport`.
 
@@ -320,6 +367,11 @@ def run_one_session(
         driver: Reuse this driver (in-process loop) when given; otherwise build a
             fresh one (cross-process child path).
         gateway: Optional Anki gateway for the deck-count snapshot metric.
+        inject_cancel: When set (seconds), this session clicks Cancel that many
+            seconds after starting the run instead of waiting for a result. It
+            asserts the run ENDS promptly (worker joins, no leaked thread) and the
+            tab returns to idle so the NEXT session can reuse it — a cancelled run
+            emits no result/error, only ``finished``. See ``_run_cancel_session``.
 
     A timeout / mining error is RECORDED on the report (``ok=False`` + message +
     screenshot), never re-raised, so one bad session does not abort the soak.
@@ -355,73 +407,90 @@ def run_one_session(
     try:
         driver.select_video(get_test_video())
         driver.select_subtitle(get_test_srt())
-        with responder:
-            if preview:
-                driver.click_preview()
-            else:
-                driver.click_process()
-            # A hung wait may BE the bug; arm a watchdog that dumps all thread
-            # stacks into the run dir if the wait blows well past its budget.
-            dump_fh = open(hang_dump, "w", encoding="utf-8")  # noqa: SIM115
-            try:
-                faulthandler.dump_traceback_later(
-                    e2e.result_timeout_s + _HANG_DUMP_MARGIN_S,
-                    file=dump_fh,
-                )
-                result = driver.wait_for_result(e2e.result_timeout_s)
-            finally:
-                faulthandler.cancel_dump_traceback_later()
-                dump_fh.close()
-                # No hang fired → drop the empty dump file.
-                if hang_dump.is_file() and hang_dump.stat().st_size == 0:
-                    with contextlib.suppress(OSError):
-                        hang_dump.unlink()
-        report.ok = result.success
-        report.words_found = result.total_words_found
-        report.cards_created = result.cards_created
-        report.errors = list(result.errors)
-        report.screenshot = driver.screenshot(f"session-{index}").name
 
-        # GUI-state consistency checks: assert widget state is coherent after the
-        # run.  Recorded in all cases; a failing check surfaces in the verdict
-        # via _assemble_report's any-failed guard (sets ok=False + error message).
-        gui_checks = _check_gui_state(driver, preview=preview, result_ok=result.success)
-        report.gui_checks = gui_checks
-        failed_checks = [name for name, c in gui_checks.items() if not c["ok"]]
-        if failed_checks:
-            report.ok = False
-            for name in failed_checks:
-                c = gui_checks[name]
-                report.errors.append(
-                    f"GUI check failed [{name}]: expected={c['expected']!r} actual={c['actual']!r} — {c['desc']}"
-                )
+        if inject_cancel is not None:
+            # Cancel path: click Cancel mid-run instead of waiting for a result.
+            # A cancelled run emits no result/error (only finished), so this
+            # asserts the run ends promptly, the worker joins, and the tab
+            # returns to idle. Skips the normal result/mined-set assertions.
+            _run_cancel_session(
+                driver,
+                report=report,
+                preview=preview,
+                delay_s=inject_cancel,
+                timeout_s=e2e.result_timeout_s,
+                index=index,
+            )
+        else:
+            with responder:
+                if preview:
+                    driver.click_preview()
+                else:
+                    driver.click_process()
+                # A hung wait may BE the bug; arm a watchdog that dumps all thread
+                # stacks into the run dir if the wait blows well past its budget.
+                dump_fh = open(hang_dump, "w", encoding="utf-8")  # noqa: SIM115
+                try:
+                    faulthandler.dump_traceback_later(
+                        e2e.result_timeout_s + _HANG_DUMP_MARGIN_S,
+                        file=dump_fh,
+                    )
+                    result = driver.wait_for_result(e2e.result_timeout_s)
+                finally:
+                    faulthandler.cancel_dump_traceback_later()
+                    dump_fh.close()
+                    # No hang fired → drop the empty dump file.
+                    if hang_dump.is_file() and hang_dump.stat().st_size == 0:
+                        with contextlib.suppress(OSError):
+                            hang_dump.unlink()
+            report.ok = result.success
+            report.words_found = result.total_words_found
+            report.cards_created = result.cards_created
+            report.errors = list(result.errors)
+            report.screenshot = driver.screenshot(f"session-{index}").name
 
-        # Mined word-set assertion: record observed forms and flag divergence.
-        # Only assert when the run completed ok (don't add noise to an already-failed run).
-        report.mined_forms = sorted(result.mined_forms)
-        if result.success:
-            observed = set(result.mined_forms)
-            expected = set(EXPECTED_LEMMAS)
-            if bypass_known_words:
-                # All words mined deterministically — set must match exactly.
-                if observed != expected:
-                    extra = observed - expected
-                    missing = expected - observed
-                    report.ok = False
+            # GUI-state consistency checks: assert widget state is coherent after
+            # the run.  Recorded in all cases; a failing check surfaces in the
+            # verdict via _assemble_report's any-failed guard.
+            gui_checks = _check_gui_state(driver, preview=preview, result_ok=result.success)
+            report.gui_checks = gui_checks
+            failed_checks = [name for name, c in gui_checks.items() if not c["ok"]]
+            if failed_checks:
+                report.ok = False
+                for name in failed_checks:
+                    c = gui_checks[name]
                     report.errors.append(
-                        f"mined-set mismatch (bypass): "
-                        f"observed={sorted(observed)!r}, "
-                        f"extra={sorted(extra)!r}, "
-                        f"missing={sorted(missing)!r}"
+                        f"GUI check failed [{name}]: expected={c['expected']!r} actual={c['actual']!r} — {c['desc']}"
                     )
-            else:
-                # Faithful mode: known-words subtraction yields a subset.
-                if not observed <= expected:
-                    spurious = observed - expected
-                    report.ok = False
-                    report.errors.append(
-                        f"mined-set not a subset (faithful): " f"spurious={sorted(spurious)!r} not in EXPECTED_LEMMAS"
-                    )
+
+            # Mined word-set assertion: record observed forms and flag divergence.
+            # Only assert when the run completed ok (don't add noise to an
+            # already-failed run).
+            report.mined_forms = sorted(result.mined_forms)
+            if result.success:
+                observed = set(result.mined_forms)
+                expected = set(EXPECTED_LEMMAS)
+                if bypass_known_words:
+                    # All words mined deterministically — set must match exactly.
+                    if observed != expected:
+                        extra = observed - expected
+                        missing = expected - observed
+                        report.ok = False
+                        report.errors.append(
+                            f"mined-set mismatch (bypass): "
+                            f"observed={sorted(observed)!r}, "
+                            f"extra={sorted(extra)!r}, "
+                            f"missing={sorted(missing)!r}"
+                        )
+                else:
+                    # Faithful mode: known-words subtraction yields a subset.
+                    if not observed <= expected:
+                        spurious = observed - expected
+                        report.ok = False
+                        report.errors.append(
+                            f"mined-set not a subset (faithful): "
+                            f"spurious={sorted(spurious)!r} not in EXPECTED_LEMMAS"
+                        )
     except (E2ETimeout, E2EMiningError) as exc:
         report.ok = False
         report.errors = [f"{type(exc).__name__}: {exc}"]
@@ -614,6 +683,7 @@ def run_inprocess_soak(
     run_dir: RunDir,
     test_home: Path,
     fresh_home: bool = False,
+    inject_cancel: float | None = None,
 ) -> SoakReport:
     """Mine ``sessions`` times reusing ONE driver/tab; return a :class:`SoakReport`.
 
@@ -629,6 +699,11 @@ def run_inprocess_soak(
             running so the run starts clean (idempotent, safe — ``_prepare_home``
             always refuses the real home). The pre-wipe baseline is recorded in
             ``SoakReport.config`` regardless of this flag.
+        inject_cancel: When set (seconds), ONE extra dedicated cancel session is
+            appended after the normal sessions: it starts a run, clicks Cancel
+            after the delay, and asserts the run ends promptly with the tab
+            reusable. The cancel is its OWN session, never folded into every soak
+            iteration (which would corrupt the leak series).
     """
     test_home = Path(test_home)
     home_info = _prepare_home(test_home, fresh=fresh_home)
@@ -661,6 +736,27 @@ def run_inprocess_soak(
                 any_failed = any_failed or not report.ok
                 # Between-session teardown + Qt deferred-delete drain so leaks
                 # surface in the next session's snapshot.
+                with contextlib.suppress(Exception):
+                    driver.teardown()
+                _drain_qt_deletes()
+
+            # Dedicated cancel session (opt-in): runs AFTER the normal soak so it
+            # never perturbs the leak series. Reuses the SAME tab to prove the tab
+            # stays reusable after a cancel.
+            if inject_cancel is not None:
+                cancel_report = run_one_session(
+                    e2e,
+                    test_home=test_home,
+                    preview=preview,
+                    bypass_known_words=bypass_known_words,
+                    run_dir=run_dir,
+                    index=sessions,
+                    driver=driver,
+                    gateway=gateway,
+                    inject_cancel=inject_cancel,
+                )
+                reports.append(cancel_report)
+                any_failed = any_failed or not cancel_report.ok
                 with contextlib.suppress(Exception):
                     driver.teardown()
                 _drain_qt_deletes()

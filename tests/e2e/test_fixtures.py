@@ -124,6 +124,25 @@ def test_subtitle_yields_expected_lemmas(tmp_path: Path) -> None:
     assert {w.lemma: w.lemma_reading for w in words} == fixtures_subtitle.LEMMA_READINGS
 
 
+def test_write_corrupt_srt_is_rejected_by_parser(tmp_path: Path) -> None:
+    """write_corrupt_srt produces a file the real parser rejects with SubtitleParseError.
+
+    The harness error path relies on this deterministically failing phase-1
+    parse; this guard keeps the corrupt fixture genuinely un-parseable.
+    """
+    pytest.importorskip("fugashi")
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.exceptions import SubtitleParseError
+    from anki_miner.services import SubtitleParserService
+
+    corrupt = fixtures_subtitle.write_corrupt_srt(tmp_path / "corrupt.srt")
+    assert corrupt.suffix == ".srt"  # selector accepts it; parse is what fails
+    assert corrupt.read_bytes() == fixtures_subtitle.CORRUPT_SUBTITLE_BYTES
+    parser = SubtitleParserService(AnkiMinerConfig())
+    with pytest.raises(SubtitleParseError):
+        parser.parse_subtitle_file(corrupt)
+
+
 # --------------------------------------------------------------------------- #
 # Dictionary
 # --------------------------------------------------------------------------- #

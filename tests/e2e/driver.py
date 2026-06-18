@@ -38,9 +38,11 @@ own task. A later harness task can add it on top of this driver.
 from __future__ import annotations
 
 import contextlib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from PyQt6.QtCore import QTimer
 from PyQt6.QtTest import QTest
 
 from anki_miner.config import AnkiMinerConfig
@@ -50,7 +52,7 @@ from anki_miner.models import ProcessingResult
 from anki_miner.services.stats_service import StatsService
 from tests.e2e.artifacts import RunDir
 
-__all__ = ["E2EMiningError", "E2ETimeout", "EpisodeTabDriver"]
+__all__ = ["CancelOutcome", "E2EMiningError", "E2ETimeout", "EpisodeTabDriver"]
 
 # Bounded join for the worker after a result/error is captured (mirrors the
 # project's MiningTabBase teardown timeout).
@@ -63,6 +65,38 @@ class E2ETimeout(RuntimeError):
 
 class E2EMiningError(RuntimeError):
     """Raised when the worker emits its ``error`` signal instead of a result."""
+
+
+@dataclass
+class CancelOutcome:
+    """Result of a cancel-injected run (see :meth:`EpisodeTabDriver.cancel_and_wait`).
+
+    A cancelled mining run emits NEITHER ``result_ready`` NOR ``error``: the
+    worker's ``run()`` checks ``check_cancelled()`` at each phase checkpoint and
+    returns silently, so the only signal that fires is the QThread ``finished``
+    one (which restores the tab buttons). The driver therefore cannot use
+    ``wait_for_result`` for a cancel; it waits for the worker thread to FINISH
+    and reports what was observed here.
+
+    Attributes:
+        cancelled: ``True`` when the worker ended without emitting a result or
+            error — the expected outcome of a mid-run cancel.
+        joined: ``True`` when the worker thread joined within the budget (no
+            leaked/stuck thread).
+        result: A :class:`ProcessingResult` if the run happened to COMPLETE
+            before the cancel took effect (a fast run can win the race); else
+            ``None``.
+        error: The worker's error message if it errored before the cancel; else
+            ``None``.
+        buttons_idle: The tab's button state after the run ended — must be idle
+            (process shown+enabled, cancel hidden) for the tab to be reusable.
+    """
+
+    cancelled: bool
+    joined: bool
+    result: ProcessingResult | None = None
+    error: str | None = None
+    buttons_idle: bool = False
 
 
 def _drain_until(predicate, timeout_ms: int = 3000, step_ms: int = 10) -> bool:
@@ -182,6 +216,81 @@ class EpisodeTabDriver:
     def click_cancel(self) -> None:
         """Click the real Cancel button."""
         self.tab.cancel_button.click()
+
+    def schedule_cancel(self, delay_s: float) -> None:
+        """Schedule a Cancel click ``delay_s`` seconds from now on the GUI thread.
+
+        Uses ``QTimer.singleShot`` so the click fires from the GUI thread's event
+        loop WHILE a wait spins it — never from a raw Python thread (clicking a
+        widget off the GUI thread is undefined behaviour in Qt). Schedule it
+        BEFORE / right at the ``click_process`` so the timer is already armed when
+        the wait loop starts pumping events.
+        """
+        QTimer.singleShot(int(delay_s * 1000), self.click_cancel)
+
+    def cancel_and_wait(self, *, delay_s: float = 0.0, timeout_s: float = 30.0) -> CancelOutcome:
+        """Schedule a cancel, spin the event loop, and report the cancel outcome.
+
+        Call this INSTEAD of :meth:`wait_for_result` for a cancel run. A cancelled
+        worker emits no ``result_ready`` / ``error`` (see :class:`CancelOutcome`),
+        so this waits for the worker QThread to FINISH rather than for a captured
+        payload. It then joins the worker (bounded) and samples the button state.
+
+        The cancel is allowed to LOSE the race against a very fast run: if the run
+        completed (result captured) or errored before the cancel took effect, that
+        is recorded in the returned :class:`CancelOutcome` rather than treated as a
+        failure — the invariant being asserted is "the run ends promptly, the
+        worker joins, and the tab returns to idle", not "the cancel always wins".
+
+        Args:
+            delay_s: Seconds before the scheduled Cancel click fires.
+            timeout_s: Budget for the worker to finish after cancel.
+
+        Returns:
+            A :class:`CancelOutcome` describing what happened.
+
+        Raises:
+            E2ETimeout: The worker did not finish within ``timeout_s`` (a stuck
+                run — itself the bug class this path hunts). A screenshot + JSON
+                are written first.
+        """
+        self.schedule_cancel(delay_s)
+
+        worker = self.tab.worker_thread
+        # No worker (nothing started) — nothing to cancel; report idle state.
+        if worker is None:
+            return CancelOutcome(cancelled=True, joined=True, buttons_idle=self.buttons_idle())
+
+        timeout_ms = int(timeout_s * 1000)
+        finished = _drain_until(
+            lambda: worker.isFinished() or self._result is not None or self._error is not None,
+            timeout_ms=timeout_ms,
+        )
+        if not finished:
+            self.screenshot("cancel-timeout")
+            self.run_dir.save_json(
+                "cancel-timeout",
+                {"timeout_s": timeout_s, "delay_s": delay_s, "log": self.log_text()},
+            )
+            raise E2ETimeout(f"cancelled run did not finish within {timeout_s}s")
+
+        # Join the worker now that it has finished — bounded, returns promptly.
+        joined = bool(worker.wait(_WORKER_JOIN_TIMEOUT_MS))
+
+        # Pump the event loop briefly so the queued finished->_restore_buttons
+        # signal is delivered before we sample button state (same idiom as the
+        # soak GUI checks): otherwise a fast finish can outrun the slot.
+        _drain_until(lambda: self.buttons_idle(), timeout_ms=2000)
+
+        self.screenshot("cancel")
+        cancelled = self._result is None and self._error is None
+        return CancelOutcome(
+            cancelled=cancelled,
+            joined=joined,
+            result=self._result,
+            error=self._error,
+            buttons_idle=self.buttons_idle(),
+        )
 
     def wait_for_result(self, timeout_s: float = 120) -> ProcessingResult:
         """Spin the event loop until the worker reports a result or errors.
