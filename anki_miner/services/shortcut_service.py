@@ -13,6 +13,8 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from anki_miner.utils.subprocess_utils import no_window_kwargs
+
 APP_NAME = "Anki Miner"
 APP_ID = "anki-miner"
 APP_COMMENT = "Japanese vocabulary mining from anime subtitles"
@@ -150,6 +152,7 @@ StartupWMClass=anki_miner
                 capture_output=True,
                 check=False,
                 timeout=_SUBPROCESS_TIMEOUT_SECONDS,
+                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
             )
 
         result.success = True
@@ -181,6 +184,7 @@ StartupWMClass=anki_miner
                 capture_output=True,
                 text=True,
                 timeout=_SUBPROCESS_TIMEOUT_SECONDS,
+                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
             )
             result.messages.append(f"Desktop shortcut created: {shortcut_path}")
             result.paths_created.append(shortcut_path)
@@ -213,6 +217,7 @@ StartupWMClass=anki_miner
                     capture_output=True,
                     text=True,
                     timeout=_SUBPROCESS_TIMEOUT_SECONDS,
+                    **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
                 )
                 result.messages.append(f"Start Menu shortcut created: {start_shortcut}")
                 result.paths_created.append(start_shortcut)
