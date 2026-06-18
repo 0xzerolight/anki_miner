@@ -87,7 +87,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **YouTube**: paste one or more URLs, then mine the queue.
 - **Audiobook**: queue local audiobook/subtitle pairs and mine them audio-only; embedded cover art stands in for screenshots.
 - **Analytics**: history, series difficulty rankings, milestones, undo.
-- **Settings**: Anki, Media, Dictionary, Filtering, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
+- **Settings**: Anki, Media, Dictionaries, Audio, Filtering, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
 
 ## Other Features
 
