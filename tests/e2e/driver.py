@@ -8,16 +8,26 @@ avoids ``MainWindow`` so there is no blocking ``ResultsDialog`` / welcome dialog
 no heavy app startup; the tab itself shows results non-modally (via the presenter
 signal), so preview/process runs need nothing dismissed.
 
-Wait mechanics
---------------
+Capture mechanics (connect-before-start)
+----------------------------------------
 ``SingleEpisodeTab._start_processing`` builds the ``EpisodeWorkerThread``, connects
-``result_ready``/``error``, and calls ``.start()`` ALL synchronously. So the instant
-``preview_button.click()`` / ``process_button.click()`` returns, ``tab.worker_thread``
-is a live started thread. The ``click_*`` methods grab it and attach a one-shot
-capture to both ``result_ready`` (payload = ``ProcessingResult``) and ``error``
-(payload = ``str``). :meth:`wait_for_result` spins the GUI event loop (the proven
-``_drain_until`` idiom from ``tests/unit/test_mining_tab_base_curation.py``) until a
-payload is captured or the timeout fires, joins the worker, then raises / returns.
+the tab's own slots, and calls ``.start()`` ALL synchronously on the click. A worker
+that errors the instant ``run()`` begins can therefore emit ``error`` before any slot
+the driver attaches *after* the click — for a Qt queued (default cross-thread)
+connection a slot connected AFTER an emit does NOT receive that emission, so a
+post-click connect would miss it and time out spuriously.
+
+To capture deterministically, the driver does NOT connect after the click. Instead it
+connects once (in ``__init__``) to the tab's ``worker_created`` signal — a test seam
+the tab emits with the freshly built worker JUST BEFORE ``.start()``. That emit runs
+synchronously on the GUI thread inside ``_start_processing`` (same-thread DIRECT
+connection), so :meth:`_on_worker_created` attaches the capture slots to
+``result_ready`` (payload = ``ProcessingResult``) and ``error`` (payload = ``str``)
+BEFORE the worker is started and can emit. The ``click_*`` methods just click the
+button; capture is armed by the signal. :meth:`wait_for_result` spins the GUI event
+loop (the proven ``_drain_until`` idiom from
+``tests/unit/test_mining_tab_base_curation.py``) until a payload is captured or the
+timeout fires, joins the worker, then raises / returns.
 
 ``AppDriver`` (full-``MainWindow`` inspection mode) is intentionally NOT built here:
 ``MainWindow()`` takes no config (it loads the user's real ``gui_config.json``) and
@@ -103,9 +113,13 @@ class EpisodeTabDriver:
             progress_callback=self.progress_callback,
             stats_service=stats_service,
         )
-        # One-shot capture slots, reset on each click_* call.
+        # Capture state, reset whenever a new worker is created (see
+        # _on_worker_created). Connect ONCE: the tab emits worker_created
+        # synchronously, just before .start(), so we attach our capture slots to
+        # the worker before it can emit (connect-before-start — see module docstring).
         self._result: ProcessingResult | None = None
         self._error: str | None = None
+        self.tab.worker_created.connect(self._on_worker_created)
 
     # ----- input actions -------------------------------------------------
 
@@ -125,24 +139,20 @@ class EpisodeTabDriver:
 
     # ----- run actions ---------------------------------------------------
 
-    def _arm_capture(self) -> None:
-        """Reset capture state and connect one-shot slots to the live worker.
+    def _on_worker_created(self, worker: Any) -> None:
+        """Reset capture state and connect one-shot slots to the new worker.
 
-        Called immediately after a button click — by then ``tab.worker_thread``
-        is a started thread (``_start_processing`` runs synchronously). Connects
-        to BOTH ``result_ready`` and ``error`` so whichever fires is captured.
-
-        Race-free: ``result_ready``/``error`` are emitted on the WORKER thread, so
-        delivery to these GUI-thread slots is a queued (default cross-thread)
-        connection — the emit enqueues an event that is not processed until the
-        GUI event loop runs. This connect happens on the GUI thread BEFORE
-        :meth:`wait_for_result` spins that loop, so even if the worker has already
-        emitted, the queued event is still delivered to the slot we just attached.
+        Invoked synchronously (same-thread DIRECT connection) from
+        ``SingleEpisodeTab._start_processing`` via the ``worker_created`` seam,
+        JUST BEFORE the worker is started. Connecting here — before ``.start()``
+        — means an emission from the worker (queued, cross-thread) cannot be
+        missed even when the worker errors the instant ``run()`` begins. We
+        connect to BOTH ``result_ready`` and ``error`` so whichever fires is
+        captured; the matching payload is read in :meth:`wait_for_result` once
+        the event loop is spun.
         """
         self._result = None
         self._error = None
-        worker = self.tab.worker_thread
-        assert worker is not None, "no worker_thread after click — did validation reject the inputs?"
 
         def _on_result(result: Any) -> None:
             self._result = result
@@ -154,14 +164,20 @@ class EpisodeTabDriver:
         worker.error.connect(_on_error)
 
     def click_preview(self) -> None:
-        """Click the real Preview button and arm result capture (preview mode)."""
+        """Click the real Preview button (preview mode).
+
+        Capture is armed by ``worker_created`` (see :meth:`_on_worker_created`),
+        emitted before the worker starts — not by the click itself.
+        """
         self.tab.preview_button.click()
-        self._arm_capture()
 
     def click_process(self) -> None:
-        """Click the real Process button and arm result capture (card creation)."""
+        """Click the real Process button (card creation).
+
+        Capture is armed by ``worker_created`` (see :meth:`_on_worker_created`),
+        emitted before the worker starts — not by the click itself.
+        """
         self.tab.process_button.click()
-        self._arm_capture()
 
     def click_cancel(self) -> None:
         """Click the real Cancel button."""

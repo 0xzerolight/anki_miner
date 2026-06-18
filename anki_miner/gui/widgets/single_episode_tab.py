@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -61,6 +61,12 @@ class SingleEpisodeTab(MiningTabBase):
     This tab allows users to select a video and subtitle file, adjust subtitle
     offset, and process the episode to mine vocabulary and create Anki cards.
     """
+
+    # Test-only seam: emitted synchronously (same-thread DIRECT connection) with
+    # the freshly built worker JUST BEFORE ``.start()`` so a test driver can
+    # connect capture slots to the worker before run() can emit. Dormant in
+    # normal use — the real app never connects, so the emit is a no-op.
+    worker_created = pyqtSignal(object)  # EpisodeWorkerThread
 
     def __init__(
         self,
@@ -510,6 +516,9 @@ class SingleEpisodeTab(MiningTabBase):
         self.worker_thread.result_ready.connect(self._on_processing_finished)
         self.worker_thread.error.connect(self._on_processing_error)
         self.worker_thread.finished.connect(self._restore_buttons)
+        # Test seam: let any listener attach to the worker BEFORE it starts (so a
+        # connect-before-start cannot miss an immediate emit). No-op in normal use.
+        self.worker_created.emit(self.worker_thread)
         self.worker_thread.start()
 
     # Progress slots (_on_progress_start/update/complete) are inherited from
