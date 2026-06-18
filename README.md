@@ -49,11 +49,10 @@ Grab the download for your platform from the [latest release](https://github.com
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
-**macOS first-run (unsigned binary):** macOS Gatekeeper will block the app because it is not notarised. In Terminal, run:
+**macOS first-run (unsigned binary):** macOS Gatekeeper will block the app because it is not notarised. Extract the archive first, then clear the quarantine flag on the extracted folder (clearing it on the `.tar.gz` does not carry over to the extracted files):
 ```bash
-xattr -dr com.apple.quarantine AnkiMiner-macOS-arm64.tar.gz
+xattr -dr com.apple.quarantine AnkiMiner/
 ```
-Or, after extracting, run the same command on the extracted `AnkiMiner/` folder.
 
 **Windows first-run (SmartScreen):** Windows SmartScreen may show "Windows protected your PC". Click **More info**, then **Run anyway**.
 
