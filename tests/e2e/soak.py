@@ -359,6 +359,10 @@ def _maybe_gateway(e2e: E2EConfig, *, preview: bool) -> AnkiGateway | None:
     For preview / bypass runs Anki is not used, so no gateway is built. For a live
     process run, the deck is ensured up front; an unreachable Anki yields ``None``
     (the caller — a test — gates on this and skips).
+
+    Raises:
+        ForeignDeckError: The test deck already exists with notes from a prior run.
+            Let this propagate so the runner can surface a clean, actionable message.
     """
     if preview:
         return None
@@ -367,7 +371,7 @@ def _maybe_gateway(e2e: E2EConfig, *, preview: bool) -> AnkiGateway | None:
         gateway.ping()
     except AnkiUnreachableError:
         return None
-    gateway.ensure_test_deck()
+    gateway.ensure_test_deck()  # raises ForeignDeckError if deck has prior-run notes
     gateway.ensure_test_model()
     return gateway
 
