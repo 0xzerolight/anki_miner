@@ -57,6 +57,12 @@ def _build_config(args: argparse.Namespace) -> E2EConfig:
         overrides["deck_name"] = args.deck
     if getattr(args, "ankiconnect_url", None):
         overrides["ankiconnect_url"] = args.ankiconnect_url
+    if getattr(args, "timeout", None) is not None:
+        # Override both timeout fields together: a slow first faithful run can
+        # spuriously time out at the default 120/300 s; --timeout lets the
+        # operator raise both caps in one flag without editing env vars.
+        overrides["result_timeout_s"] = args.timeout
+        overrides["session_timeout_s"] = args.timeout
     if overrides:
         # runs_root tracks test_home via __post_init__ unless pinned; clear it so
         # an overridden home re-derives its runs_root.
@@ -154,7 +160,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("smoke", help="One real mining session + screenshots (needs Anki).")
+    smoke = sub.add_parser("smoke", help="One real mining session + screenshots (needs Anki).")
+    smoke.add_argument(
+        "--timeout",
+        type=int,
+        default=None,
+        metavar="SECONDS",
+        help="Override both result_timeout_s and session_timeout_s (default: 120/300 s).",
+    )
 
     soak = sub.add_parser("soak", help="Multi-session soak (bug-hunt).")
     soak.add_argument("--mode", choices=["inprocess", "crossprocess"], default="inprocess")
@@ -172,6 +185,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     soak.add_argument("--policy", choices=["all", "first_n", "none"], default="all")
     soak.add_argument("--first-n", dest="first_n", type=int, default=0)
+    soak.add_argument(
+        "--timeout",
+        type=int,
+        default=None,
+        metavar="SECONDS",
+        help="Override both result_timeout_s and session_timeout_s (default: 120/300 s).",
+    )
 
     sub.add_parser("cleanup", help="Delete a leftover test deck.")
 
