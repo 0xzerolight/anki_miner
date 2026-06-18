@@ -33,6 +33,8 @@ from contextlib import ExitStack
 from typing import Any
 from unittest.mock import patch
 
+from tests.e2e.config import validate_curation_policy
+
 # Patch targets: the dialog symbols as imported INTO the modules that USE them
 # (not their definition sites — see the module docstring).
 _CURATION_TARGET = "anki_miner.gui.widgets._mining_tab_base.WordCurationDialog"
@@ -41,8 +43,6 @@ _RESULTS_TARGET = "anki_miner.gui.main_window.ResultsDialog"
 # MainWindow._maybe_offer_first_run_setup, so the only stable target is its
 # definition module.
 _WELCOME_TARGET = "anki_miner.gui.widgets.dialogs.welcome_dialog.WelcomeDialog"
-
-_ALLOWED_POLICIES = ("all", "first_n", "none")
 
 
 def _make_fake_curation_dialog(responder: AutoCurationResponder) -> type:
@@ -155,12 +155,7 @@ class AutoCurationResponder:
     """
 
     def __init__(self, policy: str = "all", first_n: int = 0, full_window: bool = False) -> None:
-        if policy not in _ALLOWED_POLICIES:
-            raise ValueError(f"policy must be one of {_ALLOWED_POLICIES}, got {policy!r}")
-        if policy == "first_n" and first_n <= 0:
-            # A first_n of 0 would silently behave like "none" (mine nothing) with
-            # no signal — reject it loudly, matching E2EConfig's validation.
-            raise ValueError(f"policy 'first_n' requires first_n > 0, got {first_n}")
+        validate_curation_policy(policy, first_n)
         self.policy = policy
         self.first_n = first_n
         self.full_window = full_window
