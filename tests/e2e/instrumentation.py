@@ -91,6 +91,7 @@ if TYPE_CHECKING:  # avoid a hard import cycle / Anki dependency at import time
 __all__ = [
     "EXPECTED_GROWERS",
     "MONOTONIC_MIN_FRACTION",
+    "MONOTONIC_MIN_GAPS",
     "RSS_SLOPE_BYTES_PER_SESSION",
     "SUSPECT_METRICS",
     "DivergenceReport",
@@ -130,6 +131,14 @@ _INPROCESS_ONLY_METRICS: frozenset[str] = frozenset(("top_level_widgets", "pytho
 #: suspect metric to count as "monotonically growing". 0.75 means "positive in
 #: at least 3 of 4 gaps" — catches a real leak while tolerating one noise dip.
 MONOTONIC_MIN_FRACTION = 0.75
+
+#: Minimum number of consecutive gaps (i.e. ≥ N+1 sessions) required before a
+#: metric can be flagged as monotonically growing. With only 1 gap (2 sessions)
+#: the fraction rule fires on any single +1 delta, producing false FAILs on
+#: short smoke runs. Requiring ≥ 2 gaps (≥ 3 sessions) ensures the heuristic
+#: has enough data points to be meaningful. The end-to-end suspect_deltas are
+#: still recorded regardless — only the FAIL flag is gated on this minimum.
+MONOTONIC_MIN_GAPS = 2
 
 #: RSS slope (bytes gained per session, least-squares) above which RSS is judged
 #: to be climbing steadily. ~5 MB/session sustained over a soak run is a lot.
@@ -372,12 +381,20 @@ def _grows_monotonically(values: list[int]) -> bool:
     Rule (documented, simple): a positive delta in at least
     :data:`MONOTONIC_MIN_FRACTION` of the consecutive gaps AND a positive net
     delta end-to-end. With < 2 points there are no gaps, so it's never growth.
+
+    Additionally, fewer than :data:`MONOTONIC_MIN_GAPS` gaps (i.e. fewer than
+    ``MONOTONIC_MIN_GAPS + 1`` sessions) returns ``False`` unconditionally — the
+    fraction rule has too little data to distinguish a real leak from noise at
+    very short runs. The end-to-end delta is still recorded by the caller for
+    context; only the FAIL flag is suppressed.
     """
     if len(values) < 2:
         return False
     # values[1:] is intentionally one shorter -> non-strict zip pairs each
     # value with its successor (the last value has no successor).
     gaps = [b - a for a, b in zip(values, values[1:], strict=False)]
+    if len(gaps) < MONOTONIC_MIN_GAPS:
+        return False
     positive = sum(1 for d in gaps if d > 0)
     net_positive = values[-1] > values[0]
     return net_positive and positive >= MONOTONIC_MIN_FRACTION * len(gaps)
