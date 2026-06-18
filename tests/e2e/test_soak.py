@@ -27,11 +27,84 @@ from tests.e2e.config import E2EConfig
 from tests.e2e.soak import (
     SessionReport,
     SoakReport,
+    _child_cmd,
     run_crossprocess_soak,
     run_inprocess_soak,
 )
 
 pytest.importorskip("fugashi")
+
+
+# --------------------------------------------------------------------------
+# Unit tests for _child_cmd (pure: no subprocess, no Anki)
+# --------------------------------------------------------------------------
+
+
+def test_child_cmd_forwards_all_four_overrides(tmp_path: Path) -> None:
+    """_child_cmd includes --policy, --first-n, --deck, --ankiconnect-url in argv.
+
+    Pure test: given an E2EConfig with non-default values for all four forwarded
+    fields, assert each flag and its value appear in the returned argv.
+    """
+    e2e = E2EConfig(
+        test_home=tmp_path / "home",
+        curation_policy="first_n",
+        first_n=5,
+        deck_name="My Custom Deck",
+        ankiconnect_url="http://127.0.0.1:9999",
+    )
+    out = tmp_path / "session.json"
+
+    argv = _child_cmd(
+        e2e,
+        test_home=tmp_path / "home",
+        index=3,
+        out=out,
+        preview=True,
+        bypass_known_words=True,
+    )
+
+    # All four config flags must be present with the correct values.
+    assert "--policy" in argv
+    assert argv[argv.index("--policy") + 1] == "first_n"
+
+    assert "--first-n" in argv
+    assert argv[argv.index("--first-n") + 1] == "5"
+
+    assert "--deck" in argv
+    assert argv[argv.index("--deck") + 1] == "My Custom Deck"
+
+    assert "--ankiconnect-url" in argv
+    assert argv[argv.index("--ankiconnect-url") + 1] == "http://127.0.0.1:9999"
+
+    # Sanity: bool flags forwarded correctly.
+    assert "--preview" in argv
+    assert "--bypass-known-words" in argv
+
+    # --index and --out forwarded.
+    assert "--index" in argv
+    assert argv[argv.index("--index") + 1] == "3"
+    assert "--out" in argv
+    assert argv[argv.index("--out") + 1] == str(out)
+
+
+def test_child_cmd_default_policy_forwarded(tmp_path: Path) -> None:
+    """_child_cmd forwards the default 'all' policy correctly (first_n=0 ok)."""
+    e2e = E2EConfig(test_home=tmp_path / "home")
+    argv = _child_cmd(
+        e2e,
+        test_home=tmp_path / "home",
+        index=0,
+        out=tmp_path / "s.json",
+        preview=False,
+        bypass_known_words=False,
+    )
+    assert "--policy" in argv
+    assert argv[argv.index("--policy") + 1] == "all"
+    assert "--first-n" in argv
+    assert argv[argv.index("--first-n") + 1] == "0"
+    assert "--preview" not in argv
+    assert "--bypass-known-words" not in argv
 
 
 @pytest.fixture
