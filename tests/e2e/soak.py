@@ -177,8 +177,10 @@ def _check_gui_state(
     """Inspect post-run GUI state and return a dict of named check results.
 
     Each entry maps a check name to ``{"expected": ..., "actual": ..., "ok": bool}``.
-    All checks are recorded unconditionally so the report is self-documenting
-    even when some pass and some fail.
+    All checks are RECORDED unconditionally so the report is self-documenting
+    even when some pass and some fail.  However, only when ``result_ok=True``
+    do failing checks escalate to errors — when the run itself failed, we record
+    observed widget state as data without adding new GUI-specific error noise.
 
     Only called when the run COMPLETED (result captured, no exception) — the
     caller is responsible for guarding.  Checks are tolerant of preview vs.
@@ -187,11 +189,19 @@ def _check_gui_state(
     checks: dict = {}
 
     # 1. Buttons returned to idle after the worker finished.
+    # Pump the event loop briefly so the queued _restore_buttons signal
+    # (connected to worker.finished) is delivered before we sample button state.
+    # This prevents a false-FAIL on slow machines where the queued signal has
+    # not yet been dispatched when we reach this check.
+    from tests.e2e.driver import _drain_until
+
+    _drain_until(lambda: driver.buttons_idle(), timeout_ms=2000)
     buttons_ok = driver.buttons_idle()
     checks["buttons_idle"] = {
         "expected": True,
         "actual": buttons_ok,
-        "ok": buttons_ok,
+        # Only a CONSISTENCY check when result_ok; otherwise record-only.
+        "ok": buttons_ok if result_ok else True,
         "desc": "process_button enabled+visible AND cancel_button hidden",
     }
 
@@ -201,19 +211,33 @@ def _check_gui_state(
     checks["log_nonempty"] = {
         "expected": True,
         "actual": log_nonempty,
-        "ok": log_nonempty,
+        "ok": log_nonempty if result_ok else True,
         "desc": "activity log contains at least one line",
     }
 
-    # 3. Common phase markers appear in the log (Step 1/5 and Step 2/5).
+    # 3. Common phase markers appear IN ORDER in the log (Step 1/5 then Step 2/5).
+    # Verify each marker is present AND their indices are strictly increasing.
+    marker_indices: list[int] = []
     for marker in _LOG_MARKERS_COMMON:
         key = f"log_contains:{marker}"
         found = marker in log
         checks[key] = {
             "expected": True,
             "actual": found,
-            "ok": found,
+            "ok": (found if result_ok else True),
             "desc": f"log contains '{marker}'",
+        }
+        if found:
+            marker_indices.append(log.index(marker))
+
+    # Assert strict ordering only when all common markers were found.
+    if len(marker_indices) == len(_LOG_MARKERS_COMMON):
+        in_order = all(marker_indices[i] < marker_indices[i + 1] for i in range(len(marker_indices) - 1))
+        checks["log_markers_in_order"] = {
+            "expected": True,
+            "actual": in_order,
+            "ok": (in_order if result_ok else True),
+            "desc": "phase markers appear in the log in strictly increasing order",
         }
 
     # 4. Process-only marker: Step 5/5 — only asserted when not preview.
@@ -224,8 +248,45 @@ def _check_gui_state(
         checks[key] = {
             "expected": True,
             "actual": found,
-            "ok": found,
+            "ok": (found if result_ok else True),
             "desc": f"log contains '{marker}' (process mode only)",
+        }
+
+    # 5. Progress state — always recorded as data; never skip.
+    prog_value = driver.progress_value()
+    prog_text = driver.progress_text()
+    checks["progress_value"] = {
+        "expected": "recorded",
+        "actual": prog_value,
+        # Not a pass/fail assertion — pure data.
+        "ok": True,
+        "desc": "progress bar value after run (data only)",
+    }
+    checks["progress_text"] = {
+        "expected": "recorded",
+        "actual": prog_text,
+        "ok": True,
+        "desc": "progress status label text after run (data only)",
+    }
+
+    # 6. Process-mode stuck-UI check: fail only on clearly broken "stuck" state.
+    # A healthy run advances progress > 0 OR sets a non-idle status string.
+    # We deliberately do NOT assert an exact value (==100) or exact string
+    # ("Complete"), since precise end-state varies and strict checks would
+    # false-FAIL on the real run.  Preview leaves progress at 0 by design
+    # (callback not invoked) — never checked for preview.
+    if not preview and result_ok:
+        _idle_statuses = {"", "Ready"}
+        status_idle = prog_text.strip() in _idle_statuses
+        stuck = prog_value == 0 and status_idle
+        checks["progress_not_stuck"] = {
+            "expected": False,
+            "actual": stuck,
+            "ok": not stuck,
+            "desc": (
+                "progress advanced (value>0) OR status is non-idle after process run "
+                "— stuck (value=0 AND idle status) signals the 'stuck progress bar' bug class"
+            ),
         }
 
     return checks
