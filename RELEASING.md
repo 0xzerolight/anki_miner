@@ -51,6 +51,16 @@ Maintainer-facing release SOP. Contributors should not need to run any of these 
 
 9. **Announce.** Wherever you announce releases (Discussions, social, etc.). The in-app update banner picks the new release up automatically on every user's next launch.
 
+## Antivirus false positives (Windows)
+
+The Windows build is an unsigned PyInstaller bundle shipping `yt-dlp` and `ffmpeg`, so Microsoft Defender (and other engines) periodically flag it as malware. It is always a false positive. When a flag is reported after a release:
+
+1. Download the flagged `AnkiMiner-*-Setup.exe` from the Release.
+2. Submit it at <https://www.microsoft.com/en-us/wdsi/filesubmission> under "software developer" / incorrectly detected as malware. Microsoft threat researchers re-evaluate and de-list, usually within hours to a couple of days.
+3. For other engines reported (ESET, Avast, etc.), submit to that vendor's false-positive portal.
+
+The build is already hardened against the common heuristics — no UPX, embedded PE version metadata, and a source-built PyInstaller bootloader (see `anki_miner.spec` and `release.yml`). The durable fix is Authenticode code signing (planned via SignPath Foundation's free OSS program); signed builds accrue Defender/SmartScreen reputation so the flagging stops recurring per release.
+
 ## Recovering from a bad release
 
 - **Workflow failed mid-publish**: the tag is on the remote but artifacts are incomplete. Delete the GitHub Release (not the tag), fix forward, push a new patch tag (`vX.Y.Z+1`). Do not retag the same version — PyPI rejects re-uploads.
