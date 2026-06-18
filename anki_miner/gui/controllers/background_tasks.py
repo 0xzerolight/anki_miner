@@ -235,20 +235,23 @@ class BackgroundTaskController(QObject):
             tab = tabs.widget(i)
             if tab is None:
                 continue
+            # Poison the curation gate / cancel queue workers BEFORE the bounded
+            # worker_thread join.  Every MiningTabBase subclass (Single, Batch,
+            # DeckBuilder, YouTube, Audiobook) exposes shutdown() via the base;
+            # YouTube/Audiobook override it to also cancel their queue workers,
+            # Single/Batch/DeckBuilder inherit the base that cancels the curation
+            # dialog and poisons the gate (OVH-003).  A worker parked in
+            # _curation_event.wait() cannot exit on cancel() alone, so joining
+            # first would always time it out and spuriously defer the close
+            # (hidden-window flash + "still running" warning) even though
+            # shutdown() releases it immediately (F8).
+            shutdown_fn = getattr(tab, "shutdown", None)
+            if callable(shutdown_fn):
+                shutdown_fn()
             # All mining tabs expose their worker on `worker_thread`.
             # DeckBuilderWorker.cancel() also opens its confirm gate, so a worker
             # blocked awaiting Build unblocks and exits.
             join(getattr(tab, "worker_thread", None))
-            # Every MiningTabBase subclass (Single, Batch, DeckBuilder, YouTube,
-            # Audiobook) now exposes shutdown() via the base.  YouTube/Audiobook
-            # override it to also cancel their queue workers; Single/Batch/
-            # DeckBuilder inherit the base that cancels the curation dialog and
-            # poisons the gate (OVH-003).  Order: bounded join first, then
-            # shutdown() poison — a worker parked in the gate at that point
-            # falls through and the deferred-close poll eventually sees it stopped.
-            shutdown_fn = getattr(tab, "shutdown", None)
-            if callable(shutdown_fn):
-                shutdown_fn()
             # SettingsTab owns short-lived AnkiConnect workers and import-flow
             # workers with no `worker_thread` (T-12, OVH-004/059/060).  Route
             # each through the same join policy so a long import/fetch request
