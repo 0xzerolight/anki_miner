@@ -17,6 +17,25 @@ from typing import Literal
 ENV_HOME = "ANKI_MINER_E2E_HOME"
 ENV_ANKICONNECT_URL = "ANKI_MINER_E2E_ANKICONNECT_URL"
 
+#: Single source of truth for valid curation policy names.
+CURATION_POLICIES: tuple[str, ...] = ("all", "first_n", "none")
+
+
+def validate_curation_policy(policy: str, first_n: int) -> None:
+    """Raise ``ValueError`` if *policy* / *first_n* is not a valid combination.
+
+    Shared by :class:`E2EConfig` and :class:`~tests.e2e.curation.AutoCurationResponder`
+    so the allowed values and error messages have a single source of truth.
+
+    Raises:
+        ValueError: unknown policy name, or ``first_n`` policy with ``first_n <= 0``.
+    """
+    if policy not in CURATION_POLICIES:
+        raise ValueError(f"curation_policy must be one of 'all', 'first_n', 'none', got {policy!r}")
+    if policy == "first_n" and first_n <= 0:
+        raise ValueError(f"curation_policy 'first_n' requires first_n > 0, got {first_n}")
+
+
 #: Distinctive deck name used by the harness. The verbose, space-laden name is
 #: a SAFETY FEATURE: it must be hard to collide with a deck a real user already
 #: has, so the cleanup/mutation paths can never plausibly nuke real study data.
@@ -67,10 +86,7 @@ class E2EConfig:
         # Validate the curation policy up front so a misconfigured run can't
         # silently mine nothing. ``first_n`` of 0 would behave like ``"none"``
         # but give no signal, so it is rejected loudly.
-        if self.curation_policy not in ("all", "first_n", "none"):
-            raise ValueError(f"curation_policy must be one of 'all', 'first_n', 'none', got {self.curation_policy!r}")
-        if self.curation_policy == "first_n" and self.first_n <= 0:
-            raise ValueError(f"curation_policy 'first_n' requires first_n > 0, got {self.first_n}")
+        validate_curation_policy(self.curation_policy, self.first_n)
         if isinstance(self.test_home, str):
             object.__setattr__(self, "test_home", Path(self.test_home))
         # Derive runs_root from the (possibly env-overridden) test_home unless
