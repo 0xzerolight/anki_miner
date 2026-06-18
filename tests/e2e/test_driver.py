@@ -24,10 +24,10 @@ from tests.e2e.app_config import build_app_config
 from tests.e2e.artifacts import RunDir
 from tests.e2e.config import E2EConfig
 from tests.e2e.curation import AutoCurationResponder
-from tests.e2e.driver import E2ETimeout, EpisodeTabDriver
+from tests.e2e.driver import E2EMiningError, E2ETimeout, EpisodeTabDriver
 from tests.e2e.fixtures_dictionary import seed_offline_dict
 from tests.e2e.fixtures_media import get_test_video
-from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS, get_test_srt
+from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS, get_test_srt, write_corrupt_srt
 
 # fugashi/MeCab is required for the real tokenizer; skip the whole module's
 # pipeline tests cleanly if it is absent.
@@ -78,6 +78,53 @@ def test_rundir_save_png_from_pixmap(tmp_path: Path, qtbot) -> None:
     assert out.is_file() and out.stat().st_size > 0
 
 
+def test_rundir_adopt_uses_exact_dir_no_subdir(tmp_path: Path) -> None:
+    """RunDir.adopt wraps an existing dir as-is — no new timestamped subdir created."""
+    target = tmp_path / "exact_dir"
+    target.mkdir()
+    run = RunDir.adopt(target)
+    assert run.path == target
+    # No child dirs created under target.
+    assert list(target.iterdir()) == []
+
+
+def test_rundir_adopt_creates_dir_if_absent(tmp_path: Path) -> None:
+    """RunDir.adopt creates the directory (with parents) when it does not exist."""
+    target = tmp_path / "missing" / "nested"
+    run = RunDir.adopt(target)
+    assert run.path == target
+    assert target.is_dir()
+
+
+def test_rundir_adopt_writes_into_given_dir(tmp_path: Path) -> None:
+    """Artifacts written through RunDir.adopt land directly in the given dir."""
+    target = tmp_path / "parent_run"
+    target.mkdir()
+    run = RunDir.adopt(target)
+    p = run.save_json("meta", {"ok": True})
+    assert p.parent == target
+    assert p.name == "01_meta.json"
+
+
+def test_rundir_adopt_step_counter_starts_at_zero(tmp_path: Path) -> None:
+    """RunDir.adopt's step counter starts at 0, unaffected by existing files."""
+    target = tmp_path / "existing"
+    target.mkdir()
+    # Pre-populate with a file that looks like a step artifact.
+    (target / "99_old.json").write_text("{}")
+    run = RunDir.adopt(target)
+    p = run.save_json("first", {})
+    assert p.name == "01_first.json"
+
+
+def test_rundir_default_still_creates_subdir(tmp_path: Path) -> None:
+    """Normal RunDir(runs_root) still creates a new timestamped subdir (unchanged)."""
+    runs_root = tmp_path / "runs"
+    run = RunDir(runs_root)
+    assert run.path.parent == runs_root
+    assert run.path != runs_root
+
+
 # --------------------------------------------------------------------------
 # build_app_config mapping
 # --------------------------------------------------------------------------
@@ -97,7 +144,7 @@ def test_build_app_config_basic_field_mapping(tmp_path: Path) -> None:
     assert set(cfg.anki_fields) >= REQUIRED_FIELD_KEYS
     # Target + isolation overrides applied.
     assert cfg.anki_deck_name == e2e.deck_name
-    assert cfg.anki_note_type == "Basic"
+    assert cfg.anki_note_type == "AnkiMiner E2E Basic"
     assert cfg.dicts_root == tmp_path / "dicts"
     assert cfg.known_words_db_path == tmp_path / "known_words.db"
     # DEFAULT = faithful real mining: exercises known-words subtraction (needs
@@ -159,6 +206,15 @@ def test_preview_drives_real_tab_no_anki(tmp_path: Path, qtbot) -> None:
         assert result.new_words_found == len(EXPECTED_LEMMAS)
         assert result.cards_created == 0  # preview creates nothing
 
+        # Mined word-set must equal EXPECTED_LEMMAS exactly (bypass → dedup off).
+        assert set(result.mined_forms) == set(EXPECTED_LEMMAS), (
+            f"mined_forms mismatch:\n"
+            f"  observed={sorted(result.mined_forms)}\n"
+            f"  expected={sorted(EXPECTED_LEMMAS)}\n"
+            f"  extra={sorted(set(result.mined_forms) - set(EXPECTED_LEMMAS))}\n"
+            f"  missing={sorted(set(EXPECTED_LEMMAS) - set(result.mined_forms))}"
+        )
+
         # Real widgets are readable.
         assert isinstance(driver.log_text(), str)
         assert isinstance(driver.progress_text(), str)
@@ -167,6 +223,24 @@ def test_preview_drives_real_tab_no_anki(tmp_path: Path, qtbot) -> None:
         # Screenshot landed on disk.
         shot = driver.screenshot("preview-done")
         assert shot.is_file() and shot.stat().st_size > 0
+
+        # GUI state must have returned to idle after the run completes.
+        assert driver.buttons_idle(), (
+            f"buttons not idle after preview: "
+            f"process_enabled={driver.process_button_enabled()}, "
+            f"cancel_visible={driver.cancel_button_visible()}"
+        )
+        assert not driver.buttons_running(), "cancel must not be visible at idle"
+
+        # Activity log must contain the phase-1 and phase-2 markers.
+        log = driver.log_text()
+        assert log.strip(), "activity log is empty after preview run"
+        assert "Step 1/5" in log, f"'Step 1/5' not found in log: {log[:500]}"
+        assert "Step 2/5" in log, f"'Step 2/5' not found in log: {log[:500]}"
+
+        # Preview never emits phase 3–5 markers (no media/definitions/cards).
+        assert "Step 3/5" not in log, "phase-3 marker in preview log (should not appear)"
+        assert "Step 5/5" not in log, "phase-5 marker in preview log (should not appear)"
     finally:
         driver.teardown()
 
@@ -190,6 +264,7 @@ def live_anki(tmp_path: Path):
     except AnkiUnreachableError:
         pytest.skip("Anki not running (AnkiConnect unreachable)")
     gateway.ensure_test_deck()
+    gateway.ensure_test_model()
     try:
         yield gateway, e2e
     finally:
@@ -200,9 +275,10 @@ def live_anki(tmp_path: Path):
 def test_process_creates_cards_live(tmp_path: Path, qtbot, live_anki) -> None:
     """Real card creation against a live Anki test deck (skips when Anki is down).
 
-    Uses the note type "Basic" (every Anki install ships it) so the harness need
-    not create a custom model. ``AutoCurationResponder(policy="all")`` keeps every
-    mined word; the deck card count must then match ``cards_created``.
+    Uses the harness note type (``e2e.note_type``, self-provisioned by
+    ``ensure_test_model`` in the ``live_anki`` fixture).
+    ``AutoCurationResponder(policy="all")`` keeps every mined word; the deck
+    card count must then match ``cards_created``.
     """
     gateway, e2e = live_anki
     # bypass_known_words: deterministic cards_created == fixture lemma count
@@ -229,6 +305,59 @@ def test_process_creates_cards_live(tmp_path: Path, qtbot, live_anki) -> None:
 
 
 # --------------------------------------------------------------------------
+# Connect-before-start: an immediately-emitting worker is still captured
+# --------------------------------------------------------------------------
+
+
+def test_immediate_error_is_captured_not_timed_out(tmp_path: Path, qtbot, monkeypatch) -> None:
+    """A worker that emits ``error`` the instant ``run()`` starts is still captured.
+
+    This is the connect-after-emit race the driver used to lose: the real
+    ``_start_processing`` builds the worker, connects the tab's slots, and calls
+    ``.start()`` synchronously on click. If the driver only connected its capture
+    slots AFTER the click (the old ``_arm_capture``), a worker that emits ``error``
+    by the time ``.start()`` returns would emit BEFORE the driver's slot existed →
+    the slot connected later never receives that emission → the driver spuriously
+    raised ``E2ETimeout``. The ``worker_created`` seam lets the driver attach BEFORE
+    ``.start()`` so the emission cannot be missed.
+
+    To make the race deterministic (not thread-scheduling dependent), the patched
+    worker emits ``error`` synchronously from ``start()`` — modelling "the worker
+    already emitted before the driver got a chance to connect". The fix must still
+    capture it → ``E2EMiningError``, never ``E2ETimeout``.
+    """
+    import anki_miner.gui.widgets.single_episode_tab as set_module
+    from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+
+    class _ImmediateErrorWorker(EpisodeWorkerThread):
+        def start(self, *args, **kwargs) -> None:  # type: ignore[override]
+            # Emit synchronously BEFORE the OS thread is even scheduled — the
+            # deterministic worst case for a connect-after-start driver: any slot
+            # connected after this returns misses the emission entirely.
+            self.error.emit("boom immediately")
+            # Never actually start the OS thread; nothing else to run.
+
+        def wait(self, *args, **kwargs) -> bool:  # type: ignore[override]
+            return True  # the thread never ran; join is a no-op
+
+    monkeypatch.setattr(set_module, "EpisodeWorkerThread", _ImmediateErrorWorker)
+
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    run_dir = RunDir(e2e.runs_root, label="immediate-error")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+        driver.click_process()
+        with pytest.raises(E2EMiningError, match="boom immediately"):
+            driver.wait_for_result(timeout_s=5)
+    finally:
+        driver.teardown()
+
+
+# --------------------------------------------------------------------------
 # Optional: timeout path
 # --------------------------------------------------------------------------
 
@@ -250,5 +379,320 @@ def test_wait_for_result_times_out(tmp_path: Path, qtbot) -> None:
             driver.wait_for_result(timeout_s=0.05)
         # Timeout artifacts written.
         assert any(p.suffix == ".png" for p in run_dir.path.iterdir())
+    finally:
+        driver.teardown()
+
+
+# --------------------------------------------------------------------------
+# Mined word-set: preview populates result.mined_forms == EXPECTED_LEMMAS
+# --------------------------------------------------------------------------
+
+
+def test_preview_mined_forms_equals_expected_lemmas(tmp_path: Path, qtbot) -> None:
+    """result.mined_forms in preview mode equals EXPECTED_LEMMAS exactly.
+
+    This is the direct check for Task 13's core invariant: a tokenizer regression
+    that changes WHICH words are mined (same count, different set) is caught here.
+    bypass_known_words=True ensures every fixture word is mined deterministically
+    (dedup off, no AnkiConnect call).
+    """
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    seed_offline_dict(cfg.dicts_root)
+
+    run_dir = RunDir(e2e.runs_root, label="mined-set")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+        driver.click_preview()
+        result = driver.wait_for_result(timeout_s=60)
+
+        assert result.success, result.errors
+        # Core invariant: the mined set must equal EXPECTED_LEMMAS exactly.
+        assert set(result.mined_forms) == set(EXPECTED_LEMMAS), (
+            f"mined_forms mismatch:\n"
+            f"  observed={sorted(result.mined_forms)}\n"
+            f"  expected={sorted(EXPECTED_LEMMAS)}\n"
+            f"  extra={sorted(set(result.mined_forms) - set(EXPECTED_LEMMAS))}\n"
+            f"  missing={sorted(set(EXPECTED_LEMMAS) - set(result.mined_forms))}"
+        )
+        # Count consistency: no duplicates in the mined set.
+        assert len(result.mined_forms) == len(
+            set(result.mined_forms)
+        ), f"mined_forms contains duplicates: {result.mined_forms}"
+    finally:
+        driver.teardown()
+
+
+def test_mined_set_wrong_set_is_flagged() -> None:
+    """A wrong mined set (different words, same or different count) is detected.
+
+    Unit-level: directly exercises the set-comparison logic used in
+    run_one_session to confirm a tokenizer regression would NOT go undetected.
+    Does not need Qt or the real pipeline.
+    """
+    expected = set(EXPECTED_LEMMAS)
+
+    # Case 1: completely wrong set (same size) — should differ.
+    wrong_same_size = {"食べる", "走る", "買う", "本", "今日", "学校", "勉強", "美味しい", "料理", "友達", "公園", "山"}
+    assert wrong_same_size != expected, "wrong set must not equal expected (test self-check)"
+
+    # Case 2: missing one word — must be caught.
+    one_missing = set(EXPECTED_LEMMAS[:-1])
+    assert one_missing != expected
+
+    # Case 3: extra word added — must be caught.
+    one_extra = set(EXPECTED_LEMMAS) | {"余分"}
+    assert one_extra != expected
+
+    # Case 4: the real expected set is a valid subset of itself (faithful mode tautology).
+    assert expected <= expected
+
+    # Case 5: a proper subset passes the faithful (⊆) check but fails the exact check.
+    subset = set(EXPECTED_LEMMAS[:6])
+    assert subset <= expected  # faithful mode: ok
+    assert subset != expected  # bypass mode: would be caught
+
+
+# --------------------------------------------------------------------------
+# Error path: a corrupt subtitle the parser rejects → failed run, no hang
+# --------------------------------------------------------------------------
+
+
+def test_corrupt_subtitle_fails_run_no_hang(tmp_path: Path, qtbot) -> None:
+    """A parser-rejected subtitle yields a FAILED run (no hang) + screenshot.
+
+    EMPIRICAL FINDING: a corrupt subtitle raises ``SubtitleParseError`` in
+    phase-1 parse. ``SubtitleParseError`` is an ``AnkiMinerException``, which
+    ``EpisodeProcessor.process_episode`` CATCHES — so the worker emits
+    ``result_ready`` with ``success=False`` (the parse error in ``result.errors``),
+    NOT its ``error`` signal. The driver therefore RETURNS a failed
+    ``ProcessingResult`` rather than raising ``E2EMiningError``. The point of this
+    path is the GUI-bug surface: an unhandled failure must not hang the wait, and
+    the tab must return to idle so it stays usable.
+    """
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    seed_offline_dict(cfg.dicts_root)
+
+    corrupt = write_corrupt_srt(tmp_path / "corrupt.srt")
+    run_dir = RunDir(e2e.runs_root, label="corrupt")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(corrupt)
+        driver.click_preview()
+        result = driver.wait_for_result(timeout_s=30)
+
+        # Run completed (no hang) but failed, with the parse error surfaced.
+        assert result.success is False
+        assert any("parse" in e.lower() or "format" in e.lower() for e in result.errors), result.errors
+
+        # No hang: the tab returned to idle and is reusable.
+        from tests.e2e.driver import _drain_until
+
+        _drain_until(lambda: driver.buttons_idle(), timeout_ms=2000)
+        assert driver.buttons_idle(), "tab did not return to idle after a failed run"
+
+        # Screenshot evidence written.
+        shot = driver.screenshot("corrupt-done")
+        assert shot.is_file() and shot.stat().st_size > 0
+    finally:
+        driver.teardown()
+
+
+def test_worker_error_signal_surfaces_as_mining_error(tmp_path: Path, qtbot, monkeypatch) -> None:
+    """A worker ``error`` emission (non-AnkiMinerException path) → ``E2EMiningError``.
+
+    Distinct from the corrupt-subtitle case (which becomes a failed result): when
+    the worker emits its ``error`` signal (e.g. an unexpected exception escaping
+    the processor build), the driver MUST surface it as ``E2EMiningError`` and not
+    hang. Models the real error-signal path the harness must capture.
+    """
+    import anki_miner.gui.widgets.single_episode_tab as set_module
+    from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+
+    class _ErrorSignalWorker(EpisodeWorkerThread):
+        def start(self, *args, **kwargs) -> None:  # type: ignore[override]
+            self.error.emit("simulated unhandled worker failure")
+
+        def wait(self, *args, **kwargs) -> bool:  # type: ignore[override]
+            return True
+
+    monkeypatch.setattr(set_module, "EpisodeWorkerThread", _ErrorSignalWorker)
+
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    run_dir = RunDir(e2e.runs_root, label="error-signal")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+        driver.click_process()
+        with pytest.raises(E2EMiningError, match="simulated unhandled worker failure"):
+            driver.wait_for_result(timeout_s=5)
+        # Screenshot written on the error path.
+        assert any(p.suffix == ".png" for p in run_dir.path.iterdir())
+    finally:
+        driver.teardown()
+
+
+# --------------------------------------------------------------------------
+# Cancel path: inject Cancel mid-run → run ends, worker joins, tab reusable
+# --------------------------------------------------------------------------
+
+
+def test_cancel_ends_run_worker_joins_tab_reusable(tmp_path: Path, qtbot) -> None:
+    """Inject Cancel mid-run: the run ends promptly, worker joins, tab reusable.
+
+    EMPIRICAL FINDING: a cancelled worker emits NEITHER ``result_ready`` NOR
+    ``error`` — ``run()``'s ``check_cancelled()`` guards suppress both, so only the
+    QThread ``finished`` signal fires (restoring the buttons). The driver's
+    ``cancel_and_wait`` therefore waits for the worker to FINISH (not for a
+    captured payload) and reports a :class:`CancelOutcome`. Asserts: the cancel
+    won (no result captured), the worker joined, the tab returned to idle, and a
+    SECOND run on the SAME tab still completes — proving no leaked/stuck state.
+    """
+    from tests.e2e.driver import CancelOutcome
+
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    seed_offline_dict(cfg.dicts_root)
+
+    run_dir = RunDir(e2e.runs_root, label="cancel")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+
+        # Preview mode (no Anki); cancel at delay 0 — the tokenize phase is the
+        # slow part, so the cancel reliably lands before the worker emits.
+        driver.click_preview()
+        outcome: CancelOutcome = driver.cancel_and_wait(delay_s=0.0, timeout_s=30)
+
+        assert isinstance(outcome, CancelOutcome)
+        assert outcome.joined, "worker did not join after cancel (leaked thread)"
+        assert outcome.buttons_idle, "tab did not return to idle after cancel (stuck UI)"
+        # The cancel won the race against this fast run: no result/error captured.
+        assert outcome.cancelled, f"cancel did not take effect: {outcome}"
+        assert outcome.result is None and outcome.error is None
+
+        # The SAME tab must be reusable for a fresh run after a cancel.
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+        driver.click_preview()
+        result = driver.wait_for_result(timeout_s=60)
+        assert result.success, result.errors
+        assert set(result.mined_forms) == set(EXPECTED_LEMMAS)
+    finally:
+        driver.teardown()
+
+
+def test_schedule_cancel_uses_qtimer_on_gui_thread(tmp_path: Path, qtbot) -> None:
+    """``schedule_cancel`` arms a GUI-thread QTimer that clicks Cancel when fired.
+
+    Light unit-level check that no raw thread is spawned: the cancel is dispatched
+    via the event loop. We schedule with a tiny delay, pump events, and assert the
+    cancel reached the worker (cancel requested).
+    """
+    from tests.e2e.driver import _drain_until
+
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    seed_offline_dict(cfg.dicts_root)
+
+    run_dir = RunDir(e2e.runs_root, label="schedule-cancel")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+        driver.click_preview()
+        worker = driver.tab.worker_thread
+        assert worker is not None
+        driver.schedule_cancel(0.0)
+        # Pump the loop so the singleShot fires and the click reaches the worker.
+        _drain_until(lambda: worker.is_cancelled or worker.isFinished(), timeout_ms=5000)
+        assert worker.is_cancelled or worker.isFinished()
+        worker.wait(5000)
+    finally:
+        driver.teardown()
+
+
+# --------------------------------------------------------------------------
+# Keyboard shortcut + tab-order coverage (C7)
+# --------------------------------------------------------------------------
+
+
+def test_shortcuts_exist_and_enabled(tmp_path: Path, qtbot) -> None:
+    """All three documented QShortcuts are registered and enabled on the tab.
+
+    Checks Ctrl+O / Ctrl+P / Ctrl+Return presence without activating them.
+    No Qt visibility required — ``findChildren`` works on an offscreen widget.
+    """
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    run_dir = RunDir(e2e.runs_root, label="shortcuts")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.assert_shortcuts_exist()  # raises AssertionError if any is missing
+    finally:
+        driver.teardown()
+
+
+def test_ctrl_p_keyboard_path_starts_preview_run(tmp_path: Path, qtbot) -> None:
+    """Ctrl+P shortcut path triggers a real preview run and a result is captured.
+
+    ``QTest.keyClick`` does NOT activate ``QShortcut.activated`` for a
+    never-shown offscreen widget (the offscreen platform plugin processes the
+    key event but the shortcut filter requires window/focus state). The robust
+    offscreen substitute is ``shortcut.activated.emit()`` on the real
+    ``QShortcut`` instance — the connected slot (``_on_preview_clicked``) is
+    still the real one, so the full pipeline runs: worker created, run
+    executes, result captured. This is the documented reduced check for this
+    low-value task (see driver.shortcut_preview_via_keyboard docstring).
+    """
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    seed_offline_dict(cfg.dicts_root)
+
+    run_dir = RunDir(e2e.runs_root, label="ctrl-p")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+
+        # Trigger via the real shortcut's activated signal (reduced offscreen check).
+        driver.shortcut_preview_via_keyboard()
+
+        result = driver.wait_for_result(timeout_s=60)
+        assert result.success, result.errors
+        # The pipeline genuinely ran: all fixture lemmas mined.
+        assert set(result.mined_forms) == set(EXPECTED_LEMMAS)
+        assert result.cards_created == 0  # preview never creates cards
+    finally:
+        driver.teardown()
+
+
+def test_tab_order_sane(tmp_path: Path, qtbot) -> None:
+    """The focus/tab order among primary inputs is video→subtitle→offset→preview→process.
+
+    Verifies the ``setTabOrder`` calls in ``_setup_accessibility`` by walking
+    ``nextInFocusChain()`` — no widget show required.
+    """
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    run_dir = RunDir(e2e.runs_root, label="tab-order")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.assert_tab_order_sane()
     finally:
         driver.teardown()

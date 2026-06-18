@@ -3,21 +3,34 @@
 :class:`EpisodeTabDriver` constructs the ACTUAL mining tab — not a mock, not the
 full ``MainWindow`` — wired to a real :class:`EpisodeProcessor` via the project's
 own ``GUIPresenter`` / ``GUIProgressCallback``, and drives it the way a user would:
-it clicks the real buttons and reads the real progress/log widgets. It deliberately
-avoids ``MainWindow`` so there is no blocking ``ResultsDialog`` / welcome dialog and
-no heavy app startup; the tab itself shows results non-modally (via the presenter
-signal), so preview/process runs need nothing dismissed.
+it clicks the real buttons and reads the real progress/log widgets. It covers both
+multi-session accumulation/leak bugs AND GUI-consistency/integration bugs (button
+enable/disable, cancel paths, mined-word-set correctness) that unit tests cannot
+exercise with real services. It deliberately avoids ``MainWindow`` so there is no
+blocking ``ResultsDialog`` / welcome dialog and no heavy app startup; the tab
+itself shows results non-modally (via the presenter signal), so preview/process
+runs need nothing dismissed.
 
-Wait mechanics
---------------
+Capture mechanics (connect-before-start)
+----------------------------------------
 ``SingleEpisodeTab._start_processing`` builds the ``EpisodeWorkerThread``, connects
-``result_ready``/``error``, and calls ``.start()`` ALL synchronously. So the instant
-``preview_button.click()`` / ``process_button.click()`` returns, ``tab.worker_thread``
-is a live started thread. The ``click_*`` methods grab it and attach a one-shot
-capture to both ``result_ready`` (payload = ``ProcessingResult``) and ``error``
-(payload = ``str``). :meth:`wait_for_result` spins the GUI event loop (the proven
-``_drain_until`` idiom from ``tests/unit/test_mining_tab_base_curation.py``) until a
-payload is captured or the timeout fires, joins the worker, then raises / returns.
+the tab's own slots, and calls ``.start()`` ALL synchronously on the click. A worker
+that errors the instant ``run()`` begins can therefore emit ``error`` before any slot
+the driver attaches *after* the click — for a Qt queued (default cross-thread)
+connection a slot connected AFTER an emit does NOT receive that emission, so a
+post-click connect would miss it and time out spuriously.
+
+To capture deterministically, the driver does NOT connect after the click. Instead it
+connects once (in ``__init__``) to the tab's ``worker_created`` signal — a test seam
+the tab emits with the freshly built worker JUST BEFORE ``.start()``. That emit runs
+synchronously on the GUI thread inside ``_start_processing`` (same-thread DIRECT
+connection), so :meth:`_on_worker_created` attaches the capture slots to
+``result_ready`` (payload = ``ProcessingResult``) and ``error`` (payload = ``str``)
+BEFORE the worker is started and can emit. The ``click_*`` methods just click the
+button; capture is armed by the signal. :meth:`wait_for_result` spins the GUI event
+loop (the proven ``_drain_until`` idiom from
+``tests/unit/test_mining_tab_base_curation.py``) until a payload is captured or the
+timeout fires, joins the worker, then raises / returns.
 
 ``AppDriver`` (full-``MainWindow`` inspection mode) is intentionally NOT built here:
 ``MainWindow()`` takes no config (it loads the user's real ``gui_config.json``) and
@@ -28,9 +41,12 @@ own task. A later harness task can add it on top of this driver.
 from __future__ import annotations
 
 import contextlib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from PyQt6.QtCore import QTimer
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtTest import QTest
 
 from anki_miner.config import AnkiMinerConfig
@@ -40,7 +56,7 @@ from anki_miner.models import ProcessingResult
 from anki_miner.services.stats_service import StatsService
 from tests.e2e.artifacts import RunDir
 
-__all__ = ["E2EMiningError", "E2ETimeout", "EpisodeTabDriver"]
+__all__ = ["CancelOutcome", "E2EMiningError", "E2ETimeout", "EpisodeTabDriver"]
 
 # Bounded join for the worker after a result/error is captured (mirrors the
 # project's MiningTabBase teardown timeout).
@@ -53,6 +69,38 @@ class E2ETimeout(RuntimeError):
 
 class E2EMiningError(RuntimeError):
     """Raised when the worker emits its ``error`` signal instead of a result."""
+
+
+@dataclass
+class CancelOutcome:
+    """Result of a cancel-injected run (see :meth:`EpisodeTabDriver.cancel_and_wait`).
+
+    A cancelled mining run emits NEITHER ``result_ready`` NOR ``error``: the
+    worker's ``run()`` checks ``check_cancelled()`` at each phase checkpoint and
+    returns silently, so the only signal that fires is the QThread ``finished``
+    one (which restores the tab buttons). The driver therefore cannot use
+    ``wait_for_result`` for a cancel; it waits for the worker thread to FINISH
+    and reports what was observed here.
+
+    Attributes:
+        cancelled: ``True`` when the worker ended without emitting a result or
+            error — the expected outcome of a mid-run cancel.
+        joined: ``True`` when the worker thread joined within the budget (no
+            leaked/stuck thread).
+        result: A :class:`ProcessingResult` if the run happened to COMPLETE
+            before the cancel took effect (a fast run can win the race); else
+            ``None``.
+        error: The worker's error message if it errored before the cancel; else
+            ``None``.
+        buttons_idle: The tab's button state after the run ended — must be idle
+            (process shown+enabled, cancel hidden) for the tab to be reusable.
+    """
+
+    cancelled: bool
+    joined: bool
+    result: ProcessingResult | None = None
+    error: str | None = None
+    buttons_idle: bool = False
 
 
 def _drain_until(predicate, timeout_ms: int = 3000, step_ms: int = 10) -> bool:
@@ -103,9 +151,13 @@ class EpisodeTabDriver:
             progress_callback=self.progress_callback,
             stats_service=stats_service,
         )
-        # One-shot capture slots, reset on each click_* call.
+        # Capture state, reset whenever a new worker is created (see
+        # _on_worker_created). Connect ONCE: the tab emits worker_created
+        # synchronously, just before .start(), so we attach our capture slots to
+        # the worker before it can emit (connect-before-start — see module docstring).
         self._result: ProcessingResult | None = None
         self._error: str | None = None
+        self.tab.worker_created.connect(self._on_worker_created)
 
     # ----- input actions -------------------------------------------------
 
@@ -125,24 +177,20 @@ class EpisodeTabDriver:
 
     # ----- run actions ---------------------------------------------------
 
-    def _arm_capture(self) -> None:
-        """Reset capture state and connect one-shot slots to the live worker.
+    def _on_worker_created(self, worker: Any) -> None:
+        """Reset capture state and connect one-shot slots to the new worker.
 
-        Called immediately after a button click — by then ``tab.worker_thread``
-        is a started thread (``_start_processing`` runs synchronously). Connects
-        to BOTH ``result_ready`` and ``error`` so whichever fires is captured.
-
-        Race-free: ``result_ready``/``error`` are emitted on the WORKER thread, so
-        delivery to these GUI-thread slots is a queued (default cross-thread)
-        connection — the emit enqueues an event that is not processed until the
-        GUI event loop runs. This connect happens on the GUI thread BEFORE
-        :meth:`wait_for_result` spins that loop, so even if the worker has already
-        emitted, the queued event is still delivered to the slot we just attached.
+        Invoked synchronously (same-thread DIRECT connection) from
+        ``SingleEpisodeTab._start_processing`` via the ``worker_created`` seam,
+        JUST BEFORE the worker is started. Connecting here — before ``.start()``
+        — means an emission from the worker (queued, cross-thread) cannot be
+        missed even when the worker errors the instant ``run()`` begins. We
+        connect to BOTH ``result_ready`` and ``error`` so whichever fires is
+        captured; the matching payload is read in :meth:`wait_for_result` once
+        the event loop is spun.
         """
         self._result = None
         self._error = None
-        worker = self.tab.worker_thread
-        assert worker is not None, "no worker_thread after click — did validation reject the inputs?"
 
         def _on_result(result: Any) -> None:
             self._result = result
@@ -154,18 +202,190 @@ class EpisodeTabDriver:
         worker.error.connect(_on_error)
 
     def click_preview(self) -> None:
-        """Click the real Preview button and arm result capture (preview mode)."""
+        """Click the real Preview button (preview mode).
+
+        Capture is armed by ``worker_created`` (see :meth:`_on_worker_created`),
+        emitted before the worker starts — not by the click itself.
+        """
         self.tab.preview_button.click()
-        self._arm_capture()
 
     def click_process(self) -> None:
-        """Click the real Process button and arm result capture (card creation)."""
+        """Click the real Process button (card creation).
+
+        Capture is armed by ``worker_created`` (see :meth:`_on_worker_created`),
+        emitted before the worker starts — not by the click itself.
+        """
         self.tab.process_button.click()
-        self._arm_capture()
 
     def click_cancel(self) -> None:
         """Click the real Cancel button."""
         self.tab.cancel_button.click()
+
+    # ----- keyboard / shortcut helpers -----------------------------------
+
+    def _find_shortcut(self, key_sequence: str) -> QShortcut | None:
+        """Return the first ``QShortcut`` child of the tab matching ``key_sequence``.
+
+        Uses ``tab.findChildren(QShortcut)`` — works for an offscreen,
+        never-``show()``-n widget because ``findChildren`` only traverses the
+        Qt object tree, no platform window needed.
+        """
+        target = QKeySequence(key_sequence)
+        for sc in self.tab.findChildren(QShortcut):
+            if sc.key() == target:
+                return sc
+        return None
+
+    def shortcut_preview_via_keyboard(self) -> None:
+        """Trigger the Ctrl+P preview shortcut through the real shortcut machinery.
+
+        ``QTest.keyClick`` requires the widget to be shown and have focus — it
+        does NOT fire ``QShortcut.activated`` for a never-``show()``-n offscreen
+        widget (empirically verified: the offscreen platform plugin accepts the
+        key event but the shortcut filter never activates). The robust offscreen
+        substitute is to call ``shortcut.activated.emit()`` directly on the real
+        ``QShortcut`` instance: the slot (``_on_preview_clicked``) is still the
+        real one, the signal is still the real one, and the driver's
+        ``worker_created`` capture is still armed — only the key-matching step is
+        bypassed. This is explicitly documented as the accepted fallback for this
+        low-value task.
+
+        Raises:
+            AssertionError: When the Ctrl+P shortcut is absent from the tab
+                (i.e. ``_setup_shortcuts`` did not register it).
+        """
+        sc = self._find_shortcut("Ctrl+P")
+        assert sc is not None, "Ctrl+P shortcut not found on SingleEpisodeTab"
+        sc.activated.emit()
+
+    def assert_shortcuts_exist(self) -> None:
+        """Assert all three documented keyboard shortcuts are registered on the tab.
+
+        Checks: Ctrl+O (browse video), Ctrl+P (preview), Ctrl+Return (process).
+        Raises ``AssertionError`` if any is absent or if the shortcut is disabled.
+        """
+        expected = ["Ctrl+O", "Ctrl+P", "Ctrl+Return"]
+        for key_seq in expected:
+            sc = self._find_shortcut(key_seq)
+            assert sc is not None, (
+                f"Expected QShortcut for {key_seq!r} not found on SingleEpisodeTab. "
+                f"Registered shortcuts: {[s.key().toString() for s in self.tab.findChildren(QShortcut)]}"
+            )
+            assert sc.isEnabled(), f"QShortcut for {key_seq!r} exists but is disabled"
+
+    def assert_tab_order_sane(self) -> None:
+        """Assert the focus/tab order among the tab's primary input widgets is correct.
+
+        Verifies the order declared in ``_setup_accessibility``:
+        video_selector → subtitle_selector → offset_spinbox → preview_button → process_button.
+
+        For each consecutive pair (A, B), walks ``nextInFocusChain()`` from A
+        and asserts B appears before the chain cycles back to A (i.e. B follows
+        A in the overall focus order). The last widget (process_button) is not
+        required to lead back to video_selector — there are many other widgets
+        between them in the full chain. Does NOT require the widget to be shown.
+        """
+        tab = self.tab
+        ordered = [
+            tab.video_selector,
+            tab.subtitle_selector,
+            tab.offset_spinbox,
+            tab.preview_button,
+            tab.process_button,
+        ]
+        # Check only consecutive forward pairs (not the wrap-around edge).
+        for i in range(len(ordered) - 1):
+            widget = ordered[i]
+            successor = ordered[i + 1]
+            # Walk until we find successor or cycle back to widget (cycle = broken).
+            seen: set[int] = set()
+            current = widget.nextInFocusChain()
+            found = False
+            while current is not None and id(current) not in seen:
+                if current is successor:
+                    found = True
+                    break
+                seen.add(id(current))
+                current = current.nextInFocusChain()
+            assert found, (
+                f"Tab-order broken: expected {successor.__class__.__name__} "
+                f"to follow {widget.__class__.__name__} in the focus chain"
+            )
+
+    def schedule_cancel(self, delay_s: float) -> None:
+        """Schedule a Cancel click ``delay_s`` seconds from now on the GUI thread.
+
+        Uses ``QTimer.singleShot`` so the click fires from the GUI thread's event
+        loop WHILE a wait spins it — never from a raw Python thread (clicking a
+        widget off the GUI thread is undefined behaviour in Qt). Schedule it
+        BEFORE / right at the ``click_process`` so the timer is already armed when
+        the wait loop starts pumping events.
+        """
+        QTimer.singleShot(int(delay_s * 1000), self.click_cancel)
+
+    def cancel_and_wait(self, *, delay_s: float = 0.0, timeout_s: float = 30.0) -> CancelOutcome:
+        """Schedule a cancel, spin the event loop, and report the cancel outcome.
+
+        Call this INSTEAD of :meth:`wait_for_result` for a cancel run. A cancelled
+        worker emits no ``result_ready`` / ``error`` (see :class:`CancelOutcome`),
+        so this waits for the worker QThread to FINISH rather than for a captured
+        payload. It then joins the worker (bounded) and samples the button state.
+
+        The cancel is allowed to LOSE the race against a very fast run: if the run
+        completed (result captured) or errored before the cancel took effect, that
+        is recorded in the returned :class:`CancelOutcome` rather than treated as a
+        failure — the invariant being asserted is "the run ends promptly, the
+        worker joins, and the tab returns to idle", not "the cancel always wins".
+
+        Args:
+            delay_s: Seconds before the scheduled Cancel click fires.
+            timeout_s: Budget for the worker to finish after cancel.
+
+        Returns:
+            A :class:`CancelOutcome` describing what happened.
+
+        Raises:
+            E2ETimeout: The worker did not finish within ``timeout_s`` (a stuck
+                run — itself the bug class this path hunts). A screenshot + JSON
+                are written first.
+        """
+        self.schedule_cancel(delay_s)
+
+        worker = self.tab.worker_thread
+        # No worker (nothing started) — nothing to cancel; report idle state.
+        if worker is None:
+            return CancelOutcome(cancelled=True, joined=True, buttons_idle=self.buttons_idle())
+
+        timeout_ms = int(timeout_s * 1000)
+        finished = _drain_until(
+            lambda: worker.isFinished() or self._result is not None or self._error is not None,
+            timeout_ms=timeout_ms,
+        )
+        if not finished:
+            self.screenshot("cancel-timeout")
+            self.run_dir.save_json(
+                "cancel-timeout",
+                {"timeout_s": timeout_s, "delay_s": delay_s, "log": self.log_text()},
+            )
+            raise E2ETimeout(f"cancelled run did not finish within {timeout_s}s")
+
+        # Join the worker now that it has finished — bounded, returns promptly.
+        joined = bool(worker.wait(_WORKER_JOIN_TIMEOUT_MS))
+
+        # Pump the event loop briefly so the queued finished->_restore_buttons
+        # signal is delivered before we sample button state (same idiom as the
+        # soak GUI checks): otherwise a fast finish can outrun the slot.
+        _drain_until(lambda: self.buttons_idle(), timeout_ms=2000)
+
+        self.screenshot("cancel")
+        cancelled = self._result is None and self._error is None
+        return CancelOutcome(
+            cancelled=cancelled,
+            joined=joined,
+            result=self._result,
+            error=self._error,
+            buttons_idle=self.buttons_idle(),
+        )
 
     def wait_for_result(self, timeout_s: float = 120) -> ProcessingResult:
         """Spin the event loop until the worker reports a result or errors.
@@ -221,6 +441,45 @@ class EpisodeTabDriver:
     def screenshot(self, name: str) -> Path:
         """Grab the whole tab to an ordered PNG in the run dir."""
         return self.run_dir.save_png(name, self.tab)
+
+    # ----- button-state predicates ---------------------------------------
+
+    def process_button_enabled(self) -> bool:
+        """Return whether the process button is not hidden (idle state).
+
+        Uses ``isHidden()`` rather than ``isVisible()`` because ``isVisible()``
+        walks the full parent chain — when the tab itself has never been
+        ``show()``-n (offscreen tests) every child reports ``isVisible()=False``
+        regardless of the button's own hidden state.  ``isHidden()`` reflects
+        only the button's OWN hidden flag, set by ``hide()``/``show()`` in
+        ``_start_processing`` / ``_restore_buttons``.
+        """
+        return self.tab.process_button.isEnabled() and not self.tab.process_button.isHidden()
+
+    def cancel_button_visible(self) -> bool:
+        """Return whether the cancel button is not hidden (running state).
+
+        Uses ``not isHidden()`` for the same reason as :meth:`process_button_enabled`.
+        """
+        return not self.tab.cancel_button.isHidden()
+
+    def buttons_idle(self) -> bool:
+        """True when the tab is in idle state: process button shown+enabled, cancel hidden.
+
+        This is the expected state AFTER a run completes (or errors). The tab
+        shows preview/process/timing/tracks buttons and hides cancel via
+        ``_restore_buttons``, which is connected to ``worker_thread.finished``.
+        """
+        return self.process_button_enabled() and not self.cancel_button_visible()
+
+    def buttons_running(self) -> bool:
+        """True when the tab is in running state: cancel shown, process hidden.
+
+        The tab hides preview/process/timing/tracks and shows cancel inside
+        ``_start_processing``; ``_restore_buttons`` reverses this when the
+        worker finishes.
+        """
+        return self.cancel_button_visible() and self.tab.process_button.isHidden()
 
     # ----- teardown ------------------------------------------------------
 
