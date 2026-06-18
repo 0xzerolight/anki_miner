@@ -41,8 +41,9 @@ class E2EConfig:
     #: AnkiConnect endpoint. Must be loopback (enforced by the gateway).
     #: Env override: ``ANKI_MINER_E2E_ANKICONNECT_URL``.
     ankiconnect_url: str = "http://127.0.0.1:8765"
-    #: Anki note type the harness builds cards against.
-    note_type: str = "Basic"
+    #: Anki note type the harness builds cards against.  The distinctive name
+    #: avoids colliding with stock "Basic" and signals harness ownership.
+    note_type: str = "AnkiMiner E2E Basic"
     #: How many mined candidates to curate into cards per run.
     #: ``"all"`` keeps everything, ``"first_n"`` keeps the first ``first_n``,
     #: ``"none"`` curates nothing.

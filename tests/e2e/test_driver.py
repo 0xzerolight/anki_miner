@@ -97,7 +97,7 @@ def test_build_app_config_basic_field_mapping(tmp_path: Path) -> None:
     assert set(cfg.anki_fields) >= REQUIRED_FIELD_KEYS
     # Target + isolation overrides applied.
     assert cfg.anki_deck_name == e2e.deck_name
-    assert cfg.anki_note_type == "Basic"
+    assert cfg.anki_note_type == "AnkiMiner E2E Basic"
     assert cfg.dicts_root == tmp_path / "dicts"
     assert cfg.known_words_db_path == tmp_path / "known_words.db"
     # DEFAULT = faithful real mining: exercises known-words subtraction (needs
@@ -190,6 +190,7 @@ def live_anki(tmp_path: Path):
     except AnkiUnreachableError:
         pytest.skip("Anki not running (AnkiConnect unreachable)")
     gateway.ensure_test_deck()
+    gateway.ensure_test_model()
     try:
         yield gateway, e2e
     finally:
@@ -200,9 +201,10 @@ def live_anki(tmp_path: Path):
 def test_process_creates_cards_live(tmp_path: Path, qtbot, live_anki) -> None:
     """Real card creation against a live Anki test deck (skips when Anki is down).
 
-    Uses the note type "Basic" (every Anki install ships it) so the harness need
-    not create a custom model. ``AutoCurationResponder(policy="all")`` keeps every
-    mined word; the deck card count must then match ``cards_created``.
+    Uses the harness note type (``e2e.note_type``, self-provisioned by
+    ``ensure_test_model`` in the ``live_anki`` fixture).
+    ``AutoCurationResponder(policy="all")`` keeps every mined word; the deck
+    card count must then match ``cards_created``.
     """
     gateway, e2e = live_anki
     # bypass_known_words: deterministic cards_created == fixture lemma count

@@ -359,6 +359,7 @@ def _maybe_gateway(e2e: E2EConfig, *, preview: bool) -> AnkiGateway | None:
     except AnkiUnreachableError:
         return None
     gateway.ensure_test_deck()
+    gateway.ensure_test_model()
     return gateway
 
 
