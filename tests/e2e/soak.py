@@ -65,7 +65,7 @@ from pathlib import Path
 from typing import Literal
 
 from tests._home_isolation import guard_real_home, set_test_home
-from tests.e2e.anki_gateway import AnkiGateway, AnkiUnreachableError
+from tests.e2e.anki_gateway import AnkiGateway
 from tests.e2e.app_config import build_app_config
 from tests.e2e.app_driver import AppDriver
 from tests.e2e.artifacts import RunDir
@@ -778,21 +778,27 @@ def _prepare_home(test_home: Path, *, fresh: bool) -> dict:
 def _maybe_gateway(e2e: E2EConfig, *, preview: bool) -> AnkiGateway | None:
     """Return a ready gateway (deck ensured) for a live process run, else ``None``.
 
-    For preview / bypass runs Anki is not used, so no gateway is built. For a live
-    process run, the deck is ensured up front; an unreachable Anki yields ``None``
-    (the caller — a test — gates on this and skips).
+    For preview runs Anki is not used, so no gateway is built and ``None`` is returned
+    immediately without pinging.
+
+    For a non-preview (live) run, pings Anki first.  If Anki is unreachable the
+    :class:`AnkiUnreachableError` is **re-raised** so it propagates to the runner's
+    ``except AnkiUnreachableError`` handler, which prints a clean one-line ``ERROR:``
+    message and exits with code 2.  (The old behaviour of swallowing the error and
+    returning ``None`` caused the run to proceed gateway-less and crash deep inside the
+    worker instead of exiting cleanly.)
 
     Raises:
+        AnkiUnreachableError: Anki is not reachable (non-preview runs only).
+            Callers (``run_inprocess_soak``, ``run_crossprocess_soak``) let this
+            propagate to the runner, which handles it as a clean exit-2.
         ForeignDeckError: The test deck already exists with notes from a prior run.
             Let this propagate so the runner can surface a clean, actionable message.
     """
     if preview:
         return None
-    try:
-        gateway = AnkiGateway(e2e)
-        gateway.ping()
-    except AnkiUnreachableError:
-        return None
+    gateway = AnkiGateway(e2e)
+    gateway.ping()  # AnkiUnreachableError propagates to the runner's clean exit-2 handler
     gateway.ensure_test_deck()  # raises ForeignDeckError if deck has prior-run notes
     gateway.ensure_test_model()
     return gateway
