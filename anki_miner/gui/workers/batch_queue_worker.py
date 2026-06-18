@@ -15,6 +15,7 @@ from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.batch_queue import BatchQueue, QueueItemStatus
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
+from anki_miner.services.anki_service import AnkiService
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +114,15 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
             self._close_current_processor()
 
     def _run_queue(self, total_cards: int) -> None:
+        # Build ONE shared AnkiService for the whole run so its vocab cache
+        # (get_existing_vocabulary) survives across all queue items. Each item
+        # gets a fresh EpisodeProcessor (different subtitle_offset) but shares
+        # this instance. AnkiService has no close(); EpisodeProcessor.close()
+        # does NOT close it, so _close_current_processor() between items is safe.
+        # (ankiconnect_url / anki_fields / excluded_decks are identical for all
+        # items in a run — only subtitle_offset differs via config_with_offset.)
+        shared_anki_service = AnkiService(self.config)
+
         while not self.check_cancelled():
             # Close the previous item's processor before building the next
             # item's, so handles never accumulate across items.
@@ -137,8 +147,11 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                 # Create config with item's subtitle offset
                 config_with_offset = replace(self.config, subtitle_offset=item.subtitle_offset)
 
-                # Create processor for this item with its specific offset
-                episode_processor = create_episode_processor(config_with_offset, self.presenter, self.stats_service)
+                # Create processor for this item with its specific offset,
+                # injecting the shared AnkiService so the vocab cache persists.
+                episode_processor = create_episode_processor(
+                    config_with_offset, self.presenter, self.stats_service, anki_service=shared_anki_service
+                )
                 self._current_processor = episode_processor
 
                 # Use FilePairMatcher for cross-folder pairing
@@ -177,6 +190,7 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                         # AND dropped cards already created for earlier pairs from the
                         # count. Record the failure and continue (mirrors
                         # ManualPairWorkerThread's per-pair except).
+                        logger.exception("BatchQueueWorker pair %s failed", pair.video.name)
                         failed_pairs.append((pair.video.name, str(e)))
                         continue
                     cards_for_item += result.cards_created
@@ -211,6 +225,7 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                     self.item_completed.emit(item.id, cards_for_item)
 
             except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+                logger.exception("BatchQueueWorker item %s failed", item.id)
                 item.status = QueueItemStatus.ERROR
                 item.error_message = str(e)
                 self.item_failed.emit(item.id, str(e))

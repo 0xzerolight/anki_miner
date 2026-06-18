@@ -95,7 +95,15 @@ class DefinitionService:
                 continue
             batch_fn = getattr(provider, "lookup_many", None)
             if callable(batch_fn):
-                hits = batch_fn(remaining)
+                try:
+                    hits = batch_fn(remaining)
+                except Exception as e:
+                    logger.warning(
+                        "Provider '%s' raised during lookup_many; skipping: %s",
+                        provider.name,
+                        e,
+                    )
+                    continue
                 still_remaining: list[str] = []
                 for word in remaining:
                     result = hits.get(word)
@@ -108,7 +116,17 @@ class DefinitionService:
                 # Per-word fallback for providers lacking the batch method.
                 still_remaining = []
                 for word in remaining:
-                    result = provider.lookup(word)
+                    try:
+                        result = provider.lookup(word)
+                    except Exception as e:
+                        logger.warning(
+                            "Provider '%s' raised during lookup of '%s'; skipping: %s",
+                            provider.name,
+                            word,
+                            e,
+                        )
+                        still_remaining.append(word)
+                        continue
                     if result:
                         resolved[word] = result
                     else:
@@ -154,7 +172,16 @@ class DefinitionService:
             if provider.is_online:
                 online_providers.append(provider)
                 continue
-            result = provider.lookup(word)
+            try:
+                result = provider.lookup(word)
+            except Exception as e:
+                logger.warning(
+                    "Provider '%s' raised during lookup of '%s'; skipping: %s",
+                    provider.name,
+                    word,
+                    e,
+                )
+                continue
             if result:
                 offline_hits.append(result)
 
@@ -163,7 +190,16 @@ class DefinitionService:
 
         online_hits: list[str] = []
         for provider in online_providers:
-            result = provider.lookup(word)
+            try:
+                result = provider.lookup(word)
+            except Exception as e:
+                logger.warning(
+                    "Provider '%s' raised during lookup of '%s'; skipping: %s",
+                    provider.name,
+                    word,
+                    e,
+                )
+                continue
             if result:
                 online_hits.append(result)
         return "".join(online_hits) if online_hits else None
@@ -173,13 +209,94 @@ class DefinitionService:
         words: list[str],
         progress_callback: ProgressCallback | None = None,
     ) -> list[str | None]:
-        """Batch variant of get_glossary; preserves input order."""
+        """Batch variant of get_glossary; preserves input order.
+
+        Fast path (OVH-050): offline providers that expose ``lookup_many`` are
+        queried ONCE for all words (one IN-clause SQLite query per dictionary
+        instead of N per-word queries). Walk semantics mirror ``get_glossary``:
+        * Every available *offline* provider is queried; hits are concatenated.
+        * *Online* providers are consulted per-word only when no offline provider
+          returned a hit for that word — they act as a fallback.
+        Providers lacking ``lookup_many`` (e.g. legacy offline or online Jisho)
+        are consulted per-word, matching the old behaviour.
+        """
         if progress_callback:
             progress_callback.on_start(len(words), "Fetching glossary entries")
 
+        self.ensure_loaded()
+
+        # Collect all available offline providers (batch-capable or per-word).
+        offline_providers: list[DictionaryProvider] = []
+        online_providers: list[DictionaryProvider] = []
+        for provider in self._providers:
+            if not provider.is_available():
+                continue
+            if provider.is_online:
+                online_providers.append(provider)
+            else:
+                offline_providers.append(provider)
+
+        # Per-word accumulator: word → list[str] of offline HTML hits.
+        offline_hits: dict[str, list[str]] = {w: [] for w in words}
+
+        for provider in offline_providers:
+            batch_fn = getattr(provider, "lookup_many", None)
+            if callable(batch_fn):
+                try:
+                    provider_results = batch_fn(words)
+                except Exception as e:
+                    logger.warning(
+                        "Provider '%s' raised during lookup_many; skipping: %s",
+                        provider.name,
+                        e,
+                    )
+                    continue
+                for w in words:
+                    html = provider_results.get(w)
+                    if html:
+                        offline_hits[w].append(html)
+            else:
+                for w in words:
+                    try:
+                        html = provider.lookup(w)
+                    except Exception as e:
+                        logger.warning(
+                            "Provider '%s' raised during lookup of '%s'; skipping: %s",
+                            provider.name,
+                            w,
+                            e,
+                        )
+                        continue
+                    if html:
+                        offline_hits[w].append(html)
+
+        # Words with no offline hits fall back to online providers (per-word).
+        online_results: dict[str, str | None] = {}
+        for w in words:
+            if not offline_hits[w]:
+                for provider in online_providers:
+                    try:
+                        html = provider.lookup(w)
+                    except Exception as e:
+                        logger.warning(
+                            "Provider '%s' raised during lookup of '%s'; skipping: %s",
+                            provider.name,
+                            w,
+                            e,
+                        )
+                        continue
+                    if html:
+                        online_results[w] = html
+                        break
+                else:
+                    online_results[w] = None
+
         results: list[str | None] = []
         for i, word in enumerate(words, 1):
-            glossary = self.get_glossary(word)
+            if offline_hits[word]:
+                glossary: str | None = "".join(offline_hits[word])
+            else:
+                glossary = online_results.get(word)
             results.append(glossary)
             if progress_callback:
                 if glossary:
@@ -212,7 +329,16 @@ class DefinitionService:
         for p in self._providers:
             if p.is_online or not p.is_available():
                 continue
-            html = p.lookup(word)
+            try:
+                html = p.lookup(word)
+            except Exception as e:
+                logger.warning(
+                    "Provider '%s' raised during lookup of '%s'; skipping: %s",
+                    p.name,
+                    word,
+                    e,
+                )
+                continue
             if html:
                 out.append((p.name, html))
         return out

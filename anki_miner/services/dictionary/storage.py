@@ -77,10 +77,15 @@ CREATE TABLE IF NOT EXISTS meta (
 # otherwise come back in unspecified query-plan order). This is what the batch
 # ``lookup_many`` path reproduces with its final ``row_id`` sort, so keeping the
 # tiebreak here guarantees ``lookup`` and ``lookup_many`` agree.
+#
+# ``score DESC`` is the leading non-term tiebreak so that Yomitan popularity
+# scores govern which senses survive LIMIT 5 (OVH-027). JMdict rows carry
+# score=0, so this key is a no-op for JMdict and the existing sequence/id
+# ordering is unchanged for that dictionary.
 _LOOKUP_SQL = (
     "SELECT content, tags FROM entries "
     "WHERE term = ? OR reading = ? "
-    "ORDER BY (term = ?) DESC, sequence, id "
+    "ORDER BY (term = ?) DESC, score DESC, sequence, id "
     "LIMIT 5"
 )
 
@@ -272,7 +277,7 @@ def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tu
         chunk = unique[start : start + _BIND_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
         sql = (
-            "SELECT id, term, reading, content, tags, sequence FROM entries "
+            "SELECT id, term, reading, content, tags, score, sequence FROM entries "
             f"WHERE term IN ({placeholders}) OR reading IN ({placeholders})"
         )
         rows = conn.execute(sql, (*chunk, *chunk)).fetchall()
@@ -280,16 +285,18 @@ def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tu
         # Bucket each fetched row to every requested word it can satisfy. A row
         # may match one word by term and a different word by reading. Each entry
         # carries the sort keys that reproduce _LOOKUP_SQL's
-        # "ORDER BY (term=?) DESC, sequence", plus a final ``id`` tiebreak:
+        # "ORDER BY (term=?) DESC, score DESC, sequence", plus a final ``id``
+        # tiebreak (OVH-027):
         #   * term_priority: 0 when this row's term equals the word (DESC puts
         #     term matches first), else 1.
+        #   * neg_score: -score mirrors ``score DESC``.
         #   * _seq_key(sequence): NULL-aware ascending sequence tiebreak.
-        #   * row_id: SQLite resolves equal (term_priority, sequence) ties by
-        #     rowid ascending under the single-word query's MULTI-INDEX OR plan;
-        #     replaying it here keeps lookup_many byte-identical to lookup.
+        #   * row_id: SQLite resolves equal (term_priority, score, sequence) ties
+        #     by rowid ascending under the single-word query's MULTI-INDEX OR
+        #     plan; replaying it here keeps lookup_many byte-identical to lookup.
         chunk_set = set(chunk)
-        buckets: dict[str, list[tuple[int, tuple[int, int], int, str, str]]] = {w: [] for w in chunk}
-        for row_id, term, reading, content, tags, sequence in rows:
+        buckets: dict[str, list[tuple[int, int, tuple[int, int], int, str, str]]] = {w: [] for w in chunk}
+        for row_id, term, reading, content, tags, score, sequence in rows:
             tags_val = tags if tags is not None else ""
             seq_key = _seq_key(sequence)
             # A row satisfies a word via term OR reading. _LOOKUP_SQL's
@@ -298,11 +305,12 @@ def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tu
             for w in {term, reading}:
                 if w is not None and w in chunk_set:
                     term_priority = 0 if term == w else 1
-                    buckets[w].append((term_priority, seq_key, row_id, content, tags_val))
+                    neg_score = -score if score is not None else 0
+                    buckets[w].append((term_priority, neg_score, seq_key, row_id, content, tags_val))
 
         for w, entries in buckets.items():
-            entries.sort(key=lambda e: (e[0], e[1], e[2]))
-            result[w] = [(content, tags) for _p, _s, _id, content, tags in entries[:5]]
+            entries.sort(key=lambda e: (e[0], e[1], e[2], e[3]))
+            result[w] = [(content, tags) for _p, _ns, _s, _id, content, tags in entries[:5]]
 
     return result
 

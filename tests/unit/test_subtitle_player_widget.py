@@ -149,15 +149,17 @@ class TestSetSource:
         first_player.stop.assert_called_once()
 
     def test_set_source_twice_fully_tears_down_first_player(self, qtbot):
-        """Calling set_source a second time should disconnect signals, clear audio, and deleteLater on the first player."""
+        """Calling set_source a second time should disconnect signals, clear audio, and deleteLater on the first player + its audio output."""
         mock1 = MagicMock()
         mock1.audioTracks.return_value = []
         mock2 = MagicMock()
         mock2.audioTracks.return_value = []
+        audio1 = MagicMock()
+        audio2 = MagicMock()
 
         with (
             patch(f"{MODULE}.QMediaPlayer", side_effect=[mock1, mock2]),
-            patch(f"{MODULE}.QAudioOutput"),
+            patch(f"{MODULE}.QAudioOutput", side_effect=[audio1, audio2]),
             patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
             patch(f"{MODULE}.get_primary_video_codec", return_value=None),
         ):
@@ -176,6 +178,9 @@ class TestSetSource:
         mock1.mediaStatusChanged.disconnect.assert_called_once_with(widget._on_media_status_changed)
         mock1.setAudioOutput.assert_any_call(None)
         mock1.deleteLater.assert_called_once()
+        # The first audio output must also be scheduled for deletion so it
+        # doesn't accumulate under the widget per re-source (F9).
+        audio1.deleteLater.assert_called_once()
 
     def test_set_source_with_audio_track_override(self, qtbot, fake_media_classes):
         """audio_track_override should skip ffprobe and use the given index."""
@@ -497,6 +502,96 @@ class TestAudioTrackSelection:
         player.audioTracks.return_value = [MagicMock(), MagicMock()]
         widget._on_tracks_changed()
         player.setActiveAudioTrack.assert_called_once_with(0)
+
+
+# ---------------------------------------------------------------------------
+# OVH-057 — closeEvent + _teardown_player
+# ---------------------------------------------------------------------------
+
+
+class TestCloseEventTeardown:
+    """OVH-057: closeEvent must call _teardown_player so the multimedia backend
+    is released deterministically when the widget (or its dialog parent) is
+    discarded — not at Python GC time."""
+
+    def test_close_event_stops_player_and_detaches_audio(self, qtbot, fake_media_classes):
+        """closeEvent calls stop() and setAudioOutput(None) on the active player."""
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+
+        player = fake_media_classes["player"]
+        player.reset_mock()
+
+        # Simulate closeEvent directly (avoids triggering Qt window close).
+        from PyQt6.QtGui import QCloseEvent
+
+        widget.closeEvent(QCloseEvent())
+
+        player.stop.assert_called_once()
+        player.setAudioOutput.assert_any_call(None)
+
+    def test_close_event_without_player_does_not_raise(self, qtbot):
+        """closeEvent before set_source (no player) must be a no-op."""
+        widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
+        assert widget.player is None
+
+        from PyQt6.QtGui import QCloseEvent
+
+        widget.closeEvent(QCloseEvent())  # must not raise
+
+    def test_close_event_clears_player_reference(self, qtbot, fake_media_classes):
+        """After closeEvent, widget.player must be None."""
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+
+        from PyQt6.QtGui import QCloseEvent
+
+        widget.closeEvent(QCloseEvent())
+        assert widget.player is None
+        assert widget.audio_output is None
+
+    def test_teardown_player_is_idempotent(self, qtbot, fake_media_classes):
+        """Calling _teardown_player twice must not raise."""
+        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+
+        widget._teardown_player()
+        widget._teardown_player()  # second call: player is None, must be no-op
+
+    def test_player_parented_to_widget_at_construction(self, qtbot):
+        """QMediaPlayer and QAudioOutput must be parented to the widget (not None)
+        so Qt's object tree frees them when the widget is deleted.
+
+        This test patches the constructors and inspects the ``parent`` positional
+        argument (first positional arg after ``self`` in Qt constructors).
+        """
+        player_instance = MagicMock()
+        player_instance.audioTracks.return_value = []
+        audio_instance = MagicMock()
+
+        with (
+            patch(f"{MODULE}.QMediaPlayer") as player_cls,
+            patch(f"{MODULE}.QAudioOutput") as audio_cls,
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
+            player_cls.return_value = player_instance
+            audio_cls.return_value = audio_instance
+
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+
+            # Both must be constructed with the widget as their Qt parent.
+            player_cls.assert_called_once_with(widget)
+            audio_cls.assert_called_once_with(widget)
 
     def test_override_logs_in_first_branch_not_qt_branch(self, qtbot, fake_media_classes, caplog):
         """Override path should log 'Selected audio track', not 'Qt metadata'."""

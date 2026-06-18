@@ -1,9 +1,13 @@
 """Worker thread for system validation."""
 
+import logging
+
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services import ValidationService
+
+logger = logging.getLogger(__name__)
 
 
 class ValidationWorkerThread(CancellableWorker):
@@ -38,6 +42,7 @@ class ValidationWorkerThread(CancellableWorker):
             if not self.check_cancelled():
                 self.result_ready.emit(result)
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+            logger.exception("ValidationWorkerThread unhandled exception")
             if not self.check_cancelled():
                 error_msg = f"Error during validation: {str(e)}"
                 self.error.emit(error_msg)

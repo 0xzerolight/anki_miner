@@ -3,7 +3,11 @@
 import pytest
 
 from anki_miner.exceptions import SetupError
-from anki_miner.services.frequency_service import FrequencyService
+from anki_miner.services.frequency_service import (
+    FrequencyService,
+    _extract_word_rank,
+    _is_word_first_header,
+)
 
 
 class TestLoad:
@@ -232,3 +236,137 @@ class TestLoadException:
             pytest.raises(SetupError, match="Error loading frequency data"),
         ):
             service.load()
+
+
+class TestIsWordFirstHeader:
+    """Unit tests for _is_word_first_header."""
+
+    def test_term_header(self):
+        assert _is_word_first_header(["term", "rank"]) is True
+
+    def test_word_header(self):
+        assert _is_word_first_header(["word", "rank"]) is True
+
+    def test_case_insensitive(self):
+        assert _is_word_first_header(["Term", "Rank"]) is True
+        assert _is_word_first_header(["WORD", "RANK"]) is True
+
+    def test_rank_first_is_not_word_first(self):
+        assert _is_word_first_header(["rank", "word"]) is False
+
+    def test_empty_row(self):
+        assert _is_word_first_header([]) is False
+
+    def test_unknown_header(self):
+        assert _is_word_first_header(["frequency", "lemma"]) is False
+
+
+class TestExtractWordRankWordFirst:
+    """Unit tests for _extract_word_rank with word_first=True (OVH-034)."""
+
+    def test_normal_word_rank(self):
+        """Plain kana term is correctly extracted in word-first mode."""
+        assert _extract_word_rank(["食べる", "100"], word_first=True) == ("食べる", 100)
+
+    def test_fullwidth_digit_term_not_swapped(self):
+        """Fullwidth-digit term '１０' must NOT be misread as rank 10."""
+        word, rank = _extract_word_rank(["１０", "42"], word_first=True)
+        assert word == "１０"
+        assert rank == 42
+
+    def test_ascii_digit_term_not_swapped(self):
+        """Pure-ASCII digit term '2020' must NOT be misread as rank 2020."""
+        word, rank = _extract_word_rank(["2020", "5"], word_first=True)
+        assert word == "2020"
+        assert rank == 5
+
+    def test_fallback_on_bad_rank_col(self):
+        """If col-1 is not an int, return ("", None) rather than guessing."""
+        assert _extract_word_rank(["食べる", "notanint"], word_first=True) == ("", None)
+
+    def test_empty_word_returns_empty(self):
+        assert _extract_word_rank(["", "42"], word_first=True) == ("", None)
+
+
+class TestExtractWordRankAutoDetect:
+    """Ensure legacy auto-detect (word_first=False) is unchanged."""
+
+    def test_rank_word_order(self):
+        assert _extract_word_rank(["1", "の"]) == ("の", 1)
+
+    def test_word_rank_order(self):
+        assert _extract_word_rank(["食べる", "100"]) == ("食べる", 100)
+
+    def test_fullwidth_digit_term_is_swapped_without_word_first(self):
+        """Without word_first, '１０' is parsed as rank 10 (pre-existing behaviour)."""
+        # Python int() parses fullwidth digits, so col-0 succeeds as rank.
+        word, rank = _extract_word_rank(["１０", "42"])
+        assert rank == 10
+        assert word == "42"
+
+
+class TestFrequencyServiceImporterHeader:
+    """Integration: FrequencyService honours the importer's term,rank header (OVH-034)."""
+
+    def test_digit_only_term_preserved_with_importer_header(self, tmp_path):
+        """A digit-only term like '２０２０' is stored with correct rank."""
+        csv_file = tmp_path / "freq.csv"
+        # Mimic what yomitan_freq_importer.py writes: header + (term, rank) rows.
+        csv_file.write_text(
+            "term,rank\n" "２０２０,1\n" "食べる,2\n",
+            encoding="utf-8",
+        )
+        service = FrequencyService(csv_file)
+        service.load()
+        assert service.lookup("２０２０") == 1
+        assert service.lookup("食べる") == 2
+        # The bogus swapped entry must NOT appear.
+        assert service.lookup("1") is None
+
+    def test_ascii_digit_term_preserved_with_importer_header(self, tmp_path):
+        """A pure-ASCII digit term like '2020' is stored with the correct rank."""
+        csv_file = tmp_path / "freq.csv"
+        csv_file.write_text(
+            "term,rank\n" "2020,5\n" "飲む,10\n",
+            encoding="utf-8",
+        )
+        service = FrequencyService(csv_file)
+        service.load()
+        assert service.lookup("2020") == 5
+        assert service.lookup("飲む") == 10
+        assert service.lookup("5") is None
+
+    def test_word_header_also_forces_word_first(self, tmp_path):
+        """A 'word,rank' header (user-exported variant) also forces word-first."""
+        csv_file = tmp_path / "freq.csv"
+        csv_file.write_text(
+            "word,rank\n" "１０,42\n",
+            encoding="utf-8",
+        )
+        service = FrequencyService(csv_file)
+        service.load()
+        assert service.lookup("１０") == 42
+
+    def test_headerless_legacy_rank_word_file_unchanged(self, tmp_path):
+        """Headerless (rank,word) files still parse with legacy auto-detect."""
+        csv_file = tmp_path / "freq.csv"
+        csv_file.write_text(
+            "1,の\n" "2,に\n" "100,食べる\n",
+            encoding="utf-8",
+        )
+        service = FrequencyService(csv_file)
+        service.load()
+        assert service.lookup("の") == 1
+        assert service.lookup("食べる") == 100
+
+    def test_headerless_legacy_word_rank_file_unchanged(self, tmp_path):
+        """Headerless (word,rank) files still parse via auto-detect."""
+        csv_file = tmp_path / "freq.csv"
+        csv_file.write_text(
+            "の,1\n" "食べる,100\n",
+            encoding="utf-8",
+        )
+        service = FrequencyService(csv_file)
+        service.load()
+        assert service.lookup("の") == 1
+        assert service.lookup("食べる") == 100

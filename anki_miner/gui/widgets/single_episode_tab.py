@@ -1,9 +1,12 @@
 """Single episode mining tab for GUI."""
 
+from __future__ import annotations
+
 import logging
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence, QShortcut
@@ -42,6 +45,9 @@ from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+
+if TYPE_CHECKING:
+    from anki_miner.orchestration import EpisodeProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -469,31 +475,36 @@ class SingleEpisodeTab(MiningTabBase):
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
 
-        # Tear down the previous run's worker + processor BEFORE building new
-        # ones. A fresh processor is created per run and its sqlite handles /
+        # Tear down the previous run's worker + processor BEFORE starting a new
+        # one. A fresh processor is created per run and its sqlite handles /
         # requests.Session were never released; on Windows those leak and
-        # collide with run N+1's GUI-thread service construction, hard-freezing
+        # collide with subsequent GUI-thread service construction, hard-freezing
         # the app on back-to-back single-episode mines. Join the old worker,
         # then close its processor so no stale handle survives into the new run.
         self._teardown_previous_run("single-episode")
 
-        # Create processor using service factory. DEBUG-logged so a Windows
-        # reporter running with debug logging can confirm which call blocks
-        # during the back-to-back-mining freeze.
-        logger.debug("building processor for %s", video_file)
-        processor = create_episode_processor(config_with_offset, self.presenter, self.stats_service)
-        logger.debug("processor built for %s", video_file)
+        # Pass a factory so the processor is built on the worker thread.
+        # This keeps the GUI thread free during the slow registry scan,
+        # sqlite opens, and CSV parses that happen during construction.
+        # DEBUG-logged so a Windows reporter running with debug logging can
+        # confirm the GUI-thread build no longer blocks.
+        def _processor_factory() -> EpisodeProcessor:
+            logger.debug("building processor for %s (worker thread)", video_file)
+            proc = create_episode_processor(config_with_offset, self.presenter, self.stats_service)
+            logger.debug("processor built for %s (worker thread)", video_file)
+            return proc
 
         # Create and start worker thread
         curation_cb = self._curation_bridge if not preview_mode else None
         self.worker_thread = EpisodeWorkerThread(
-            processor,
+            None,
             video_file,
             subtitle_file,
             preview_mode,
             self.progress_callback,
             curation_callback=curation_cb,
             audio_track_override=self._audio_track_override,
+            processor_factory=_processor_factory,
         )
 
         self.worker_thread.result_ready.connect(self._on_processing_finished)

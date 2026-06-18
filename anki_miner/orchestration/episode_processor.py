@@ -569,14 +569,30 @@ class EpisodeProcessor:
                 )
 
         # Record difficulty data if stats service available.
+        # OVH-024: use the pre-filter comprehension-unknown count (all_unknown_lemmas),
+        # NOT the post-filter mineable count (unknown_words). difficulty_score measures
+        # how hard the episode is to comprehend; i+1/frequency filters can collapse
+        # unknown_words to a handful, making a hard episode appear near-zero difficulty.
+        #
+        # A locked stats.db (Anki or a parallel run) raises OperationalError here.
+        # Do NOT let it bubble into process_episode's generic except — that would
+        # report cards_created=0 with no note IDs, turning a successful run into an
+        # apparent failure. Dropping one difficulty row is safe; warn and continue.
         if self.stats_service and self.stats_service.is_available():
-            self.stats_service.record_difficulty(
-                series_name=ctx.series_name,
-                episode_name=ctx.episode_name,
-                total_words=len(all_words),
-                unknown_words=len(unknown_words),
-                unique_words=len(all_words),
-            )
+            try:
+                self.stats_service.record_difficulty(
+                    series_name=ctx.series_name,
+                    episode_name=ctx.episode_name,
+                    total_words=len(all_words),
+                    unknown_words=len(all_unknown_lemmas),
+                    unique_words=len(all_words),
+                )
+            except sqlite3.Error as e:
+                logger.warning(
+                    "Could not record difficulty for %s in stats.db (%s); " "the run will continue.",
+                    ctx.episode_name,
+                    e,
+                )
 
         ctx.new_words_found = len(unknown_words)
         return unknown_words
@@ -682,7 +698,7 @@ class EpisodeProcessor:
         pitch_data: list[tuple[str | None, str | None]] = [(None, None)] * len(words_with_media)
         if self.pitch_accent_service and self.pitch_accent_service.is_available():
             pitch_data = self.pitch_accent_service.lookup_batch_detailed(
-                [(w.lemma, w.reading, w.pos) for w in words_with_media],
+                [(w.lemma, w.lemma_reading or w.reading, w.pos) for w in words_with_media],
                 fmt=self.config.pitch_category_format,
             )
             found_count = sum(1 for pos, _ in pitch_data if pos)
@@ -698,10 +714,13 @@ class EpisodeProcessor:
         glossaries: list[str | None],
         pitch_data: list[tuple[str | None, str | None]],
         progress_callback: ProgressCallback | None,
-    ) -> tuple[int, list[int]]:
+    ) -> tuple[int, list[int], list[str]]:
         """Phase 5: build CardPayloads and submit them to Anki.
 
-        Returns ``(cards_created, created_note_ids)``.
+        Returns ``(cards_created, created_note_ids, mined_forms)`` where
+        ``mined_forms`` is the list of ``mined_form`` strings for the cards
+        that were created — carried onto ``ProcessingResult`` so the Undo
+        callback can revert ``source='mined'`` rows in known_words.db (OVH-030).
         """
         self.presenter.show_info("Step 5/5 — Creating Anki cards")
         card_data: list[CardPayload] = []
@@ -759,6 +778,12 @@ class EpisodeProcessor:
                 f"(same Expression as an existing card or another word in this batch)."
             )
 
+        # Collect mined_forms from the cards that were actually submitted.
+        # Stored as mined_form (POS-aware) to match what Anki records in the
+        # Expression field (Issue #5). Returned to the caller so process_episode
+        # can stamp ProcessingResult.mined_forms for the Undo path (OVH-030).
+        mined_words: set[str] = {payload.word.mined_form for payload in card_data}
+
         # Add newly mined words to known word DB.
         # Store mined_form so the local DB matches what Anki stores in the
         # Expression first field (POS-aware via mined_form); Issue #5.
@@ -770,10 +795,9 @@ class EpisodeProcessor:
         # a failure (T-19). The cache is additive and self-heals on the next
         # run, so dropping this one write is safe; warn and keep the result.
         if self.known_word_db and self.known_word_db.is_available() and card_data:
-            mined_words = {payload.word.mined_form for payload in card_data}
             try:
                 self.known_word_db.add_words(mined_words, source="mined")
-            except sqlite3.OperationalError as e:
+            except sqlite3.Error as e:
                 logger.warning(
                     "Could not record %d mined words in known_words.db (%s); "
                     "the cards were still created. The cache will re-sync next run.",
@@ -781,7 +805,7 @@ class EpisodeProcessor:
                     e,
                 )
 
-        return cards_created, created_note_ids
+        return cards_created, created_note_ids, sorted(mined_words)
 
     def process_episode(
         self,
@@ -873,6 +897,14 @@ class EpisodeProcessor:
         # (the 2e0cc13 perf win).
         self.media_extractor.invalidate_audio_stream_cache(video_file)
 
+        # Reset the partial-IDs accumulator before this episode's run so that
+        # if the episode fails mid-batch the except handlers harvest ONLY IDs
+        # created during THIS run, not any stale IDs left over from a prior
+        # episode on the same processor instance (OVH-008). create_cards_batch
+        # resets it again at its own start — this guard is belt-and-suspenders
+        # for the case where the failure happens before phase 5 even runs.
+        self.anki_service.last_created_note_ids = []
+
         # Bridge the caller's cancel_event into this run's cancellation
         # checkpoints for the duration of this call only: the phase
         # checkpoints below and the media extractor's cancelled_check consult
@@ -956,23 +988,48 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            cards_created, created_note_ids = self._phase5_create(
+            cards_created, created_note_ids, mined_forms = self._phase5_create(
                 ctx, media_results, definitions, glossaries, pitch_data, stage_progress
             )
             if isinstance(stage_progress, StageWeightedProgress):
                 stage_progress.finish()
-            result = ctx.build_result(cards_created=cards_created, card_ids=created_note_ids)
+            result = ctx.build_result(
+                cards_created=cards_created,
+                card_ids=created_note_ids,
+                mined_forms=mined_forms,
+            )
             self._record_session(ctx, result)
             return result
 
         except AnkiMinerException as e:
             ctx.errors.append(str(e))
+            partial_ids = list(self.anki_service.last_created_note_ids)
+            if partial_ids:
+                ctx.errors.append(
+                    f"Run failed after creating {len(partial_ids)} card(s); " f"they remain in Anki and can be undone."
+                )
             self.presenter.show_error(f"Error: {e}")
-            return ctx.build_result(total_words_found=0, new_words_found=0)
+            return ctx.build_result(
+                total_words_found=0,
+                new_words_found=0,
+                cards_created=len(partial_ids),
+                card_ids=partial_ids,
+            )
         except Exception as e:
+            logger.exception("EpisodeProcessor unhandled exception")
             ctx.errors.append(f"Unexpected error: {e}")
+            partial_ids = list(self.anki_service.last_created_note_ids)
+            if partial_ids:
+                ctx.errors.append(
+                    f"Run failed after creating {len(partial_ids)} card(s); " f"they remain in Anki and can be undone."
+                )
             self.presenter.show_error(f"Unexpected error: {e}")
-            return ctx.build_result(total_words_found=0, new_words_found=0)
+            return ctx.build_result(
+                total_words_found=0,
+                new_words_found=0,
+                cards_created=len(partial_ids),
+                card_ids=partial_ids,
+            )
         finally:
             if cancel_event is not None:
                 self._external_cancel = None
@@ -1007,7 +1064,7 @@ class EpisodeProcessor:
                     elapsed_time=result.elapsed_time,
                 )
             )
-        except sqlite3.OperationalError as e:
+        except sqlite3.Error as e:
             logger.warning(
                 "Could not record mining session for %s in stats.db (%s); " "the cards were still created.",
                 ctx.episode_name,

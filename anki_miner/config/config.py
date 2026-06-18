@@ -1,9 +1,10 @@
 """Configuration classes for Anki Miner."""
 
 import tempfile
+import types
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Mapping
 
 from .paths import ANKI_MINER_HOME
 
@@ -49,7 +50,7 @@ class AnkiMinerConfig:
     anki_deck_name: str = "Anki Miner"
     anki_note_type: str = "Lapis"
     anki_word_field: str = "Expression"
-    anki_fields: dict[str, str] = field(
+    anki_fields: Mapping[str, str] = field(
         default_factory=lambda: {
             "word": "Expression",
             "sentence": "Sentence",
@@ -96,16 +97,16 @@ class AnkiMinerConfig:
     subtitle_offset: float = 0.0  # Seconds to shift subtitles (+ later, - earlier)
 
     # Word filtering settings
-    allowed_pos: list[str] = field(default_factory=lambda: ["名詞", "動詞", "形容詞", "副詞", "形状詞", "代名詞"])
-    excluded_subtypes: list[str] = field(
-        default_factory=lambda: [
+    allowed_pos: tuple[str, ...] = field(default_factory=lambda: ("名詞", "動詞", "形容詞", "副詞", "形状詞", "代名詞"))
+    excluded_subtypes: tuple[str, ...] = field(
+        default_factory=lambda: (
             "非自立",
             "数詞",
             "接尾",
             "助動詞",
             "接頭",
             "固有名詞",
-        ]
+        )
     )
     # Enabled name-wordset IDs (Issue #59). Each ID maps to a bundled
     # plain-text proper-noun list under resources/wordsets/<id>.txt.
@@ -270,6 +271,9 @@ class AnkiMinerConfig:
     # Analytics settings
     stats_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "stats.db")
 
+    # Logging
+    log_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "anki_miner.log")
+
     # --- YouTube ---
     youtube_max_duration_s: int = 7200
     youtube_max_height: int = 720
@@ -329,6 +333,8 @@ class AnkiMinerConfig:
             object.__setattr__(self, "stats_db_path", Path(self.stats_db_path))
         if isinstance(self.history_db_path, str):
             object.__setattr__(self, "history_db_path", Path(self.history_db_path))
+        if isinstance(self.log_path, str):
+            object.__setattr__(self, "log_path", Path(self.log_path))
         if isinstance(self.youtube_cookies_file, str):
             object.__setattr__(
                 self,
@@ -365,6 +371,17 @@ class AnkiMinerConfig:
         # JSON round-trip yields a list for excluded_wordsets; coerce to tuple.
         if isinstance(self.excluded_wordsets, list):
             object.__setattr__(self, "excluded_wordsets", tuple(self.excluded_wordsets))
+        # JSON round-trip yields a list for allowed_pos / excluded_subtypes;
+        # coerce to tuple so the frozen instance stays internally immutable.
+        if isinstance(self.allowed_pos, list):
+            object.__setattr__(self, "allowed_pos", tuple(self.allowed_pos))
+        if isinstance(self.excluded_subtypes, list):
+            object.__setattr__(self, "excluded_subtypes", tuple(self.excluded_subtypes))
+        # Wrap anki_fields in MappingProxyType so it cannot be mutated in place
+        # on the shared frozen config instance (tuple coercion pattern already
+        # applied to the other collection fields above).
+        if not isinstance(self.anki_fields, types.MappingProxyType):
+            object.__setattr__(self, "anki_fields", types.MappingProxyType(dict(self.anki_fields)))
 
         # Clamp ui_font_scale to [0.5, 2.0]
         object.__setattr__(self, "ui_font_scale", max(0.5, min(2.0, float(self.ui_font_scale))))

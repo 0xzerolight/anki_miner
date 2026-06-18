@@ -27,6 +27,7 @@ mirrors too):
 
 from __future__ import annotations
 
+import logging
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -38,6 +39,8 @@ from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.models.audiobook_queue import AudiobookQueueItem
 from anki_miner.orchestration import EpisodeProcessor
+
+logger = logging.getLogger(__name__)
 
 
 class AudiobookQueueWorker(ProcessorOwningWorker):
@@ -135,6 +138,7 @@ class AudiobookQueueWorker(ProcessorOwningWorker):
             try:
                 result = self._mine_one(idx, item)
             except Exception as exc:  # noqa: BLE001 - surface any failure to GUI
+                logger.exception("AudiobookQueueWorker item %d failed", idx)
                 self.item_finished.emit(idx, None, f"{type(exc).__name__}: {exc}", 1)
             else:
                 self.item_finished.emit(idx, result, None, 1)
