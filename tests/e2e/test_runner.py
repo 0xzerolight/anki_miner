@@ -271,6 +271,61 @@ def test_parser_fresh_home_soak_sets_true():
     assert args.fresh_home is True
 
 
+def test_parser_inject_cancel_soak_defaults_none():
+    """Parsing 'soak' without --inject-cancel gives inject_cancel=None."""
+    from tests.e2e.runner import _build_parser
+
+    parser = _build_parser()
+    args = parser.parse_args(["soak"])
+    assert args.inject_cancel is None
+
+
+def test_parser_inject_cancel_soak_parses_float():
+    """Parsing 'soak --inject-cancel 0.5' gives inject_cancel=0.5 (float)."""
+    from tests.e2e.runner import _build_parser
+
+    parser = _build_parser()
+    args = parser.parse_args(["soak", "--inject-cancel", "0.5"])
+    assert args.inject_cancel == 0.5
+
+
+def test_cmd_soak_forwards_inject_cancel_to_inprocess(tmp_path, monkeypatch):
+    """_cmd_soak passes inject_cancel through to run_inprocess_soak."""
+    monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
+    monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
+
+    args = _args("soak", inject_cancel=0.25)
+    mock_report = _fake_soak_report()
+
+    with (
+        patch(_RUNNER_SET_HOME),
+        patch(_RUNNER_RUNDIR),
+        patch(_RUNNER_INPROCESS, return_value=mock_report) as mock_run,
+    ):
+        _cmd_soak(args)
+
+    assert mock_run.call_args.kwargs.get("inject_cancel") == 0.25
+
+
+def test_cmd_soak_inject_cancel_rejected_for_crossprocess(tmp_path, monkeypatch, capsys):
+    """--inject-cancel with --mode crossprocess is a clean ERROR (exit 2), no run."""
+    monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
+    monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
+
+    args = _args("soak", mode="crossprocess", inject_cancel=0.1)
+
+    with (
+        patch(_RUNNER_SET_HOME),
+        patch(_RUNNER_RUNDIR),
+        patch(_RUNNER_CROSSPROCESS) as mock_cross,
+    ):
+        code = _cmd_soak(args)
+
+    assert code == 2
+    assert "inprocess" in capsys.readouterr().err
+    mock_cross.assert_not_called()
+
+
 def test_cmd_smoke_forwards_fresh_home_true(tmp_path, monkeypatch):
     """_cmd_smoke passes fresh_home=True to run_inprocess_soak when flag set."""
     monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
