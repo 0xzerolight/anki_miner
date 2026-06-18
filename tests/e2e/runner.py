@@ -109,6 +109,7 @@ def _cmd_smoke(args: argparse.Namespace) -> int:
             bypass_known_words=True,
             run_dir=run_dir,
             test_home=e2e.test_home,
+            fresh_home=getattr(args, "fresh_home", False),
         )
     except AnkiUnreachableError:
         return _anki_down(e2e)
@@ -143,6 +144,7 @@ def _cmd_soak(args: argparse.Namespace) -> int:
             bypass_known_words=args.bypass_known_words,
             run_dir=run_dir,
             test_home=e2e.test_home,
+            fresh_home=getattr(args, "fresh_home", False),
         )
     except AnkiUnreachableError:
         return _anki_down(e2e)
@@ -182,6 +184,16 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="SECONDS",
         help="Override both result_timeout_s and session_timeout_s (default: 120/300 s).",
     )
+    smoke.add_argument(
+        "--fresh-home",
+        dest="fresh_home",
+        action="store_true",
+        help=(
+            "Delete the test home's contents before running so the run starts "
+            "clean (safe: refuses the real home). Pre-run baseline is always "
+            "recorded in report.json regardless of this flag."
+        ),
+    )
 
     soak = sub.add_parser("soak", help="Multi-session soak (bug-hunt).")
     soak.add_argument("--mode", choices=["inprocess", "crossprocess"], default="inprocess")
@@ -205,6 +217,16 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="SECONDS",
         help="Override both result_timeout_s and session_timeout_s (default: 120/300 s).",
+    )
+    soak.add_argument(
+        "--fresh-home",
+        dest="fresh_home",
+        action="store_true",
+        help=(
+            "Delete the test home's contents before running so the run starts "
+            "clean (safe: refuses the real home). Pre-run baseline is always "
+            "recorded in report.json regardless of this flag."
+        ),
     )
 
     sub.add_parser("cleanup", help="Delete a leftover test deck.")

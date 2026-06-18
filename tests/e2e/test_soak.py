@@ -27,7 +27,9 @@ from tests.e2e.config import E2EConfig
 from tests.e2e.soak import (
     SessionReport,
     SoakReport,
+    _assert_safe_home,
     _child_cmd,
+    _prepare_home,
     run_crossprocess_soak,
     run_inprocess_soak,
 )
@@ -284,6 +286,128 @@ def test_crossprocess_preview_soak(isolated_home: Path, tmp_path: Path) -> None:
     assert len(loaded["sessions"]) == 2
     # Parent disk deltas recorded as cross-process context.
     assert "parent_disk_deltas" in loaded["config"]
+
+
+# --------------------------------------------------------------------------
+# _prepare_home / --fresh-home unit tests (no Anki, no Qt)
+# --------------------------------------------------------------------------
+
+
+def test_prepare_home_fresh_clears_existing_contents(tmp_path: Path) -> None:
+    """_prepare_home(fresh=True) empties a pre-existing home dir."""
+    home = tmp_path / "e2e_home"
+    home.mkdir()
+    (home / "known_words.db").write_text("not a real db")
+    (home / "subdir").mkdir()
+    (home / "subdir" / "file.txt").write_text("hello")
+
+    result = _prepare_home(home, fresh=True)
+
+    # Dir still exists but its contents are gone.
+    assert home.is_dir()
+    assert list(home.iterdir()) == [], "fresh=True must empty the home dir"
+
+    # Baseline captured BEFORE the wipe.
+    assert result["home_pre_existed"] is True
+    assert "home_baseline" in result
+
+
+def test_prepare_home_no_fresh_leaves_existing_contents(tmp_path: Path) -> None:
+    """_prepare_home(fresh=False) does NOT remove existing files."""
+    home = tmp_path / "e2e_home"
+    home.mkdir()
+    sentinel = home / "sentinel.txt"
+    sentinel.write_text("keep me")
+
+    _prepare_home(home, fresh=False)
+
+    assert sentinel.is_file(), "fresh=False must not delete anything"
+
+
+def test_prepare_home_records_pre_existed_false_for_new_home(tmp_path: Path) -> None:
+    """_prepare_home records home_pre_existed=False when home didn't exist yet."""
+    home = tmp_path / "brand_new_home"
+    assert not home.exists()
+
+    result = _prepare_home(home, fresh=False)
+
+    assert result["home_pre_existed"] is False
+    assert result["home_baseline"] == {"known_words_rows": 0, "temp_files": 0}
+    assert home.is_dir()
+
+
+def test_prepare_home_records_pre_existed_true_for_existing_home(tmp_path: Path) -> None:
+    """_prepare_home records home_pre_existed=True when home already existed."""
+    home = tmp_path / "existing_home"
+    home.mkdir()
+
+    result = _prepare_home(home, fresh=False)
+
+    assert result["home_pre_existed"] is True
+
+
+def test_prepare_home_refuses_real_home(monkeypatch: pytest.MonkeyPatch) -> None:
+    """_prepare_home refuses the real ~/.anki_miner via _assert_safe_home."""
+    real = Path.home() / ".anki_miner"
+    with pytest.raises(AssertionError, match="Refusing to run"):
+        _prepare_home(real, fresh=False)
+
+
+def test_assert_safe_home_refuses_real_home(monkeypatch: pytest.MonkeyPatch) -> None:
+    """_assert_safe_home raises AssertionError for the real home path."""
+    real = Path.home() / ".anki_miner"
+    with pytest.raises(AssertionError, match="Refusing to run"):
+        _assert_safe_home(real)
+
+
+def test_inprocess_soak_fresh_home_records_baseline_in_report(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+    """run_inprocess_soak with fresh_home=True records home_pre_existed + baseline in report."""
+    # Seed a file so the pre-existed=True path is exercised.
+    (isolated_home / "sentinel.txt").write_text("stale")
+
+    e2e = E2EConfig(test_home=isolated_home)
+    run_dir = RunDir(tmp_path / "runs", label="fresh")
+
+    soak = run_inprocess_soak(
+        e2e,
+        sessions=1,
+        preview=True,
+        bypass_known_words=True,
+        run_dir=run_dir,
+        test_home=isolated_home,
+        fresh_home=True,
+    )
+
+    assert "home_pre_existed" in soak.config
+    assert soak.config["home_pre_existed"] is True
+    assert "home_baseline" in soak.config
+    assert isinstance(soak.config["home_baseline"], dict)
+    assert "known_words_rows" in soak.config["home_baseline"]
+    assert "temp_files" in soak.config["home_baseline"]
+
+    # The sentinel was wiped before the run.
+    assert not (isolated_home / "sentinel.txt").exists()
+
+
+def test_inprocess_soak_no_fresh_home_leaves_files(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+    """run_inprocess_soak with fresh_home=False does NOT delete the test home contents."""
+    sentinel = isolated_home / "sentinel.txt"
+    sentinel.write_text("keep me")
+
+    e2e = E2EConfig(test_home=isolated_home)
+    run_dir = RunDir(tmp_path / "runs", label="faithful")
+
+    run_inprocess_soak(
+        e2e,
+        sessions=1,
+        preview=True,
+        bypass_known_words=True,
+        run_dir=run_dir,
+        test_home=isolated_home,
+        fresh_home=False,
+    )
+
+    assert sentinel.is_file(), "fresh_home=False must not remove pre-existing files"
 
 
 @pytest.mark.e2e

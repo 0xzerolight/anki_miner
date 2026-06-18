@@ -82,7 +82,9 @@ from tests.e2e.instrumentation import (
 __all__ = [
     "SessionReport",
     "SoakReport",
+    "_assert_safe_home",
     "_child_cmd",
+    "_prepare_home",
     "run_crossprocess_soak",
     "run_inprocess_soak",
     "run_one_session",
@@ -353,6 +355,46 @@ def _assert_safe_home(test_home: Path) -> None:
         )
 
 
+def _prepare_home(test_home: Path, *, fresh: bool) -> dict:
+    """Assert safety, record pre-run baseline, and optionally wipe the home.
+
+    Returns a dict of baseline keys to include in ``SoakReport.config``:
+    * ``home_pre_existed`` — ``True`` if the directory already existed before
+      this call (baseline populated from the on-disk state before any wipe).
+    * ``home_baseline`` — ``{known_words_rows, temp_files}`` sampled from the
+      pre-wipe state so a skewed faithful run is self-explaining in
+      ``report.json``.
+
+    When ``fresh=True`` the home's contents are deleted after sampling (the dir
+    itself is recreated so the run can write into it).  The real ``~/.anki_miner``
+    is always refused via ``_assert_safe_home``.
+    """
+    from tests.e2e.app_config import MEDIA_TEMP_BASENAME
+    from tests.e2e.instrumentation import _count_sqlite_rows, _count_temp_files
+
+    test_home = Path(test_home)
+    _assert_safe_home(test_home)
+
+    pre_existed = test_home.exists()
+    known_rows = _count_sqlite_rows(test_home / "known_words.db") if pre_existed else 0
+    temp_files = _count_temp_files(test_home / MEDIA_TEMP_BASENAME) if pre_existed else 0
+
+    if fresh and pre_existed:
+        import shutil
+
+        shutil.rmtree(test_home)
+
+    test_home.mkdir(parents=True, exist_ok=True)
+
+    return {
+        "home_pre_existed": pre_existed,
+        "home_baseline": {
+            "known_words_rows": known_rows,
+            "temp_files": temp_files,
+        },
+    }
+
+
 def _maybe_gateway(e2e: E2EConfig, *, preview: bool) -> AnkiGateway | None:
     """Return a ready gateway (deck ensured) for a live process run, else ``None``.
 
@@ -389,6 +431,7 @@ def run_inprocess_soak(
     bypass_known_words: bool,
     run_dir: RunDir,
     test_home: Path,
+    fresh_home: bool = False,
 ) -> SoakReport:
     """Mine ``sessions`` times reusing ONE driver/tab; return a :class:`SoakReport`.
 
@@ -398,9 +441,15 @@ def run_inprocess_soak(
 
     SAFETY: refuses the real home and wraps the whole run in
     :func:`guard_real_home` so the user's ``~/.anki_miner`` is provably untouched.
+
+    Args:
+        fresh_home: When ``True``, delete the test home's contents before
+            running so the run starts clean (idempotent, safe — ``_prepare_home``
+            always refuses the real home). The pre-wipe baseline is recorded in
+            ``SoakReport.config`` regardless of this flag.
     """
     test_home = Path(test_home)
-    _assert_safe_home(test_home)
+    home_info = _prepare_home(test_home, fresh=fresh_home)
 
     cfg = build_app_config(e2e, test_home, bypass_known_words=bypass_known_words)
     if not (cfg.dicts_root / "e2e-dict" / "index.sqlite").is_file():
@@ -454,6 +503,7 @@ def run_inprocess_soak(
         preview=preview,
         bypass_known_words=bypass_known_words,
         run_dir=run_dir,
+        extra_config=home_info,
     )
     soak.write_report(run_dir)
     return soak
@@ -633,6 +683,7 @@ def run_crossprocess_soak(
     bypass_known_words: bool,
     run_dir: RunDir,
     test_home: Path,
+    fresh_home: bool = False,
 ) -> SoakReport:
     """Spawn a fresh subprocess per session; aggregate children + parent disk deltas.
 
@@ -642,9 +693,14 @@ def run_crossprocess_soak(
     their JSON). Parent disk deltas per session are recorded in ``config`` context.
 
     SAFETY: refuses the real home; wraps the run in :func:`guard_real_home`.
+
+    Args:
+        fresh_home: When ``True``, delete the test home's contents before
+            running so the run starts clean. See ``_prepare_home`` for safety
+            details and baseline recording.
     """
     test_home = Path(test_home)
-    _assert_safe_home(test_home)
+    home_info = _prepare_home(test_home, fresh=fresh_home)
 
     cfg = build_app_config(e2e, test_home, bypass_known_words=bypass_known_words)
     media_temp = cfg.media_temp_folder
@@ -700,6 +756,7 @@ def run_crossprocess_soak(
         bypass_known_words=bypass_known_words,
         run_dir=run_dir,
         extra_config={
+            **home_info,
             "parent_disk_deltas": parent_disk_deltas,
             "note": (
                 "cross-process: parent disk deltas are authoritative for sqlite/temp/"
