@@ -261,12 +261,17 @@ class WordPreviewDialog(QDialog):
             elif grouping_mode == 3:  # Word Length
                 self._add_words_grouped_by_length()
         finally:
-            self.table.setSortingEnabled(True)
+            # Only re-enable sorting for flat mode (index 0). In grouped modes
+            # (1/2/3) the table has spanned group-header rows; re-enabling
+            # sorting lets a header click scramble those rows into the data.
+            self.table.setSortingEnabled(grouping_mode == 0)
             self.table.setUpdatesEnabled(True)
 
-        # Re-apply AFTER sorting/updates are re-enabled: re-enabling sorting
-        # resets the vertical-header resize mode to Interactive, which drops the
-        # scaled Fixed row height. Re-applying here keeps it in effect.
+        # Re-apply AFTER updates are re-enabled. In flat mode, re-enabling
+        # sorting resets the vertical-header resize mode to Interactive, which
+        # drops the scaled Fixed row height — re-applying here keeps it in
+        # effect. In grouped modes sorting stays disabled so the reset doesn't
+        # occur, but re-applying is harmless and keeps both paths consistent.
         self._apply_fixed_row_height()
 
         # Update result count
