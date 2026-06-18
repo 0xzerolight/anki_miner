@@ -587,7 +587,7 @@ class EpisodeProcessor:
                     unknown_words=len(all_unknown_lemmas),
                     unique_words=len(all_words),
                 )
-            except sqlite3.OperationalError as e:
+            except sqlite3.Error as e:
                 logger.warning(
                     "Could not record difficulty for %s in stats.db (%s); " "the run will continue.",
                     ctx.episode_name,
@@ -797,7 +797,7 @@ class EpisodeProcessor:
         if self.known_word_db and self.known_word_db.is_available() and card_data:
             try:
                 self.known_word_db.add_words(mined_words, source="mined")
-            except sqlite3.OperationalError as e:
+            except sqlite3.Error as e:
                 logger.warning(
                     "Could not record %d mined words in known_words.db (%s); "
                     "the cards were still created. The cache will re-sync next run.",
@@ -1064,7 +1064,7 @@ class EpisodeProcessor:
                     elapsed_time=result.elapsed_time,
                 )
             )
-        except sqlite3.OperationalError as e:
+        except sqlite3.Error as e:
             logger.warning(
                 "Could not record mining session for %s in stats.db (%s); " "the cards were still created.",
                 ctx.episode_name,

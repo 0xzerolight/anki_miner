@@ -3774,6 +3774,38 @@ class TestRecordDifficultyGuard:
         assert result.cards_created == 1
         assert result.success is True
 
+    def test_non_operational_sqlite_error_also_caught(self, test_config, mock_services, tmp_path):
+        """A non-OperationalError sqlite failure (e.g. DatabaseError) must also be
+        caught, not just OperationalError, so a corrupt/disk-IO stats.db can't turn
+        a successful run into an apparent failure (F11)."""
+        import sqlite3
+
+        stats = self._make_stats_service(tmp_path)
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=stats,
+            **mock_services,
+        )
+
+        with patch.object(
+            stats,
+            "record_difficulty",
+            side_effect=sqlite3.DatabaseError("database disk image is malformed"),
+        ):
+            result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.cards_created == 1
+        assert result.success is True
+
     def test_difficulty_recorded_when_db_available(self, test_config, mock_services, tmp_path):
         """Sanity: record_difficulty is called when the stats service is healthy."""
         stats = self._make_stats_service(tmp_path)
