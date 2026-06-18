@@ -3,6 +3,7 @@
 import os
 import sqlite3
 import stat
+import sys
 
 import pytest
 
@@ -463,8 +464,8 @@ class TestCorruptDatabaseFile:
 
 
 @pytest.mark.skipif(
-    os.geteuid() == 0,
-    reason="root bypasses filesystem write permissions",
+    sys.platform == "win32" or os.geteuid() == 0,
+    reason="POSIX permission bits not applicable on Windows; root bypasses them",
 )
 class TestUnwritableParent:
     """``initialize`` must not silently swallow a filesystem permission failure.
