@@ -315,7 +315,7 @@ def _assemble_report(
     """
     post_snaps = [s.snapshot_post for s in sessions if s.snapshot_post is not None]
     cards = [s.cards_created for s in sessions]
-    divergence = detect_divergence(post_snaps, cards_created=cards)
+    divergence = detect_divergence(post_snaps, cards_created=cards, mode=mode)
 
     any_failed = any(not s.ok for s in sessions)
     verdict = "FAIL" if any_failed else divergence.verdict
