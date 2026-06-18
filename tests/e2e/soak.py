@@ -1,8 +1,10 @@
-"""Soak runner for the E2E GUI test harness — the HEADLINE feature.
+"""Soak runner for the E2E GUI test harness.
 
 Mines the same episode several sessions in a row and instruments process/disk/
-deck state between sessions to surface a bug that "only appears after several
-mining sessions in a row". It composes the prior harness building blocks
+deck state between sessions to surface both multi-session accumulation/leak bugs
+AND GUI-consistency/integration bugs (widget state, mined word sets, cancel/error
+paths, known-words accumulation) that unit tests cannot reproduce. It composes
+the prior harness building blocks
 (``E2EConfig``, ``build_app_config``, ``EpisodeTabDriver``, ``AutoCurationResponder``,
 the ``instrumentation`` snapshot/diff/divergence functions, ``AnkiGateway``,
 ``RunDir``, and the home-isolation primitives) — it is glue plus the two loop
@@ -815,9 +817,11 @@ def run_inprocess_soak(
 ) -> SoakReport:
     """Mine ``sessions`` times reusing ONE driver/tab; return a :class:`SoakReport`.
 
-    Reusing the single tab across sessions is what catches widget/worker/QThread/
-    memory leaks. Between sessions the driver is town down and Qt deferred-deletes
-    are drained so a surviving object is a genuine leak in the next snapshot.
+    Reusing the single tab across sessions catches widget/worker/QThread/memory
+    leaks AND GUI-consistency bugs (button state, word-set correctness, cancel
+    path behaviour) that only surface with real services wired to the real widget
+    stack. Between sessions the driver is torn down and Qt deferred-deletes are
+    drained so a surviving object is a genuine leak in the next snapshot.
 
     SAFETY: refuses the real home and wraps the whole run in
     :func:`guard_real_home` so the user's ``~/.anki_miner`` is provably untouched.
