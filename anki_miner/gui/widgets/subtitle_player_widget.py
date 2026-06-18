@@ -188,7 +188,10 @@ class SubtitlePlayerWidget(QWidget):
         ``QAudioOutput`` and ``QMediaPlayer`` parented to ``self``, Qt will free
         the C++ objects when the widget is destroyed — but detaching the output
         first is still best practice to avoid a use-after-free window during
-        the Qt object-tree teardown.
+        the Qt object-tree teardown.  ``set_source`` builds a fresh player AND a
+        fresh ``QAudioOutput`` on every re-source, so the old output is scheduled
+        for deletion here too — otherwise one ``QAudioOutput`` accumulates under
+        the widget per re-source until the widget itself is destroyed (F9).
         """
         if self.player is None:
             return
@@ -201,6 +204,8 @@ class SubtitlePlayerWidget(QWidget):
         self.player.mediaStatusChanged.disconnect(self._on_media_status_changed)
         self.player.setAudioOutput(None)
         self.player.deleteLater()
+        if self.audio_output is not None:
+            self.audio_output.deleteLater()
         self.player = None
         self.audio_output = None
 
