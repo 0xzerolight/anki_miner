@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import cast
 
 from tests.e2e.instrumentation import (
+    MONOTONIC_MIN_GAPS,
     RSS_SLOPE_BYTES_PER_SESSION,
     DivergenceReport,
     StateSnapshot,
@@ -104,6 +105,39 @@ def test_monotonic_qthread_pool_is_flagged():
     report = detect_divergence(snaps)
     assert report.verdict == "FAIL"
     assert any("qthread_pool_active" in f for f in report.flags)
+
+
+def test_two_sessions_positive_delta_not_flagged():
+    # 2 sessions → 1 gap → below MONOTONIC_MIN_GAPS threshold → no FAIL.
+    # Suspect delta is still recorded.
+    snaps = [_snap(index=0, temp_files=0), _snap(index=1, temp_files=1)]
+    report = detect_divergence(snaps)
+    assert report.verdict == "PASS"
+    assert report.flags == []
+    assert report.suspect_deltas["temp_files"] == 1  # delta still recorded
+
+
+def test_three_sessions_genuine_leak_is_flagged():
+    # 3 sessions → 2 gaps = MONOTONIC_MIN_GAPS → fraction rule applies → FAIL.
+    snaps = [_snap(index=i, temp_files=i) for i in range(3)]
+    report = detect_divergence(snaps)
+    assert report.verdict == "FAIL"
+    assert any("temp_files" in f for f in report.flags)
+    assert report.suspect_deltas["temp_files"] == 2  # 0 -> 2
+
+
+def test_four_sessions_genuine_monotonic_leak_is_flagged():
+    # 4 sessions → 3 gaps → fraction rule catches a real leak (all 3 positive).
+    snaps = [_snap(index=i, temp_files=i) for i in range(4)]
+    report = detect_divergence(snaps)
+    assert report.verdict == "FAIL"
+    assert any("temp_files" in f for f in report.flags)
+    assert report.suspect_deltas["temp_files"] == 3
+
+
+def test_monotonic_min_gaps_constant_is_two():
+    # Regression guard: the threshold value itself must not drift.
+    assert MONOTONIC_MIN_GAPS == 2
 
 
 def test_single_blip_in_temp_files_is_not_flagged():
