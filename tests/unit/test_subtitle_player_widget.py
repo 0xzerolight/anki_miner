@@ -149,15 +149,17 @@ class TestSetSource:
         first_player.stop.assert_called_once()
 
     def test_set_source_twice_fully_tears_down_first_player(self, qtbot):
-        """Calling set_source a second time should disconnect signals, clear audio, and deleteLater on the first player."""
+        """Calling set_source a second time should disconnect signals, clear audio, and deleteLater on the first player + its audio output."""
         mock1 = MagicMock()
         mock1.audioTracks.return_value = []
         mock2 = MagicMock()
         mock2.audioTracks.return_value = []
+        audio1 = MagicMock()
+        audio2 = MagicMock()
 
         with (
             patch(f"{MODULE}.QMediaPlayer", side_effect=[mock1, mock2]),
-            patch(f"{MODULE}.QAudioOutput"),
+            patch(f"{MODULE}.QAudioOutput", side_effect=[audio1, audio2]),
             patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
             patch(f"{MODULE}.get_primary_video_codec", return_value=None),
         ):
@@ -176,6 +178,9 @@ class TestSetSource:
         mock1.mediaStatusChanged.disconnect.assert_called_once_with(widget._on_media_status_changed)
         mock1.setAudioOutput.assert_any_call(None)
         mock1.deleteLater.assert_called_once()
+        # The first audio output must also be scheduled for deletion so it
+        # doesn't accumulate under the widget per re-source (F9).
+        audio1.deleteLater.assert_called_once()
 
     def test_set_source_with_audio_track_override(self, qtbot, fake_media_classes):
         """audio_track_override should skip ffprobe and use the given index."""
