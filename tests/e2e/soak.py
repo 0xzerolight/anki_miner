@@ -3,8 +3,8 @@
 Mines the same episode several sessions in a row and instruments process/disk/
 deck state between sessions to surface both multi-session accumulation/leak bugs
 AND GUI-consistency/integration bugs (widget state, mined word sets, cancel/error
-paths, known-words accumulation) that unit tests cannot reproduce. It composes
-the prior harness building blocks
+paths, known-words accumulation) that unit tests cannot reproduce.
+It composes the prior harness building blocks
 (``E2EConfig``, ``build_app_config``, ``EpisodeTabDriver``, ``AutoCurationResponder``,
 the ``instrumentation`` snapshot/diff/divergence functions, ``AnkiGateway``,
 ``RunDir``, and the home-isolation primitives) — it is glue plus the two loop
