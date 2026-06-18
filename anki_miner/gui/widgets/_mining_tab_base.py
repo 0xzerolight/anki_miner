@@ -169,6 +169,20 @@ class MiningTabBase(QWidget):
         """
         if self.worker_thread is None:  # type: ignore[attr-defined]
             return
+        # Defensively release any open curation dialog and poison the gate
+        # BEFORE cancelling / joining the worker (OVH-081).  A worker parked
+        # in ``_curation_event.wait()`` would never exit from cancel() alone —
+        # the event keeps it blocked.  Poisoning here makes teardown safe
+        # regardless of caller state (not just when _is_processing guards it).
+        # This poison is TRANSIENT: it releases *this* run's predecessor; the
+        # re-arm below clears it so the about-to-start run is not silently
+        # short-circuited (permanent poison is reserved for shutdown(), F1).
+        # Guard with hasattr: only SingleEpisodeTab and BatchProcessingTab call
+        # _teardown_previous_run, both of which initialize the curation bridge,
+        # but test fakes and future subclasses may not.
+        if hasattr(self, "_curation_event"):
+            self._cancel_active_curation_dialog()
+            self._poison_curation_gate()
         with contextlib.suppress(TypeError, RuntimeError):
             self.worker_thread.finished.disconnect(self._restore_buttons)  # type: ignore[attr-defined]
         self.worker_thread.cancel()  # type: ignore[attr-defined]
@@ -179,6 +193,12 @@ class MiningTabBase(QWidget):
         if joined and old_processor is not None:
             with contextlib.suppress(Exception):
                 old_processor.close()
+        # Re-arm the gate for the upcoming run. The predecessor is now joined
+        # (or timed-out + cancelled, so it bails before re-reaching curation)
+        # and self.worker_thread is reassigned by the caller right after this
+        # returns, so resetting here cannot resurrect the old worker's dialog.
+        if hasattr(self, "_curation_event"):
+            self._reset_curation_gate()
 
     # ------------------------------------------------------------------
     # Known/ignore list (Issue #42)
@@ -214,7 +234,9 @@ class MiningTabBase(QWidget):
         # cancel lands in that gap the dialog doesn't exist yet, so rejecting
         # it is a no-op and the slot would otherwise still pop a dialog.
         self._curation_cancelled = False
-        # Flipped once by _poison_curation_gate() at shutdown; never reset.
+        # Set permanently by _poison_curation_gate() at shutdown. The transient
+        # poison inside _teardown_previous_run is undone by _reset_curation_gate()
+        # before the next run, so a rerun is never silently short-circuited (F1).
         self._curation_gate_poisoned = False
         self._curation_requested.connect(self._on_curation_requested)
 
@@ -254,6 +276,24 @@ class MiningTabBase(QWidget):
         self._curation_gate_poisoned = True
         self._curation_result = None
         self._curation_event.set()
+
+    def _reset_curation_gate(self) -> None:
+        """Re-arm the curation gate after a previous run's worker was torn down.
+
+        ``_teardown_previous_run`` poisons the gate to release a predecessor that
+        may be parked in ``_curation_event.wait()``. That poison must NOT carry
+        into the next run, or every Process mine after the first in a session would
+        skip curation and produce zero cards with no dialog (F1). Permanent
+        poisoning stays reserved for :meth:`shutdown`.
+
+        Only the poison flag is cleared here. ``_curation_cancelled`` is left as the
+        teardown set it: a ``_curation_requested`` emission already queued by the
+        torn-down worker would otherwise pop a dialog for the dead run when the GUI
+        slot finally fires. The next run's :meth:`_curation_bridge` resets
+        ``_curation_cancelled`` to ``False`` itself before it emits, so this does not
+        suppress the upcoming run's own dialog.
+        """
+        self._curation_gate_poisoned = False
 
     def _build_curation_context(
         self,
@@ -341,6 +381,37 @@ class MiningTabBase(QWidget):
         finally:
             self._active_curation_dialog = None
             self._curation_event.set()
+            # Schedule the dialog for deletion so its Qt widget tree (table,
+            # QTextBrowser, embedded SubtitlePlayerWidget + QMediaPlayer) is
+            # freed deterministically rather than accumulating per mining session
+            # until GC — OVH-016 / Issue #55 multimedia teardown.
+            # Guard for the case where dialog construction raised before the
+            # name was bound (NameError would be silently swallowed otherwise).
+            with contextlib.suppress(NameError, AttributeError):
+                dialog.deleteLater()
+
+    def shutdown(self) -> None:
+        """Cancel any open curation dialog and poison the gate (OVH-003).
+
+        Generic base implementation called by ``BackgroundTaskController.shutdown``
+        for every tab that exposes a curation bridge (Single, Batch, YouTube,
+        Audiobook).  Ensures a worker parked in ``_curation_event.wait()``
+        is released so the bounded close-join can complete without deadlocking.
+
+        No-op when ``_init_curation_bridge`` has not been called (e.g. tabs
+        that don't use the curation flow, or test fakes that bypass ``__init__``).
+
+        ``YouTubeTab`` and ``AudiobookTab`` override this to also cancel their
+        queue workers; both already call ``_cancel_active_curation_dialog()`` and
+        ``_poison_curation_gate()`` in their overrides, so they do NOT need to call
+        ``super().shutdown()`` — their poison paths are already correct and more
+        precise (cancel → poison, in that order).  Subclasses that add no extra
+        teardown may rely on this base implementation directly.
+        """
+        if not hasattr(self, "_curation_event"):
+            return
+        self._cancel_active_curation_dialog()
+        self._poison_curation_gate()
 
     def _cancel_active_curation_dialog(self) -> None:
         """Reject any open curation dialog so the worker doesn't hang on cancel.

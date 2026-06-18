@@ -84,7 +84,16 @@ class IndexedDictProvider:
     def lookup(self, word: str) -> str | None:
         if self._conn is None:
             return None
-        return self._render(storage_lookup(self._conn, word))
+        try:
+            return self._render(storage_lookup(self._conn, word))
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Dictionary '%s' (%s) raised DatabaseError during lookup; treating as miss: %s",
+                self.dict_id,
+                self._db_path,
+                e,
+            )
+            return None
 
     def lookup_many(self, words: list[str]) -> dict[str, str | None]:
         """Batch lookup. Runs one IN-clause query per dictionary (chunked),
@@ -92,7 +101,16 @@ class IndexedDictProvider:
         :meth:`lookup`, so single and batch results are byte-identical."""
         if self._conn is None:
             return dict.fromkeys(words)
-        rows_by_word = storage_lookup_many(self._conn, words)
+        try:
+            rows_by_word = storage_lookup_many(self._conn, words)
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Dictionary '%s' (%s) raised DatabaseError during lookup_many; treating as all-miss: %s",
+                self.dict_id,
+                self._db_path,
+                e,
+            )
+            return dict.fromkeys(words)
         # storage_lookup_many keys by unique requested words; re-expand to every
         # requested word (preserving duplicates) for caller convenience.
         return {w: self._render(rows_by_word.get(w, [])) for w in words}
@@ -100,23 +118,37 @@ class IndexedDictProvider:
     def _render(self, rows: list[tuple[str, str]]) -> str | None:
         """Assemble Lapis-shape HTML from (content, tags) rows. Returns None
         when there are no rows. Shared by lookup and lookup_many to guarantee
-        byte-identical output."""
+        byte-identical output.
+
+        Deduplication (OVH-026): some dictionaries double-key the same entry —
+        once under a kanji term with a kana reading, and again under the kana
+        term alone. Both rows carry identical ``content``. We keep the first-seen
+        row for each unique content blob and still UNION the tags from all
+        duplicate rows, so no information is lost.
+        """
         if not rows:
             return None
 
-        # Build tag union preserving first-seen order across all hits.
+        # Build tag union preserving first-seen order across all hits,
+        # and deduplicate rows with identical content (keep first seen).
         ordered_tags: list[str] = []
         seen_tags: set[str] = set()
-        for _content, tags in rows:
-            if not tags:
-                continue
-            for tag in tags.split(" "):
-                if tag and tag not in seen_tags:
-                    seen_tags.add(tag)
-                    ordered_tags.append(tag)
+        seen_content: set[str] = set()
+        unique_rows: list[tuple[str, str]] = []
+        for content, tags in rows:
+            # Always union in the tags, even from duplicate-content rows.
+            if tags:
+                for tag in tags.split(" "):
+                    if tag and tag not in seen_tags:
+                        seen_tags.add(tag)
+                        ordered_tags.append(tag)
+            # Only keep the first occurrence of each distinct content blob.
+            if content not in seen_content:
+                seen_content.add(content)
+                unique_rows.append((content, tags))
 
         # Merge gloss-item blobs by simple concatenation (renderer emits <li class="gloss-item">…</li>).
-        merged = "".join(content for content, _tags in rows)
+        merged = "".join(content for content, _tags in unique_rows)
 
         # Count gloss-items. Use prefix without closing '>' so future class additions still match.
         item_count = merged.count('<li class="gloss-item"')

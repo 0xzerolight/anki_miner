@@ -59,6 +59,16 @@ class DictionaryImportFlow:
         # would be destroyed mid-run if it fell out of scope before joining.
         self._active_import_worker: DictionaryImportWorker | None = None
 
+    def iter_close_workers(self) -> tuple:
+        """Live worker handles MainWindow must join on close.
+
+        Returns the active import worker so ``SettingsTab.iter_close_workers``
+        can chain it into the single ``BackgroundTaskController._join_worker_for_close``
+        policy (cancel + bounded grace join + laggard deferral).  A ``None``
+        entry (idle flow) is filtered by ``_join_worker_for_close``.
+        """
+        return (self._active_import_worker,)
+
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
         """Toggle import-trigger buttons. Prevents overlapping import workers."""
         self._panel._add_btn.setEnabled(enabled)

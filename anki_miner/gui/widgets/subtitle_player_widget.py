@@ -145,18 +145,7 @@ class SubtitlePlayerWidget(QWidget):
                 Defaults to the bare ``"ffprobe"`` literal (PATH lookup).
         """
         # Stop and fully tear down any existing player before re-initialising
-        if self.player is not None:
-            self.player.stop()
-            self.player.positionChanged.disconnect(self._on_position_changed)
-            self.player.durationChanged.disconnect(self._on_duration_changed)
-            self.player.playbackStateChanged.disconnect(self._on_playback_state_changed)
-            self.player.errorOccurred.disconnect(self._on_media_error)
-            self.player.tracksChanged.disconnect(self._on_tracks_changed)
-            self.player.mediaStatusChanged.disconnect(self._on_media_status_changed)
-            self.player.setAudioOutput(None)
-            self.player.deleteLater()
-            self.player = None
-            self.audio_output = None
+        self._teardown_player()
 
         # Reset per-source watchdog state and restore normal video widget visibility.
         self._got_video_frame = False
@@ -177,8 +166,8 @@ class SubtitlePlayerWidget(QWidget):
         else:
             self._jp_audio_index = audio_track_override
 
-        self.audio_output = QAudioOutput()
-        self.player = QMediaPlayer()
+        self.audio_output = QAudioOutput(self)
+        self.player = QMediaPlayer(self)
         self.player.setAudioOutput(self.audio_output)
         self.player.setVideoOutput(self.video_widget)
 
@@ -190,6 +179,46 @@ class SubtitlePlayerWidget(QWidget):
         self.player.mediaStatusChanged.connect(self._on_media_status_changed)
 
         self.player.setSource(QUrl.fromLocalFile(str(video_path)))
+
+    def _teardown_player(self) -> None:
+        """Stop playback and detach the audio output from the current player.
+
+        Factored out of ``set_source`` so it can be called from both re-source
+        (reuse path) and ``closeEvent`` (widget discard path).  With both
+        ``QAudioOutput`` and ``QMediaPlayer`` parented to ``self``, Qt will free
+        the C++ objects when the widget is destroyed — but detaching the output
+        first is still best practice to avoid a use-after-free window during
+        the Qt object-tree teardown.  ``set_source`` builds a fresh player AND a
+        fresh ``QAudioOutput`` on every re-source, so the old output is scheduled
+        for deletion here too — otherwise one ``QAudioOutput`` accumulates under
+        the widget per re-source until the widget itself is destroyed (F9).
+        """
+        if self.player is None:
+            return
+        self.player.stop()
+        self.player.positionChanged.disconnect(self._on_position_changed)
+        self.player.durationChanged.disconnect(self._on_duration_changed)
+        self.player.playbackStateChanged.disconnect(self._on_playback_state_changed)
+        self.player.errorOccurred.disconnect(self._on_media_error)
+        self.player.tracksChanged.disconnect(self._on_tracks_changed)
+        self.player.mediaStatusChanged.disconnect(self._on_media_status_changed)
+        self.player.setAudioOutput(None)
+        self.player.deleteLater()
+        if self.audio_output is not None:
+            self.audio_output.deleteLater()
+        self.player = None
+        self.audio_output = None
+
+    def closeEvent(self, event) -> None:
+        """Tear down the multimedia backend deterministically on widget close.
+
+        Without this, ``QMediaPlayer`` and ``QAudioOutput`` — even though now
+        parented to ``self`` — might be freed after the ``QVideoWidget`` C++
+        object has already been destroyed, causing a use-after-free in the
+        multimedia pipeline (OVH-057 / Issue #55).
+        """
+        self._teardown_player()
+        super().closeEvent(event)
 
     # ------------------------------------------------------------------
     # Public control API

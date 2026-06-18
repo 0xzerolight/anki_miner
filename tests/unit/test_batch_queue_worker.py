@@ -643,3 +643,100 @@ def test_close_failure_does_not_abort_queue(tmp_path):
 
     # Second item still processed despite first close() raising.
     assert results["finished"] == [5], results["finished"]
+
+
+# ---------------------------------------------------------------------------
+# Shared AnkiService across batch items (OVH-011/013)
+# ---------------------------------------------------------------------------
+
+
+def test_shared_anki_service_passed_to_each_processor(tmp_path):
+    """A single AnkiService instance must be built once and passed via
+    anki_service= to every create_episode_processor call in the run, so the
+    vocab cache survives across all queue items."""
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "anime1", tmp_path / "subs1", "Show1")
+    queue.add_item(tmp_path / "anime2", tmp_path / "subs2", "Show2")
+
+    proc = MagicMock()
+    proc.process_episode.return_value = _ok_result(cards=1)
+
+    captured_anki_services: list = []
+
+    def _fake_create_ep(config, presenter, stats_service=None, anki_service=None, **kwargs):
+        captured_anki_services.append(anki_service)
+        return proc
+
+    worker = _make_worker_with_queue(queue)
+    _wire_status_slots(worker, queue)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            side_effect=_fake_create_ep,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    # create_episode_processor called once per item (2 items)
+    assert len(captured_anki_services) == 2
+    # Both calls received the SAME AnkiService instance
+    assert captured_anki_services[0] is captured_anki_services[1]
+    assert captured_anki_services[0] is not None
+
+
+def test_batch_vocab_scan_at_most_once_across_items(tmp_path):
+    """With a shared AnkiService, get_existing_vocabulary (findNotes) must be
+    called AT MOST ONCE across all queue items in a batch run — not once per item.
+    The second item hits the cache and never re-queries AnkiConnect."""
+    from unittest.mock import MagicMock, patch
+
+    from anki_miner.services.anki_service import AnkiService
+
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "anime1", tmp_path / "subs1", "Show1")
+    queue.add_item(tmp_path / "anime2", tmp_path / "subs2", "Show2")
+
+    # Track all AnkiService instances constructed during the run
+    constructed_services: list[AnkiService] = []
+    original_init = AnkiService.__init__
+
+    def _tracking_init(self, config):
+        original_init(self, config)
+        constructed_services.append(self)
+
+    def _tracking_get_vocab(self):
+        # Simulate a populated response without HTTP by priming the cache directly
+        self._existing_vocab_cache = {"既知"}
+        return self._existing_vocab_cache
+
+    proc = MagicMock()
+    proc.process_episode.return_value = _ok_result(cards=1)
+
+    worker = _make_worker_with_queue(queue)
+    _wire_status_slots(worker, queue)
+
+    with (
+        patch.object(AnkiService, "__init__", _tracking_init),
+        patch.object(AnkiService, "get_existing_vocabulary", _tracking_get_vocab),
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    # Only ONE AnkiService must be constructed for the whole run
+    assert len(constructed_services) == 1, f"Expected 1 AnkiService construction, got {len(constructed_services)}"

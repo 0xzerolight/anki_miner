@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QThread, pyqtSignal
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from anki_miner.orchestration.episode_processor import EpisodeProcessor
@@ -122,5 +125,6 @@ class SingleCallWorker(CancellableWorker):
             if not self.check_cancelled():
                 self.result_ready.emit(result)
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+            logger.exception("SingleCallWorker unhandled exception")
             if not self.check_cancelled():
                 self.error.emit(f"{self._error_prefix}{e}")

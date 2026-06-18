@@ -739,6 +739,32 @@ class TestShouldIncludeWord:
         token2 = _make_token("ドンッ", "副詞", lemma="ドンッ")
         assert service._should_include_word(token2) is False
 
+    # OVH-029 — POS-gated onomatopoeia filter: 2-char katakana NOUNs must survive
+    @pytest.mark.parametrize("surface", ["ビル", "バス", "ドア", "パン", "キス", "ジム", "メモ"])
+    def test_includes_2char_katakana_noun_loanwords(self, service, surface):
+        """2-char katakana nouns (loanwords) must not be rejected by the onomatopoeia heuristic.
+
+        The unique-char/length gate (≤2 unique, ≤4 chars) was previously POS-blind,
+        blocking ビル/バス/ドア/パン/キス/ジム/メモ.  After OVH-029 the gate only
+        fires on 副詞 (adverb) tokens so these nouns fall through to the ≥2-char
+        acceptance floor.
+        """
+        token = _make_token(surface, "名詞", lemma=surface)
+        assert (
+            service._should_include_word(token) is True
+        ), f"2-char katakana noun '{surface}' must be included (not caught by onomatopoeia heuristic)"
+
+    def test_excludes_2char_katakana_adverb_onomatopoeia(self, service):
+        """2-char katakana 副詞 with ≤2 unique chars is still onomatopoeia → excluded."""
+        # ドキ is a 2-char adverb with 2 unique chars (ド, キ) → excluded
+        token = _make_token("ドキ", "副詞", lemma="ドキ")
+        assert service._should_include_word(token) is False
+
+    def test_excludes_dokidoki_adverb(self, service):
+        """ドキドキ (副詞) must still be excluded by the POS-gated heuristic."""
+        token = _make_token("ドキドキ", "副詞", lemma="ドキドキ")
+        assert service._should_include_word(token) is False
+
 
 class TestExtractLemma:
     """Tests for _extract_lemma method."""
@@ -2561,3 +2587,237 @@ class TestAbandonedGeneratorCacheNonCommit:
         assert mock_tagger.call_count == 2
         assert counts["猫"] == 1
         assert counts["犬"] == 1
+
+
+# ---------------------------------------------------------------------------
+# OVH-006 — ASS/SSA Comment lines must be skipped
+# ---------------------------------------------------------------------------
+
+
+class TestASSCommentFilter:
+    """ASS/SSA Comment events must not be tokenized or returned (OVH-006).
+
+    pysubs2 SSAEvent.is_comment is True for ``Comment:`` lines (karaoke,
+    sign TL, staff credits).  SRT/VTT mocks lack the attribute entirely;
+    getattr(..., False) must leave them unaffected.
+    """
+
+    @staticmethod
+    def _make_line(text: str, start: int = 1000, end: int = 3000, *, is_comment: bool = False):
+        line = MagicMock()
+        line.text = text
+        line.start = start
+        line.end = end
+        line.is_comment = is_comment
+        return line
+
+    @staticmethod
+    def _make_line_no_attr(text: str, start: int = 1000, end: int = 3000):
+        """SRT-style mock: no is_comment attribute."""
+        line = MagicMock(spec=["text", "start", "end"])
+        line.text = text
+        line.start = start
+        line.end = end
+        return line
+
+    def _make_service_with_tagger(self, test_config, mock_tagger):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger):
+            return SubtitleParserService(test_config)
+
+    def test_comment_line_excluded_from_parse_subtitle_file(self, test_config, tmp_path):
+        """Comment-only token must not appear in parse_subtitle_file output."""
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        dialogue_token = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+
+        dialogue_line = self._make_line("猫", is_comment=False)
+        comment_line = self._make_line("カラオケ", is_comment=True)
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([dialogue_line, comment_line]))
+
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [dialogue_token]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            words = service.parse_subtitle_file(sub_file)
+
+        lemmas = {w.lemma for w in words}
+        assert "カラオケ" not in lemmas, "Comment-line token must not appear in mining output"
+        assert "猫" in lemmas
+
+    def test_comment_line_excluded_from_count_lemmas(self, test_config, tmp_path):
+        """Comment-only token must not contribute to count_lemmas (Deck Builder coverage)."""
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        dialogue_token = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+
+        dialogue_line = self._make_line("猫", is_comment=False)
+        comment_line = self._make_line("カラオケ", is_comment=True)
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([dialogue_line, comment_line]))
+
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [dialogue_token]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            counts = service.count_lemmas(sub_file)
+
+        assert "カラオケ" not in counts, "Comment-line token must not be counted"
+        assert counts["猫"] == 1
+
+    def test_comment_line_excluded_from_parse_raw_entries(self, test_config, tmp_path):
+        """Comment lines must not appear in parse_raw_entries output."""
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        dialogue_line = self._make_line("猫が好き", is_comment=False)
+        comment_line = self._make_line("Staff: Alice", is_comment=True)
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([dialogue_line, comment_line]))
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
+        ):
+            service = SubtitleParserService(test_config)
+            entries = service.parse_raw_entries(sub_file)
+
+        texts = [e[2] for e in entries]
+        assert not any("Staff" in t for t in texts), "Comment-line text must not appear in raw entries"
+        assert any("猫が好き" in t for t in texts)
+
+    def test_srt_line_without_is_comment_attr_unaffected(self, test_config, tmp_path):
+        """SRT lines without is_comment must still be parsed normally."""
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        srt_line = self._make_line_no_attr("犬")
+        token = _make_token("犬", "名詞", lemma="犬", kana="イヌ")
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([srt_line]))
+
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            words = service.parse_subtitle_file(sub_file)
+
+        assert any(w.lemma == "犬" for w in words), "SRT lines without is_comment must not be skipped"
+
+
+# ---------------------------------------------------------------------------
+# OVH-012 — _line_cache must hold per-file entries (multi-file cross-phase)
+# ---------------------------------------------------------------------------
+
+
+class TestLineCacheMultiFile:
+    """Per-file line cache must survive across files so Deck Builder Phase-1 →
+    Phase-2 reuse covers ALL files, not just the last one (OVH-012).
+    """
+
+    @staticmethod
+    def _make_file_subs(text: str):
+        line = MagicMock()
+        line.text = text
+        line.start = 1000
+        line.end = 3000
+        line.is_comment = False
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(side_effect=lambda: iter([line]))
+        return mock_subs
+
+    def test_two_files_both_cached(self, test_config, tmp_path):
+        """After parsing file A then file B, both must be in the cache."""
+        import os
+
+        file_a = tmp_path / "a.srt"
+        file_b = tmp_path / "b.srt"
+        file_a.write_text("placeholder", encoding="utf-8")
+        file_b.write_text("placeholder", encoding="utf-8")
+        os.utime(file_a, (1000, 1000))
+        os.utime(file_b, (2000, 2000))
+
+        token_a = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        token_b = _make_token("犬", "名詞", lemma="犬", kana="イヌ")
+
+        subs_a = self._make_file_subs("猫")
+        subs_b = self._make_file_subs("犬")
+
+        mock_tagger = MagicMock()
+        mock_tagger.side_effect = [[token_a], [token_b]]
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                side_effect=lambda p: subs_a if "a.srt" in p else subs_b,
+            ),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            service.count_lemmas(file_a)
+            service.count_lemmas(file_b)
+
+        assert file_a.resolve() in service._line_cache, "file A must remain cached after file B is parsed"
+        assert file_b.resolve() in service._line_cache, "file B must also be cached"
+
+    def test_parse_file_a_after_file_b_is_cache_hit(self, test_config, tmp_path):
+        """count_lemmas(A) → count_lemmas(B) → count_lemmas(A) must not re-tokenize A."""
+        import os
+
+        file_a = tmp_path / "a.srt"
+        file_b = tmp_path / "b.srt"
+        file_a.write_text("placeholder", encoding="utf-8")
+        file_b.write_text("placeholder", encoding="utf-8")
+        os.utime(file_a, (1000, 1000))
+        os.utime(file_b, (2000, 2000))
+
+        token_a = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        token_b = _make_token("犬", "名詞", lemma="犬", kana="イヌ")
+
+        subs_a = self._make_file_subs("猫")
+        subs_b = self._make_file_subs("犬")
+
+        mock_tagger = MagicMock()
+        # Only two real tokenize calls expected: one for A, one for B.
+        # The third call (A again) must be a cache hit → no tagger call.
+        mock_tagger.side_effect = [[token_a], [token_b]]
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                side_effect=lambda p: subs_a if "a.srt" in p else subs_b,
+            ),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            counts_a1 = service.count_lemmas(file_a)  # fills cache for A
+            assert mock_tagger.call_count == 1
+
+            counts_b = service.count_lemmas(file_b)  # fills cache for B; A must remain
+            assert mock_tagger.call_count == 2
+
+            counts_a2 = service.count_lemmas(file_a)  # must be a cache hit (no new tagger call)
+            assert (
+                mock_tagger.call_count == 2
+            ), "Third parse of file A re-tokenized; cache must hold both A and B entries"
+
+        assert counts_a1 == counts_a2
+        assert counts_b["犬"] == 1

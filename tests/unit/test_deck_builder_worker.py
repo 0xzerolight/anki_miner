@@ -709,3 +709,110 @@ def test_curation_processor_tracks_phase2_current_processor(qapp):
         assert worker.curation_processor is ep1
     finally:
         worker._stop_patch.stop()
+
+
+# --------------------------------------------------------------------------- #
+# OVH-015 — Processor lifecycle / teardown
+# --------------------------------------------------------------------------- #
+
+
+def test_superseded_procs_closed_not_final(qapp):
+    """OVH-015: intermediate per-pair procs are closed; the final one is NOT.
+
+    With N pairs, procs ep1..epN are built. ep1..(epN-1) each get .close()
+    called (before the next proc is constructed). epN — the survivor returned
+    via curation_processor — must NOT be closed by the worker so DeckBuilderTab
+    can use it for post-build in-app lookups.
+    """
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    ep1 = _fake_processor(counts)
+    ep2 = _fake_processor(counts)
+    ep3 = _fake_processor(counts)
+    worker, _ = _make_worker(
+        qapp,
+        _make_request([_make_pair("ep1"), _make_pair("ep2"), _make_pair("ep3")]),
+        processors=[base, ep1, ep2, ep3],
+    )
+    try:
+        worker.confirm()
+        worker.run()
+
+        # Superseded procs must have been closed.
+        ep1.close.assert_called_once()
+        ep2.close.assert_called_once()
+        # Final proc is the survivor — worker must NOT close it.
+        ep3.close.assert_not_called()
+        # Survivor is accessible via curation_processor.
+        assert worker.curation_processor is ep3
+    finally:
+        worker._stop_patch.stop()
+
+
+def test_base_closed_in_finally_on_success(qapp):
+    """OVH-015: base processor is closed on successful completion."""
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    ep1 = _fake_processor(counts)
+    worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base, ep1])
+    try:
+        worker.confirm()
+        worker.run()
+        base.close.assert_called_once()
+    finally:
+        worker._stop_patch.stop()
+
+
+def test_base_closed_in_finally_on_exception(qapp):
+    """OVH-015: base processor is closed even when Phase 1 raises."""
+    base = _fake_processor(collections.Counter())
+    base.subtitle_parser.count_lemmas.side_effect = RuntimeError("corpus exploded")
+    worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base])
+    try:
+        errors = _collect(worker.error)
+        worker.confirm()
+        worker.run()
+        assert errors  # exception was surfaced
+        base.close.assert_called_once()
+    finally:
+        worker._stop_patch.stop()
+
+
+def test_base_closed_on_reject(qapp):
+    """OVH-015: base processor is closed when the user rejects the preview."""
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    ep = _fake_processor(counts)
+    worker, factory = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base, ep])
+    try:
+        worker.reject()
+        worker.run()
+        base.close.assert_called_once()
+        # No per-episode processor was built.
+        assert factory.call_count == 1
+    finally:
+        worker._stop_patch.stop()
+
+
+def test_final_proc_not_closed_when_exception_in_phase2(qapp):
+    """OVH-015: if Phase 2 raises, the final _current_processor survives unclosed.
+
+    The survivor may not have finished mining (the exception interrupted it),
+    but DeckBuilderTab still gets to call release_dictionary_resources() on it
+    via curation_processor — so the worker must not close it on exception either.
+    """
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    ep1 = _fake_processor(counts)
+    ep1.process_episode.side_effect = RuntimeError("anki gone")
+    worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base, ep1])
+    try:
+        errors = _collect(worker.error)
+        worker.confirm()
+        worker.run()
+        assert errors  # error signal was emitted
+        base.close.assert_called_once()
+        # ep1 is _current_processor at the point of the exception — must NOT be closed.
+        ep1.close.assert_not_called()
+    finally:
+        worker._stop_patch.stop()

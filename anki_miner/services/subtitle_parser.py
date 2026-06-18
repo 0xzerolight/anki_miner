@@ -33,6 +33,12 @@ from anki_miner.utils.text_utils import (
 
 logger = logging.getLogger(__name__)
 
+# Maximum number of files held simultaneously in the per-instance per-file
+# tokenization cache.  When the cap is hit the oldest entry (insertion order)
+# is evicted so the dict stays bounded while still covering the Deck Builder's
+# Phase-1 → Phase-2 cross-file reuse pattern for any corpus up to this size.
+_LINE_CACHE_MAX_FILES: int = 256
+
 
 class SubtitleParserService:
     """Parse subtitles and extract Japanese vocabulary words (stateless service)."""
@@ -90,6 +96,11 @@ class SubtitleParserService:
         # count_lemmas → parse_subtitle_file double-parse). Survives across
         # parse_* calls; an mtime change invalidates the entry. _reset_caches()
         # does NOT touch this — it is not a per-parse cache.
+        #
+        # Size-bounded: capped at _LINE_CACHE_MAX_FILES entries via insertion-order
+        # eviction (pop the oldest key when full). Prevents unbounded growth during
+        # large Deck Builder builds while still caching all files touched in Phase 1
+        # for Phase 2 reuse when the corpus fits within the cap.
         self._line_cache: dict[Path, tuple[float, list[tuple[str, list, list, float, float, float]]]] = {}
 
     # ------------------------------------------------------------------
@@ -159,15 +170,18 @@ class SubtitleParserService:
         ``_should_include_word`` themselves so the index path and mining path
         share identical token selection logic).
 
-        Per-file cache: keyed by resolved path → (mtime, line-state list); only
-        the most-recently-parsed file is retained (bounded to one entry). On a
-        cache HIT for the same path+mtime the subtitle file is neither reloaded
-        nor re-tokenized — the stored line-state (the very tuples a fresh parse
-        would yield, including ``_SyntheticToken``s) is replayed. An mtime
-        mismatch (file edited between passes) invalidates the entry and forces a
-        fresh load + tokenize, preserving today's behaviour. Consumers MUST NOT
-        mutate the yielded ``merged_tokens`` lists/tokens, as they are shared
-        across passes; current consumers only read them.
+        Per-file cache: keyed by resolved path → (mtime, line-state list);
+        bounded to ``_LINE_CACHE_MAX_FILES`` entries via oldest-first eviction.
+        On a cache HIT for the same path+mtime the subtitle file is neither
+        reloaded nor re-tokenized — the stored line-state (the very tuples a
+        fresh parse would yield, including ``_SyntheticToken``s) is replayed.
+        An mtime mismatch (file edited between passes) invalidates the entry and
+        forces a fresh load + tokenize. The multi-entry cache supports the Deck
+        Builder's Phase-1 (``count_lemmas``) → Phase-2 (``parse_subtitle_file``)
+        cross-file reuse pattern: every file visited in Phase 1 remains cached
+        for Phase 2, eliminating a second full MeCab pass over the corpus.
+        Consumers MUST NOT mutate the yielded ``merged_tokens`` lists/tokens, as
+        they are shared across passes; current consumers only read them.
         """
         key = subtitle_file.resolve()
         try:
@@ -193,6 +207,12 @@ class SubtitleParserService:
         # abandons iteration early does not leave a truncated entry.
         line_states: list[tuple[str, list, list, float, float, float]] = []
         for line in subs:
+            # Skip ASS/SSA Comment events (karaoke, sign TL, staff credits…).
+            # pysubs2 SSAEvent.is_comment is a bool; we check ``is True`` (strict
+            # identity) so that a missing attribute (SRT/VTT, or a mock object
+            # whose auto-created attr is a truthy non-bool) never triggers the skip.
+            if getattr(line, "is_comment", None) is True:
+                continue
             text = self._apply_text_filter(clean_subtitle_text(line.text))
             if not text:
                 continue
@@ -213,13 +233,13 @@ class SubtitleParserService:
         # mtime is None only when stat() failed, in which case _load_subs above
         # already raised, so this assignment is reachable only with a real mtime.
         #
-        # Bound the cache to the current file only. Cross-phase reuse (Deck
-        # Builder Phase 1 -> Phase 2) re-parses the SAME file back-to-back, so
-        # keeping prior files' tokenized line-state would grow the cache
-        # unbounded across a many-episode build with no hit benefit. Replacing
-        # the dict evicts the previous file as the new one is committed.
+        # Evict the oldest entry when the cache is at capacity so growth stays
+        # bounded (see _LINE_CACHE_MAX_FILES). dict preserves insertion order in
+        # Python 3.7+, so next(iter(...)) yields the oldest key.
         if mtime is not None:
-            self._line_cache = {key: (mtime, line_states)}
+            if len(self._line_cache) >= _LINE_CACHE_MAX_FILES:
+                self._line_cache.pop(next(iter(self._line_cache)))
+            self._line_cache[key] = (mtime, line_states)
 
     @staticmethod
     def _iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
@@ -343,6 +363,9 @@ class SubtitleParserService:
 
         entries = []
         for line in subs:
+            # Skip ASS/SSA Comment events (same guard as _iter_parsed_lines).
+            if getattr(line, "is_comment", None) is True:
+                continue
             text = self._apply_text_filter(clean_subtitle_text(line.text))
             if not text:
                 continue

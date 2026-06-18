@@ -243,6 +243,13 @@ class MainWindow(QMainWindow):
         assert check_updates_action is not None
         check_updates_action.triggered.connect(self._check_for_updates)
 
+        help_menu.addSeparator()
+
+        open_log_action = help_menu.addAction("Open Log Folder")
+        assert open_log_action is not None
+        open_log_action.setToolTip("Open the folder containing anki_miner.log in your file manager")
+        open_log_action.triggered.connect(self._open_log_folder)
+
         # Top-right corner of the menu bar holds a small button bar. A QMenuBar
         # allows only one corner widget per corner, so both buttons live inside
         # a container QWidget laid out horizontally.
@@ -274,12 +281,12 @@ class MainWindow(QMainWindow):
         menu_bar.setCornerWidget(corner_widget, Qt.Corner.TopRightCorner)
 
     def _setup_shortcuts(self) -> None:
-        """Set up global keyboard shortcuts."""
-        # Tab switching shortcuts (Ctrl+1..Ctrl+7, one per tab in order)
-        for i in range(1, 8):
-            shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
-            shortcut.activated.connect(lambda idx=i - 1: self._switch_to_tab(idx))
+        """Set up global keyboard shortcuts.
 
+        Per-tab Ctrl+N shortcuts are NOT created here — they depend on the live
+        tab count and are created by :meth:`setup_tab_shortcuts`, which app.py
+        calls once all tabs have been registered via :func:`register_mining_tab`.
+        """
         # Theme toggle (Ctrl+T)
         theme_shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
         theme_shortcut.activated.connect(self._cycle_theme)
@@ -291,6 +298,18 @@ class MainWindow(QMainWindow):
         # System validation (Ctrl+Shift+V)
         validation_shortcut = QShortcut(QKeySequence("Ctrl+Shift+V"), self)
         validation_shortcut.activated.connect(self._run_validation)
+
+    def setup_tab_shortcuts(self) -> None:
+        """Create one Ctrl+N shortcut per registered tab, driven by the live tab count.
+
+        Called by app.py after all tabs have been registered so the count is
+        final.  Creating these in :meth:`_setup_shortcuts` (which runs in
+        ``__init__``, before app.py adds any tabs) would under-count and leave
+        the later tabs unreachable.
+        """
+        for i in range(1, self.tabs.count() + 1):
+            shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
+            shortcut.activated.connect(lambda idx=i - 1: self._switch_to_tab(idx))
 
     def _switch_to_tab(self, index: int) -> None:
         """Switch to tab at given index.
@@ -356,6 +375,15 @@ class MainWindow(QMainWindow):
         from PyQt6.QtGui import QDesktopServices
 
         QDesktopServices.openUrl(QUrl("https://github.com/0xzerolight/anki_miner"))
+
+    def _open_log_folder(self) -> None:
+        """Open the log folder in the system file manager (Help → Open Log Folder)."""
+        from PyQt6.QtCore import QUrl
+        from PyQt6.QtGui import QDesktopServices
+
+        log_folder = self.config.log_path.parent
+        log_folder.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_folder)))
 
     def _create_desktop_shortcut(self) -> None:
         """Create a desktop shortcut via ShortcutService and report the result."""
@@ -534,6 +562,25 @@ class MainWindow(QMainWindow):
         def undo_callback(note_ids: list[int]) -> int:
             deleted = self._anki_service.delete_notes(note_ids)
             self.status_bar.increment_cards_created(-deleted)
+            # Revert the session's source='mined' known-words rows so the user
+            # can re-mine the same words on the next run (OVH-030). Only the
+            # 'mined' rows written by this session are removed — source='user'
+            # and source='anki' rows are untouched (Issue #42). Gate on the DB
+            # being available, NOT on use_known_words_db: the mining write
+            # (episode_processor) records 'mined' rows whenever the DB file
+            # exists, regardless of the toggle, so undo must revert under the
+            # same condition or it leaves orphaned 'mined' rows that suppress
+            # re-mining if the toggle is later enabled (F2). Guard with
+            # try/except so a DB failure never crashes the GUI.
+            if result.mined_forms:
+                try:
+                    from anki_miner.services.known_word_db import KnownWordDB
+
+                    kw_db = KnownWordDB(self.config.known_words_db_path)
+                    if kw_db.is_available():
+                        kw_db.remove_words(set(result.mined_forms), source="mined")
+                except Exception:
+                    logger.warning("Undo: could not revert mined words in known_words.db", exc_info=True)
             return deleted
 
         # Show results dialog with undo support
@@ -649,6 +696,12 @@ class MainWindow(QMainWindow):
         if laggards:
             self.background_tasks.defer_close(event, laggards)
             return
+
+        # Release persistent per-tab processor dict handles before accepting
+        # the close so SQLite connections are freed deterministically rather
+        # than at Python GC.  Safe here: all workers are joined above so no
+        # live thread is reading through these handles (OVH-061 / Issue #30).
+        self.release_dictionary_resources()
 
         # Save configuration before closing
         GUIConfigManager.save_config(self.config)

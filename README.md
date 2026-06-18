@@ -49,6 +49,13 @@ Grab the download for your platform from the [latest release](https://github.com
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
+**macOS first-run (unsigned binary):** macOS Gatekeeper will block the app because it is not notarised. Extract the archive first, then clear the quarantine flag on the extracted folder (clearing it on the `.tar.gz` does not carry over to the extracted files):
+```bash
+xattr -dr com.apple.quarantine AnkiMiner/
+```
+
+**Windows first-run (SmartScreen):** Windows SmartScreen may show "Windows protected your PC". Click **More info**, then **Run anyway**.
+
 <details>
 <summary><strong>Install from PyPI (Python 3.11+)</strong></summary>
 
@@ -79,7 +86,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **YouTube**: paste one or more URLs, then mine the queue.
 - **Audiobook**: queue local audiobook/subtitle pairs and mine them audio-only; embedded cover art stands in for screenshots.
 - **Analytics**: history, series difficulty rankings, milestones, undo.
-- **Settings**: Anki, Media, Dictionary, Filtering, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
+- **Settings**: Anki, Media, Dictionaries, Audio, Filtering, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
 
 ## Other Features
 

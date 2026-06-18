@@ -9,12 +9,15 @@ the importer to run is injected so the two flows share one worker.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Callable
 
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
+
+logger = logging.getLogger(__name__)
 
 # Importer signature: (zip_path, dest_csv, *, progress, cancel_check) -> result.
 ImportFn = Callable[..., Any]
@@ -69,4 +72,5 @@ class YomitanCsvImportWorker(CancellableWorker):
             )
             self.import_finished.emit(result)
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
+            logger.exception("YomitanCsvImportWorker unhandled exception")
             self.failed.emit(str(exc))

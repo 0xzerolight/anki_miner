@@ -58,10 +58,16 @@ class AnkiService:
         """
         self.config = config
         self.last_created_note_ids: list[int] = []
-        # Number of notes skipped as duplicates during the last
-        # create_cards_batch call (only counts the per-note recovery path; the
-        # common case where AnkiConnect returns a null slot is not attributable
-        # to a specific cause). Read by the pipeline to report skips.
+        # Number of notes not created during the last create_cards_batch call.
+        # Combines both sources:
+        #   - null slots in the addNotes result array (common path: most likely a
+        #     duplicate but could be another silent rejection — not attributable
+        #     to a specific cause, so we word it as "not created" to the user)
+        #   - per-note recovery path skips (top-level duplicate error fallback)
+        # Prior behaviour counted only the recovery-path skips; null-slot gaps
+        # were silent. An unexplained created-vs-submitted gap on every
+        # duplicate-heavy re-run is worse than imperfect attribution, so we now
+        # surface all of them. Read by the pipeline to report skips.
         self.last_skipped_duplicates: int = 0
         # Number of media files (screenshots/audio) that could not be stored in
         # Anki during the last create_cards_batch call. Read by the pipeline to
@@ -410,6 +416,10 @@ class AnkiService:
         # because note construction time inside Anki dominates over HTTP.
         batch_size = 100
         total_created = 0
+        # mined_forms of cards actually created (non-null id) this run, for the
+        # incremental cache merge in the finally. Only created words are merged —
+        # see the rationale there (F10).
+        created_forms: list[str] = []
         # Diagnostic counters for the bold path (Issue #20). Surface whether
         # the precomputed bolded strings actually made it to the note body,
         # so users who enable the option but see no bold can tell from the
@@ -445,6 +455,7 @@ class AnkiService:
                 # to abort the entire run with zero cards. Recover from that case by
                 # retrying per-note and skipping only the duplicates; any other
                 # error still propagates to the pipeline boundary.
+                used_per_note_recovery = False
                 try:
                     note_ids = (
                         post_action(
@@ -464,11 +475,34 @@ class AnkiService:
                     )
                     note_ids, batch_skipped = self._add_notes_individually(notes)
                     skipped_duplicates += batch_skipped
+                    used_per_note_recovery = True
 
-                # Count successful creations (non-null IDs)
+                # Count successful creations (non-null IDs).  Null slots in the
+                # addNotes result are AnkiConnect's common way to signal a
+                # silent rejection — most often a duplicate, but the protocol
+                # gives no per-slot reason code, so we attribute them as
+                # "not created" rather than definitively "duplicate".
+                # Skip null-slot counting when the per-note recovery path ran —
+                # that path already attributed each None slot explicitly.
                 batch_created = sum(1 for nid in note_ids if nid is not None)
+                if not used_per_note_recovery:
+                    null_slots = len(notes) - batch_created
+                    skipped_duplicates += null_slots
+                    if null_slots > 0:
+                        logger.info(
+                            "%d note(s) were not created (likely already in your collection).",
+                            null_slots,
+                        )
                 total_created += batch_created
                 all_created_ids.extend(nid for nid in note_ids if nid is not None)
+                # note_ids align positionally with `notes` (hence `batch`) in
+                # both the batch and per-note-recovery paths, so a non-null slot
+                # identifies the word that was created.
+                # strict=False: note_ids is 1:1 with batch by the addNotes contract;
+                # a shorter list (malformed response) only under-merges, never crashes.
+                created_forms.extend(
+                    item.word.mined_form for item, nid in zip(batch, note_ids, strict=False) if nid is not None
+                )
 
                 if progress_callback:
                     progress_callback.on_progress(
@@ -477,19 +511,33 @@ class AnkiService:
                     )
         finally:
             # Record whatever batches completed (all of them on success, the
-            # earlier ones on a mid-run failure) and invalidate the vocab
-            # cache if any card was created so the filter reflects the new
-            # collection. Runs before the exception re-raises.
+            # earlier ones on a mid-run failure). Runs before the exception
+            # re-raises.
             self.last_created_note_ids = all_created_ids
             self.last_skipped_duplicates = skipped_duplicates
-            if total_created > 0:
-                self.invalidate_existing_vocabulary_cache()
+            # Incremental merge: if the cache is already populated, union the
+            # mined_forms of cards actually CREATED this run into it so subsequent
+            # episodes (within the same batch run or the same manual-pair session)
+            # get a cheap cache hit instead of a full collection re-scan.
+            # Only created words are merged — NOT every attempted word: a null
+            # addNotes slot is usually a duplicate (already in the collection, and
+            # thus already in the cache from the initial scan), but it can also be
+            # a non-duplicate silent rejection (bad model/field) for a word that is
+            # NOT in the collection. Merging those would wrongly mark them "known"
+            # and filter them out of later batch items. When the cache is None
+            # (not yet populated), leave it None so the next call scans normally.
+            if self._existing_vocab_cache is not None:
+                for form in created_forms:
+                    key = _strip_for_dedup(form)
+                    if key and _JAPANESE_RE.search(key):
+                        self._existing_vocab_cache.add(key)
 
         if progress_callback:
             progress_callback.on_complete()
         if skipped_duplicates > 0:
             logger.info(
-                "Skipped %d note(s) Anki flagged as duplicates (existing card or same-batch).", skipped_duplicates
+                "%d note(s) were not created (likely already in your collection).",
+                skipped_duplicates,
             )
         if self.config.bold_target_in_sentence and word_data_list:
             logger.info(

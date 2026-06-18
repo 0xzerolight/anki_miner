@@ -10,6 +10,7 @@ badge) stays in MainWindow.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -230,25 +231,31 @@ class BackgroundTaskController(QObject):
         join(self.prewarm_worker, timeout_ms=None)
 
         # Cancel and wait for any processing workers in tabs
-        from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
-        from anki_miner.gui.widgets.youtube_tab import YouTubeTab
-
         for i in range(tabs.count()):
             tab = tabs.widget(i)
+            if tab is None:
+                continue
+            # Poison the curation gate / cancel queue workers BEFORE the bounded
+            # worker_thread join.  Every MiningTabBase subclass (Single, Batch,
+            # DeckBuilder, YouTube, Audiobook) exposes shutdown() via the base;
+            # YouTube/Audiobook override it to also cancel their queue workers,
+            # Single/Batch/DeckBuilder inherit the base that cancels the curation
+            # dialog and poisons the gate (OVH-003).  A worker parked in
+            # _curation_event.wait() cannot exit on cancel() alone, so joining
+            # first would always time it out and spuriously defer the close
+            # (hidden-window flash + "still running" warning) even though
+            # shutdown() releases it immediately (F8).
+            shutdown_fn = getattr(tab, "shutdown", None)
+            if callable(shutdown_fn):
+                shutdown_fn()
             # All mining tabs expose their worker on `worker_thread`.
             # DeckBuilderWorker.cancel() also opens its confirm gate, so a worker
             # blocked awaiting Build unblocks and exits.
             join(getattr(tab, "worker_thread", None))
-            # YouTube tab owns an additional probe worker; shutdown() tears
-            # both threads down cleanly. Audiobook tab's shutdown() poisons its
-            # curation gate so a worker parked in the curation wait (Issue #65)
-            # falls through instead of deadlocking the join.
-            if isinstance(tab, (YouTubeTab, AudiobookTab)) and hasattr(tab, "shutdown"):
-                tab.shutdown()
-            # SettingsTab owns short-lived AnkiConnect workers with no
-            # `worker_thread` (T-12). Route each through the same join policy
-            # so a long fetch/styling request defers the close instead of being
-            # destroyed mid-request.
+            # SettingsTab owns short-lived AnkiConnect workers and import-flow
+            # workers with no `worker_thread` (T-12, OVH-004/059/060).  Route
+            # each through the same join policy so a long import/fetch request
+            # defers the close instead of being destroyed mid-request.
             iter_workers = getattr(tab, "iter_close_workers", None)
             if callable(iter_workers):
                 for worker in iter_workers():
@@ -320,5 +327,12 @@ class BackgroundTaskController(QObject):
             return
         if self._close_poll_timer is not None:
             self._close_poll_timer.stop()
+        # Every laggard has exited, so no thread is reading through the per-tab
+        # processor sqlite handles; release them deterministically here too, not
+        # just on the immediate-close path, or OVH-061's deterministic teardown
+        # is skipped whenever a worker deferred the close (F7). Guarded so a
+        # refusal can't block the quit.
+        with contextlib.suppress(Exception):
+            self._window.release_dictionary_resources()
         GUIConfigManager.save_config(self._window.config)
         QApplication.quit()

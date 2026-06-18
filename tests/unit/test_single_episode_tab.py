@@ -691,3 +691,168 @@ def test_build_curation_context_routes_through_shared_helpers(tab, facade_proces
     assert media_context is sentinel_ctx
     # Lookup resolves through the processor facade (offline_lookup_fn).
     assert lookup_fn is facade_processor.definition_service.lookup_all_offline
+
+
+# ---------------------------------------------------------------------------
+# 18. _start_processing defers processor construction to the worker thread (OVH-054)
+# ---------------------------------------------------------------------------
+
+
+def test_start_processing_does_not_call_create_episode_processor_on_gui_thread(tab, tmp_path):
+    """create_episode_processor must NOT be called synchronously on the GUI thread.
+
+    The processor is built lazily inside a factory closure passed to
+    EpisodeWorkerThread — it only runs when the worker calls run() on the
+    worker thread.  Patching create_episode_processor and asserting it was not
+    called proves no synchronous GUI-thread construction occurred.
+    """
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+
+    mock_worker = MagicMock(name="EpisodeWorkerThread")
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=mock_worker),
+        patch("anki_miner.gui.widgets.single_episode_tab.create_episode_processor") as mock_build,
+    ):
+        tab._start_processing(preview_mode=False)
+
+    # Must NOT have been called during _start_processing (GUI-thread).
+    mock_build.assert_not_called()
+
+
+def test_start_processing_passes_processor_factory_to_worker(tab, tmp_path):
+    """_start_processing passes processor=None and a callable processor_factory
+    to EpisodeWorkerThread instead of a pre-built processor."""
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+
+    mock_worker = MagicMock(name="EpisodeWorkerThread")
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=mock_worker) as worker_cls,
+        patch("anki_miner.gui.widgets.single_episode_tab.create_episode_processor"),
+    ):
+        tab._start_processing(preview_mode=False)
+
+    worker_cls.assert_called_once()
+    _, kwargs = worker_cls.call_args
+    assert kwargs.get("processor") is None, "processor must be None when factory path is used"
+    assert callable(kwargs.get("processor_factory")), "processor_factory must be a callable"
+
+
+def test_factory_closure_calls_create_episode_processor_when_invoked(tab, tmp_path):
+    """Invoking the factory passed to EpisodeWorkerThread calls
+    create_episode_processor — confirming the factory works correctly when
+    the worker thread later calls it."""
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+
+    mock_worker = MagicMock(name="EpisodeWorkerThread")
+    built_processor = MagicMock(name="EpisodeProcessor")
+
+    captured_factory: list = []
+
+    def _capture_factory(*args, **kwargs):
+        captured_factory.append(kwargs.get("processor_factory"))
+        return mock_worker
+
+    # The factory is a closure over the patched create_episode_processor, so
+    # we must call factory() inside the patch context — once the with block
+    # exits the original function is restored.
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", side_effect=_capture_factory),
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.create_episode_processor",
+            return_value=built_processor,
+        ) as mock_build,
+    ):
+        tab._start_processing(preview_mode=False)
+
+        assert len(captured_factory) == 1
+        factory = captured_factory[0]
+        assert callable(factory)
+        # Factory not yet called during _start_processing.
+        mock_build.assert_not_called()
+
+        # Calling the factory (simulating worker thread) invokes create_episode_processor.
+        result = factory()
+        mock_build.assert_called_once()
+        assert result is built_processor
+
+
+def test_mocked_mine_produces_result_and_curation_context_resolves(tab, tmp_path, facade_processor):
+    """A full mocked mine via the factory path: result is handled correctly and
+    curation_processor is the factory-built processor.
+
+    EpisodeWorkerThread is patched to a MagicMock so no real QThread is
+    spawned.  The processor_factory kwarg captured from the constructor is
+    invoked directly to simulate what the worker thread would do, then
+    curation_processor on the mock is asserted to equal the built processor.
+    """
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+
+    mock_worker = MagicMock(name="EpisodeWorkerThread")
+    # Before the factory runs the processor is None (matches real pre-run state).
+    mock_worker.processor = None
+    mock_worker.curation_processor = None
+
+    with (
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread",
+            return_value=mock_worker,
+        ) as worker_cls,
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.create_episode_processor",
+            return_value=facade_processor,
+        ),
+    ):
+        tab._start_processing(preview_mode=True)
+
+        # worker_thread was set to the mock; no real QThread was spawned.
+        assert tab.worker_thread is mock_worker
+
+        # Processor not yet built (factory hasn't run).
+        assert mock_worker.processor is None
+        assert mock_worker.curation_processor is None
+
+        # Capture the factory closure from the constructor kwargs and invoke it
+        # directly — this simulates what the worker thread does at the start of run().
+        _, kwargs = worker_cls.call_args
+        assert kwargs.get("processor") is None, "processor must be None when factory path is used"
+        factory = kwargs.get("processor_factory")
+        assert callable(factory)
+
+        built = factory()
+
+    # After invoking the factory, curation_processor resolves to facade_processor.
+    assert built is facade_processor

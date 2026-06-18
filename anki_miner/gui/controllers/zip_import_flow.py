@@ -62,6 +62,16 @@ class ZipImportFlow:
         self._pending_pitch_commit: Callable[[], None] | None = None
         self._pending_freq_commit: Callable[[], None] | None = None
 
+    def iter_close_workers(self) -> tuple:
+        """Live worker handles MainWindow must join on close.
+
+        Returns both CSV import workers so ``SettingsTab.iter_close_workers``
+        can chain them into the single ``BackgroundTaskController._join_worker_for_close``
+        policy (cancel + bounded grace join + laggard deferral).  ``None``
+        entries (idle flows) are filtered by ``_join_worker_for_close``.
+        """
+        return (self._active_freq_worker, self._active_pitch_worker)
+
     def run_modal_zip_import(
         self,
         *,

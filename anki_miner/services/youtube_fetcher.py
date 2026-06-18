@@ -600,6 +600,8 @@ class YouTubeFetcherService:
                 "3",
                 "--fragment-retries",
                 "3",
+                "--socket-timeout",
+                "30",
             ]
         )
 

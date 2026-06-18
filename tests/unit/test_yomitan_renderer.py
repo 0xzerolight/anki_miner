@@ -219,6 +219,48 @@ class TestStylePassthrough:
         out = structured_content_to_html(node)
         assert "font-weight: 700" in out
 
+    # OVH-063 regression: CSS image-load functions bypass the url() guard.
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "image-set(https://evil/beacon.png 1x)",
+            "-webkit-image-set(https://evil/x.png 1x)",
+            "image(https://evil/x.png)",
+            "cross-fade(https://evil/a.png, https://evil/b.png, 50%)",
+            "src(https://evil/x.css)",
+            # With whitespace before the paren — the tolerance the spec requires.
+            "image-set  (https://evil/x.png 1x)",
+        ],
+    )
+    def test_style_image_load_functions_blocked(self, value):
+        node = {"tag": "div", "style": {"background": value}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "evil" not in out
+        assert "style=" not in out
+
+    @pytest.mark.parametrize(
+        "prop,value",
+        [
+            # Plain keyword/color values must not be blocked.
+            ("background", "#fff"),
+            ("color", "rgb(10, 20, 30)"),
+            ("color", "rgba(10, 20, 30, 0.5)"),
+            ("color", "hsl(120, 50%, 50%)"),
+            ("color", "hsla(120, 50%, 50%, 0.8)"),
+            # calc() on an allowed property (fontSize is in the whitelist).
+            ("fontSize", "calc(1em + 2px)"),
+            # var() is a CSS custom-property reference — must not be blocked.
+            ("color", "var(--accent)"),
+            # % on an allowed property (borderRadius supports it).
+            ("borderRadius", "50%"),
+        ],
+    )
+    def test_style_benign_color_and_function_values_pass(self, prop, value):
+        node = {"tag": "div", "style": {prop: value}, "content": "x"}
+        out = structured_content_to_html(node)
+        # The value should survive into the style attribute.
+        assert "style=" in out
+
     def test_style_block_non_dict_ignored(self):
         node = {"tag": "div", "style": "color: red", "content": "x"}
         # We only accept dict styles to keep the value scrubber simple.
