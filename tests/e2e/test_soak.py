@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -29,6 +30,7 @@ from tests.e2e.soak import (
     SoakReport,
     _assert_safe_home,
     _child_cmd,
+    _maybe_gateway,
     _prepare_home,
     run_crossprocess_soak,
     run_inprocess_soak,
@@ -633,3 +635,42 @@ def test_live_process_soak_skips_when_anki_down(isolated_home: Path, tmp_path: P
     )
     assert len(soak.sessions) == 2
     assert (run_dir.path / "report.json").is_file()
+
+
+# --------------------------------------------------------------------------
+# Unit tests for _maybe_gateway (no live Anki — gateway/post_action mocked)
+# --------------------------------------------------------------------------
+
+_SOAK_GW = "tests.e2e.soak.AnkiGateway"
+
+
+def test_maybe_gateway_preview_returns_none_without_pinging(tmp_path: Path) -> None:
+    """preview=True returns None immediately — AnkiGateway is never constructed."""
+    e2e = E2EConfig(test_home=tmp_path)
+    with patch(_SOAK_GW) as mock_gw_cls:
+        result = _maybe_gateway(e2e, preview=True)
+    assert result is None
+    mock_gw_cls.assert_not_called()
+
+
+def test_maybe_gateway_non_preview_raises_when_anki_down(tmp_path: Path) -> None:
+    """preview=False re-raises AnkiUnreachableError so the runner's exit-2 handler fires."""
+    e2e = E2EConfig(test_home=tmp_path)
+    with patch(_SOAK_GW) as mock_gw_cls:
+        mock_instance = mock_gw_cls.return_value
+        mock_instance.ping.side_effect = AnkiUnreachableError("connection refused")
+        with pytest.raises(AnkiUnreachableError):
+            _maybe_gateway(e2e, preview=False)
+
+
+def test_maybe_gateway_non_preview_returns_gateway_when_anki_up(tmp_path: Path) -> None:
+    """preview=False returns the gateway when ping succeeds."""
+    e2e = E2EConfig(test_home=tmp_path)
+    with patch(_SOAK_GW) as mock_gw_cls:
+        mock_instance = mock_gw_cls.return_value
+        mock_instance.ping.return_value = None
+        result = _maybe_gateway(e2e, preview=False)
+    assert result is mock_instance
+    mock_instance.ping.assert_called_once()
+    mock_instance.ensure_test_deck.assert_called_once()
+    mock_instance.ensure_test_model.assert_called_once()

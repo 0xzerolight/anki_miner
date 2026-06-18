@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from tests.e2e.anki_gateway import ForeignDeckError
+from tests.e2e.anki_gateway import AnkiUnreachableError, ForeignDeckError
 from tests.e2e.config import E2EConfig
 from tests.e2e.runner import _cmd_cleanup, _cmd_smoke, _cmd_soak, _foreign_deck, main
 
@@ -179,6 +179,79 @@ def test_cmd_soak_foreign_deck_crossprocess(tmp_path, capsys, monkeypatch):
     assert code == 2
     assert "ERROR:" in captured.err
     assert "Traceback" not in captured.err
+
+
+# ---------------------------------------------------------------------------
+# _cmd_smoke / _cmd_soak: AnkiUnreachableError → clean exit 2 (no traceback)
+# ---------------------------------------------------------------------------
+
+
+def test_cmd_smoke_anki_down_clean_exit(tmp_path, capsys, monkeypatch):
+    """_cmd_smoke catches AnkiUnreachableError (from _maybe_gateway), returns 2.
+
+    The soak runner raises AnkiUnreachableError (now that _maybe_gateway re-raises
+    instead of swallowing it).  The runner's existing except clause must produce a
+    single-line ERROR: on stderr with no traceback and nothing on stdout.
+    """
+    monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
+    monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
+
+    args = _args("smoke")
+
+    with (
+        patch(_RUNNER_SET_HOME),
+        patch(_RUNNER_RUNDIR),
+        patch(_RUNNER_INPROCESS, side_effect=AnkiUnreachableError("connection refused")),
+    ):
+        code = _cmd_smoke(args)
+
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "ERROR:" in captured.err
+    assert "Traceback" not in captured.err
+    assert not captured.out
+
+
+def test_cmd_soak_inprocess_anki_down_clean_exit(tmp_path, capsys, monkeypatch):
+    """_cmd_soak (inprocess) catches AnkiUnreachableError, returns 2 cleanly."""
+    monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
+    monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
+
+    args = _args("soak", mode="inprocess")
+
+    with (
+        patch(_RUNNER_SET_HOME),
+        patch(_RUNNER_RUNDIR),
+        patch(_RUNNER_INPROCESS, side_effect=AnkiUnreachableError("connection refused")),
+    ):
+        code = _cmd_soak(args)
+
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "ERROR:" in captured.err
+    assert "Traceback" not in captured.err
+    assert not captured.out
+
+
+def test_cmd_soak_crossprocess_anki_down_clean_exit(tmp_path, capsys, monkeypatch):
+    """_cmd_soak (crossprocess) catches AnkiUnreachableError, returns 2 cleanly."""
+    monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
+    monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
+
+    args = _args("soak", mode="crossprocess")
+
+    with (
+        patch(_RUNNER_SET_HOME),
+        patch(_RUNNER_RUNDIR),
+        patch(_RUNNER_CROSSPROCESS, side_effect=AnkiUnreachableError("connection refused")),
+    ):
+        code = _cmd_soak(args)
+
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "ERROR:" in captured.err
+    assert "Traceback" not in captured.err
+    assert not captured.out
 
 
 # ---------------------------------------------------------------------------
