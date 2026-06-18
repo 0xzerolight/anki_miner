@@ -1,7 +1,9 @@
 """State instrumentation + divergence detection for the E2E soak runner.
 
-The soak runner mines the same episode several sessions in a row to surface a
-bug that "only appears after several mining sessions." Between sessions it calls
+The soak runner mines the same episode several sessions in a row to surface both
+multi-session accumulation/leak bugs AND GUI-consistency bugs (e.g. widget-state
+regressions, word-set divergence from expected) that only appear with real
+services wired to the real widget stack. Between sessions it calls
 :func:`capture_snapshot` to record process/disk/deck metrics, then feeds the
 series to :func:`detect_divergence`, which produces a triage :class:`DivergenceReport`
 (``verdict`` + human-readable ``flags`` + per-metric deltas) for the agent to read

@@ -3,10 +3,13 @@
 :class:`EpisodeTabDriver` constructs the ACTUAL mining tab — not a mock, not the
 full ``MainWindow`` — wired to a real :class:`EpisodeProcessor` via the project's
 own ``GUIPresenter`` / ``GUIProgressCallback``, and drives it the way a user would:
-it clicks the real buttons and reads the real progress/log widgets. It deliberately
-avoids ``MainWindow`` so there is no blocking ``ResultsDialog`` / welcome dialog and
-no heavy app startup; the tab itself shows results non-modally (via the presenter
-signal), so preview/process runs need nothing dismissed.
+it clicks the real buttons and reads the real progress/log widgets. It covers both
+multi-session accumulation/leak bugs AND GUI-consistency/integration bugs (button
+enable/disable, cancel paths, mined-word-set correctness) that unit tests cannot
+exercise with real services. It deliberately avoids ``MainWindow`` so there is no
+blocking ``ResultsDialog`` / welcome dialog and no heavy app startup; the tab
+itself shows results non-modally (via the presenter signal), so preview/process
+runs need nothing dismissed.
 
 Capture mechanics (connect-before-start)
 ----------------------------------------
