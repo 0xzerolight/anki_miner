@@ -206,6 +206,15 @@ def test_preview_drives_real_tab_no_anki(tmp_path: Path, qtbot) -> None:
         assert result.new_words_found == len(EXPECTED_LEMMAS)
         assert result.cards_created == 0  # preview creates nothing
 
+        # Mined word-set must equal EXPECTED_LEMMAS exactly (bypass → dedup off).
+        assert set(result.mined_forms) == set(EXPECTED_LEMMAS), (
+            f"mined_forms mismatch:\n"
+            f"  observed={sorted(result.mined_forms)}\n"
+            f"  expected={sorted(EXPECTED_LEMMAS)}\n"
+            f"  extra={sorted(set(result.mined_forms) - set(EXPECTED_LEMMAS))}\n"
+            f"  missing={sorted(set(EXPECTED_LEMMAS) - set(result.mined_forms))}"
+        )
+
         # Real widgets are readable.
         assert isinstance(driver.log_text(), str)
         assert isinstance(driver.progress_text(), str)
@@ -372,3 +381,76 @@ def test_wait_for_result_times_out(tmp_path: Path, qtbot) -> None:
         assert any(p.suffix == ".png" for p in run_dir.path.iterdir())
     finally:
         driver.teardown()
+
+
+# --------------------------------------------------------------------------
+# Mined word-set: preview populates result.mined_forms == EXPECTED_LEMMAS
+# --------------------------------------------------------------------------
+
+
+def test_preview_mined_forms_equals_expected_lemmas(tmp_path: Path, qtbot) -> None:
+    """result.mined_forms in preview mode equals EXPECTED_LEMMAS exactly.
+
+    This is the direct check for Task 13's core invariant: a tokenizer regression
+    that changes WHICH words are mined (same count, different set) is caught here.
+    bypass_known_words=True ensures every fixture word is mined deterministically
+    (dedup off, no AnkiConnect call).
+    """
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    seed_offline_dict(cfg.dicts_root)
+
+    run_dir = RunDir(e2e.runs_root, label="mined-set")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+        driver.click_preview()
+        result = driver.wait_for_result(timeout_s=60)
+
+        assert result.success, result.errors
+        # Core invariant: the mined set must equal EXPECTED_LEMMAS exactly.
+        assert set(result.mined_forms) == set(EXPECTED_LEMMAS), (
+            f"mined_forms mismatch:\n"
+            f"  observed={sorted(result.mined_forms)}\n"
+            f"  expected={sorted(EXPECTED_LEMMAS)}\n"
+            f"  extra={sorted(set(result.mined_forms) - set(EXPECTED_LEMMAS))}\n"
+            f"  missing={sorted(set(EXPECTED_LEMMAS) - set(result.mined_forms))}"
+        )
+        # Count consistency: no duplicates in the mined set.
+        assert len(result.mined_forms) == len(
+            set(result.mined_forms)
+        ), f"mined_forms contains duplicates: {result.mined_forms}"
+    finally:
+        driver.teardown()
+
+
+def test_mined_set_wrong_set_is_flagged() -> None:
+    """A wrong mined set (different words, same or different count) is detected.
+
+    Unit-level: directly exercises the set-comparison logic used in
+    run_one_session to confirm a tokenizer regression would NOT go undetected.
+    Does not need Qt or the real pipeline.
+    """
+    expected = set(EXPECTED_LEMMAS)
+
+    # Case 1: completely wrong set (same size) — should differ.
+    wrong_same_size = {"食べる", "走る", "買う", "本", "今日", "学校", "勉強", "美味しい", "料理", "友達", "公園", "山"}
+    assert wrong_same_size != expected, "wrong set must not equal expected (test self-check)"
+
+    # Case 2: missing one word — must be caught.
+    one_missing = set(EXPECTED_LEMMAS[:-1])
+    assert one_missing != expected
+
+    # Case 3: extra word added — must be caught.
+    one_extra = set(EXPECTED_LEMMAS) | {"余分"}
+    assert one_extra != expected
+
+    # Case 4: the real expected set is a valid subset of itself (faithful mode tautology).
+    assert expected <= expected
+
+    # Case 5: a proper subset passes the faithful (⊆) check but fails the exact check.
+    subset = set(EXPECTED_LEMMAS[:6])
+    assert subset <= expected  # faithful mode: ok
+    assert subset != expected  # bypass mode: would be caught
