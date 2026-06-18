@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pytest
 
-from tests._home_isolation import restore_home_patches, set_test_home
 from tests.e2e.anki_gateway import AnkiGateway, AnkiUnreachableError
 from tests.e2e.artifacts import RunDir
 from tests.e2e.config import E2EConfig
@@ -139,23 +138,6 @@ def test_child_cmd_no_run_dir_by_default(tmp_path: Path) -> None:
         bypass_known_words=False,
     )
     assert "--run-dir" not in argv
-
-
-@pytest.fixture
-def isolated_home(tmp_path: Path):
-    """Point the process at a tmp home and restore the patches afterwards.
-
-    The autouse conftest isolation already redirects the real home, but the soak
-    runner is explicit about which home it uses, so we pin a per-test tmp home and
-    restore the in-process binding patches on teardown.
-    """
-    home = tmp_path / "home"
-    home.mkdir(parents=True, exist_ok=True)
-    saved = set_test_home(home)
-    try:
-        yield home
-    finally:
-        restore_home_patches(saved)
 
 
 def test_inprocess_preview_soak(isolated_home: Path, tmp_path: Path, qtbot) -> None:
