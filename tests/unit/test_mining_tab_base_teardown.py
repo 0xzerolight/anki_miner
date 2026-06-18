@@ -90,7 +90,14 @@ class TestTeardownPreviousRunPoisonsGate:
         # Poison must precede cancel
         assert order.index("poison") < order.index("cancel"), f"Expected poison before cancel; got order={order}"
 
-    def test_gate_is_poisoned_after_teardown(self, qapp, qtbot):
+    def test_gate_rearmed_after_teardown(self, qapp, qtbot):
+        """Teardown's poison is transient: the gate must be re-armed afterward (F1).
+
+        The poison releases the *previous* run's parked worker, but must not carry
+        into the next run — otherwise the 2nd Process mine in a session skips
+        curation and silently produces zero cards. Permanent poisoning is reserved
+        for shutdown().
+        """
         tab = _Bare()
         qtbot.addWidget(tab)
         tab._init_curation_bridge()
@@ -99,11 +106,58 @@ class TestTeardownPreviousRunPoisonsGate:
         worker.isRunning.return_value = False
         worker.finished = MagicMock()
         worker.curation_processor = None
+        worker.wait.return_value = True
 
         tab.worker_thread = worker
         tab._teardown_previous_run("test")
 
-        assert tab._curation_gate_poisoned
+        # Gate must be re-armed (worker-side check) so the next run can curate.
+        assert not tab._curation_gate_poisoned
+        # _curation_cancelled is deliberately left set: it guards a stale queued
+        # _on_curation_requested from the torn-down worker. The next run's
+        # _curation_bridge clears it before emitting.
+        assert tab._curation_cancelled
+
+    def test_second_run_curation_not_short_circuited(self, qapp, qtbot):
+        """Regression (F1): after a teardown, the next run's _curation_bridge emits.
+
+        Before the fix _teardown_previous_run permanently poisoned the gate, so the
+        2nd Process mine's _curation_bridge returned None immediately (no dialog, no
+        cards). Here we simulate the start-of-run-2 teardown of a finished run-1
+        worker (worker_thread is never nulled after a run), then drive the bridge and
+        assert it reaches the emit path with a real selection result.
+        """
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        # A finished run-1 worker still referenced (never nulled by the finish slots).
+        worker = MagicMock(name="w")
+        worker.isRunning.return_value = False
+        worker.finished = MagicMock()
+        worker.curation_processor = None
+        worker.wait.return_value = True
+        tab.worker_thread = worker
+
+        tab._teardown_previous_run("test")
+        assert not tab._curation_gate_poisoned, "gate must be re-armed for the next run"
+
+        # Drive the bridge directly: swap the dialog-exec'ing slot for a stub that
+        # records the emission and releases the worker with a selection.
+        tab._curation_requested.disconnect(tab._on_curation_requested)
+        emitted: list[list] = []
+
+        def _stub(words: list) -> None:
+            emitted.append(words)
+            tab._curation_result = ["picked"]
+            tab._curation_event.set()
+
+        tab._curation_requested.connect(_stub, Qt.ConnectionType.DirectConnection)
+
+        result = tab._curation_bridge(["w1"])
+
+        assert emitted == [["w1"]], "2nd-run curation must emit, not short-circuit to None"
+        assert result == ["picked"]
 
     def test_dialog_cancelled_before_join(self, qapp, qtbot):
         """Any open curation dialog is rejected before the worker join."""
