@@ -10,8 +10,32 @@ import dataclasses
 
 import pytest
 
-from tests.e2e.config import E2EConfig
+from tests.e2e.config import E2EConfig, validate_curation_policy
 from tests.e2e.runner import _build_parser
+
+# --------------------------------------------------------------------------
+# validate_curation_policy — shared validator unit tests
+# --------------------------------------------------------------------------
+
+
+def test_validate_rejects_unknown_policy():
+    with pytest.raises(ValueError, match="curation_policy must be one of"):
+        validate_curation_policy("everything", 0)
+
+
+def test_validate_rejects_first_n_with_zero():
+    with pytest.raises(ValueError, match="first_n > 0"):
+        validate_curation_policy("first_n", 0)
+
+
+def test_validate_rejects_first_n_with_negative():
+    with pytest.raises(ValueError, match="first_n > 0"):
+        validate_curation_policy("first_n", -1)
+
+
+@pytest.mark.parametrize("policy,first_n", [("all", 0), ("none", 0), ("first_n", 3)])
+def test_validate_accepts_valid_combos(policy, first_n):
+    validate_curation_policy(policy, first_n)  # must not raise
 
 
 def test_first_n_policy_with_zero_cap_raises():
