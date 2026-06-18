@@ -107,6 +107,37 @@ def test_child_cmd_default_policy_forwarded(tmp_path: Path) -> None:
     assert "--bypass-known-words" not in argv
 
 
+def test_child_cmd_forwards_run_dir(tmp_path: Path) -> None:
+    """_child_cmd includes --run-dir <path> when run_dir is given."""
+    e2e = E2EConfig(test_home=tmp_path / "home")
+    parent_dir = tmp_path / "parent_run"
+    argv = _child_cmd(
+        e2e,
+        test_home=tmp_path / "home",
+        index=0,
+        out=tmp_path / "s.json",
+        preview=False,
+        bypass_known_words=False,
+        run_dir=parent_dir,
+    )
+    assert "--run-dir" in argv
+    assert argv[argv.index("--run-dir") + 1] == str(parent_dir)
+
+
+def test_child_cmd_no_run_dir_by_default(tmp_path: Path) -> None:
+    """_child_cmd omits --run-dir when run_dir param is not supplied."""
+    e2e = E2EConfig(test_home=tmp_path / "home")
+    argv = _child_cmd(
+        e2e,
+        test_home=tmp_path / "home",
+        index=0,
+        out=tmp_path / "s.json",
+        preview=False,
+        bypass_known_words=False,
+    )
+    assert "--run-dir" not in argv
+
+
 @pytest.fixture
 def isolated_home(tmp_path: Path):
     """Point the process at a tmp home and restore the patches afterwards.
@@ -232,6 +263,15 @@ def test_crossprocess_preview_soak(isolated_home: Path, tmp_path: Path) -> None:
         assert s.ok, s.errors
         assert s.words_found > 0
         assert s.snapshot_post is not None
+
+    # Each session's screenshot must resolve under the PARENT run dir (not a child
+    # subdir). This is the core fix: child artifacts are co-located with the parent.
+    for s in soak.sessions:
+        assert s.screenshot, f"session {s.index} has no screenshot name"
+        shot_path = run_dir.path / s.screenshot
+        assert shot_path.is_file() and shot_path.stat().st_size > 0, (
+            f"session {s.index} screenshot '{s.screenshot}' not found under " f"parent run dir {run_dir.path}"
+        )
 
     # Child handoff JSONs exist on disk.
     for i in range(2):
