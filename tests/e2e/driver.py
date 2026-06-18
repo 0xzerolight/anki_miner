@@ -238,6 +238,45 @@ class EpisodeTabDriver:
         """Grab the whole tab to an ordered PNG in the run dir."""
         return self.run_dir.save_png(name, self.tab)
 
+    # ----- button-state predicates ---------------------------------------
+
+    def process_button_enabled(self) -> bool:
+        """Return whether the process button is not hidden (idle state).
+
+        Uses ``isHidden()`` rather than ``isVisible()`` because ``isVisible()``
+        walks the full parent chain — when the tab itself has never been
+        ``show()``-n (offscreen tests) every child reports ``isVisible()=False``
+        regardless of the button's own hidden state.  ``isHidden()`` reflects
+        only the button's OWN hidden flag, set by ``hide()``/``show()`` in
+        ``_start_processing`` / ``_restore_buttons``.
+        """
+        return self.tab.process_button.isEnabled() and not self.tab.process_button.isHidden()
+
+    def cancel_button_visible(self) -> bool:
+        """Return whether the cancel button is not hidden (running state).
+
+        Uses ``not isHidden()`` for the same reason as :meth:`process_button_enabled`.
+        """
+        return not self.tab.cancel_button.isHidden()
+
+    def buttons_idle(self) -> bool:
+        """True when the tab is in idle state: process button shown+enabled, cancel hidden.
+
+        This is the expected state AFTER a run completes (or errors). The tab
+        shows preview/process/timing/tracks buttons and hides cancel via
+        ``_restore_buttons``, which is connected to ``worker_thread.finished``.
+        """
+        return self.process_button_enabled() and not self.cancel_button_visible()
+
+    def buttons_running(self) -> bool:
+        """True when the tab is in running state: cancel shown, process hidden.
+
+        The tab hides preview/process/timing/tracks and shows cancel inside
+        ``_start_processing``; ``_restore_buttons`` reverses this when the
+        worker finishes.
+        """
+        return self.cancel_button_visible() and self.tab.process_button.isHidden()
+
     # ----- teardown ------------------------------------------------------
 
     def teardown(self) -> None:
