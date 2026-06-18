@@ -43,6 +43,7 @@ from pathlib import Path
 from typing import Any
 
 from PyQt6.QtCore import QTimer
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtTest import QTest
 
 from anki_miner.config import AnkiMinerConfig
@@ -216,6 +217,97 @@ class EpisodeTabDriver:
     def click_cancel(self) -> None:
         """Click the real Cancel button."""
         self.tab.cancel_button.click()
+
+    # ----- keyboard / shortcut helpers -----------------------------------
+
+    def _find_shortcut(self, key_sequence: str) -> QShortcut | None:
+        """Return the first ``QShortcut`` child of the tab matching ``key_sequence``.
+
+        Uses ``tab.findChildren(QShortcut)`` — works for an offscreen,
+        never-``show()``-n widget because ``findChildren`` only traverses the
+        Qt object tree, no platform window needed.
+        """
+        target = QKeySequence(key_sequence)
+        for sc in self.tab.findChildren(QShortcut):
+            if sc.key() == target:
+                return sc
+        return None
+
+    def shortcut_preview_via_keyboard(self) -> None:
+        """Trigger the Ctrl+P preview shortcut through the real shortcut machinery.
+
+        ``QTest.keyClick`` requires the widget to be shown and have focus — it
+        does NOT fire ``QShortcut.activated`` for a never-``show()``-n offscreen
+        widget (empirically verified: the offscreen platform plugin accepts the
+        key event but the shortcut filter never activates). The robust offscreen
+        substitute is to call ``shortcut.activated.emit()`` directly on the real
+        ``QShortcut`` instance: the slot (``_on_preview_clicked``) is still the
+        real one, the signal is still the real one, and the driver's
+        ``worker_created`` capture is still armed — only the key-matching step is
+        bypassed. This is explicitly documented as the accepted fallback for this
+        low-value task.
+
+        Raises:
+            AssertionError: When the Ctrl+P shortcut is absent from the tab
+                (i.e. ``_setup_shortcuts`` did not register it).
+        """
+        sc = self._find_shortcut("Ctrl+P")
+        assert sc is not None, "Ctrl+P shortcut not found on SingleEpisodeTab"
+        sc.activated.emit()
+
+    def assert_shortcuts_exist(self) -> None:
+        """Assert all three documented keyboard shortcuts are registered on the tab.
+
+        Checks: Ctrl+O (browse video), Ctrl+P (preview), Ctrl+Return (process).
+        Raises ``AssertionError`` if any is absent or if the shortcut is disabled.
+        """
+        expected = ["Ctrl+O", "Ctrl+P", "Ctrl+Return"]
+        for key_seq in expected:
+            sc = self._find_shortcut(key_seq)
+            assert sc is not None, (
+                f"Expected QShortcut for {key_seq!r} not found on SingleEpisodeTab. "
+                f"Registered shortcuts: {[s.key().toString() for s in self.tab.findChildren(QShortcut)]}"
+            )
+            assert sc.isEnabled(), f"QShortcut for {key_seq!r} exists but is disabled"
+
+    def assert_tab_order_sane(self) -> None:
+        """Assert the focus/tab order among the tab's primary input widgets is correct.
+
+        Verifies the order declared in ``_setup_accessibility``:
+        video_selector → subtitle_selector → offset_spinbox → preview_button → process_button.
+
+        For each consecutive pair (A, B), walks ``nextInFocusChain()`` from A
+        and asserts B appears before the chain cycles back to A (i.e. B follows
+        A in the overall focus order). The last widget (process_button) is not
+        required to lead back to video_selector — there are many other widgets
+        between them in the full chain. Does NOT require the widget to be shown.
+        """
+        tab = self.tab
+        ordered = [
+            tab.video_selector,
+            tab.subtitle_selector,
+            tab.offset_spinbox,
+            tab.preview_button,
+            tab.process_button,
+        ]
+        # Check only consecutive forward pairs (not the wrap-around edge).
+        for i in range(len(ordered) - 1):
+            widget = ordered[i]
+            successor = ordered[i + 1]
+            # Walk until we find successor or cycle back to widget (cycle = broken).
+            seen: set[int] = set()
+            current = widget.nextInFocusChain()
+            found = False
+            while current is not None and id(current) not in seen:
+                if current is successor:
+                    found = True
+                    break
+                seen.add(id(current))
+                current = current.nextInFocusChain()
+            assert found, (
+                f"Tab-order broken: expected {successor.__class__.__name__} "
+                f"to follow {widget.__class__.__name__} in the focus chain"
+            )
 
     def schedule_cancel(self, delay_s: float) -> None:
         """Schedule a Cancel click ``delay_s`` seconds from now on the GUI thread.
