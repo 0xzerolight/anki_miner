@@ -363,3 +363,84 @@ def test_capture_snapshot_default_media_temp_under_home(qapp, tmp_path):
     (home / "media_temp" / "leftover.tmp").write_bytes(b"x")
     snap = capture_snapshot(test_home=home, gateway=None)
     assert snap.temp_files == 1
+
+
+# --------------------------------------------------------------------------
+# detect_divergence: mode="crossprocess" — in-process metrics must NOT drive verdict
+# --------------------------------------------------------------------------
+
+
+def test_crossprocess_widget_growth_does_not_fail():
+    """Growing top_level_widgets must NOT FAIL in crossprocess mode."""
+    snaps = [_snap(index=i, top_level_widgets=1 + i) for i in range(5)]
+    report = detect_divergence(snaps, mode="crossprocess")
+    assert report.verdict != "FAIL"
+    assert all("top_level_widgets" not in f for f in report.flags)
+
+
+def test_crossprocess_thread_growth_does_not_fail():
+    """Growing python_threads must NOT FAIL in crossprocess mode."""
+    snaps = [_snap(index=i, python_threads=4 + i) for i in range(5)]
+    report = detect_divergence(snaps, mode="crossprocess")
+    assert report.verdict != "FAIL"
+    assert all("python_threads" not in f for f in report.flags)
+
+
+def test_crossprocess_qthread_pool_growth_does_not_fail():
+    """Growing qthread_pool_active must NOT FAIL in crossprocess mode."""
+    snaps = [_snap(index=i, qthread_pool_active=i) for i in range(5)]
+    report = detect_divergence(snaps, mode="crossprocess")
+    assert report.verdict != "FAIL"
+    assert all("qthread_pool_active" not in f for f in report.flags)
+
+
+def test_crossprocess_rss_slope_does_not_warn():
+    """High RSS slope must NOT WARN in crossprocess mode."""
+    step = RSS_SLOPE_BYTES_PER_SESSION * 2
+    snaps = [_snap(index=i, rss_bytes=100_000_000 + i * step) for i in range(5)]
+    report = detect_divergence(snaps, mode="crossprocess")
+    assert all("rss" not in f.lower() for f in report.flags)
+
+
+def test_crossprocess_temp_files_growth_still_fails():
+    """Growing temp_files DOES still FAIL in crossprocess mode (disk is authoritative)."""
+    snaps = [_snap(index=i, temp_files=i) for i in range(5)]
+    report = detect_divergence(snaps, mode="crossprocess")
+    assert report.verdict == "FAIL"
+    assert any("temp_files" in f for f in report.flags)
+
+
+def test_crossprocess_in_process_metrics_recorded_as_context():
+    """In crossprocess mode, growing in-process metrics are still in suspect_deltas."""
+    snaps = [_snap(index=i, top_level_widgets=1 + i, python_threads=4 + i) for i in range(5)]
+    report = detect_divergence(snaps, mode="crossprocess")
+    # Deltas present for context even though they don't drive the verdict.
+    assert "top_level_widgets" in report.suspect_deltas
+    assert "python_threads" in report.suspect_deltas
+    assert "rss_bytes" in report.suspect_deltas
+    assert "rss_slope_bytes_per_session" in report.suspect_deltas
+
+
+def test_inprocess_widget_growth_still_fails():
+    """Sanity: mode="inprocess" (default) still FAILs on widget growth."""
+    snaps = [_snap(index=i, top_level_widgets=1 + i) for i in range(5)]
+    report = detect_divergence(snaps, mode="inprocess")
+    assert report.verdict == "FAIL"
+    assert any("top_level_widgets" in f for f in report.flags)
+
+
+def test_crossprocess_stable_everything_is_pass():
+    """A fully stable series stays PASS in crossprocess mode."""
+    report = detect_divergence(_stable_series(), mode="crossprocess")
+    assert report.verdict == "PASS"
+    assert report.flags == []
+
+
+def test_crossprocess_widget_leak_plus_temp_files_leak_fails_on_temp():
+    """Both in-process and disk leaks: crossprocess verdict is FAIL from temp_files only."""
+    snaps = [_snap(index=i, top_level_widgets=1 + i, temp_files=i) for i in range(5)]
+    report = detect_divergence(snaps, mode="crossprocess")
+    assert report.verdict == "FAIL"
+    # temp_files drives the flag, NOT top_level_widgets.
+    assert any("temp_files" in f for f in report.flags)
+    assert all("top_level_widgets" not in f for f in report.flags)
