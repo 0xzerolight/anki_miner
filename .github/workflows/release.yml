@@ -91,7 +91,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install .
+          # Use requirements.lock to pin transitive deps to known-good versions.
+          # Version-constraint form (no --require-hashes): cross-platform safe
+          # because an incomplete lock never fails the build on unlisted packages.
+          # Upgrade to hash-pinning once a universal lock is generated with uv.
+          pip install . -c requirements.lock
           # Pin PyInstaller for reproducible bundles; bump deliberately.
           pip install pyinstaller==6.20.0
 
