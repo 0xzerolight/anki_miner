@@ -267,6 +267,63 @@ class TestEpisodeNumberExtractor:
             assert result.season_number == 1
             assert result.episode_number == 5
 
+    class TestReleaseEncodingTags:
+        """Regression for Issue #80 — codec / bit-depth / CRC32 tags must not be
+        mined as the episode number. In "[Group] Title - 03 - EpTitle [BD 1080p
+        x265 10-bit][3EEAABE6]" the trailing-number fallback used to land on a
+        codec digit ("265"), the bit-depth ("10"), or a checksum digit, so two
+        episodes whose checksums shared a trailing digit collapsed onto the same
+        number and got mispaired.
+        """
+
+        def test_x265_codec_not_mined(self, tmp_path):
+            path = tmp_path / "Show - 04 [x265].mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 4
+
+        def test_h264_codec_not_mined(self, tmp_path):
+            path = tmp_path / "Show - 04 [h264].mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 4
+
+        def test_10bit_depth_not_mined(self, tmp_path):
+            path = tmp_path / "Show - 04 [10-bit].mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 4
+
+        def test_crc32_checksum_not_mined(self, tmp_path):
+            path = tmp_path / "Show - 04 [3EEAABE6].mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 4
+
+        def test_reported_ep03_extracts_3(self, tmp_path):
+            path = (
+                tmp_path
+                / "[XerBlade] Turn A Gundam - 03 - After the Festival [BD 1080p x265 10-bit Opus][3EEAABE6].mkv"
+            )
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 3
+
+        def test_reported_ep36_extracts_36(self, tmp_path):
+            path = (
+                tmp_path
+                / "[XerBlade] Turn A Gundam - 36 - Militia Space Showdown [BD 1080p x265 10-bit Opus][DA71A6AC].mkv"
+            )
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 36
+
 
 class TestEpisodeMatcher:
     """Tests for EpisodeMatcher class."""
@@ -414,6 +471,35 @@ class TestEpisodeMatcher:
         assert len({str(s) for _, s in pairs}) == 3
         # Every video appears exactly once.
         assert len({str(v) for v, _ in pairs}) == 3
+
+    def test_fansub_release_tags_pair_distinctly(self, tmp_path):
+        """Regression for Issue #80 — two episodes from a fansub BD release whose
+        CRC32 checksums share a trailing digit must each pair with their own
+        subtitle, not collapse onto one checksum-derived number and swap."""
+        video_dir = tmp_path / "videos"
+        video_dir.mkdir()
+        sub_dir = tmp_path / "subs"
+        sub_dir.mkdir()
+        stems = [
+            "[XerBlade] Turn A Gundam - 03 - After the Festival [BD 1080p x265 10-bit Opus][3EEAABE6]",
+            "[XerBlade] Turn A Gundam - 36 - Militia Space Showdown [BD 1080p x265 10-bit Opus][DA71A6AC]",
+        ]
+        vids, subs = [], []
+        for stem in stems:
+            v = video_dir / f"{stem}.mkv"
+            v.touch()
+            vids.append(v)
+            s = sub_dir / f"{stem}.srt"
+            s.touch()
+            subs.append(s)
+
+        pairs = EpisodeMatcher.match_by_episode_number(vids, subs)
+
+        assert len(pairs) == 2
+        # No subtitle reused, and each video keeps its own subtitle.
+        assert len({str(s) for _, s in pairs}) == 2
+        for v, s in pairs:
+            assert v.stem == s.stem
 
     def test_handles_no_matches(self, tmp_path):
         """Should return empty list when no matches found."""

@@ -70,3 +70,20 @@ class TestFilePairMatcher:
             pairs = FilePairMatcher.find_pairs_by_episode_number(anime_dir, sub_dir)
 
             assert len(pairs) == 1
+
+        def test_pairs_sorted_by_episode_ascending(self, tmp_path):
+            """Preview consumes this order, so it must be ascending by episode
+            number regardless of filesystem iteration order (Issue #80)."""
+            anime_dir = tmp_path / "anime"
+            anime_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+
+            # Created out of order; result must still be 01, 02, 03.
+            for n in (3, 1, 2):
+                (anime_dir / f"Show_{n:02d}.mkv").touch()
+                (sub_dir / f"Show_{n:02d}.srt").touch()
+
+            pairs = FilePairMatcher.find_pairs_by_episode_number(anime_dir, sub_dir)
+
+            assert [p.video.name for p in pairs] == ["Show_01.mkv", "Show_02.mkv", "Show_03.mkv"]
