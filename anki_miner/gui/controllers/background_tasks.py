@@ -10,6 +10,7 @@ badge) stays in MainWindow.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -323,5 +324,12 @@ class BackgroundTaskController(QObject):
             return
         if self._close_poll_timer is not None:
             self._close_poll_timer.stop()
+        # Every laggard has exited, so no thread is reading through the per-tab
+        # processor sqlite handles; release them deterministically here too, not
+        # just on the immediate-close path, or OVH-061's deterministic teardown
+        # is skipped whenever a worker deferred the close (F7). Guarded so a
+        # refusal can't block the quit.
+        with contextlib.suppress(Exception):
+            self._window.release_dictionary_resources()
         GUIConfigManager.save_config(self._window.config)
         QApplication.quit()
