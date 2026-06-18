@@ -35,30 +35,16 @@ jobs:
       - run: mypy anki_miner
 
   test:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Full Python-version matrix on Linux; one representative Python per
-        # non-Linux OS to catch platform-specific regressions (shortcut_service,
-        # ffmpeg_resolver, update_checker) without tripling CI minutes.
-        include:
-          - os: ubuntu-latest
-            python-version: "3.11"
-          - os: ubuntu-latest
-            python-version: "3.12"
-          - os: ubuntu-latest
-            python-version: "3.13"
-          - os: windows-latest
-            python-version: "3.12"
-          - os: macos-latest
-            python-version: "3.12"
-    runs-on: ${{ matrix.os }}
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Qt system dependencies
-        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libegl1 libpulse0 libxkbcommon0
