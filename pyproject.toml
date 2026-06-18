@@ -51,6 +51,9 @@ dev = [
     # Build-time only: scripts/build_name_wordsets.py parses JMnedict's
     # entity-laden XML (Issue #59). Not a runtime dependency.
     "lxml>=6.1.0",
+    # Soft E2E dep: screenshot baseline-diff in tests/e2e/screenshot_diff.py.
+    # PIL is never imported at runtime; the diff degrades gracefully if absent.
+    "pillow>=10.0.0",
 ]
 
 [project.scripts]

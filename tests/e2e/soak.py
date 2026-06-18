@@ -79,6 +79,8 @@ from tests.e2e.instrumentation import (
     detect_divergence,
     diff_snapshots,
 )
+from tests.e2e.screenshot_diff import SCREENSHOT_DIFF_WARN_THRESHOLD
+from tests.e2e.screenshot_diff import screenshot_diff as _screenshot_diff
 
 __all__ = [
     "SessionReport",
@@ -143,6 +145,11 @@ class SessionReport:
     #: LAST session or the run is not in faithful mode).  Only set in faithful mode;
     #: always ``None`` in preview / bypass mode.
     known_words_not_remined: bool | None = None
+    #: Normalized per-pixel mean absolute difference vs. session-0 baseline
+    #: screenshot (0.0 = identical, 1.0 = maximum difference).  ``None`` when
+    #: PIL is unavailable, a screenshot is missing, or this IS the baseline
+    #: (session 0).
+    screenshot_diff: float | None = None
 
 
 @dataclass
@@ -681,6 +688,16 @@ def _assemble_report(
     any_failed = any(not s.ok for s in sessions)
     verdict = "FAIL" if any_failed else divergence.verdict
 
+    # Visual-regression WARN: if any non-baseline session has a diff above the
+    # threshold, escalate to WARN (never FAIL — rendering noise exists).
+    visual_warn_sessions = [
+        s.index
+        for s in sessions
+        if s.screenshot_diff is not None and s.screenshot_diff > SCREENSHOT_DIFF_WARN_THRESHOLD
+    ]
+    if visual_warn_sessions and verdict == "PASS":
+        verdict = "WARN"
+
     config = {
         "deck_name": e2e.deck_name,
         "test_home": str(test_home),
@@ -690,6 +707,8 @@ def _assemble_report(
         "preview": preview,
         "bypass_known_words": bypass_known_words,
         "sessions_requested": len(sessions),
+        "screenshot_diff_warn_threshold": SCREENSHOT_DIFF_WARN_THRESHOLD,
+        "screenshot_diff_warn_sessions": visual_warn_sessions,
     }
     if extra_config:
         config.update(extra_config)
@@ -848,6 +867,7 @@ def run_inprocess_soak(
         # so these asserts would be meaningless noise there.
         faithful = not preview and not bypass_known_words
 
+        baseline_screenshot: Path | None = None
         try:
             for i in range(sessions):
                 report = run_one_session(
@@ -863,6 +883,18 @@ def run_inprocess_soak(
                 # Record how many known words the DB holds after this session.
                 # -1 in preview/bypass (DB not created); positive count in faithful.
                 report.known_words_count = _read_known_word_count(test_home)
+
+                # Screenshot baseline-diff: session 0 = baseline; subsequent
+                # sessions are diffed against it. A diff above threshold is
+                # surfaced as a WARN flag (visual regression, not a hard FAIL).
+                if report.screenshot:
+                    shot_path = run_dir.path / report.screenshot
+                    if baseline_screenshot is None:
+                        baseline_screenshot = shot_path  # session 0 sets the baseline
+                    else:
+                        diff_val = _screenshot_diff(baseline_screenshot, shot_path)
+                        report.screenshot_diff = diff_val
+
                 reports.append(report)
 
                 # Cross-session check: compare THIS session to the PREVIOUS one.
@@ -1137,6 +1169,7 @@ def run_crossprocess_soak(
 
     with guard_real_home(Path.home() / ".anki_miner"):
         gateway = _maybe_gateway(e2e, preview=preview)
+        baseline_screenshot: Path | None = None
         try:
             for i in range(sessions):
                 parent_pre = capture_snapshot(
@@ -1158,6 +1191,18 @@ def run_crossprocess_soak(
                 )
                 # Record known-word count from the shared on-disk DB (parent reads it).
                 report.known_words_count = _read_known_word_count(test_home)
+
+                # Screenshot baseline-diff: session 0 = baseline; subsequent
+                # sessions are diffed against it. A diff above threshold is
+                # surfaced as a WARN flag (visual regression, not a hard FAIL).
+                if report.screenshot:
+                    shot_path = run_dir.path / report.screenshot
+                    if baseline_screenshot is None:
+                        baseline_screenshot = shot_path  # session 0 sets the baseline
+                    else:
+                        diff_val = _screenshot_diff(baseline_screenshot, shot_path)
+                        report.screenshot_diff = diff_val
+
                 reports.append(report)
 
                 # Cross-session check: compare to the previous session.
