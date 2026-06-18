@@ -6,9 +6,7 @@ These tests assert:
 * ``ForeignDeckError`` raised by ``_maybe_gateway`` (via ``ensure_test_deck``) is
   caught by both ``_cmd_smoke`` and ``_cmd_soak``, surfaces a clean one-line
   ``ERROR:`` message on stderr, produces no traceback, and returns exit code 2.
-* ``cleanup --allow-existing-deck`` passes ``allow_existing=True`` to
-  ``ensure_test_deck`` and then calls ``delete_test_deck``.
-* ``cleanup`` (without the flag) does NOT call ``ensure_test_deck``.
+* ``cleanup`` calls ``delete_test_deck`` directly (no ``ensure_test_deck`` call).
 """
 
 from __future__ import annotations
@@ -46,8 +44,6 @@ def _args(command: str, **kwargs):
         "ankiconnect_url": None,
         "timeout": None,
     }
-    if command == "smoke":
-        pass  # no extra defaults needed
     if command == "soak":
         defaults.update(
             {
@@ -59,8 +55,6 @@ def _args(command: str, **kwargs):
                 "first_n": 0,
             }
         )
-    if command == "cleanup":
-        defaults["allow_existing_deck"] = False
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
 
@@ -210,66 +204,26 @@ def test_main_smoke_foreign_deck_exit_code(tmp_path, monkeypatch, capsys):
 
 
 # ---------------------------------------------------------------------------
-# cleanup --allow-existing-deck: passes allow_existing=True to ensure_test_deck
+# cleanup: simple delete path (no ensure_test_deck call)
 # ---------------------------------------------------------------------------
 
 
-def test_cmd_cleanup_allow_existing_deck_calls_ensure(tmp_path, monkeypatch):
-    """--allow-existing-deck causes _cmd_cleanup to call ensure_test_deck(allow_existing=True)."""
+def test_cmd_cleanup_calls_delete(tmp_path, monkeypatch, capsys):
+    """_cmd_cleanup pings, deletes the test deck, and prints a confirmation line."""
     monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
     monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
 
-    args = _args("cleanup", allow_existing_deck=True)
+    args = _args("cleanup")
 
     mock_gw = MagicMock()
     mock_gw.ping.return_value = "6"
-    mock_gw.config = E2EConfig()
 
     with patch(_RUNNER_GATEWAY, return_value=mock_gw):
         code = _cmd_cleanup(args)
 
     assert code == 0
-    mock_gw.ensure_test_deck.assert_called_once_with(allow_existing=True)
+    mock_gw.ping.assert_called_once()
     mock_gw.delete_test_deck.assert_called_once()
-
-
-def test_cmd_cleanup_without_flag_skips_ensure(tmp_path, monkeypatch):
-    """cleanup without --allow-existing-deck must NOT call ensure_test_deck."""
-    monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
-    monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
-
-    args = _args("cleanup", allow_existing_deck=False)
-
-    mock_gw = MagicMock()
-    mock_gw.ping.return_value = "6"
-    mock_gw.config = E2EConfig()
-
-    with patch(_RUNNER_GATEWAY, return_value=mock_gw):
-        code = _cmd_cleanup(args)
-
-    assert code == 0
     mock_gw.ensure_test_deck.assert_not_called()
-    mock_gw.delete_test_deck.assert_called_once()
-
-
-# ---------------------------------------------------------------------------
-# parser: --allow-existing-deck is accepted by cleanup subcommand
-# ---------------------------------------------------------------------------
-
-
-def test_parser_cleanup_allow_existing_deck_flag():
-    """argparse accepts --allow-existing-deck on the cleanup subcommand."""
-    from tests.e2e.runner import _build_parser
-
-    parser = _build_parser()
-    args = parser.parse_args(["cleanup", "--allow-existing-deck"])
-    assert args.allow_existing_deck is True
-
-
-def test_parser_cleanup_no_flag_default():
-    """Without --allow-existing-deck, allow_existing_deck defaults to False."""
-    from tests.e2e.runner import _build_parser
-
-    parser = _build_parser()
-    args = parser.parse_args(["cleanup"])
-    assert args.allow_existing_deck is False
+    captured = capsys.readouterr()
+    assert "Deleted test deck" in captured.out
