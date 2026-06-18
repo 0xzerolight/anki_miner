@@ -174,12 +174,18 @@ class TestUndoRevertsMinedWords:
         db = KnownWordDB(db_path)
         assert db.get_known_words() == {"飲む"}, "anki row must survive undo"
 
-    def test_undo_skipped_when_use_known_words_db_false(self, main_window, monkeypatch, test_config):
-        """When use_known_words_db is False the revert path is bypassed entirely."""
+    def test_undo_reverts_mined_rows_even_when_toggle_off(self, main_window, monkeypatch, test_config):
+        """Revert is gated on the DB existing, NOT on use_known_words_db (F2).
+
+        The mining write records source='mined' rows whenever the DB file exists,
+        regardless of the toggle, so undo must revert under the same condition —
+        otherwise an existing DB accrues orphaned 'mined' rows that suppress
+        re-mining if the toggle is later turned on.
+        """
         from anki_miner.services.known_word_db import KnownWordDB
 
         db_path = test_config.known_words_db_path
-        self._setup_known_words_db(db_path, {"食べる": "mined"})
+        self._setup_known_words_db(db_path, {"食べる": "mined", "ラーメン": "user"})
 
         captured = _capture_undo_callback(monkeypatch)
         _fake_delete_notes(monkeypatch, deleted_count=1)
@@ -198,8 +204,32 @@ class TestUndoRevertsMinedWords:
         captured["cb"]([40])
 
         db = KnownWordDB(db_path)
-        # Row should still be there — revert path was skipped.
-        assert db.get_known_words() == {"食べる"}
+        # Mined row reverted even with the toggle off; user row untouched.
+        assert "食べる" not in db.get_known_words(), "mined row must be reverted regardless of toggle"
+        assert db.get_words_by_source("user") == {"ラーメン"}, "user row must survive"
+
+    def test_undo_noop_when_db_absent(self, main_window, monkeypatch, test_config, tmp_path):
+        """When no known_words.db exists, undo's revert is a no-op (no DB created)."""
+        absent_db = tmp_path / "nonexistent" / "known_words.db"
+
+        captured = _capture_undo_callback(monkeypatch)
+        _fake_delete_notes(monkeypatch, deleted_count=1)
+
+        config = replace(main_window.config, known_words_db_path=absent_db, enable_history=False)
+        main_window.update_config(config)
+
+        result = ProcessingResult(
+            total_words_found=1,
+            new_words_found=1,
+            cards_created=1,
+            card_ids=[50],
+            mined_forms=["食べる"],
+        )
+        main_window._on_processing_result(result)
+        # Must not raise, must not create the DB file (is_available() guard).
+        captured["cb"]([50])
+
+        assert not absent_db.exists(), "revert must not create a DB when none exists"
 
     def test_undo_skipped_when_mined_forms_empty(self, main_window, monkeypatch, test_config):
         """When result.mined_forms is empty, the known_words.db revert is skipped."""

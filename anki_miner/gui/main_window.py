@@ -565,14 +565,20 @@ class MainWindow(QMainWindow):
             # Revert the session's source='mined' known-words rows so the user
             # can re-mine the same words on the next run (OVH-030). Only the
             # 'mined' rows written by this session are removed — source='user'
-            # and source='anki' rows are untouched (Issue #42). Guard with
+            # and source='anki' rows are untouched (Issue #42). Gate on the DB
+            # being available, NOT on use_known_words_db: the mining write
+            # (episode_processor) records 'mined' rows whenever the DB file
+            # exists, regardless of the toggle, so undo must revert under the
+            # same condition or it leaves orphaned 'mined' rows that suppress
+            # re-mining if the toggle is later enabled (F2). Guard with
             # try/except so a DB failure never crashes the GUI.
-            if self.config.use_known_words_db and result.mined_forms:
+            if result.mined_forms:
                 try:
                     from anki_miner.services.known_word_db import KnownWordDB
 
                     kw_db = KnownWordDB(self.config.known_words_db_path)
-                    kw_db.remove_words(set(result.mined_forms), source="mined")
+                    if kw_db.is_available():
+                        kw_db.remove_words(set(result.mined_forms), source="mined")
                 except Exception:
                     logger.warning("Undo: could not revert mined words in known_words.db", exc_info=True)
             return deleted
