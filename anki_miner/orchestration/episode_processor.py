@@ -948,7 +948,9 @@ class EpisodeProcessor:
 
             if preview_mode:
                 self.presenter.show_word_preview(unknown_words)
-                return ctx.build_result()
+                return ctx.build_result(
+                    mined_forms=[w.mined_form for w in unknown_words],
+                )
 
             # Wrap the raw callback so the bar reflects whole-episode progress
             # instead of resetting 0->100 per stage. One weight per stage that
