@@ -43,6 +43,7 @@ def _args(command: str, **kwargs):
         "deck": None,
         "ankiconnect_url": None,
         "timeout": None,
+        "fresh_home": False,
     }
     if command == "soak":
         defaults.update(
@@ -227,3 +228,101 @@ def test_cmd_cleanup_calls_delete(tmp_path, monkeypatch, capsys):
     mock_gw.ensure_test_deck.assert_not_called()
     captured = capsys.readouterr()
     assert "Deleted test deck" in captured.out
+
+
+# ---------------------------------------------------------------------------
+# --fresh-home: parser + forwarding
+# ---------------------------------------------------------------------------
+
+
+def test_parser_fresh_home_smoke_defaults_false():
+    """Parsing 'smoke' without --fresh-home gives fresh_home=False."""
+    from tests.e2e.runner import _build_parser
+
+    parser = _build_parser()
+    args = parser.parse_args(["smoke"])
+    assert args.fresh_home is False
+
+
+def test_parser_fresh_home_smoke_sets_true():
+    """Parsing 'smoke --fresh-home' gives fresh_home=True."""
+    from tests.e2e.runner import _build_parser
+
+    parser = _build_parser()
+    args = parser.parse_args(["smoke", "--fresh-home"])
+    assert args.fresh_home is True
+
+
+def test_parser_fresh_home_soak_defaults_false():
+    """Parsing 'soak' without --fresh-home gives fresh_home=False."""
+    from tests.e2e.runner import _build_parser
+
+    parser = _build_parser()
+    args = parser.parse_args(["soak"])
+    assert args.fresh_home is False
+
+
+def test_parser_fresh_home_soak_sets_true():
+    """Parsing 'soak --fresh-home' gives fresh_home=True."""
+    from tests.e2e.runner import _build_parser
+
+    parser = _build_parser()
+    args = parser.parse_args(["soak", "--fresh-home"])
+    assert args.fresh_home is True
+
+
+def test_cmd_smoke_forwards_fresh_home_true(tmp_path, monkeypatch):
+    """_cmd_smoke passes fresh_home=True to run_inprocess_soak when flag set."""
+    monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
+    monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
+
+    args = _args("smoke", fresh_home=True)
+    mock_report = _fake_soak_report()
+
+    with (
+        patch(_RUNNER_SET_HOME),
+        patch(_RUNNER_RUNDIR),
+        patch(_RUNNER_INPROCESS, return_value=mock_report) as mock_run,
+    ):
+        _cmd_smoke(args)
+
+    _kw = mock_run.call_args.kwargs
+    assert _kw.get("fresh_home") is True
+
+
+def test_cmd_smoke_forwards_fresh_home_false_by_default(tmp_path, monkeypatch):
+    """_cmd_smoke passes fresh_home=False when flag is absent."""
+    monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
+    monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
+
+    args = _args("smoke")
+    mock_report = _fake_soak_report()
+
+    with (
+        patch(_RUNNER_SET_HOME),
+        patch(_RUNNER_RUNDIR),
+        patch(_RUNNER_INPROCESS, return_value=mock_report) as mock_run,
+    ):
+        _cmd_smoke(args)
+
+    _kw = mock_run.call_args.kwargs
+    assert _kw.get("fresh_home") is False
+
+
+def test_cmd_soak_forwards_fresh_home_true(tmp_path, monkeypatch):
+    """_cmd_soak passes fresh_home=True to the runner when flag set."""
+    monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
+    monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
+
+    args = _args("soak", fresh_home=True)
+    mock_report = _fake_soak_report()
+
+    with (
+        patch(_RUNNER_SET_HOME),
+        patch(_RUNNER_RUNDIR),
+        patch(_RUNNER_INPROCESS, return_value=mock_report) as mock_run,
+    ):
+        _cmd_soak(args)
+
+    _kw = mock_run.call_args.kwargs
+    assert _kw.get("fresh_home") is True
