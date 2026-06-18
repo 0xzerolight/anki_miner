@@ -200,6 +200,7 @@ def _check_gui_state(
     *,
     preview: bool,
     result_ok: bool,
+    cards_created: int = 0,
 ) -> dict:
     """Inspect post-run GUI state and return a dict of named check results.
 
@@ -212,6 +213,13 @@ def _check_gui_state(
     Only called when the run COMPLETED (result captured, no exception) — the
     caller is responsible for guarding.  Checks are tolerant of preview vs.
     process: phase-3..5 log markers are only required in process mode.
+
+    ``cards_created`` gates the card-creation-phase assertions (``Step 5/5`` and
+    ``progress_not_stuck``): when all words were already known (``cards_created==0``,
+    early return before phase 5) those checks are recorded as data only
+    (``ok=True``), not as failures.  The gates fire only when ``cards_created>0``
+    — a run that created cards yet has no Step 5/5 or stuck progress is still
+    a genuine FAIL.
     """
     checks: dict = {}
 
@@ -268,15 +276,26 @@ def _check_gui_state(
         }
 
     # 4. Process-only marker: Step 5/5 — only asserted when not preview.
+    # Further gated on cards_created > 0: when all words are already known the
+    # pipeline returns early (before phase 5), so Step 5/5 is legitimately absent.
+    # Record as data (ok=True) in that case so the early-return path never
+    # false-FAILs; a genuine stuck run (cards_created>0 but no Step 5/5) still
+    # fails.
     if not preview:
         marker = _LOG_MARKER_PROCESS_ONLY
         key = f"log_contains:{marker}"
         found = marker in log
+        # Assert only when cards were actually created (reached phase 5).
+        assert_step5 = result_ok and cards_created > 0
         checks[key] = {
             "expected": True,
             "actual": found,
-            "ok": (found if result_ok else True),
-            "desc": f"log contains '{marker}' (process mode only)",
+            "ok": (found if assert_step5 else True),
+            "desc": (
+                f"log contains '{marker}' (process mode, cards_created>0 only)"
+                if cards_created == 0
+                else f"log contains '{marker}' (process mode only)"
+            ),
         }
 
     # 5. Progress state — always recorded as data; never skip.
@@ -302,19 +321,36 @@ def _check_gui_state(
     # ("Complete"), since precise end-state varies and strict checks would
     # false-FAIL on the real run.  Preview leaves progress at 0 by design
     # (callback not invoked) — never checked for preview.
+    # Further gated on cards_created > 0: when all words are already known the
+    # pipeline returns early and never advances the progress bar, so progress==0
+    # + idle status is expected and must not be flagged.  The check only fires
+    # when the run SHOULD have advanced progress (i.e. cards were created).
     if not preview and result_ok:
         _idle_statuses = {"", "Ready"}
         status_idle = prog_text.strip() in _idle_statuses
         stuck = prog_value == 0 and status_idle
-        checks["progress_not_stuck"] = {
-            "expected": False,
-            "actual": stuck,
-            "ok": not stuck,
-            "desc": (
-                "progress advanced (value>0) OR status is non-idle after process run "
-                "— stuck (value=0 AND idle status) signals the 'stuck progress bar' bug class"
-            ),
-        }
+        if cards_created > 0:
+            checks["progress_not_stuck"] = {
+                "expected": False,
+                "actual": stuck,
+                "ok": not stuck,
+                "desc": (
+                    "progress advanced (value>0) OR status is non-idle after process run "
+                    "— stuck (value=0 AND idle status) signals the 'stuck progress bar' bug class"
+                ),
+            }
+        else:
+            # cards_created==0 (early return, all words already known): record
+            # progress as data only — stuck state is expected in this path.
+            checks["progress_not_stuck"] = {
+                "expected": "data-only (cards_created==0)",
+                "actual": stuck,
+                "ok": True,
+                "desc": (
+                    "progress state after early-return (all words already known) — "
+                    "recorded for visibility; stuck state is expected here"
+                ),
+            }
 
     return checks
 
@@ -473,7 +509,12 @@ def run_one_session(
             # GUI-state consistency checks: assert widget state is coherent after
             # the run.  Recorded in all cases; a failing check surfaces in the
             # verdict via _assemble_report's any-failed guard.
-            gui_checks = _check_gui_state(driver, preview=preview, result_ok=result.success)
+            gui_checks = _check_gui_state(
+                driver,
+                preview=preview,
+                result_ok=result.success,
+                cards_created=result.cards_created,
+            )
             report.gui_checks = gui_checks
             failed_checks = [name for name, c in gui_checks.items() if not c["ok"]]
             if failed_checks:
