@@ -201,6 +201,44 @@ def test_inprocess_preview_soak(isolated_home: Path, tmp_path: Path, qtbot) -> N
     assert len(loaded["sessions"]) == 3
 
 
+def test_inprocess_preview_soak_gui_checks_populated_and_pass(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+    """GUI-state checks are recorded in every SessionReport and all pass for a healthy preview run.
+
+    After each session ``run_one_session`` calls ``_check_gui_state`` and stores
+    the result in ``SessionReport.gui_checks``.  For a healthy offscreen preview
+    every check must be ``ok=True`` (buttons idle, log non-empty, phase markers
+    present).  A failing check would also set ``session.ok=False`` which would
+    make the overall soak ``FAIL`` — verified by the verdict assertion.
+    """
+    e2e = E2EConfig(test_home=isolated_home)
+    run_dir = RunDir(tmp_path / "runs", label="gui-checks")
+
+    soak = run_inprocess_soak(
+        e2e,
+        sessions=2,
+        preview=True,
+        bypass_known_words=True,
+        run_dir=run_dir,
+        test_home=isolated_home,
+    )
+
+    assert soak.verdict == "PASS", f"soak verdict FAIL — session errors: {[s.errors for s in soak.sessions]}"
+    for s in soak.sessions:
+        assert s.ok, f"session {s.index} failed: {s.errors}"
+        assert s.gui_checks, f"session {s.index}: gui_checks dict is empty (not populated)"
+        failed = {name: c for name, c in s.gui_checks.items() if not c["ok"]}
+        assert not failed, f"session {s.index}: GUI checks failed: " + ", ".join(
+            f"{n}(expected={c['expected']!r} actual={c['actual']!r})" for n, c in failed.items()
+        )
+        # Verify the expected check keys are present.
+        assert "buttons_idle" in s.gui_checks
+        assert "log_nonempty" in s.gui_checks
+        assert "log_contains:Step 1/5" in s.gui_checks
+        assert "log_contains:Step 2/5" in s.gui_checks
+        # Preview: process-only marker must NOT be in checks.
+        assert "log_contains:Step 5/5" not in s.gui_checks
+
+
 def test_inprocess_preview_soak_temp_files_stable(isolated_home: Path, tmp_path: Path, qtbot) -> None:
     """temp_files delta is 0 across sessions when ANKI_MINER_KEEP_TEMP is not set.
 
