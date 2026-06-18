@@ -24,7 +24,7 @@ from tests.e2e.app_config import build_app_config
 from tests.e2e.artifacts import RunDir
 from tests.e2e.config import E2EConfig
 from tests.e2e.curation import AutoCurationResponder
-from tests.e2e.driver import E2ETimeout, EpisodeTabDriver
+from tests.e2e.driver import E2EMiningError, E2ETimeout, EpisodeTabDriver
 from tests.e2e.fixtures_dictionary import seed_offline_dict
 from tests.e2e.fixtures_media import get_test_video
 from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS, get_test_srt
@@ -273,6 +273,59 @@ def test_process_creates_cards_live(tmp_path: Path, qtbot, live_anki) -> None:
         assert result.success, result.errors
         assert result.cards_created > 0
         assert gateway.deck_card_count() == result.cards_created
+    finally:
+        driver.teardown()
+
+
+# --------------------------------------------------------------------------
+# Connect-before-start: an immediately-emitting worker is still captured
+# --------------------------------------------------------------------------
+
+
+def test_immediate_error_is_captured_not_timed_out(tmp_path: Path, qtbot, monkeypatch) -> None:
+    """A worker that emits ``error`` the instant ``run()`` starts is still captured.
+
+    This is the connect-after-emit race the driver used to lose: the real
+    ``_start_processing`` builds the worker, connects the tab's slots, and calls
+    ``.start()`` synchronously on click. If the driver only connected its capture
+    slots AFTER the click (the old ``_arm_capture``), a worker that emits ``error``
+    by the time ``.start()`` returns would emit BEFORE the driver's slot existed →
+    the slot connected later never receives that emission → the driver spuriously
+    raised ``E2ETimeout``. The ``worker_created`` seam lets the driver attach BEFORE
+    ``.start()`` so the emission cannot be missed.
+
+    To make the race deterministic (not thread-scheduling dependent), the patched
+    worker emits ``error`` synchronously from ``start()`` — modelling "the worker
+    already emitted before the driver got a chance to connect". The fix must still
+    capture it → ``E2EMiningError``, never ``E2ETimeout``.
+    """
+    import anki_miner.gui.widgets.single_episode_tab as set_module
+    from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+
+    class _ImmediateErrorWorker(EpisodeWorkerThread):
+        def start(self, *args, **kwargs) -> None:  # type: ignore[override]
+            # Emit synchronously BEFORE the OS thread is even scheduled — the
+            # deterministic worst case for a connect-after-start driver: any slot
+            # connected after this returns misses the emission entirely.
+            self.error.emit("boom immediately")
+            # Never actually start the OS thread; nothing else to run.
+
+        def wait(self, *args, **kwargs) -> bool:  # type: ignore[override]
+            return True  # the thread never ran; join is a no-op
+
+    monkeypatch.setattr(set_module, "EpisodeWorkerThread", _ImmediateErrorWorker)
+
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    run_dir = RunDir(e2e.runs_root, label="immediate-error")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+        driver.click_process()
+        with pytest.raises(E2EMiningError, match="boom immediately"):
+            driver.wait_for_result(timeout_s=5)
     finally:
         driver.teardown()
 
