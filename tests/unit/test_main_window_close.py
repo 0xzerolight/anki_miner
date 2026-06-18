@@ -518,6 +518,30 @@ class TestCloseEventJoinTimeoutPolicy:
         event.accept.assert_not_called()
         event.ignore.assert_called_once()
 
+    def test_tab_shutdown_runs_before_worker_join(self, main_window):
+        """tab.shutdown() (gate poison) must precede the worker_thread join, so a
+        worker parked in the curation gate is released first and does not time the
+        join out into a spurious deferred close (F8)."""
+        order: list[str] = []
+
+        class _OrderWorker(_FakeWorker):
+            def cancel(self) -> None:
+                order.append("join-cancel")
+                super().cancel()
+
+        class _OrderTab(_FakeEpisodeTab):
+            def shutdown(self) -> None:
+                order.append("shutdown")
+
+        tab = _OrderTab(worker_running=True, wait_result=True)
+        tab.worker_thread = _OrderWorker(running=True, wait_result=True)
+        main_window.tabs.addTab(tab, "Episode")
+
+        _trigger_close(main_window)
+
+        assert "shutdown" in order and "join-cancel" in order
+        assert order.index("shutdown") < order.index("join-cancel"), f"shutdown must precede join; got {order}"
+
     def test_poll_keeps_app_alive_while_laggard_runs(self, quit_calls, main_window):
         worker = _FakeWorker(running=True, wait_result=False)
         main_window.background_tasks.update_worker = worker
