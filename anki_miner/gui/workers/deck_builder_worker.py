@@ -15,6 +15,8 @@ confirm gate:
 
 from __future__ import annotations
 
+import contextlib
+import logging
 import threading
 from collections.abc import Callable
 from dataclasses import replace
@@ -29,6 +31,8 @@ from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.deck_build import DeckBuildRequest
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.corpus_aggregator import aggregate, select
+
+logger = logging.getLogger(__name__)
 
 # Config fields SubtitleParserService actually reads. Phase 2 reuses Phase 1's
 # parser (with its filled per-file tokenization cache); that's only sound while
@@ -130,12 +134,31 @@ class DeckBuilderWorker(ProcessorOwningWorker):
         # the cancellation flag and return.
         self._confirm_event.set()
 
+    def _close_superseded_processor(self) -> None:
+        """Close and discard the current per-pair processor before building the next.
+
+        Mirrors ``BatchQueueWorkerThread._close_current_processor``: errors are
+        swallowed (the processor is being discarded) so a close failure never
+        aborts the build.  The reference is dropped so ``_current_processor``
+        always points at the live proc (or None) — not one already released.
+
+        The FINAL processor is NOT closed here; it is left open as the survivor
+        (``curation_processor``) for DeckBuilderTab's post-build in-app lookups.
+        ``base`` is closed separately in the ``run()`` finally.
+        """
+        if self._current_processor is None:
+            return
+        with contextlib.suppress(Exception):
+            self._current_processor.close()
+        self._current_processor = None
+
     # ------------------------------------------------------------------ #
     # Worker body
     # ------------------------------------------------------------------ #
 
     def run(self) -> None:
         """Run the aggregate → preview → (gated) build flow."""
+        base: EpisodeProcessor | None = None
         try:
             # Phase 1: aggregate + preview. Every step here is slow (processor
             # construction: seconds; aggregate: MeCab over the whole corpus,
@@ -173,6 +196,13 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                 name = pair.video.stem
                 self.item_started.emit(name)
 
+                # Close the PREVIOUS per-pair processor before building the next.
+                # This prevents sqlite handles + requests.Session from accumulating
+                # across all pairs (the Windows back-to-back-freeze class).
+                # The final processor is NOT closed here — it survives as the
+                # ``curation_processor`` survivor for DeckBuilderTab.
+                self._close_superseded_processor()
+
                 cfg = replace(
                     self.config,
                     anki_deck_name=self.request.deck_name,
@@ -193,8 +223,10 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                 )
                 # Cross-phase tokenization cache: reuse the Phase-1 parser whose
                 # per-file line cache was filled by aggregate() → count_lemmas
-                # above, so Phase 2's parse_subtitle_file* hits the cache instead
-                # of re-running MeCab over every file a second time. The reuse is
+                # above.  The parser's _line_cache holds up to _LINE_CACHE_MAX_FILES
+                # entries keyed by resolved path, so Phase 2's parse_subtitle_file*
+                # replays cached line-state instead of re-running MeCab over the
+                # corpus a second time (one MeCab pass total, not two). The reuse is
                 # byte-identical only while cfg leaves every parse-relevant field
                 # untouched (it overrides anki_deck_name / include_known_words /
                 # bypass_optional_filters / allow_duplicate_cards, none of which
@@ -255,7 +287,16 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                 return
             self.build_finished.emit(total, preview.projected_coverage_pct)
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
+            logger.exception("DeckBuilderWorker unhandled exception")
             self.error.emit(str(e))
+        finally:
+            # Always close ``base`` on every exit (success / cancel / exception).
+            # ``base`` owns its own definition_service (dict sqlite) + audio
+            # requests.Session; closing it does NOT touch the shared
+            # subtitle_parser, so the survivor (_current_processor) keeps working.
+            if base is not None:
+                with contextlib.suppress(Exception):
+                    base.close()
 
     # ------------------------------------------------------------------ #
     # Helpers

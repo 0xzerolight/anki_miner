@@ -16,6 +16,7 @@ class ProcessingResult:
     card_ids: list[int] = field(default_factory=list)
     video_file: str = ""
     subtitle_file: str = ""
+    mined_forms: list[str] = field(default_factory=list)
 
     @property
     def success(self) -> bool:

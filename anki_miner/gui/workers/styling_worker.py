@@ -1,5 +1,6 @@
 """Worker thread for applying/removing the managed card-styling block (Issue #44)."""
 
+import logging
 from typing import Literal
 
 from PyQt6.QtCore import pyqtSignal
@@ -12,6 +13,8 @@ from anki_miner.services.dictionary.card_styling import (
     build_managed_block,
     strip_managed_block,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class StylingWorker(CancellableWorker):
@@ -70,5 +73,6 @@ class StylingWorker(CancellableWorker):
             if not self.check_cancelled():
                 self.error.emit(str(e))
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+            logger.exception("StylingWorker unhandled exception")
             if not self.check_cancelled():
                 self.error.emit(f"Styling update failed: {e}")

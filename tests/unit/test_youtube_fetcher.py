@@ -541,6 +541,25 @@ class TestUrlArgumentSeparator:
         self._assert_sep_then_url(cmd, self._HOSTILE)
 
 
+class TestBuildFetchCmdSocketTimeout:
+    """OVH-039: _build_fetch_cmd must include --socket-timeout so stalled
+    downloads fail fast into existing retry logic instead of hanging forever."""
+
+    def test_socket_timeout_present(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        cmd = service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, "manual_only")
+        assert "--socket-timeout" in cmd
+
+    def test_socket_timeout_value_is_numeric(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        cmd = service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, "manual_only")
+        idx = cmd.index("--socket-timeout")
+        value = cmd[idx + 1]
+        assert value.isdigit(), f"--socket-timeout value must be numeric, got {value!r}"
+
+    def test_auto_sub_mode_also_has_socket_timeout(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        cmd = service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, "auto_only")
+        assert "--socket-timeout" in cmd
+
+
 class TestFetchVideoResolverFallback:
     """When ``youtube_ffmpeg_location`` is unset, the fetcher falls back to
     ``resolve_ffmpeg`` so frozen builds use the bundled binary instead of

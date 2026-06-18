@@ -532,10 +532,13 @@ class TestAnimatedScreenshot:
             result = svc.extract_media_batch(video_file, words, recording_progress)
 
         # The word is skipped (no screenshot), nothing is spawned, nothing raises.
+        # OVH-043: a dropped word now emits on_error (non-fatal; run completes normally).
         assert result == []
         mock_popen.assert_not_called()
         mock_run.assert_not_called()
-        assert recording_progress.errors == []
+        assert len(recording_progress.errors) == 1
+        assert recording_progress.errors[0][0] == "食べる"
+        assert "media extraction failed" in recording_progress.errors[0][1]
         assert recording_progress.completes == 1
 
 
@@ -996,7 +999,14 @@ class TestExtractMediaBatch:
 
             ss = tmp_path / "good.jpg"
             ss.write_bytes(b"\xff\xd8fake")
-            return MediaData(screenshot_path=ss, screenshot_filename="good.jpg")
+            audio = tmp_path / "good.mp3"
+            audio.write_bytes(b"\xff\xfbfake")
+            return MediaData(
+                screenshot_path=ss,
+                screenshot_filename="good.jpg",
+                audio_path=audio,
+                audio_filename="good.mp3",
+            )
 
         with patch.object(service, "extract_media", side_effect=fake_extract):
             result = service.extract_media_batch(video_file, words, recording_progress)
@@ -1004,7 +1014,7 @@ class TestExtractMediaBatch:
         # Only the successful word should be in results
         assert len(result) == 1
         assert result[0][0].lemma == "良い"
-        # The error should be reported
+        # The error should be reported for the exception case only
         assert len(recording_progress.errors) == 1
         assert recording_progress.errors[0][0] == "悪い"
         assert "ffmpeg exploded" in recording_progress.errors[0][1]
@@ -1680,3 +1690,198 @@ class TestFfmpegResolverWiring:
 
         _, kwargs = mock_find.call_args
         assert kwargs.get("ffprobe_cmd") == str(fake_ffprobe)
+
+
+class TestOVH043DroppedWordOnError:
+    """OVH-043: words dropped by extract_media_batch surface via on_error (non-fatal)."""
+
+    def test_dropped_word_triggers_on_error(self, service, video_file, make_tokenized_word, recording_progress):
+        """A word with no screenshot (keep=False) must call on_error with a failure message."""
+        words = [make_tokenized_word(lemma="失敗", start_time=1.0)]
+
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            # No screenshot, no audio → keep=False in default mode
+            return MediaData()
+
+        with patch.object(service, "extract_media", side_effect=fake_extract):
+            result = service.extract_media_batch(video_file, words, recording_progress)
+
+        assert result == []
+        assert len(recording_progress.errors) == 1
+        lemma, msg = recording_progress.errors[0]
+        assert lemma == "失敗"
+        assert "media extraction failed" in msg
+
+    def test_successful_word_does_not_trigger_on_error(
+        self, service, video_file, make_tokenized_word, recording_progress, tmp_path
+    ):
+        """A word whose screenshot succeeds must NOT call on_error."""
+        words = [make_tokenized_word(lemma="成功", start_time=1.0)]
+
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            ss = tmp_path / "shot.jpg"
+            ss.write_bytes(b"\xff\xd8fake")
+            # Screenshot succeeded, audio also succeeded
+            audio = tmp_path / "audio.mp3"
+            audio.write_bytes(b"\xff\xfbfake")
+            return MediaData(
+                screenshot_path=ss,
+                screenshot_filename=ss.name,
+                audio_path=audio,
+                audio_filename=audio.name,
+            )
+
+        with patch.object(service, "extract_media", side_effect=fake_extract):
+            result = service.extract_media_batch(video_file, words, recording_progress)
+
+        assert len(result) == 1
+        assert recording_progress.errors == []
+
+    def test_on_error_is_non_fatal_run_continues(
+        self, service, video_file, make_tokenized_word, recording_progress, tmp_path
+    ):
+        """on_error for a dropped word must not abort the batch; subsequent words are processed."""
+        words = [
+            make_tokenized_word(lemma="失敗", start_time=1.0),
+            make_tokenized_word(lemma="成功", start_time=2.0),
+        ]
+
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            if word.lemma == "失敗":
+                return MediaData()
+            ss = tmp_path / "shot.jpg"
+            ss.write_bytes(b"\xff\xd8fake")
+            audio = tmp_path / "audio.mp3"
+            audio.write_bytes(b"\xff\xfbfake")
+            return MediaData(
+                screenshot_path=ss,
+                screenshot_filename=ss.name,
+                audio_path=audio,
+                audio_filename=audio.name,
+            )
+
+        with patch.object(service, "extract_media", side_effect=fake_extract):
+            result = service.extract_media_batch(video_file, words, recording_progress)
+
+        # One word kept, one dropped
+        assert len(result) == 1
+        assert result[0][0].lemma == "成功"
+        # Dropped word emitted an error but run continued
+        assert len(recording_progress.errors) == 1
+        assert recording_progress.errors[0][0] == "失敗"
+        assert recording_progress.completes == 1
+
+    def test_audio_only_dropped_word_triggers_on_error(
+        self, service, video_file, make_tokenized_word, recording_progress
+    ):
+        """In audio_only mode a dropped word (no audio) still emits on_error."""
+        words = [make_tokenized_word(lemma="失敗音声", start_time=1.0)]
+
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            return MediaData()  # no audio → keep=False in audio_only mode
+
+        with (
+            patch.object(service, "extract_cover_art", return_value=None),
+            patch.object(service, "extract_media", side_effect=fake_extract),
+        ):
+            result = service.extract_media_batch(video_file, words, recording_progress, audio_only=True)
+
+        assert result == []
+        assert len(recording_progress.errors) == 1
+        assert recording_progress.errors[0][0] == "失敗音声"
+
+
+class TestOVH044AudioFailedOnError:
+    """OVH-044: screenshot OK but audio failed in default mode → on_error emitted, card kept."""
+
+    def test_screenshot_ok_audio_failed_emits_on_error(
+        self, service, video_file, make_tokenized_word, recording_progress, tmp_path
+    ):
+        """Default mode: screenshot succeeded, audio failed → on_error with 'audio extraction failed'."""
+        words = [make_tokenized_word(lemma="音声なし", start_time=1.0)]
+
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            ss = tmp_path / "shot.jpg"
+            ss.write_bytes(b"\xff\xd8fake")
+            # Screenshot succeeded, audio failed (no audio_path/audio_filename)
+            return MediaData(screenshot_path=ss, screenshot_filename=ss.name)
+
+        with patch.object(service, "extract_media", side_effect=fake_extract):
+            result = service.extract_media_batch(video_file, words, recording_progress)
+
+        # Card is KEPT (screenshot-based keep decision unchanged)
+        assert len(result) == 1
+        assert result[0][0].lemma == "音声なし"
+        # Error is surfaced to the GUI
+        assert len(recording_progress.errors) == 1
+        lemma, msg = recording_progress.errors[0]
+        assert lemma == "音声なし"
+        assert "audio extraction failed" in msg
+
+    def test_screenshot_and_audio_ok_no_error(
+        self, service, video_file, make_tokenized_word, recording_progress, tmp_path
+    ):
+        """Default mode: both screenshot and audio succeeded → no on_error call."""
+        words = [make_tokenized_word(lemma="両方成功", start_time=1.0)]
+
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            ss = tmp_path / "shot.jpg"
+            ss.write_bytes(b"\xff\xd8fake")
+            audio = tmp_path / "audio.mp3"
+            audio.write_bytes(b"\xff\xfbfake")
+            return MediaData(
+                screenshot_path=ss,
+                screenshot_filename=ss.name,
+                audio_path=audio,
+                audio_filename=audio.name,
+            )
+
+        with patch.object(service, "extract_media", side_effect=fake_extract):
+            result = service.extract_media_batch(video_file, words, recording_progress)
+
+        assert len(result) == 1
+        assert recording_progress.errors == []
+
+    def test_audio_only_mode_unaffected_by_ovh044(
+        self, service, video_file, make_tokenized_word, recording_progress, tmp_path
+    ):
+        """audio_only mode: a kept word (audio present, no screenshot) must NOT emit OVH-044 error.
+
+        In audio_only mode the keep decision keys on has_audio, and there is no
+        per-word screenshot at all, so the 'has screenshot but not audio' condition
+        cannot apply.  This guards against the OVH-044 branch accidentally firing
+        in audio_only mode.
+        """
+        words = [make_tokenized_word(lemma="音声のみ", start_time=1.0)]
+        cover = tmp_path / "cover.jpg"
+        cover.write_bytes(b"\xff\xd8fake-cover")
+
+        def fake_extract(vf, word, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            audio = tmp_path / "audio.mp3"
+            audio.write_bytes(b"\xff\xfbfake")
+            # audio_only=True: audio present, screenshot absent — this is normal
+            return MediaData(audio_path=audio, audio_filename=audio.name)
+
+        with (
+            patch.object(service, "extract_cover_art", return_value=cover),
+            patch.object(service, "extract_media", side_effect=fake_extract),
+        ):
+            result = service.extract_media_batch(video_file, words, recording_progress, audio_only=True)
+
+        assert len(result) == 1
+        # No spurious error for missing screenshot in audio_only mode
+        assert recording_progress.errors == []

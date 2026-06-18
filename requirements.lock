@@ -1,0 +1,41 @@
+# requirements.lock — version-pinned constraints for release bundle builds.
+#
+# PURPOSE: pin the exact dependency set used to build release artifacts so
+# `pip install .` resolves to known-good versions rather than floating ranges.
+# This is a CONSTRAINTS file (pip install -c requirements.lock), not a
+# requirements file; it only bounds what pip would resolve, not what it installs.
+#
+# FORM: version-pin only (no --require-hashes).
+# WHY: hash-pinning via `uv pip compile --universal --generate-hashes` requires
+# uv (not installed) and network access to pull all OS-specific wheel hashes
+# (PyQt6-Qt6 alone ships separate wheels per OS/arch). Without both, a partial
+# hash lock would cause `--require-hashes` to fail on Windows/macOS runners
+# because every transitive dep that appears in the lock must have its hash
+# listed. A constraints-only lock is non-breaking: it pins listed packages but
+# silently ignores unlisted ones, so an incomplete list never fails the build.
+# See OVH-017 in docs/project-audit/2026-06-17-audit.md.
+#
+# To upgrade to full hash pinning, run on a machine with uv + network:
+#   uv pip compile --universal --generate-hashes pyproject.toml -o requirements.lock
+# then replace this file and switch release.yml to --require-hashes.
+#
+# Generated from: /home/light/Projects/anki_miner/.venv (Linux/Python 3.13)
+# Pinned: 2026-06-17
+
+# Direct runtime dependencies
+certifi==2026.1.4
+charset-normalizer==3.4.4
+click==8.1.8
+fugashi==1.5.2
+gTTS==2.5.4
+idna==3.11
+packaging==26.0
+psutil==7.2.2
+PyQt6==6.10.2
+PyQt6-Qt6==6.10.2
+PyQt6-sip==13.11.0
+pysubs2==1.8.0
+requests==2.34.2
+unidic-lite==1.0.8
+urllib3==2.6.3
+yt-dlp==2026.3.17

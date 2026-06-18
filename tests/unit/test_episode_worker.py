@@ -1,4 +1,4 @@
-"""Tests for EpisodeWorkerThread audio_track_override forwarding."""
+"""Tests for EpisodeWorkerThread audio_track_override forwarding and factory path."""
 
 from __future__ import annotations
 
@@ -10,6 +10,20 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+
+
+def _make_factory_worker(qapp, factory, **kwargs):
+    """Build an EpisodeWorkerThread using the processor_factory path."""
+    common = {
+        "processor": None,
+        "processor_factory": factory,
+        "video_file": Path("/fake/video.mkv"),
+        "subtitle_file": Path("/fake/subs.ass"),
+        "preview_mode": False,
+        "progress_callback": MagicMock(name="ProgressCallback"),
+    }
+    common.update(kwargs)
+    return EpisodeWorkerThread(**common)
 
 
 def _make_worker(qapp, audio_track_override=..., **kwargs):
@@ -173,3 +187,136 @@ def test_successful_run_emits_result_ready(qapp):
     worker.run()
 
     assert results == [sentinel]
+
+
+# ---------------------------------------------------------------------------
+# processor_factory path (OVH-054): construction deferred to the worker thread
+# ---------------------------------------------------------------------------
+
+
+def test_factory_path_builds_processor_inside_run(qapp):
+    """Given processor_factory and processor=None, run() builds the processor
+    before calling process_episode, and curation_processor returns it."""
+    built_processor = MagicMock(name="EpisodeProcessor")
+    built_processor.process_episode.return_value = MagicMock(name="ProcessingResult")
+
+    factory_call_count: list[int] = []
+
+    def factory():
+        factory_call_count.append(1)
+        return built_processor
+
+    worker = _make_factory_worker(qapp, factory)
+    # Before run(), processor is None (not yet built).
+    assert worker.processor is None
+    assert worker.curation_processor is None
+
+    worker.run()
+
+    # Factory was called exactly once.
+    assert factory_call_count == [1]
+    # Processor was built and is now accessible via curation_processor.
+    assert worker.processor is built_processor
+    assert worker.curation_processor is built_processor
+    # Mining was executed with the factory-built processor.
+    built_processor.process_episode.assert_called_once()
+
+
+def test_factory_path_error_emits_error_signal(qapp):
+    """A factory that raises must emit the error signal, not crash the thread."""
+
+    def bad_factory():
+        raise RuntimeError("registry scan failed")
+
+    worker = _make_factory_worker(qapp, bad_factory)
+
+    errors: list[str] = []
+    results: list = []
+    worker.error.connect(errors.append)
+    worker.result_ready.connect(results.append)
+
+    worker.run()
+
+    assert results == []
+    assert len(errors) == 1
+    assert "registry scan failed" in errors[0]
+
+
+def test_factory_path_cancel_before_run_skips_factory(qapp):
+    """A pre-run cancel must not invoke the factory at all."""
+    factory_called: list[bool] = []
+
+    def factory():
+        factory_called.append(True)
+        return MagicMock(name="EpisodeProcessor")
+
+    worker = _make_factory_worker(qapp, factory)
+
+    worker.cancel()
+    worker.run()
+
+    assert factory_called == []
+    assert worker.processor is None
+
+
+def test_factory_path_curation_processor_resolves_after_run(qapp):
+    """curation_processor returns the factory-built processor after run().
+
+    This is the post-run in-app curation lookup path: the GUI reads
+    worker.curation_processor to resolve lookup_fn and release handles.
+    """
+    proc = MagicMock(name="EpisodeProcessor")
+    proc.process_episode.return_value = MagicMock(name="ProcessingResult")
+    worker = _make_factory_worker(qapp, lambda: proc)
+
+    worker.run()
+
+    assert worker.curation_processor is proc
+
+
+def test_prebuilt_processor_path_still_works(qapp):
+    """Legacy pre-built-processor path is unchanged: processor kwarg accepted,
+    no factory needed, process_episode called with the supplied instance."""
+    processor = MagicMock(name="EpisodeProcessor")
+    processor.process_episode.return_value = MagicMock(name="ProcessingResult")
+
+    worker = EpisodeWorkerThread(
+        processor=processor,
+        video_file=Path("/fake/video.mkv"),
+        subtitle_file=Path("/fake/subs.ass"),
+        preview_mode=False,
+        progress_callback=MagicMock(name="ProgressCallback"),
+    )
+
+    worker.run()
+
+    processor.process_episode.assert_called_once()
+    assert worker.curation_processor is processor
+
+
+def test_both_processor_and_factory_raises(qapp):
+    """Supplying both processor and processor_factory must raise ValueError."""
+    proc = MagicMock(name="EpisodeProcessor")
+
+    with pytest.raises(ValueError, match="not both"):
+        EpisodeWorkerThread(
+            processor=proc,
+            processor_factory=lambda: proc,
+            video_file=Path("/fake/video.mkv"),
+            subtitle_file=Path("/fake/subs.ass"),
+            preview_mode=False,
+            progress_callback=MagicMock(name="ProgressCallback"),
+        )
+
+
+def test_neither_processor_nor_factory_raises(qapp):
+    """Supplying neither processor nor processor_factory must raise ValueError."""
+    with pytest.raises(ValueError, match="Either processor or processor_factory"):
+        EpisodeWorkerThread(
+            processor=None,
+            processor_factory=None,
+            video_file=Path("/fake/video.mkv"),
+            subtitle_file=Path("/fake/subs.ass"),
+            preview_mode=False,
+            progress_callback=MagicMock(name="ProgressCallback"),
+        )

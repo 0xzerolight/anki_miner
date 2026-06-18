@@ -644,14 +644,19 @@ class TestDictsRootRoundTrip:
 
 
 class TestDictionaryRemovedPersistsNarrowly:
-    """dictionary_removed must persist only the chain — never run the full Save
-    pipeline whose unrelated validation aborts would orphan the removed dict_id
-    in gui_config.json (Issue #30 / T-08)."""
+    """chain_changed (from panel.remove()) must persist only the chain — never
+    run the full Save pipeline whose unrelated validation aborts would orphan
+    the removed dict_id in gui_config.json (Issue #30 / T-08 / OVH-032).
+
+    The wiring is chain_changed → _persist_chain_change.  Since panel.remove()
+    emits chain_changed then dictionary_removed, we drive chain_changed directly
+    here so the tests remain independent of disk state.
+    """
 
     def test_removed_persists_chain_despite_failing_validation(self, test_config, tmp_path, monkeypatch, qtbot):
         """A stale (deleted) cookies file would abort the full Save at its
         validation gate — but the chain change after a destructive remove must
-        still be persisted, with no warning dialog."""
+        still be persisted via chain_changed, with no warning dialog."""
         from PyQt6.QtWidgets import QMessageBox
 
         # A cookies path that does not exist → _on_save_clicked would early-return
@@ -677,7 +682,8 @@ class TestDictionaryRemovedPersistsNarrowly:
             # Simulate the panel state AFTER a remove: dict-a gone from the chain.
             widget.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
 
-            widget.dictionary_panel.dictionary_removed.emit()
+            # chain_changed is the signal that drives persist (OVH-032).
+            widget.dictionary_panel.chain_changed.emit()
 
             assert received, "chain change must be persisted even though Save would have aborted"
             assert received[-1].dictionary_chain == (ChainEntry(kind="jisho", dict_id=None, enabled=True),)
@@ -712,7 +718,8 @@ class TestDictionaryRemovedPersistsNarrowly:
             widget.anki_panel.deck_input.setText("unsaved_deck")
 
             widget.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
-            widget.dictionary_panel.dictionary_removed.emit()
+            # chain_changed is the signal that drives persist (OVH-032).
+            widget.dictionary_panel.chain_changed.emit()
 
             assert received, "chain change must be persisted"
             # Only the chain changed; the unrelated edit was not committed.

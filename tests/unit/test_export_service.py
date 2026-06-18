@@ -1,6 +1,7 @@
 """Tests for ExportService."""
 
 import csv
+from unittest.mock import patch
 
 import pytest
 
@@ -340,3 +341,105 @@ class TestExportVocabList:
 
         assert count == 0
         assert out.read_text(encoding="utf-8") == ""
+
+
+# ── Atomic write safety (OVH-035) ──────────────────────────────
+
+
+class TestAtomicWriteDelimited:
+    """_write_delimited (export_csv / export_tsv) must not corrupt a pre-existing
+    destination file if the write fails mid-stream (OVH-035)."""
+
+    def test_failed_write_leaves_original_unchanged(self, export_service, sample_words, tmp_path):
+        """If the CSV write raises, the original file is not truncated and
+        no stray .tmp file remains.
+
+        We simulate a mid-stream failure by making os.replace raise, which is
+        the last step before the tmp is promoted to the destination.  The tmp
+        was fully written but os.replace failed — the code must clean it up and
+        re-raise, leaving the original untouched.
+        """
+        out = tmp_path / "words.csv"
+        original_content = "original content"
+        out.write_text(original_content, encoding="utf-8")
+
+        with (
+            patch("anki_miner.services.export_service.os.replace", side_effect=OSError("disk full")),
+            pytest.raises(OSError, match="disk full"),
+        ):
+            export_service.export_csv(sample_words, out)
+
+        # Original must be intact (os.replace never ran so destination unchanged)
+        assert out.read_text(encoding="utf-8") == original_content
+        # No stray tmp file (cleanup should have unlinked it)
+        tmp_file = out.with_suffix(out.suffix + ".tmp")
+        assert not tmp_file.exists()
+
+    def test_successful_write_produces_correct_content(self, export_service, sample_words, tmp_path):
+        """Happy path: file is created with correct CSV content."""
+        out = tmp_path / "words.csv"
+        export_service.export_csv(sample_words, out)
+
+        with open(out, encoding="utf-8") as f:
+            reader = csv.reader(f)
+            header = next(reader)
+            rows = list(reader)
+
+        assert "Lemma" in header
+        assert len(rows) == 3
+
+    def test_no_tmp_file_remains_after_success(self, export_service, sample_words, tmp_path):
+        """After a successful write, no .tmp sibling should remain."""
+        out = tmp_path / "words.csv"
+        export_service.export_csv(sample_words, out)
+
+        tmp_file = out.with_suffix(out.suffix + ".tmp")
+        assert not tmp_file.exists()
+
+
+class TestAtomicWriteVocabList:
+    """export_vocab_list must not corrupt a pre-existing destination file if the
+    write raises mid-stream (OVH-035)."""
+
+    def test_failed_write_leaves_original_unchanged(self, export_service, sample_words, tmp_path):
+        """If writing the tmp file raises, the original file is not touched and
+        no stray .tmp file remains."""
+        out = tmp_path / "vocab.txt"
+        original_content = "original vocab\n"
+        out.write_text(original_content, encoding="utf-8")
+
+        # Patch Path.write_text to raise when called on the .tmp path
+        original_write_text = out.__class__.write_text
+
+        def failing_write_text(self, content, **kwargs):
+            if self.suffix.endswith(".tmp"):
+                raise OSError("permission denied")
+            return original_write_text(self, content, **kwargs)
+
+        with (
+            patch.object(out.__class__, "write_text", failing_write_text),
+            pytest.raises(OSError, match="permission denied"),
+        ):
+            export_service.export_vocab_list(sample_words, out, fmt="plain")
+
+        # Original must be intact
+        assert out.read_text(encoding="utf-8") == original_content
+        # No stray tmp file
+        tmp_file = out.with_suffix(out.suffix + ".tmp")
+        assert not tmp_file.exists()
+
+    def test_successful_write_produces_correct_content(self, export_service, sample_words, tmp_path):
+        """Happy path: vocab list is created with correct content."""
+        out = tmp_path / "vocab.txt"
+        export_service.export_vocab_list(sample_words, out, fmt="plain")
+
+        lines = out.read_text(encoding="utf-8").strip().split("\n")
+        assert lines == ["食べる", "飲む", "走る"]
+
+    def test_no_tmp_file_remains_after_success(self, export_service, sample_words, tmp_path):
+        """After a successful write, no .tmp sibling should remain."""
+        out = tmp_path / "vocab.txt"
+        export_service.export_vocab_list(sample_words, out, fmt="plain")
+
+        tmp_file = out.with_suffix(out.suffix + ".tmp")
+        assert not tmp_file.exists()

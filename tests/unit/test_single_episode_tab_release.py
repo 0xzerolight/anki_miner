@@ -92,7 +92,16 @@ def _ready_tab_inputs(tab, tmp_path):
 
 
 def test_rerun_closes_prior_processor_before_building_new_one(tab, tmp_path):
-    """Run N+1 closes run N's processor and joins its worker before any new processor is built."""
+    """Run N+1 closes run N's processor before the new processor is built.
+
+    With the factory path the new processor is built lazily on the worker
+    thread (not synchronously on the GUI thread during _start_processing), so
+    the old_close → build_new ordering is enforced across the thread boundary:
+    teardown is synchronous (old_close happens in _start_processing) while
+    build_new happens only when the factory is invoked inside worker.run().
+    We verify the GUI-thread half: old processor closed during _start_processing,
+    and create_episode_processor NOT called synchronously on the GUI thread.
+    """
     from unittest.mock import patch
 
     _ready_tab_inputs(tab, tmp_path)
@@ -106,27 +115,27 @@ def test_rerun_closes_prior_processor_before_building_new_one(tab, tmp_path):
     new_worker = MagicMock(name="NewWorker")
     new_processor = MagicMock(name="NewProcessor")
 
-    order: list[str] = []
-    old_processor.close.side_effect = lambda: order.append("old_close")
-
-    def _build_processor(*a, **k):
-        order.append("build_new")
-        return new_processor
-
     with (
-        patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=new_worker),
+        patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=new_worker) as worker_cls,
         patch(
             "anki_miner.gui.widgets.single_episode_tab.create_episode_processor",
-            side_effect=_build_processor,
-        ),
+            return_value=new_processor,
+        ) as mock_build,
     ):
         tab._start_processing(preview_mode=False)
 
-    # Old worker was cancelled and joined before the new processor was built.
+    # Old worker was cancelled and joined.
     old_worker.cancel.assert_called_once_with()
     old_worker.wait.assert_called_once()
+    # Old processor was closed (teardown happened synchronously on GUI thread).
     old_processor.close.assert_called_once_with()
-    assert order == ["old_close", "build_new"], order
+    # create_episode_processor is NOT called synchronously on the GUI thread;
+    # it only runs inside the factory closure when the worker calls run().
+    mock_build.assert_not_called()
+    # A processor_factory keyword arg was passed to the new worker.
+    _, kwargs = worker_cls.call_args
+    assert callable(kwargs.get("processor_factory")), "processor_factory must be a callable"
+    assert kwargs.get("processor") is None, "processor must be None when factory is used"
 
 
 def test_rerun_with_no_prior_worker_does_not_crash(tab, tmp_path):

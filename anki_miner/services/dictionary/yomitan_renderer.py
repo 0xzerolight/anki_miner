@@ -145,9 +145,17 @@ _STYLE_SHORTCUT_KEYS = frozenset(
 
 # Patterns/substrings forbidden inside any style value. CSS-escape sequences,
 # function calls, and angle brackets are the realistic injection vectors here.
+# The resource-loading image functions (image-set, image, cross-fade, src) are
+# listed explicitly because they can fetch remote URLs in unquoted form and
+# therefore bypass the url() guard — e.g. `background: image-set(https://… 1x)`.
+# calc/rgb/rgba/hsl/hsla/var are intentionally NOT listed: they carry no URLs.
 _STYLE_VALUE_BAD_RE = re.compile(
     r"""(?ix)
     (?:url\s*\() |
+    (?:[a-z-]*image-set\s*\() |
+    (?:[a-z-]*cross-fade\s*\() |
+    (?:(?<![a-z])image\s*\() |
+    (?:src\s*\() |
     (?:expression\s*\() |
     (?:javascript:) |
     (?:vbscript:) |

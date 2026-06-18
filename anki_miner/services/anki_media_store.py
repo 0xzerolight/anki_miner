@@ -7,12 +7,18 @@ dictionary-bundled assets referenced from definition/glossary HTML:
 ``_build_store_media_action`` → ``_chunk_media_actions`` (count + byte
 budget) → ``_store_media_chunk`` (per-file fallback on a failed ``multi``
 POST).
+
+``store_batch`` streams: filenames are deduplicated first (cheap, no I/O),
+then base64 encoding happens lazily inside ``_stream_encode_chunks`` as each
+chunk is assembled, so only one chunk's worth of encoded data (~4 MB) is
+resident in memory at a time.  ``_chunk_media_actions`` is kept for the
+``upload_dict_media`` path which pre-builds actions before chunking.
 """
 
 import base64
 import logging
 import re
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
@@ -102,6 +108,51 @@ def _chunk_media_actions(items: list[tuple[str, dict]]) -> Iterator[list[tuple[s
         yield chunk
 
 
+def _stream_encode_chunks(
+    items: Iterable[tuple[str, Path]],
+) -> Iterator[list[tuple[str, dict]]]:
+    """Yield chunks of ``(filename, action)`` pairs with lazy base64 encoding.
+
+    Unlike ``_chunk_media_actions`` (which requires actions to be pre-built),
+    this generator encodes each file only when it is about to be added to the
+    current chunk.  File size is estimated via ``stat()`` (base64 expansion
+    ratio ≈ 4/3) before encoding so the byte budget can be checked without
+    reading file contents twice.  Only one chunk's worth of encoded data is
+    resident in memory at a time; the caller discards each chunk after its POST.
+
+    Files that cannot be read (``OSError``) or stat'd are logged as warnings
+    and skipped — consistent with ``_build_store_media_action`` behaviour.
+    """
+    chunk: list[tuple[str, dict]] = []
+    chunk_bytes = 0
+    for filename, src_path in items:
+        # Estimate encoded size from file size to decide whether to flush first.
+        try:
+            raw_size = src_path.stat().st_size
+        except OSError as e:
+            logger.warning("Failed to stat media file %s: %s", filename, e)
+            continue
+        # base64 encodes 3 raw bytes → 4 ASCII chars; round up to next 4-byte
+        # boundary.  The +3 before integer division handles the padding.
+        estimated_bytes = ((raw_size + 2) // 3) * 4
+
+        if chunk and (len(chunk) >= _MEDIA_BATCH_CHUNK or chunk_bytes + estimated_bytes > _MEDIA_BATCH_MAX_BYTES):
+            yield chunk
+            chunk = []
+            chunk_bytes = 0
+
+        # Encode now — just before it enters the chunk.
+        action = _build_store_media_action(filename, src_path)
+        if action is None:
+            # _build_store_media_action already logged the warning.
+            continue
+        chunk.append((filename, action))
+        chunk_bytes += len(action["params"].get("data", ""))
+
+    if chunk:
+        yield chunk
+
+
 def _build_store_media_action(filename: str, src_path: Path) -> dict | None:
     """Build a ``storeMediaFile`` action dict for use in a ``multi`` envelope.
 
@@ -138,11 +189,12 @@ class AnkiMediaStore:
     def store_batch(self, word_data_list: list[CardPayload]) -> set[str]:
         """Store all media files in Anki collection via batched ``multi`` POSTs.
 
-        Collects all readable (filename, base64-data) pairs, deduplicates by
-        filename, then sends them in chunks bounded by both ``_MEDIA_BATCH_CHUNK``
-        actions and ``_MEDIA_BATCH_MAX_BYTES`` of cumulative base64 payload per
-        ``multi`` call.  Files that cannot be read (OSError) are logged and
-        skipped at build time.  If a chunk's ``multi`` POST fails with a transport
+        Deduplicates filenames first (cheap, no I/O), then streams base64
+        encoding lazily via ``_stream_encode_chunks``: only one chunk's worth
+        of encoded data (~4 MB) is resident in memory at a time.  Each chunk
+        is POSTed and its encoded data dropped before the next chunk is
+        assembled.  Files that cannot be read (OSError) are logged and skipped
+        at encode time.  If a chunk's ``multi`` POST fails with a transport
         error (AnkiConnect resets the connection on oversized bodies), the chunk
         is retried one file at a time via single ``storeMediaFile`` POSTs.
         Per-sub-action AnkiConnect errors (sub-result with an ``"error"`` key)
@@ -159,12 +211,10 @@ class AnkiMediaStore:
         Returns:
             Set of filenames that were successfully stored
         """
-        # Build (filename → action) mapping, deduped by filename (first writer
-        # wins; duplicates point at the same file, so content is identical
-        # either way). Dedup BEFORE the read+encode so a file shared by N
-        # payloads — e.g. audiobook cover art on every card — is read and
-        # base64-encoded once, not N times.
-        actions_by_filename: dict[str, dict] = {}
+        # Dedup by filename first (cheap, no encoding).  First writer wins —
+        # duplicate filenames point at the same content, so whichever path we
+        # pick encodes the same bytes.
+        paths_by_filename: dict[str, Path] = {}
         # Track filenames that had a path on disk at pipeline time but vanished
         # before we could upload them (e.g. user deleted audio_cache/jpod101/
         # mid-run — the documented retry procedure for miss markers). These are
@@ -186,25 +236,28 @@ class AnkiMediaStore:
                 if not src_path.exists():
                     # Had a path but the file is gone; count as a failure unless
                     # already deduped (first encounter owns the failure slot).
-                    if filename not in actions_by_filename and filename not in vanished:
+                    if filename not in paths_by_filename and filename not in vanished:
                         logger.warning("Media source file vanished before upload: %s", filename)
                         vanished.add(filename)
                     continue
-                if filename in actions_by_filename:
+                if filename in paths_by_filename:
                     continue
-                action = _build_store_media_action(filename, src_path)
-                if action is not None:
-                    actions_by_filename[filename] = action
+                paths_by_filename[filename] = src_path
 
-        if not actions_by_filename:
+        if not paths_by_filename:
             self.last_store_failures = len(vanished)
             return set()
 
+        # Stream: encode lazily per chunk; only one chunk's base64 is in RAM
+        # at a time.  Files that fail to encode are skipped (logged inside
+        # _stream_encode_chunks) and excluded from the attempt count below.
         stored: set[str] = set()
-        for chunk in _chunk_media_actions(list(actions_by_filename.items())):
+        attempted: set[str] = set()
+        for chunk in _stream_encode_chunks(paths_by_filename.items()):
+            attempted.update(fn for fn, _ in chunk)
             stored |= self._store_media_chunk(chunk)
 
-        self.last_store_failures = len(actions_by_filename) - len(stored) + len(vanished)
+        self.last_store_failures = len(attempted) - len(stored) + len(vanished)
         return stored
 
     def upload_dict_media(self, word_data_list: list[CardPayload]) -> None:

@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
+from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
@@ -156,7 +157,23 @@ class AudioPackSettingsPanel(FormPanel):
         self._chain: list[AudioSourceEntry] = []
         # Cached registry view; refreshed on demand instead of per UI tick.
         self._view: _RegistryView | None = None
+        # Guard: registry scan deferred to first showEvent so it does not run
+        # on the GUI thread before the window paints (OVH-053).
+        self._scanned: bool = False
         self._setup_fields()
+
+    def showEvent(self, event: QShowEvent) -> None:  # type: ignore[override]
+        """Trigger the first registry scan when the panel becomes visible.
+
+        Defers AudioPackRegistry.load() off the app startup / first-paint
+        path (OVH-053).  Subsequent showEvent calls are no-ops; explicit
+        refreshes (refresh_registry, set_chain with pre-supplied meta)
+        call _rebuild_list directly and bypass this guard.
+        """
+        super().showEvent(event)
+        if not self._scanned:
+            self._scanned = True
+            self._rebuild_list()
 
     def refresh_registry(self) -> None:
         """Force a registry rescan. Call after an import finishes."""
@@ -332,15 +349,19 @@ class AudioPackSettingsPanel(FormPanel):
         try:
             # clear() destroys the previous row widgets (and their signal connections), so there is no duplicate handler risk.
             self._list.clear()
-            if self._view is None:
+            # OVH-053: defer the disk scan until the panel has been shown at
+            # least once (showEvent sets _scanned); before first paint the rows
+            # render without pack metadata — a safe no-content state since
+            # the list is never visible until the Settings tab is opened.
+            if self._view is None and self._scanned:
                 registry = AudioPackRegistry(self._packs_root)
                 self._view = _RegistryView(registry)
                 self._view.load()
-            view = self._view
+            view = self._view  # may be None before first show (OVH-053)
             for entry in self._chain:
                 meta: AudioPackMeta | None = None
                 if entry.kind == "pack":
-                    meta = view.get(entry.pack_id) if entry.pack_id else None
+                    meta = view.get(entry.pack_id) if (view is not None and entry.pack_id) else None
                     display = meta.source if meta else (entry.pack_id or "(missing)")
                     fmt = meta.format if meta else ""
                     count = meta.entry_count if meta else 0
