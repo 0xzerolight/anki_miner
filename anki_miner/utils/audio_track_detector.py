@@ -6,6 +6,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from anki_miner.utils.subprocess_utils import no_window_kwargs
+
 logger = logging.getLogger(__name__)
 
 JAPANESE_LANGUAGE_CODES = frozenset({"jpn", "ja", "japanese", "jp"})
@@ -72,7 +74,15 @@ def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -
     ]
 
     try:
-        proc = subprocess.run(cmd, capture_output=True, timeout=30, text=True, encoding="utf-8", errors="replace")
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            timeout=30,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
+        )
     except (subprocess.SubprocessError, OSError, ValueError) as e:
         logger.warning(f"Error probing {video_path} (select={select_streams}): {e}")
         return None
