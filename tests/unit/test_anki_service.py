@@ -836,6 +836,33 @@ class TestVocabCacheMergeOnCreate:
         # Cache must still be None; next call will do a full scan
         assert service._existing_vocab_cache is None
 
+    def test_null_slot_word_not_merged_into_cache(self, test_config, make_tokenized_word):
+        """Only CREATED words are merged into the cache — a word addNotes returned a
+        null slot for must NOT be merged. Merging a non-duplicate silent rejection
+        (bad model/field) would wrongly mark a not-in-collection word 'known' and
+        filter it out of later batch items (F10)."""
+        from anki_miner.models import CardPayload, MediaData
+
+        service = AnkiService(test_config)
+        service._existing_vocab_cache = {"既知"}
+
+        created = make_tokenized_word(surface="食べる", lemma="食べる", pos=None)
+        rejected = make_tokenized_word(surface="未作成", lemma="未作成", pos=None)
+        items = [
+            CardPayload(word=created, media=MediaData(), definition="d1"),
+            CardPayload(word=rejected, media=MediaData(), definition="d2"),
+        ]
+
+        # addNotes creates the first (id 200) and returns a null slot for the second.
+        add_resp = _mock_response(result=[200, None])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=add_resp):
+            n = service.create_cards_batch(items)
+
+        assert n == 1
+        assert "食べる" in service._existing_vocab_cache, "created word must be merged"
+        assert "未作成" not in service._existing_vocab_cache, "uncreated word must NOT be merged"
+        assert "既知" in service._existing_vocab_cache
+
     def test_delete_notes_still_invalidates_cache(self, test_config, make_tokenized_word):
         """delete_notes (undo path) must still wipe the cache completely."""
         service = AnkiService(test_config)
