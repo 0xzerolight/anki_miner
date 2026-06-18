@@ -30,6 +30,14 @@ class RunDir:
             created under. Created if absent.
         label: Optional suffix appended to the timestamped dir name so several
             runs in the same second / same report stay distinguishable.
+
+    For cross-process soak, children write their artifacts into the PARENT's
+    run dir instead of creating their own: use :meth:`adopt` to wrap an
+    existing directory as a ``RunDir`` without creating a new timestamped
+    subdir.
+
+    Retention policy: every run dir is ALWAYS kept (never auto-pruned).
+    Pruning is a caller concern; the harness never deletes artifact dirs.
     """
 
     def __init__(self, runs_root: Path, label: str = "") -> None:
@@ -42,6 +50,26 @@ class RunDir:
         # Monotonic step counter so saved files sort in capture order regardless
         # of the (possibly identical-to-the-second) timestamp.
         self._step = 0
+
+    @classmethod
+    def adopt(cls, path: Path) -> RunDir:
+        """Wrap an *existing* directory as a RunDir WITHOUT creating a new subdir.
+
+        The step counter starts at 0 (independent of any files already in the
+        directory). Use this when a child process needs to write its artifacts
+        into a parent's run dir rather than creating its own timestamped dir.
+
+        Args:
+            path: The exact directory to use. Created (with parents) if absent.
+
+        Returns:
+            A :class:`RunDir` whose :attr:`path` is ``path`` itself.
+        """
+        instance = cls.__new__(cls)
+        instance._path = Path(path)
+        instance._path.mkdir(parents=True, exist_ok=True)
+        instance._step = 0
+        return instance
 
     @property
     def path(self) -> Path:

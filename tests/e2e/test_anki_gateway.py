@@ -250,7 +250,7 @@ def test_config_defaults(monkeypatch):
     cfg = E2EConfig.from_env()
     assert cfg.deck_name == "AnkiMiner E2E TEST"
     assert cfg.ankiconnect_url == "http://127.0.0.1:8765"
-    assert cfg.note_type == "Basic"
+    assert cfg.note_type == "AnkiMiner E2E Basic"
     assert cfg.curation_policy == "all"
     assert cfg.runs_root == cfg.test_home / "runs"
 
@@ -266,3 +266,43 @@ def test_config_explicit_runs_root_preserved():
 
     cfg = E2EConfig(runs_root=Path("/custom/runs"))
     assert cfg.runs_root == Path("/custom/runs")
+
+
+# --- ensure_test_model --------------------------------------------------------
+
+
+def test_ensure_test_model_creates_when_absent():
+    """When the model is not in modelNames, createModel must be issued."""
+    gw = _gateway()
+
+    def fake(url, action, params=None, timeout=30):
+        if action == "modelNames":
+            return ["Lapis", "Senren"]
+        return None  # createModel
+
+    with patch(GATEWAY_PA, side_effect=fake) as pa:
+        gw.ensure_test_model()
+
+    actions = [c.args[1] for c in pa.call_args_list]
+    assert "modelNames" in actions
+    assert "createModel" in actions
+
+    create = next(c for c in pa.call_args_list if c.args[1] == "createModel")
+    params = create.args[2]
+    assert params["modelName"] == gw.config.note_type
+    assert params["inOrderFields"] == ["Front", "Back"]
+    assert len(params["cardTemplates"]) == 1
+    assert params["cardTemplates"][0]["Front"] == "{{Front}}"
+    assert params["cardTemplates"][0]["Back"] == "{{FrontSide}}<hr id=answer>{{Back}}"
+
+
+def test_ensure_test_model_skips_when_present():
+    """When the model is already in modelNames, createModel must NOT be issued."""
+    gw = _gateway()
+
+    with patch(GATEWAY_PA, return_value=[gw.config.note_type, "Lapis"]) as pa:
+        gw.ensure_test_model()
+
+    actions = [c.args[1] for c in pa.call_args_list]
+    assert "modelNames" in actions
+    assert "createModel" not in actions
