@@ -46,13 +46,33 @@ Heuristics (deliberately SIMPLE — a triage aid, not statistics)
 
 All thresholds are named constants below; tune them there.
 
+Parent vs child snapshot semantics (in-process vs cross-process mode)
+----------------------------------------------------------------------
+:func:`capture_snapshot` is always called in the PARENT (runner) process. In
+``inprocess`` mode the parent also hosts the Qt application and the pipeline
+workers, so the in-process metrics (``top_level_widgets``, ``python_threads``,
+``qthread_pool_active``, ``rss_bytes``) reflect the pipeline and are a
+meaningful series across sessions.
+
+In ``crossprocess`` mode each session runs in a SEPARATE subprocess. The parent
+calls ``capture_snapshot`` between sessions to record disk state, but the
+in-process numbers (widgets, threads, RSS) are the PARENT's idle numbers, not
+the child's — they are NOT a meaningful series across sessions and must not drive
+the verdict. Only disk metrics (``temp_files``; sqlite row counts stay as
+expected-growers context) are authoritative across processes.
+
+Pass ``mode="crossprocess"`` to :func:`detect_divergence` (or via
+``_assemble_report``) so the in-process metrics and RSS slope are still recorded
+in ``suspect_deltas`` for context but never generate a LEAK/WARN flag.
+
 Input / output contract (for the runner's serializer)
 ------------------------------------------------------
 :func:`detect_divergence` takes the per-session ``list[StateSnapshot]`` (the
-snapshot captured *after* each session is the natural choice) and an optional
-parallel ``cards_created: list[int]``. It returns a :class:`DivergenceReport`
-dataclass; both it and :class:`StateSnapshot` use only JSON-friendly fields so
-``dataclasses.asdict`` round-trips straight into ``report.json``.
+snapshot captured *after* each session is the natural choice), an optional
+parallel ``cards_created: list[int]``, and an optional ``mode`` (default
+``"inprocess"``). It returns a :class:`DivergenceReport` dataclass; both it and
+:class:`StateSnapshot` use only JSON-friendly fields so ``dataclasses.asdict``
+round-trips straight into ``report.json``.
 """
 
 from __future__ import annotations
@@ -99,6 +119,12 @@ _EXPECTED_DB_NAMES = ("history.db", "stats.db", "known_words.db")
 #: Metrics that legitimately grow as mining creates cards. Their growth is
 #: reported but never flagged.
 EXPECTED_GROWERS = ("anki_test_deck_count", *_EXPECTED_DB_NAMES)
+
+#: In-process metrics that reflect the calling process, NOT a child session's
+#: state. In ``crossprocess`` mode, snapshots are taken by the parent between
+#: child sessions, so these numbers are the parent's idle numbers — they must
+#: NOT drive the verdict (still recorded in suspect_deltas for context).
+_INPROCESS_ONLY_METRICS: frozenset[str] = frozenset(("top_level_widgets", "python_threads", "qthread_pool_active"))
 
 #: Fraction of session-to-session gaps that must show a positive delta for a
 #: suspect metric to count as "monotonically growing". 0.75 means "positive in
@@ -382,6 +408,7 @@ def detect_divergence(
     snapshots: list[StateSnapshot],
     *,
     cards_created: list[int] | None = None,
+    mode: Literal["inprocess", "crossprocess"] = "inprocess",
 ) -> DivergenceReport:
     """Flag session-over-session divergence in the snapshot series.
 
@@ -393,6 +420,14 @@ def detect_divergence(
             positive count to ``0`` later in the run is surfaced as an
             *investigate* flag (WARN, not FAIL) — it can be legitimate
             known-words accumulation.
+        mode: ``"inprocess"`` (default) evaluates all :data:`SUSPECT_METRICS`
+            and the RSS slope to drive the verdict.  ``"crossprocess"`` skips
+            the in-process metrics (``top_level_widgets``, ``python_threads``,
+            ``qthread_pool_active``) and the RSS slope when deciding the verdict
+            — they are still recorded in ``suspect_deltas`` for context but
+            never generate a LEAK/WARN flag, because those numbers are the
+            parent's idle numbers rather than a meaningful per-session series.
+            Only ``temp_files`` (disk) drives FAIL in cross-process mode.
 
     Returns:
         A :class:`DivergenceReport` whose ``verdict`` is the worst signal found:
@@ -423,6 +458,11 @@ def detect_divergence(
     for metric in SUSPECT_METRICS:
         vals = _series(snapshots, metric)
         suspect_deltas[metric] = vals[-1] - vals[0]
+        # In crossprocess mode, in-process metrics are recorded for context but
+        # never drive the verdict (they reflect the parent's idle state, not the
+        # child sessions).
+        if mode == "crossprocess" and metric in _INPROCESS_ONLY_METRICS:
+            continue
         if _grows_monotonically(vals):
             fail = True
             report_flags.append(
@@ -435,7 +475,8 @@ def detect_divergence(
     slope = _rss_slope(rss_vals)
     suspect_deltas["rss_bytes"] = rss_vals[-1] - rss_vals[0]
     suspect_deltas["rss_slope_bytes_per_session"] = int(slope)
-    if slope > RSS_SLOPE_BYTES_PER_SESSION:
+    # In crossprocess mode, RSS is the parent's idle RSS, not a leak signal.
+    if mode == "inprocess" and slope > RSS_SLOPE_BYTES_PER_SESSION:
         warn = True
         report_flags.append(
             f"RSS climbing ~{slope / (1024 * 1024):.1f} MB/session "
