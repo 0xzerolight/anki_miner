@@ -346,18 +346,44 @@ def test_prepare_home_records_pre_existed_true_for_existing_home(tmp_path: Path)
     assert result["home_pre_existed"] is True
 
 
-def test_prepare_home_refuses_real_home(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_prepare_home_refuses_real_home() -> None:
     """_prepare_home refuses the real ~/.anki_miner via _assert_safe_home."""
     real = Path.home() / ".anki_miner"
     with pytest.raises(AssertionError, match="Refusing to run"):
         _prepare_home(real, fresh=False)
 
 
-def test_assert_safe_home_refuses_real_home(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_assert_safe_home_refuses_real_home() -> None:
     """_assert_safe_home raises AssertionError for the real home path."""
     real = Path.home() / ".anki_miner"
     with pytest.raises(AssertionError, match="Refusing to run"):
         _assert_safe_home(real)
+
+
+def test_prepare_home_fresh_true_refuses_real_home_and_preserves_sentinel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """_prepare_home(fresh=True) raises BEFORE rmtree when path == real ~/.anki_miner.
+
+    Monkeypatches Path.home() so that (Path.home() / ".anki_miner") resolves to
+    a tmp dir we control — the real user home is never touched.  A sentinel file
+    is seeded inside that fake "real home"; the test confirms _assert_safe_home
+    fires (AssertionError) AND that the sentinel still exists afterward (i.e.
+    shutil.rmtree was NOT reached).
+    """
+    fake_user_home = tmp_path / "fake_home"
+    fake_user_home.mkdir()
+    fake_real_anki = fake_user_home / ".anki_miner"
+    fake_real_anki.mkdir()
+    sentinel = fake_real_anki / "sentinel.txt"
+    sentinel.write_text("must survive")
+
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: fake_user_home))
+
+    with pytest.raises(AssertionError, match="Refusing to run"):
+        _prepare_home(fake_real_anki, fresh=True)
+
+    assert sentinel.exists(), "guard fired after rmtree — sentinel was deleted"
 
 
 def test_inprocess_soak_fresh_home_records_baseline_in_report(isolated_home: Path, tmp_path: Path, qtbot) -> None:

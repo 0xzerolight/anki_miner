@@ -607,6 +607,8 @@ def _run_child_session(
         run_dir=run_dir.path,
     )
 
+    # --fresh-home is intentionally NOT forwarded to children: the parent wipes
+    # the home ONCE before spawning children; each child then runs into a clean dir.
     # ANKI_MINER_KEEP_TEMP is intentionally NOT forced here: temp is cleaned after
     # each child session (mirroring production), so temp_files is a genuine leak
     # signal. If the parent env already exports it (operator debugging), it passes
