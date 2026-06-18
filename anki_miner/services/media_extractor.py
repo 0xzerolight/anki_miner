@@ -21,6 +21,7 @@ from anki_miner.utils import (
 )
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
+from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
 
@@ -414,6 +415,7 @@ class MediaExtractorService:
                 text=True,
                 encoding="utf-8",
                 errors="replace",
+                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
             )
         except (subprocess.SubprocessError, OSError) as e:
             logger.warning("%s error%s: %s", op_name, suffix, e)
@@ -519,6 +521,7 @@ class MediaExtractorService:
                     capture_output=True,
                     timeout=15,
                     text=True,
+                    **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
                 )
                 available = proc.returncode == 0 and encoder in proc.stdout
             except (subprocess.SubprocessError, OSError) as e:
