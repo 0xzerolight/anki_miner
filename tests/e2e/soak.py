@@ -83,8 +83,11 @@ __all__ = [
     "SessionReport",
     "SoakReport",
     "_assert_safe_home",
+    "_check_known_words_cross_session",
     "_child_cmd",
     "_prepare_home",
+    "_read_known_word_count",
+    "_read_known_words_set",
     "run_crossprocess_soak",
     "run_inprocess_soak",
     "run_one_session",
@@ -131,6 +134,14 @@ class SessionReport:
     #: Cancel-path outcome when this session injected a cancel (else ``{}``).
     #: Keys: ``cancelled`` / ``joined`` / ``buttons_idle`` — see ``CancelOutcome``.
     cancel_outcome: dict = field(default_factory=dict)
+    #: Total known-word rows in ``known_words.db`` after this session.
+    #: ``-1`` when the DB was absent or unreadable (preview / bypass runs).
+    known_words_count: int = -1
+    #: ``True`` when none of THIS session's mined_forms were re-mined in the NEXT
+    #: session (subtraction worked).  ``None`` when not yet checked (i.e. this is the
+    #: LAST session or the run is not in faithful mode).  Only set in faithful mode;
+    #: always ``None`` in preview / bypass mode.
+    known_words_not_remined: bool | None = None
 
 
 @dataclass
@@ -547,6 +558,102 @@ def _drain_qt_deletes() -> None:
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
 
 
+def _read_known_word_count(test_home: Path) -> int:
+    """Return the total row count from ``known_words.db``, or ``-1`` if absent/unreadable.
+
+    Pure read: opens the DB in read-only URI mode so it never creates a new file
+    and cannot interfere with the running pipeline.  Degrades gracefully when the
+    table has not been initialised yet (preview / bypass runs never create the DB).
+    """
+    import sqlite3
+
+    db_path = Path(test_home) / "known_words.db"
+    if not db_path.exists():
+        return -1
+    try:
+        with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as conn:
+            cursor = conn.execute("SELECT COUNT(*) FROM known_words")
+            return int(cursor.fetchone()[0])
+    except Exception:
+        return -1
+
+
+def _read_known_words_set(test_home: Path) -> set[str] | None:
+    """Return all ``lemma`` values from ``known_words.db``, or ``None`` if absent/unreadable.
+
+    Same read-only URI approach as :func:`_read_known_word_count`.
+    Returns ``None`` (not empty set) when the DB is absent so callers can
+    distinguish "DB not there" from "DB exists but empty".
+    """
+    import sqlite3
+
+    db_path = Path(test_home) / "known_words.db"
+    if not db_path.exists():
+        return None
+    try:
+        with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as conn:
+            cursor = conn.execute("SELECT lemma FROM known_words")
+            return {row[0] for row in cursor.fetchall()}
+    except Exception:
+        return None
+
+
+def _check_known_words_cross_session(
+    prev: SessionReport,
+    curr: SessionReport,
+    *,
+    test_home: Path,
+) -> None:
+    """Check cross-session known-words invariants (faithful mode only).
+
+    After session N completes, reads ``known_words.db`` and verifies:
+    1. The forms mined in session N-1 (``prev.mined_forms``) are now in the
+       known-words set (they were written as known after being mined).
+    2. Session N did NOT re-mine any of session N-1's forms (subtraction worked).
+
+    A violated invariant sets ``prev.ok = False`` and appends a descriptive error.
+    ``curr.known_words_not_remined`` is set on ``prev`` (it reflects whether PREV's
+    mined forms were NOT re-mined by CURR).
+
+    Only called in faithful mode; degrade gracefully if the DB is absent (no crash,
+    skip both checks and leave ``prev.known_words_not_remined = None``).
+    """
+    known = _read_known_words_set(test_home)
+    if known is None:
+        # DB absent — likely a preview or the pipeline didn't create it.
+        return
+
+    prev_mined = set(prev.mined_forms)
+    curr_mined = set(curr.mined_forms)
+
+    # Check 1: prev's mined forms appear as known by the time curr ran.
+    if prev_mined:
+        not_recorded = prev_mined - known
+        if not_recorded:
+            prev.ok = False
+            prev.errors.append(
+                f"known-words accumulation: {len(not_recorded)} form(s) mined in session "
+                f"{prev.index} not found in known_words.db by session {curr.index}: "
+                f"{sorted(not_recorded)!r}"
+            )
+
+    # Check 2: curr must not re-mine any of prev's forms.
+    if prev_mined:
+        remined = prev_mined & curr_mined
+        not_remined = len(remined) == 0
+        prev.known_words_not_remined = not_remined
+        if not not_remined:
+            prev.ok = False
+            prev.errors.append(
+                f"known-words subtraction failed: {len(remined)} form(s) mined in session "
+                f"{prev.index} were re-mined in session {curr.index}: "
+                f"{sorted(remined)!r}"
+            )
+    else:
+        # Nothing was mined in prev — vacuously ok.
+        prev.known_words_not_remined = True
+
+
 def _assemble_report(
     *,
     mode: Literal["inprocess", "crossprocess"],
@@ -720,6 +827,11 @@ def run_inprocess_soak(
         gateway = _maybe_gateway(e2e, preview=preview)
         # ONE driver reused across every session (leak detection depends on it).
         driver = EpisodeTabDriver(cfg, run_dir)
+        # Whether cross-session known-words checks are active: faithful mode only.
+        # Preview / bypass legitimately re-mines and never writes known_words.db,
+        # so these asserts would be meaningless noise there.
+        faithful = not preview and not bypass_known_words
+
         try:
             for i in range(sessions):
                 report = run_one_session(
@@ -732,7 +844,20 @@ def run_inprocess_soak(
                     driver=driver,
                     gateway=gateway,
                 )
+                # Record how many known words the DB holds after this session.
+                # -1 in preview/bypass (DB not created); positive count in faithful.
+                report.known_words_count = _read_known_word_count(test_home)
                 reports.append(report)
+
+                # Cross-session check: compare THIS session to the PREVIOUS one.
+                # The check runs after session 1+ (needs a prior session to compare).
+                if faithful and len(reports) >= 2:
+                    _check_known_words_cross_session(
+                        reports[-2],
+                        reports[-1],
+                        test_home=test_home,
+                    )
+
                 any_failed = any_failed or not report.ok
                 # Between-session teardown + Qt deferred-delete drain so leaks
                 # surface in the next session's snapshot.
@@ -991,6 +1116,9 @@ def run_crossprocess_soak(
     parent_disk_deltas: list[dict] = []
     any_failed = False
 
+    # Cross-session known-words checks: faithful mode only (not preview/bypass).
+    faithful = not preview and not bypass_known_words
+
     with guard_real_home(Path.home() / ".anki_miner"):
         gateway = _maybe_gateway(e2e, preview=preview)
         try:
@@ -1012,7 +1140,18 @@ def run_crossprocess_soak(
                     child_json=child_json,
                     run_dir=run_dir,
                 )
+                # Record known-word count from the shared on-disk DB (parent reads it).
+                report.known_words_count = _read_known_word_count(test_home)
                 reports.append(report)
+
+                # Cross-session check: compare to the previous session.
+                if faithful and len(reports) >= 2:
+                    _check_known_words_cross_session(
+                        reports[-2],
+                        reports[-1],
+                        test_home=test_home,
+                    )
+
                 any_failed = any_failed or not report.ok
                 parent_post = capture_snapshot(
                     test_home=test_home,
