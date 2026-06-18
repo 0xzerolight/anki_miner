@@ -41,6 +41,7 @@ def _build_tabs(monkeypatch, test_config):
     """
     _patch_heavy_init(monkeypatch, test_config)
 
+    from anki_miner.gui import app as app_module
     from anki_miner.gui.main_window import MainWindow
     from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
     from anki_miner.gui.utils.service_factory import create_youtube_fetcher
@@ -62,12 +63,12 @@ def _build_tabs(monkeypatch, test_config):
     episode_tab = SingleEpisodeTab(
         window.get_config(), episode_presenter, episode_progress, stats_service=stats_service
     )
-    window.tabs.addTab(episode_tab, "Episode Mining")
+    app_module.register_mining_tab(window, episode_tab, episode_presenter, "Episode Mining")
 
     batch_presenter = GUIPresenter(window)
     batch_progress = GUIProgressCallback(window)
     batch_tab = BatchProcessingTab(window.get_config(), batch_presenter, batch_progress, stats_service=stats_service)
-    window.tabs.addTab(batch_tab, "Batch Mining")
+    app_module.register_mining_tab(window, batch_tab, batch_presenter, "Batch Mining")
 
     deck_builder_presenter = GUIPresenter(window)
     deck_builder_progress = GUIProgressCallback(window)
@@ -77,15 +78,7 @@ def _build_tabs(monkeypatch, test_config):
         deck_builder_progress,
         stats_service=stats_service,
     )
-    window.tabs.addTab(deck_builder_tab, "Deck Builder")
-
-    for presenter in (episode_presenter, batch_presenter, deck_builder_presenter):
-        presenter.info_signal.connect(window._on_info_message)
-        presenter.success_signal.connect(window._on_success_message)
-        presenter.warning_signal.connect(window._on_warning_message)
-        presenter.error_signal.connect(window._on_error_message)
-        presenter.processing_result_signal.connect(window._on_processing_result)
-        presenter.word_preview_signal.connect(window._on_word_preview)
+    app_module.register_mining_tab(window, deck_builder_tab, deck_builder_presenter, "Deck Builder")
 
     youtube_presenter = GUIPresenter(window)
     youtube_fetcher = create_youtube_fetcher(window.get_config())
@@ -96,7 +89,7 @@ def _build_tabs(monkeypatch, test_config):
         presenter=youtube_presenter,
         stats_service=stats_service,
     )
-    window.tabs.addTab(youtube_tab, "YouTube")
+    app_module.register_mining_tab(window, youtube_tab, youtube_presenter, "YouTube")
 
     audiobook_presenter = GUIPresenter(window)
     audiobook_tab = AudiobookTab(
@@ -105,26 +98,22 @@ def _build_tabs(monkeypatch, test_config):
         presenter=audiobook_presenter,
         stats_service=stats_service,
     )
-    window.tabs.addTab(audiobook_tab, "Audiobook")
+    app_module.register_mining_tab(window, audiobook_tab, audiobook_presenter, "Audiobook")
 
     analytics_tab = AnalyticsTab(stats_service)
     window.tabs.addTab(analytics_tab, "Analytics")
 
     settings_tab = SettingsTab(window.get_config())
     settings_tab.config_changed.connect(window.update_config)
-    settings_tab.config_changed.connect(episode_tab.update_config)
-    settings_tab.config_changed.connect(batch_tab.update_config)
-    settings_tab.config_changed.connect(deck_builder_tab.update_config)
-    settings_tab.config_changed.connect(youtube_tab.update_config)
-    settings_tab.config_changed.connect(audiobook_tab.update_config)
+    for i in range(window.tabs.count()):
+        tab_widget = window.tabs.widget(i)
+        if hasattr(tab_widget, "update_config"):
+            settings_tab.config_changed.connect(tab_widget.update_config)
     window.tabs.addTab(settings_tab, "Settings")
 
     window.config_refreshed.connect(settings_tab.update_config)
-    window.config_refreshed.connect(episode_tab.update_config)
-    window.config_refreshed.connect(batch_tab.update_config)
-    window.config_refreshed.connect(deck_builder_tab.update_config)
-    window.config_refreshed.connect(youtube_tab.update_config)
-    window.config_refreshed.connect(audiobook_tab.update_config)
+
+    window.setup_tab_shortcuts()
 
     tab_count = window.tabs.count()
     titles = [window.tabs.tabText(i) for i in range(tab_count)]
