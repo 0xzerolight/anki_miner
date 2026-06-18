@@ -29,6 +29,7 @@ from anki_miner.exceptions.youtube import (
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
+from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,7 @@ def _ytdlp_supports_js_runtimes() -> bool:
             capture_output=True,
             text=True,
             timeout=30,
+            **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
         )
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         return False
@@ -94,6 +96,7 @@ def _ytdlp_supports_remote_components() -> bool:
             capture_output=True,
             text=True,
             timeout=30,
+            **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
         )
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         return False
@@ -166,6 +169,7 @@ class YouTubeFetcherService:
                 capture_output=True,
                 text=True,
                 timeout=timeout_s,
+                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
             )
         except subprocess.TimeoutExpired as e:
             raise YouTubeFetchError(f"yt-dlp metadata probe timed out after {e.timeout}s") from e
@@ -295,6 +299,7 @@ class YouTubeFetcherService:
                 capture_output=True,
                 text=True,
                 timeout=timeout_s,
+                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
             )
         except subprocess.TimeoutExpired as e:
             raise YouTubeFetchError(f"yt-dlp playlist probe timed out after {e.timeout}s") from e
@@ -435,6 +440,7 @@ class YouTubeFetcherService:
             stderr=subprocess.STDOUT,
             bufsize=1,
             text=True,
+            **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
         )
         self._popen = popen
 

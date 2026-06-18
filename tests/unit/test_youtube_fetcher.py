@@ -1916,3 +1916,34 @@ class TestProbePlaylist:
             pytest.raises(YouTubeFetchError, match="non-JSON"),
         ):
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
+
+
+class TestNoWindowSpawn:
+    """Issue #79: every yt-dlp spawn must spread no_window_kwargs()."""
+
+    SENTINEL = {"creationflags": 0x424242}
+
+    def test_probe_metadata_spreads_no_window(self, service: YouTubeFetcherService) -> None:
+        payload = _make_metadata()
+        with (
+            patch("anki_miner.services.youtube_fetcher.no_window_kwargs", return_value=self.SENTINEL),
+            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun,
+        ):
+            service.probe_metadata("https://youtu.be/abc123")
+        assert mrun.call_args.kwargs.get("creationflags") == 0x424242
+
+    def test_fetch_video_spreads_no_window(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        _make_happy_outputs(tmp_path)
+        captured: dict[str, Any] = {}
+
+        def fake_popen(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            captured["kwargs"] = kwargs
+            return _FakePopen(lines=[], returncode=0)
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.no_window_kwargs", return_value=self.SENTINEL),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", side_effect=fake_popen),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        assert captured["kwargs"].get("creationflags") == 0x424242
