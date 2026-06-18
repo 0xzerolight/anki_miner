@@ -66,7 +66,12 @@ from anki_miner.config import AnkiMinerConfig, ChainEntry
 from tests.e2e.config import E2EConfig
 from tests.e2e.fixtures_dictionary import DEFAULT_DICT_ID
 
-__all__ = ["build_app_config"]
+#: Basename of the media-temp folder under the test home. Single source of
+#: truth shared with ``instrumentation.capture_snapshot``'s defensive default so
+#: both derive the same path without independently hard-coding ``"media_temp"``.
+MEDIA_TEMP_BASENAME = "media_temp"
+
+__all__ = ["build_app_config", "MEDIA_TEMP_BASENAME"]
 
 
 def _basic_note_fields() -> dict[str, str]:
@@ -129,7 +134,7 @@ def build_app_config(e2e: E2EConfig, test_home: Path, *, bypass_known_words: boo
         anki_note_type=e2e.note_type,
         anki_fields=_basic_note_fields(),
         # --- isolated on-disk state (pinned explicitly; not env-derived) ---
-        media_temp_folder=test_home / "media_temp",
+        media_temp_folder=test_home / MEDIA_TEMP_BASENAME,
         dicts_root=dicts_root,
         known_words_db_path=test_home / "known_words.db",
         history_db_path=test_home / "history.db",

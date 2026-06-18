@@ -196,6 +196,37 @@ class AnkiGateway:
         self._call("createDeck", params={"deck": self.config.deck_name}, timeout=15)
         self._deck_ensured = True
 
+    def ensure_test_model(self) -> None:
+        """Idempotently create the harness note type via ``createModel``.
+
+        If ``config.note_type`` is already in the collection's ``modelNames``
+        list, skip silently.  Otherwise create a two-field Front/Back model
+        that mirrors the stock "Basic" shape.
+
+        ``createModel`` adds the model to the user's real Anki collection —
+        that is acceptable because the name is namespaced (``config.note_type``
+        defaults to ``"AnkiMiner E2E Basic"``).
+        """
+        existing: list[str] = self._call("modelNames", timeout=15) or []
+        if self.config.note_type in existing:
+            return
+        self._call(
+            "createModel",
+            params={
+                "modelName": self.config.note_type,
+                "inOrderFields": ["Front", "Back"],
+                "css": ".card { font-family: arial; font-size: 20px; text-align: center; }",
+                "cardTemplates": [
+                    {
+                        "Name": "Card 1",
+                        "Front": "{{Front}}",
+                        "Back": "{{FrontSide}}<hr id=answer>{{Back}}",
+                    }
+                ],
+            },
+            timeout=15,
+        )
+
     def delete_test_deck_notes(self) -> int:
         """Delete exactly the notes currently in the test deck via ``deleteNotes``.
 

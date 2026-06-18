@@ -948,7 +948,16 @@ class EpisodeProcessor:
 
             if preview_mode:
                 self.presenter.show_word_preview(unknown_words)
-                return ctx.build_result()
+                # Preview reports the would-be-mined forms (no cards are created
+                # here). This overloads mined_forms' usual "cards actually created"
+                # meaning, but is safe: every consumer is gated on card creation —
+                # the Undo button only renders when card_ids exist, the undo
+                # callback's remove_words finds no source='mined' rows (preview
+                # returns before _phase5_create, the sole writer), and history/
+                # stats are gated on cards_created > 0.
+                return ctx.build_result(
+                    mined_forms=[w.mined_form for w in unknown_words],
+                )
 
             # Wrap the raw callback so the bar reflects whole-episode progress
             # instead of resetting 0->100 per stage. One weight per stage that

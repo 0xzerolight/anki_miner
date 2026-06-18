@@ -1,7 +1,9 @@
 """State instrumentation + divergence detection for the E2E soak runner.
 
-The soak runner mines the same episode several sessions in a row to surface a
-bug that "only appears after several mining sessions." Between sessions it calls
+The soak runner mines the same episode several sessions in a row to surface both
+multi-session accumulation/leak bugs AND GUI-consistency bugs (e.g. widget-state
+regressions, word-set divergence from expected) that only appear with real
+services wired to the real widget stack. Between sessions it calls
 :func:`capture_snapshot` to record process/disk/deck metrics, then feeds the
 series to :func:`detect_divergence`, which produces a triage :class:`DivergenceReport`
 (``verdict`` + human-readable ``flags`` + per-metric deltas) for the agent to read
@@ -46,13 +48,33 @@ Heuristics (deliberately SIMPLE — a triage aid, not statistics)
 
 All thresholds are named constants below; tune them there.
 
+Parent vs child snapshot semantics (in-process vs cross-process mode)
+----------------------------------------------------------------------
+:func:`capture_snapshot` is always called in the PARENT (runner) process. In
+``inprocess`` mode the parent also hosts the Qt application and the pipeline
+workers, so the in-process metrics (``top_level_widgets``, ``python_threads``,
+``qthread_pool_active``, ``rss_bytes``) reflect the pipeline and are a
+meaningful series across sessions.
+
+In ``crossprocess`` mode each session runs in a SEPARATE subprocess. The parent
+calls ``capture_snapshot`` between sessions to record disk state, but the
+in-process numbers (widgets, threads, RSS) are the PARENT's idle numbers, not
+the child's — they are NOT a meaningful series across sessions and must not drive
+the verdict. Only disk metrics (``temp_files``; sqlite row counts stay as
+expected-growers context) are authoritative across processes.
+
+Pass ``mode="crossprocess"`` to :func:`detect_divergence` (or via
+``_assemble_report``) so the in-process metrics and RSS slope are still recorded
+in ``suspect_deltas`` for context but never generate a LEAK/WARN flag.
+
 Input / output contract (for the runner's serializer)
 ------------------------------------------------------
 :func:`detect_divergence` takes the per-session ``list[StateSnapshot]`` (the
-snapshot captured *after* each session is the natural choice) and an optional
-parallel ``cards_created: list[int]``. It returns a :class:`DivergenceReport`
-dataclass; both it and :class:`StateSnapshot` use only JSON-friendly fields so
-``dataclasses.asdict`` round-trips straight into ``report.json``.
+snapshot captured *after* each session is the natural choice), an optional
+parallel ``cards_created: list[int]``, and an optional ``mode`` (default
+``"inprocess"``). It returns a :class:`DivergenceReport` dataclass; both it and
+:class:`StateSnapshot` use only JSON-friendly fields so ``dataclasses.asdict``
+round-trips straight into ``report.json``.
 """
 
 from __future__ import annotations
@@ -68,9 +90,14 @@ import psutil  # type: ignore[import-untyped]
 if TYPE_CHECKING:  # avoid a hard import cycle / Anki dependency at import time
     from tests.e2e.anki_gateway import AnkiGateway
 
+# Import the media-temp basename so the defensive default in capture_snapshot
+# derives from the same single source of truth as build_app_config.
+from tests.e2e.app_config import MEDIA_TEMP_BASENAME as _MEDIA_TEMP_BASENAME
+
 __all__ = [
     "EXPECTED_GROWERS",
     "MONOTONIC_MIN_FRACTION",
+    "MONOTONIC_MIN_GAPS",
     "RSS_SLOPE_BYTES_PER_SESSION",
     "SUSPECT_METRICS",
     "DivergenceReport",
@@ -100,10 +127,24 @@ _EXPECTED_DB_NAMES = ("history.db", "stats.db", "known_words.db")
 #: reported but never flagged.
 EXPECTED_GROWERS = ("anki_test_deck_count", *_EXPECTED_DB_NAMES)
 
+#: In-process metrics that reflect the calling process, NOT a child session's
+#: state. In ``crossprocess`` mode, snapshots are taken by the parent between
+#: child sessions, so these numbers are the parent's idle numbers — they must
+#: NOT drive the verdict (still recorded in suspect_deltas for context).
+_INPROCESS_ONLY_METRICS: frozenset[str] = frozenset(("top_level_widgets", "python_threads", "qthread_pool_active"))
+
 #: Fraction of session-to-session gaps that must show a positive delta for a
 #: suspect metric to count as "monotonically growing". 0.75 means "positive in
 #: at least 3 of 4 gaps" — catches a real leak while tolerating one noise dip.
 MONOTONIC_MIN_FRACTION = 0.75
+
+#: Minimum number of consecutive gaps (i.e. ≥ N+1 sessions) required before a
+#: metric can be flagged as monotonically growing. With only 1 gap (2 sessions)
+#: the fraction rule fires on any single +1 delta, producing false FAILs on
+#: short smoke runs. Requiring ≥ 2 gaps (≥ 3 sessions) ensures the heuristic
+#: has enough data points to be meaningful. The end-to-end suspect_deltas are
+#: still recorded regardless — only the FAIL flag is gated on this minimum.
+MONOTONIC_MIN_GAPS = 2
 
 #: RSS slope (bytes gained per session, least-squares) above which RSS is judged
 #: to be climbing steadily. ~5 MB/session sustained over a soak run is a lot.
@@ -247,8 +288,8 @@ def capture_snapshot(
         test_home: Isolated home dir holding the pipeline's SQLite DBs
             (``known_words.db`` / ``history.db`` / ``stats.db``).
         media_temp_folder: The processor's media-temp folder. Defaults to
-            ``test_home / "media_temp"`` (matching ``app_config.build_app_config``)
-            when omitted.
+            ``test_home / MEDIA_TEMP_BASENAME`` (the shared constant from
+            ``app_config``) when omitted.
         gateway: Optional :class:`AnkiGateway` for the deck count. ``None`` (or an
             unreachable Anki) leaves ``anki_test_deck_count`` as ``None``.
         index: Session ordinal recorded on the snapshot.
@@ -260,7 +301,7 @@ def capture_snapshot(
         Anki degrades the deck count to ``None``.
     """
     test_home = Path(test_home)
-    media_temp = Path(media_temp_folder) if media_temp_folder is not None else test_home / "media_temp"
+    media_temp = Path(media_temp_folder) if media_temp_folder is not None else test_home / _MEDIA_TEMP_BASENAME
 
     widgets, pool_active = _count_qt_state()
     sqlite_rows = {name: _count_sqlite_rows(test_home / name) for name in _SQLITE_DB_NAMES}
@@ -346,12 +387,20 @@ def _grows_monotonically(values: list[int]) -> bool:
     Rule (documented, simple): a positive delta in at least
     :data:`MONOTONIC_MIN_FRACTION` of the consecutive gaps AND a positive net
     delta end-to-end. With < 2 points there are no gaps, so it's never growth.
+
+    Additionally, fewer than :data:`MONOTONIC_MIN_GAPS` gaps (i.e. fewer than
+    ``MONOTONIC_MIN_GAPS + 1`` sessions) returns ``False`` unconditionally — the
+    fraction rule has too little data to distinguish a real leak from noise at
+    very short runs. The end-to-end delta is still recorded by the caller for
+    context; only the FAIL flag is suppressed.
     """
     if len(values) < 2:
         return False
     # values[1:] is intentionally one shorter -> non-strict zip pairs each
     # value with its successor (the last value has no successor).
     gaps = [b - a for a, b in zip(values, values[1:], strict=False)]
+    if len(gaps) < MONOTONIC_MIN_GAPS:
+        return False
     positive = sum(1 for d in gaps if d > 0)
     net_positive = values[-1] > values[0]
     return net_positive and positive >= MONOTONIC_MIN_FRACTION * len(gaps)
@@ -382,6 +431,7 @@ def detect_divergence(
     snapshots: list[StateSnapshot],
     *,
     cards_created: list[int] | None = None,
+    mode: Literal["inprocess", "crossprocess"] = "inprocess",
 ) -> DivergenceReport:
     """Flag session-over-session divergence in the snapshot series.
 
@@ -393,6 +443,14 @@ def detect_divergence(
             positive count to ``0`` later in the run is surfaced as an
             *investigate* flag (WARN, not FAIL) — it can be legitimate
             known-words accumulation.
+        mode: ``"inprocess"`` (default) evaluates all :data:`SUSPECT_METRICS`
+            and the RSS slope to drive the verdict.  ``"crossprocess"`` skips
+            the in-process metrics (``top_level_widgets``, ``python_threads``,
+            ``qthread_pool_active``) and the RSS slope when deciding the verdict
+            — they are still recorded in ``suspect_deltas`` for context but
+            never generate a LEAK/WARN flag, because those numbers are the
+            parent's idle numbers rather than a meaningful per-session series.
+            Only ``temp_files`` (disk) drives FAIL in cross-process mode.
 
     Returns:
         A :class:`DivergenceReport` whose ``verdict`` is the worst signal found:
@@ -423,6 +481,11 @@ def detect_divergence(
     for metric in SUSPECT_METRICS:
         vals = _series(snapshots, metric)
         suspect_deltas[metric] = vals[-1] - vals[0]
+        # In crossprocess mode, in-process metrics are recorded for context but
+        # never drive the verdict (they reflect the parent's idle state, not the
+        # child sessions).
+        if mode == "crossprocess" and metric in _INPROCESS_ONLY_METRICS:
+            continue
         if _grows_monotonically(vals):
             fail = True
             report_flags.append(
@@ -435,7 +498,8 @@ def detect_divergence(
     slope = _rss_slope(rss_vals)
     suspect_deltas["rss_bytes"] = rss_vals[-1] - rss_vals[0]
     suspect_deltas["rss_slope_bytes_per_session"] = int(slope)
-    if slope > RSS_SLOPE_BYTES_PER_SESSION:
+    # In crossprocess mode, RSS is the parent's idle RSS, not a leak signal.
+    if mode == "inprocess" and slope > RSS_SLOPE_BYTES_PER_SESSION:
         warn = True
         report_flags.append(
             f"RSS climbing ~{slope / (1024 * 1024):.1f} MB/session "

@@ -22,7 +22,7 @@ import dataclasses
 import sys
 
 from tests._home_isolation import set_test_home
-from tests.e2e.anki_gateway import AnkiGateway, AnkiUnreachableError
+from tests.e2e.anki_gateway import AnkiGateway, AnkiUnreachableError, ForeignDeckError
 from tests.e2e.artifacts import RunDir
 from tests.e2e.config import E2EConfig
 from tests.e2e.soak import (
@@ -47,6 +47,16 @@ def _anki_down(e2e: E2EConfig) -> int:
     return 2
 
 
+def _foreign_deck(e2e: E2EConfig) -> int:
+    """Print the one-line foreign-deck error to stderr and return exit code 2."""
+    print(
+        f"ERROR: Test deck {e2e.deck_name!r} already has cards from a prior run. "
+        f"Run `python scripts/run_e2e.py cleanup` to delete it, then retry.",
+        file=sys.stderr,
+    )
+    return 2
+
+
 def _build_config(args: argparse.Namespace) -> E2EConfig:
     """Build ``E2EConfig.from_env()`` applying any trivial CLI overrides."""
     e2e = E2EConfig.from_env()
@@ -57,6 +67,12 @@ def _build_config(args: argparse.Namespace) -> E2EConfig:
         overrides["deck_name"] = args.deck
     if getattr(args, "ankiconnect_url", None):
         overrides["ankiconnect_url"] = args.ankiconnect_url
+    if getattr(args, "timeout", None) is not None:
+        # Override both timeout fields together: a slow first faithful run can
+        # spuriously time out at the default 120/300 s; --timeout lets the
+        # operator raise both caps in one flag without editing env vars.
+        overrides["result_timeout_s"] = args.timeout
+        overrides["session_timeout_s"] = args.timeout
     if overrides:
         # runs_root tracks test_home via __post_init__ unless pinned; clear it so
         # an overridden home re-derives its runs_root.
@@ -93,9 +109,12 @@ def _cmd_smoke(args: argparse.Namespace) -> int:
             bypass_known_words=True,
             run_dir=run_dir,
             test_home=e2e.test_home,
+            fresh_home=getattr(args, "fresh_home", False),
         )
     except AnkiUnreachableError:
         return _anki_down(e2e)
+    except ForeignDeckError:
+        return _foreign_deck(e2e)
     return _emit(soak, run_dir)
 
 
@@ -115,19 +134,48 @@ def _cmd_soak(args: argparse.Namespace) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
+    inject_cancel = getattr(args, "inject_cancel", None)
+    if inject_cancel is not None and args.mode == "crossprocess":
+        # Cancel needs GUI-thread QTimer timing against the in-process tab; a
+        # cross-process child owns its own event loop the parent can't drive.
+        print("ERROR: --inject-cancel is only supported with --mode inprocess", file=sys.stderr)
+        return 2
+
+    full_window = getattr(args, "full_window", False)
+    if full_window and args.mode == "crossprocess":
+        # Full-window drives a real MainWindow in THIS process; a cross-process
+        # child builds its own bare driver, so the flag can't reach it.
+        print("ERROR: --full-window is only supported with --mode inprocess", file=sys.stderr)
+        return 2
+
     run_dir = RunDir(e2e.runs_root, label=f"soak-{args.mode}")
-    runner = run_crossprocess_soak if args.mode == "crossprocess" else run_inprocess_soak
     try:
-        soak = runner(
-            e2e,
-            sessions=args.sessions,
-            preview=args.preview,
-            bypass_known_words=args.bypass_known_words,
-            run_dir=run_dir,
-            test_home=e2e.test_home,
-        )
+        if args.mode == "crossprocess":
+            soak = run_crossprocess_soak(
+                e2e,
+                sessions=args.sessions,
+                preview=args.preview,
+                bypass_known_words=args.bypass_known_words,
+                run_dir=run_dir,
+                test_home=e2e.test_home,
+                fresh_home=getattr(args, "fresh_home", False),
+            )
+        else:
+            soak = run_inprocess_soak(
+                e2e,
+                sessions=args.sessions,
+                preview=args.preview,
+                bypass_known_words=args.bypass_known_words,
+                run_dir=run_dir,
+                test_home=e2e.test_home,
+                fresh_home=getattr(args, "fresh_home", False),
+                inject_cancel=inject_cancel,
+                full_window=full_window,
+            )
     except AnkiUnreachableError:
         return _anki_down(e2e)
+    except ForeignDeckError:
+        return _foreign_deck(e2e)
     return _emit(soak, run_dir)
 
 
@@ -154,7 +202,24 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("smoke", help="One real mining session + screenshots (needs Anki).")
+    smoke = sub.add_parser("smoke", help="One real mining session + screenshots (needs Anki).")
+    smoke.add_argument(
+        "--timeout",
+        type=int,
+        default=None,
+        metavar="SECONDS",
+        help="Override both result_timeout_s and session_timeout_s (default: 120/300 s).",
+    )
+    smoke.add_argument(
+        "--fresh-home",
+        dest="fresh_home",
+        action="store_true",
+        help=(
+            "Delete the test home's contents before running so the run starts "
+            "clean (safe: refuses the real home). Pre-run baseline is always "
+            "recorded in report.json regardless of this flag."
+        ),
+    )
 
     soak = sub.add_parser("soak", help="Multi-session soak (bug-hunt).")
     soak.add_argument("--mode", choices=["inprocess", "crossprocess"], default="inprocess")
@@ -172,6 +237,45 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     soak.add_argument("--policy", choices=["all", "first_n", "none"], default="all")
     soak.add_argument("--first-n", dest="first_n", type=int, default=0)
+    soak.add_argument(
+        "--timeout",
+        type=int,
+        default=None,
+        metavar="SECONDS",
+        help="Override both result_timeout_s and session_timeout_s (default: 120/300 s).",
+    )
+    soak.add_argument(
+        "--fresh-home",
+        dest="fresh_home",
+        action="store_true",
+        help=(
+            "Delete the test home's contents before running so the run starts "
+            "clean (safe: refuses the real home). Pre-run baseline is always "
+            "recorded in report.json regardless of this flag."
+        ),
+    )
+    soak.add_argument(
+        "--inject-cancel",
+        dest="inject_cancel",
+        type=float,
+        default=None,
+        metavar="SECONDS",
+        help=(
+            "Append ONE dedicated cancel session: start a run and click Cancel "
+            "SECONDS later, asserting the run ends promptly and the tab stays "
+            "reusable. In-process mode only (Qt-thread timing)."
+        ),
+    )
+    soak.add_argument(
+        "--full-window",
+        dest="full_window",
+        action="store_true",
+        help=(
+            "Drive a real MainWindow (episode tab mounted + dialogs patched) "
+            "instead of the bare tab, so dialog wiring / tab switching / the "
+            "results display are exercised too. In-process mode only."
+        ),
+    )
 
     sub.add_parser("cleanup", help="Delete a leftover test deck.")
 
