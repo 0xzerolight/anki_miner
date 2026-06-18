@@ -12,6 +12,7 @@ from anki_miner.models import ValidationIssue, ValidationResult
 from anki_miner.services._ankiconnect import post_action
 from anki_miner.utils import ensure_directory
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
+from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
 
@@ -243,6 +244,7 @@ class ValidationService:
                 capture_output=True,
                 text=True,
                 timeout=10,
+                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
             )
 
             if result.returncode != 0:
