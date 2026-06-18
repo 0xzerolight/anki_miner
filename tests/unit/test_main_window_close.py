@@ -606,9 +606,10 @@ class TestCloseEventReleasesDictResources:
             "release"
         ), f"Expected join before release; got order={call_order}"
 
-    def test_release_dict_resources_not_called_on_deferred_close(self, main_window, monkeypatch):
-        """When a laggard worker defers the close, release_dictionary_resources()
-        must NOT run — the thread is still live and the handles are still in use."""
+    def test_release_dict_resources_not_called_while_laggard_live(self, main_window, monkeypatch):
+        """At defer time, with the laggard still live, release must NOT run yet —
+        the thread is still reading through the handles (F7 releases later, in
+        _poll_deferred_close, once the laggard exits)."""
         release_calls: list = []
         monkeypatch.setattr(
             main_window,
@@ -624,3 +625,25 @@ class TestCloseEventReleasesDictResources:
 
         event.accept.assert_not_called()  # close is deferred
         assert release_calls == [], "release must not run while a laggard is still live"
+
+    def test_release_dict_resources_called_on_deferred_close_completion(self, quit_calls, main_window, monkeypatch):
+        """Once the deferred laggard exits, _poll_deferred_close releases dict
+        resources before quitting — OVH-061 teardown is not skipped on the
+        deferred path (F7)."""
+        release_calls: list = []
+        monkeypatch.setattr(
+            main_window,
+            "release_dictionary_resources",
+            lambda: release_calls.append(True) or True,
+        )
+
+        worker = _FakeWorker(running=True, wait_result=False)
+        main_window.background_tasks.update_worker = worker
+        _trigger_close(main_window)
+        assert release_calls == [], "must not release while laggard runs"
+
+        worker.finish()
+        main_window.background_tasks._poll_deferred_close()
+
+        assert release_calls == [True], "release must run when the deferred close completes"
+        assert quit_calls == [True]
