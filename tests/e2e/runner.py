@@ -22,7 +22,7 @@ import dataclasses
 import sys
 
 from tests._home_isolation import set_test_home
-from tests.e2e.anki_gateway import AnkiGateway, AnkiUnreachableError
+from tests.e2e.anki_gateway import AnkiGateway, AnkiUnreachableError, ForeignDeckError
 from tests.e2e.artifacts import RunDir
 from tests.e2e.config import E2EConfig
 from tests.e2e.soak import (
@@ -42,6 +42,16 @@ def _anki_down(e2e: E2EConfig) -> int:
     """Print the one-line Anki-unreachable error to stderr and return exit code 2."""
     print(
         f"ERROR: Anki not reachable at {e2e.ankiconnect_url} — start Anki with AnkiConnect",
+        file=sys.stderr,
+    )
+    return 2
+
+
+def _foreign_deck(e2e: E2EConfig) -> int:
+    """Print the one-line foreign-deck error to stderr and return exit code 2."""
+    print(
+        f"ERROR: Test deck {e2e.deck_name!r} already has cards from a prior run. "
+        f"Run `python scripts/run_e2e.py cleanup` to delete it, then retry.",
         file=sys.stderr,
     )
     return 2
@@ -102,6 +112,8 @@ def _cmd_smoke(args: argparse.Namespace) -> int:
         )
     except AnkiUnreachableError:
         return _anki_down(e2e)
+    except ForeignDeckError:
+        return _foreign_deck(e2e)
     return _emit(soak, run_dir)
 
 
@@ -134,15 +146,21 @@ def _cmd_soak(args: argparse.Namespace) -> int:
         )
     except AnkiUnreachableError:
         return _anki_down(e2e)
+    except ForeignDeckError:
+        return _foreign_deck(e2e)
     return _emit(soak, run_dir)
 
 
 def _cmd_cleanup(args: argparse.Namespace) -> int:
     """Delete a leftover test deck (after inspecting a failure)."""
     e2e = _build_config(args)
+    allow_existing: bool = getattr(args, "allow_existing_deck", False)
     try:
         gateway = AnkiGateway(e2e)
         gateway.ping()
+        if allow_existing:
+            # Operator explicitly wants to adopt (then delete) a pre-existing deck.
+            gateway.ensure_test_deck(allow_existing=True)
         gateway.delete_test_deck()
     except AnkiUnreachableError:
         return _anki_down(e2e)
@@ -193,7 +211,17 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Override both result_timeout_s and session_timeout_s (default: 120/300 s).",
     )
 
-    sub.add_parser("cleanup", help="Delete a leftover test deck.")
+    cleanup = sub.add_parser("cleanup", help="Delete a leftover test deck.")
+    cleanup.add_argument(
+        "--allow-existing-deck",
+        dest="allow_existing_deck",
+        action="store_true",
+        help=(
+            "Adopt a pre-existing populated deck before deleting it. "
+            "Bypasses the foreign-deck safety guard for operators who knowingly "
+            "want to wipe a deck that has cards from a prior run."
+        ),
+    )
 
     return parser
 
