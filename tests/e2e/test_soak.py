@@ -95,6 +95,44 @@ def test_inprocess_preview_soak(isolated_home: Path, tmp_path: Path, qtbot) -> N
     assert len(loaded["sessions"]) == 3
 
 
+def test_inprocess_preview_soak_temp_files_stable(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+    """temp_files delta is 0 across sessions when ANKI_MINER_KEEP_TEMP is not set.
+
+    The harness no longer forces ANKI_MINER_KEEP_TEMP, so the processor cleans
+    temp after each session. A healthy preview soak must show zero temp_files
+    growth between sessions — confirming ``temp_files`` is a real leak signal.
+    """
+    import os
+
+    # Guarantee ANKI_MINER_KEEP_TEMP is unset for this test.
+    env_backup = os.environ.pop("ANKI_MINER_KEEP_TEMP", None)
+    try:
+        e2e = E2EConfig(test_home=isolated_home)
+        run_dir = RunDir(tmp_path / "runs", label="temp-stable")
+
+        soak = run_inprocess_soak(
+            e2e,
+            sessions=2,
+            preview=True,
+            bypass_known_words=True,
+            run_dir=run_dir,
+            test_home=isolated_home,
+        )
+
+        assert soak.verdict == "PASS"
+        for s in soak.sessions:
+            assert s.ok, s.errors
+            # temp_files should not accumulate — delta must be <= 0 per session.
+            temp_delta = s.delta.get("temp_files", 0)
+            assert temp_delta <= 0, (
+                f"Session {s.index}: temp_files grew by {temp_delta} "
+                "(ANKI_MINER_KEEP_TEMP must not be forced by the harness)"
+            )
+    finally:
+        if env_backup is not None:
+            os.environ["ANKI_MINER_KEEP_TEMP"] = env_backup
+
+
 def test_crossprocess_preview_soak(isolated_home: Path, tmp_path: Path) -> None:
     """2-session cross-process preview soak: real subprocesses aggregated + report.
 
