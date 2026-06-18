@@ -77,12 +77,18 @@ class TestConfigureLogging:
         log_path = tmp_path / "nested" / "dir" / "app.log"
 
         root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
         handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
         try:
             configure_logging(log_path)
             assert log_path.parent.exists()
         finally:
-            # Remove any handlers added by this test to avoid polluting others
+            # Restore global logging state (levels + handlers) so later tests
+            # don't run with root pinned at WARNING / anki_miner at DEBUG (F6).
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
             for h in list(root.handlers):
                 if h not in handlers_before:
                     h.close()
@@ -96,13 +102,18 @@ class TestConfigureLogging:
         log_path = tmp_path / "test.log"
 
         root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
         handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
         added: list[logging.Handler] = []
         try:
             configure_logging(log_path)
             added = [h for h in root.handlers if h not in handlers_before]
             assert any(isinstance(h, RotatingFileHandler) for h in added)
         finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
             for h in added:
                 h.close()
                 root.removeHandler(h)
@@ -113,7 +124,10 @@ class TestConfigureLogging:
         log_path = tmp_path / "app.log"
 
         root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
         handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
         added: list[logging.Handler] = []
         try:
             configure_logging(log_path)
@@ -129,6 +143,8 @@ class TestConfigureLogging:
             content = log_path.read_text(encoding="utf-8")
             assert "sentinel-test-message" in content
         finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
             for h in added:
                 h.close()
                 root.removeHandler(h)
@@ -207,6 +223,59 @@ class TestConfigureLogging:
             for h in added:
                 h.close()
                 root.removeHandler(h)
+
+    def test_idempotent_no_duplicate_handlers(self, tmp_path):
+        """Calling _configure_logging twice leaves exactly one project handler (F5)."""
+        configure_logging = self._import_configure_logging()
+        log_path = tmp_path / "app.log"
+
+        root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
+        root_level_before = root.level
+        am_level_before = am_logger.level
+        try:
+            configure_logging(log_path)
+            configure_logging(log_path)
+            sinks = [h for h in root.handlers if getattr(h, "_anki_miner_sink", False)]
+            assert len(sinks) == 1, f"expected one project handler, got {len(sinks)}"
+        finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
+            for h in list(root.handlers):
+                if getattr(h, "_anki_miner_sink", False):
+                    h.close()
+                    root.removeHandler(h)
+
+    def test_repoint_redirects_to_new_path(self, tmp_path):
+        """A second call with a new path re-points the sink; records go to the new file (F3)."""
+        configure_logging = self._import_configure_logging()
+        first = tmp_path / "first.log"
+        second = tmp_path / "second.log"
+
+        root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
+        root_level_before = root.level
+        am_level_before = am_logger.level
+        try:
+            configure_logging(first)
+            configure_logging(second)
+
+            logging.getLogger("anki_miner.repoint_test").error("after-repoint")
+            for h in root.handlers:
+                if getattr(h, "_anki_miner_sink", False):
+                    h.flush()
+
+            assert "after-repoint" in second.read_text(encoding="utf-8")
+            # The first file was opened with delay=True and never written → no record leaks there.
+            first_content = "" if not first.exists() else first.read_text(encoding="utf-8")
+            assert "after-repoint" not in first_content
+        finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
+            for h in list(root.handlers):
+                if getattr(h, "_anki_miner_sink", False):
+                    h.close()
+                    root.removeHandler(h)
 
 
 # ---------------------------------------------------------------------------
@@ -468,5 +537,8 @@ class TestMainUsesConfigLogPath:
             except Exception:
                 pass  # We only care that _configure_logging was called
 
+        # main() now configures the default path first (so config-load warnings
+        # are captured, F3), then re-points to config.log_path. The custom path
+        # must be the one in effect after main() (the last call).
         assert len(captured) >= 1, "_configure_logging was never called"
-        assert captured[0] == custom_log, f"Expected _configure_logging({custom_log!r}), got {captured[0]!r}"
+        assert captured[-1] == custom_log, f"Expected final _configure_logging({custom_log!r}), got {captured[-1]!r}"
