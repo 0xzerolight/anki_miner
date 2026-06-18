@@ -202,6 +202,44 @@ def test_inprocess_preview_soak(isolated_home: Path, tmp_path: Path, qtbot) -> N
     assert len(loaded["sessions"]) == 3
 
 
+def test_inprocess_soak_inject_cancel_appends_dedicated_session(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+    """--inject-cancel appends ONE dedicated cancel session that ends cleanly.
+
+    A 2-session preview soak plus an injected cancel yields 3 SessionReports; the
+    last is the cancel session. It must record a cancel outcome (worker joined +
+    tab idle) and be ``ok`` (run ended promptly, no leaked thread / stuck UI). The
+    normal sessions remain unaffected (the cancel is its own session).
+    """
+    e2e = E2EConfig(test_home=isolated_home)
+    run_dir = RunDir(tmp_path / "runs", label="cancel-soak")
+
+    soak = run_inprocess_soak(
+        e2e,
+        sessions=2,
+        preview=True,
+        bypass_known_words=True,
+        run_dir=run_dir,
+        test_home=isolated_home,
+        inject_cancel=0.0,
+    )
+
+    assert len(soak.sessions) == 3  # 2 normal + 1 dedicated cancel
+    normal, cancel = soak.sessions[:2], soak.sessions[2]
+    for s in normal:
+        assert s.ok, s.errors
+        assert not s.cancel_outcome  # normal sessions never cancel
+
+    # The dedicated cancel session ended cleanly and is recorded.
+    assert cancel.cancel_outcome, "cancel session must record a cancel_outcome"
+    assert cancel.cancel_outcome["joined"] is True
+    assert cancel.cancel_outcome["buttons_idle"] is True
+    assert cancel.ok, cancel.errors
+
+    # report.json round-trips the cancel_outcome.
+    loaded = json.loads((run_dir.path / "report.json").read_text(encoding="utf-8"))
+    assert loaded["sessions"][2]["cancel_outcome"]["joined"] is True
+
+
 def test_inprocess_preview_soak_gui_checks_populated_and_pass(isolated_home: Path, tmp_path: Path, qtbot) -> None:
     """GUI-state checks are recorded in every SessionReport and all pass for a healthy preview run.
 

@@ -29,9 +29,17 @@ __all__ = [
     "SUBTITLE_LINES",
     "EXPECTED_LEMMAS",
     "LEMMA_READINGS",
+    "CORRUPT_SUBTITLE_BYTES",
     "write_test_srt",
     "get_test_srt",
+    "write_corrupt_srt",
 ]
+
+#: Deterministic, copyright-free bytes that the subtitle parser REJECTS. Plain
+#: text with no timing cues: ``pysubs2.load`` finds no suitable format and the
+#: parser raises ``SubtitleParseError`` ("No suitable formats") during phase-1
+#: parse — before any tokenization. Used by the harness's error-path coverage.
+CORRUPT_SUBTITLE_BYTES = b"this is not a subtitle file\nno timing cues at all\njust plain lines\n"
 
 #: Directory holding the committed E2E input assets (shared with fixtures_media).
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
@@ -112,3 +120,24 @@ def get_test_srt() -> Path:
     if not TEST_SRT_PATH.exists():
         write_test_srt(TEST_SRT_PATH)
     return TEST_SRT_PATH
+
+
+def write_corrupt_srt(path: Path) -> Path:
+    """Write a deterministic, parser-REJECTED ``.srt`` to *path*.
+
+    The contents (:data:`CORRUPT_SUBTITLE_BYTES`) are plain text with no timing
+    cues, which ``pysubs2.load`` cannot parse — the real
+    :class:`~anki_miner.services.subtitle_parser.SubtitleParserService` raises
+    ``SubtitleParseError`` on it during phase-1 parse. The ``.srt`` suffix means
+    the file selector accepts it (so the run starts) but the parse fails, driving
+    the harness's error path. Copyright-free and reproducible.
+
+    Args:
+        path: Destination ``.srt`` path (parent dirs created as needed).
+
+    Returns:
+        ``path`` (for chaining).
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(CORRUPT_SUBTITLE_BYTES)
+    return path

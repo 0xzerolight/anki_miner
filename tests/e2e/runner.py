@@ -134,18 +134,36 @@ def _cmd_soak(args: argparse.Namespace) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
+    inject_cancel = getattr(args, "inject_cancel", None)
+    if inject_cancel is not None and args.mode == "crossprocess":
+        # Cancel needs GUI-thread QTimer timing against the in-process tab; a
+        # cross-process child owns its own event loop the parent can't drive.
+        print("ERROR: --inject-cancel is only supported with --mode inprocess", file=sys.stderr)
+        return 2
+
     run_dir = RunDir(e2e.runs_root, label=f"soak-{args.mode}")
-    runner = run_crossprocess_soak if args.mode == "crossprocess" else run_inprocess_soak
     try:
-        soak = runner(
-            e2e,
-            sessions=args.sessions,
-            preview=args.preview,
-            bypass_known_words=args.bypass_known_words,
-            run_dir=run_dir,
-            test_home=e2e.test_home,
-            fresh_home=getattr(args, "fresh_home", False),
-        )
+        if args.mode == "crossprocess":
+            soak = run_crossprocess_soak(
+                e2e,
+                sessions=args.sessions,
+                preview=args.preview,
+                bypass_known_words=args.bypass_known_words,
+                run_dir=run_dir,
+                test_home=e2e.test_home,
+                fresh_home=getattr(args, "fresh_home", False),
+            )
+        else:
+            soak = run_inprocess_soak(
+                e2e,
+                sessions=args.sessions,
+                preview=args.preview,
+                bypass_known_words=args.bypass_known_words,
+                run_dir=run_dir,
+                test_home=e2e.test_home,
+                fresh_home=getattr(args, "fresh_home", False),
+                inject_cancel=inject_cancel,
+            )
     except AnkiUnreachableError:
         return _anki_down(e2e)
     except ForeignDeckError:
@@ -226,6 +244,18 @@ def _build_parser() -> argparse.ArgumentParser:
             "Delete the test home's contents before running so the run starts "
             "clean (safe: refuses the real home). Pre-run baseline is always "
             "recorded in report.json regardless of this flag."
+        ),
+    )
+    soak.add_argument(
+        "--inject-cancel",
+        dest="inject_cancel",
+        type=float,
+        default=None,
+        metavar="SECONDS",
+        help=(
+            "Append ONE dedicated cancel session: start a run and click Cancel "
+            "SECONDS later, asserting the run ends promptly and the tab stays "
+            "reusable. In-process mode only (Qt-thread timing)."
         ),
     )
 

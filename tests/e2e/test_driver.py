@@ -27,7 +27,7 @@ from tests.e2e.curation import AutoCurationResponder
 from tests.e2e.driver import E2EMiningError, E2ETimeout, EpisodeTabDriver
 from tests.e2e.fixtures_dictionary import seed_offline_dict
 from tests.e2e.fixtures_media import get_test_video
-from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS, get_test_srt
+from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS, get_test_srt, write_corrupt_srt
 
 # fugashi/MeCab is required for the real tokenizer; skip the whole module's
 # pipeline tests cleanly if it is absent.
@@ -454,3 +454,171 @@ def test_mined_set_wrong_set_is_flagged() -> None:
     subset = set(EXPECTED_LEMMAS[:6])
     assert subset <= expected  # faithful mode: ok
     assert subset != expected  # bypass mode: would be caught
+
+
+# --------------------------------------------------------------------------
+# Error path: a corrupt subtitle the parser rejects → failed run, no hang
+# --------------------------------------------------------------------------
+
+
+def test_corrupt_subtitle_fails_run_no_hang(tmp_path: Path, qtbot) -> None:
+    """A parser-rejected subtitle yields a FAILED run (no hang) + screenshot.
+
+    EMPIRICAL FINDING: a corrupt subtitle raises ``SubtitleParseError`` in
+    phase-1 parse. ``SubtitleParseError`` is an ``AnkiMinerException``, which
+    ``EpisodeProcessor.process_episode`` CATCHES — so the worker emits
+    ``result_ready`` with ``success=False`` (the parse error in ``result.errors``),
+    NOT its ``error`` signal. The driver therefore RETURNS a failed
+    ``ProcessingResult`` rather than raising ``E2EMiningError``. The point of this
+    path is the GUI-bug surface: an unhandled failure must not hang the wait, and
+    the tab must return to idle so it stays usable.
+    """
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    seed_offline_dict(cfg.dicts_root)
+
+    corrupt = write_corrupt_srt(tmp_path / "corrupt.srt")
+    run_dir = RunDir(e2e.runs_root, label="corrupt")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(corrupt)
+        driver.click_preview()
+        result = driver.wait_for_result(timeout_s=30)
+
+        # Run completed (no hang) but failed, with the parse error surfaced.
+        assert result.success is False
+        assert any("parse" in e.lower() or "format" in e.lower() for e in result.errors), result.errors
+
+        # No hang: the tab returned to idle and is reusable.
+        from tests.e2e.driver import _drain_until
+
+        _drain_until(lambda: driver.buttons_idle(), timeout_ms=2000)
+        assert driver.buttons_idle(), "tab did not return to idle after a failed run"
+
+        # Screenshot evidence written.
+        shot = driver.screenshot("corrupt-done")
+        assert shot.is_file() and shot.stat().st_size > 0
+    finally:
+        driver.teardown()
+
+
+def test_worker_error_signal_surfaces_as_mining_error(tmp_path: Path, qtbot, monkeypatch) -> None:
+    """A worker ``error`` emission (non-AnkiMinerException path) → ``E2EMiningError``.
+
+    Distinct from the corrupt-subtitle case (which becomes a failed result): when
+    the worker emits its ``error`` signal (e.g. an unexpected exception escaping
+    the processor build), the driver MUST surface it as ``E2EMiningError`` and not
+    hang. Models the real error-signal path the harness must capture.
+    """
+    import anki_miner.gui.widgets.single_episode_tab as set_module
+    from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+
+    class _ErrorSignalWorker(EpisodeWorkerThread):
+        def start(self, *args, **kwargs) -> None:  # type: ignore[override]
+            self.error.emit("simulated unhandled worker failure")
+
+        def wait(self, *args, **kwargs) -> bool:  # type: ignore[override]
+            return True
+
+    monkeypatch.setattr(set_module, "EpisodeWorkerThread", _ErrorSignalWorker)
+
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    run_dir = RunDir(e2e.runs_root, label="error-signal")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+        driver.click_process()
+        with pytest.raises(E2EMiningError, match="simulated unhandled worker failure"):
+            driver.wait_for_result(timeout_s=5)
+        # Screenshot written on the error path.
+        assert any(p.suffix == ".png" for p in run_dir.path.iterdir())
+    finally:
+        driver.teardown()
+
+
+# --------------------------------------------------------------------------
+# Cancel path: inject Cancel mid-run → run ends, worker joins, tab reusable
+# --------------------------------------------------------------------------
+
+
+def test_cancel_ends_run_worker_joins_tab_reusable(tmp_path: Path, qtbot) -> None:
+    """Inject Cancel mid-run: the run ends promptly, worker joins, tab reusable.
+
+    EMPIRICAL FINDING: a cancelled worker emits NEITHER ``result_ready`` NOR
+    ``error`` — ``run()``'s ``check_cancelled()`` guards suppress both, so only the
+    QThread ``finished`` signal fires (restoring the buttons). The driver's
+    ``cancel_and_wait`` therefore waits for the worker to FINISH (not for a
+    captured payload) and reports a :class:`CancelOutcome`. Asserts: the cancel
+    won (no result captured), the worker joined, the tab returned to idle, and a
+    SECOND run on the SAME tab still completes — proving no leaked/stuck state.
+    """
+    from tests.e2e.driver import CancelOutcome
+
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    seed_offline_dict(cfg.dicts_root)
+
+    run_dir = RunDir(e2e.runs_root, label="cancel")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+
+        # Preview mode (no Anki); cancel at delay 0 — the tokenize phase is the
+        # slow part, so the cancel reliably lands before the worker emits.
+        driver.click_preview()
+        outcome: CancelOutcome = driver.cancel_and_wait(delay_s=0.0, timeout_s=30)
+
+        assert isinstance(outcome, CancelOutcome)
+        assert outcome.joined, "worker did not join after cancel (leaked thread)"
+        assert outcome.buttons_idle, "tab did not return to idle after cancel (stuck UI)"
+        # The cancel won the race against this fast run: no result/error captured.
+        assert outcome.cancelled, f"cancel did not take effect: {outcome}"
+        assert outcome.result is None and outcome.error is None
+
+        # The SAME tab must be reusable for a fresh run after a cancel.
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+        driver.click_preview()
+        result = driver.wait_for_result(timeout_s=60)
+        assert result.success, result.errors
+        assert set(result.mined_forms) == set(EXPECTED_LEMMAS)
+    finally:
+        driver.teardown()
+
+
+def test_schedule_cancel_uses_qtimer_on_gui_thread(tmp_path: Path, qtbot) -> None:
+    """``schedule_cancel`` arms a GUI-thread QTimer that clicks Cancel when fired.
+
+    Light unit-level check that no raw thread is spawned: the cancel is dispatched
+    via the event loop. We schedule with a tiny delay, pump events, and assert the
+    cancel reached the worker (cancel requested).
+    """
+    from tests.e2e.driver import _drain_until
+
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    seed_offline_dict(cfg.dicts_root)
+
+    run_dir = RunDir(e2e.runs_root, label="schedule-cancel")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+        driver.click_preview()
+        worker = driver.tab.worker_thread
+        assert worker is not None
+        driver.schedule_cancel(0.0)
+        # Pump the loop so the singleShot fires and the click reaches the worker.
+        _drain_until(lambda: worker.is_cancelled or worker.isFinished(), timeout_ms=5000)
+        assert worker.is_cancelled or worker.isFinished()
+        worker.wait(5000)
+    finally:
+        driver.teardown()
