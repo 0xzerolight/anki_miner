@@ -43,6 +43,10 @@ _RESULTS_TARGET = "anki_miner.gui.main_window.ResultsDialog"
 # MainWindow._maybe_offer_first_run_setup, so the only stable target is its
 # definition module.
 _WELCOME_TARGET = "anki_miner.gui.widgets.dialogs.welcome_dialog.WelcomeDialog"
+# WordPreviewDialog is imported at module top into main_window and exec()'d
+# modally by _on_word_preview (the preview sibling of _on_processing_result), so
+# a full-window PREVIEW run would block on it. Patch the name as imported there.
+_WORD_PREVIEW_TARGET = "anki_miner.gui.main_window.WordPreviewDialog"
 
 
 def _make_fake_curation_dialog(responder: AutoCurationResponder) -> type:
@@ -135,6 +139,29 @@ def _make_fake_welcome_dialog() -> type:
     return _FakeWelcomeDialog
 
 
+def _make_fake_word_preview_dialog() -> type:
+    """Build a no-op ``WordPreviewDialog`` fake.
+
+    ``MainWindow._on_word_preview`` constructs ``WordPreviewDialog(words, config,
+    self)`` and ``exec()``s it modally on every PREVIEW run. The fake returns
+    immediately so a full-window preview never blocks on the modal popup.
+    """
+    from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog as _Real
+
+    real_dialog_code = _Real.DialogCode
+
+    class _FakeWordPreviewDialog:
+        DialogCode = real_dialog_code
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
+
+        def exec(self) -> Any:
+            return real_dialog_code.Accepted
+
+    return _FakeWordPreviewDialog
+
+
 class AutoCurationResponder:
     """Context manager that auto-answers the curation modal during a run.
 
@@ -144,9 +171,9 @@ class AutoCurationResponder:
             ``first_n``, ``"none"`` keeps nothing (an empty but ACCEPTED
             selection — completed with 0 cards, not a cancel).
         first_n: Cap used when ``policy == "first_n"``.
-        full_window: When True, also patch the post-run ``ResultsDialog`` and the
-            first-run ``WelcomeDialog`` so a full ``MainWindow``-driven run does
-            not block on either.
+        full_window: When True, also patch the post-run ``ResultsDialog``, the
+            preview ``WordPreviewDialog``, and the first-run ``WelcomeDialog`` so
+            a full ``MainWindow``-driven run does not block on any of them.
 
     Attributes:
         offered: One entry per dialog opened, each the list of words that dialog
@@ -178,6 +205,7 @@ class AutoCurationResponder:
             if self.full_window:
                 stack.enter_context(patch(_RESULTS_TARGET, _make_fake_results_dialog()))
                 stack.enter_context(patch(_WELCOME_TARGET, _make_fake_welcome_dialog()))
+                stack.enter_context(patch(_WORD_PREVIEW_TARGET, _make_fake_word_preview_dialog()))
         except Exception:
             # If a later patch fails, unwind the ones already started.
             stack.close()

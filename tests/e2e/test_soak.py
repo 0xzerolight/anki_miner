@@ -202,6 +202,38 @@ def test_inprocess_preview_soak(isolated_home: Path, tmp_path: Path, qtbot) -> N
     assert len(loaded["sessions"]) == 3
 
 
+def test_inprocess_preview_soak_full_window(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+    """2-session full-window preview soak: a real MainWindow drives each session.
+
+    The opt-in ``full_window=True`` path builds an ``AppDriver`` (real
+    ``MainWindow`` with the episode tab mounted + dialogs patched) and reuses it
+    across sessions. Preview + bypass runs fully offscreen. Asserts every session
+    completed ok with words found and the soak verdict is PASS — i.e. the
+    full-window driver mines and disposes cleanly across sessions (no
+    leak/freeze).
+    """
+    e2e = E2EConfig(test_home=isolated_home)
+    run_dir = RunDir(tmp_path / "runs", label="inproc-fw")
+
+    soak = run_inprocess_soak(
+        e2e,
+        sessions=2,
+        preview=True,
+        bypass_known_words=True,
+        run_dir=run_dir,
+        test_home=isolated_home,
+        full_window=True,
+    )
+
+    assert isinstance(soak, SoakReport)
+    assert len(soak.sessions) == 2
+    for s in soak.sessions:
+        assert s.ok, s.errors
+        assert s.words_found > 0
+        assert s.cards_created == 0  # preview creates nothing
+    assert soak.verdict == "PASS"
+
+
 def test_inprocess_soak_inject_cancel_appends_dedicated_session(isolated_home: Path, tmp_path: Path, qtbot) -> None:
     """--inject-cancel appends ONE dedicated cancel session that ends cleanly.
 

@@ -326,6 +326,59 @@ def test_cmd_soak_inject_cancel_rejected_for_crossprocess(tmp_path, monkeypatch,
     mock_cross.assert_not_called()
 
 
+def test_cmd_soak_forwards_full_window_to_inprocess(tmp_path, monkeypatch):
+    """_cmd_soak passes full_window through to run_inprocess_soak."""
+    monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
+    monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
+
+    args = _args("soak", full_window=True)
+    mock_report = _fake_soak_report()
+
+    with (
+        patch(_RUNNER_SET_HOME),
+        patch(_RUNNER_RUNDIR),
+        patch(_RUNNER_INPROCESS, return_value=mock_report) as mock_run,
+    ):
+        _cmd_soak(args)
+
+    assert mock_run.call_args.kwargs.get("full_window") is True
+
+
+def test_cmd_soak_full_window_rejected_for_crossprocess(tmp_path, monkeypatch, capsys):
+    """--full-window with --mode crossprocess is a clean ERROR (exit 2), no run."""
+    monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
+    monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
+
+    args = _args("soak", mode="crossprocess", full_window=True)
+
+    with (
+        patch(_RUNNER_SET_HOME),
+        patch(_RUNNER_RUNDIR),
+        patch(_RUNNER_CROSSPROCESS) as mock_cross,
+    ):
+        code = _cmd_soak(args)
+
+    assert code == 2
+    assert "inprocess" in capsys.readouterr().err
+    mock_cross.assert_not_called()
+
+
+def test_parser_full_window_soak_defaults_false():
+    """Parsing 'soak' without --full-window gives full_window=False."""
+    from tests.e2e.runner import _build_parser
+
+    args = _build_parser().parse_args(["soak"])
+    assert args.full_window is False
+
+
+def test_parser_full_window_soak_sets_true():
+    """Parsing 'soak --full-window' gives full_window=True."""
+    from tests.e2e.runner import _build_parser
+
+    args = _build_parser().parse_args(["soak", "--full-window"])
+    assert args.full_window is True
+
+
 def test_cmd_smoke_forwards_fresh_home_true(tmp_path, monkeypatch):
     """_cmd_smoke passes fresh_home=True to run_inprocess_soak when flag set."""
     monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))

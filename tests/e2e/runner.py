@@ -141,6 +141,13 @@ def _cmd_soak(args: argparse.Namespace) -> int:
         print("ERROR: --inject-cancel is only supported with --mode inprocess", file=sys.stderr)
         return 2
 
+    full_window = getattr(args, "full_window", False)
+    if full_window and args.mode == "crossprocess":
+        # Full-window drives a real MainWindow in THIS process; a cross-process
+        # child builds its own bare driver, so the flag can't reach it.
+        print("ERROR: --full-window is only supported with --mode inprocess", file=sys.stderr)
+        return 2
+
     run_dir = RunDir(e2e.runs_root, label=f"soak-{args.mode}")
     try:
         if args.mode == "crossprocess":
@@ -163,6 +170,7 @@ def _cmd_soak(args: argparse.Namespace) -> int:
                 test_home=e2e.test_home,
                 fresh_home=getattr(args, "fresh_home", False),
                 inject_cancel=inject_cancel,
+                full_window=full_window,
             )
     except AnkiUnreachableError:
         return _anki_down(e2e)
@@ -256,6 +264,16 @@ def _build_parser() -> argparse.ArgumentParser:
             "Append ONE dedicated cancel session: start a run and click Cancel "
             "SECONDS later, asserting the run ends promptly and the tab stays "
             "reusable. In-process mode only (Qt-thread timing)."
+        ),
+    )
+    soak.add_argument(
+        "--full-window",
+        dest="full_window",
+        action="store_true",
+        help=(
+            "Drive a real MainWindow (episode tab mounted + dialogs patched) "
+            "instead of the bare tab, so dialog wiring / tab switching / the "
+            "results display are exercised too. In-process mode only."
         ),
     )
 
