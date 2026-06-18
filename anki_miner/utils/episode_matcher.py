@@ -69,6 +69,20 @@ class EpisodeNumberExtractor:
         # "Show_03_720p" kept "720p" — which the old consuming BARE_NUMBER regex
         # silently skipped but the lookahead form would mine as episode 720.
         filename = re.sub(r"(?<![0-9A-Za-z])\d{3,4}[pi](?![0-9A-Za-z])", "", filename, flags=re.IGNORECASE)
+        # Strip release-encoding tags whose embedded digits otherwise win the
+        # trailing-number fallback (Issue #80): video codec (x264/x265/h264/
+        # h265/av1/vp9), color bit-depth (10-bit/8bit), and the 8-hex CRC32
+        # checksum fansub groups append, e.g. "[3EEAABE6]". In the standard
+        # "[Group] Title - 03 - EpTitle [BD 1080p x265 10-bit][3EEAABE6]" format
+        # the real episode ("- 03 -") otherwise loses to "265", "10", or a
+        # checksum digit, collapsing distinct episodes onto one number and
+        # mispairing them. All three strips are required: any one left in leaves
+        # a different trailing junk number that re-triggers the collision.
+        filename = re.sub(
+            r"(?<![0-9A-Za-z])(?:[xh]\.?26[45]|av1|vp9)(?![0-9A-Za-z])", "", filename, flags=re.IGNORECASE
+        )
+        filename = re.sub(r"(?<![0-9A-Za-z])\d{1,2}[\s._-]?bit(?![0-9A-Za-z])", "", filename, flags=re.IGNORECASE)
+        filename = re.sub(r"[\[(][0-9A-Fa-f]{8}[\])]", "", filename)
 
         for pattern, extractor in cls.PATTERNS:
             match = re.search(pattern, filename)
