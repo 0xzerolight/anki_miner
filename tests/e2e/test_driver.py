@@ -622,3 +622,77 @@ def test_schedule_cancel_uses_qtimer_on_gui_thread(tmp_path: Path, qtbot) -> Non
         worker.wait(5000)
     finally:
         driver.teardown()
+
+
+# --------------------------------------------------------------------------
+# Keyboard shortcut + tab-order coverage (C7)
+# --------------------------------------------------------------------------
+
+
+def test_shortcuts_exist_and_enabled(tmp_path: Path, qtbot) -> None:
+    """All three documented QShortcuts are registered and enabled on the tab.
+
+    Checks Ctrl+O / Ctrl+P / Ctrl+Return presence without activating them.
+    No Qt visibility required — ``findChildren`` works on an offscreen widget.
+    """
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    run_dir = RunDir(e2e.runs_root, label="shortcuts")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.assert_shortcuts_exist()  # raises AssertionError if any is missing
+    finally:
+        driver.teardown()
+
+
+def test_ctrl_p_keyboard_path_starts_preview_run(tmp_path: Path, qtbot) -> None:
+    """Ctrl+P shortcut path triggers a real preview run and a result is captured.
+
+    ``QTest.keyClick`` does NOT activate ``QShortcut.activated`` for a
+    never-shown offscreen widget (the offscreen platform plugin processes the
+    key event but the shortcut filter requires window/focus state). The robust
+    offscreen substitute is ``shortcut.activated.emit()`` on the real
+    ``QShortcut`` instance — the connected slot (``_on_preview_clicked``) is
+    still the real one, so the full pipeline runs: worker created, run
+    executes, result captured. This is the documented reduced check for this
+    low-value task (see driver.shortcut_preview_via_keyboard docstring).
+    """
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    seed_offline_dict(cfg.dicts_root)
+
+    run_dir = RunDir(e2e.runs_root, label="ctrl-p")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.select_video(get_test_video())
+        driver.select_subtitle(get_test_srt())
+
+        # Trigger via the real shortcut's activated signal (reduced offscreen check).
+        driver.shortcut_preview_via_keyboard()
+
+        result = driver.wait_for_result(timeout_s=60)
+        assert result.success, result.errors
+        # The pipeline genuinely ran: all fixture lemmas mined.
+        assert set(result.mined_forms) == set(EXPECTED_LEMMAS)
+        assert result.cards_created == 0  # preview never creates cards
+    finally:
+        driver.teardown()
+
+
+def test_tab_order_sane(tmp_path: Path, qtbot) -> None:
+    """The focus/tab order among primary inputs is video→subtitle→offset→preview→process.
+
+    Verifies the ``setTabOrder`` calls in ``_setup_accessibility`` by walking
+    ``nextInFocusChain()`` — no widget show required.
+    """
+    e2e = E2EConfig(test_home=tmp_path)
+    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
+    run_dir = RunDir(e2e.runs_root, label="tab-order")
+    driver = EpisodeTabDriver(cfg, run_dir)
+    qtbot.addWidget(driver.tab)
+    try:
+        driver.assert_tab_order_sane()
+    finally:
+        driver.teardown()
