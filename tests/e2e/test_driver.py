@@ -214,6 +214,24 @@ def test_preview_drives_real_tab_no_anki(tmp_path: Path, qtbot) -> None:
         # Screenshot landed on disk.
         shot = driver.screenshot("preview-done")
         assert shot.is_file() and shot.stat().st_size > 0
+
+        # GUI state must have returned to idle after the run completes.
+        assert driver.buttons_idle(), (
+            f"buttons not idle after preview: "
+            f"process_enabled={driver.process_button_enabled()}, "
+            f"cancel_visible={driver.cancel_button_visible()}"
+        )
+        assert not driver.buttons_running(), "cancel must not be visible at idle"
+
+        # Activity log must contain the phase-1 and phase-2 markers.
+        log = driver.log_text()
+        assert log.strip(), "activity log is empty after preview run"
+        assert "Step 1/5" in log, f"'Step 1/5' not found in log: {log[:500]}"
+        assert "Step 2/5" in log, f"'Step 2/5' not found in log: {log[:500]}"
+
+        # Preview never emits phase 3–5 markers (no media/definitions/cards).
+        assert "Step 3/5" not in log, "phase-3 marker in preview log (should not appear)"
+        assert "Step 5/5" not in log, "phase-5 marker in preview log (should not appear)"
     finally:
         driver.teardown()
 

@@ -121,6 +121,10 @@ class SessionReport:
     screenshot: str = ""
     #: Last ~40 lines of the driver's activity log.
     log_tail: str = ""
+    #: GUI-state checks recorded after the run completes.  Keys are check names;
+    #: values are ``{"expected": ..., "actual": ..., "ok": bool}``.  Empty when
+    #: the run did not reach the GUI-check step (e.g. timed out before result).
+    gui_checks: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -152,6 +156,79 @@ class SoakReport:
 def _log_tail(text: str, lines: int = _LOG_TAIL_LINES) -> str:
     """Return the last ``lines`` lines of ``text``."""
     return "\n".join(text.splitlines()[-lines:])
+
+
+# Log markers guaranteed to appear in both preview and process runs (emitted by
+# the presenter in phase 1 + phase 2 of EpisodeProcessor.process_episode).
+# "Step 1/5" is in the show_info call at the top of _phase1_parse; "Step 2/5"
+# at the top of _phase2_filter.  Both appear regardless of preview vs process.
+_LOG_MARKERS_COMMON = ("Step 1/5", "Step 2/5")
+
+# Log marker for process mode only: phase 5 creation (preview skips phases 3-5).
+_LOG_MARKER_PROCESS_ONLY = "Step 5/5"
+
+
+def _check_gui_state(
+    driver: EpisodeTabDriver,
+    *,
+    preview: bool,
+    result_ok: bool,
+) -> dict:
+    """Inspect post-run GUI state and return a dict of named check results.
+
+    Each entry maps a check name to ``{"expected": ..., "actual": ..., "ok": bool}``.
+    All checks are recorded unconditionally so the report is self-documenting
+    even when some pass and some fail.
+
+    Only called when the run COMPLETED (result captured, no exception) — the
+    caller is responsible for guarding.  Checks are tolerant of preview vs.
+    process: phase-3..5 log markers are only required in process mode.
+    """
+    checks: dict = {}
+
+    # 1. Buttons returned to idle after the worker finished.
+    buttons_ok = driver.buttons_idle()
+    checks["buttons_idle"] = {
+        "expected": True,
+        "actual": buttons_ok,
+        "ok": buttons_ok,
+        "desc": "process_button enabled+visible AND cancel_button hidden",
+    }
+
+    # 2. Log is non-empty.
+    log = driver.log_text()
+    log_nonempty = bool(log.strip())
+    checks["log_nonempty"] = {
+        "expected": True,
+        "actual": log_nonempty,
+        "ok": log_nonempty,
+        "desc": "activity log contains at least one line",
+    }
+
+    # 3. Common phase markers appear in the log (Step 1/5 and Step 2/5).
+    for marker in _LOG_MARKERS_COMMON:
+        key = f"log_contains:{marker}"
+        found = marker in log
+        checks[key] = {
+            "expected": True,
+            "actual": found,
+            "ok": found,
+            "desc": f"log contains '{marker}'",
+        }
+
+    # 4. Process-only marker: Step 5/5 — only asserted when not preview.
+    if not preview:
+        marker = _LOG_MARKER_PROCESS_ONLY
+        key = f"log_contains:{marker}"
+        found = marker in log
+        checks[key] = {
+            "expected": True,
+            "actual": found,
+            "ok": found,
+            "desc": f"log contains '{marker}' (process mode only)",
+        }
+
+    return checks
 
 
 def run_one_session(
@@ -240,6 +317,20 @@ def run_one_session(
         report.cards_created = result.cards_created
         report.errors = list(result.errors)
         report.screenshot = driver.screenshot(f"session-{index}").name
+
+        # GUI-state consistency checks: assert widget state is coherent after the
+        # run.  Recorded in all cases; a failing check surfaces in the verdict
+        # via _assemble_report's any-failed guard (sets ok=False + error message).
+        gui_checks = _check_gui_state(driver, preview=preview, result_ok=result.success)
+        report.gui_checks = gui_checks
+        failed_checks = [name for name, c in gui_checks.items() if not c["ok"]]
+        if failed_checks:
+            report.ok = False
+            for name in failed_checks:
+                c = gui_checks[name]
+                report.errors.append(
+                    f"GUI check failed [{name}]: expected={c['expected']!r} actual={c['actual']!r} — {c['desc']}"
+                )
     except (E2ETimeout, E2EMiningError) as exc:
         report.ok = False
         report.errors = [f"{type(exc).__name__}: {exc}"]
