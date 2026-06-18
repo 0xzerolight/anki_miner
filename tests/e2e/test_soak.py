@@ -209,6 +209,11 @@ def test_inprocess_preview_soak_gui_checks_populated_and_pass(isolated_home: Pat
     every check must be ``ok=True`` (buttons idle, log non-empty, phase markers
     present).  A failing check would also set ``session.ok=False`` which would
     make the overall soak ``FAIL`` — verified by the verdict assertion.
+
+    Progress state (``progress_value`` / ``progress_text``) is recorded as data
+    in both modes — this test verifies those keys exist even in preview mode where
+    the progress bar is not advanced (value stays 0 by design).  No ok=False
+    assertion is made for progress in preview mode.
     """
     e2e = E2EConfig(test_home=isolated_home)
     run_dir = RunDir(tmp_path / "runs", label="gui-checks")
@@ -235,8 +240,19 @@ def test_inprocess_preview_soak_gui_checks_populated_and_pass(isolated_home: Pat
         assert "log_nonempty" in s.gui_checks
         assert "log_contains:Step 1/5" in s.gui_checks
         assert "log_contains:Step 2/5" in s.gui_checks
+        # Phase markers recorded in order when all common markers found.
+        assert "log_markers_in_order" in s.gui_checks
         # Preview: process-only marker must NOT be in checks.
         assert "log_contains:Step 5/5" not in s.gui_checks
+        # Progress state is ALWAYS recorded as data (both modes).
+        assert "progress_value" in s.gui_checks, "progress_value must be recorded in gui_checks"
+        assert "progress_text" in s.gui_checks, "progress_text must be recorded in gui_checks"
+        # In preview mode progress_value stays 0 (callback not invoked) — that's expected.
+        # The key point is that the value IS recorded (not absent).
+        assert isinstance(s.gui_checks["progress_value"]["actual"], int)
+        assert isinstance(s.gui_checks["progress_text"]["actual"], str)
+        # Preview: no stuck-progress assertion (progress_not_stuck absent in preview).
+        assert "progress_not_stuck" not in s.gui_checks
 
 
 def test_inprocess_preview_soak_temp_files_stable(isolated_home: Path, tmp_path: Path, qtbot) -> None:
