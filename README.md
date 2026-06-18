@@ -56,6 +56,8 @@ xattr -dr com.apple.quarantine AnkiMiner/
 
 **Windows first-run (SmartScreen):** Windows SmartScreen may show "Windows protected your PC". Click **More info**, then **Run anyway**.
 
+**Windows Defender false positive:** Some installs flag the bundled `.exe` as a virus. This is a known false positive — the app is open source (see the [build workflow](.github/workflows/release.yml)) and bundles `yt-dlp` and `ffmpeg`, tools that antivirus heuristics flag on sight. If Defender quarantines it, restore the file from **Protection history**, then [report the false positive to Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission); detections are usually cleared within a day or two.
+
 <details>
 <summary><strong>Install from PyPI (Python 3.11+)</strong></summary>
 
