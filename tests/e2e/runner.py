@@ -154,13 +154,9 @@ def _cmd_soak(args: argparse.Namespace) -> int:
 def _cmd_cleanup(args: argparse.Namespace) -> int:
     """Delete a leftover test deck (after inspecting a failure)."""
     e2e = _build_config(args)
-    allow_existing: bool = getattr(args, "allow_existing_deck", False)
     try:
         gateway = AnkiGateway(e2e)
         gateway.ping()
-        if allow_existing:
-            # Operator explicitly wants to adopt (then delete) a pre-existing deck.
-            gateway.ensure_test_deck(allow_existing=True)
         gateway.delete_test_deck()
     except AnkiUnreachableError:
         return _anki_down(e2e)
@@ -211,17 +207,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Override both result_timeout_s and session_timeout_s (default: 120/300 s).",
     )
 
-    cleanup = sub.add_parser("cleanup", help="Delete a leftover test deck.")
-    cleanup.add_argument(
-        "--allow-existing-deck",
-        dest="allow_existing_deck",
-        action="store_true",
-        help=(
-            "Adopt a pre-existing populated deck before deleting it. "
-            "Bypasses the foreign-deck safety guard for operators who knowingly "
-            "want to wipe a deck that has cards from a prior run."
-        ),
-    )
+    sub.add_parser("cleanup", help="Delete a leftover test deck.")
 
     return parser
 
