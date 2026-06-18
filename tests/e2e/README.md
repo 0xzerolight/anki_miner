@@ -52,7 +52,8 @@ Additional soak flags:
   tab is cleanly reusable afterward. Tests the cancel path without corrupting
   the leak series.
 - **`--fresh-home`** — wipe the test home before running so the soak starts
-  from a clean slate (baseline is still recorded before the wipe).
+  from a clean slate (the home baseline — known-words row count + temp-file
+  count recorded in `SoakReport.config` — is captured before the wipe).
 - **`--timeout SECONDS`** — per-session wait budget (default varies by mode).
 
 ### Faithful vs `--bypass-known-words`
@@ -104,9 +105,12 @@ The following checks are implemented and run on every in-process soak session
 - **Screenshot baseline diff (visual regression)** — screenshots are taken after
   each session; if a baseline exists, pixel-level diff is computed and a
   deviation above threshold is reported as WARN (not FAIL).
-- **Keyboard-shortcut + tab-order coverage** — the `--full-window` path exercises
-  the menu accelerator keys and tab-order traversal of the episode tab's form
-  fields; violations surface as Qt warnings captured in the run log.
+- **Keyboard-shortcut + tab-order coverage** — `assert_shortcuts_exist` and
+  `assert_tab_order_sane` are exercised by the harness's own unit tests in
+  `test_driver.py`, not by the soak session loop. `--full-window` adds a real
+  `MainWindow` to the soak: patched `ResultsDialog`, tab switching, `QAction`
+  menu trigger, and the results-display slot — it does not run shortcut or
+  tab-order assertions during the soak.
 
 ## Isolation
 
