@@ -20,7 +20,7 @@ The launcher is a thin shim that isolates the home + Qt env before importing:
 
 ```bash
 python scripts/run_e2e.py smoke
-python scripts/run_e2e.py soak [--mode inprocess|crossprocess] [--sessions N] [--preview] [--bypass-known-words] [--policy all|first_n|none] [--first-n K]
+python scripts/run_e2e.py soak [--mode inprocess|crossprocess] [--sessions N] [--preview] [--bypass-known-words] [--policy all|first_n|none] [--first-n K] [--full-window]
 python scripts/run_e2e.py cleanup
 ```
 
@@ -41,6 +41,17 @@ python scripts/run_e2e.py cleanup
   uses it.
 
 `--preview` defaults off (real card creation); pass it for parse+filter only.
+
+### `--full-window` (in-process only)
+
+By default the soak drives the bare `SingleEpisodeTab`. `--full-window` instead
+drives a real `MainWindow` (the episode tab mounted + the post-run
+`ResultsDialog` / preview `WordPreviewDialog` / first-run `WelcomeDialog` /
+curation modal all patched to non-blocking no-ops), so dialog wiring, tab
+switching, the menu bar, and the results-display slot are exercised too — the
+GUI surface the bare-tab path skips. Startup is isolated by writing a disabling
+`gui_config.json` into the test home (update check off, first-run flags done) and
+no-op'ing the startup validation worker. In-process mode only.
 
 ## Isolation
 

@@ -65,6 +65,7 @@ from typing import Literal
 from tests._home_isolation import guard_real_home, set_test_home
 from tests.e2e.anki_gateway import AnkiGateway, AnkiUnreachableError
 from tests.e2e.app_config import build_app_config
+from tests.e2e.app_driver import AppDriver
 from tests.e2e.artifacts import RunDir
 from tests.e2e.config import E2EConfig
 from tests.e2e.curation import AutoCurationResponder
@@ -186,7 +187,7 @@ _LOG_MARKER_PROCESS_ONLY = "Step 5/5"
 
 
 def _check_gui_state(
-    driver: EpisodeTabDriver,
+    driver: EpisodeTabDriver | AppDriver,
     *,
     preview: bool,
     result_ok: bool,
@@ -310,7 +311,7 @@ def _check_gui_state(
 
 
 def _run_cancel_session(
-    driver: EpisodeTabDriver,
+    driver: EpisodeTabDriver | AppDriver,
     *,
     report: SessionReport,
     preview: bool,
@@ -360,7 +361,7 @@ def run_one_session(
     bypass_known_words: bool,
     run_dir: RunDir,
     index: int,
-    driver: EpisodeTabDriver | None = None,
+    driver: EpisodeTabDriver | AppDriver | None = None,
     gateway: AnkiGateway | None = None,
     inject_cancel: float | None = None,
 ) -> SessionReport:
@@ -791,6 +792,7 @@ def run_inprocess_soak(
     test_home: Path,
     fresh_home: bool = False,
     inject_cancel: float | None = None,
+    full_window: bool = False,
 ) -> SoakReport:
     """Mine ``sessions`` times reusing ONE driver/tab; return a :class:`SoakReport`.
 
@@ -811,6 +813,11 @@ def run_inprocess_soak(
             after the delay, and asserts the run ends promptly with the tab
             reusable. The cancel is its OWN session, never folded into every soak
             iteration (which would corrupt the leak series).
+        full_window: When ``True``, drive the run through a real
+            :class:`~tests.e2e.app_driver.AppDriver` (a full ``MainWindow`` with
+            the episode tab mounted + dialogs patched) instead of the bare
+            ``EpisodeTabDriver`` — so dialog wiring / tab switching / the results
+            display are exercised too. In-process only.
     """
     test_home = Path(test_home)
     home_info = _prepare_home(test_home, fresh=fresh_home)
@@ -826,7 +833,16 @@ def run_inprocess_soak(
     with guard_real_home(Path.home() / ".anki_miner"):
         gateway = _maybe_gateway(e2e, preview=preview)
         # ONE driver reused across every session (leak detection depends on it).
-        driver = EpisodeTabDriver(cfg, run_dir)
+        # Full-window builds a real MainWindow (with the episode tab mounted +
+        # ResultsDialog/WordPreviewDialog/WelcomeDialog/curation patched); the
+        # default path drives the bare tab. AppDriver holds the dialog/responder
+        # patches open for its lifetime, so the responder used per session by
+        # run_one_session simply re-patches curation (a harmless re-entry).
+        driver: EpisodeTabDriver | AppDriver
+        if full_window:
+            driver = AppDriver(cfg, run_dir, curation_policy=e2e.curation_policy, first_n=e2e.first_n)
+        else:
+            driver = EpisodeTabDriver(cfg, run_dir)
         # Whether cross-session known-words checks are active: faithful mode only.
         # Preview / bypass legitimately re-mines and never writes known_words.db,
         # so these asserts would be meaningless noise there.
