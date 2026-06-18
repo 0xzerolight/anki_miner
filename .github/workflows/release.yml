@@ -96,8 +96,20 @@ jobs:
           # because an incomplete lock never fails the build on unlisted packages.
           # Upgrade to hash-pinning once a universal lock is generated with uv.
           pip install . -c requirements.lock
-          # Pin PyInstaller for reproducible bundles; bump deliberately.
-          pip install pyinstaller==6.20.0
+
+      # PyInstaller bootloader handling. The prebuilt PyPI wheel ships a bootloader
+      # binary whose hash AV vendors flag (malware reuses it), a major source of the
+      # Defender false positives. On Windows, build it from source (--no-binary) so
+      # the bootloader gets a fresh, unflagged hash; windows-latest has the MSVC
+      # toolchain preinstalled. Other OSes keep the prebuilt wheel. Pin for
+      # reproducible bundles; bump deliberately.
+      - name: Install PyInstaller (Windows, bootloader from source)
+        if: runner.os == 'Windows'
+        run: pip install --no-binary pyinstaller pyinstaller==6.20.0
+
+      - name: Install PyInstaller (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: pip install pyinstaller==6.20.0
 
       - name: Extract and validate version
         id: version
