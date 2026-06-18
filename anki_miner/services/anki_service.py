@@ -416,6 +416,10 @@ class AnkiService:
         # because note construction time inside Anki dominates over HTTP.
         batch_size = 100
         total_created = 0
+        # mined_forms of cards actually created (non-null id) this run, for the
+        # incremental cache merge in the finally. Only created words are merged —
+        # see the rationale there (F10).
+        created_forms: list[str] = []
         # Diagnostic counters for the bold path (Issue #20). Surface whether
         # the precomputed bolded strings actually made it to the note body,
         # so users who enable the option but see no bold can tell from the
@@ -491,6 +495,14 @@ class AnkiService:
                         )
                 total_created += batch_created
                 all_created_ids.extend(nid for nid in note_ids if nid is not None)
+                # note_ids align positionally with `notes` (hence `batch`) in
+                # both the batch and per-note-recovery paths, so a non-null slot
+                # identifies the word that was created.
+                # strict=False: note_ids is 1:1 with batch by the addNotes contract;
+                # a shorter list (malformed response) only under-merges, never crashes.
+                created_forms.extend(
+                    item.word.mined_form for item, nid in zip(batch, note_ids, strict=False) if nid is not None
+                )
 
                 if progress_callback:
                     progress_callback.on_progress(
@@ -503,17 +515,20 @@ class AnkiService:
             # re-raises.
             self.last_created_note_ids = all_created_ids
             self.last_skipped_duplicates = skipped_duplicates
-            # Incremental merge: if the cache is already populated and cards were
-            # created, union the just-carded mined_forms into it so subsequent
+            # Incremental merge: if the cache is already populated, union the
+            # mined_forms of cards actually CREATED this run into it so subsequent
             # episodes (within the same batch run or the same manual-pair session)
             # get a cheap cache hit instead of a full collection re-scan.
-            # Merging attempted mined_forms is safe — a skipped duplicate is
-            # already in the collection, so it belongs in the cache.
-            # When the cache is None (not yet populated), leave it None so
-            # the next get_existing_vocabulary scans normally.
-            if total_created > 0 and self._existing_vocab_cache is not None:
-                for item in word_data_list:
-                    key = _strip_for_dedup(item.word.mined_form)
+            # Only created words are merged — NOT every attempted word: a null
+            # addNotes slot is usually a duplicate (already in the collection, and
+            # thus already in the cache from the initial scan), but it can also be
+            # a non-duplicate silent rejection (bad model/field) for a word that is
+            # NOT in the collection. Merging those would wrongly mark them "known"
+            # and filter them out of later batch items. When the cache is None
+            # (not yet populated), leave it None so the next call scans normally.
+            if self._existing_vocab_cache is not None:
+                for form in created_forms:
+                    key = _strip_for_dedup(form)
                     if key and _JAPANESE_RE.search(key):
                         self._existing_vocab_cache.add(key)
 
