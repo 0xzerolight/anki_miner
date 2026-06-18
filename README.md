@@ -180,6 +180,7 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
 
 - **Researching/Under consideration**:
   - Android port.
+  - Jellyfin integration.
 
 - **Long-term**:
   - Beyond Japanese: Mining other languages.
