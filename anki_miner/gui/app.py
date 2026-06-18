@@ -28,6 +28,8 @@ from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.services.stats_service import StatsService
 
+logger = logging.getLogger(__name__)
+
 
 def _scrub_pyinstaller_env() -> None:
     # PyInstaller's bootloader prepends _internal/ to LD_LIBRARY_PATH so
@@ -83,12 +85,25 @@ def _run_bundled_smoke() -> int:
 
 
 def _configure_logging(log_path: Path) -> None:
-    """Attach a RotatingFileHandler to the root logger.
+    """Attach (or re-point) a RotatingFileHandler on the root logger.
 
-    Called once from main() so all modules that already call
+    Called from main() so all modules that already call
     ``logging.getLogger(__name__)`` have their records captured to disk.
     Two 2 MB backup files → at most ~6 MB on disk at any time.
+
+    Idempotent: a handler attached by a previous call is removed and replaced,
+    so calling this twice — bootstrap default-path → config-path re-point (F3),
+    or a second ``main()``/in-process re-launch (test/E2E harness) — never stacks
+    handlers writing each record N times (F5).
     """
+    root = logging.getLogger()
+    # Drop the handler we previously attached so a re-point / re-call doesn't
+    # duplicate it. Tagged with a sentinel attribute to avoid removing handlers
+    # installed by anything else.
+    for existing in list(root.handlers):
+        if getattr(existing, "_anki_miner_sink", False):
+            root.removeHandler(existing)
+            existing.close()
     log_path.parent.mkdir(parents=True, exist_ok=True)
     handler = RotatingFileHandler(
         log_path,
@@ -98,6 +113,7 @@ def _configure_logging(log_path: Path) -> None:
         delay=True,
     )
     handler.setLevel(logging.DEBUG)
+    handler._anki_miner_sink = True  # type: ignore[attr-defined]  # sentinel for idempotent replacement
     fmt = logging.Formatter(
         "%(asctime)s %(levelname)-8s %(name)s: %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%S",
@@ -108,7 +124,6 @@ def _configure_logging(log_path: Path) -> None:
     # A record must clear both its logger's effective level AND the handler's
     # level — setting the handler to DEBUG here means the handler itself never
     # silences anything; filtering happens at the logger level.
-    root = logging.getLogger()
     root.setLevel(logging.WARNING)
     root.addHandler(handler)
     logging.getLogger("anki_miner").setLevel(logging.DEBUG)
@@ -184,17 +199,22 @@ def main():
     if os.environ.get("ANKI_MINER_SMOKE") == "youtube":
         sys.exit(_run_bundled_smoke())
 
-    # Attach the rotating file handler before anything else runs so that
-    # bootstrap errors (dict scan, MeCab init, AnkiConnect probe) are captured.
-    # Load (or fall back to default) config now — GUIConfigManager has no Qt
-    # dependency and can be called before QApplication — so we honour
-    # config.log_path rather than the hardcoded default.
+    # Attach the rotating file handler to the DEFAULT path before loading config
+    # so config-load diagnostics — including the OVH-001 .bak-recovery warnings
+    # emitted inside load_config — are captured rather than discarded (F3).
+    # GUIConfigManager has no Qt dependency, so it can run before QApplication.
+    _default_log_path = ANKI_MINER_HOME / "anki_miner.log"
+    _configure_logging(_default_log_path)
     try:
         _early_config = GUIConfigManager.load_config()
         _log_path = _early_config.log_path
     except Exception:
-        _log_path = ANKI_MINER_HOME / "anki_miner.log"
-    _configure_logging(_log_path)
+        logger.exception("Failed to load config at startup; using default log path")
+        _log_path = _default_log_path
+    # Honour a user-customised log_path by re-pointing the handler (idempotent,
+    # so no duplicate sink). No-op in the common case where it equals the default.
+    if _log_path != _default_log_path:
+        _configure_logging(_log_path)
 
     # Enable high DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
