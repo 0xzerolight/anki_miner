@@ -82,6 +82,7 @@ from tests.e2e.instrumentation import (
 __all__ = [
     "SessionReport",
     "SoakReport",
+    "_child_cmd",
     "run_crossprocess_soak",
     "run_inprocess_soak",
     "run_one_session",
@@ -468,6 +469,48 @@ def _worktree_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _child_cmd(
+    e2e: E2EConfig,
+    *,
+    test_home: Path,
+    index: int,
+    out: Path,
+    preview: bool,
+    bypass_known_words: bool,
+) -> list[str]:
+    """Build the argv list for a ``--one-session`` child process.
+
+    Pure (no I/O, no subprocess) so it can be unit-tested in isolation.
+    All four parent config overrides (policy, first_n, deck, ankiconnect_url)
+    are forwarded so the child does not silently fall back to defaults.
+    """
+    cmd = [
+        sys.executable,
+        "-m",
+        "tests.e2e.soak",
+        "--one-session",
+        "--home",
+        str(test_home),
+        "--index",
+        str(index),
+        "--out",
+        str(out),
+        "--policy",
+        e2e.curation_policy,
+        "--first-n",
+        str(e2e.first_n),
+        "--deck",
+        e2e.deck_name,
+        "--ankiconnect-url",
+        e2e.ankiconnect_url,
+    ]
+    if preview:
+        cmd.append("--preview")
+    if bypass_known_words:
+        cmd.append("--bypass-known-words")
+    return cmd
+
+
 def _run_child_session(
     e2e: E2EConfig,
     *,
@@ -487,22 +530,14 @@ def _run_child_session(
     A timeout / non-zero exit / unreadable JSON is recorded as ``ok=False`` with a
     stderr tail rather than raising, so a flaky child does not abort the soak.
     """
-    cmd = [
-        sys.executable,
-        "-m",
-        "tests.e2e.soak",
-        "--one-session",
-        "--home",
-        str(test_home),
-        "--index",
-        str(index),
-        "--out",
-        str(child_json),
-    ]
-    if preview:
-        cmd.append("--preview")
-    if bypass_known_words:
-        cmd.append("--bypass-known-words")
+    cmd = _child_cmd(
+        e2e,
+        test_home=test_home,
+        index=index,
+        out=child_json,
+        preview=preview,
+        bypass_known_words=bypass_known_words,
+    )
 
     # ANKI_MINER_KEEP_TEMP is intentionally NOT forced here: temp is cleaned after
     # each child session (mirroring production), so temp_files is a genuine leak
@@ -677,6 +712,11 @@ def _main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--preview", action="store_true")
     parser.add_argument("--bypass-known-words", action="store_true")
+    # Config forwarded from the parent so cross-process children honour all overrides.
+    parser.add_argument("--policy", default="all", choices=["all", "first_n", "none"])
+    parser.add_argument("--first-n", type=int, default=0)
+    parser.add_argument("--deck", default=None)
+    parser.add_argument("--ankiconnect-url", default=None)
     args = parser.parse_args(argv)
 
     test_home = Path(args.home)
@@ -692,7 +732,14 @@ def _main(argv: list[str] | None = None) -> int:
 
     app = QApplication.instance() or QApplication(sys.argv[:1])
 
-    e2e = E2EConfig(test_home=test_home)
+    # Build E2EConfig forwarding all parent overrides; fall back to defaults for
+    # optional flags so existing callers that omit them stay valid.
+    e2e_kwargs: dict = {"test_home": test_home, "curation_policy": args.policy, "first_n": args.first_n}
+    if args.deck is not None:
+        e2e_kwargs["deck_name"] = args.deck
+    if args.ankiconnect_url is not None:
+        e2e_kwargs["ankiconnect_url"] = args.ankiconnect_url
+    e2e = E2EConfig(**e2e_kwargs)
     run_dir = RunDir(e2e.runs_root, label=f"child-{args.index}")
     gateway = _maybe_gateway(e2e, preview=args.preview)
 
