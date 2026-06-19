@@ -2,8 +2,9 @@
 
 Fetches a URL to a uniquely-named ``.part`` temp file inside a caller-provided
 directory and returns that temp path. It NEVER writes the final destination —
-the caller performs the atomic ``os.replace`` after routing the file to the
-right importer. GUI-free and importer-free by design.
+the caller routes the file to the right importer (dict/freq through their
+importers, the raw pitch TSV via ``shutil.move``). GUI-free and importer-free
+by design.
 
 The download pattern (browser User-Agent, ``raise_for_status``, chunked
 ``iter_content`` with a size cap, atomic staging via ``NamedTemporaryFile``)
@@ -104,6 +105,12 @@ def download_to_temp(
                     tmp_fd.write(chunk)
                     if progress is not None:
                         progress(downloaded, total, f"Downloading {url}")
+
+                # Belt-and-suspenders: requests/urllib3 already raise on a
+                # truncated Content-Length read, but assert the byte count too so
+                # a short response can never be promoted to a partial final file.
+                if total and downloaded != total:
+                    raise SetupError(f"Download truncated: got {downloaded} of {total} bytes from {url}")
         finally:
             response.close()
     except SetupError:
