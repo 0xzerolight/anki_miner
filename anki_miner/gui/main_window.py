@@ -343,9 +343,6 @@ class MainWindow(QMainWindow):
         for i in range(self.tabs.count()):
             if hasattr(self.tabs.widget(i), "open_themes_subtab"):
                 return i
-        for i in range(self.tabs.count()):  # fallback by label
-            if self.tabs.tabText(i) == "Settings":
-                return i
         return -1
 
     def _open_settings(self) -> None:

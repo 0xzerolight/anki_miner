@@ -2087,6 +2087,34 @@ The dictionary was not removed.</source>
 </context><context>
     <name>MainWindow</name>
     <message>
+        <source>Episode Mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Batch Mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>YouTube</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audiobook</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Analytics</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation type="unfinished" />
     </message>
