@@ -54,6 +54,9 @@ dev = [
     # Soft E2E dep: screenshot baseline-diff in tests/e2e/screenshot_diff.py.
     # PIL is never imported at runtime; the diff degrades gracefully if absent.
     "pillow>=10.0.0",
+    # Build-time only: provides `pyside6-lrelease` to compile .ts → .qm
+    # translation catalogs (scripts/i18n.py). Not a runtime dependency.
+    "pyside6-essentials>=6.6.0",
 ]
 
 [project.scripts]
@@ -77,6 +80,7 @@ include-package-data = true
 "anki_miner.services.dictionary.resources" = ["*.css"]
 "anki_miner.services.dictionary.resources.presets" = ["*.css"]
 "anki_miner.resources.wordsets" = ["*.txt"]
+"anki_miner.gui.resources.translations" = ["*.ts", "*.qm"]
 
 [tool.setuptools.dynamic]
 version = {attr = "anki_miner.__version__"}
