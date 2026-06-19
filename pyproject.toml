@@ -54,8 +54,13 @@ dev = [
     # Soft E2E dep: screenshot baseline-diff in tests/e2e/screenshot_diff.py.
     # PIL is never imported at runtime; the diff degrades gracefully if absent.
     "pillow>=10.0.0",
-    # Build-time only: provides `pyside6-lrelease` to compile .ts → .qm
-    # translation catalogs (scripts/i18n.py). Not a runtime dependency.
+]
+# Build-time only: pyside6-lrelease compiles .ts → .qm translation catalogs
+# (scripts/i18n.py compile). NOT needed by tests or CI's drift check (which
+# only extracts via pylupdate6). Kept OUT of `dev` so the test env stays
+# single-binding — PySide6 alongside PyQt6 makes pytest-qt pick PySide6.
+# Regenerate translations with: pip install -e ".[i18n]"
+i18n = [
     "pyside6-essentials>=6.6.0",
 ]
 
@@ -99,6 +104,10 @@ python_functions = ["test_*"]
 # (CI + local) to avoid paying for an ungated metric. Run it explicitly when
 # needed: pytest --cov=anki_miner
 addopts = "-v -m \"not e2e\""
+# The app is PyQt6-only. A stray PySide6 install (e.g. the i18n build dep)
+# must not flip pytest-qt's binding auto-detection to PySide6, which would
+# make qtbot reject every PyQt6 widget. Pin it.
+qt_api = "pyqt6"
 markers = [
     "youtube: requires network and yt-dlp real extractor",
     "real_ytdlp: exercises the real _ytdlp_supports_js_runtimes (no autouse stub)",
