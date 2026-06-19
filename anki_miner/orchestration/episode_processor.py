@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from PyQt6.QtCore import QCoreApplication
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
@@ -32,6 +34,25 @@ from anki_miner.services import (
 from anki_miner.utils import ensure_directory, has_katakana, hiragana_to_katakana
 
 logger = logging.getLogger(__name__)
+
+
+def _arg(template: str, *args: object) -> str:
+    """Substitute ``%1``, ``%2``, … placeholders in a translated template.
+
+    ``QCoreApplication.translate()`` returns a plain Python ``str`` in PyQt6
+    (there is no ``QString.arg()``), so placeholder substitution must be done
+    in Python.  Placeholders are replaced left-to-right: the first ``%1``
+    occurrence is replaced with ``str(args[0])``, ``%2`` with ``str(args[1])``,
+    and so on.  Un-referenced higher placeholders are left as-is.
+
+    Designed to mirror Qt's ``QString::arg()`` for the subset of patterns
+    used in this file.
+    """
+    result = template
+    for i, val in enumerate(args, start=1):
+        result = result.replace(f"%{i}", str(val), 1)
+    return result
+
 
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
@@ -359,13 +380,20 @@ class EpisodeProcessor:
 
         Returns the raw parse output; mutates ``ctx.total_words_found``.
         """
-        self.presenter.show_info(f"Step 1/5 — Parsing subtitles: {subtitle_file.name}")
+        self.presenter.show_info(
+            _arg(
+                QCoreApplication.translate("EpisodeProcessor", "Step 1/5 — Parsing subtitles: %1"),
+                subtitle_file.name,
+            )
+        )
         line_index: list[LineLemmas] | None = None
         if self.config.use_i_plus_one_filter:
             all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(subtitle_file)
         else:
             all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file)
-        self.presenter.show_success(f"Found {len(all_words)} unique words")
+        self.presenter.show_success(
+            QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
+        )
         ctx.total_words_found = len(all_words)
         return all_words, line_index
 
@@ -386,7 +414,13 @@ class EpisodeProcessor:
             for word in all_words:
                 word.frequency_rank = self.frequency_service.lookup(word.lemma)
             ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
-            self.presenter.show_info(f"Frequency data: {ranked_count}/{len(all_words)} words ranked")
+            self.presenter.show_info(
+                _arg(
+                    QCoreApplication.translate("EpisodeProcessor", "Frequency data: %1/%2 words ranked"),
+                    ranked_count,
+                    len(all_words),
+                )
+            )
 
         # Filter against existing vocabulary.
         if self.config.include_known_words:
@@ -394,10 +428,16 @@ class EpisodeProcessor:
             # entirely — including the Issue #42 user ignore list — and mine all
             # words that passed POS/subtype filtering. Coverage-deck builds
             # intentionally re-card words the user already knows.
-            self.presenter.show_info("Step 2/5 — Known-words filter bypassed (include everything mode)")
+            self.presenter.show_info(
+                QCoreApplication.translate(
+                    "EpisodeProcessor", "Step 2/5 — Known-words filter bypassed (include everything mode)"
+                )
+            )
             unknown_words = all_words
         else:
-            self.presenter.show_info("Step 2/5 — Filtering against known vocabulary")
+            self.presenter.show_info(
+                QCoreApplication.translate("EpisodeProcessor", "Step 2/5 — Filtering against known vocabulary")
+            )
             # User-curated ignore list (Issue #42): always applied on the normal
             # mining path, regardless of the use_known_words_db toggle. The DB
             # object is always present now, but the file may not exist for users
@@ -414,17 +454,32 @@ class EpisodeProcessor:
                 anki_vocab = self.anki_service.get_existing_vocabulary()
                 added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
                 if added > 0:
-                    self.presenter.show_info(f"Known word DB synced: {added} new words ({total} total)")
+                    self.presenter.show_info(
+                        _arg(
+                            QCoreApplication.translate(
+                                "EpisodeProcessor", "Known word DB synced: %1 new words (%2 total)"
+                            ),
+                            added,
+                            total,
+                        )
+                    )
                     known_words = known_words | (anki_vocab - known_words)
             else:
                 known_words = self.anki_service.get_existing_vocabulary()
 
             unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
-        self.presenter.show_success(f"{len(unknown_words)} new words to mine")
+        self.presenter.show_success(
+            QCoreApplication.translate("EpisodeProcessor", "%n new word(s) to mine", "", len(unknown_words))
+        )
 
         # Comprehension percentage.
         comprehension = ((len(all_words) - len(unknown_words)) / len(all_words)) * 100 if all_words else 0.0
-        self.presenter.show_info(f"Comprehension: {comprehension:.1f}% of words already known")
+        self.presenter.show_info(
+            _arg(
+                QCoreApplication.translate("EpisodeProcessor", "Comprehension: %1% of words already known"),
+                f"{comprehension:.1f}",
+            )
+        )
         ctx.comprehension_percentage = comprehension
 
         # Surface the "everything was already known" case explicitly. Without
@@ -435,9 +490,14 @@ class EpisodeProcessor:
         # no-op for "bold isn't working".
         if all_words and not unknown_words:
             self.presenter.show_warning(
-                f"All {len(all_words)} words from this subtitle are already in your "
-                "Anki collection — no new cards will be created. Card-format "
-                "options (bold target word, etc.) only apply to newly mined cards."
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "All %n word(s) from this subtitle are already in your Anki collection"
+                    " — no new cards will be created. Card-format options (bold target word,"
+                    " etc.) only apply to newly mined cards.",
+                    "",
+                    len(all_words),
+                )
             )
 
         # Issue #74: snapshot the full unknown-lemma set before optional
@@ -453,7 +513,13 @@ class EpisodeProcessor:
             filtered_out = before - len(unknown_words)
             if filtered_out > 0:
                 self.presenter.show_info(
-                    f"Frequency filter: removed {filtered_out} words " f"outside top {self.config.max_frequency_rank}"
+                    _arg(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor", "Frequency filter: removed %1 words outside top %2"
+                        ),
+                        filtered_out,
+                        self.config.max_frequency_rank,
+                    )
                 )
 
         # Word list (blacklist/whitelist) filter.
@@ -462,7 +528,12 @@ class EpisodeProcessor:
             unknown_words = self.word_filter.filter_by_word_lists(unknown_words, self.word_list_service)
             filtered_out = before - len(unknown_words)
             if filtered_out > 0:
-                self.presenter.show_info(f"Word list filter: removed {filtered_out} words")
+                self.presenter.show_info(
+                    _arg(
+                        QCoreApplication.translate("EpisodeProcessor", "Word list filter: removed %1 words"),
+                        filtered_out,
+                    )
+                )
 
         # Script-type filter (hiragana-only / katakana-only). Issue #57.
         if (
@@ -481,7 +552,13 @@ class EpisodeProcessor:
                     kinds.append("hiragana-only")
                 if self.config.exclude_katakana_only_words:
                     kinds.append("katakana-only")
-                self.presenter.show_info(f"Script-type filter: removed {removed} {'/'.join(kinds)} words")
+                self.presenter.show_info(
+                    _arg(
+                        QCoreApplication.translate("EpisodeProcessor", "Script-type filter: removed %1 %2 words"),
+                        removed,
+                        "/".join(kinds),
+                    )
+                )
         # Name wordset filter (Issue #59). Drops proper nouns (people/place
         # names) that slipped past the 固有名詞 POS filter because unidic-lite
         # mistagged them. Whitelist still rescues. Gated like neighbors so the
@@ -493,7 +570,12 @@ class EpisodeProcessor:
             )
             filtered_out = before - len(unknown_words)
             if filtered_out > 0:
-                self.presenter.show_info(f"Name wordset filter: removed {filtered_out} words")
+                self.presenter.show_info(
+                    _arg(
+                        QCoreApplication.translate("EpisodeProcessor", "Name wordset filter: removed %1 words"),
+                        filtered_out,
+                    )
+                )
 
         # Sentence deduplication. i+1 filter does its own sentence picking;
         # dedup would be a no-op (post-i+1 sentences are unique by construction).
@@ -506,7 +588,14 @@ class EpisodeProcessor:
             unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
             deduped = before - len(unknown_words)
             if deduped > 0:
-                self.presenter.show_info(f"Sentence deduplication: removed {deduped} duplicate-sentence words")
+                self.presenter.show_info(
+                    _arg(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor", "Sentence deduplication: removed %1 duplicate-sentence words"
+                        ),
+                        deduped,
+                    )
+                )
 
         # Cross-episode frequency filter.
         if (
@@ -523,8 +612,14 @@ class EpisodeProcessor:
             filtered_out = before - len(unknown_words)
             if filtered_out > 0:
                 self.presenter.show_info(
-                    f"Cross-episode filter: removed {filtered_out} words "
-                    f"appearing in fewer than {self.config.min_episode_appearances} episodes"
+                    _arg(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor",
+                            "Cross-episode filter: removed %1 words appearing in fewer than %2 episodes",
+                        ),
+                        filtered_out,
+                        self.config.min_episode_appearances,
+                    )
                 )
 
         # i+1 sentence filtering. Restricts mining to words with an i+1 example
@@ -539,7 +634,14 @@ class EpisodeProcessor:
             )
             kept = len(unknown_words)
             pct = (kept / before * 100.0) if before else 0.0
-            self.presenter.show_info(f"i+1 filter: kept {kept}/{before} words ({pct:.0f}%)")
+            self.presenter.show_info(
+                _arg(
+                    QCoreApplication.translate("EpisodeProcessor", "i+1 filter: kept %1/%2 words (%3%)"),
+                    kept,
+                    before,
+                    f"{pct:.0f}",
+                )
+            )
 
         # Sentence length filter (Issue #33). Drops words whose FINAL example
         # sentence exceeds the configured audio-duration and/or character caps.
@@ -565,7 +667,13 @@ class EpisodeProcessor:
                 if self.config.max_sentence_chars > 0:
                     caps.append(f"{self.config.max_sentence_chars} chars")
                 self.presenter.show_info(
-                    f"Sentence length filter: removed {filtered_out} words " f"(cap: {', '.join(caps)})"
+                    _arg(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor", "Sentence length filter: removed %1 words (cap: %2)"
+                        ),
+                        filtered_out,
+                        ", ".join(caps),
+                    )
                 )
 
         # Record difficulty data if stats service available.
@@ -609,7 +717,9 @@ class EpisodeProcessor:
     ) -> list[tuple[TokenizedWord, MediaData]]:
         """Phase 3: extract media (screenshots + audio; audio + cover art when
         ``audio_only``) for each unknown word."""
-        self.presenter.show_info("Step 3/5 — Extracting media from video")
+        self.presenter.show_info(
+            QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Extracting media from video")
+        )
         media_results: list[tuple[TokenizedWord, MediaData]] = self.media_extractor.extract_media_batch(
             video_file,
             unknown_words,
@@ -661,7 +771,13 @@ class EpisodeProcessor:
                     progress_callback.on_progress(i + 1, f"Expression audio: {word.mined_form}")
             if progress_callback is not None:
                 progress_callback.on_complete()
-            self.presenter.show_info(f"Expression audio: {fetched_count}/{len(media_results)} available")
+            self.presenter.show_info(
+                _arg(
+                    QCoreApplication.translate("EpisodeProcessor", "Expression audio: %1/%2 available"),
+                    fetched_count,
+                    len(media_results),
+                )
+            )
 
         return media_results
 
@@ -676,13 +792,17 @@ class EpisodeProcessor:
         list[tuple[str | None, str | None]],
     ]:
         """Phase 4: look up definitions, optional glossaries, and pitch accents."""
-        self.presenter.show_info("Step 4/5 — Fetching definitions")
+        self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 4/5 — Fetching definitions"))
         words_with_media = [word for word, _ in media_results]
         definitions = self.definition_service.get_definitions_batch(
             [w.lemma for w in words_with_media],
             progress_callback,
         )
-        self.presenter.show_success(f"Found {sum(1 for d in definitions if d)} definitions")
+        self.presenter.show_success(
+            QCoreApplication.translate(
+                "EpisodeProcessor", "Found %n definition(s)", "", sum(1 for d in definitions if d)
+            )
+        )
 
         # Optional: fetch concatenated multi-dict glossary if the user mapped
         # the Glossary field. Skipped otherwise to avoid the extra chain walk
@@ -702,7 +822,13 @@ class EpisodeProcessor:
                 fmt=self.config.pitch_category_format,
             )
             found_count = sum(1 for pos, _ in pitch_data if pos)
-            self.presenter.show_info(f"Pitch accent data: {found_count}/{len(words_with_media)} words")
+            self.presenter.show_info(
+                _arg(
+                    QCoreApplication.translate("EpisodeProcessor", "Pitch accent data: %1/%2 words"),
+                    found_count,
+                    len(words_with_media),
+                )
+            )
 
         return definitions, glossaries, pitch_data
 
@@ -722,7 +848,7 @@ class EpisodeProcessor:
         that were created — carried onto ``ProcessingResult`` so the Undo
         callback can revert ``source='mined'`` rows in known_words.db (OVH-030).
         """
-        self.presenter.show_info("Step 5/5 — Creating Anki cards")
+        self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 5/5 — Creating Anki cards"))
         card_data: list[CardPayload] = []
         for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
             media_results, definitions, glossaries, pitch_data, strict=True
@@ -758,24 +884,42 @@ class EpisodeProcessor:
         if skipped_words:
             preview = ", ".join(skipped_words[:10])
             more = f" (+{len(skipped_words) - 10} more)" if len(skipped_words) > 10 else ""
-            self.presenter.show_warning(f"Skipped {len(skipped_words)} words with no definition found: {preview}{more}")
+            self.presenter.show_warning(
+                _arg(
+                    QCoreApplication.translate("EpisodeProcessor", "Skipped %1 words with no definition found: %2%3"),
+                    len(skipped_words),
+                    preview,
+                    more,
+                )
+            )
 
         cards_created = self.anki_service.create_cards_batch(card_data, progress_callback)
         created_note_ids = list(self.anki_service.last_created_note_ids)
 
-        self.presenter.show_success(f"Successfully created {cards_created} cards")
+        self.presenter.show_success(
+            QCoreApplication.translate("EpisodeProcessor", "Successfully created %n card(s)", "", cards_created)
+        )
         media_failures = self.anki_service.last_media_store_failures
         if isinstance(media_failures, int) and media_failures > 0:
             self.presenter.show_warning(
-                f"{media_failures} media file(s) could not be stored in Anki; those cards "
-                f"will have no audio or screenshot. Check that Anki/AnkiConnect is running and "
-                f"see the log for details."
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "%n media file(s) could not be stored in Anki; those cards will have no audio"
+                    " or screenshot. Check that Anki/AnkiConnect is running and see the log for details.",
+                    "",
+                    media_failures,
+                )
             )
         skipped_duplicates = self.anki_service.last_skipped_duplicates
         if isinstance(skipped_duplicates, int) and skipped_duplicates > 0:
             self.presenter.show_warning(
-                f"Skipped {skipped_duplicates} word(s) Anki flagged as duplicates "
-                f"(same Expression as an existing card or another word in this batch)."
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Skipped %n word(s) Anki flagged as duplicates (same Expression as an existing"
+                    " card or another word in this batch).",
+                    "",
+                    skipped_duplicates,
+                )
             )
 
         # Collect mined_forms from the cards that were actually submitted.
@@ -926,14 +1070,16 @@ class EpisodeProcessor:
         try:
             all_words, line_index = self._phase1_parse(ctx, subtitle_file)
             if not all_words:
-                self.presenter.show_warning("No words found in subtitles")
+                self.presenter.show_warning(
+                    QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
+                )
                 return ctx.build_result()
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
             unknown_words = self._phase2_filter(ctx, all_words, line_index, cross_episode_counts)
             if not unknown_words:
-                self.presenter.show_info("All words already in Anki!")
+                self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "All words already in Anki!"))
                 return ctx.build_result(new_words_found=0)
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
@@ -950,9 +1096,15 @@ class EpisodeProcessor:
                     # intentional "card nothing this episode", a completed run
                     # with zero new cards — NOT a cancellation (keeps stats and
                     # batch status accurate).
-                    self.presenter.show_info("No words selected for card creation")
+                    self.presenter.show_info(
+                        QCoreApplication.translate("EpisodeProcessor", "No words selected for card creation")
+                    )
                     return ctx.build_result(new_words_found=0)
-                self.presenter.show_info(f"User selected {len(unknown_words)} words for card creation")
+                self.presenter.show_info(
+                    QCoreApplication.translate(
+                        "EpisodeProcessor", "User selected %n word(s) for card creation", "", len(unknown_words)
+                    )
+                )
 
             if preview_mode:
                 self.presenter.show_word_preview(unknown_words)
@@ -997,9 +1149,13 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
             if not media_results:
-                self.presenter.show_warning("No media extracted successfully")
+                self.presenter.show_warning(
+                    QCoreApplication.translate("EpisodeProcessor", "No media extracted successfully")
+                )
                 return ctx.build_result(errors=["Media extraction failed for all words"])
-            self.presenter.show_success(f"Extracted media for {len(media_results)} words")
+            self.presenter.show_success(
+                QCoreApplication.translate("EpisodeProcessor", "Extracted media for %n word(s)", "", len(media_results))
+            )
 
             definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
             if self.cancelled:
@@ -1025,7 +1181,7 @@ class EpisodeProcessor:
                 ctx.errors.append(
                     f"Run failed after creating {len(partial_ids)} card(s); " f"they remain in Anki and can be undone."
                 )
-            self.presenter.show_error(f"Error: {e}")
+            self.presenter.show_error(_arg(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
             return ctx.build_result(
                 total_words_found=0,
                 new_words_found=0,
@@ -1040,7 +1196,9 @@ class EpisodeProcessor:
                 ctx.errors.append(
                     f"Run failed after creating {len(partial_ids)} card(s); " f"they remain in Anki and can be undone."
                 )
-            self.presenter.show_error(f"Unexpected error: {e}")
+            self.presenter.show_error(
+                _arg(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
+            )
             return ctx.build_result(
                 total_words_found=0,
                 new_words_found=0,
