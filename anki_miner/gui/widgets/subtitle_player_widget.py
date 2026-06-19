@@ -322,9 +322,23 @@ class SubtitlePlayerWidget(QWidget):
         Connected once in _setup_ui to ``QVideoWidget.videoSink().videoFrameChanged``.
         Setting this flag prevents the AV1 watchdog from triggering the fallback UI
         when a frame is successfully decoded.
+
+        Recovery: if the fallback notice is already showing (slow software decode
+        that produced its first frame only after the 2 s watchdog fired and
+        stopped the player), undo the fallback — hide the notice, restore the
+        video widget, and resume playback so the preview plays rather than
+        staying stuck on the notice.
         """
         self._got_video_frame = True
         self._av1_watchdog.stop()
+        # isHidden(), not isVisible(): the explicit visibility flag set by the
+        # watchdog, independent of whether the widget tree is shown on screen.
+        if not self._av1_notice_label.isHidden():
+            logger.info("AV1 frame decoded after the watchdog fired; restoring video preview")
+            self._av1_notice_label.setVisible(False)
+            self.video_widget.setVisible(True)
+            if self.player is not None:
+                self.player.play()
 
     def _on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
         """Arm the AV1 watchdog when the media is loaded and the source is AV1.
