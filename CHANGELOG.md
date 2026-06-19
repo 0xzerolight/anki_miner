@@ -9,10 +9,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+
+### Fixed
+
+### Removed
+
+
+## [2.6.5] - 2026-06-19
+
+### Added
+- **Recommended-resources download on first run.** First launch offers to fetch the recommended starter resources (dictionary, frequency, and pitch-accent data) so a fresh install is ready to mine without hunting them down.
+- **Restore dictionaries from disk.** Settings → Dictionaries detects indexed dictionaries present on disk but missing from your chain and offers a one-click Restore so they aren't silently dropped.
+- **`ANKI_MINER_HOME` environment variable.** Point the app at a custom data directory instead of `~/.anki_miner/` — useful for portable setups or keeping data off the system drive.
+
+### Changed
 - **Window title shortened to "Anki Miner"** (was "Anki Miner - Japanese Vocabulary Mining Tool").
+- **Settings save shows an inline status instead of a popup.** Saving updates a small inline "Saved" label rather than interrupting with a modal dialog.
 
 ### Fixed
 - **AV1 video previews in-app when your GPU can decode it.** Machines with a hardware AV1 decoder (RTX-30+/Tiger-Lake+) now play AV1 in the preview pane. On a machine without one, the pane shows a short "this video uses AV1, which your system can't decode for in-app preview" notice instead of a blank player; if a frame does decode later, the preview recovers automatically. Mining is unaffected either way — screenshots come from FFmpeg, not the preview.
+- **No more console windows flashing on Windows** (#79). yt-dlp, ffmpeg, ffprobe, and PowerShell subprocesses no longer pop up black console windows during mining.
+- **Episode pairing no longer trips on codec/CRC tags in filenames** (#80). Bit-depth, codec, and CRC32 tags are stripped before the episode number is read, so files pair to the right episode.
+- **Settings survive a corrupt config file.** On a damaged `gui_config.json`, the app recovers from a `.bak` (written before each overwrite) instead of resetting to defaults.
+- **File dialogs open in a sensible folder.** Dictionary import and Browse dialogs open at the relevant directory (e.g. your dicts folder) instead of the filesystem root.
+- **Unsaved settings edits are kept on refresh, and dictionary-chain reordering persists.**
+- **Frequency and pitch data read correctly.** The frequency importer honors the source column order, and pitch-accent lookups use the lemma reading.
+- **Cleaner definitions.** Duplicate kana glosses are removed and results are ranked by score.
+- **Better subtitle parsing.** ASS/SSA comment lines are skipped and the katakana-noun filter is corrected, so junk lines don't become cards.
+- **Cancel actually stops a run** even when triggered while the processor is still being built on the worker thread.
+- **Undo reverts only the current session's cards**, not rows added by earlier sessions.
+- **Partial downloads are rejected.** Downloaded files are checked against the server's Content-Length before use.
+- **Frequency file picker again offers `.txt` files.**
+- **Word-preview column sorting is disabled in grouped views** where it produced misleading order.
+- **Anki warns when card creation returns fewer IDs than expected** instead of silently under-counting the vocab cache.
+- **ffmpeg extraction failures and skipped duplicate cards are surfaced in the GUI** instead of failing silently.
+- **Long mining and queue sessions are more stable** — several resource leaks and teardown races in the preview player, dictionary handles, and worker threads were fixed.
+- **Imported-dictionary CSS is sandboxed** from loading external resources, so custom card styling can't pull in outside content.
+- **Fewer Windows Defender false positives.** Release builds compile the PyInstaller bootloader from source and embed version metadata, avoiding AV-flagged prebuilt hashes.
+- Minor visual polish: dark-theme table corner button and Reset-to-default button alignment.
 
 ### Removed
 - **Windows portable `.zip` and generic Linux `.tar.gz` downloads.** Releases now ship one download per platform: Windows `Setup.exe`, Linux `.deb` (Debian/Ubuntu) or AppImage (other distros), macOS arm64 `.tar.gz`, plus PyPI and source. The Setup.exe installs per-user without admin, and the AppImage is the self-contained portable Linux option.
