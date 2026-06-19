@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # half-finished .ts never auto-appears and every entry gets a human-readable name.
 _LANGUAGES: dict[str, str] = {
     "en": "English",
+    "ja": "日本語",
 }
 
 
