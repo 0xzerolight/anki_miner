@@ -22,6 +22,7 @@ from anki_miner.gui.widgets.dialogs.export_dialog import ExportDialog
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.models import TokenizedWord
 from anki_miner.models.word import WordData
+from anki_miner.utils.i18n import tr_format
 
 
 class WordPreviewDialog(QDialog):
@@ -66,7 +67,7 @@ class WordPreviewDialog(QDialog):
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
-        self.setWindowTitle(f"Word Preview - {len(self.all_words)} words found")
+        self.setWindowTitle(tr_format(self.tr("Word Preview - %1 words found"), len(self.all_words)))
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
         self.resize(1100, 700)
@@ -77,7 +78,7 @@ class WordPreviewDialog(QDialog):
 
         # Header with title
         header = SectionHeader(
-            f"Word Preview: {len(self.all_words)} words found",
+            tr_format(self.tr("Word Preview: %1 words found"), len(self.all_words)),
         )
         main_layout.addWidget(header)
 
@@ -89,12 +90,12 @@ class WordPreviewDialog(QDialog):
         controls_layout.setSpacing(SPACING.sm)
 
         # Search bar
-        search_label = QLabel("Search:")
+        search_label = QLabel(self.tr("Search:"))
         search_label.setFont(self._create_font(12, QFont.Weight.Medium))
         controls_layout.addWidget(search_label)
 
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Filter by any field...")
+        self.search_input.setPlaceholderText(self.tr("Filter by any field..."))
         self.search_input.textChanged.connect(self._on_search_changed)
         self.search_input.setMinimumWidth(250)
         controls_layout.addWidget(self.search_input)
@@ -102,12 +103,14 @@ class WordPreviewDialog(QDialog):
         controls_layout.addSpacing(16)
 
         # Group by dropdown
-        group_label = QLabel("Group by:")
+        group_label = QLabel(self.tr("Group by:"))
         group_label.setFont(self._create_font(12, QFont.Weight.Medium))
         controls_layout.addWidget(group_label)
 
         self.group_combo = QComboBox()
-        self.group_combo.addItems(["None (Flat List)", "Time Range", "Alphabetical", "Word Length"])
+        self.group_combo.addItems(
+            [self.tr("None (Flat List)"), self.tr("Time Range"), self.tr("Alphabetical"), self.tr("Word Length")]
+        )
         self.group_combo.currentIndexChanged.connect(self._on_grouping_changed)
         self.group_combo.setMinimumWidth(150)
         controls_layout.addWidget(self.group_combo)
@@ -115,7 +118,7 @@ class WordPreviewDialog(QDialog):
         controls_layout.addStretch()
 
         # Export button
-        export_button = ModernButton("Export...", variant="secondary")
+        export_button = ModernButton(self.tr("Export..."), variant="secondary")
         export_button.clicked.connect(self._on_export)
         controls_layout.addWidget(export_button)
 
@@ -152,7 +155,7 @@ class WordPreviewDialog(QDialog):
         main_layout.addWidget(self.stats_frame)
 
         # Table section
-        table_label = QLabel("Discovered Words")
+        table_label = QLabel(self.tr("Discovered Words"))
         table_label.setObjectName("heading3")
         table_label.setFont(self._create_font(16, QFont.Weight.Bold))
         main_layout.addWidget(table_label)
@@ -160,7 +163,16 @@ class WordPreviewDialog(QDialog):
         # Table
         self.table = QTableWidget()
         self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels(["Surface", "Lemma", "Reading", "Sentence", "Time", "Video"])
+        self.table.setHorizontalHeaderLabels(
+            [
+                self.tr("Surface"),
+                self.tr("Lemma"),
+                self.tr("Reading"),
+                self.tr("Sentence"),
+                self.tr("Time"),
+                self.tr("Video"),
+            ]
+        )
 
         # Configure table appearance
         self.table.setAlternatingRowColors(True)
@@ -193,7 +205,7 @@ class WordPreviewDialog(QDialog):
 
         footer_layout.addStretch()
 
-        close_button = ModernButton("Close", variant="primary")
+        close_button = ModernButton(self.tr("Close"), variant="primary")
         close_button.clicked.connect(self.accept)
         close_button.setMinimumWidth(120)
         footer_layout.addWidget(close_button)
@@ -275,7 +287,9 @@ class WordPreviewDialog(QDialog):
         self._apply_fixed_row_height()
 
         # Update result count
-        self.result_count_label.setText(f"Showing {len(self.filtered_words)} of {len(self.all_words)} words")
+        self.result_count_label.setText(
+            tr_format(self.tr("Showing %1 of %2 words"), len(self.filtered_words), len(self.all_words))
+        )
 
     def _add_words_to_table(self, words: list[TokenizedWord], group_name: str | None = None) -> None:
         """Add words to the table.
@@ -321,7 +335,12 @@ class WordPreviewDialog(QDialog):
             time_str = self._format_time(word.start_time)
             time_item = QTableWidgetItem(time_str)
             time_item.setToolTip(
-                f"Start: {word.start_time:.2f}s, End: {word.end_time:.2f}s, Duration: {word.duration:.2f}s"
+                tr_format(
+                    self.tr("Start: %1s, End: %2s, Duration: %3s"),
+                    f"{word.start_time:.2f}",
+                    f"{word.end_time:.2f}",
+                    f"{word.duration:.2f}",
+                )
             )
 
             # Color-code by time range using theme-aware semantic tokens so the
@@ -358,7 +377,7 @@ class WordPreviewDialog(QDialog):
         for start, end, label in ranges:
             group_words = [w for w in self.filtered_words if start <= w.start_time < end]
             if group_words:
-                self._add_words_to_table(group_words, f"{label} ({len(group_words)} words)")
+                self._add_words_to_table(group_words, tr_format(self.tr("%1 (%2 words)"), label, len(group_words)))
 
     def _add_words_grouped_alphabetically(self) -> None:
         """Add words grouped by first character of lemma."""
@@ -374,7 +393,7 @@ class WordPreviewDialog(QDialog):
         # Sort groups by key and add to table
         for char in sorted(groups.keys()):
             group_words = groups[char]
-            self._add_words_to_table(group_words, f"{char} ({len(group_words)} words)")
+            self._add_words_to_table(group_words, tr_format(self.tr("%1 (%2 words)"), char, len(group_words)))
 
     def _add_words_grouped_by_length(self) -> None:
         """Add words grouped by word length."""
@@ -389,7 +408,7 @@ class WordPreviewDialog(QDialog):
         for min_len, max_len, label in ranges:
             group_words = [w for w in self.filtered_words if min_len <= len(w.lemma) <= max_len]
             if group_words:
-                self._add_words_to_table(group_words, f"{label} ({len(group_words)} words)")
+                self._add_words_to_table(group_words, tr_format(self.tr("%1 (%2 words)"), label, len(group_words)))
 
     def _format_time(self, seconds: float) -> str:
         """Format time in seconds to MM:SS format.
@@ -407,30 +426,30 @@ class WordPreviewDialog(QDialog):
     def _update_statistics(self) -> None:
         """Update the statistics panel."""
         if not self.filtered_words:
-            self.total_words_label.setText("0 words")
-            self.unique_lemmas_label.setText("0 unique")
-            self.avg_length_label.setText("Avg: 0 chars")
-            self.time_span_label.setText("Span: 00:00")
+            self.total_words_label.setText(self.tr("0 words"))
+            self.unique_lemmas_label.setText(self.tr("0 unique"))
+            self.avg_length_label.setText(self.tr("Avg: 0 chars"))
+            self.time_span_label.setText(self.tr("Span: 00:00"))
             return
 
         # Total words
         total = len(self.filtered_words)
-        self.total_words_label.setText(f"{total} words")
+        self.total_words_label.setText(tr_format(self.tr("%1 words"), total))
 
         # Unique lemmas
         unique_lemmas = len({w.lemma for w in self.filtered_words})
-        self.unique_lemmas_label.setText(f"{unique_lemmas} unique")
+        self.unique_lemmas_label.setText(tr_format(self.tr("%1 unique"), unique_lemmas))
 
         # Average word length
         avg_length = sum(len(w.lemma) for w in self.filtered_words) / len(self.filtered_words)
-        self.avg_length_label.setText(f"Avg: {avg_length:.1f} chars")
+        self.avg_length_label.setText(tr_format(self.tr("Avg: %1 chars"), f"{avg_length:.1f}"))
 
         # Time span
         min_time = min(w.start_time for w in self.filtered_words)
         max_time = max(w.end_time for w in self.filtered_words)
         span = max_time - min_time
         span_str = self._format_time(span)
-        self.time_span_label.setText(f"Span: {span_str}")
+        self.time_span_label.setText(tr_format(self.tr("Span: %1"), span_str))
 
     def _on_search_changed(self, _text: str) -> None:
         """Handle search text change.
