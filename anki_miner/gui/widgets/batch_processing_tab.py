@@ -35,6 +35,7 @@ from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.panels import QueuePanel
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models.batch_queue import QueueItemStatus
+from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
@@ -120,13 +121,15 @@ class BatchProcessingTab(MiningTabBase):
         layout.addWidget(self.queue_panel, 1)  # Give it stretch factor
 
         # Issue #60: opt-in per-episode word curation popup (default off).
-        self.review_words_checkbox = QCheckBox("Review words before mining")
+        self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
         self.review_words_checkbox.setChecked(False)
-        self.review_words_checkbox.setToolTip("Show the word-selection popup for each episode before creating cards")
+        self.review_words_checkbox.setToolTip(
+            self.tr("Show the word-selection popup for each episode before creating cards")
+        )
         layout.addWidget(self.review_words_checkbox)
 
         # Overall Progress (for queue processing)
-        overall_progress_header = QLabel("Overall Progress")
+        overall_progress_header = QLabel(self.tr("Overall Progress"))
         overall_progress_header.setObjectName("heading3")
         font = QFont()
         font.setPixelSize(FONT_SIZES.body)
@@ -138,7 +141,7 @@ class BatchProcessingTab(MiningTabBase):
         layout.addWidget(self.overall_progress_widget)
 
         # Current Episode Progress
-        current_progress_header = QLabel("Current Episode")
+        current_progress_header = QLabel(self.tr("Current Episode"))
         current_progress_header.setObjectName("heading3")
         current_progress_header.setFont(font)
         layout.addWidget(current_progress_header)
@@ -147,7 +150,7 @@ class BatchProcessingTab(MiningTabBase):
         layout.addWidget(self.current_progress_widget)
 
         # Retry Failed button (hidden by default)
-        self.retry_button = ModernButton("Retry Failed", variant="secondary")
+        self.retry_button = ModernButton(self.tr("Retry Failed"), variant="secondary")
         self.retry_button.setVisible(False)
         self.retry_button.clicked.connect(self._retry_failed_items)
         layout.addWidget(self.retry_button)
@@ -207,7 +210,7 @@ class BatchProcessingTab(MiningTabBase):
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
         # Section header
-        header = SectionHeader(title="Quick Processing")
+        header = SectionHeader(title=self.tr("Quick Processing"))
         layout.addWidget(header)
 
         # Shared label-column width so both folder rows line up.
@@ -215,13 +218,13 @@ class BatchProcessingTab(MiningTabBase):
 
         # Anime folder selector
         self.anime_folder_selector = FileSelector(
-            label="Anime Folder:", file_mode=False, file_filter="", label_width=label_w
+            label=self.tr("Anime Folder:"), file_mode=False, file_filter="", label_width=label_w
         )
         layout.addWidget(self.anime_folder_selector)
 
         # Subtitle folder selector
         self.subtitle_folder_selector = FileSelector(
-            label="Subtitle Folder:", file_mode=False, file_filter="", label_width=label_w
+            label=self.tr("Subtitle Folder:"), file_mode=False, file_filter="", label_width=label_w
         )
         layout.addWidget(self.subtitle_folder_selector)
 
@@ -229,18 +232,18 @@ class BatchProcessingTab(MiningTabBase):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
 
-        self.preview_pairs_button = ModernButton("Preview", variant="secondary")
+        self.preview_pairs_button = ModernButton(self.tr("Preview"), variant="secondary")
         self.preview_pairs_button.clicked.connect(self._preview_pairs)
-        self.preview_pairs_button.setToolTip("Preview video/subtitle pairs before processing")
+        self.preview_pairs_button.setToolTip(self.tr("Preview video/subtitle pairs before processing"))
         button_layout.addWidget(self.preview_pairs_button)
 
-        self.process_pairs_button = ModernButton("Process Folder", variant="primary")
+        self.process_pairs_button = ModernButton(self.tr("Process Folder"), variant="primary")
         self.process_pairs_button.clicked.connect(self._process_pairs)
-        self.process_pairs_button.setToolTip("Process every episode pair found in the selected folders")
+        self.process_pairs_button.setToolTip(self.tr("Process every episode pair found in the selected folders"))
         button_layout.addWidget(self.process_pairs_button)
 
-        self.cancel_button = ModernButton("Cancel", variant="danger")
-        self.cancel_button.setToolTip("Cancel processing")
+        self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
+        self.cancel_button.setToolTip(self.tr("Cancel processing"))
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.cancel_button.hide()
         button_layout.addWidget(self.cancel_button)
@@ -291,7 +294,9 @@ class BatchProcessingTab(MiningTabBase):
         """Preview video/subtitle pairs before processing."""
         folders = self._get_validated_folders()
         if not folders:
-            QMessageBox.warning(self, "Invalid Folders", "Please select valid anime and subtitle folders")
+            QMessageBox.warning(
+                self, self.tr("Invalid Folders"), self.tr("Please select valid anime and subtitle folders")
+            )
             return
 
         anime_folder, subtitle_folder = folders
@@ -300,14 +305,16 @@ class BatchProcessingTab(MiningTabBase):
         if not pairs:
             QMessageBox.warning(
                 self,
-                "No Pairs Found",
-                "No matching video/subtitle pairs found.\n\n"
-                "Files are paired by episode number, so point each folder at a "
-                "single show:\n"
-                "- episode_01.mp4 <-> episode_01.ass\n"
-                "- episode_02.mp4 <-> episode_02.ass\n\n"
-                "Mixing multiple shows in one folder can mispair episodes that "
-                "share a number — add each show as its own queue item.",
+                self.tr("No Pairs Found"),
+                self.tr(
+                    "No matching video/subtitle pairs found.\n\n"
+                    "Files are paired by episode number, so point each folder at a "
+                    "single show:\n"
+                    "- episode_01.mp4 <-> episode_01.ass\n"
+                    "- episode_02.mp4 <-> episode_02.ass\n\n"
+                    "Mixing multiple shows in one folder can mispair episodes that "
+                    "share a number — add each show as its own queue item."
+                ),
             )
             return
 
@@ -323,14 +330,16 @@ class BatchProcessingTab(MiningTabBase):
 
         folders = self._get_validated_folders()
         if not folders:
-            QMessageBox.warning(self, "Invalid Folders", "Please select valid anime and subtitle folders")
+            QMessageBox.warning(
+                self, self.tr("Invalid Folders"), self.tr("Please select valid anime and subtitle folders")
+            )
             return
 
         anime_folder, subtitle_folder = folders
         pairs = self._find_episode_pairs(anime_folder, subtitle_folder)
 
         if not pairs:
-            QMessageBox.warning(self, "No Pairs Found", "No matching video/subtitle pairs found")
+            QMessageBox.warning(self, self.tr("No Pairs Found"), self.tr("No matching video/subtitle pairs found"))
             return
 
         self._start_processing_with_pairs(pairs)
@@ -349,7 +358,7 @@ class BatchProcessingTab(MiningTabBase):
         self._show_cancel_state()
 
         # Log start
-        self.presenter.show_info(f"Starting batch processing of {len(pairs)} episodes...")
+        self.presenter.show_info(tr_format(self.tr("Starting batch processing of %1 episodes..."), len(pairs)))
 
         # Tear down the previous run before building a new processor so leaked
         # sqlite handles / Session sockets can't survive into this run (Windows
@@ -382,14 +391,14 @@ class BatchProcessingTab(MiningTabBase):
             if issue_type == "invalid":
                 QMessageBox.warning(
                     self,
-                    "Invalid Folders",
-                    f"Series '{widget.display_name}' has folders that don't exist. Skipping.",
+                    self.tr("Invalid Folders"),
+                    tr_format(self.tr("Series '%1' has folders that don't exist. Skipping."), widget.display_name),
                 )
             else:
                 QMessageBox.warning(
                     self,
-                    "Incomplete Series",
-                    f"Series '{widget.display_name}' is missing folders. Skipping.",
+                    self.tr("Incomplete Series"),
+                    tr_format(self.tr("Series '%1' is missing folders. Skipping."), widget.display_name),
                 )
 
     def _start_queue_worker(self) -> None:
@@ -442,7 +451,7 @@ class BatchProcessingTab(MiningTabBase):
         valid_pairs = self.queue_panel.get_valid_pairs()
 
         if not valid_pairs:
-            QMessageBox.information(self, "Empty Queue", "No valid series in queue to process")
+            QMessageBox.information(self, self.tr("Empty Queue"), self.tr("No valid series in queue to process"))
             return
 
         self._warn_incomplete_items()
@@ -460,7 +469,9 @@ class BatchProcessingTab(MiningTabBase):
         self._is_processing = True
         self.log_widget.clear_log()
         self._show_cancel_state()
-        self.presenter.show_info(f"Starting queue processing ({self.batch_queue.pending_count} series)...")
+        self.presenter.show_info(
+            tr_format(self.tr("Starting queue processing (%1 series)..."), self.batch_queue.pending_count)
+        )
 
         # Start worker (creates processors per-item with subtitle offset)
         self._start_queue_worker()
@@ -479,7 +490,7 @@ class BatchProcessingTab(MiningTabBase):
         """Hide action buttons and show cancel button."""
         self.preview_pairs_button.hide()
         self.process_pairs_button.hide()
-        self.cancel_button.setText("\u25a0 Cancel")
+        self.cancel_button.setText(self.tr("\u25a0 Cancel"))
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
         self.queue_panel.set_buttons_enabled(False)
@@ -498,9 +509,9 @@ class BatchProcessingTab(MiningTabBase):
         self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
             self.worker_thread.cancel()
-        self.cancel_button.setText("Cancelling...")
+        self.cancel_button.setText(self.tr("Cancelling..."))
         self.cancel_button.setEnabled(False)
-        self.current_progress_widget.set_status("Cancelling...")
+        self.current_progress_widget.set_status(self.tr("Cancelling..."))
 
     def _on_queue_started(self, total_items: int) -> None:
         """Called when queue processing starts.
@@ -509,7 +520,7 @@ class BatchProcessingTab(MiningTabBase):
             total_items: Total number of series to process
         """
         self.overall_progress_widget.set_determinate(total_items)
-        self.overall_progress_widget.set_progress(0, total_items, "Starting queue processing...")
+        self.overall_progress_widget.set_progress(0, total_items, self.tr("Starting queue processing..."))
 
     def _on_item_started(self, item_id: str, display_name: str) -> None:
         """Called when processing starts for an item.
@@ -522,7 +533,7 @@ class BatchProcessingTab(MiningTabBase):
             item_id: Item ID
             display_name: Display name of series
         """
-        self.presenter.show_info(f"Processing series: {display_name}")
+        self.presenter.show_info(tr_format(self.tr("Processing series: %1"), display_name))
         self.queue_panel.set_item_status(item_id, "processing")
 
     def _on_item_completed(self, item_id: str, cards_created: int) -> None:
@@ -539,8 +550,10 @@ class BatchProcessingTab(MiningTabBase):
         completed = self.batch_queue.completed_count
         total = self.batch_queue.total_items
 
-        self.overall_progress_widget.set_progress(completed, total, f"Completed: {completed}/{total}")
-        self.presenter.show_success(f"Created {cards_created} cards")
+        self.overall_progress_widget.set_progress(
+            completed, total, tr_format(self.tr("Completed: %1/%2"), completed, total)
+        )
+        self.presenter.show_success(tr_format(self.tr("Created %1 cards"), cards_created))
 
         # Update queue panel — address the completed row by id (T-30).
         self.queue_panel.set_processing_item_complete(item_id, cards_created)
@@ -594,10 +607,12 @@ class BatchProcessingTab(MiningTabBase):
 
         # Show summary
         failed = self.batch_queue.failed_count
-        summary = f"Processed {self.batch_queue.total_items} anime series\n" f"Total cards created: {total_cards}"
+        summary = tr_format(
+            self.tr("Processed %1 anime series\nTotal cards created: %2"), self.batch_queue.total_items, total_cards
+        )
         if failed > 0:
-            summary += f"\n{failed} series failed"
-        QMessageBox.information(self, "Queue Processing Complete", summary)
+            summary += tr_format(self.tr("\n%1 series failed"), failed)
+        QMessageBox.information(self, self.tr("Queue Processing Complete"), summary)
 
     def _retry_failed_items(self) -> None:
         """Retry failed items in the batch queue."""
@@ -606,7 +621,7 @@ class BatchProcessingTab(MiningTabBase):
 
         reset_count = self.batch_queue.reset_failed_for_retry()
         if reset_count == 0:
-            QMessageBox.information(self, "No Items to Retry", "No failed items eligible for retry.")
+            QMessageBox.information(self, self.tr("No Items to Retry"), self.tr("No failed items eligible for retry."))
             self.retry_button.setVisible(False)
             return
 
@@ -619,7 +634,7 @@ class BatchProcessingTab(MiningTabBase):
         self._is_processing = True
         self._show_cancel_state()
 
-        self.presenter.show_info(f"Retrying {reset_count} failed items...")
+        self.presenter.show_info(tr_format(self.tr("Retrying %1 failed items..."), reset_count))
         self._start_queue_worker()
 
     def _on_progress_start(self, total: int, description: str) -> None:
@@ -666,12 +681,12 @@ class BatchProcessingTab(MiningTabBase):
         # instead of presenting every finish as a success (Issue #51).
         total_cards = sum(r.cards_created for r in results)
         failed = sum(1 for r in results if not r.success)
-        summary = f"Processed {len(results)} episodes\nTotal cards created: {total_cards}"
+        summary = tr_format(self.tr("Processed %1 episodes\nTotal cards created: %2"), len(results), total_cards)
         if failed > 0:
-            summary += f"\n{failed} episode(s) failed - see log for details"
-            QMessageBox.warning(self, "Batch Processing Complete", summary)
+            summary += tr_format(self.tr("\n%1 episode(s) failed - see log for details"), failed)
+            QMessageBox.warning(self, self.tr("Batch Processing Complete"), summary)
         else:
-            QMessageBox.information(self, "Batch Processing Complete", summary)
+            QMessageBox.information(self, self.tr("Batch Processing Complete"), summary)
 
     def _on_processing_error(self, error_message: str) -> None:
         """Handle processing error signal.

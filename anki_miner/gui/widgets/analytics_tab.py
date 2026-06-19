@@ -66,7 +66,7 @@ class AnalyticsTab(QWidget):
         # Refresh button
         button_layout = QHBoxLayout()
         button_layout.addStretch()
-        self.refresh_button = ModernButton("Refresh", variant="secondary")
+        self.refresh_button = ModernButton(self.tr("Refresh"), variant="secondary")
         self.refresh_button.clicked.connect(lambda: self.refresh_data(force=True))
         button_layout.addWidget(self.refresh_button)
         layout.addLayout(button_layout)
@@ -92,16 +92,16 @@ class AnalyticsTab(QWidget):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        header = SectionHeader("Overview")
+        header = SectionHeader(self.tr("Overview"))
         layout.addWidget(header)
 
         grid = QGridLayout()
         grid.setSpacing(SPACING.sm)
 
-        self.card_total_cards = StatCard(value="0", label="Total Cards")
-        self.card_total_sessions = StatCard(value="0", label="Sessions")
-        self.card_total_series = StatCard(value="0", label="Series Mined")
-        self.card_avg_cards = StatCard(value="0", label="Avg Cards/Session")
+        self.card_total_cards = StatCard(value="0", label=self.tr("Total Cards"))
+        self.card_total_sessions = StatCard(value="0", label=self.tr("Sessions"))
+        self.card_total_series = StatCard(value="0", label=self.tr("Series Mined"))
+        self.card_avg_cards = StatCard(value="0", label=self.tr("Avg Cards/Session"))
 
         grid.addWidget(self.card_total_cards, 0, 0)
         grid.addWidget(self.card_total_sessions, 0, 1)
@@ -119,10 +119,10 @@ class AnalyticsTab(QWidget):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        header = SectionHeader("Recent Sessions")
+        header = SectionHeader(self.tr("Recent Sessions"))
         layout.addWidget(header)
 
-        self.sessions_empty_label = QLabel("No sessions yet. Process an episode to see your history here.")
+        self.sessions_empty_label = QLabel(self.tr("No sessions yet. Process an episode to see your history here."))
         self.sessions_empty_label.setObjectName("helper-text")
         self.sessions_empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.sessions_empty_label.setMinimumHeight(80)
@@ -130,7 +130,16 @@ class AnalyticsTab(QWidget):
 
         self.sessions_table = QTableWidget()
         self.sessions_table.setColumnCount(6)
-        self.sessions_table.setHorizontalHeaderLabels(["Date", "Series", "Episode", "Words", "New Words", "Cards"])
+        self.sessions_table.setHorizontalHeaderLabels(
+            [
+                self.tr("Date"),
+                self.tr("Series"),
+                self.tr("Episode"),
+                self.tr("Words"),
+                self.tr("New Words"),
+                self.tr("Cards"),
+            ]
+        )
         configure_table_header(self.sessions_table)
         self.sessions_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.sessions_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -152,18 +161,20 @@ class AnalyticsTab(QWidget):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        header = SectionHeader("Series Difficulty Ranking")
+        header = SectionHeader(self.tr("Series Difficulty Ranking"))
         layout.addWidget(header)
 
         explanation = QLabel(
-            "Difficulty is based on the ratio of unknown words. "
-            "Lower scores mean easier content for your current level."
+            self.tr(
+                "Difficulty is based on the ratio of unknown words. "
+                "Lower scores mean easier content for your current level."
+            )
         )
         explanation.setWordWrap(True)
         explanation.setObjectName("helper-text")
         layout.addWidget(explanation)
 
-        self.difficulty_empty_label = QLabel("Mine multiple series to see difficulty comparisons.")
+        self.difficulty_empty_label = QLabel(self.tr("Mine multiple series to see difficulty comparisons."))
         self.difficulty_empty_label.setObjectName("helper-text")
         self.difficulty_empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.difficulty_empty_label.setMinimumHeight(80)
@@ -171,7 +182,9 @@ class AnalyticsTab(QWidget):
 
         self.difficulty_table = QTableWidget()
         self.difficulty_table.setColumnCount(5)
-        self.difficulty_table.setHorizontalHeaderLabels(["Rank", "Series", "Avg Words", "Avg Unknown", "Difficulty"])
+        self.difficulty_table.setHorizontalHeaderLabels(
+            [self.tr("Rank"), self.tr("Series"), self.tr("Avg Words"), self.tr("Avg Unknown"), self.tr("Difficulty")]
+        )
         configure_table_header(self.difficulty_table)
         self.difficulty_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.difficulty_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -193,7 +206,7 @@ class AnalyticsTab(QWidget):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        header = SectionHeader("Milestones")
+        header = SectionHeader(self.tr("Milestones"))
         layout.addWidget(header)
 
         self.milestones_layout = QVBoxLayout()
