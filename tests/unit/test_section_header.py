@@ -16,7 +16,7 @@ from anki_miner.gui.widgets.enhanced.section_header import SectionHeader
 
 def test_section_header_has_right_margin(qapp, qtbot):
     """Right margin must be > 0 so the action button has breathing room."""
-    header = SectionHeader(title="Multi-Anime Queue", action_text="Add Series")
+    header = SectionHeader(title="Multi-Series Queue", action_text="Add Series")
     qtbot.addWidget(header)
     try:
         margins = header.layout().contentsMargins()

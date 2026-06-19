@@ -214,11 +214,11 @@ class BatchProcessingTab(MiningTabBase):
         layout.addWidget(header)
 
         # Shared label-column width so both folder rows line up.
-        label_w = field_label_width("Anime Folder:", "Subtitle Folder:")
+        label_w = field_label_width("Video Folder:", "Subtitle Folder:")
 
         # Video folder selector
         self.video_folder_selector = FileSelector(
-            label=self.tr("Anime Folder:"), file_mode=False, file_filter="", label_width=label_w
+            label=self.tr("Video Folder:"), file_mode=False, file_filter="", label_width=label_w
         )
         layout.addWidget(self.video_folder_selector)
 
@@ -295,7 +295,7 @@ class BatchProcessingTab(MiningTabBase):
         folders = self._get_validated_folders()
         if not folders:
             QMessageBox.warning(
-                self, self.tr("Invalid Folders"), self.tr("Please select valid anime and subtitle folders")
+                self, self.tr("Invalid Folders"), self.tr("Please select valid video and subtitle folders")
             )
             return
 
@@ -331,7 +331,7 @@ class BatchProcessingTab(MiningTabBase):
         folders = self._get_validated_folders()
         if not folders:
             QMessageBox.warning(
-                self, self.tr("Invalid Folders"), self.tr("Please select valid anime and subtitle folders")
+                self, self.tr("Invalid Folders"), self.tr("Please select valid video and subtitle folders")
             )
             return
 
@@ -608,7 +608,7 @@ class BatchProcessingTab(MiningTabBase):
         # Show summary
         failed = self.batch_queue.failed_count
         summary = tr_format(
-            self.tr("Processed %1 anime series\nTotal cards created: %2"), self.batch_queue.total_items, total_cards
+            self.tr("Processed %1 series\nTotal cards created: %2"), self.batch_queue.total_items, total_cards
         )
         if failed > 0:
             summary += tr_format(self.tr("\n%1 series failed"), failed)
