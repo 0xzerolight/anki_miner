@@ -30,4 +30,4 @@ class ModernButton(QPushButton):
         self.setMinimumHeight(36)
 
         # Set accessibility properties
-        self.setAccessibleName(text if text else "Button")
+        self.setAccessibleName(text if text else self.tr("Button"))

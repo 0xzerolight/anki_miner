@@ -12,7 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import NamedTuple
 
-from PyQt6.QtCore import QEventLoop, Qt
+from PyQt6.QtCore import QCoreApplication, QEventLoop, Qt
 from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config.paths import ANKI_MINER_HOME
@@ -20,6 +20,7 @@ from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
 from anki_miner.services.frequency import YomitanFreqImportResult
 from anki_miner.services.pitch_accent import YomitanPitchImportResult
+from anki_miner.utils.i18n import tr_format
 
 
 class YomitanCsvLabels(NamedTuple):
@@ -127,11 +128,17 @@ class ZipImportFlow:
 
         # Overwrite guard. atomic_write_csv only protects against mid-write
         # failures, not intentional clobbering of a user's existing CSV.
+        def _t(s: str) -> str:
+            return QCoreApplication.translate("ZipImportFlow", s)
+
         if dest_csv.exists() and dest_csv.stat().st_size > 0:
             reply = QMessageBox.question(
                 self._parent,
                 labels.overwrite_title,
-                f"{dest_csv} already exists and will be replaced.\n\nContinue with import?",
+                tr_format(
+                    _t("%1 already exists and will be replaced.\n\nContinue with import?"),
+                    dest_csv,
+                ),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
@@ -140,7 +147,7 @@ class ZipImportFlow:
                 # commit with the existing path unchanged.
                 return decline_fallback
 
-        dlg = QProgressDialog(labels.progress, "Cancel", 0, 100, self._parent)
+        dlg = QProgressDialog(labels.progress, _t("Cancel"), 0, 100, self._parent)
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
@@ -193,14 +200,22 @@ class ZipImportFlow:
             # don't re-trigger the import every time the user clicks Save.
             selector.set_path(str(dest_csv))
             skipped_note = (
-                f" (skipped {result.skipped_display_only:,} display-only entries)"
+                tr_format(
+                    _t(" (skipped %1 display-only entries)"),
+                    f"{result.skipped_display_only:,}",
+                )
                 if result.skipped_display_only
                 else ""
             )
             QMessageBox.information(
                 self._parent,
                 labels.success_title,
-                f"Imported {result.entry_count:,} entries from '{result.source_name}'.{skipped_note}",
+                tr_format(
+                    _t("Imported %1 entries from '%2'."),
+                    f"{result.entry_count:,}",
+                    result.source_name,
+                )
+                + skipped_note,
             )
 
         setattr(self, commit_slot_attr, _commit)

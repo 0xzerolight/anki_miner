@@ -12,7 +12,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
@@ -21,6 +21,7 @@ from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
 from anki_miner.services.dictionary.registry import DictionaryRegistry
+from anki_miner.utils.i18n import tr_format
 
 
 class DictionaryImportFlow:
@@ -85,17 +86,21 @@ class DictionaryImportFlow:
 
     def add_dict(self) -> None:
         """Prompt for a Yomitan zip and run the import worker."""
+
+        def _t(s: str) -> str:
+            return QCoreApplication.translate("DictionaryImportFlow", s)
+
         zip_path_str, _ = QFileDialog.getOpenFileName(
             self._parent,
-            "Choose Yomitan dictionary zip",
+            _t("Choose Yomitan dictionary zip"),
             resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
-            "Yomitan zip (*.zip)",
+            _t("Yomitan zip (*.zip)"),
         )
         if not zip_path_str:
             return
 
         dest_root = self._get_config().dicts_root
-        dlg = QProgressDialog("Importing dictionary…", "Cancel", 0, 100, self._parent)
+        dlg = QProgressDialog(_t("Importing dictionary…"), _t("Cancel"), 0, 100, self._parent)
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
@@ -112,8 +117,8 @@ class DictionaryImportFlow:
             dlg.close()
             QMessageBox.information(
                 self._parent,
-                "Dictionary added",
-                f"Imported {dict_id} ({meta.get('entry_count', 0):,} entries)",
+                _t("Dictionary added"),
+                tr_format(_t("Imported %1 (%2 entries)"), dict_id, f"{meta.get('entry_count', 0):,}"),
             )
             new_chain = self._with_dict_at_top(dict_id)
             # New dict folder on disk — invalidate the panel's cached registry
@@ -125,7 +130,7 @@ class DictionaryImportFlow:
 
         def on_failed(err: str) -> None:
             dlg.close()
-            QMessageBox.warning(self._parent, "Import Failed", err)
+            QMessageBox.warning(self._parent, _t("Import Failed"), err)
             self._set_import_buttons_enabled(True)
 
         worker.progress.connect(on_progress)
@@ -142,11 +147,15 @@ class DictionaryImportFlow:
         ``overwrite=True``. Picking a different zip would orphan the stale slot
         and silently create a new one — we abort with a warning instead.
         """
+
+        def _t(s: str) -> str:
+            return QCoreApplication.translate("DictionaryImportFlow", s)
+
         zip_path_str, _ = QFileDialog.getOpenFileName(
             self._parent,
-            "Choose Yomitan dictionary zip",
+            _t("Choose Yomitan dictionary zip"),
             resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
-            "Yomitan zip (*.zip)",
+            _t("Yomitan zip (*.zip)"),
         )
         if not zip_path_str:
             return
@@ -155,14 +164,18 @@ class DictionaryImportFlow:
         try:
             derived_id = derive_dict_id_from_zip(zip_path)
         except Exception as exc:  # noqa: BLE001 — surface every failure to GUI
-            QMessageBox.warning(self._parent, "Invalid Zip", str(exc))
+            QMessageBox.warning(self._parent, _t("Invalid Zip"), str(exc))
             return
 
         if derived_id != slot_id:
             QMessageBox.warning(
                 self._parent,
-                "Zip does not match slot",
-                f"This zip is for '{derived_id}', but you are re-importing " f"'{slot_id}'. Pick the matching zip.",
+                _t("Zip does not match slot"),
+                tr_format(
+                    _t("This zip is for '%1', but you are re-importing '%2'. Pick the matching zip."),
+                    derived_id,
+                    slot_id,
+                ),
             )
             return
 
@@ -173,13 +186,13 @@ class DictionaryImportFlow:
         if not self._panel.request_resource_release():
             QMessageBox.warning(
                 self._parent,
-                "Re-import Blocked",
-                "A mining run is in progress. Stop it before re-importing dictionaries.",
+                _t("Re-import Blocked"),
+                _t("A mining run is in progress. Stop it before re-importing dictionaries."),
             )
             return
 
         dest_root = self._get_config().dicts_root
-        dlg = QProgressDialog("Re-importing dictionary…", "Cancel", 0, 100, self._parent)
+        dlg = QProgressDialog(_t("Re-importing dictionary…"), _t("Cancel"), 0, 100, self._parent)
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
@@ -196,8 +209,8 @@ class DictionaryImportFlow:
             dlg.close()
             QMessageBox.information(
                 self._parent,
-                "Dictionary re-imported",
-                f"Re-imported {dict_id} ({meta.get('entry_count', 0):,} entries)",
+                _t("Dictionary re-imported"),
+                tr_format(_t("Re-imported %1 (%2 entries)"), dict_id, f"{meta.get('entry_count', 0):,}"),
             )
             # Refresh registry so the stale-flag warning clears on the row.
             current_chain = self._panel.get_chain()
@@ -210,7 +223,7 @@ class DictionaryImportFlow:
 
         def on_failed(err: str) -> None:
             dlg.close()
-            QMessageBox.warning(self._parent, "Re-import Failed", err)
+            QMessageBox.warning(self._parent, _t("Re-import Failed"), err)
             self._set_import_buttons_enabled(True)
 
         worker.progress.connect(on_progress)
@@ -221,12 +234,16 @@ class DictionaryImportFlow:
 
     def reimport_jmdict(self) -> None:
         """Reimport JMdict from the configured XML path."""
+
+        def _t(s: str) -> str:
+            return QCoreApplication.translate("DictionaryImportFlow", s)
+
         xml = self._get_config().jmdict_path
         if not xml.exists():
             QMessageBox.warning(
                 self._parent,
-                "JMdict not found",
-                f"No JMdict XML at {xml}. Download from EDRDG and place it there.",
+                _t("JMdict not found"),
+                tr_format(_t("No JMdict XML at %1. Download from EDRDG and place it there."), xml),
             )
             return
 
@@ -236,13 +253,13 @@ class DictionaryImportFlow:
         if not self._panel.request_resource_release():
             QMessageBox.warning(
                 self._parent,
-                "Re-import Blocked",
-                "A mining run is in progress. Stop it before re-importing dictionaries.",
+                _t("Re-import Blocked"),
+                _t("A mining run is in progress. Stop it before re-importing dictionaries."),
             )
             return
 
         dest_root = self._get_config().dicts_root
-        dlg = QProgressDialog("Reimporting JMdict…", "Cancel", 0, 100, self._parent)
+        dlg = QProgressDialog(_t("Reimporting JMdict…"), _t("Cancel"), 0, 100, self._parent)
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
@@ -268,7 +285,7 @@ class DictionaryImportFlow:
 
         def on_failed(err: str) -> None:
             dlg.close()
-            QMessageBox.warning(self._parent, "Reimport Failed", err)
+            QMessageBox.warning(self._parent, _t("Reimport Failed"), err)
             self._set_import_buttons_enabled(True)
 
         worker.progress.connect(on_progress)
@@ -325,16 +342,18 @@ class DictionaryImportFlow:
             else:
                 missing_legacy.append(meta.source_name)
 
+        def _t(s: str) -> str:
+            return QCoreApplication.translate("DictionaryImportFlow", s)
+
         if not jobs:
             if missing_legacy:
-                body = (
+                body = _t(
                     "No dictionaries with saved sources were found.\n\n"
-                    "Skipped (no saved source — right-click a dictionary "
-                    "row → Re-import… to seed):\n" + "\n".join(f"  • {n}" for n in missing_legacy)
-                )
+                    "Skipped (no saved source — right-click a dictionary row → Re-import… to seed):\n"
+                ) + "\n".join(f"  • {n}" for n in missing_legacy)
             else:
-                body = "No dictionaries in the chain."
-            QMessageBox.information(self._parent, "Nothing to reimport", body)
+                body = _t("No dictionaries in the chain.")
+            QMessageBox.information(self._parent, _t("Nothing to reimport"), body)
             return
 
         # Drop sqlite handles before any worker touches the dict folders.
@@ -344,12 +363,12 @@ class DictionaryImportFlow:
         if not self._panel.request_resource_release():
             QMessageBox.warning(
                 self._parent,
-                "Re-import Blocked",
-                "A mining run is in progress. Stop it before re-importing dictionaries.",
+                _t("Re-import Blocked"),
+                _t("A mining run is in progress. Stop it before re-importing dictionaries."),
             )
             return
 
-        dlg = QProgressDialog("Reimporting dictionaries…", "Cancel", 0, 100, self._parent)
+        dlg = QProgressDialog(_t("Reimporting dictionaries…"), _t("Cancel"), 0, 100, self._parent)
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
@@ -380,24 +399,24 @@ class DictionaryImportFlow:
 
             lines: list[str] = []
             if reimported:
-                lines.append(f"Reimported {len(reimported)} dictionar" f"{'y' if len(reimported) == 1 else 'ies'}:")
+                lines.append(tr_format(_t("Reimported %1 dictionary/dictionaries:"), len(reimported)))
                 lines.extend(f"  • {n}" for n in reimported)
             if missing_legacy:
                 if lines:
                     lines.append("")
-                lines.append("Skipped (no saved source — right-click a " "dictionary row → Re-import… to seed):")
+                lines.append(_t("Skipped (no saved source — right-click a dictionary row → Re-import… to seed):"))
                 lines.extend(f"  • {n}" for n in missing_legacy)
             if errors:
                 if lines:
                     lines.append("")
-                lines.append("Failed:")
+                lines.append(_t("Failed:"))
                 lines.extend(f"  • {name}: {msg}" for name, msg in errors)
             if state["cancelled"]:
                 if lines:
                     lines.append("")
-                lines.append("Cancelled before remaining dictionaries.")
+                lines.append(_t("Cancelled before remaining dictionaries."))
 
-            QMessageBox.information(self._parent, "Reimport All", "\n".join(lines) or "Done.")
+            QMessageBox.information(self._parent, _t("Reimport All"), "\n".join(lines) or _t("Done."))
 
         def launch_next() -> None:
             idx = state["index"]
@@ -407,7 +426,7 @@ class DictionaryImportFlow:
                 return
 
             kind, dict_id, display, source_path = jobs[idx]
-            dlg.setLabelText(f"Dictionary {idx + 1} of {len(jobs)}: {display}")
+            dlg.setLabelText(tr_format(_t("Dictionary %1 of %2: %3"), idx + 1, len(jobs), display))
             dlg.setMaximum(100)
             dlg.setValue(0)
 
@@ -476,22 +495,26 @@ class DictionaryImportFlow:
         panel_config = replace(self._get_config(), dictionary_chain=self._panel.get_chain())
         orphans = registry.unlisted(panel_config)
 
+        def _t(s: str) -> str:
+            return QCoreApplication.translate("DictionaryImportFlow", s)
+
         if not orphans:
             QMessageBox.information(
                 self._parent,
-                "Nothing to restore",
-                "All on-disk dictionaries are already listed.",
+                _t("Nothing to restore"),
+                _t("All on-disk dictionaries are already listed."),
             )
             return
 
         body = (
-            "Found dictionaries on disk that aren't in your list:\n\n"
+            _t("Found dictionaries on disk that aren't in your list:\n\n")
             + "\n".join(f"  • {m.source_name}" for m in orphans)
-            + "\n\nAdd them to the dictionary list?"
+            + "\n\n"
+            + _t("Add them to the dictionary list?")
         )
         reply = QMessageBox.question(
             self._parent,
-            "Restore from Disk",
+            _t("Restore from Disk"),
             body,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,

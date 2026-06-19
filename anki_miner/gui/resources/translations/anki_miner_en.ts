@@ -142,6 +142,12 @@
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>AnkiProbeController</name>
+    <message>
+        <source>Add Deck</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AnkiSettingsPanel</name>
     <message>
         <source>AnkiConnect URL</source>
@@ -559,6 +565,16 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Apply</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>AudiobookQueueItemWidget</name>
+    <message>
+        <source>%1 cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove from queue</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -1170,6 +1186,12 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>EnhancedDialog</name>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>EpisodeProcessor</name>
     <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
@@ -1403,6 +1425,40 @@ The dictionary was not removed.</source>
     <message>
         <source>Failed to export:
 %1</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>FileSelector</name>
+    <message>
+        <source>Select file...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select folder...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Browse...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No file selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No folder selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File not found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder not found</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -1680,6 +1736,24 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>HeaderWidget</name>
+    <message>
+        <source>Turn Immersion Into Vocabulary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Theme:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All themes…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Active theme. Top-right shows favorites; pick 'All themes…' to manage them. (Ctrl+T cycles favorites). Installed: %1</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Manage Known Words</source>
@@ -1746,6 +1820,32 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Restart Anki Miner to apply the new language.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>LogWidget</name>
+    <message>
+        <source>Activity Log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy all log content to clipboard</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Clear all log messages</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copied!</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -1989,6 +2089,12 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>ModernButton</name>
+    <message>
+        <source>Button</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>PairPreviewDialog</name>
     <message>
         <source>Preview File Pairs - %1 pairs found</source>
@@ -2040,6 +2146,104 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Proceed with Processing</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>PlaylistAddController</name>
+    <message>
+        <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A playlist is already being added — wait for it to finish.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resolving playlist…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Playlist resolve failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Playlist add cancelled.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped %1 already-queued video(s).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No new videos to add from playlist '%1'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Added %1 videos from playlist '%2'.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ProgressWidget</name>
+    <message>
+        <source>Ready</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Processing...</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>QueueItemWidget</name>
+    <message>
+        <source>Edit</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Edit anime and subtitle folders</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove from queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pending</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Processing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No anime folder selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitle folder selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> • Offset: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 episodes • %2 cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 episodes • Ready to process</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not configured</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2156,26 +2360,6 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Resources Installed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Resources Partially Installed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Resource Download Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No resources were processed.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Resources are downloaded from their original sources; their licenses apply.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2583,6 +2767,82 @@ Details: %2</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>StatusBarWidget</name>
+    <message>
+        <source>Ready</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>0 cards this session</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Click to view detailed system validation</source>
+        <translation type="unfinished" />
+    </message>
+    <message numerus="yes">
+        <source>%n card(s) this session</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
+    <message>
+        <source>AnkiConnect is connected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>AnkiConnect is not connected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>ffmpeg is available</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>ffmpeg is not available</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>SubtitlePlayerWidget</name>
+    <message>
+        <source>This video uses AV1, which your system can't decode for in-app preview.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Play</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pause</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video error: %1</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>SubtitleViewer</name>
+    <message>
+        <source>Subtitle Timing Viewer</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Offset:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Positive = subtitles later, Negative = subtitles earlier</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply Offset</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ThemesPanel</name>
     <message>
         <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
@@ -2642,6 +2902,36 @@ Details: %2</source>
     </message>
     <message>
         <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>UpdateBanner</name>
+    <message>
+        <source>Skip this version</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner v%1 is available!</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>View release</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download .deb</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download AppImage</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download installer</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download archive</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2835,6 +3125,22 @@ Details: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>1-2 characters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>3-4 characters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>5-6 characters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>7+ characters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>0 words</source>
         <translation type="unfinished" />
     </message>
@@ -2864,6 +3170,40 @@ Details: %2</source>
     </message>
     <message>
         <source>Span: %1</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>YouTubeQueueItemWidget</name>
+    <message>
+        <source>Manual JA subs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto JA subs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 (probing...)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>(probing...)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Probe failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>unknown error</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove from queue</source>
         <translation type="unfinished" />
     </message>
 </context><context>

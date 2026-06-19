@@ -59,7 +59,7 @@ class LogWidget(QWidget):
         header_layout.setContentsMargins(SPACING.sm, SPACING.xs, SPACING.sm, SPACING.xs)
 
         # Title
-        title_label = QLabel("Activity Log")
+        title_label = QLabel(self.tr("Activity Log"))
         title_font = QFont()
         title_font.setWeight(QFont.Weight.Bold)
         title_label.setFont(title_font)
@@ -68,17 +68,17 @@ class LogWidget(QWidget):
         header_layout.addStretch()
 
         # Copy button
-        self.copy_button = QPushButton("Copy")
+        self.copy_button = QPushButton(self.tr("Copy"))
         self.copy_button.setObjectName("ghost")
         self.copy_button.clicked.connect(self._on_copy_clicked)
-        self.copy_button.setToolTip("Copy all log content to clipboard")
+        self.copy_button.setToolTip(self.tr("Copy all log content to clipboard"))
         header_layout.addWidget(self.copy_button)
 
         # Clear button
-        self.clear_button = QPushButton("Clear")
+        self.clear_button = QPushButton(self.tr("Clear"))
         self.clear_button.setObjectName("ghost")
         self.clear_button.clicked.connect(self._on_clear_clicked)
-        self.clear_button.setToolTip("Clear all log messages")
+        self.clear_button.setToolTip(self.tr("Clear all log messages"))
         header_layout.addWidget(self.clear_button)
 
         header.setLayout(header_layout)
@@ -214,12 +214,12 @@ class LogWidget(QWidget):
         clipboard.setText(self.text_edit.toPlainText())
 
         # Provide feedback (could show a temporary "Copied!" message)
-        self.copy_button.setText("Copied!")
+        self.copy_button.setText(self.tr("Copied!"))
 
         # Reset button text after a delay
         from PyQt6.QtCore import QTimer
 
-        QTimer.singleShot(2000, lambda: self.copy_button.setText("Copy"))
+        QTimer.singleShot(2000, lambda: self.copy_button.setText(self.tr("Copy")))
 
     def _on_clear_clicked(self) -> None:
         """Handle clear button click."""

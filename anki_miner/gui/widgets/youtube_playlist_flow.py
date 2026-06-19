@@ -34,6 +34,7 @@ from dataclasses import dataclass
 from typing import Literal
 from urllib.parse import urlparse
 
+from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from anki_miner.config import AnkiMinerConfig
@@ -45,6 +46,7 @@ from anki_miner.gui.workers.youtube_probe_worker import YouTubeProbeWorker
 from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url
 
 # Bare 11-char YouTube video id (same alphabet as the fetcher's _VIDEO_ID_RE).
@@ -212,13 +214,23 @@ class PlaylistAddController:
         # Reject option-leading / non-URL inputs before they reach yt-dlp as
         # an argument. Leave the field populated so the user can fix it. T-34.
         if not _is_acceptable_add_input(url):
-            self._callbacks.log_error("Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.")
+            self._callbacks.log_error(
+                QCoreApplication.translate(
+                    "PlaylistAddController",
+                    "Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.",
+                )
+            )
             return
 
         url_info = classify_youtube_url(url)
         if url_info.kind in ("playlist", "video_in_playlist"):
             if self._playlist_resolve_worker is not None or self._playlist_probe_worker is not None:
-                self._callbacks.log_warning("A playlist is already being added — wait for it to finish.")
+                self._callbacks.log_warning(
+                    QCoreApplication.translate(
+                        "PlaylistAddController",
+                        "A playlist is already being added — wait for it to finish.",
+                    )
+                )
                 return
             self._begin_playlist_resolve(url, url_info)
             return
@@ -341,7 +353,7 @@ class PlaylistAddController:
 
     def _begin_playlist_resolve(self, url: str, url_info: YouTubeUrlInfo) -> None:
         """Spawn a flat-playlist resolve worker for *url*."""
-        self._callbacks.log_info("Resolving playlist…")
+        self._callbacks.log_info(QCoreApplication.translate("PlaylistAddController", "Resolving playlist…"))
         self._callbacks.clear_url_input()
 
         worker = YouTubePlaylistResolveWorker(
@@ -361,7 +373,12 @@ class PlaylistAddController:
 
     def _on_playlist_resolve_error(self, message: str) -> None:
         """Resolve failed — log it; the finished slot handles state cleanup."""
-        self._callbacks.log_error(f"Playlist resolve failed: {message}")
+        self._callbacks.log_error(
+            tr_format(
+                QCoreApplication.translate("PlaylistAddController", "Playlist resolve failed: %1"),
+                message,
+            )
+        )
 
     def _on_playlist_resolve_finished(self) -> None:
         """Drop the resolve handle once its QThread emits finished."""
@@ -394,7 +411,7 @@ class PlaylistAddController:
         elif choice == "playlist":
             self._expand_playlist(entries, pl.title)
         else:
-            self._callbacks.log_info("Playlist add cancelled.")
+            self._callbacks.log_info(QCoreApplication.translate("PlaylistAddController", "Playlist add cancelled."))
 
     def _ask_playlist_choice(
         self,
@@ -413,31 +430,45 @@ class PlaylistAddController:
         if url_info.kind == "playlist" and not over_cap:
             return "playlist"
 
+        def _t(s: str) -> str:
+            return QCoreApplication.translate("PlaylistAddController", s)
+
         if pl.total_count is not None:
             total_text = str(pl.total_count)
         elif over_cap:
-            total_text = f"more than {cap}"
+            total_text = tr_format(_t("more than %1"), cap)
         else:
             total_text = str(len(pl.entries))
 
         box = QMessageBox(self._parent)
         box.setIcon(QMessageBox.Icon.Question)
-        box.setWindowTitle("Add Playlist")
+        box.setWindowTitle(_t("Add Playlist"))
 
         single_button = None
         if url_info.kind == "video_in_playlist":
             box.setText(
-                f"This video is part of the playlist '{pl.title}' ({total_text} videos). "
-                "Add just this video or all of them?"
+                tr_format(
+                    _t("This video is part of the playlist '%1' (%2 videos). Add just this video or all of them?"),
+                    pl.title,
+                    total_text,
+                )
             )
-            single_button = box.addButton("Just this video", QMessageBox.ButtonRole.ActionRole)
-            playlist_label = f"Add first {cap} of {total_text}" if over_cap else f"Add all {total_text}"
+            single_button = box.addButton(_t("Just this video"), QMessageBox.ButtonRole.ActionRole)
+            playlist_label = (
+                tr_format(_t("Add first %1 of %2"), cap, total_text)
+                if over_cap
+                else tr_format(_t("Add all %1"), total_text)
+            )
         else:
             box.setText(
-                f"Playlist '{pl.title}' has {total_text} videos — more than the "
-                f"configured maximum ({cap}). Add the first {cap}?"
+                tr_format(
+                    _t("Playlist '%1' has %2 videos — more than the configured maximum (%3). Add the first %3?"),
+                    pl.title,
+                    total_text,
+                    cap,
+                )
             )
-            playlist_label = f"Add first {cap}"
+            playlist_label = tr_format(_t("Add first %1"), cap)
 
         playlist_button = box.addButton(playlist_label, QMessageBox.ButtonRole.AcceptRole)
         box.addButton(QMessageBox.StandardButton.Cancel)
@@ -469,9 +500,19 @@ class PlaylistAddController:
             kept_entries.append(entry)
 
         if skipped:
-            self._callbacks.log_warning(f"Skipped {skipped} already-queued video(s).")
+            self._callbacks.log_warning(
+                tr_format(
+                    QCoreApplication.translate("PlaylistAddController", "Skipped %1 already-queued video(s)."),
+                    skipped,
+                )
+            )
         if not kept_entries:
-            self._callbacks.log_info(f"No new videos to add from playlist '{playlist_title}'.")
+            self._callbacks.log_info(
+                tr_format(
+                    QCoreApplication.translate("PlaylistAddController", "No new videos to add from playlist '%1'."),
+                    playlist_title,
+                )
+            )
             return
 
         kept_items: list[YouTubeQueueItem] = []
@@ -493,7 +534,13 @@ class PlaylistAddController:
         self._playlist_probe_worker = worker
         worker.start()
 
-        self._callbacks.log_info(f"Added {len(kept_items)} videos from playlist '{playlist_title}'.")
+        self._callbacks.log_info(
+            tr_format(
+                QCoreApplication.translate("PlaylistAddController", "Added %1 videos from playlist '%2'."),
+                len(kept_items),
+                playlist_title,
+            )
+        )
         self._callbacks.recompute_buttons()
 
     def _playlist_item_at(self, idx: int) -> YouTubeQueueItem | None:

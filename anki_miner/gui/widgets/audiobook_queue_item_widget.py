@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
 from anki_miner.models.audiobook_queue import AudiobookItemStatus, AudiobookQueueItem
+from anki_miner.utils.i18n import tr_format
 
 # ---------------------------------------------------------------------------
 # Status → rendering matrix
@@ -90,12 +91,11 @@ class AudiobookQueueItemWidget(QFrame):
     # Private helpers
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _resolve_detail(item: AudiobookQueueItem) -> str:
+    def _resolve_detail(self, item: AudiobookQueueItem) -> str:
         """Return the second-line text for the given item state."""
         status = item.status
         if status == AudiobookItemStatus.COMPLETED:
-            return f"{item.cards_created} cards created"
+            return tr_format(self.tr("%1 cards created"), item.cards_created)
         if status == AudiobookItemStatus.ERROR:
             return item.error_message or ""
         return item.subtitle_file.name
@@ -136,7 +136,7 @@ class AudiobookQueueItemWidget(QFrame):
         self.remove_button = QPushButton("×")
         self.remove_button.setObjectName("danger")
         self.remove_button.setMaximumWidth(SPACING.xl)
-        self.remove_button.setToolTip("Remove from queue")
+        self.remove_button.setToolTip(self.tr("Remove from queue"))
         self.remove_button.clicked.connect(self.removed.emit)
         top_row.addWidget(self.remove_button)
 

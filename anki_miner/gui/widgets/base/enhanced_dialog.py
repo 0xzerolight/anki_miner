@@ -175,16 +175,16 @@ class EnhancedDialog(QDialog):
 
         return button
 
-    def add_close_button(self, text: str = "Close") -> QPushButton:
+    def add_close_button(self, text: str = "") -> QPushButton:
         """Add a close button that closes the dialog.
 
         Args:
-            text: Button text
+            text: Button text (defaults to translated "Close")
 
         Returns:
             The created button
         """
-        return self.add_button(text, "primary", self.accept)
+        return self.add_button(text or self.tr("Close"), "primary", self.accept)
 
     def keyPressEvent(self, event) -> None:
         """Handle key press events."""

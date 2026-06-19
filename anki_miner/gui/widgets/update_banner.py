@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton
 
 from anki_miner.services.update_checker import UpdateInfo
+from anki_miner.utils.i18n import tr_format
 
 
 class UpdateBanner(QFrame):
@@ -48,7 +49,7 @@ class UpdateBanner(QFrame):
         self._download_btn.clicked.connect(self._on_download)
         layout.addWidget(self._download_btn)
 
-        self._skip_btn = QPushButton("Skip this version")
+        self._skip_btn = QPushButton(self.tr("Skip this version"))
         self._skip_btn.setObjectName("skipBtn")
         self._skip_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._skip_btn.clicked.connect(self._on_skip)
@@ -64,26 +65,24 @@ class UpdateBanner(QFrame):
 
     # ------------------------------------------------------------------ helpers
 
-    @staticmethod
-    def _format_label(info: UpdateInfo) -> str:
-        return f"Anki Miner v{info.version} is available!"
+    def _format_label(self, info: UpdateInfo) -> str:
+        return tr_format(self.tr("Anki Miner v%1 is available!"), info.version)
 
-    @staticmethod
-    def _download_label(info: UpdateInfo) -> str:
+    def _download_label(self, info: UpdateInfo) -> str:
         """Map the asset URL extension to a user-facing button label."""
         url = info.asset_url
         if url is None:
-            return "View release"
+            return self.tr("View release")
         lowered = url.lower()
         if lowered.endswith(".deb"):
-            return "Download .deb"
+            return self.tr("Download .deb")
         if lowered.endswith(".appimage"):
-            return "Download AppImage"
+            return self.tr("Download AppImage")
         if lowered.endswith("setup.exe"):
-            return "Download installer"
+            return self.tr("Download installer")
         if lowered.endswith(".tar.gz"):
-            return "Download archive"
-        return "View release"
+            return self.tr("Download archive")
+        return self.tr("View release")
 
     # ------------------------------------------------------------------ public
 
