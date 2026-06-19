@@ -2,12 +2,12 @@
 
 Verifies that the QCoreApplication.translate() wrappers in episode_processor.py
 render correctly under the default English translator (no .qm loaded), and that
-the _arg() placeholder helper substitutes correctly.
+the tr_format() placeholder helper substitutes correctly.
 """
 
 from PyQt6.QtCore import QCoreApplication
 
-from anki_miner.orchestration.episode_processor import _arg
+from anki_miner.utils.i18n import tr_format
 
 
 def test_unique_words_plural_renders(qapp):
@@ -17,8 +17,8 @@ def test_unique_words_plural_renders(qapp):
 
 
 def test_step1_subtitle_arg_renders(qapp):
-    """%1 in Step 1/5 message is substituted via _arg()."""
-    msg = _arg(
+    """%1 in Step 1/5 message is substituted via tr_format()."""
+    msg = tr_format(
         QCoreApplication.translate("EpisodeProcessor", "Step 1/5 — Parsing subtitles: %1"),
         "episode01.ass",
     )
@@ -27,7 +27,7 @@ def test_step1_subtitle_arg_renders(qapp):
 
 def test_known_word_db_synced_multi_arg_renders(qapp):
     """%1 and %2 in the known-word-DB sync message are both replaced."""
-    msg = _arg(
+    msg = tr_format(
         QCoreApplication.translate("EpisodeProcessor", "Known word DB synced: %1 new words (%2 total)"),
         5,
         200,
@@ -37,7 +37,7 @@ def test_known_word_db_synced_multi_arg_renders(qapp):
 
 def test_comprehension_float_arg_renders(qapp):
     """Formatted float is passed as string arg for the comprehension message."""
-    msg = _arg(
+    msg = tr_format(
         QCoreApplication.translate("EpisodeProcessor", "Comprehension: %1% of words already known"),
         f"{87.3:.1f}",
     )
@@ -52,13 +52,13 @@ def test_successfully_created_plural_renders(qapp):
 
 def test_error_arg_renders(qapp):
     """Error: %1 renders with the exception string."""
-    msg = _arg(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), "AnkiConnect timeout")
+    msg = tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), "AnkiConnect timeout")
     assert msg == "Error: AnkiConnect timeout"
 
 
 def test_i_plus_one_three_arg_renders(qapp):
     """Three-placeholder i+1 filter message renders all substitutions."""
-    msg = _arg(
+    msg = tr_format(
         QCoreApplication.translate("EpisodeProcessor", "i+1 filter: kept %1/%2 words (%3%)"),
         8,
         15,
