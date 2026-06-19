@@ -140,6 +140,17 @@ class TestDownloadToTemp:
             download_to_temp(URL, dest_dir=tmp_path)
         assert _part_files(tmp_path) == []
 
+    def test_content_length_mismatch_raises_and_cleans_up(self, tmp_path):
+        # Server advertises 100 bytes but the body is short (5). Even if requests
+        # didn't raise, the explicit byte-count check must reject the partial.
+        resp = _response(content=b"short", headers={"Content-Length": "100"})
+        with (
+            patch.object(resource_downloader._session, "get", return_value=resp),
+            pytest.raises(SetupError, match="truncated"),
+        ):
+            download_to_temp(URL, dest_dir=tmp_path)
+        assert _part_files(tmp_path) == []
+
     def test_browser_user_agent_set_on_session(self):
         ua = resource_downloader._session.headers["User-Agent"]
         assert not ua.lower().startswith("python-requests")
