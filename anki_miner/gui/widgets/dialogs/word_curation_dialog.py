@@ -34,6 +34,7 @@ from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.models import TokenizedWord
+from anki_miner.utils.i18n import tr_format
 
 
 @dataclass(frozen=True)
@@ -140,7 +141,7 @@ class WordCurationDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
-        self.setWindowTitle("Word Curation")
+        self.setWindowTitle(self.tr("Word Curation"))
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
         if self._show_player or self._show_dict:
@@ -153,7 +154,7 @@ class WordCurationDialog(QDialog):
         layout.setContentsMargins(SPACING.lg, SPACING.lg, SPACING.lg, SPACING.lg)
 
         # Header (outside the splitter — always visible)
-        header = QLabel("Select words for card creation")
+        header = QLabel(self.tr("Select words for card creation"))
         header.setFont(self._make_font(16, QFont.Weight.Bold))
         layout.addWidget(header)
 
@@ -178,12 +179,12 @@ class WordCurationDialog(QDialog):
         footer_layout = QHBoxLayout()
         footer_layout.addStretch()
 
-        cancel_button = ModernButton("Cancel", variant="secondary")
+        cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         cancel_button.clicked.connect(self.reject)
         cancel_button.setMinimumWidth(100)
         footer_layout.addWidget(cancel_button)
 
-        confirm_button = ModernButton("Confirm Selection", variant="primary")
+        confirm_button = ModernButton(self.tr("Confirm Selection"), variant="primary")
         confirm_button.clicked.connect(self.accept)
         confirm_button.setMinimumWidth(140)
         footer_layout.addWidget(confirm_button)
@@ -203,27 +204,27 @@ class WordCurationDialog(QDialog):
         controls_layout = QHBoxLayout()
         controls_layout.setSpacing(SPACING.sm)
 
-        search_label = QLabel("Search:")
+        search_label = QLabel(self.tr("Search:"))
         controls_layout.addWidget(search_label)
 
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Filter by any field...")
+        self.search_input.setPlaceholderText(self.tr("Filter by any field..."))
         self.search_input.textChanged.connect(self._on_search_changed)
         self.search_input.setMinimumWidth(200)
         controls_layout.addWidget(self.search_input)
 
         controls_layout.addSpacing(16)
 
-        _bulk_tooltip = (
+        _bulk_tooltip = self.tr(
             "Acts on highlighted rows when 2 or more are selected "
             "(Ctrl+Click or Shift+Click to select). Otherwise acts on all visible rows."
         )
-        self.select_all_button = ModernButton("Select All", variant="secondary")
+        self.select_all_button = ModernButton(self.tr("Select All"), variant="secondary")
         self.select_all_button.clicked.connect(self._select_all)
         self.select_all_button.setToolTip(_bulk_tooltip)
         controls_layout.addWidget(self.select_all_button)
 
-        self.deselect_all_button = ModernButton("Deselect All", variant="secondary")
+        self.deselect_all_button = ModernButton(self.tr("Deselect All"), variant="secondary")
         self.deselect_all_button.clicked.connect(self._deselect_all)
         self.deselect_all_button.setToolTip(_bulk_tooltip)
         controls_layout.addWidget(self.deselect_all_button)
@@ -231,12 +232,14 @@ class WordCurationDialog(QDialog):
         # Add to local known/ignore list (Issue #42). Acts on the highlighted
         # rows, or the current row when nothing is highlighted — deliberately NOT
         # all visible rows, to avoid ignoring the whole list by accident.
-        self.add_known_button = ModernButton("Add to Known Words", variant="secondary")
+        self.add_known_button = ModernButton(self.tr("Add to Known Words"), variant="secondary")
         self.add_known_button.clicked.connect(self._on_add_to_known)
         self.add_known_button.setToolTip(
-            "Permanently ignore the highlighted row(s) — adds them to your local "
-            "Known Words list so they are never mined again. Falls back to the "
-            "current row when none are highlighted."
+            self.tr(
+                "Permanently ignore the highlighted row(s) — adds them to your local "
+                "Known Words list so they are never mined again. Falls back to the "
+                "current row when none are highlighted."
+            )
         )
         controls_layout.addWidget(self.add_known_button)
 
@@ -252,7 +255,14 @@ class WordCurationDialog(QDialog):
         self.table = QTableWidget()
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels(
-            ["", "Word (mined)", "Form in subtitle", "Reading", "Sentence", "Freq. Rank"]
+            [
+                "",
+                self.tr("Word (mined)"),
+                self.tr("Form in subtitle"),
+                self.tr("Reading"),
+                self.tr("Sentence"),
+                self.tr("Freq. Rank"),
+            ]
         )
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -585,8 +595,8 @@ class WordCurationDialog(QDialog):
         word = self._words[original_index]
         menu = QMenu(self)
 
-        copy_lemma_action = menu.addAction("Copy lemma")
-        copy_sentence_action = menu.addAction("Copy sentence")
+        copy_lemma_action = menu.addAction(self.tr("Copy lemma"))
+        copy_sentence_action = menu.addAction(self.tr("Copy sentence"))
 
         vp = self.table.viewport()
         if vp is None:
@@ -758,7 +768,7 @@ class WordCurationDialog(QDialog):
             if (item := self.table.item(row, 0)) and item.checkState() == Qt.CheckState.Checked
         )
         total = len(self._words)
-        self.word_count_label.setText(f"{selected} of {total} words selected")
+        self.word_count_label.setText(tr_format(self.tr("%1 of %2 words selected"), selected, total))
 
     def get_selected_words(self) -> list[TokenizedWord]:
         """Return the list of checked words."""

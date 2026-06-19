@@ -536,6 +536,32 @@ The audio pack was not removed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>AudioTracksDialog</name>
+    <message>
+        <source>Audio Track</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No audio tracks found in this file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This file has only one audio track.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto-detect (currently: Track %1 — %2)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto-detect (no Japanese track found — will use first track)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AudiobookTab</name>
     <message>
         <source>Audiobook queue</source>
@@ -1304,6 +1330,82 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>ExportDialog</name>
+    <message>
+        <source>Export Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Format</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>CSV (.csv)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>TSV (.tsv)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Vocabulary List (.txt)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>List format:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Plain (one word per line)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>, %1 with definitions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>, %1 with media</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select output file...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Browse...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Complete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Successfully exported %1 words to:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed to export:
+%1</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>FilteringSettingsPanel</name>
     <message>
         <source>Word Frequency</source>
@@ -1578,6 +1680,61 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>KnownWordsManagerDialog</name>
+    <message>
+        <source>Manage Known Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Local Known Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words you added from the Word Curator. These are ignored on every mining run, kept when you rebuild the cache, and exportable for re-import into jiten.moe.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Filter…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove Selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset User List</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 user word(s) · %2 cached from Anki</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Known Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Complete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exported %1 word(s) to:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>LanguagePanel</name>
     <message>
         <source>Choose the language for the app interface.</source>
@@ -1832,6 +1989,60 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>PairPreviewDialog</name>
+    <message>
+        <source>Preview File Pairs - %1 pairs found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File Pair Preview: %1 pairs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 video/subtitle pairs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Total size: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video: %1 • Subtitles: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paired Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video File</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video Size</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle File</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle Size</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pairs process in order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Proceed with Processing</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>QueuePanel</name>
     <message>
         <source>Multi-Anime Queue</source>
@@ -1919,6 +2130,130 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>%1 series - %2 episodes - Ready to process</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ResourceDownloadDialog</name>
+    <message>
+        <source>Preparing download…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading Recommended Resources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>done</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources Installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources Partially Installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resource Download Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No resources were processed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources are downloaded from their original sources; their licenses apply.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ResultsDialog</name>
+    <message>
+        <source>Processing Results</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Success!</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Processing completed successfully</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Completed with Errors</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some issues occurred during processing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words Discovered</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards Created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Processing Time</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Processing Rate</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Comprehension</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Errors Occurred</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Undo (%1 cards)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Confirm Undo</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete %1 cards from Anki? This cannot be undone.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Undone (%1 cards deleted)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Undo Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed to delete cards. Check Anki is running.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2307,6 +2642,228 @@ Details: %2</source>
     </message>
     <message>
         <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>WelcomeDialog</name>
+    <message>
+        <source>Anki Miner works best with a frequency list, pitch accent data, and a dictionary. Download the recommended set now?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Welcome to Anki Miner</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Let's get you set up with the recommended resources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>What are these resources?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip — set up manually</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download recommended resources</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>WordCurationDialog</name>
+    <message>
+        <source>Word Curation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select words for card creation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Confirm Selection</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Search:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Filter by any field...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Acts on highlighted rows when 2 or more are selected (Ctrl+Click or Shift+Click to select). Otherwise acts on all visible rows.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deselect All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add to Known Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Permanently ignore the highlighted row(s) — adds them to your local Known Words list so they are never mined again. Falls back to the current row when none are highlighted.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word (mined)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Form in subtitle</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Freq. Rank</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy lemma</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 of %2 words selected</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>WordPreviewDialog</name>
+    <message>
+        <source>Word Preview - %1 words found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word Preview: %1 words found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Search:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Filter by any field...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Group by:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None (Flat List)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Time Range</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Alphabetical</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word Length</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Discovered Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Surface</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lemma</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Time</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Showing %1 of %2 words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start: %1s, End: %2s, Duration: %3s</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 (%2 words)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>0 words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>0 unique</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Avg: 0 chars</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Span: 00:00</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 unique</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Avg: %1 chars</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Span: %1</source>
         <translation type="unfinished" />
     </message>
 </context><context>

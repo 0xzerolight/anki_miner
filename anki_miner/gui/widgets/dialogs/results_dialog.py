@@ -10,6 +10,7 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import StatCard
 from anki_miner.models import ProcessingResult
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class ResultsDialog(EnhancedDialog):
             parent: Optional parent widget
             undo_callback: Optional callback that accepts card IDs and returns deleted count
         """
-        super().__init__(parent, title="Processing Results")
+        super().__init__(parent, title=self.tr("Processing Results"))
         self.processing_result = result
         self._undo_callback = undo_callback
         self.undo_completed = False
@@ -53,9 +54,11 @@ class ResultsDialog(EnhancedDialog):
 
         # Set header based on result
         if self.processing_result.success:
-            self.set_header("complete", "Success!", "Processing completed successfully")
+            self.set_header("complete", self.tr("Success!"), self.tr("Processing completed successfully"))
         else:
-            self.set_header("error", "Completed with Errors", "Some issues occurred during processing")
+            self.set_header(
+                "error", self.tr("Completed with Errors"), self.tr("Some issues occurred during processing")
+            )
 
         # Statistics cards in a frame
         stats_container = QFrame()
@@ -70,16 +73,16 @@ class ResultsDialog(EnhancedDialog):
         # Words discovered card
         words_card = StatCard(
             value=str(self.processing_result.total_words_found),
-            label="Words Discovered",
+            label=self.tr("Words Discovered"),
         )
         row1_layout.addWidget(words_card)
 
         # New words card
-        new_words_card = StatCard(value=str(self.processing_result.new_words_found), label="New Words")
+        new_words_card = StatCard(value=str(self.processing_result.new_words_found), label=self.tr("New Words"))
         row1_layout.addWidget(new_words_card)
 
         # Cards created card
-        cards_card = StatCard(value=str(self.processing_result.cards_created), label="Cards Created")
+        cards_card = StatCard(value=str(self.processing_result.cards_created), label=self.tr("Cards Created"))
         row1_layout.addWidget(cards_card)
 
         stats_layout.addLayout(row1_layout)
@@ -93,18 +96,18 @@ class ResultsDialog(EnhancedDialog):
         time_seconds = int(self.processing_result.elapsed_time % 60)
         time_str = f"{time_minutes:02d}:{time_seconds:02d}"
 
-        time_card = StatCard(value=time_str, label="Processing Time")
+        time_card = StatCard(value=time_str, label=self.tr("Processing Time"))
         row2_layout.addWidget(time_card)
 
         # Processing speed card
         if self.processing_result.elapsed_time > 0:
             speed = self.processing_result.cards_created / self.processing_result.elapsed_time
-            speed_card = StatCard(value=f"{speed:.1f}/sec", label="Processing Rate")
+            speed_card = StatCard(value=f"{speed:.1f}/sec", label=self.tr("Processing Rate"))
             row2_layout.addWidget(speed_card)
 
         # Comprehension percentage card with color indicator
         comp_pct = self.processing_result.comprehension_percentage
-        comp_card = StatCard(value=f"{comp_pct:.1f}%", label="Comprehension")
+        comp_card = StatCard(value=f"{comp_pct:.1f}%", label=self.tr("Comprehension"))
         row2_layout.addWidget(comp_card)
 
         stats_layout.addLayout(row2_layout)
@@ -114,7 +117,7 @@ class ResultsDialog(EnhancedDialog):
 
         # Errors section (if any)
         if self.processing_result.errors:
-            error_header = QLabel("Errors Occurred")
+            error_header = QLabel(self.tr("Errors Occurred"))
             error_header.setObjectName("heading3")
             error_font = QFont()
             error_font.setPixelSize(FONT_SIZES.h3)
@@ -132,21 +135,21 @@ class ResultsDialog(EnhancedDialog):
         # Add undo button if callback and card IDs are available
         if self._undo_callback and self.processing_result.card_ids:
             self._undo_button = self.add_button(
-                f"Undo ({len(self.processing_result.card_ids)} cards)",
+                tr_format(self.tr("Undo (%1 cards)"), len(self.processing_result.card_ids)),
                 "danger",
                 self._on_undo_clicked,
             )
 
         # Add close button using EnhancedDialog method
-        self.add_close_button("Close")
+        self.add_close_button(self.tr("Close"))
 
     def _on_undo_clicked(self) -> None:
         """Handle undo button click with confirmation."""
         count = len(self.processing_result.card_ids)
         reply = QMessageBox.question(
             self,
-            "Confirm Undo",
-            f"Delete {count} cards from Anki? This cannot be undone.",
+            self.tr("Confirm Undo"),
+            tr_format(self.tr("Delete %1 cards from Anki? This cannot be undone."), count),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -159,9 +162,11 @@ class ResultsDialog(EnhancedDialog):
             if self._undo_callback is None:
                 return
             deleted = self._undo_callback(self.processing_result.card_ids)
-            self._undo_button.setText(f"Undone ({deleted} cards deleted)")
+            self._undo_button.setText(tr_format(self.tr("Undone (%1 cards deleted)"), deleted))
             self.undo_completed = True
         except Exception as e:
             self._undo_button.setEnabled(True)
             logger.error(f"Undo failed: {e}")
-            QMessageBox.critical(self, "Undo Failed", "Failed to delete cards. Check Anki is running.")
+            QMessageBox.critical(
+                self, self.tr("Undo Failed"), self.tr("Failed to delete cards. Check Anki is running.")
+            )

@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.utils.file_pairing import FilePair
+from anki_miner.utils.i18n import tr_format
 
 
 class PairPreviewDialog(QDialog):
@@ -44,7 +45,7 @@ class PairPreviewDialog(QDialog):
 
     def _setup_ui(self):
         """Set up the user interface."""
-        self.setWindowTitle(f"Preview File Pairs - {len(self.pairs)} pairs found")
+        self.setWindowTitle(tr_format(self.tr("Preview File Pairs - %1 pairs found"), len(self.pairs)))
         self.setMinimumSize(900, 600)
         self.resize(1000, 650)
 
@@ -54,7 +55,7 @@ class PairPreviewDialog(QDialog):
 
         # Header
         header = SectionHeader(
-            f"File Pair Preview: {len(self.pairs)} pairs",
+            tr_format(self.tr("File Pair Preview: %1 pairs"), len(self.pairs)),
         )
         main_layout.addWidget(header)
 
@@ -66,7 +67,7 @@ class PairPreviewDialog(QDialog):
         stats_layout.setSpacing(SPACING.lg)
 
         # Pair count
-        pair_count_label = QLabel(f"{len(self.pairs)} video/subtitle pairs")
+        pair_count_label = QLabel(tr_format(self.tr("%1 video/subtitle pairs"), len(self.pairs)))
         pair_count_label.setFont(self._create_font(13, QFont.Weight.Medium))
         stats_layout.addWidget(pair_count_label)
 
@@ -76,14 +77,16 @@ class PairPreviewDialog(QDialog):
             with contextlib.suppress(OSError):
                 total_size += pair.video.stat().st_size + pair.subtitle.stat().st_size
         size_str = self._format_file_size(total_size)
-        size_label = QLabel(f"Total size: {size_str}")
+        size_label = QLabel(tr_format(self.tr("Total size: %1"), size_str))
         size_label.setFont(self._create_font(13, QFont.Weight.Medium))
         stats_layout.addWidget(size_label)
 
         # File type distribution
         video_types = {pair.video.suffix.lower() for pair in self.pairs}
         subtitle_types = {pair.subtitle.suffix.lower() for pair in self.pairs}
-        types_label = QLabel(f"Video: {', '.join(video_types)} • Subtitles: {', '.join(subtitle_types)}")
+        types_label = QLabel(
+            tr_format(self.tr("Video: %1 • Subtitles: %2"), ", ".join(video_types), ", ".join(subtitle_types))
+        )
         types_label.setFont(self._create_font(13, QFont.Weight.Medium))
         stats_layout.addWidget(types_label)
 
@@ -93,7 +96,7 @@ class PairPreviewDialog(QDialog):
         main_layout.addWidget(stats_frame)
 
         # Table section
-        table_label = QLabel("Paired Files")
+        table_label = QLabel(self.tr("Paired Files"))
         table_label.setObjectName("heading3")
         table_label.setFont(self._create_font(16, QFont.Weight.Bold))
         main_layout.addWidget(table_label)
@@ -101,7 +104,9 @@ class PairPreviewDialog(QDialog):
         # Table
         self.table = QTableWidget()
         self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["Video File", "Video Size", "Subtitle File", "Subtitle Size"])
+        self.table.setHorizontalHeaderLabels(
+            [self.tr("Video File"), self.tr("Video Size"), self.tr("Subtitle File"), self.tr("Subtitle Size")]
+        )
         self.table.setRowCount(len(self.pairs))
 
         # Configure table appearance
@@ -167,20 +172,20 @@ class PairPreviewDialog(QDialog):
         footer_layout.setSpacing(SPACING.sm)
 
         # Info label
-        info_label = QLabel("Pairs process in order.")
+        info_label = QLabel(self.tr("Pairs process in order."))
         info_label.setFont(self._create_font(12))
         footer_layout.addWidget(info_label)
 
         footer_layout.addStretch()
 
         # Cancel button
-        cancel_button = ModernButton("Cancel", variant="secondary")
+        cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         cancel_button.clicked.connect(self.reject)
         cancel_button.setMinimumWidth(120)
         footer_layout.addWidget(cancel_button)
 
         # Proceed button
-        proceed_button = ModernButton("Proceed with Processing", variant="primary")
+        proceed_button = ModernButton(self.tr("Proceed with Processing"), variant="primary")
         proceed_button.clicked.connect(self.accept)
         proceed_button.setMinimumWidth(180)
         footer_layout.addWidget(proceed_button)
