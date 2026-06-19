@@ -32,6 +32,7 @@ from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.deck_builder_worker import DeckBuilderWorker
 from anki_miner.models.deck_build import DeckBuildPreview, DeckBuildRequest, DeckSelectionMode
 from anki_miner.utils.file_pairing import FilePairMatcher
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -119,20 +120,20 @@ class DeckBuilderTab(MiningTabBase):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        layout.addWidget(SectionHeader("Input"))
+        layout.addWidget(SectionHeader(self.tr("Input")))
 
         self.video_folder_selector = FileSelector(
-            label="Anime Video Folder:",
+            label=self.tr("Anime Video Folder:"),
             file_mode=False,
-            placeholder="Select folder with video files…",
+            placeholder=self.tr("Select folder with video files…"),
             label_width=self._label_w,
         )
         layout.addWidget(self.video_folder_selector)
 
         self.subtitle_folder_selector = FileSelector(
-            label="Subtitle Folder:",
+            label=self.tr("Subtitle Folder:"),
             file_mode=False,
-            placeholder="Select folder with subtitle files…",
+            placeholder=self.tr("Select folder with subtitle files…"),
             label_width=self._label_w,
         )
         layout.addWidget(self.subtitle_folder_selector)
@@ -150,31 +151,31 @@ class DeckBuilderTab(MiningTabBase):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        layout.addWidget(SectionHeader("Deck Settings"))
+        layout.addWidget(SectionHeader(self.tr("Deck Settings")))
 
         # Deck name row
         deck_row = QHBoxLayout()
         deck_row.setSpacing(SPACING.xs)
-        deck_label = QLabel("Deck Name:")
+        deck_label = QLabel(self.tr("Deck Name:"))
         deck_label.setObjectName("field-label")
         deck_label.setFixedWidth(self._label_w)
         deck_row.addWidget(deck_label)
         self.deck_name_edit = QLineEdit()
-        self.deck_name_edit.setPlaceholderText("Enter deck name…")
+        self.deck_name_edit.setPlaceholderText(self.tr("Enter deck name…"))
         deck_row.addWidget(self.deck_name_edit, 1)
         layout.addLayout(deck_row)
 
         # Mode row
         mode_row = QHBoxLayout()
         mode_row.setSpacing(SPACING.xs)
-        mode_label = QLabel("Word Selection:")
+        mode_label = QLabel(self.tr("Word Selection:"))
         mode_label.setObjectName("field-label")
         mode_label.setFixedWidth(self._label_w)
         mode_row.addWidget(mode_label)
         self.mode_combo = QComboBox()
-        self.mode_combo.addItem("All vocabulary", userData=DeckSelectionMode.ALL)
-        self.mode_combo.addItem("Top N words", userData=DeckSelectionMode.TOP_N)
-        self.mode_combo.addItem("Target coverage %", userData=DeckSelectionMode.COVERAGE_PCT)
+        self.mode_combo.addItem(self.tr("All vocabulary"), userData=DeckSelectionMode.ALL)
+        self.mode_combo.addItem(self.tr("Top N words"), userData=DeckSelectionMode.TOP_N)
+        self.mode_combo.addItem(self.tr("Target coverage %"), userData=DeckSelectionMode.COVERAGE_PCT)
         mode_row.addWidget(self.mode_combo)
         mode_row.addStretch()
         layout.addLayout(mode_row)
@@ -187,8 +188,8 @@ class DeckBuilderTab(MiningTabBase):
         self.top_n_spinbox = QSpinBox()
         self.top_n_spinbox.setRange(1, 100_000)
         self.top_n_spinbox.setValue(1000)
-        self.top_n_spinbox.setSuffix(" words")
-        self.top_n_spinbox.setToolTip("Include the N most-frequent lemmas")
+        self.top_n_spinbox.setSuffix(self.tr(" words"))
+        self.top_n_spinbox.setToolTip(self.tr("Include the N most-frequent lemmas"))
         value_row.addWidget(self.top_n_spinbox)
 
         self.coverage_spinbox = QDoubleSpinBox()
@@ -196,7 +197,7 @@ class DeckBuilderTab(MiningTabBase):
         self.coverage_spinbox.setValue(90.0)
         self.coverage_spinbox.setDecimals(1)
         self.coverage_spinbox.setSuffix(" %")
-        self.coverage_spinbox.setToolTip("Include enough words to cover this percentage of tokens")
+        self.coverage_spinbox.setToolTip(self.tr("Include enough words to cover this percentage of tokens"))
         value_row.addWidget(self.coverage_spinbox)
         self.coverage_spinbox.hide()
 
@@ -208,11 +209,13 @@ class DeckBuilderTab(MiningTabBase):
         self._on_mode_changed(0)
 
         # Collection filter
-        self.collection_filter_checkbox = QCheckBox("Skip words already in my Anki collection")
+        self.collection_filter_checkbox = QCheckBox(self.tr("Skip words already in my Anki collection"))
         self.collection_filter_checkbox.setChecked(True)
         self.collection_filter_checkbox.setToolTip(
-            "Checked: subtract your known words — good for personal study.\n"
-            "Unchecked: mine every word — good for building a complete or shareable deck."
+            self.tr(
+                "Checked: subtract your known words — good for personal study.\n"
+                "Unchecked: mine every word — good for building a complete or shareable deck."
+            )
         )
         layout.addWidget(self.collection_filter_checkbox)
 
@@ -226,20 +229,20 @@ class DeckBuilderTab(MiningTabBase):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        layout.addWidget(SectionHeader("Actions"))
+        layout.addWidget(SectionHeader(self.tr("Actions")))
 
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.xs)
 
-        self.preview_button = ModernButton("Preview", variant="secondary")
-        self.preview_button.setToolTip("Analyse the corpus and preview which words will be included")
+        self.preview_button = ModernButton(self.tr("Preview"), variant="secondary")
+        self.preview_button.setToolTip(self.tr("Analyse the corpus and preview which words will be included"))
 
-        self.build_button = ModernButton("Build Deck", variant="primary")
-        self.build_button.setToolTip("Create the Anki cards for the previewed word list")
+        self.build_button = ModernButton(self.tr("Build Deck"), variant="primary")
+        self.build_button.setToolTip(self.tr("Create the Anki cards for the previewed word list"))
         self.build_button.setEnabled(False)
 
-        self.cancel_button = ModernButton("Cancel", variant="danger")
-        self.cancel_button.setToolTip("Cancel the current operation")
+        self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
+        self.cancel_button.setToolTip(self.tr("Cancel the current operation"))
         self.cancel_button.setEnabled(False)
 
         self.preview_button.clicked.connect(self._on_preview_clicked)
@@ -262,7 +265,7 @@ class DeckBuilderTab(MiningTabBase):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        layout.addWidget(SectionHeader("Results"))
+        layout.addWidget(SectionHeader(self.tr("Results")))
 
         # Preview summary area (hidden until a preview arrives)
         self.preview_frame = QFrame()
@@ -273,12 +276,12 @@ class DeckBuilderTab(MiningTabBase):
 
         self._preview_labels: dict[str, QLabel] = {}
         for field_key, field_label in [
-            ("total_tokens", "Total tokens:"),
-            ("unique_lemmas", "Unique lemmas:"),
-            ("candidate_count", "Candidate words:"),
-            ("projected_coverage_pct", "Projected coverage:"),
-            ("known_skipped", "Known (skipped):"),
-            ("card_count", "Cards to create:"),
+            ("total_tokens", self.tr("Total tokens:")),
+            ("unique_lemmas", self.tr("Unique lemmas:")),
+            ("candidate_count", self.tr("Candidate words:")),
+            ("projected_coverage_pct", self.tr("Projected coverage:")),
+            ("known_skipped", self.tr("Known (skipped):")),
+            ("card_count", self.tr("Cards to create:")),
         ]:
             row = QHBoxLayout()
             lbl = QLabel(field_label)
@@ -343,25 +346,25 @@ class DeckBuilderTab(MiningTabBase):
         subtitle_folder = self.subtitle_folder_selector.get_path().strip()
 
         if not video_folder or not subtitle_folder:
-            self.log_widget.append_warning("Select both the video folder and subtitle folder first.")
+            self.log_widget.append_warning(self.tr("Select both the video folder and subtitle folder first."))
             return
 
         if not self.video_folder_selector.is_valid():
-            self.log_widget.append_warning(f"Video folder not found: {video_folder}")
+            self.log_widget.append_warning(tr_format(self.tr("Video folder not found: %1"), video_folder))
             return
 
         if not self.subtitle_folder_selector.is_valid():
-            self.log_widget.append_warning(f"Subtitle folder not found: {subtitle_folder}")
+            self.log_widget.append_warning(tr_format(self.tr("Subtitle folder not found: %1"), subtitle_folder))
             return
 
         deck_name = self.deck_name_edit.text().strip()
         if not deck_name:
-            self.log_widget.append_warning("Enter a deck name before previewing.")
+            self.log_widget.append_warning(self.tr("Enter a deck name before previewing."))
             return
 
         pairs = FilePairMatcher.find_pairs_by_episode_number(Path(video_folder), Path(subtitle_folder))
         if not pairs:
-            self.log_widget.append_warning("No video/subtitle pairs found. Check the folders.")
+            self.log_widget.append_warning(self.tr("No video/subtitle pairs found. Check the folders."))
             return
 
         mode: DeckSelectionMode = self.mode_combo.currentData()
@@ -407,7 +410,7 @@ class DeckBuilderTab(MiningTabBase):
                     old_processor.close()
 
         self.log_widget.clear_log()
-        self.log_widget.append_info("Analysing corpus…")
+        self.log_widget.append_info(self.tr("Analysing corpus…"))
         self.preview_frame.hide()
         self._set_buttons_running()
 
@@ -441,9 +444,11 @@ class DeckBuilderTab(MiningTabBase):
         self.preview_frame.show()
 
         self.log_widget.append_success(
-            f"Preview ready — {preview.card_count:,} cards, "
-            f"~{preview.projected_coverage_pct:.1f}% coverage. "
-            "Click 'Build Deck' to proceed."
+            tr_format(
+                self.tr("Preview ready — %1 cards, ~%2% coverage. Click 'Build Deck' to proceed."),
+                f"{preview.card_count:,}",
+                f"{preview.projected_coverage_pct:.1f}",
+            )
         )
 
         # Enable Build; keep Cancel so the user can abandon the gated worker
@@ -461,7 +466,7 @@ class DeckBuilderTab(MiningTabBase):
         self.build_button.setEnabled(False)
         self.preview_button.setEnabled(False)
         deck_name = self.worker_thread.request.deck_name
-        self.log_widget.append_info(f"Building deck '{deck_name}'…")
+        self.log_widget.append_info(tr_format(self.tr("Building deck '%1'…"), deck_name))
         self.worker_thread.confirm()
 
     # ------------------------------------------------------------------
@@ -469,11 +474,11 @@ class DeckBuilderTab(MiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_item_started(self, name: str) -> None:
-        self.progress_widget.set_status(f"Processing: {name}")
-        self.log_widget.append_info(f"Processing: {name}")
+        self.progress_widget.set_status(tr_format(self.tr("Processing: %1"), name))
+        self.log_widget.append_info(tr_format(self.tr("Processing: %1"), name))
 
     def _on_item_completed(self, name: str, cards: int) -> None:
-        self.log_widget.append_info(f"  {name}: {cards} card(s) created")
+        self.log_widget.append_info(tr_format(self.tr("  %1: %2 card(s) created"), name, cards))
 
     # ------------------------------------------------------------------
     # Slot: build_finished (Phase 2 complete)
@@ -486,9 +491,14 @@ class DeckBuilderTab(MiningTabBase):
         # words are skipped or a definition lookup yields nothing, so this is
         # framed as a target rather than an achieved figure.
         self.log_widget.append_success(
-            f"Done! Created {total:,} cards (~{coverage:.1f}% target coverage) in deck '{deck_name}'."
+            tr_format(
+                self.tr("Done! Created %1 cards (~%2% target coverage) in deck '%3'."),
+                f"{total:,}",
+                f"{coverage:.1f}",
+                deck_name,
+            )
         )
-        self.progress_widget.set_status("Build complete")
+        self.progress_widget.set_status(self.tr("Build complete"))
         self._restore_buttons()
 
     # ------------------------------------------------------------------
@@ -502,16 +512,16 @@ class DeckBuilderTab(MiningTabBase):
         # ``self.worker_thread`` over a still-running thread.
         if self.worker_thread is not None:
             self.worker_thread.cancel()
-        self.cancel_button.setText("Cancelling…")
+        self.cancel_button.setText(self.tr("Cancelling…"))
         self.cancel_button.setEnabled(False)
-        self.log_widget.append_warning("Cancelling…")
+        self.log_widget.append_warning(self.tr("Cancelling…"))
 
     # ------------------------------------------------------------------
     # Slot: error (from worker)
     # ------------------------------------------------------------------
 
     def _on_error(self, msg: str) -> None:
-        self.log_widget.append_error(f"Error: {msg}")
+        self.log_widget.append_error(tr_format(self.tr("Error: %1"), msg))
         self._restore_buttons()
 
     # Progress slots (_on_progress_start/update/complete) are inherited from
@@ -534,7 +544,7 @@ class DeckBuilderTab(MiningTabBase):
         self.preview_button.setEnabled(True)
         self.build_button.setEnabled(False)
         self.cancel_button.setEnabled(False)
-        self.cancel_button.setText("Cancel")
+        self.cancel_button.setText(self.tr("Cancel"))
 
     # ------------------------------------------------------------------
     # Config update

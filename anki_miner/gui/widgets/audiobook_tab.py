@@ -50,6 +50,7 @@ from anki_miner.gui.workers.audiobook_queue_worker import AudiobookQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.audiobook_queue import AudiobookItemStatus, AudiobookQueue, AudiobookQueueItem
 from anki_miner.orchestration import EpisodeProcessor
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -160,10 +161,10 @@ class AudiobookTab(MiningTabBase):
         queue_layout.setSpacing(SPACING.sm)
         queue_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        queue_layout.addWidget(SectionHeader("Audiobook queue"))
+        queue_layout.addWidget(SectionHeader(self.tr("Audiobook queue")))
 
         self.audio_selector = FileSelector(
-            label="Audio File:",
+            label=self.tr("Audio File:"),
             file_filter=_AUDIO_FILTER,
             label_width=100,
         )
@@ -171,7 +172,7 @@ class AudiobookTab(MiningTabBase):
         queue_layout.addWidget(self.audio_selector)
 
         self.subtitle_selector = FileSelector(
-            label="Subtitle File:",
+            label=self.tr("Subtitle File:"),
             file_filter=_SUBTITLE_FILTER,
             label_width=100,
         )
@@ -179,8 +180,8 @@ class AudiobookTab(MiningTabBase):
 
         add_row = QHBoxLayout()
         add_row.setSpacing(SPACING.xs)
-        self.add_button = ModernButton("Add", variant="secondary")
-        self.add_button.setToolTip("Add the audio + subtitle pair to the queue.")
+        self.add_button = ModernButton(self.tr("Add"), variant="secondary")
+        self.add_button.setToolTip(self.tr("Add the audio + subtitle pair to the queue."))
         self.add_button.clicked.connect(self._on_add_clicked)
         add_row.addWidget(self.add_button)
         add_row.addStretch()
@@ -194,35 +195,37 @@ class AudiobookTab(MiningTabBase):
         queue_layout.addWidget(self.list_widget, 1)
 
         # Empty-state hint (shown when the list is empty).
-        self.empty_label = QLabel("Pick an audiobook and its subtitle file above, then click Add.")
+        self.empty_label = QLabel(self.tr("Pick an audiobook and its subtitle file above, then click Add."))
         self.empty_label.setObjectName("helper-text")
         self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         queue_layout.addWidget(self.empty_label)
 
         # Issue #65: opt-in per-item word curation popup (default off).
-        self.review_words_checkbox = QCheckBox("Review words before mining")
+        self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
         self.review_words_checkbox.setChecked(False)
-        self.review_words_checkbox.setToolTip("Show the word-selection popup for each audiobook before creating cards.")
+        self.review_words_checkbox.setToolTip(
+            self.tr("Show the word-selection popup for each audiobook before creating cards.")
+        )
         queue_layout.addWidget(self.review_words_checkbox)
 
         # Action buttons
         button_row = QHBoxLayout()
         button_row.setSpacing(SPACING.xs)
 
-        self.preview_button = ModernButton("Preview", variant="secondary")
-        self.preview_button.setToolTip("Run the queue in preview mode — no cards created.")
+        self.preview_button = ModernButton(self.tr("Preview"), variant="secondary")
+        self.preview_button.setToolTip(self.tr("Run the queue in preview mode — no cards created."))
         self.preview_button.clicked.connect(self._on_preview_clicked)
 
-        self.mine_button = ModernButton("Mine", variant="primary")
-        self.mine_button.setToolTip("Mine every queued item into Anki cards.")
+        self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
+        self.mine_button.setToolTip(self.tr("Mine every queued item into Anki cards."))
         self.mine_button.clicked.connect(self._on_mine_clicked)
 
-        self.clear_button = ModernButton("Clear", variant="ghost")
-        self.clear_button.setToolTip("Remove every queued item that is not currently mining.")
+        self.clear_button = ModernButton(self.tr("Clear"), variant="ghost")
+        self.clear_button.setToolTip(self.tr("Remove every queued item that is not currently mining."))
         self.clear_button.clicked.connect(self._on_clear_clicked)
 
-        self.stop_button = ModernButton("Stop All", variant="danger")
-        self.stop_button.setToolTip("Cancel the active run.")
+        self.stop_button = ModernButton(self.tr("Stop All"), variant="danger")
+        self.stop_button.setToolTip(self.tr("Cancel the active run."))
         self.stop_button.clicked.connect(self._on_stop_all_clicked)
 
         button_row.addWidget(self.preview_button)
@@ -242,7 +245,7 @@ class AudiobookTab(MiningTabBase):
         progress_layout.setSpacing(SPACING.sm)
         progress_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        progress_layout.addWidget(SectionHeader("Progress"))
+        progress_layout.addWidget(SectionHeader(self.tr("Progress")))
         self.progress_widget = ProgressWidget()
         progress_layout.addWidget(self.progress_widget)
 
@@ -339,7 +342,7 @@ class AudiobookTab(MiningTabBase):
                 stats_service=self._stats_service,  # type: ignore[arg-type]
             )
         if self._processor is None:
-            self.log_widget.append_warning("Mining unavailable — services not initialized.")
+            self.log_widget.append_warning(self.tr("Mining unavailable — services not initialized."))
             return
 
         # Snapshot BEFORE constructing the worker so all idx-based signal
@@ -365,8 +368,8 @@ class AudiobookTab(MiningTabBase):
         worker.finished.connect(self._on_worker_finished)
         self.worker_thread = worker
 
-        mode_label = "Preview" if preview_mode else "Mine"
-        self.log_widget.append_info(f"{mode_label} run starting — {len(ready_items)} items.")
+        mode_label = self.tr("Preview") if preview_mode else self.tr("Mine")
+        self.log_widget.append_info(tr_format(self.tr("%1 run starting — %2 items."), mode_label, len(ready_items)))
         self._recompute_buttons()
         worker.start()
 
@@ -380,7 +383,7 @@ class AudiobookTab(MiningTabBase):
             return
         worker.cancel()
         self.stop_button.setEnabled(False)
-        self.stop_button.setText("Cancelling…")
+        self.stop_button.setText(self.tr("Cancelling…"))
 
     # ------------------------------------------------------------------
     # Per-item signal slots
@@ -406,7 +409,7 @@ class AudiobookTab(MiningTabBase):
         self._refresh_row(item)
 
         total = len(self._run_items)
-        self.progress_widget.set_status(f"Mining {idx + 1} of {total}: {item.audio_file.name}")
+        self.progress_widget.set_status(tr_format(self.tr("Mining %1 of %2: %3"), idx + 1, total, item.audio_file.name))
         self.progress_widget.set_determinate(100)
         self.progress_widget.set_value(0)
         self._recompute_buttons()
@@ -433,7 +436,7 @@ class AudiobookTab(MiningTabBase):
             item.status = AudiobookItemStatus.COMPLETED
             item.cards_created = cards
             item.error_message = None
-            self.log_widget.append_success(f"Mined {item.audio_file.name}: {cards} cards.")
+            self.log_widget.append_success(tr_format(self.tr("Mined %1: %2 cards."), item.audio_file.name, cards))
             if self._presenter is not None:
                 # Presenter forwarding is best-effort — the queue worker has
                 # already recorded the result; a broken presenter slot
@@ -443,7 +446,7 @@ class AudiobookTab(MiningTabBase):
         else:
             item.status = AudiobookItemStatus.ERROR
             item.error_message = str(error)
-            self.log_widget.append_error(f"Failed {item.audio_file.name}: {error}.")
+            self.log_widget.append_error(tr_format(self.tr("Failed %1: %2."), item.audio_file.name, error))
 
         self._refresh_row(item)
         self._recompute_buttons()
@@ -457,7 +460,7 @@ class AudiobookTab(MiningTabBase):
         """
         succeeded = sum(1 for i in self._queue.all_items() if i.status == AudiobookItemStatus.COMPLETED)
         failed = sum(1 for i in self._queue.all_items() if i.status == AudiobookItemStatus.ERROR)
-        self.log_widget.append_info(f"Queue done: {succeeded} succeeded, {failed} failed.")
+        self.log_widget.append_info(tr_format(self.tr("Queue done: %1 succeeded, %2 failed."), succeeded, failed))
 
     def _on_worker_finished(self) -> None:
         """Single cleanup slot wired to ``QThread.finished``.
@@ -472,7 +475,7 @@ class AudiobookTab(MiningTabBase):
         """
         self.worker_thread = None
         self._run_items = []
-        self.stop_button.setText("Stop All")
+        self.stop_button.setText(self.tr("Stop All"))
         self.stop_button.setEnabled(True)
         self.progress_widget.reset()
         self._recompute_buttons()
