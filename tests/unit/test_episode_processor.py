@@ -970,6 +970,7 @@ class TestIncludeKnownWordsFlag:
         mock_known_db = MagicMock()
         mock_known_db.is_available.return_value = True
         mock_known_db.get_known_words.return_value = {"食べる", "走る"}
+        mock_known_db.get_words_by_source.return_value = set()
         mock_known_db.sync_with_anki.return_value = (0, 2)
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
@@ -3914,3 +3915,40 @@ class TestMinedFormsOnResult:
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         assert result.mined_forms == []
+
+    def test_mined_forms_excludes_prior_session_mined_rows(self, test_config, mock_services, tmp_path):
+        """Undo set excludes a 'mined' row a prior session created and this run
+        merely re-encountered — only THIS session's new rows are revertable."""
+        prior = _make_word("食べる")  # verb → mined_form == lemma 食べる
+        fresh = _make_word("猫", surface="猫", pos="名詞", start_time=4.0)  # noun → mined_form == surface 猫
+
+        mock_known_db = MagicMock()
+        mock_known_db.is_available.return_value = True
+        mock_known_db.get_known_words.return_value = set()
+        mock_known_db.sync_with_anki.return_value = (0, 0)
+        # The earlier run already recorded 食べる as 'mined'.
+        mock_known_db.get_words_by_source.return_value = {"食べる"}
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [prior, fresh]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [prior, fresh]
+        mock_services["media_extractor"].extract_media_batch.return_value = [
+            (prior, _make_media("taberu")),
+            (fresh, _make_media("neko")),
+        ]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. cat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 2
+
+        processor = EpisodeProcessor(
+            config=replace(test_config, use_known_words_db=True),
+            presenter=NullPresenter(),
+            known_word_db=mock_known_db,
+            **mock_services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.cards_created == 2
+        # Both were mined, but 食べる predates this session → only 猫 is revertable.
+        assert result.mined_forms == ["猫"]
+        # The full set is still recorded in the DB.
+        mock_known_db.add_words.assert_called_once_with({"食べる", "猫"}, source="mined")
