@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.services.wordset_service import load_wordset_catalog
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -68,49 +69,55 @@ class FilteringSettingsPanel(FormPanel):
         # Word Frequency section. The frequency *file selector + enable toggle*
         # now live in the Dictionaries tab (users think of the frequency list as
         # a dictionary); only the max-rank threshold — a filter — stays here.
-        self.add_section("Word Frequency")
+        self.add_section(self.tr("Word Frequency"))
 
         # Max frequency rank
         self.max_frequency_spinbox = QSpinBox()
         self.max_frequency_spinbox.setRange(0, 100000)
-        self.max_frequency_spinbox.setSpecialValueText("No limit")
+        self.max_frequency_spinbox.setSpecialValueText(self.tr("No limit"))
         self.add_field(
-            "Max Frequency Rank",
+            self.tr("Max Frequency Rank"),
             self.max_frequency_spinbox,
-            helper="Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words. "
-            "Words missing from the frequency list are excluded. Applies only when "
-            "frequency data is enabled (toggle in the Dictionaries tab).",
+            helper=self.tr(
+                "Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words. "
+                "Words missing from the frequency list are excluded. Applies only when "
+                "frequency data is enabled (toggle in the Dictionaries tab)."
+            ),
         )
 
         # Known Words Database section
-        self.add_section("Known Words Database")
+        self.add_section(self.tr("Known Words Database"))
 
-        self.use_known_words_db_checkbox = QCheckBox("Use Local Known Words Database")
+        self.use_known_words_db_checkbox = QCheckBox(self.tr("Use Local Known Words Database"))
         self.add_field(
             "",
             self.use_known_words_db_checkbox,
-            helper="Caches known words locally to skip the Anki query on every run.",
+            helper=self.tr("Caches known words locally to skip the Anki query on every run."),
         )
 
         # Rebuild button: clears the local cache so deck exclusions take effect.
         # The cache is additive (never removes), so a deck synced before being
         # excluded would otherwise stay cached forever (Issue #38).
         rebuild_row = QHBoxLayout()
-        self.rebuild_known_words_button = QPushButton("Rebuild Known Words DB")
+        self.rebuild_known_words_button = QPushButton(self.tr("Rebuild Known Words DB"))
         self.rebuild_known_words_button.setToolTip(
-            "Clear the local known-words cache so it re-syncs from Anki on the "
-            "next run. Needed for deck exclusions below to take effect when the "
-            "local cache is enabled."
+            self.tr(
+                "Clear the local known-words cache so it re-syncs from Anki on the "
+                "next run. Needed for deck exclusions below to take effect when the "
+                "local cache is enabled."
+            )
         )
         self.rebuild_known_words_button.clicked.connect(self.rebuild_known_words_requested.emit)
         rebuild_row.addWidget(self.rebuild_known_words_button)
 
         # Manage the user-curated known/ignore list (Issue #42): view, remove,
         # export, reset words added from the Word Curator.
-        self.manage_known_words_button = QPushButton("Manage Known Words…")
+        self.manage_known_words_button = QPushButton(self.tr("Manage Known Words…"))
         self.manage_known_words_button.setToolTip(
-            "View, remove, export, or reset the words you added to your local "
-            "known words list from the Word Curator."
+            self.tr(
+                "View, remove, export, or reset the words you added to your local "
+                "known words list from the Word Curator."
+            )
         )
         self.manage_known_words_button.clicked.connect(self.manage_known_words_requested.emit)
         rebuild_row.addWidget(self.manage_known_words_button)
@@ -118,12 +125,14 @@ class FilteringSettingsPanel(FormPanel):
         self.add_layout(rebuild_row)
 
         # Excluded decks (Issue #38)
-        self.add_section("Excluded Decks")
+        self.add_section(self.tr("Excluded Decks"))
 
         excluded_helper = QLabel(
-            "Words in these decks (and their subdecks) are NOT treated as already "
-            "known, so they stay mineable. Useful for kanji-shape decks like "
-            "Remembering The Kanji that don't teach vocabulary."
+            self.tr(
+                "Words in these decks (and their subdecks) are NOT treated as already "
+                "known, so they stay mineable. Useful for kanji-shape decks like "
+                "Remembering The Kanji that don't teach vocabulary."
+            )
         )
         excluded_helper.setObjectName("helper-text")
         excluded_helper.setWordWrap(True)
@@ -135,9 +144,9 @@ class FilteringSettingsPanel(FormPanel):
         self.add_widget(self.excluded_decks_list)
 
         excluded_buttons = QHBoxLayout()
-        self.add_deck_button = QPushButton("Add Deck…")
+        self.add_deck_button = QPushButton(self.tr("Add Deck…"))
         self.add_deck_button.clicked.connect(self._on_add_deck_clicked)
-        self.remove_deck_button = QPushButton("Remove")
+        self.remove_deck_button = QPushButton(self.tr("Remove"))
         self.remove_deck_button.clicked.connect(self._on_remove_deck_clicked)
         excluded_buttons.addWidget(self.add_deck_button)
         excluded_buttons.addWidget(self.remove_deck_button)
@@ -145,47 +154,53 @@ class FilteringSettingsPanel(FormPanel):
         self.add_layout(excluded_buttons)
 
         # Word Lists section
-        self.add_section("Word Lists")
+        self.add_section(self.tr("Word Lists"))
 
-        self.blacklist_selector = FileSelector(label="", file_mode=True, placeholder="Select blacklist file...")
+        self.blacklist_selector = FileSelector(
+            label="", file_mode=True, placeholder=self.tr("Select blacklist file...")
+        )
         self.add_field(
-            "Blacklist File",
+            self.tr("Blacklist File"),
             self.blacklist_selector,
-            helper="Text file with one word per line to always skip",
+            helper=self.tr("Text file with one word per line to always skip"),
         )
 
-        self.use_blacklist_checkbox = QCheckBox("Enable Blacklist")
+        self.use_blacklist_checkbox = QCheckBox(self.tr("Enable Blacklist"))
         self.add_field(
             "",
             self.use_blacklist_checkbox,
-            helper="Skip words found in the blacklist file",
+            helper=self.tr("Skip words found in the blacklist file"),
         )
 
-        self.whitelist_selector = FileSelector(label="", file_mode=True, placeholder="Select whitelist file...")
+        self.whitelist_selector = FileSelector(
+            label="", file_mode=True, placeholder=self.tr("Select whitelist file...")
+        )
         self.add_field(
-            "Whitelist File",
+            self.tr("Whitelist File"),
             self.whitelist_selector,
-            helper="Text file with one word per line to always include",
+            helper=self.tr("Text file with one word per line to always include"),
         )
 
-        self.use_whitelist_checkbox = QCheckBox("Enable Whitelist")
+        self.use_whitelist_checkbox = QCheckBox(self.tr("Enable Whitelist"))
         self.add_field(
             "",
             self.use_whitelist_checkbox,
-            helper="Always include words found in the whitelist file",
+            helper=self.tr("Always include words found in the whitelist file"),
         )
 
         # Name Wordsets section (Issue #59). Bundled proper-noun lists derived
         # from JMnedict; checking one excludes those names from mining. Catches
         # names unidic-lite mistags as common nouns (the POS filter only drops
         # proper nouns the parser actually recognizes as 固有名詞).
-        self.add_section("Name Wordsets")
+        self.add_section(self.tr("Name Wordsets"))
 
         wordsets_helper = QLabel(
-            "Exclude bundled lists of Japanese proper nouns (people and place "
-            "names) from mining. Useful for anime that drop lots of character "
-            "and place names. A name you actually want is rescued by the "
-            "whitelist above."
+            self.tr(
+                "Exclude bundled lists of Japanese proper nouns (people and place "
+                "names) from mining. Useful for anime that drop lots of character "
+                "and place names. A name you actually want is rescued by the "
+                "whitelist above."
+            )
         )
         wordsets_helper.setObjectName("helper-text")
         wordsets_helper.setWordWrap(True)
@@ -193,39 +208,47 @@ class FilteringSettingsPanel(FormPanel):
 
         self.wordset_checkboxes: dict[str, QCheckBox] = {}
         for info in load_wordset_catalog():
-            cb = QCheckBox(f"{info.label} ({info.count:,})")
-            cb.setToolTip(f"Exclude the bundled '{info.label}' wordset ({info.count:,} entries) from mining.")
+            cb = QCheckBox(tr_format(self.tr("%1 (%2)"), info.label, f"{info.count:,}"))
+            cb.setToolTip(
+                tr_format(
+                    self.tr("Exclude the bundled '%1' wordset (%2 entries) from mining."), info.label, f"{info.count:,}"
+                )
+            )
             self.wordset_checkboxes[info.id] = cb
             self.add_field("", cb)
 
         # Subtitle Text Filtering section (Issue #8)
-        self.add_section("Subtitle Text Filtering")
+        self.add_section(self.tr("Subtitle Text Filtering"))
 
         self.subtitle_regex_edit = QLineEdit()
         self.subtitle_regex_edit.setPlaceholderText(r"e.g. \([^)]*\)|\[[^\]]*\]")
         self.add_field(
-            "Regex Filter",
+            self.tr("Regex Filter"),
             self.subtitle_regex_edit,
-            helper="Python regex matched in subtitle text and removed (or replaced) before mining. "
-            "Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. "
-            "Combine alternatives with |. Test patterns at https://regex101.com.",
+            helper=self.tr(
+                "Python regex matched in subtitle text and removed (or replaced) before mining. "
+                "Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. "
+                "Combine alternatives with |. Test patterns at https://regex101.com."
+            ),
         )
 
         self.subtitle_replacement_edit = QLineEdit()
-        self.subtitle_replacement_edit.setPlaceholderText("(empty = delete match)")
+        self.subtitle_replacement_edit.setPlaceholderText(self.tr("(empty = delete match)"))
         self.add_field(
-            "Replacement",
+            self.tr("Replacement"),
             self.subtitle_replacement_edit,
-            helper="Text inserted in place of each match (empty deletes the match). "
-            "Use Python backreferences (\\1 \\2) for capture groups. "
-            "Note: NOT $1 $2 syntax like asbplayer; translate when copying patterns.",
+            helper=self.tr(
+                "Text inserted in place of each match (empty deletes the match). "
+                "Use Python backreferences (\\1 \\2) for capture groups. "
+                "Note: NOT $1 $2 syntax like asbplayer; translate when copying patterns."
+            ),
         )
 
-        self.use_subtitle_regex_checkbox = QCheckBox("Enable Subtitle Regex Filter")
+        self.use_subtitle_regex_checkbox = QCheckBox(self.tr("Enable Subtitle Regex Filter"))
         self.add_field(
             "",
             self.use_subtitle_regex_checkbox,
-            helper="Apply the filter to all parsed subtitle lines (mining and preview).",
+            helper=self.tr("Apply the filter to all parsed subtitle lines (mining and preview)."),
         )
 
         # Preset buttons row: each click appends its pattern to the regex field
@@ -234,66 +257,78 @@ class FilteringSettingsPanel(FormPanel):
         preset_container = QWidget()
         preset_layout = QHBoxLayout()
         preset_layout.setContentsMargins(0, 0, 0, 0)
-        for label, pattern in SUBTITLE_REGEX_PRESETS:
-            btn = QPushButton(label)
+        _preset_labels = [
+            self.tr("Parens (Tanaka)"),
+            self.tr("Brackets [SFX]"),
+            self.tr("Music ♪♬"),
+            self.tr("Speaker: prefix"),
+        ]
+        for (_, pattern), translated_label in zip(SUBTITLE_REGEX_PRESETS, _preset_labels, strict=True):
+            btn = QPushButton(translated_label)
             btn.setToolTip(pattern)
             btn.clicked.connect(lambda _checked=False, p=pattern: self._append_preset(p))
             preset_layout.addWidget(btn)
         preset_layout.addStretch()
         preset_container.setLayout(preset_layout)
         self.add_field(
-            "Presets",
+            self.tr("Presets"),
             preset_container,
-            helper="Click to append a built-in pattern to the regex field above.",
+            helper=self.tr("Click to append a built-in pattern to the regex field above."),
         )
 
         # Deduplication section
-        self.add_section("Deduplication")
+        self.add_section(self.tr("Deduplication"))
 
-        self.deduplicate_sentences_checkbox = QCheckBox("Deduplicate by Sentence")
+        self.deduplicate_sentences_checkbox = QCheckBox(self.tr("Deduplicate by Sentence"))
         self.add_field(
             "",
             self.deduplicate_sentences_checkbox,
-            helper="Skips duplicate example sentences.",
+            helper=self.tr("Skips duplicate example sentences."),
         )
 
         # Script Type section (Issue #57)
-        self.add_section("Script Type")
+        self.add_section(self.tr("Script Type"))
 
-        self.exclude_hiragana_only_checkbox = QCheckBox("Exclude Hiragana-Only Words")
+        self.exclude_hiragana_only_checkbox = QCheckBox(self.tr("Exclude Hiragana-Only Words"))
         self.add_field(
             "",
             self.exclude_hiragana_only_checkbox,
-            helper="Skip words written entirely in hiragana (e.g. する, これ). Focuses the deck on kanji vocabulary.",
+            helper=self.tr(
+                "Skip words written entirely in hiragana (e.g. する, これ). Focuses the deck on kanji vocabulary."
+            ),
         )
 
-        self.exclude_katakana_only_checkbox = QCheckBox("Exclude Katakana-Only Words")
+        self.exclude_katakana_only_checkbox = QCheckBox(self.tr("Exclude Katakana-Only Words"))
         self.add_field(
             "",
             self.exclude_katakana_only_checkbox,
-            helper="Skip words written entirely in katakana (e.g. コーヒー). Drops most foreign loanwords.",
+            helper=self.tr("Skip words written entirely in katakana (e.g. コーヒー). Drops most foreign loanwords."),
         )
 
         # i+1 Sentence Filter section
-        self.add_section("i+1 Sentence Filter")
+        self.add_section(self.tr("i+1 Sentence Filter"))
 
-        self.use_i_plus_one_checkbox = QCheckBox("Only Mine i+1 Sentences")
+        self.use_i_plus_one_checkbox = QCheckBox(self.tr("Only Mine i+1 Sentences"))
         self.use_i_plus_one_checkbox.setToolTip(
-            "Only create cards for words that appear in a sentence with exactly ONE "
-            "unknown word (the i+1 / immersion learning concept). Drops words whose "
-            "only examples contain multiple unknowns, so expect significantly fewer "
-            "cards per episode. Overrides sentence deduplication when enabled."
+            self.tr(
+                "Only create cards for words that appear in a sentence with exactly ONE "
+                "unknown word (the i+1 / immersion learning concept). Drops words whose "
+                "only examples contain multiple unknowns, so expect significantly fewer "
+                "cards per episode. Overrides sentence deduplication when enabled."
+            )
         )
         self.add_field("", self.use_i_plus_one_checkbox)
 
         # Sentence Length section (Issue #33)
-        self.add_section("Sentence Length")
+        self.add_section(self.tr("Sentence Length"))
 
-        self.use_sentence_length_checkbox = QCheckBox("Enable Sentence Length Filter")
+        self.use_sentence_length_checkbox = QCheckBox(self.tr("Enable Sentence Length Filter"))
         self.use_sentence_length_checkbox.setToolTip(
-            "Drop words whose example sentence exceeds the audio-duration "
-            "or character caps below. Either cap set to 0 means no limit "
-            "for that dimension. Reduces deck size and speeds up reviews."
+            self.tr(
+                "Drop words whose example sentence exceeds the audio-duration "
+                "or character caps below. Either cap set to 0 means no limit "
+                "for that dimension. Reduces deck size and speeds up reviews."
+            )
         )
         self.add_field("", self.use_sentence_length_checkbox)
 
@@ -301,36 +336,39 @@ class FilteringSettingsPanel(FormPanel):
         self.max_sentence_duration_spinbox.setRange(0.0, 600.0)
         self.max_sentence_duration_spinbox.setDecimals(1)
         self.max_sentence_duration_spinbox.setSingleStep(0.5)
-        self.max_sentence_duration_spinbox.setSuffix(" s")
-        self.max_sentence_duration_spinbox.setSpecialValueText("No limit")
+        self.max_sentence_duration_spinbox.setSuffix(self.tr(" s"))
+        self.max_sentence_duration_spinbox.setSpecialValueText(self.tr("No limit"))
         self.add_field(
-            "Max Sentence Duration",
+            self.tr("Max Sentence Duration"),
             self.max_sentence_duration_spinbox,
-            helper="Drops cards whose example sentence audio is longer than this many seconds. "
-            "Set to 0 for no limit.",
+            helper=self.tr(
+                "Drops cards whose example sentence audio is longer than this many seconds. " "Set to 0 for no limit."
+            ),
         )
 
         self.max_sentence_chars_spinbox = QSpinBox()
         self.max_sentence_chars_spinbox.setRange(0, 1000)
-        self.max_sentence_chars_spinbox.setSpecialValueText("No limit")
+        self.max_sentence_chars_spinbox.setSpecialValueText(self.tr("No limit"))
         self.add_field(
-            "Max Sentence Characters",
+            self.tr("Max Sentence Characters"),
             self.max_sentence_chars_spinbox,
-            helper="Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit.",
+            helper=self.tr("Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit."),
         )
 
         # Card Formatting section (Issue #20)
-        self.add_section("Card Formatting")
+        self.add_section(self.tr("Card Formatting"))
 
-        self.bold_target_in_sentence_checkbox = QCheckBox("Bold target word in sentence")
+        self.bold_target_in_sentence_checkbox = QCheckBox(self.tr("Bold target word in sentence"))
         # QToolTip has no PlainText format and auto-detects HTML when the
         # string contains tag-like substrings. Escape the angle brackets so
         # the literal "<b>...</b>" markup is visible. Issue #20.
         self.bold_target_in_sentence_checkbox.setToolTip(
-            "Wrap the mined word in &lt;b&gt;...&lt;/b&gt; inside the Sentence and "
-            "SentenceFurigana fields. Match is the exact MeCab span of the "
-            "mined morpheme, so duplicated surfaces in a sentence only bold "
-            "the actually-mined occurrence."
+            self.tr(
+                "Wrap the mined word in &lt;b&gt;...&lt;/b&gt; inside the Sentence and "
+                "SentenceFurigana fields. Match is the exact MeCab span of the "
+                "mined morpheme, so duplicated surfaces in a sentence only bold "
+                "the actually-mined occurrence."
+            )
         )
         self.add_field("", self.bold_target_in_sentence_checkbox)
 
@@ -377,8 +415,8 @@ class FilteringSettingsPanel(FormPanel):
             return
         deck, ok = QInputDialog.getItem(
             self,
-            "Exclude Deck",
-            "Deck to exclude from known-words detection:",
+            self.tr("Exclude Deck"),
+            self.tr("Deck to exclude from known-words detection:"),
             choices,
             0,
             False,

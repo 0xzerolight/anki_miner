@@ -44,9 +44,9 @@ class YouTubeSettingsPanel(FormPanel):
         for label, _value in _COOKIE_BROWSER_OPTIONS:
             self.cookies_browser_combo.addItem(label)
         self.add_field(
-            "Cookies from browser",
+            self.tr("Cookies from browser"),
             self.cookies_browser_combo,
-            helper=(
+            helper=self.tr(
                 "Pick a browser whose cookies yt-dlp should reuse. "
                 "Leave as 'None' unless YouTube is blocking anonymous fetches."
             ),
@@ -57,12 +57,12 @@ class YouTubeSettingsPanel(FormPanel):
             label="",
             file_mode=True,
             file_filter="Cookies file (*.txt);;All Files (*)",
-            placeholder="Optional: path to an exported cookies.txt...",
+            placeholder=self.tr("Optional: path to an exported cookies.txt..."),
         )
         self.add_field(
-            "Cookies file",
+            self.tr("Cookies file"),
             self.cookies_file_selector,
-            helper=(
+            helper=self.tr(
                 "Optional. Overrides the browser dropdown above. Export a Netscape "
                 "cookies.txt with a 'Get cookies.txt LOCALLY' browser extension — works "
                 "with ANY browser (Safari, Brave, Arc...). Keep the file private; it "
@@ -73,20 +73,20 @@ class YouTubeSettingsPanel(FormPanel):
         # Max duration (minutes)
         self.max_duration_spinbox = QSpinBox()
         self.max_duration_spinbox.setRange(1, 600)
-        self.max_duration_spinbox.setSuffix(" minutes")
+        self.max_duration_spinbox.setSuffix(self.tr(" minutes"))
         self.add_field(
-            "YouTube max duration",
+            self.tr("YouTube max duration"),
             self.max_duration_spinbox,
-            helper="Videos longer than this are rejected before fetching.",
+            helper=self.tr("Videos longer than this are rejected before fetching."),
         )
 
         # Playlist max (number of videos)
         self.playlist_max_spinbox = QSpinBox()
         self.playlist_max_spinbox.setRange(1, 1000)
         self.add_field(
-            "Playlist max videos",
+            self.tr("Playlist max videos"),
             self.playlist_max_spinbox,
-            helper="When adding a playlist, at most this many videos are queued.",
+            helper=self.tr("When adding a playlist, at most this many videos are queued."),
         )
 
         self.add_stretch()

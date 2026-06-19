@@ -66,25 +66,25 @@ class AnkiSettingsPanel(FormPanel):
         self.ankiconnect_url_input = QLineEdit()
         self.ankiconnect_url_input.setPlaceholderText("http://localhost:8765")
         self.add_field(
-            "AnkiConnect URL",
+            self.tr("AnkiConnect URL"),
             self.ankiconnect_url_input,
-            helper="Default http://localhost:8765. Change if AnkiConnect uses a different port.",
+            helper=self.tr("Default http://localhost:8765. Change if AnkiConnect uses a different port."),
         )
 
         # Card tags
         self.anki_tags_input = QLineEdit()
         self.add_field(
-            "Card tags",
+            self.tr("Card tags"),
             self.anki_tags_input,
-            helper="Space-separated tags applied to every mined card. Leave blank for no tags.",
+            helper=self.tr("Space-separated tags applied to every mined card. Leave blank for no tags."),
         )
 
         # Test connection button
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        self.test_connection_button = ModernButton("Test Connection", variant="secondary")
-        self.test_connection_button.setToolTip("Anki must be running with AnkiConnect installed.")
+        self.test_connection_button = ModernButton(self.tr("Test Connection"), variant="secondary")
+        self.test_connection_button.setToolTip(self.tr("Anki must be running with AnkiConnect installed."))
         self.test_connection_button.clicked.connect(self._on_test_connection)
         button_layout.addWidget(self.test_connection_button)
 
@@ -92,14 +92,14 @@ class AnkiSettingsPanel(FormPanel):
 
         # Deck name with sync button
         self._add_labeled_field_with_button(
-            label_text="Deck Name",
+            label_text=self.tr("Deck Name"),
             input_widget_name="deck_input",
-            placeholder="Enter deck name...",
+            placeholder=self.tr("Enter deck name..."),
             tooltip="",
             button_name="deck_sync_button",
-            button_tooltip="Sync deck list from Anki",
+            button_tooltip=self.tr("Sync deck list from Anki"),
             button_callback=self._on_deck_sync,
-            helper_text="Target deck for new cards.",
+            helper_text=self.tr("Target deck for new cards."),
         )
 
         # Deck status
@@ -109,14 +109,14 @@ class AnkiSettingsPanel(FormPanel):
 
         # Note type with sync button
         self._add_labeled_field_with_button(
-            label_text="Note Type",
+            label_text=self.tr("Note Type"),
             input_widget_name="note_type_input",
-            placeholder="Enter note type name...",
+            placeholder=self.tr("Enter note type name..."),
             tooltip="",
             button_name="notetype_sync_button",
-            button_tooltip="Sync note type list from Anki",
+            button_tooltip=self.tr("Sync note type list from Anki"),
             button_callback=self._on_notetype_sync,
-            helper_text="Anki note type whose fields you'll map below.",
+            helper_text=self.tr("Anki note type whose fields you'll map below."),
         )
 
         # Note type status
@@ -125,10 +125,10 @@ class AnkiSettingsPanel(FormPanel):
         self.add_widget(self.notetype_status)
 
         # Card Field Mappings section
-        self.add_section("Card Field Mappings")
+        self.add_section(self.tr("Card Field Mappings"))
 
         # Helper text for card fields
-        card_fields_helper = QLabel("Map data to note fields (names must match exactly). Blank = skip.")
+        card_fields_helper = QLabel(self.tr("Map data to note fields (names must match exactly). Blank = skip."))
         card_fields_helper.setObjectName("helper-text")
         card_fields_helper.setWordWrap(True)
         self.add_widget(card_fields_helper)
@@ -136,8 +136,10 @@ class AnkiSettingsPanel(FormPanel):
         # Fetch fields from note type button
         fetch_layout = QHBoxLayout()
         fetch_layout.addStretch()
-        self.fetch_fields_button = ModernButton("Fetch Fields from Note Type", variant="secondary")
-        self.fetch_fields_button.setToolTip("Query AnkiConnect for the note type's field names and auto-map them")
+        self.fetch_fields_button = ModernButton(self.tr("Fetch Fields from Note Type"), variant="secondary")
+        self.fetch_fields_button.setToolTip(
+            self.tr("Query AnkiConnect for the note type's field names and auto-map them")
+        )
         self.fetch_fields_button.clicked.connect(self._on_fetch_fields)
         fetch_layout.addWidget(self.fetch_fields_button)
         self.add_layout(fetch_layout)
@@ -145,22 +147,26 @@ class AnkiSettingsPanel(FormPanel):
         # Expression field (word)
         self.expression_field_input = QLineEdit()
         self.expression_field_input.setPlaceholderText("Expression")
-        self.add_field("Expression Field", self.expression_field_input, helper="Stores the mined Japanese word.")
+        self.add_field(
+            self.tr("Expression Field"), self.expression_field_input, helper=self.tr("Stores the mined Japanese word.")
+        )
 
         # Sentence field
         self.sentence_field_input = QLineEdit()
         self.sentence_field_input.setPlaceholderText("Sentence")
         self.add_field(
-            "Sentence Field", self.sentence_field_input, helper="Stores the example sentence from the subtitle."
+            self.tr("Sentence Field"),
+            self.sentence_field_input,
+            helper=self.tr("Stores the example sentence from the subtitle."),
         )
 
         # Definition field
         self.definition_field_input = QLineEdit()
         self.definition_field_input.setPlaceholderText("MainDefinition")
         self.add_field(
-            "Definition Field",
+            self.tr("Definition Field"),
             self.definition_field_input,
-            helper="Stores the English definition from the dictionary chain.",
+            helper=self.tr("Stores the English definition from the dictionary chain."),
         )
 
         # Glossary field (second definition slot — receives concatenated hits
@@ -168,20 +174,22 @@ class AnkiSettingsPanel(FormPanel):
         self.glossary_field_input = QLineEdit()
         self.glossary_field_input.setPlaceholderText("Glossary")
         self.add_field(
-            "Glossary Field",
+            self.tr("Glossary Field"),
             self.glossary_field_input,
-            helper="Concatenated hits from every enabled dictionary as Yomitan HTML.",
+            helper=self.tr("Concatenated hits from every enabled dictionary as Yomitan HTML."),
         )
 
         # Picture field
         self.picture_field_input = QLineEdit()
         self.picture_field_input.setPlaceholderText("Picture")
-        self.add_field("Picture Field", self.picture_field_input, helper="Stores the screenshot.")
+        self.add_field(self.tr("Picture Field"), self.picture_field_input, helper=self.tr("Stores the screenshot."))
 
         # Audio field
         self.audio_field_input = QLineEdit()
         self.audio_field_input.setPlaceholderText("SentenceAudio")
-        self.add_field("Audio Field", self.audio_field_input, helper="Stores the sentence audio clip.")
+        self.add_field(
+            self.tr("Audio Field"), self.audio_field_input, helper=self.tr("Stores the sentence audio clip.")
+        )
 
         # Expression audio field (Issue #73). Field-name presence is the on/off
         # switch (like Frequency/Pitch) — leave blank to disable. Sources are
@@ -189,52 +197,54 @@ class AnkiSettingsPanel(FormPanel):
         self.expression_audio_field_input = QLineEdit()
         self.expression_audio_field_input.setPlaceholderText("ExpressionAudio")
         self.add_field(
-            "Expression Audio Field",
+            self.tr("Expression Audio Field"),
             self.expression_audio_field_input,
-            helper="Stores the word pronunciation audio clip; leave blank to disable. "
-            "Sources are configured under Audio settings.",
+            helper=self.tr(
+                "Stores the word pronunciation audio clip; leave blank to disable. "
+                "Sources are configured under Audio settings."
+            ),
         )
 
         # Expression Furigana field
         self.expression_furigana_field_input = QLineEdit()
         self.expression_furigana_field_input.setPlaceholderText("ExpressionFurigana")
         self.add_field(
-            "Expression Furigana Field",
+            self.tr("Expression Furigana Field"),
             self.expression_furigana_field_input,
-            helper="Stores the expression with furigana readings.",
+            helper=self.tr("Stores the expression with furigana readings."),
         )
 
         # Expression Reading field (plain kana)
         self.expression_reading_field_input = QLineEdit()
         self.expression_reading_field_input.setPlaceholderText("ExpressionReading")
         self.add_field(
-            "Expression Reading Field",
+            self.tr("Expression Reading Field"),
             self.expression_reading_field_input,
-            helper="Stores the expression as plain kana.",
+            helper=self.tr("Stores the expression as plain kana."),
         )
 
         # Sentence Furigana field
         self.sentence_furigana_field_input = QLineEdit()
         self.sentence_furigana_field_input.setPlaceholderText("SentenceFurigana")
         self.add_field(
-            "Sentence Furigana Field",
+            self.tr("Sentence Furigana Field"),
             self.sentence_furigana_field_input,
-            helper="Stores the sentence with furigana readings.",
+            helper=self.tr("Stores the sentence with furigana readings."),
         )
 
         # Sentence Reading field (plain kana)
         self.sentence_reading_field_input = QLineEdit()
         self.sentence_reading_field_input.setPlaceholderText("SentenceReading")
         self.add_field(
-            "Sentence Reading Field",
+            self.tr("Sentence Reading Field"),
             self.sentence_reading_field_input,
-            helper="Stores the sentence as plain kana.",
+            helper=self.tr("Stores the sentence as plain kana."),
         )
 
         # Auxiliary Data Fields section
-        self.add_section("Auxiliary Data Fields")
+        self.add_section(self.tr("Auxiliary Data Fields"))
 
-        auxiliary_helper = QLabel("Need pitch_accent.csv / frequency.csv in ~/.anki_miner/. Blank = skip.")
+        auxiliary_helper = QLabel(self.tr("Need pitch_accent.csv / frequency.csv in ~/.anki_miner/. Blank = skip."))
         auxiliary_helper.setObjectName("helper-text")
         auxiliary_helper.setWordWrap(True)
         self.add_widget(auxiliary_helper)
@@ -243,54 +253,60 @@ class AnkiSettingsPanel(FormPanel):
         self.pitch_position_field_input = QLineEdit()
         self.pitch_position_field_input.setPlaceholderText("PitchPosition")
         self.add_field(
-            "Pitch Position Field",
+            self.tr("Pitch Position Field"),
             self.pitch_position_field_input,
-            helper="Stores the numeric pitch drop position.",
+            helper=self.tr("Stores the numeric pitch drop position."),
         )
 
         # Pitch Category field
         self.pitch_category_field_input = QLineEdit()
         self.pitch_category_field_input.setPlaceholderText("PitchCategory")
         self.add_field(
-            "Pitch Category Field", self.pitch_category_field_input, helper="Stores the pitch category label."
+            self.tr("Pitch Category Field"),
+            self.pitch_category_field_input,
+            helper=self.tr("Stores the pitch category label."),
         )
 
         # Pitch Category format (jp vs romaji)
         self.pitch_category_format_combo = QComboBox()
-        self.pitch_category_format_combo.addItem("Japanese (平板/頭高/中高/尾高/起伏)", "jp")
-        self.pitch_category_format_combo.addItem("Romaji (heiban/atamadaka/nakadaka/odaka/kifuku)", "romaji")
+        self.pitch_category_format_combo.addItem(self.tr("Japanese (平板/頭高/中高/尾高/起伏)"), "jp")
+        self.pitch_category_format_combo.addItem(self.tr("Romaji (heiban/atamadaka/nakadaka/odaka/kifuku)"), "romaji")
         self.add_field(
-            "Pitch Category Format",
+            self.tr("Pitch Category Format"),
             self.pitch_category_format_combo,
-            helper="Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.",
+            helper=self.tr("Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes."),
         )
 
         # Frequency field
         self.frequency_field_input = QLineEdit()
         self.frequency_field_input.setPlaceholderText("Frequency")
-        self.add_field("Frequency Field", self.frequency_field_input, helper="Stores the word frequency rank.")
+        self.add_field(
+            self.tr("Frequency Field"), self.frequency_field_input, helper=self.tr("Stores the word frequency rank.")
+        )
 
         # Source field
         self.source_field_input = QLineEdit()
         self.source_field_input.setPlaceholderText("Source")
         self.add_field(
-            "Source Field",
+            self.tr("Source Field"),
             self.source_field_input,
-            helper="Stores the show/episode and timestamp the word came from. Blank = skip.",
+            helper=self.tr("Stores the show/episode and timestamp the word came from. Blank = skip."),
         )
 
         # Card Styling section (Issue #44)
-        self.add_section("Card Styling")
+        self.add_section(self.tr("Card Styling"))
 
         styling_helper = QLabel(
-            '"Apply to Note Type" writes a managed CSS block via AnkiConnect (never touches your own CSS; '
-            '"Remove" reverts cleanly). Custom CSS is appended after the selected preset.'
+            self.tr(
+                '"Apply to Note Type" writes a managed CSS block via AnkiConnect (never touches your own CSS; '
+                '"Remove" reverts cleanly). Custom CSS is appended after the selected preset.'
+            )
         )
         styling_helper.setObjectName("helper-text")
         styling_helper.setWordWrap(True)
         self.add_widget(styling_helper)
 
-        preset_label = QLabel("Card style preset:")
+        preset_label = QLabel(self.tr("Card style preset:"))
         preset_label.setObjectName("field-label")
         make_label_fit_text(preset_label)
         self.add_widget(preset_label)
@@ -298,10 +314,12 @@ class AnkiSettingsPanel(FormPanel):
         self.card_style_preset_combo = QComboBox()
         for preset in PRESETS:
             self.card_style_preset_combo.addItem(preset.display_name, preset.id)
-        self.card_style_preset_combo.setToolTip("Pick a bundled preset; your custom CSS below is appended after it.")
+        self.card_style_preset_combo.setToolTip(
+            self.tr("Pick a bundled preset; your custom CSS below is appended after it.")
+        )
         self.add_widget(self.card_style_preset_combo)
 
-        css_label = QLabel("Custom CSS:")
+        css_label = QLabel(self.tr("Custom CSS:"))
         css_label.setObjectName("field-label")
         make_label_fit_text(css_label)
         self.add_widget(css_label)
@@ -315,8 +333,10 @@ class AnkiSettingsPanel(FormPanel):
         mono_font.setStyleHint(QFont.StyleHint.Monospace)
         mono_font.setPixelSize(FONT_SIZES.small)
         self.custom_css_edit.setToolTip(
-            "Published Yomitan/Jitendex snippets work verbatim. "
-            "Re-import a dictionary to refresh its data-sc-* hooks on older entries."
+            self.tr(
+                "Published Yomitan/Jitendex snippets work verbatim. "
+                "Re-import a dictionary to refresh its data-sc-* hooks on older entries."
+            )
         )
         self.custom_css_edit.setFont(mono_font)
         self.custom_css_edit.setMinimumHeight(120)
@@ -325,12 +345,12 @@ class AnkiSettingsPanel(FormPanel):
 
         styling_button_layout = QHBoxLayout()
         styling_button_layout.addStretch()
-        self.apply_styling_button = ModernButton("Apply to Note Type", variant="primary")
-        self.apply_styling_button.setToolTip("Write the managed CSS block into the note type via AnkiConnect")
+        self.apply_styling_button = ModernButton(self.tr("Apply to Note Type"), variant="primary")
+        self.apply_styling_button.setToolTip(self.tr("Write the managed CSS block into the note type via AnkiConnect"))
         self.apply_styling_button.clicked.connect(self._on_apply_styling)
         styling_button_layout.addWidget(self.apply_styling_button)
-        self.remove_styling_button = ModernButton("Remove Anki Miner Styles", variant="secondary")
-        self.remove_styling_button.setToolTip("Strip Anki Miner's managed CSS block from the note type")
+        self.remove_styling_button = ModernButton(self.tr("Remove Anki Miner Styles"), variant="secondary")
+        self.remove_styling_button.setToolTip(self.tr("Strip Anki Miner's managed CSS block from the note type"))
         self.remove_styling_button.clicked.connect(self._on_remove_styling)
         styling_button_layout.addWidget(self.remove_styling_button)
         self.add_layout(styling_button_layout)
@@ -395,12 +415,12 @@ class AnkiSettingsPanel(FormPanel):
 
     def _on_deck_sync(self) -> None:
         """Handle deck sync button click."""
-        self.set_deck_status(None, "Syncing deck list...")
+        self.set_deck_status(None, self.tr("Syncing deck list..."))
         self.deck_sync_requested.emit()
 
     def _on_notetype_sync(self) -> None:
         """Handle note type sync button click."""
-        self.set_notetype_status(None, "Syncing note type list...")
+        self.set_notetype_status(None, self.tr("Syncing note type list..."))
         self.notetype_sync_requested.emit()
 
     def _on_test_connection(self) -> None:
@@ -415,10 +435,10 @@ class AnkiSettingsPanel(FormPanel):
             status: Status string (connected, disconnected, checking, unknown)
         """
         status_map = {
-            "connected": ("success", "Connected to AnkiConnect"),
-            "disconnected": ("error", "Not connected to AnkiConnect"),
-            "checking": ("checking", "Checking connection..."),
-            "unknown": ("info", "Connection status unknown"),
+            "connected": ("success", self.tr("Connected to AnkiConnect")),
+            "disconnected": ("error", self.tr("Not connected to AnkiConnect")),
+            "checking": ("checking", self.tr("Checking connection...")),
+            "unknown": ("info", self.tr("Connection status unknown")),
         }
         badge_status, text = status_map.get(status, ("info", "Unknown"))
         self.connection_status.set_name(text.split(" to ")[0] if " to " in text else text)
@@ -432,13 +452,13 @@ class AnkiSettingsPanel(FormPanel):
             message: Status message
         """
         if exists is None:
-            self.deck_status.setText(message or "Checking...")
+            self.deck_status.setText(message or self.tr("Checking..."))
             self.deck_status.setProperty("status", "checking")
         elif exists:
-            self.deck_status.setText(message or "Deck exists")
+            self.deck_status.setText(message or self.tr("Deck exists"))
             self.deck_status.setProperty("status", "success")
         else:
-            self.deck_status.setText(message or "Deck not found")
+            self.deck_status.setText(message or self.tr("Deck not found"))
             self.deck_status.setProperty("status", "error")
 
         if style := self.deck_status.style():
@@ -453,13 +473,13 @@ class AnkiSettingsPanel(FormPanel):
             message: Status message
         """
         if exists is None:
-            self.notetype_status.setText(message or "Checking...")
+            self.notetype_status.setText(message or self.tr("Checking..."))
             self.notetype_status.setProperty("status", "checking")
         elif exists:
-            self.notetype_status.setText(message or "Note type exists")
+            self.notetype_status.setText(message or self.tr("Note type exists"))
             self.notetype_status.setProperty("status", "success")
         else:
-            self.notetype_status.setText(message or "Note type not found")
+            self.notetype_status.setText(message or self.tr("Note type not found"))
             self.notetype_status.setProperty("status", "error")
 
         if style := self.notetype_status.style():
@@ -602,24 +622,24 @@ class AnkiSettingsPanel(FormPanel):
     # === Card Styling (Issue #44) ===
     def _on_apply_styling(self) -> None:
         """Handle the Apply-to-note-type button click."""
-        self.set_styling_status(None, "Applying styles to note type...")
+        self.set_styling_status(None, self.tr("Applying styles to note type..."))
         self.apply_styling_requested.emit()
 
     def _on_remove_styling(self) -> None:
         """Handle the Remove-styles button click."""
-        self.set_styling_status(None, "Removing styles from note type...")
+        self.set_styling_status(None, self.tr("Removing styles from note type..."))
         self.remove_styling_requested.emit()
 
     def set_styling_status(self, ok: bool | None, message: str = "") -> None:
         """Update the card-styling status line (None=working, True=ok, False=error)."""
         if ok is None:
-            self.styling_status.setText(message or "Working...")
+            self.styling_status.setText(message or self.tr("Working..."))
             self.styling_status.setProperty("status", "checking")
         elif ok:
-            self.styling_status.setText(message or "Done")
+            self.styling_status.setText(message or self.tr("Done"))
             self.styling_status.setProperty("status", "success")
         else:
-            self.styling_status.setText(message or "Failed")
+            self.styling_status.setText(message or self.tr("Failed"))
             self.styling_status.setProperty("status", "error")
 
         if style := self.styling_status.style():
