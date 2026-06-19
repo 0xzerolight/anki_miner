@@ -394,8 +394,17 @@ class DeckBuilderTab(MiningTabBase):
             # to a live QThread — "QThread: Destroyed while thread is still
             # running" — and crash. Bounded so a stuck worker cannot freeze
             # the GUI forever.
-            if not self.worker_thread.wait(5000):
+            joined = self.worker_thread.wait(5000)
+            if not joined:
                 logger.warning("Lingering deck-builder worker did not stop within 5 s; replacing it anyway")
+            # Release the survivor processor's sqlite handles + HTTP session
+            # before dropping the worker reference on reassignment below; single
+            # and batch tabs do the same in _teardown_previous_run. Only when
+            # joined: never close() under a still-running worker.
+            old_processor = self.worker_thread.curation_processor
+            if joined and old_processor is not None:
+                with contextlib.suppress(Exception):
+                    old_processor.close()
 
         self.log_widget.clear_log()
         self.log_widget.append_info("Analysing corpus…")

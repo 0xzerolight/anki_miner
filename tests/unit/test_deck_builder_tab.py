@@ -320,6 +320,68 @@ def test_second_preview_joins_lingering_worker_before_replacing(tab, tmp_path):
     assert tab.worker_thread is worker2
 
 
+def test_second_preview_closes_joined_survivor_processor(tab, tmp_path):
+    """The survivor processor is close()d on a re-Preview once the old worker
+    joins, releasing its sqlite handles + HTTP session (mirrors single/batch)."""
+    pairs = _make_pairs(tmp_path)
+    tab.deck_name_edit.setText("Deck")
+
+    worker1 = MagicMock(name="worker1")
+    worker1.wait.return_value = True  # joins within the bound
+    worker2 = MagicMock(name="worker2")
+
+    with (
+        patch(
+            "anki_miner.gui.widgets.deck_builder_tab.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=pairs,
+        ),
+        patch(
+            "anki_miner.gui.widgets.deck_builder_tab.DeckBuilderWorker",
+            side_effect=[worker1, worker2],
+        ),
+    ):
+        tab.video_folder_selector.get_path = MagicMock(return_value=str(tmp_path))
+        tab.video_folder_selector.is_valid = MagicMock(return_value=True)
+        tab.subtitle_folder_selector.get_path = MagicMock(return_value=str(tmp_path))
+        tab.subtitle_folder_selector.is_valid = MagicMock(return_value=True)
+
+        tab._on_preview_clicked()
+        tab._on_preview_clicked()
+
+    worker1.curation_processor.close.assert_called_once_with()
+
+
+def test_second_preview_does_not_close_unjoined_survivor(tab, tmp_path):
+    """If the old worker did NOT join within the bound, its processor is left
+    open — closing under a live worker would risk a use-after-free."""
+    pairs = _make_pairs(tmp_path)
+    tab.deck_name_edit.setText("Deck")
+
+    worker1 = MagicMock(name="worker1")
+    worker1.wait.return_value = False  # timed out, still running
+    worker2 = MagicMock(name="worker2")
+
+    with (
+        patch(
+            "anki_miner.gui.widgets.deck_builder_tab.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=pairs,
+        ),
+        patch(
+            "anki_miner.gui.widgets.deck_builder_tab.DeckBuilderWorker",
+            side_effect=[worker1, worker2],
+        ),
+    ):
+        tab.video_folder_selector.get_path = MagicMock(return_value=str(tmp_path))
+        tab.video_folder_selector.is_valid = MagicMock(return_value=True)
+        tab.subtitle_folder_selector.get_path = MagicMock(return_value=str(tmp_path))
+        tab.subtitle_folder_selector.is_valid = MagicMock(return_value=True)
+
+        tab._on_preview_clicked()
+        tab._on_preview_clicked()
+
+    worker1.curation_processor.close.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # 5. _on_preview_clicked — validation failures (no worker started)
 # ---------------------------------------------------------------------------
