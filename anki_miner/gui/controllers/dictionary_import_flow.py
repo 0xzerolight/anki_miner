@@ -88,7 +88,7 @@ class DictionaryImportFlow:
         zip_path_str, _ = QFileDialog.getOpenFileName(
             self._parent,
             "Choose Yomitan dictionary zip",
-            resolve_start_dir(None, file_mode=True),
+            resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
             "Yomitan zip (*.zip)",
         )
         if not zip_path_str:
@@ -145,7 +145,7 @@ class DictionaryImportFlow:
         zip_path_str, _ = QFileDialog.getOpenFileName(
             self._parent,
             "Choose Yomitan dictionary zip",
-            resolve_start_dir(None, file_mode=True),
+            resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
             "Yomitan zip (*.zip)",
         )
         if not zip_path_str:
