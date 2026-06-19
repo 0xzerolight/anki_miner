@@ -397,6 +397,11 @@ class TestValidateGithubUrl:
     def test_custom_scheme_rejected(self):
         assert _validate_github_url("myapp://github.com/path") is False
 
+    def test_mixed_case_host_accepted(self):
+        # Hosts are case-insensitive; a "GitHub.com" URL must not be rejected.
+        assert _validate_github_url("https://GitHub.com/foo/bar/releases/tag/v3.0.0") is True
+        assert _validate_github_url("https://API.GitHub.com/repos/foo/bar/releases/latest") is True
+
 
 class TestPickAssetUrlValidation:
     """_pick_asset must reject browser_download_url values not on the allowlist (OVH-064)."""
