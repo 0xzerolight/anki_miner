@@ -1488,6 +1488,43 @@ class TestStatsServiceIntegration:
         assert result.card_ids == [12345]
         assert not result.errors
 
+    def test_oserror_on_record_session_keeps_successful_result(self, test_config, mock_services, tmp_path):
+        """A non-sqlite OSError (e.g. WAL write to a full/RO disk) during the
+        post-create session record must also be swallowed, not reported as a
+        failed run with cards_created=0 (F6)."""
+        mock_stats = MagicMock()
+        mock_stats.is_available.return_value = True
+        mock_stats.record_session.side_effect = OSError("No space left on device")
+
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+
+        def _create_batch(card_data, progress_callback=None):
+            mock_services["anki_service"].last_created_note_ids = [12345]
+            return 1
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_stats.record_session.assert_called_once()
+        assert result.cards_created == 1
+        assert result.card_ids == [12345]
+        assert not result.errors
+
 
 class TestPerRunTempFolder:
     """Isolate temp media per run instead of sharing one folder across calls."""
