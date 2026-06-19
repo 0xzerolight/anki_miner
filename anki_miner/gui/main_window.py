@@ -197,7 +197,9 @@ class MainWindow(QMainWindow):
         """Set up accessibility features for screen readers and keyboard navigation."""
         # Set window accessible name and description
         self.setAccessibleName("Anki Miner Main Window")
-        self.setAccessibleDescription("Japanese vocabulary mining tool for creating Anki flashcards from anime")
+        self.setAccessibleDescription(
+            "Japanese vocabulary mining tool for creating Anki flashcards from video subtitles"
+        )
 
         # Set accessible names for main components
         self.tabs.setAccessibleName("Main Tabs")
