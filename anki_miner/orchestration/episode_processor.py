@@ -32,26 +32,9 @@ from anki_miner.services import (
     WordFilterService,
 )
 from anki_miner.utils import ensure_directory, has_katakana, hiragana_to_katakana
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
-
-
-def _arg(template: str, *args: object) -> str:
-    """Substitute ``%1``, ``%2``, … placeholders in a translated template.
-
-    ``QCoreApplication.translate()`` returns a plain Python ``str`` in PyQt6
-    (there is no ``QString.arg()``), so placeholder substitution must be done
-    in Python.  Placeholders are replaced left-to-right: the first ``%1``
-    occurrence is replaced with ``str(args[0])``, ``%2`` with ``str(args[1])``,
-    and so on.  Un-referenced higher placeholders are left as-is.
-
-    Designed to mirror Qt's ``QString::arg()`` for the subset of patterns
-    used in this file.
-    """
-    result = template
-    for i, val in enumerate(args, start=1):
-        result = result.replace(f"%{i}", str(val), 1)
-    return result
 
 
 if TYPE_CHECKING:
@@ -381,7 +364,7 @@ class EpisodeProcessor:
         Returns the raw parse output; mutates ``ctx.total_words_found``.
         """
         self.presenter.show_info(
-            _arg(
+            tr_format(
                 QCoreApplication.translate("EpisodeProcessor", "Step 1/5 — Parsing subtitles: %1"),
                 subtitle_file.name,
             )
@@ -415,7 +398,7 @@ class EpisodeProcessor:
                 word.frequency_rank = self.frequency_service.lookup(word.lemma)
             ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
             self.presenter.show_info(
-                _arg(
+                tr_format(
                     QCoreApplication.translate("EpisodeProcessor", "Frequency data: %1/%2 words ranked"),
                     ranked_count,
                     len(all_words),
@@ -455,7 +438,7 @@ class EpisodeProcessor:
                 added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
                 if added > 0:
                     self.presenter.show_info(
-                        _arg(
+                        tr_format(
                             QCoreApplication.translate(
                                 "EpisodeProcessor", "Known word DB synced: %1 new words (%2 total)"
                             ),
@@ -475,7 +458,7 @@ class EpisodeProcessor:
         # Comprehension percentage.
         comprehension = ((len(all_words) - len(unknown_words)) / len(all_words)) * 100 if all_words else 0.0
         self.presenter.show_info(
-            _arg(
+            tr_format(
                 QCoreApplication.translate("EpisodeProcessor", "Comprehension: %1% of words already known"),
                 f"{comprehension:.1f}",
             )
@@ -513,7 +496,7 @@ class EpisodeProcessor:
             filtered_out = before - len(unknown_words)
             if filtered_out > 0:
                 self.presenter.show_info(
-                    _arg(
+                    tr_format(
                         QCoreApplication.translate(
                             "EpisodeProcessor", "Frequency filter: removed %1 words outside top %2"
                         ),
@@ -529,7 +512,7 @@ class EpisodeProcessor:
             filtered_out = before - len(unknown_words)
             if filtered_out > 0:
                 self.presenter.show_info(
-                    _arg(
+                    tr_format(
                         QCoreApplication.translate("EpisodeProcessor", "Word list filter: removed %1 words"),
                         filtered_out,
                     )
@@ -553,7 +536,7 @@ class EpisodeProcessor:
                 if self.config.exclude_katakana_only_words:
                     kinds.append("katakana-only")
                 self.presenter.show_info(
-                    _arg(
+                    tr_format(
                         QCoreApplication.translate("EpisodeProcessor", "Script-type filter: removed %1 %2 words"),
                         removed,
                         "/".join(kinds),
@@ -571,7 +554,7 @@ class EpisodeProcessor:
             filtered_out = before - len(unknown_words)
             if filtered_out > 0:
                 self.presenter.show_info(
-                    _arg(
+                    tr_format(
                         QCoreApplication.translate("EpisodeProcessor", "Name wordset filter: removed %1 words"),
                         filtered_out,
                     )
@@ -589,7 +572,7 @@ class EpisodeProcessor:
             deduped = before - len(unknown_words)
             if deduped > 0:
                 self.presenter.show_info(
-                    _arg(
+                    tr_format(
                         QCoreApplication.translate(
                             "EpisodeProcessor", "Sentence deduplication: removed %1 duplicate-sentence words"
                         ),
@@ -612,7 +595,7 @@ class EpisodeProcessor:
             filtered_out = before - len(unknown_words)
             if filtered_out > 0:
                 self.presenter.show_info(
-                    _arg(
+                    tr_format(
                         QCoreApplication.translate(
                             "EpisodeProcessor",
                             "Cross-episode filter: removed %1 words appearing in fewer than %2 episodes",
@@ -635,7 +618,7 @@ class EpisodeProcessor:
             kept = len(unknown_words)
             pct = (kept / before * 100.0) if before else 0.0
             self.presenter.show_info(
-                _arg(
+                tr_format(
                     QCoreApplication.translate("EpisodeProcessor", "i+1 filter: kept %1/%2 words (%3%)"),
                     kept,
                     before,
@@ -667,7 +650,7 @@ class EpisodeProcessor:
                 if self.config.max_sentence_chars > 0:
                     caps.append(f"{self.config.max_sentence_chars} chars")
                 self.presenter.show_info(
-                    _arg(
+                    tr_format(
                         QCoreApplication.translate(
                             "EpisodeProcessor", "Sentence length filter: removed %1 words (cap: %2)"
                         ),
@@ -772,7 +755,7 @@ class EpisodeProcessor:
             if progress_callback is not None:
                 progress_callback.on_complete()
             self.presenter.show_info(
-                _arg(
+                tr_format(
                     QCoreApplication.translate("EpisodeProcessor", "Expression audio: %1/%2 available"),
                     fetched_count,
                     len(media_results),
@@ -823,7 +806,7 @@ class EpisodeProcessor:
             )
             found_count = sum(1 for pos, _ in pitch_data if pos)
             self.presenter.show_info(
-                _arg(
+                tr_format(
                     QCoreApplication.translate("EpisodeProcessor", "Pitch accent data: %1/%2 words"),
                     found_count,
                     len(words_with_media),
@@ -885,7 +868,7 @@ class EpisodeProcessor:
             preview = ", ".join(skipped_words[:10])
             more = f" (+{len(skipped_words) - 10} more)" if len(skipped_words) > 10 else ""
             self.presenter.show_warning(
-                _arg(
+                tr_format(
                     QCoreApplication.translate("EpisodeProcessor", "Skipped %1 words with no definition found: %2%3"),
                     len(skipped_words),
                     preview,
@@ -1181,7 +1164,7 @@ class EpisodeProcessor:
                 ctx.errors.append(
                     f"Run failed after creating {len(partial_ids)} card(s); " f"they remain in Anki and can be undone."
                 )
-            self.presenter.show_error(_arg(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
+            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
             return ctx.build_result(
                 total_words_found=0,
                 new_words_found=0,
@@ -1197,7 +1180,7 @@ class EpisodeProcessor:
                     f"Run failed after creating {len(partial_ids)} card(s); " f"they remain in Anki and can be undone."
                 )
             self.presenter.show_error(
-                _arg(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
+                tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
             )
             return ctx.build_result(
                 total_words_found=0,
