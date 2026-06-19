@@ -104,7 +104,7 @@ if platform.system() == "Windows":
                             StringStruct(
                                 "FileDescription",
                                 "Anki Miner - Japanese vocabulary mining from "
-                                "anime subtitles",
+                                "media",
                             ),
                             StringStruct("FileVersion", app_version),
                             StringStruct("InternalName", "AnkiMiner"),
