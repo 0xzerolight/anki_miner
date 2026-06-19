@@ -25,6 +25,14 @@ SRC_ROOT = REPO_ROOT / "anki_miner"
 TS_DIR = SRC_ROOT / "gui" / "resources" / "translations"
 EN_TS = TS_DIR / "anki_miner_en.ts"
 EN_QM = TS_DIR / "anki_miner_en.qm"
+JA_TS = TS_DIR / "anki_miner_ja.ts"
+JA_QM = TS_DIR / "anki_miner_ja.qm"
+
+# Every shipped catalog as (source .ts, compiled .qm). "en" is the source
+# language (all entries unfinished); the rest carry translations. pylupdate6
+# updates-or-creates a .ts, preserving existing translations on merge, so the
+# same primitive regenerates en and syncs translated catalogs without data loss.
+_CATALOGS: list[tuple[Path, Path]] = [(EN_TS, EN_QM), (JA_TS, JA_QM)]
 
 
 def _python_sources() -> list[str]:
@@ -44,26 +52,51 @@ def _lrelease() -> str:
     return exe
 
 
-def extract(ts_path: Path = EN_TS) -> None:
+def _update_ts(ts_path: Path) -> None:
+    """Create-or-merge ``ts_path`` from sources, then strip locations.
+
+    pylupdate6 merges into an existing .ts (keeps finished translations, adds new
+    sources as ``type="unfinished"``, drops removed ones via ``--no-obsolete``),
+    so a translated catalog is synced in place without losing work.
+    """
     ts_path.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(["pylupdate6", "--no-obsolete", "--ts", str(ts_path), *_python_sources()], check=True)
     _strip_locations(ts_path)
 
 
+def extract() -> None:
+    for ts_path, _ in _CATALOGS:
+        _update_ts(ts_path)
+
+
 def compile_ts() -> None:
-    subprocess.run([_lrelease(), str(EN_TS), "-qm", str(EN_QM)], check=True)
+    for ts_path, qm_path in _CATALOGS:
+        subprocess.run([_lrelease(), str(ts_path), "-qm", str(qm_path)], check=True)
 
 
 def check() -> int:
+    """CI guard: every catalog must be in sync with the sources.
+
+    For each catalog the committed .ts is seeded into a temp dir and re-synced;
+    any diff means it is stale. A newly-added English string surfaces here as an
+    extra ``unfinished`` entry the translated .ts lacks — flagging JA drift (the
+    string falls back to English at runtime until translated).
+    """
+    rc = 0
     with tempfile.TemporaryDirectory() as td:
-        tmp_ts = Path(td) / "anki_miner_en.ts"
-        extract(tmp_ts)
-        if tmp_ts.read_text(encoding="utf-8") != EN_TS.read_text(encoding="utf-8"):
-            print(
-                "error: anki_miner_en.ts is stale. Run: python scripts/i18n.py extract && python scripts/i18n.py compile"
-            )
-            return 1
-    return 0
+        for ts_path, _ in _CATALOGS:
+            tmp_ts = Path(td) / ts_path.name
+            if ts_path.exists():
+                shutil.copy2(ts_path, tmp_ts)  # seed so merge preserves translations
+            _update_ts(tmp_ts)
+            committed = ts_path.read_text(encoding="utf-8") if ts_path.exists() else ""
+            if tmp_ts.read_text(encoding="utf-8") != committed:
+                print(
+                    f"error: {ts_path.name} is stale. "
+                    "Run: python scripts/i18n.py extract && python scripts/i18n.py compile"
+                )
+                rc = 1
+    return rc
 
 
 def main(argv: list[str]) -> int:
