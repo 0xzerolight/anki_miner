@@ -94,6 +94,27 @@ class TestConfigureLogging:
                     h.close()
                     root.removeHandler(h)
 
+    def test_tolerates_str_log_path(self, tmp_path):
+        """_configure_logging coerces a str argument to Path (F14 robustness)."""
+        configure_logging = self._import_configure_logging()
+        log_path = tmp_path / "nested" / "app.log"
+
+        root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
+        handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
+        try:
+            configure_logging(str(log_path))  # str, not Path
+            assert log_path.parent.exists()
+        finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
+            for h in list(root.handlers):
+                if h not in handlers_before:
+                    h.close()
+                    root.removeHandler(h)
+
     def test_adds_rotating_file_handler(self, tmp_path):
         """_configure_logging adds a RotatingFileHandler to the root logger."""
         from logging.handlers import RotatingFileHandler
