@@ -289,13 +289,13 @@ def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tu
         # tiebreak (OVH-027):
         #   * term_priority: 0 when this row's term equals the word (DESC puts
         #     term matches first), else 1.
-        #   * neg_score: -score mirrors ``score DESC``.
+        #   * score_key: (is_null, -score) mirrors ``score DESC`` with NULL last.
         #   * _seq_key(sequence): NULL-aware ascending sequence tiebreak.
         #   * row_id: SQLite resolves equal (term_priority, score, sequence) ties
         #     by rowid ascending under the single-word query's MULTI-INDEX OR
         #     plan; replaying it here keeps lookup_many byte-identical to lookup.
         chunk_set = set(chunk)
-        buckets: dict[str, list[tuple[int, int, tuple[int, int], int, str, str]]] = {w: [] for w in chunk}
+        buckets: dict[str, list[tuple[int, tuple[int, int], tuple[int, int], int, str, str]]] = {w: [] for w in chunk}
         for row_id, term, reading, content, tags, score, sequence in rows:
             tags_val = tags if tags is not None else ""
             seq_key = _seq_key(sequence)
@@ -305,8 +305,8 @@ def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tu
             for w in {term, reading}:
                 if w is not None and w in chunk_set:
                     term_priority = 0 if term == w else 1
-                    neg_score = -score if score is not None else 0
-                    buckets[w].append((term_priority, neg_score, seq_key, row_id, content, tags_val))
+                    score_key = _score_key(score)
+                    buckets[w].append((term_priority, score_key, seq_key, row_id, content, tags_val))
 
         for w, entries in buckets.items():
             entries.sort(key=lambda e: (e[0], e[1], e[2], e[3]))
@@ -321,3 +321,14 @@ def _seq_key(sequence: int | None) -> tuple[int, int]:
     if sequence is None:
         return (0, 0)
     return (1, sequence)
+
+
+# Sort key mirroring SQLite "ORDER BY score DESC": NULL sorts last.
+# (is_null, -score) where a present score -> (0, -score) sorts ahead of any
+# NULL -> (1, 0); among present scores, -score ascending == score descending.
+# Unreachable in practice (the importer coerces score to int and the schema
+# defaults it to 0), but keeps lookup_many byte-identical to the SQL lookup.
+def _score_key(score: int | None) -> tuple[int, int]:
+    if score is None:
+        return (1, 0)
+    return (0, -score)
