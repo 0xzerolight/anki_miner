@@ -218,7 +218,7 @@ class SingleEpisodeTab(MiningTabBase):
     def _setup_accessibility(self) -> None:
         """Set up accessibility features for screen readers."""
         self.setAccessibleName("Episode Mining Tab")
-        self.setAccessibleDescription("Process a single anime episode to create vocabulary flashcards")
+        self.setAccessibleDescription("Process a single video episode to create vocabulary flashcards")
 
         # Set proper tab order: video selector -> subtitle selector -> offset -> preview -> process
         self.setTabOrder(self.video_selector, self.subtitle_selector)
