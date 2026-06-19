@@ -25,7 +25,7 @@ class QueueItemWidget(QFrame):
 
     Features:
     - Card-based design with shadow on hover
-    - Header: Anime series name + status badge
+    - Header: Series name + status badge
     - Body: Folder paths (truncated), episode count, statistics
     - Footer: Edit and Remove buttons
     - Status badges: Pending, Processing, Complete
@@ -56,7 +56,7 @@ class QueueItemWidget(QFrame):
         self.item_id = ""
         self._status = "pending"  # pending, processing, complete
         self._is_expanded = True
-        self._anime_folder = ""
+        self._video_folder = ""
         self._subtitle_folder = ""
         self._episode_count = 0
         self._cards_created = 0
@@ -104,15 +104,15 @@ class QueueItemWidget(QFrame):
         body_layout.setContentsMargins(0, 0, 0, 0)
         body_layout.setSpacing(SPACING.xs)
 
-        # Anime folder path
-        self.anime_path_label = QLabel()
-        self.anime_path_label.setObjectName("queue-item-path")
+        # Video folder path
+        self.video_path_label = QLabel()
+        self.video_path_label.setObjectName("queue-item-path")
         path_font = QFont()
         path_font.setPixelSize(FONT_SIZES.caption)
-        self.anime_path_label.setFont(path_font)
-        self.anime_path_label.setWordWrap(False)
-        self.anime_path_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum)
-        body_layout.addWidget(self.anime_path_label)
+        self.video_path_label.setFont(path_font)
+        self.video_path_label.setWordWrap(False)
+        self.video_path_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum)
+        body_layout.addWidget(self.video_path_label)
 
         # Subtitle folder path
         self.subtitle_path_label = QLabel()
@@ -172,14 +172,14 @@ class QueueItemWidget(QFrame):
         self._update_paths()
         self._update_stats()
 
-    def set_folders(self, anime_folder: Path, subtitle_folder: Path) -> None:
+    def set_folders(self, video_folder: Path, subtitle_folder: Path) -> None:
         """Set folder paths.
 
         Args:
-            anime_folder: Path to anime folder
+            video_folder: Path to video folder
             subtitle_folder: Path to subtitle folder
         """
-        self._anime_folder = str(anime_folder)
+        self._video_folder = str(video_folder)
         self._subtitle_folder = str(subtitle_folder)
         self._update_paths()
 
@@ -187,11 +187,11 @@ class QueueItemWidget(QFrame):
         """Get current folder paths.
 
         Returns:
-            Tuple of (anime_folder, subtitle_folder) or None if not set
+            Tuple of (video_folder, subtitle_folder) or None if not set
         """
-        anime = Path(self._anime_folder) if self._anime_folder else None
+        video = Path(self._video_folder) if self._video_folder else None
         subtitle = Path(self._subtitle_folder) if self._subtitle_folder else None
-        return (anime, subtitle)
+        return (video, subtitle)
 
     def get_status(self) -> str:
         """Get the current status of this queue item.
@@ -304,15 +304,15 @@ class QueueItemWidget(QFrame):
 
     def _update_paths(self) -> None:
         """Update the path labels with truncation."""
-        if self._anime_folder:
+        if self._video_folder:
             # Truncate path for display
-            anime_path = Path(self._anime_folder)
-            display_path = self._truncate_path(str(anime_path))
-            self.anime_path_label.setText(display_path)
-            self.anime_path_label.setToolTip(str(anime_path))
+            video_path = Path(self._video_folder)
+            display_path = self._truncate_path(str(video_path))
+            self.video_path_label.setText(display_path)
+            self.video_path_label.setToolTip(str(video_path))
         else:
-            self.anime_path_label.setText(self.tr("No anime folder selected"))
-            self.anime_path_label.setToolTip("")
+            self.video_path_label.setText(self.tr("No anime folder selected"))
+            self.video_path_label.setToolTip("")
 
         if self._subtitle_folder:
             # Truncate path for display

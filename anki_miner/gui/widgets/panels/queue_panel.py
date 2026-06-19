@@ -1,4 +1,4 @@
-"""Multi-anime queue panel for batch processing."""
+"""Multi-series queue panel for batch processing."""
 
 import logging
 from pathlib import Path
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class QueuePanel(QFrame):
-    """Multi-anime queue management panel.
+    """Multi-series queue management panel.
 
     Handles queue display, item management, and statistics.
 
@@ -112,7 +112,7 @@ class QueuePanel(QFrame):
         self._update_stats()
 
     def _add_series(self) -> None:
-        """Add a new anime series to the queue."""
+        """Add a new series to the queue."""
         # Prompt for series name
         name, ok = QInputDialog.getText(
             self,
@@ -163,12 +163,12 @@ class QueuePanel(QFrame):
         # Shared label-column width so every labeled row lines up.
         label_w = field_label_width(self.tr("Anime Folder:"), self.tr("Subtitle Folder:"), self.tr("Subtitle Offset:"))
 
-        # Anime folder selector
-        anime_selector = FileSelector(label=self.tr("Anime Folder:"), file_mode=False, label_width=label_w)
-        current_anime, _ = widget.get_folders()
-        if current_anime:
-            anime_selector.set_path(str(current_anime))
-        layout.addWidget(anime_selector)
+        # Video folder selector
+        video_selector = FileSelector(label=self.tr("Anime Folder:"), file_mode=False, label_width=label_w)
+        current_video, _ = widget.get_folders()
+        if current_video:
+            video_selector.set_path(str(current_video))
+        layout.addWidget(video_selector)
 
         # Subtitle folder selector
         subtitle_selector = FileSelector(label=self.tr("Subtitle Folder:"), file_mode=False, label_width=label_w)
@@ -203,17 +203,17 @@ class QueuePanel(QFrame):
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Update widget with new paths
-            anime_path = anime_selector.get_path()
+            video_path = video_selector.get_path()
             subtitle_path = subtitle_selector.get_path()
 
-            if anime_path and subtitle_path:
-                widget.set_folders(Path(anime_path), Path(subtitle_path))
+            if video_path and subtitle_path:
+                widget.set_folders(Path(video_path), Path(subtitle_path))
 
                 # Count episodes (optional enhancement)
                 from anki_miner.utils.file_pairing import FilePairMatcher
 
                 try:
-                    pairs = FilePairMatcher.find_pairs_by_episode_number(Path(anime_path), Path(subtitle_path))
+                    pairs = FilePairMatcher.find_pairs_by_episode_number(Path(video_path), Path(subtitle_path))
                     widget.set_episode_count(len(pairs))
                 except Exception as e:
                     logger.warning(f"Failed to count episodes for {widget.display_name}: {e}")
@@ -277,13 +277,13 @@ class QueuePanel(QFrame):
 
         Returns:
             List of tuples:
-            (anime_folder, subtitle_folder, display_name, subtitle_offset, widget)
+            (video_folder, subtitle_folder, display_name, subtitle_offset, widget)
         """
         valid_pairs = []
         for widget in self.queue_item_widgets:
-            anime, subtitle = widget.get_folders()
-            if anime and subtitle and anime.exists() and subtitle.exists():
-                valid_pairs.append((anime, subtitle, widget.display_name, widget.subtitle_offset, widget))
+            video, subtitle = widget.get_folders()
+            if video and subtitle and video.exists() and subtitle.exists():
+                valid_pairs.append((video, subtitle, widget.display_name, widget.subtitle_offset, widget))
         return valid_pairs
 
     def get_incomplete_items(self) -> list:
@@ -294,10 +294,10 @@ class QueuePanel(QFrame):
         """
         incomplete = []
         for widget in self.queue_item_widgets:
-            anime, subtitle = widget.get_folders()
-            if anime and subtitle:
+            video, subtitle = widget.get_folders()
+            if video and subtitle:
                 # Both paths set - check if they exist on disk
-                if not anime.exists() or not subtitle.exists():
+                if not video.exists() or not subtitle.exists():
                     incomplete.append((widget, "invalid"))
             else:
                 # One or both paths not set

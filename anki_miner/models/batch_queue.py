@@ -19,7 +19,7 @@ class QueueItemStatus(Enum):
 class QueueItem:
     """A single batch processing queue item."""
 
-    anime_folder: Path
+    video_folder: Path
     subtitle_folder: Path
     display_name: str  # User-friendly name
     id: str = field(default_factory=lambda: str(uuid4()))
@@ -40,7 +40,7 @@ class BatchQueue:
 
     def add_item(
         self,
-        anime_folder: Path,
+        video_folder: Path,
         subtitle_folder: Path,
         display_name: str | None = None,
         subtitle_offset: float = 0.0,
@@ -48,7 +48,7 @@ class BatchQueue:
         """Add a folder pair to the queue.
 
         Args:
-            anime_folder: Path to anime folder
+            video_folder: Path to video folder
             subtitle_folder: Path to subtitle folder
             display_name: Optional custom name for this item
             subtitle_offset: Subtitle timing offset in seconds
@@ -57,10 +57,10 @@ class BatchQueue:
             The created QueueItem
         """
         if display_name is None:
-            display_name = anime_folder.name
+            display_name = video_folder.name
 
         item = QueueItem(
-            anime_folder=anime_folder,
+            video_folder=video_folder,
             subtitle_folder=subtitle_folder,
             display_name=display_name,
             subtitle_offset=subtitle_offset,

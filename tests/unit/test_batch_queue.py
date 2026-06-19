@@ -8,21 +8,21 @@ class TestQueueItem:
 
     def test_default_status_is_pending(self, tmp_path):
         item = QueueItem(
-            anime_folder=tmp_path / "anime",
+            video_folder=tmp_path / "video",
             subtitle_folder=tmp_path / "subs",
             display_name="Test Anime",
         )
         assert item.status == QueueItemStatus.PENDING
 
     def test_auto_generated_id(self, tmp_path):
-        item1 = QueueItem(anime_folder=tmp_path, subtitle_folder=tmp_path, display_name="A")
-        item2 = QueueItem(anime_folder=tmp_path, subtitle_folder=tmp_path, display_name="B")
+        item1 = QueueItem(video_folder=tmp_path, subtitle_folder=tmp_path, display_name="A")
+        item2 = QueueItem(video_folder=tmp_path, subtitle_folder=tmp_path, display_name="B")
         assert item1.id != item2.id
         assert len(item1.id) > 0
 
     def test_custom_offset(self, tmp_path):
         item = QueueItem(
-            anime_folder=tmp_path,
+            video_folder=tmp_path,
             subtitle_folder=tmp_path,
             display_name="Test",
             subtitle_offset=2.5,
@@ -30,15 +30,15 @@ class TestQueueItem:
         assert item.subtitle_offset == 2.5
 
     def test_default_offset_is_zero(self, tmp_path):
-        item = QueueItem(anime_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
+        item = QueueItem(video_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
         assert item.subtitle_offset == 0.0
 
     def test_default_cards_created_is_zero(self, tmp_path):
-        item = QueueItem(anime_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
+        item = QueueItem(video_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
         assert item.cards_created == 0
 
     def test_default_error_message_empty(self, tmp_path):
-        item = QueueItem(anime_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
+        item = QueueItem(video_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
         assert item.error_message == ""
 
 
@@ -51,21 +51,21 @@ class TestBatchQueue:
 
     def test_add_item(self, tmp_path):
         queue = BatchQueue()
-        item = queue.add_item(tmp_path / "anime", tmp_path / "subs", "My Anime")
+        item = queue.add_item(tmp_path / "video", tmp_path / "subs", "My Anime")
         assert queue.total_items == 1
         assert item.display_name == "My Anime"
-        assert item.anime_folder == tmp_path / "anime"
+        assert item.video_folder == tmp_path / "video"
 
     def test_add_item_default_display_name(self, tmp_path):
         queue = BatchQueue()
-        anime_folder = tmp_path / "Naruto"
-        anime_folder.mkdir()
-        item = queue.add_item(anime_folder, tmp_path / "subs")
+        video_folder = tmp_path / "Naruto"
+        video_folder.mkdir()
+        item = queue.add_item(video_folder, tmp_path / "subs")
         assert item.display_name == "Naruto"
 
     def test_add_item_with_offset(self, tmp_path):
         queue = BatchQueue()
-        item = queue.add_item(tmp_path / "anime", tmp_path / "subs", "Test", subtitle_offset=1.5)
+        item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Test", subtitle_offset=1.5)
         assert item.subtitle_offset == 1.5
 
     def test_get_next_pending(self, tmp_path):
@@ -140,11 +140,11 @@ class TestRetryFeature:
     """Tests for retry-related features."""
 
     def test_retry_count_default(self, tmp_path):
-        item = QueueItem(anime_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
+        item = QueueItem(video_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
         assert item.retry_count == 0
 
     def test_max_retries_default(self, tmp_path):
-        item = QueueItem(anime_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
+        item = QueueItem(video_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
         assert item.max_retries == 2
 
     def test_failed_count(self, tmp_path):
