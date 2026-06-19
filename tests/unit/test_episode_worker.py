@@ -97,14 +97,55 @@ def test_curation_processor_exposes_constructor_processor(qapp):
 # ---------------------------------------------------------------------------
 
 
-def test_cancel_propagates_to_processor(qapp):
-    """cancel() sets the worker flag AND forwards to processor.cancel()."""
+def test_cancel_sets_flag_without_poking_processor(qapp):
+    """cancel() sets the worker flag and does NOT call processor.cancel().
+
+    The sticky processor flag would poison the next run of a reused processor;
+    cancellation now reaches the processor via the cancel_event passed to
+    process_episode in run() (see test below)."""
     worker = _make_worker(qapp)
 
     worker.cancel()
 
     assert worker.is_cancelled is True
-    worker.processor.cancel.assert_called_once_with()
+    worker.processor.cancel.assert_not_called()
+
+
+def test_run_passes_cancel_event_to_process_episode(qapp):
+    """run() hands the worker's _cancel_event to process_episode as the per-run
+    external cancel source."""
+    worker = _make_worker(qapp)
+    worker.run()
+    _, kwargs = worker.processor.process_episode.call_args
+    assert kwargs.get("cancel_event") is worker._cancel_event
+
+
+def test_factory_path_cancel_during_build_is_seen_by_process_episode(qapp):
+    """Regression: cancel fired WHILE the factory builds the processor must reach
+    the run. The cancel_event handed to process_episode is already set, so the
+    real EpisodeProcessor aborts before creating cards (the cancel gap)."""
+    seen: dict = {}
+    built = MagicMock(name="EpisodeProcessor")
+
+    def _record(*args, **kwargs):
+        ev = kwargs.get("cancel_event")
+        seen["cancel_event"] = ev
+        seen["was_set_at_call"] = ev.is_set() if ev is not None else None
+        return MagicMock(name="ProcessingResult")
+
+    built.process_episode.side_effect = _record
+
+    def factory():
+        # User presses Cancel during the slow registry/sqlite/CSV build.
+        worker.cancel()
+        return built
+
+    worker = _make_factory_worker(qapp, factory)
+    worker.run()
+
+    built.process_episode.assert_called_once()
+    assert seen["cancel_event"] is worker._cancel_event
+    assert seen["was_set_at_call"] is True
 
 
 def test_cancel_before_run_skips_process_episode_and_emit(qapp):

@@ -83,10 +83,18 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
         return self.processor
 
     def cancel(self) -> None:
-        """Cancel processing, propagating to the processor if one exists."""
+        """Cancel processing.
+
+        Sets the thread-safe cancel flag. ``run()`` hands this worker's
+        ``_cancel_event`` to ``process_episode`` as the per-run external cancel
+        source, so the request reaches the processor's phase checkpoints even
+        when cancel fires *during* the factory build — i.e. before
+        ``self.processor`` exists (the gap that let a cancelled first-mine still
+        create cards). We deliberately do NOT call ``self.processor.cancel()``:
+        that sets the processor's sticky ``_cancelled`` flag, which would poison
+        the next run of a reused processor (see EpisodeProcessor._external_cancel).
+        """
         super().cancel()
-        if self.processor is not None:
-            self.processor.cancel()
 
     def run(self) -> None:
         """Execute episode processing in background thread."""
@@ -108,6 +116,7 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
                 self.progress_callback,
                 curation_callback=self.curation_callback,
                 audio_track_override=self.audio_track_override,
+                cancel_event=self._cancel_event,
             )
 
             if not self.check_cancelled():
