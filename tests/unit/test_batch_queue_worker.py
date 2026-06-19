@@ -36,7 +36,7 @@ def test_curation_attrs_use_item_offset_and_callback_forwarded(tmp_path):
         id="i1",
         display_name="Show",
         subtitle_offset=3.0,
-        anime_folder=tmp_path / "anime",
+        video_folder=tmp_path / "video",
         subtitle_folder=tmp_path / "subs",
     )
     queue = MagicMock()
@@ -127,7 +127,7 @@ def test_all_pairs_failed_emits_item_failed(tmp_path):
     pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
 
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
 
     proc = MagicMock()
     proc.process_episode.side_effect = [_failed_result(), _failed_result()]
@@ -162,7 +162,7 @@ def test_partial_failure_emits_item_failed_with_partial_cards(tmp_path):
     pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
 
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
 
     proc = MagicMock()
     proc.process_episode.side_effect = [_ok_result(cards=3), _failed_result()]
@@ -196,7 +196,7 @@ def test_all_pairs_succeed_emits_item_completed(tmp_path):
     pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
 
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
 
     proc = MagicMock()
     proc.process_episode.side_effect = [_ok_result(cards=2), _ok_result(cards=3)]
@@ -248,7 +248,7 @@ def test_item_processed_exactly_once_when_gui_status_write_delayed(tmp_path):
     pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
 
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
     item = queue.get_all_items()[0]
 
     proc = MagicMock()
@@ -283,7 +283,7 @@ def test_fast_fail_item_fails_exactly_once_when_gui_status_write_delayed(tmp_pat
     """Regression: a fast-failing item ("No matching pairs" raises within the
     same loop iteration) must not hot-spin re-failing while GUI writes lag."""
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
     item = queue.get_all_items()[0]
 
     worker = _make_worker_with_queue(queue)
@@ -316,7 +316,7 @@ def test_worker_marks_item_processing_at_pick_time(tmp_path):
     pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
 
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
     item = queue.get_all_items()[0]
 
     seen_during_processing: list[QueueItemStatus] = []
@@ -363,7 +363,7 @@ def test_cancel_mid_item_does_not_emit_item_completed(tmp_path):
     pair3 = SimpleNamespace(video=Path("/tmp/ep3.mkv"), subtitle=Path("/tmp/ep3.ass"))
 
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
     item = queue.get_all_items()[0]
 
     proc = MagicMock()
@@ -452,7 +452,7 @@ def test_setup_error_emits_item_failed(tmp_path):
         id="i1",
         display_name="Show",
         subtitle_offset=0.0,
-        anime_folder=tmp_path / "anime",
+        video_folder=tmp_path / "video",
         subtitle_folder=tmp_path / "subs",
     )
     queue = MagicMock()
@@ -495,7 +495,7 @@ def test_mid_loop_raise_does_not_abort_remaining_pairs_or_lose_cards(tmp_path):
     pair3 = SimpleNamespace(video=Path("/tmp/ep3.mkv"), subtitle=Path("/tmp/ep3.ass"))
 
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
     item = queue.get_all_items()[0]
 
     proc = MagicMock()
@@ -544,8 +544,8 @@ def test_each_item_processor_closed(tmp_path):
     pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
 
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime1", tmp_path / "subs1", "Show1")
-    queue.add_item(tmp_path / "anime2", tmp_path / "subs2", "Show2")
+    queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
+    queue.add_item(tmp_path / "video2", tmp_path / "subs2", "Show2")
 
     proc1 = MagicMock(name="proc1")
     proc1.process_episode.return_value = _ok_result(cards=1)
@@ -587,7 +587,7 @@ def test_each_item_processor_closed(tmp_path):
 def test_processor_closed_on_exception_exit(tmp_path):
     """The current processor is closed even when run() exits via an exception path."""
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime", tmp_path / "subs", "Show")
+    queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
 
     proc = MagicMock(name="proc")
 
@@ -615,8 +615,8 @@ def test_close_failure_does_not_abort_queue(tmp_path):
     pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
 
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime1", tmp_path / "subs1", "Show1")
-    queue.add_item(tmp_path / "anime2", tmp_path / "subs2", "Show2")
+    queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
+    queue.add_item(tmp_path / "video2", tmp_path / "subs2", "Show2")
 
     proc1 = MagicMock(name="proc1")
     proc1.process_episode.return_value = _ok_result(cards=2)
@@ -657,8 +657,8 @@ def test_shared_anki_service_passed_to_each_processor(tmp_path):
     pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
 
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime1", tmp_path / "subs1", "Show1")
-    queue.add_item(tmp_path / "anime2", tmp_path / "subs2", "Show2")
+    queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
+    queue.add_item(tmp_path / "video2", tmp_path / "subs2", "Show2")
 
     proc = MagicMock()
     proc.process_episode.return_value = _ok_result(cards=1)
@@ -702,8 +702,8 @@ def test_batch_vocab_scan_at_most_once_across_items(tmp_path):
     pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
 
     queue = BatchQueue()
-    queue.add_item(tmp_path / "anime1", tmp_path / "subs1", "Show1")
-    queue.add_item(tmp_path / "anime2", tmp_path / "subs2", "Show2")
+    queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
+    queue.add_item(tmp_path / "video2", tmp_path / "subs2", "Show2")
 
     # Track all AnkiService instances constructed during the run
     constructed_services: list[AnkiService] = []
