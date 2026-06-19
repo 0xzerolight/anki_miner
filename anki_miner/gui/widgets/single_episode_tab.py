@@ -45,6 +45,7 @@ from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.orchestration import EpisodeProcessor
@@ -131,23 +132,23 @@ class SingleEpisodeTab(MiningTabBase):
         # Actions section
         from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 
-        actions_header = SectionHeader("Actions")
+        actions_header = SectionHeader(self.tr("Actions"))
         layout.addWidget(actions_header)
 
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.xs)
 
-        self.preview_button = ModernButton("Preview Words", variant="secondary")
-        self.preview_button.setToolTip("Preview discovered words before creating cards")
-        self.process_button = ModernButton("Process Episode", variant="primary")
-        self.process_button.setToolTip("Create Anki cards from the episode")
-        self.timing_button = ModernButton("Test Timing", variant="secondary")
-        self.timing_button.setToolTip("Preview video with subtitles to adjust timing offset")
-        self.tracks_button = ModernButton("Tracks", variant="secondary")
-        self.tracks_button.setToolTip("Manually choose which audio track to use for this episode")
+        self.preview_button = ModernButton(self.tr("Preview Words"), variant="secondary")
+        self.preview_button.setToolTip(self.tr("Preview discovered words before creating cards"))
+        self.process_button = ModernButton(self.tr("Process Episode"), variant="primary")
+        self.process_button.setToolTip(self.tr("Create Anki cards from the episode"))
+        self.timing_button = ModernButton(self.tr("Test Timing"), variant="secondary")
+        self.timing_button.setToolTip(self.tr("Preview video with subtitles to adjust timing offset"))
+        self.tracks_button = ModernButton(self.tr("Tracks"), variant="secondary")
+        self.tracks_button.setToolTip(self.tr("Manually choose which audio track to use for this episode"))
 
-        self.cancel_button = ModernButton("Cancel", variant="danger")
-        self.cancel_button.setToolTip("Cancel processing")
+        self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
+        self.cancel_button.setToolTip(self.tr("Cancel processing"))
         self.cancel_button.hide()
 
         self.preview_button.clicked.connect(self._on_preview_clicked)
@@ -165,7 +166,7 @@ class SingleEpisodeTab(MiningTabBase):
         layout.addLayout(button_layout)
 
         # Progress section
-        progress_header = SectionHeader("Progress")
+        progress_header = SectionHeader(self.tr("Progress"))
         layout.addWidget(progress_header)
 
         self.progress_widget = ProgressWidget()
@@ -208,8 +209,8 @@ class SingleEpisodeTab(MiningTabBase):
         process_shortcut.activated.connect(self._on_process_clicked)
 
         # Update button tooltips to show shortcuts
-        self.preview_button.setToolTip("Preview discovered words before creating cards (Ctrl+P)")
-        self.process_button.setToolTip("Create Anki cards from the episode (Ctrl+Enter)")
+        self.preview_button.setToolTip(self.tr("Preview discovered words before creating cards (Ctrl+P)"))
+        self.process_button.setToolTip(self.tr("Create Anki cards from the episode (Ctrl+Enter)"))
 
         # Set accessibility properties
         self._setup_accessibility()
@@ -240,7 +241,7 @@ class SingleEpisodeTab(MiningTabBase):
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
         # Section header
-        header = SectionHeader("File Selection")
+        header = SectionHeader(self.tr("File Selection"))
         layout.addWidget(header)
 
         # Shared label-column width so every labeled row in this card lines its
@@ -250,7 +251,7 @@ class SingleEpisodeTab(MiningTabBase):
         # Recent files dropdown
         recent_layout = QHBoxLayout()
         recent_layout.setSpacing(SPACING.xs)
-        recent_label = QLabel("Recent Files:")
+        recent_label = QLabel(self.tr("Recent Files:"))
         recent_label.setObjectName("field-label")
         recent_label.setFixedWidth(label_w)
         make_label_fit_text(recent_label)
@@ -263,7 +264,7 @@ class SingleEpisodeTab(MiningTabBase):
         # minimumSizeHint content-driven, pinning the layout to the widest item.
         self.recent_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.recent_combo.setMinimumContentsLength(20)
-        self.recent_combo.addItem("Select recent file pair...")
+        self.recent_combo.addItem(self.tr("Select recent file pair..."))
         self.recent_combo.currentIndexChanged.connect(self._on_recent_selected)
         recent_layout.addWidget(self.recent_combo, 1)
         layout.addLayout(recent_layout)
@@ -272,13 +273,13 @@ class SingleEpisodeTab(MiningTabBase):
 
         # Video file selector
         self.video_selector = FileSelector(
-            label="Video File:", file_mode=True, file_filter=VIDEO_FILE_FILTER, label_width=label_w
+            label=self.tr("Video File:"), file_mode=True, file_filter=VIDEO_FILE_FILTER, label_width=label_w
         )
         layout.addWidget(self.video_selector)
 
         # Subtitle file selector
         self.subtitle_selector = FileSelector(
-            label="Subtitle File:", file_mode=True, file_filter=SUBTITLE_FILE_FILTER, label_width=label_w
+            label=self.tr("Subtitle File:"), file_mode=True, file_filter=SUBTITLE_FILE_FILTER, label_width=label_w
         )
         layout.addWidget(self.subtitle_selector)
 
@@ -286,7 +287,7 @@ class SingleEpisodeTab(MiningTabBase):
         offset_layout = QHBoxLayout()
         offset_layout.setSpacing(SPACING.xs)
 
-        offset_label = QLabel("Subtitle Offset:")
+        offset_label = QLabel(self.tr("Subtitle Offset:"))
         offset_label.setObjectName("field-label")
         offset_label.setFixedWidth(label_w)
         make_label_fit_text(offset_label)
@@ -295,8 +296,8 @@ class SingleEpisodeTab(MiningTabBase):
         self.offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
         self.offset_spinbox.setSingleStep(0.5)
         self.offset_spinbox.setValue(self.config.subtitle_offset)
-        self.offset_spinbox.setSuffix(" seconds")
-        self.offset_spinbox.setToolTip("Adjust subtitle timing (positive = later, negative = earlier)")
+        self.offset_spinbox.setSuffix(self.tr(" seconds"))
+        self.offset_spinbox.setToolTip(self.tr("Adjust subtitle timing (positive = later, negative = earlier)"))
 
         offset_layout.addWidget(offset_label)
         offset_layout.addWidget(self.offset_spinbox)
@@ -307,7 +308,7 @@ class SingleEpisodeTab(MiningTabBase):
         layout.addSpacing(4)
 
         # Helper text
-        helper_label = QLabel("Adjust if subtitles are out of sync")
+        helper_label = QLabel(self.tr("Adjust if subtitles are out of sync"))
         helper_label.setObjectName("helper-text")
         helper_label.setWordWrap(True)  # Allow text to wrap if needed
         from PyQt6.QtGui import QFont
@@ -337,10 +338,12 @@ class SingleEpisodeTab(MiningTabBase):
         """Open the AudioTracksDialog for manual audio track override selection."""
         video_path = self.video_selector.get_path().strip()
         if not video_path:
-            QMessageBox.warning(self, "Missing Video File", "Select a video file first.")
+            QMessageBox.warning(self, self.tr("Missing Video File"), self.tr("Select a video file first."))
             return
         if not self.video_selector.is_valid():
-            QMessageBox.warning(self, "File Not Found", f"Video file not found: {video_path}")
+            QMessageBox.warning(
+                self, self.tr("File Not Found"), tr_format(self.tr("Video file not found: %1"), video_path)
+            )
             return
 
         video_file = Path(video_path)
@@ -353,8 +356,8 @@ class SingleEpisodeTab(MiningTabBase):
         if not streams:
             QMessageBox.information(
                 self,
-                "No Audio Tracks",
-                "No audio tracks detected. Check that ffprobe is installed and the file has audio.",
+                self.tr("No Audio Tracks"),
+                self.tr("No audio tracks detected. Check that ffprobe is installed and the file has audio."),
             )
             return
 
@@ -387,15 +390,19 @@ class SingleEpisodeTab(MiningTabBase):
         subtitle_path = self.subtitle_selector.get_path().strip()
 
         if not video_path or not subtitle_path:
-            QMessageBox.warning(self, "Missing Files", "Select both video and subtitle files.")
+            QMessageBox.warning(self, self.tr("Missing Files"), self.tr("Select both video and subtitle files."))
             return
 
         if not self.video_selector.is_valid():
-            QMessageBox.warning(self, "File Not Found", f"Video file not found: {video_path}")
+            QMessageBox.warning(
+                self, self.tr("File Not Found"), tr_format(self.tr("Video file not found: %1"), video_path)
+            )
             return
 
         if not self.subtitle_selector.is_valid():
-            QMessageBox.warning(self, "File Not Found", f"Subtitle file not found: {subtitle_path}")
+            QMessageBox.warning(
+                self, self.tr("File Not Found"), tr_format(self.tr("Subtitle file not found: %1"), subtitle_path)
+            )
             return
 
         video_file = Path(video_path)
@@ -410,11 +417,13 @@ class SingleEpisodeTab(MiningTabBase):
             entries = parser.parse_raw_entries(subtitle_file)
         except Exception as e:
             logger.error("Failed to parse subtitles: %s", e)
-            QMessageBox.critical(self, "Parse Error", "Failed to parse subtitles. Check the file format.")
+            QMessageBox.critical(
+                self, self.tr("Parse Error"), self.tr("Failed to parse subtitles. Check the file format.")
+            )
             return
 
         if not entries:
-            QMessageBox.information(self, "No Subtitles", "No subtitle entries found in the file.")
+            QMessageBox.information(self, self.tr("No Subtitles"), self.tr("No subtitle entries found in the file."))
             return
 
         # Open subtitle viewer
@@ -445,15 +454,19 @@ class SingleEpisodeTab(MiningTabBase):
         subtitle_path = self.subtitle_selector.get_path().strip()
 
         if not video_path or not subtitle_path:
-            QMessageBox.warning(self, "Missing Files", "Select both video and subtitle files.")
+            QMessageBox.warning(self, self.tr("Missing Files"), self.tr("Select both video and subtitle files."))
             return
 
         if not self.video_selector.is_valid():
-            QMessageBox.warning(self, "File Not Found", f"Video file not found: {video_path}")
+            QMessageBox.warning(
+                self, self.tr("File Not Found"), tr_format(self.tr("Video file not found: %1"), video_path)
+            )
             return
 
         if not self.subtitle_selector.is_valid():
-            QMessageBox.warning(self, "File Not Found", f"Subtitle file not found: {subtitle_path}")
+            QMessageBox.warning(
+                self, self.tr("File Not Found"), tr_format(self.tr("Subtitle file not found: %1"), subtitle_path)
+            )
             return
 
         # Record preview mode only after validation passes — a rejected validation
@@ -477,7 +490,7 @@ class SingleEpisodeTab(MiningTabBase):
         self.process_button.hide()
         self.timing_button.hide()
         self.tracks_button.hide()
-        self.cancel_button.setText("\u25a0 Cancel")
+        self.cancel_button.setText(self.tr("\u25a0 Cancel"))
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
 
@@ -550,9 +563,9 @@ class SingleEpisodeTab(MiningTabBase):
         self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
             self.worker_thread.cancel()
-        self.cancel_button.setText("Cancelling...")
+        self.cancel_button.setText(self.tr("Cancelling..."))
         self.cancel_button.setEnabled(False)
-        self.progress_widget.set_status("Cancelling...")
+        self.progress_widget.set_status(self.tr("Cancelling..."))
 
     def _restore_buttons(self) -> None:
         """Restore normal button state after processing ends."""
@@ -618,7 +631,7 @@ class SingleEpisodeTab(MiningTabBase):
         """Refresh the recent files combo box from disk."""
         self.recent_combo.blockSignals(True)
         self.recent_combo.clear()
-        self.recent_combo.addItem("Select recent file pair...")
+        self.recent_combo.addItem(self.tr("Select recent file pair..."))
 
         entries = self.recent_manager.get_recent()
         for entry in entries:

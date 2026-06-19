@@ -52,6 +52,96 @@
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>AnalyticsTab</name>
+    <message>
+        <source>Refresh</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overview</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Total Cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sessions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Series Mined</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Avg Cards/Session</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recent Sessions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No sessions yet. Process an episode to see your history here.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Date</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Series</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Episode</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Series Difficulty Ranking</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Difficulty is based on the ratio of unknown words. Lower scores mean easier content for your current level.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine multiple series to see difficulty comparisons.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rank</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Avg Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Avg Unknown</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Difficulty</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Milestones</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AnkiSettingsPanel</name>
     <message>
         <source>AnkiConnect URL</source>
@@ -443,6 +533,463 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>JapanesePod101 (online)</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>AudiobookTab</name>
+    <message>
+        <source>Audiobook queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the audio + subtitle pair to the queue.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick an audiobook and its subtitle file above, then click Add.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show the word-selection popup for each audiobook before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Run the queue in preview mode — no cards created.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove every queued item that is not currently mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>BatchProcessingTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show the word-selection popup for each episode before creating cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overall Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Current Episode</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retry Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Quick Processing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anime Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview video/subtitle pairs before processing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Process Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Process every episode pair found in the selected folders</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel processing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Invalid Folders</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Please select valid anime and subtitle folders</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Pairs Found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No matching video/subtitle pairs found.
+
+Files are paired by episode number, so point each folder at a single show:
+- episode_01.mp4 &lt;-&gt; episode_01.ass
+- episode_02.mp4 &lt;-&gt; episode_02.ass
+
+Mixing multiple shows in one folder can mispair episodes that share a number — add each show as its own queue item.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No matching video/subtitle pairs found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting batch processing of %1 episodes...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Series '%1' has folders that don't exist. Skipping.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Incomplete Series</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Series '%1' is missing folders. Skipping.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Empty Queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No valid series in queue to process</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting queue processing (%1 series)...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>■ Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting queue processing...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Processing series: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Completed: %1/%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Created %1 cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Processed %1 anime series
+Total cards created: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>
+%1 series failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Queue Processing Complete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Items to Retry</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No failed items eligible for retry.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retrying %1 failed items...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Processed %1 episodes
+Total cards created: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>
+%1 episode(s) failed - see log for details</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Batch Processing Complete</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>DeckBuilderTab</name>
+    <message>
+        <source>Input</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anime Video Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select folder with video files…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select folder with subtitle files…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enter deck name…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All vocabulary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Top N words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Target coverage %</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Include the N most-frequent lemmas</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Include enough words to cover this percentage of tokens</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip words already in my Anki collection</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checked: subtract your known words — good for personal study.
+Unchecked: mine every word — good for building a complete or shareable deck.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Analyse the corpus and preview which words will be included</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build Deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create the Anki cards for the previewed word list</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel the current operation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Results</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Total tokens:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Unique lemmas:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Candidate words:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Projected coverage:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known (skipped):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards to create:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select both the video folder and subtitle folder first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video folder not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle folder not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enter a deck name before previewing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No video/subtitle pairs found. Check the folders.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Analysing corpus…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview ready — %1 cards, ~%2% coverage. Click 'Build Deck' to proceed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Building deck '%1'…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Processing: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>  %1: %2 card(s) created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done! Created %1 cards (~%2% target coverage) in deck '%3'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build complete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Error: %1</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -1271,6 +1818,20 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>MiningTabBase</name>
+    <message>
+        <source>%1 — done</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed: %1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>QueuePanel</name>
     <message>
         <source>Multi-Anime Queue</source>
@@ -1533,6 +2094,160 @@ Details: %2</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>SingleEpisodeTab</name>
+    <message>
+        <source>Actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview discovered words before creating cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Process Episode</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create Anki cards from the episode</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Test Timing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview video with subtitles to adjust timing offset</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manually choose which audio track to use for this episode</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel processing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview discovered words before creating cards (Ctrl+P)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create Anki cards from the episode (Ctrl+Enter)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File Selection</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recent Files:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select recent file pair...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Adjust if subtitles are out of sync</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Missing Video File</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a video file first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File Not Found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video file not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Audio Tracks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Missing Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select both video and subtitle files.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle file not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Parse Error</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed to parse subtitles. Check the file format.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitle entries found in the file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>■ Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling...</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ThemesPanel</name>
     <message>
         <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
@@ -1634,6 +2349,96 @@ Details: %2</source>
     </message>
     <message>
         <source>When adding a playlist, at most this many videos are queued.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>YouTubeTab</name>
+    <message>
+        <source>YouTube queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the URL to the queue and probe its metadata.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paste a YouTube URL above and click Add.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show the word-selection popup for each video before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Run the queue in preview mode — no cards created.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine every READY item in the queue into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove every queued item that is not currently mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined %1: %2 cards (attempts=%3).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed %1: %2 (attempts=%3).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>

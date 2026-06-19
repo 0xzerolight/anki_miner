@@ -24,6 +24,7 @@ from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -111,7 +112,7 @@ class MiningTabBase(QWidget):
     def _on_progress_complete(self) -> None:
         """Default complete slot: mark the current phase done."""
         phase = getattr(self, "_current_phase", "")
-        self.progress_widget.set_status(f"{phase} — done" if phase else "Complete")  # type: ignore[attr-defined]
+        self.progress_widget.set_status(tr_format(self.tr("%1 — done"), phase) if phase else self.tr("Complete"))  # type: ignore[attr-defined]
 
     def _on_progress_error(self, item: str, error: str) -> None:
         """Default per-item error handler: append a failure line to ``self.log_widget``.
@@ -120,7 +121,7 @@ class MiningTabBase(QWidget):
         lack a ``log_widget`` should not wire the progress callback through this
         base, or should override this method.
         """
-        self.log_widget.append_error(f"Failed: {item} — {error}")  # type: ignore[attr-defined]
+        self.log_widget.append_error(tr_format(self.tr("Failed: %1 — %2"), item, error))  # type: ignore[attr-defined]
 
     # ------------------------------------------------------------------
     # Drag-and-drop scaffolding
