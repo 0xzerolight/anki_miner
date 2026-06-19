@@ -63,3 +63,14 @@ jobs:
       - run: pip install --upgrade build
       - run: python -m build --wheel
       - run: python scripts/check_wheel_assets.py
+
+  i18n-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - name: Verify translation catalog is up to date
+        run: python scripts/i18n.py check
