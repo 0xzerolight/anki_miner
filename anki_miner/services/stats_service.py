@@ -36,9 +36,9 @@ SESSION_MILESTONES = [
 
 SERIES_MILESTONES = [
     (3, "Series Explorer", "Mined from 3 different series"),
-    (5, "Anime Fan", "Mined from 5 different series"),
-    (10, "Anime Enthusiast", "Mined from 10 different series"),
-    (25, "Anime Connoisseur", "Mined from 25 different series"),
+    (5, "Series Fan", "Mined from 5 different series"),
+    (10, "Series Enthusiast", "Mined from 10 different series"),
+    (25, "Series Connoisseur", "Mined from 25 different series"),
 ]
 
 
