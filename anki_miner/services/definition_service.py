@@ -88,6 +88,13 @@ class DefinitionService:
         resolved: dict[str, str | None] = {}
         remaining = list(dict.fromkeys(words))  # de-dup, preserve order
 
+        # NOTE: the two ``except Exception`` clauses below are deliberately broad,
+        # not an oversight. This is the never-raises provider boundary: a provider
+        # (offline index, online Jisho, a user-imported dict) that raises an
+        # UNANTICIPATED exception type must degrade to "miss + continue to the next
+        # provider", never abort the whole mine. Narrowing to specific types would
+        # let a single buggy/edge-case provider crash a run. Words it failed to
+        # resolve fall through to the next provider, and any earlier hits are kept.
         for provider in self._providers:
             if not remaining:
                 break
