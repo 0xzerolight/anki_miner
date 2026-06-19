@@ -80,8 +80,8 @@ def test_open_settings_lands_on_settings(window_tabs):
     assert window.tabs.currentWidget() is settings
 
 
-def test_settings_tab_index_falls_back_to_label(qtbot, monkeypatch, test_config):
-    """A settings-like widget without open_themes_subtab is still found by label."""
+def test_settings_tab_index_requires_capability(qtbot, monkeypatch, test_config):
+    """A widget without open_themes_subtab is not recognized as the Settings tab."""
     _patch_heavy_init(monkeypatch, test_config)
     from anki_miner.gui.main_window import MainWindow
 
@@ -92,6 +92,8 @@ def test_settings_tab_index_falls_back_to_label(qtbot, monkeypatch, test_config)
         window.tabs.addTab(QWidget(), "Analytics")
         plain_settings = QWidget()  # no open_themes_subtab attribute
         window.tabs.addTab(plain_settings, "Settings")
-        assert window._settings_tab_index() == 1
+        # The label-fallback was removed to avoid breaking under non-English
+        # locales; capability check is the sole lookup path.
+        assert window._settings_tab_index() == -1
     finally:
         window.deleteLater()

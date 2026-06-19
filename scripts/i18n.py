@@ -8,8 +8,8 @@ Subcommands:
              (pylupdate6 has no -locations option, and raw line numbers churn
              on every unrelated edit, which would make `check` false-positive).
   compile  — compile each *.ts to *.qm via pyside6-lrelease.
-  check    — regenerate to a temp file and diff against the committed .ts (and
-             recompile + compare the .qm); exit 1 on drift. Used by CI.
+  check    — regenerate to a temp file and diff against the committed .ts;
+             exit 1 on drift. Used by CI.
 """
 
 from __future__ import annotations

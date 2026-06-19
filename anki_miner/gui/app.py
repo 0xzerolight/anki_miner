@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import QCoreApplication, Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QWidget
 
@@ -269,7 +269,9 @@ def main():
         episode_progress,
         stats_service=stats_service,
     )
-    register_mining_tab(window, episode_tab, episode_presenter, "Episode Mining")
+    register_mining_tab(
+        window, episode_tab, episode_presenter, QCoreApplication.translate("MainWindow", "Episode Mining")
+    )
 
     batch_presenter = GUIPresenter(window)
     batch_progress = GUIProgressCallback(window)
@@ -279,7 +281,7 @@ def main():
         batch_progress,
         stats_service=stats_service,
     )
-    register_mining_tab(window, batch_tab, batch_presenter, "Batch Mining")
+    register_mining_tab(window, batch_tab, batch_presenter, QCoreApplication.translate("MainWindow", "Batch Mining"))
 
     deck_builder_presenter = GUIPresenter(window)
     deck_builder_progress = GUIProgressCallback(window)
@@ -289,7 +291,9 @@ def main():
         deck_builder_progress,
         stats_service=stats_service,
     )
-    register_mining_tab(window, deck_builder_tab, deck_builder_presenter, "Deck Builder")
+    register_mining_tab(
+        window, deck_builder_tab, deck_builder_presenter, QCoreApplication.translate("MainWindow", "Deck Builder")
+    )
 
     # YouTube tab (uses its own presenter + shared stats service). The
     # processor is built lazily on the first Mine click so the dictionary
@@ -306,7 +310,7 @@ def main():
         presenter=youtube_presenter,
         stats_service=stats_service,
     )
-    register_mining_tab(window, youtube_tab, youtube_presenter, "YouTube")
+    register_mining_tab(window, youtube_tab, youtube_presenter, QCoreApplication.translate("MainWindow", "YouTube"))
 
     # Audiobook tab (Issue #71). Same lazy-processor pattern as YouTube:
     # processor=None defers the dictionary-chain build to the first Mine
@@ -318,11 +322,13 @@ def main():
         presenter=audiobook_presenter,
         stats_service=stats_service,
     )
-    register_mining_tab(window, audiobook_tab, audiobook_presenter, "Audiobook")
+    register_mining_tab(
+        window, audiobook_tab, audiobook_presenter, QCoreApplication.translate("MainWindow", "Audiobook")
+    )
 
     # Analytics tab (non-mining: no presenter, no update_config wiring)
     analytics_tab = AnalyticsTab(stats_service)
-    window.tabs.addTab(analytics_tab, "Analytics")
+    window.tabs.addTab(analytics_tab, QCoreApplication.translate("MainWindow", "Analytics"))
 
     settings_tab = SettingsTab(window.get_config())
     # from_settings=True suppresses the config_refreshed re-emit: SettingsTab
@@ -352,7 +358,7 @@ def main():
     # applied — re-emitting would loop back through `_on_theme_changed`).
     settings_tab.themes_panel.favorites_changed.connect(window.header.refresh_favorites)
     settings_tab.themes_panel.state_changed.connect(lambda *_: window.header.update_theme_selector())
-    window.tabs.addTab(settings_tab, "Settings")
+    window.tabs.addTab(settings_tab, QCoreApplication.translate("MainWindow", "Settings"))
 
     # Non-Settings config refreshes (e.g. JMdict migration finishing in the
     # background) must propagate to SettingsTab so its panels don't go stale.
