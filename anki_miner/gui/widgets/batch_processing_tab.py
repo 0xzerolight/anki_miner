@@ -50,7 +50,7 @@ class BatchProcessingTab(MiningTabBase):
 
     Features:
     - Quick Processing section with FileSelector widgets
-    - Multi-Anime Queue via QueuePanel
+    - Multi-Series Queue via QueuePanel
     - Dual progress bars (overall + current episode)
     - Enhanced log widget
     """
@@ -115,7 +115,7 @@ class BatchProcessingTab(MiningTabBase):
         quick_section = self._create_quick_processing_section()
         layout.addWidget(quick_section)
 
-        # Multi-Anime Queue Panel (extracted component)
+        # Multi-Series Queue Panel (extracted component)
         self.queue_panel = QueuePanel()
         self.queue_panel.process_requested.connect(self._process_queue)
         layout.addWidget(self.queue_panel, 1)  # Give it stretch factor
@@ -179,10 +179,10 @@ class BatchProcessingTab(MiningTabBase):
 
     def _setup_shortcuts(self) -> None:
         """Set up tab-specific keyboard shortcuts."""
-        # Ctrl+O: Browse anime folder
+        # Ctrl+O: Browse video folder
         browse_shortcut = QShortcut(QKeySequence("Ctrl+O"), self)
         browse_shortcut.activated.connect(
-            lambda: (self.anime_folder_selector.browse() if hasattr(self, "anime_folder_selector") else None)
+            lambda: (self.video_folder_selector.browse() if hasattr(self, "video_folder_selector") else None)
         )
 
         # Ctrl+P: Preview/Scan pairs
@@ -216,11 +216,11 @@ class BatchProcessingTab(MiningTabBase):
         # Shared label-column width so both folder rows line up.
         label_w = field_label_width("Anime Folder:", "Subtitle Folder:")
 
-        # Anime folder selector
-        self.anime_folder_selector = FileSelector(
+        # Video folder selector
+        self.video_folder_selector = FileSelector(
             label=self.tr("Anime Folder:"), file_mode=False, file_filter="", label_width=label_w
         )
-        layout.addWidget(self.anime_folder_selector)
+        layout.addWidget(self.video_folder_selector)
 
         # Subtitle folder selector
         self.subtitle_folder_selector = FileSelector(
@@ -263,24 +263,24 @@ class BatchProcessingTab(MiningTabBase):
         """Validate and return folder paths from selectors.
 
         Returns:
-            Tuple of (anime_folder, subtitle_folder) or None if invalid
+            Tuple of (video_folder, subtitle_folder) or None if invalid
         """
-        anime_path = self.anime_folder_selector.get_path().strip()
+        video_path = self.video_folder_selector.get_path().strip()
         subtitle_path = self.subtitle_folder_selector.get_path().strip()
 
-        if not anime_path or not subtitle_path:
+        if not video_path or not subtitle_path:
             return None
 
-        if not self.anime_folder_selector.is_valid() or not self.subtitle_folder_selector.is_valid():
+        if not self.video_folder_selector.is_valid() or not self.subtitle_folder_selector.is_valid():
             return None
 
-        return Path(anime_path), Path(subtitle_path)
+        return Path(video_path), Path(subtitle_path)
 
-    def _find_episode_pairs(self, anime_folder: Path, subtitle_folder: Path) -> list:
+    def _find_episode_pairs(self, video_folder: Path, subtitle_folder: Path) -> list:
         """Find matching video/subtitle pairs in folders.
 
         Args:
-            anime_folder: Path to anime folder
+            video_folder: Path to video folder
             subtitle_folder: Path to subtitle folder
 
         Returns:
@@ -288,7 +288,7 @@ class BatchProcessingTab(MiningTabBase):
         """
         from anki_miner.utils.file_pairing import FilePairMatcher
 
-        return FilePairMatcher.find_pairs_by_episode_number(anime_folder, subtitle_folder)
+        return FilePairMatcher.find_pairs_by_episode_number(video_folder, subtitle_folder)
 
     def _preview_pairs(self) -> None:
         """Preview video/subtitle pairs before processing."""
@@ -299,8 +299,8 @@ class BatchProcessingTab(MiningTabBase):
             )
             return
 
-        anime_folder, subtitle_folder = folders
-        pairs = self._find_episode_pairs(anime_folder, subtitle_folder)
+        video_folder, subtitle_folder = folders
+        pairs = self._find_episode_pairs(video_folder, subtitle_folder)
 
         if not pairs:
             QMessageBox.warning(
@@ -335,8 +335,8 @@ class BatchProcessingTab(MiningTabBase):
             )
             return
 
-        anime_folder, subtitle_folder = folders
-        pairs = self._find_episode_pairs(anime_folder, subtitle_folder)
+        video_folder, subtitle_folder = folders
+        pairs = self._find_episode_pairs(video_folder, subtitle_folder)
 
         if not pairs:
             QMessageBox.warning(self, self.tr("No Pairs Found"), self.tr("No matching video/subtitle pairs found"))
@@ -461,8 +461,8 @@ class BatchProcessingTab(MiningTabBase):
         # and card-count updates from the worker address the right row, even
         # when two rows share a display_name (T-30).
         self.batch_queue.clear()
-        for anime_folder, subtitle_folder, display_name, subtitle_offset, widget in valid_pairs:
-            item = self.batch_queue.add_item(anime_folder, subtitle_folder, display_name, subtitle_offset)
+        for video_folder, subtitle_folder, display_name, subtitle_offset, widget in valid_pairs:
+            item = self.batch_queue.add_item(video_folder, subtitle_folder, display_name, subtitle_offset)
             widget.item_id = item.id
 
         # Prepare UI for processing
@@ -718,7 +718,7 @@ class BatchProcessingTab(MiningTabBase):
             return
         folders = [url.toLocalFile() for url in urls_from_event(event) if Path(url.toLocalFile()).is_dir()]
         if len(folders) >= 1:
-            self.anime_folder_selector.set_path(folders[0])
+            self.video_folder_selector.set_path(folders[0])
         if len(folders) >= 2:
             self.subtitle_folder_selector.set_path(folders[1])
         event.acceptProposedAction()
