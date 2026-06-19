@@ -51,7 +51,7 @@ class SubtitleViewer(QDialog):
         self._offset = initial_offset
         self._ffprobe_cmd = ffprobe_cmd
 
-        self.setWindowTitle("Subtitle Timing Viewer")
+        self.setWindowTitle(self.tr("Subtitle Timing Viewer"))
         self.setMinimumSize(720, 540)
         self.resize(800, 600)
 
@@ -81,7 +81,7 @@ class SubtitleViewer(QDialog):
         controls_layout.addStretch()
 
         # Offset control
-        offset_label = QLabel("Offset:")
+        offset_label = QLabel(self.tr("Offset:"))
         controls_layout.addWidget(offset_label)
 
         self.offset_spinbox = QDoubleSpinBox()
@@ -89,18 +89,18 @@ class SubtitleViewer(QDialog):
         self.offset_spinbox.setSingleStep(0.1)
         self.offset_spinbox.setValue(initial_offset)
         self.offset_spinbox.setSuffix(" s")
-        self.offset_spinbox.setToolTip("Positive = subtitles later, Negative = subtitles earlier")
+        self.offset_spinbox.setToolTip(self.tr("Positive = subtitles later, Negative = subtitles earlier"))
         self.offset_spinbox.valueChanged.connect(self._on_offset_changed)
         controls_layout.addWidget(self.offset_spinbox)
 
         controls_layout.addStretch()
 
         # Apply / Cancel buttons
-        apply_btn = QPushButton("Apply Offset")
+        apply_btn = QPushButton(self.tr("Apply Offset"))
         apply_btn.clicked.connect(self.accept)
         controls_layout.addWidget(apply_btn)
 
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton(self.tr("Cancel"))
         cancel_btn.clicked.connect(self.reject)
         controls_layout.addWidget(cancel_btn)
 

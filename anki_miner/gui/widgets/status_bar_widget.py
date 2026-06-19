@@ -43,7 +43,7 @@ class StatusBarWidget(QStatusBar):
         self.setContentsMargins(SPACING.sm, 6, SPACING.sm, 6)
 
         # Left section: Current operation
-        self.operation_label = QLabel("Ready")
+        self.operation_label = QLabel(self.tr("Ready"))
         self.operation_label.setObjectName("status-operation")
         operation_font = QFont()
         operation_font.setWeight(QFont.Weight.Medium)
@@ -58,7 +58,7 @@ class StatusBarWidget(QStatusBar):
         self.addWidget(separator1)
 
         # Center section: Statistics
-        self.stats_label = QLabel("0 cards this session")
+        self.stats_label = QLabel(self.tr("0 cards this session"))
         self.stats_label.setObjectName("status-stats")
         stats_font = QFont()
         stats_font.setPixelSize(FONT_SIZES.caption)
@@ -75,7 +75,7 @@ class StatusBarWidget(QStatusBar):
         # Right section: System status (clickable container)
         self.system_status_widget = QWidget()
         self.system_status_widget.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.system_status_widget.setToolTip("Click to view detailed system validation")
+        self.system_status_widget.setToolTip(self.tr("Click to view detailed system validation"))
         self.system_status_widget.mousePressEvent = lambda event: self._on_system_status_clicked(event)  # type: ignore[method-assign,assignment]
 
         system_layout = QHBoxLayout()
@@ -134,23 +134,20 @@ class StatusBarWidget(QStatusBar):
 
     def _update_stats(self) -> None:
         """Update the statistics display."""
-        if self._cards_created_session == 1:
-            text = "1 card this session"
-        else:
-            text = f"{self._cards_created_session} cards this session"
-
-        self.stats_label.setText(text)
+        self.stats_label.setText(self.tr("%n card(s) this session", "", self._cards_created_session))
 
     def _update_system_status(self) -> None:
         """Update the system status indicators using StatusBadge."""
         # AnkiConnect status
         status = "success" if self._ankiconnect_status else "error"
-        tooltip = "AnkiConnect is connected" if self._ankiconnect_status else "AnkiConnect is not connected"
+        tooltip = (
+            self.tr("AnkiConnect is connected") if self._ankiconnect_status else self.tr("AnkiConnect is not connected")
+        )
         self.anki_status_badge.set_status(status, tooltip)
 
         # ffmpeg status
         status = "success" if self._ffmpeg_status else "error"
-        tooltip = "ffmpeg is available" if self._ffmpeg_status else "ffmpeg is not available"
+        tooltip = self.tr("ffmpeg is available") if self._ffmpeg_status else self.tr("ffmpeg is not available")
         self.ffmpeg_status_badge.set_status(status, tooltip)
 
     def _on_system_status_clicked(self, event) -> None:

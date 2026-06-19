@@ -42,7 +42,7 @@ class ProgressWidget(QWidget):
         self.setMinimumHeight(MIN_HEIGHT_PROGRESS_WIDGET)
 
         # Main status label
-        self.status_label = QLabel("Ready")
+        self.status_label = QLabel(self.tr("Ready"))
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         font = QFont()
         font.setWeight(QFont.Weight.Medium)
@@ -139,7 +139,7 @@ class ProgressWidget(QWidget):
         self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
         self.progress_bar.setFormat("%p%")
-        self.status_label.setText("Ready")
+        self.status_label.setText(self.tr("Ready"))
         self.stats_label.setText("")
         self._start_time = None
         self._items_processed = 0
@@ -149,7 +149,7 @@ class ProgressWidget(QWidget):
         """Set progress bar to indeterminate mode (busy indicator)."""
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximum(0)
-        self.progress_bar.setFormat("Processing...")
+        self.progress_bar.setFormat(self.tr("Processing..."))
         self._start_time = None
 
     def set_determinate(self, maximum: int = 100) -> None:

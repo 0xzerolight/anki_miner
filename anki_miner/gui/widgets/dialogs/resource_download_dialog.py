@@ -27,8 +27,6 @@ if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
 
-LICENSE_NOTE = "Resources are downloaded from their original sources; their licenses apply."
-
 
 def run_resource_download(parent: QWidget, config: AnkiMinerConfig) -> AnkiMinerConfig | None:
     """Download + import the recommended resources behind a modal dialog.
@@ -126,29 +124,36 @@ def _run_download_modal(parent: QWidget, config: AnkiMinerConfig, download_dir: 
 
 def _show_results_dialog(parent: QWidget, summary: ResourceDownloadSummary) -> None:
     """Show a per-item summary; failed items list their URL as a manual fallback."""
+
+    def _t(s: str) -> str:
+        return QCoreApplication.translate("ResourceDownloadDialog", s)
+
     lines: list[str] = []
     for result in summary.results:
         if result.ok:
-            lines.append(f"✓ {result.display_name} — {result.detail}")
+            lines.append(tr_format(_t("✓ %1 — %2"), result.display_name, result.detail))
         else:
-            lines.append(f"✗ {result.display_name} — {result.detail}\n" f"   Download manually: {result.url}")
+            lines.append(
+                tr_format(
+                    _t("✗ %1 — %2\n   Download manually: %3"),
+                    result.display_name,
+                    result.detail,
+                    result.url,
+                )
+            )
 
     if not summary.failed:
-        title = QCoreApplication.translate("ResourceDownloadDialog", "Resources Installed")
+        title = _t("Resources Installed")
         icon = QMessageBox.Icon.Information
     elif summary.succeeded:
-        title = QCoreApplication.translate("ResourceDownloadDialog", "Resources Partially Installed")
+        title = _t("Resources Partially Installed")
         icon = QMessageBox.Icon.Warning
     else:
-        title = QCoreApplication.translate("ResourceDownloadDialog", "Resource Download Failed")
+        title = _t("Resource Download Failed")
         icon = QMessageBox.Icon.Warning
 
-    body = (
-        "\n".join(lines)
-        if lines
-        else QCoreApplication.translate("ResourceDownloadDialog", "No resources were processed.")
-    )
-    body = f"{body}\n\n{QCoreApplication.translate('ResourceDownloadDialog', 'Resources are downloaded from their original sources; their licenses apply.')}"
+    body = "\n".join(lines) if lines else _t("No resources were processed.")
+    body = f"{body}\n\n{_t('Resources are downloaded from their original sources; their licenses apply.')}"
 
     box = QMessageBox(parent)
     box.setIcon(icon)
