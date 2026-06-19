@@ -147,10 +147,6 @@ The pitch and frequency pickers accept a raw CSV/TSV or a Yomitan zip, auto-conv
 
 Proper-noun filtering uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html) (JMdict/EDICT project, EDRDG, CC BY-SA 4.0).
 
-## Updates
-
-Anki Miner checks GitHub for new releases on startup (toggle in Settings). When an update is available, a banner offers a one-click download of the asset that matches your install: `.deb` for Debian/Ubuntu, `.AppImage` for AppImage, the Inno installer on Windows, the macOS arm64 archive, or the release page for pip/source installs. "Skip this version" suppresses the prompt for that release; the next release prompts again.
-
 ## Troubleshooting
 
 | Issue                    | Solution                                                                         |
