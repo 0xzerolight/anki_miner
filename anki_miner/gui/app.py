@@ -96,6 +96,7 @@ def _configure_logging(log_path: Path) -> None:
     or a second ``main()``/in-process re-launch (test/E2E harness) — never stacks
     handlers writing each record N times (F5).
     """
+    log_path = Path(log_path)  # tolerate a str caller; .parent below needs a Path
     root = logging.getLogger()
     # Drop the handler we previously attached so a re-point / re-call doesn't
     # duplicate it. Tagged with a sentinel attribute to avoid removing handlers
@@ -201,7 +202,9 @@ def main():
 
     # Attach the rotating file handler to the DEFAULT path before loading config
     # so config-load diagnostics — including the OVH-001 .bak-recovery warnings
-    # emitted inside load_config — are captured rather than discarded (F3).
+    # emitted inside load_config — are captured: those warnings fire as soon as a
+    # handler exists, so attaching here (before the load) is what makes them land
+    # in the file rather than going nowhere (F3).
     # GUIConfigManager has no Qt dependency, so it can run before QApplication.
     _default_log_path = ANKI_MINER_HOME / "anki_miner.log"
     _configure_logging(_default_log_path)
