@@ -796,7 +796,7 @@ The audio pack was not removed.</source>
         <translation>クイック処理</translation>
     </message>
     <message>
-        <source>Anime Folder:</source>
+        <source>Video Folder:</source>
         <translation>動画フォルダ:</translation>
     </message>
     <message>
@@ -832,7 +832,7 @@ The audio pack was not removed.</source>
         <translation>無効なフォルダ</translation>
     </message>
     <message>
-        <source>Please select valid anime and subtitle folders</source>
+        <source>Please select valid video and subtitle folders</source>
         <translation>有効な動画フォルダと字幕フォルダを選択してください。</translation>
     </message>
     <message>
@@ -912,9 +912,9 @@ Mixing multiple shows in one folder can mispair episodes that share a number —
         <translation>%1 枚のカードを作成しました</translation>
     </message>
     <message>
-        <source>Processed %1 anime series
+        <source>Processed %1 series
 Total cards created: %2</source>
-        <translation>%1 件のアニメシリーズを処理しました
+        <translation>%1 件のシリーズを処理しました
 作成したカードの総数: %2</translation>
     </message>
     <message>
@@ -962,8 +962,8 @@ Total cards created: %2</source>
         <translation>入力</translation>
     </message>
     <message>
-        <source>Anime Video Folder:</source>
-        <translation>アニメ動画フォルダ:</translation>
+        <source>Video Folder:</source>
+        <translation>動画フォルダ:</translation>
     </message>
     <message>
         <source>Select folder with video files…</source>
@@ -1840,8 +1840,8 @@ The dictionary was not removed.</source>
         <translation>固有名詞ワードセット</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for anime that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
-        <translation>同梱された日本語の固有名詞（人名・地名）のリストをマイニングから除外します。登場人物名や地名が多く出てくるアニメに便利です。実際に必要な名前は上記のホワイトリストに追加することで対象に含められます。</translation>
+        <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for shows that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
+        <translation>同梱された日本語の固有名詞（人名・地名）のリストをマイニングから除外します。登場人物名や地名が多く出てくる作品に便利です。実際に必要な名前は上記のホワイトリストに追加することで対象に含められます。</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
@@ -2530,7 +2530,7 @@ The dictionary was not removed.</source>
         <translation>編集</translation>
     </message>
     <message>
-        <source>Edit anime and subtitle folders</source>
+        <source>Edit video and subtitle folders</source>
         <translation>動画と字幕フォルダを編集</translation>
     </message>
     <message>
@@ -2554,7 +2554,7 @@ The dictionary was not removed.</source>
         <translation>完了</translation>
     </message>
     <message>
-        <source>No anime folder selected</source>
+        <source>No video folder selected</source>
         <translation>動画フォルダが選択されていません</translation>
     </message>
     <message>
@@ -2580,7 +2580,7 @@ The dictionary was not removed.</source>
 </context><context>
     <name>QueuePanel</name>
     <message>
-        <source>Multi-Anime Queue</source>
+        <source>Multi-Series Queue</source>
         <translation>複数シリーズキュー</translation>
     </message>
     <message>
@@ -2592,7 +2592,7 @@ The dictionary was not removed.</source>
         <translation>キューを処理</translation>
     </message>
     <message>
-        <source>Process all anime series in queue</source>
+        <source>Process all series in queue</source>
         <translation>キュー内のすべてのシリーズを処理</translation>
     </message>
     <message>
@@ -2604,15 +2604,11 @@ The dictionary was not removed.</source>
         <translation>キューからすべての項目を削除</translation>
     </message>
     <message>
-        <source>Add Anime Series</source>
-        <translation>シリーズを追加</translation>
-    </message>
-    <message>
         <source>Enter a name for series #%1:</source>
         <translation>シリーズ #%1 の名前を入力してください:</translation>
     </message>
     <message>
-        <source>Anime Series %1</source>
+        <source>Series %1</source>
         <translation>シリーズ %1</translation>
     </message>
     <message>
@@ -2620,7 +2616,7 @@ The dictionary was not removed.</source>
         <translation>編集: %1</translation>
     </message>
     <message>
-        <source>Anime Folder:</source>
+        <source>Video Folder:</source>
         <translation>動画フォルダ:</translation>
     </message>
     <message>

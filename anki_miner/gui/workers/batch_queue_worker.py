@@ -157,7 +157,7 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                 # Use FilePairMatcher for cross-folder pairing
                 from anki_miner.utils.file_pairing import FilePairMatcher
 
-                pairs = FilePairMatcher.find_pairs_by_episode_number(item.anime_folder, item.subtitle_folder)
+                pairs = FilePairMatcher.find_pairs_by_episode_number(item.video_folder, item.subtitle_folder)
 
                 if not pairs:
                     raise ValueError("No matching video/subtitle pairs found")
