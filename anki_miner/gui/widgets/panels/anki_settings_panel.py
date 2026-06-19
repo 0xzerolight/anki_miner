@@ -435,13 +435,15 @@ class AnkiSettingsPanel(FormPanel):
             status: Status string (connected, disconnected, checking, unknown)
         """
         status_map = {
-            "connected": ("success", self.tr("Connected to AnkiConnect")),
-            "disconnected": ("error", self.tr("Not connected to AnkiConnect")),
-            "checking": ("checking", self.tr("Checking connection...")),
-            "unknown": ("info", self.tr("Connection status unknown")),
+            "connected": ("success", self.tr("Connected"), self.tr("Connected to AnkiConnect")),
+            "disconnected": ("error", self.tr("Not connected"), self.tr("Not connected to AnkiConnect")),
+            "checking": ("checking", self.tr("Checking..."), self.tr("Checking connection...")),
+            "unknown": ("info", self.tr("Unknown"), self.tr("Connection status unknown")),
         }
-        badge_status, text = status_map.get(status, ("info", "Unknown"))
-        self.connection_status.set_name(text.split(" to ")[0] if " to " in text else text)
+        badge_status, name, text = status_map.get(
+            status, ("info", self.tr("Unknown"), self.tr("Connection status unknown"))
+        )
+        self.connection_status.set_name(name)
         self.connection_status.set_status(badge_status, text)
 
     def set_deck_status(self, exists: bool | None, message: str = "") -> None:

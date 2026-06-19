@@ -318,7 +318,15 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Connected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Connected to AnkiConnect</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not connected</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -326,15 +334,19 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Checking...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Checking connection...</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Connection status unknown</source>
+        <source>Unknown</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Checking...</source>
+        <source>Connection status unknown</source>
         <translation type="unfinished" />
     </message>
     <message>
