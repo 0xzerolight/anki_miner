@@ -720,6 +720,23 @@ class TestAv1WatchdogFallback:
 
         fake_media_classes["player"].stop.assert_called_once()
 
+    def test_late_frame_after_fallback_restores_video_and_resumes(self, qtbot, fake_media_classes):
+        """A frame decoded AFTER the watchdog fired (slow software decode) undoes
+        the fallback: notice hidden, video restored, playback resumed."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes)
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+        widget._on_av1_watchdog_timeout()
+        # Fallback is showing, player stopped.
+        assert widget.video_widget.isHidden()
+        assert not widget._av1_notice_label.isHidden()
+
+        fake_media_classes["player"].reset_mock()
+        widget._on_video_frame_changed()  # late frame arrives
+
+        assert not widget.video_widget.isHidden(), "video should be restored"
+        assert widget._av1_notice_label.isHidden(), "fallback notice should be hidden again"
+        fake_media_classes["player"].play.assert_called_once()
+
     def test_watchdog_arms_on_buffered_media_too(self, qtbot, fake_media_classes):
         """Watchdog should arm on BufferedMedia as well as LoadedMedia."""
         widget = self._make_widget_av1(qtbot, fake_media_classes)
