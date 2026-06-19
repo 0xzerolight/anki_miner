@@ -467,6 +467,23 @@ class TestCreateCardsBatch:
         # Exactly 2 batches (100 + 50), not more
         assert mock_post.call_count == 2
 
+    def test_warns_when_addnotes_returns_short_id_list(self, test_config, make_tokenized_word, caplog):
+        """A note_ids list shorter than the batch (malformed addNotes response)
+        under-merges the vocab cache; surface it instead of merging silently."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=3)
+
+        short_resp = _mock_response(result=[100, 101])  # 2 ids for 3 notes
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=short_resp),
+            caplog.at_level(logging.WARNING),
+        ):
+            result = service.create_cards_batch(items)
+
+        assert result == 2
+        assert "vocab cache may under-merge" in caplog.text
+
     def test_counts_only_non_null_note_ids(self, test_config, make_tokenized_word):
         """Should only count non-null IDs in the result array."""
         service = AnkiService(test_config)
