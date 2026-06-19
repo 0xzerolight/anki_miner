@@ -977,7 +977,7 @@ class EpisodeProcessor:
             cross_episode_counts: Optional cross-episode word frequency counts.
             episode_name_override: Optional override for the episode identity
                 passed to stats_service. When ``None`` (default) the identity
-                is derived from ``video_file.stem`` (preserves current anime
+                is derived from ``video_file.stem`` (preserves current file-based
                 flow). Used by ``process_youtube_url`` to record
                 ``YT:<video_id>``.
             series_name_override: Optional override for the series identity
@@ -1256,7 +1256,7 @@ class EpisodeProcessor:
 
         Episode identity recorded to stats_service is ``YT:<video_id>`` with
         series ``YouTube`` so that YouTube mining rows never collide with
-        anime folders that happen to share a stem.
+        file-based folders that happen to share a stem.
 
         Args:
             url: YouTube video URL (or anything yt-dlp accepts).

@@ -1,4 +1,4 @@
-"""Deck Builder tab — mine an entire anime series into a named Anki deck."""
+"""Deck Builder tab — mine an entire series into a named Anki deck."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 class DeckBuilderTab(MiningTabBase):
-    """Tab that mines an entire anime folder into a named Anki deck.
+    """Tab that mines an entire video folder into a named Anki deck.
 
     Two-phase flow driven by :class:`DeckBuilderWorker`:
 
