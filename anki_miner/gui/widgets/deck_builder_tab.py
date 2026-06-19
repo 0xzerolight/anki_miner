@@ -78,7 +78,7 @@ class DeckBuilderTab(MiningTabBase):
         # Shared label-column width so every labeled row across both cards
         # lines its input field up at the same x.
         self._label_w = field_label_width(
-            "Anime Video Folder:",
+            "Video Folder:",
             "Subtitle Folder:",
             "Deck Name:",
             "Word Selection:",
@@ -123,7 +123,7 @@ class DeckBuilderTab(MiningTabBase):
         layout.addWidget(SectionHeader(self.tr("Input")))
 
         self.video_folder_selector = FileSelector(
-            label=self.tr("Anime Video Folder:"),
+            label=self.tr("Video Folder:"),
             file_mode=False,
             placeholder=self.tr("Select folder with video files…"),
             label_width=self._label_w,

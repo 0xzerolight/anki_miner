@@ -59,7 +59,7 @@ class QueuePanel(QFrame):
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
         # Section header with Add button
-        header = SectionHeader(title=self.tr("Multi-Anime Queue"), action_text=self.tr("Add Series"))
+        header = SectionHeader(title=self.tr("Multi-Series Queue"), action_text=self.tr("Add Series"))
         header.action_clicked.connect(self._add_series)
         layout.addWidget(header)
 
@@ -95,7 +95,7 @@ class QueuePanel(QFrame):
 
         self.process_queue_button = ModernButton(self.tr("Process Queue"), variant="primary")
         self.process_queue_button.clicked.connect(self.process_requested.emit)
-        self.process_queue_button.setToolTip(self.tr("Process all anime series in queue"))
+        self.process_queue_button.setToolTip(self.tr("Process all series in queue"))
         button_layout.addWidget(self.process_queue_button)
 
         clear_button = ModernButton(self.tr("Clear All"), variant="ghost")
@@ -116,9 +116,9 @@ class QueuePanel(QFrame):
         # Prompt for series name
         name, ok = QInputDialog.getText(
             self,
-            self.tr("Add Anime Series"),
+            self.tr("Add Series"),
             tr_format(self.tr("Enter a name for series #%1:"), len(self.queue_item_widgets) + 1),
-            text=tr_format(self.tr("Anime Series %1"), len(self.queue_item_widgets) + 1),
+            text=tr_format(self.tr("Series %1"), len(self.queue_item_widgets) + 1),
         )
         if not ok or not name.strip():
             return
@@ -161,10 +161,10 @@ class QueuePanel(QFrame):
         layout = QVBoxLayout()
 
         # Shared label-column width so every labeled row lines up.
-        label_w = field_label_width(self.tr("Anime Folder:"), self.tr("Subtitle Folder:"), self.tr("Subtitle Offset:"))
+        label_w = field_label_width(self.tr("Video Folder:"), self.tr("Subtitle Folder:"), self.tr("Subtitle Offset:"))
 
         # Video folder selector
-        video_selector = FileSelector(label=self.tr("Anime Folder:"), file_mode=False, label_width=label_w)
+        video_selector = FileSelector(label=self.tr("Video Folder:"), file_mode=False, label_width=label_w)
         current_video, _ = widget.get_folders()
         if current_video:
             video_selector.set_path(str(current_video))
