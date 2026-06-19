@@ -500,6 +500,14 @@ class AnkiService:
                 # identifies the word that was created.
                 # strict=False: note_ids is 1:1 with batch by the addNotes contract;
                 # a shorter list (malformed response) only under-merges, never crashes.
+                # Surface the contract violation so a silent under-merge isn't
+                # mistaken for a clean run (cards themselves are unaffected).
+                if len(note_ids) != len(batch):
+                    logger.warning(
+                        "addNotes returned %d id(s) for %d note(s); vocab cache may under-merge.",
+                        len(note_ids),
+                        len(batch),
+                    )
                 created_forms.extend(
                     item.word.mined_form for item, nid in zip(batch, note_ids, strict=False) if nid is not None
                 )
