@@ -304,6 +304,33 @@ class TestEpisodeNumberExtractor:
             assert result is not None
             assert result.episode_number == 4
 
+        def test_10bit_compact_depth_not_mined(self, tmp_path):
+            # The compact "10bit" spelling (no separator) must strip too — the
+            # bit-depth regex separator is intentionally optional. Making it
+            # mandatory would reintroduce the Issue #80 collision.
+            path = tmp_path / "Show - 04 [10bit].mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 4
+
+        def test_8bit_compact_depth_not_mined(self, tmp_path):
+            path = tmp_path / "Show - 05 [8bit].mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 5
+
+        def test_episode_adjacent_to_depth_tag_survives(self, tmp_path):
+            # A real episode number in its own token survives even when a
+            # (non-fused) depth tag follows: the depth strip only eats the
+            # delimited "[8bit]" token, not the "24" episode.
+            path = tmp_path / "[Grp] Show - 24 [1080p][8bit].mkv"
+            path.touch()
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+            assert result is not None
+            assert result.episode_number == 24
+
         def test_reported_ep03_extracts_3(self, tmp_path):
             path = (
                 tmp_path
