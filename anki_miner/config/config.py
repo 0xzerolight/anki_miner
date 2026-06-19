@@ -298,6 +298,10 @@ class AnkiMinerConfig:
     # Global UI font scale factor. Applied to all QSS ${font-size-*} variables.
     # Clamped to [0.5, 2.0] in __post_init__; values outside the range are silently clamped.
     ui_font_scale: float = 1.0
+    # UI language code (BCP-47-ish short code, e.g. "en", "fr", "ru"). "en" is
+    # the source language: no translator is installed for it. Persisted via
+    # gui_config.json; applied at startup (restart-to-apply). Discussion #76.
+    ui_language: str = "en"
 
     def __post_init__(self):
         """Convert string paths to Path objects if needed.
@@ -385,6 +389,12 @@ class AnkiMinerConfig:
 
         # Clamp ui_font_scale to [0.5, 2.0]
         object.__setattr__(self, "ui_font_scale", max(0.5, min(2.0, float(self.ui_font_scale))))
+
+        # Normalize ui_language: lower-case, strip, empty → "en". Lenient (no
+        # whitelist) so a contributor's freshly-added language code is accepted
+        # before its catalog is fully wired; install_translators no-ops on a
+        # code with no .qm.
+        object.__setattr__(self, "ui_language", str(self.ui_language).strip().lower() or "en")
 
         # Keep anki_word_field in sync with anki_fields["word"]
         word_field_from_mapping = self.anki_fields.get("word", "")
