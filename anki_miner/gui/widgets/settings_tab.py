@@ -34,6 +34,7 @@ from anki_miner.gui.widgets.panels import (
     AudioPackSettingsPanel,
     DictionarySettingsPanel,
     FilteringSettingsPanel,
+    LanguagePanel,
     MediaSettingsPanel,
     ThemesPanel,
     YouTubeSettingsPanel,
@@ -81,6 +82,7 @@ class SettingsTab(QWidget):
             "theme",
             "theme_favorites",
             "ui_font_scale",
+            "ui_language",
             "skipped_update_version",
             "last_known_version",
             "first_run_shortcut_done",
@@ -161,6 +163,7 @@ class SettingsTab(QWidget):
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
         self.themes_panel = ThemesPanel(self.config.themes_root)
+        self.language_panel = LanguagePanel(self.config.ui_language)
 
         # Add tabs with scroll areas for each panel
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.anki_panel), "Anki")
@@ -172,6 +175,7 @@ class SettingsTab(QWidget):
         # Themes tab — sub-tab index captured so MainWindow / shortcuts can
         # jump straight to it via :meth:`open_themes_subtab`.
         self._themes_subtab_index = self.tab_widget.addTab(self._wrap_in_scroll_area(self.themes_panel), "Themes")
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.language_panel), self.tr("Language"))
         # Reset preview baseline when the user navigates away from Themes so
         # a later visit reverts to their last-chosen theme, not session start.
         self.tab_widget.currentChanged.connect(self._on_settings_subtab_changed)
@@ -270,6 +274,8 @@ class SettingsTab(QWidget):
         self.themes_panel.state_changed.connect(self._on_theme_state_changed)
         self.themes_panel.font_scale_changed.connect(self._on_font_scale_changed)
 
+        self.language_panel.language_changed.connect(self._on_language_changed)
+
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts."""
         # Ctrl+S: Save settings
@@ -330,6 +336,8 @@ class SettingsTab(QWidget):
         # Update settings — standalone checkbox outside all panels.
         self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
 
+        self.language_panel.set_language(self.config.ui_language)
+
     def open_themes_subtab(self) -> None:
         """Switch the settings sub-tab to Themes.
 
@@ -364,6 +372,11 @@ class SettingsTab(QWidget):
         ``ui_font_scale`` to ``gui_config.json``.
         """
         self.config = replace(self.config, ui_font_scale=scale)
+        self.config_changed.emit(self.config)
+
+    def _on_language_changed(self, language: str) -> None:
+        """Persist a UI-language change immediately (applies on next launch)."""
+        self.config = replace(self.config, ui_language=language)
         self.config_changed.emit(self.config)
 
     def _on_save_clicked(self) -> None:
