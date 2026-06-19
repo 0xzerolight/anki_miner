@@ -993,7 +993,12 @@ def run_inprocess_soak(
                 driver.dispose()
             _drain_qt_deletes()
             # Keep the deck on failure (for inspection); clean it otherwise.
-            if gateway is not None and not any_failed:
+            # Re-derive over ALL reports: _check_known_words_cross_session can
+            # flip a PRIOR report's ok=False after the loop's any_failed
+            # accumulator already moved past it, so the loop-local flag alone
+            # would delete the deck of a failed run.
+            run_failed = any_failed or any(not r.ok for r in reports)
+            if gateway is not None and not run_failed:
                 with contextlib.suppress(Exception):
                     gateway.delete_test_deck()
 
