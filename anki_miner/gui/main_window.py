@@ -36,6 +36,7 @@ from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutService, ValidationService
 from anki_miner.services.anki_service import AnkiService
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -132,12 +133,15 @@ class MainWindow(QMainWindow):
             if previous:
                 QMessageBox.information(
                     self,
-                    "Anki Miner updated",
-                    (
-                        f"Updated to v{__version__}.<br><br>"
-                        "See what's new: "
-                        '<a href="https://github.com/0xzerolight/anki_miner/releases/latest">'
-                        "release notes</a>"
+                    self.tr("Anki Miner updated"),
+                    tr_format(
+                        self.tr(
+                            "Updated to v%1.<br><br>"
+                            "See what's new: "
+                            '<a href="https://github.com/0xzerolight/anki_miner/releases/latest">'
+                            "release notes</a>"
+                        ),
+                        __version__,
                     ),
                 )
 
@@ -218,36 +222,36 @@ class MainWindow(QMainWindow):
         assert menu_bar is not None
 
         # Tools menu
-        tools_menu = menu_bar.addMenu("&Tools")
+        tools_menu = menu_bar.addMenu(self.tr("&Tools"))
         assert tools_menu is not None
-        shortcut_action = tools_menu.addAction("Create Desktop Shortcut...")
+        shortcut_action = tools_menu.addAction(self.tr("Create Desktop Shortcut..."))
         assert shortcut_action is not None
         shortcut_action.triggered.connect(self._create_desktop_shortcut)
 
-        resources_action = tools_menu.addAction("Download Recommended Resources...")
+        resources_action = tools_menu.addAction(self.tr("Download Recommended Resources..."))
         assert resources_action is not None
         resources_action.triggered.connect(self._download_recommended_resources)
 
         # Help menu
-        help_menu = menu_bar.addMenu("&Help")
+        help_menu = menu_bar.addMenu(self.tr("&Help"))
         assert help_menu is not None
 
-        about_action = help_menu.addAction("About Anki Miner")
+        about_action = help_menu.addAction(self.tr("About Anki Miner"))
         assert about_action is not None
         about_action.setShortcut(QKeySequence("F1"))
         about_action.triggered.connect(self._show_about)
 
         help_menu.addSeparator()
 
-        check_updates_action = help_menu.addAction("Check for Updates")
+        check_updates_action = help_menu.addAction(self.tr("Check for Updates"))
         assert check_updates_action is not None
         check_updates_action.triggered.connect(self._check_for_updates)
 
         help_menu.addSeparator()
 
-        open_log_action = help_menu.addAction("Open Log Folder")
+        open_log_action = help_menu.addAction(self.tr("Open Log Folder"))
         assert open_log_action is not None
-        open_log_action.setToolTip("Open the folder containing anki_miner.log in your file manager")
+        open_log_action.setToolTip(self.tr("Open the folder containing anki_miner.log in your file manager"))
         open_log_action.triggered.connect(self._open_log_folder)
 
         # Top-right corner of the menu bar holds a small button bar. A QMenuBar
@@ -261,20 +265,20 @@ class MainWindow(QMainWindow):
         # "Report a Bug / Suggest a Feature" button (moved out of the Help menu).
         report_button = QToolButton(corner_widget)
         report_button.setObjectName("report_issue_button")
-        report_button.setText("Report a Bug / Suggest a Feature")
+        report_button.setText(self.tr("Report a Bug / Suggest a Feature"))
         report_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         report_button.setAutoRaise(True)
-        report_button.setToolTip("Report a bug or suggest a feature on GitHub")
+        report_button.setToolTip(self.tr("Report a bug or suggest a feature on GitHub"))
         report_button.clicked.connect(self._report_issue)
         corner_layout.addWidget(report_button)
 
         # "Star on GitHub" button.
         star_button = QToolButton(corner_widget)
         star_button.setObjectName("github_star_button")
-        star_button.setText("⭐ Star - help the project")
+        star_button.setText(self.tr("⭐ Star - help the project"))
         star_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         star_button.setAutoRaise(True)
-        star_button.setToolTip("Star the project on GitHub")
+        star_button.setToolTip(self.tr("Star the project on GitHub"))
         star_button.clicked.connect(self._open_github_repo)
         corner_layout.addWidget(star_button)
 
@@ -390,12 +394,12 @@ class MainWindow(QMainWindow):
         result = ShortcutService.create_shortcut()
         body = "\n".join(result.messages) if result.messages else ""
         if result.success:
-            QMessageBox.information(self, "Desktop Shortcut", body or "Shortcut created.")
+            QMessageBox.information(self, self.tr("Desktop Shortcut"), body or self.tr("Shortcut created."))
         else:
             QMessageBox.warning(
                 self,
-                "Desktop Shortcut",
-                result.error or "Failed to create desktop shortcut.",
+                self.tr("Desktop Shortcut"),
+                result.error or self.tr("Failed to create desktop shortcut."),
             )
 
     def _maybe_create_shortcut_on_first_run(self) -> None:
@@ -524,11 +528,15 @@ class MainWindow(QMainWindow):
         self._set_anki_connection_badge("connected" if result.ankiconnect_ok else "disconnected")
 
         if result.all_passed:
-            self.status_bar.set_operation("System validation passed", "success")
+            self.status_bar.set_operation(self.tr("System validation passed"), "success")
         elif not silent:
             # Show validation issues (skip popup during startup auto-check)
             issues_text = "\n".join([f"- {issue.component}: {issue.message}" for issue in result.issues])
-            QMessageBox.warning(self, "Validation Issues", f"System validation found issues:\n\n{issues_text}")
+            QMessageBox.warning(
+                self,
+                self.tr("Validation Issues"),
+                tr_format(self.tr("System validation found issues:\n\n%1"), issues_text),
+            )
 
     def _set_anki_connection_badge(self, status: str) -> None:
         """Push an AnkiConnect connection status onto the Settings → Anki badge.
@@ -718,9 +726,9 @@ class MainWindow(QMainWindow):
         # The current (config-bound) service is passed per call so the rebuild
         # in _build_config_bound_services reaches the next run.
         if not self.background_tasks.start_validation(self.validation_service):
-            self.status_bar.set_operation("Validation already running", "info")
+            self.status_bar.set_operation(self.tr("Validation already running"), "info")
             return
-        self.status_bar.set_operation("Running system validation...", "info")
+        self.status_bar.set_operation(self.tr("Running system validation..."), "info")
 
     def _on_validation_finished(self, result: ValidationResult) -> None:
         """Handle validation worker completion.
@@ -740,14 +748,14 @@ class MainWindow(QMainWindow):
         silent = self._validation_silent
         self._validation_silent = False
 
-        self.status_bar.set_operation(f"Validation error: {error_message}", "error")
+        self.status_bar.set_operation(tr_format(self.tr("Validation error: %1"), error_message), "error")
         if not silent:
-            QMessageBox.critical(self, "Validation Error", error_message)
+            QMessageBox.critical(self, self.tr("Validation Error"), error_message)
 
     def _maybe_migrate_jmdict(self) -> None:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background."""
         if self.background_tasks.maybe_migrate_jmdict(self.config):
-            self.status_bar.set_operation("Migrating JMdict to SQLite…", "info")
+            self.status_bar.set_operation(self.tr("Migrating JMdict to SQLite…"), "info")
 
     def _on_jmdict_migration_finished(self, dict_id: str, meta: dict) -> None:
         """Notify tabs that they need to rebuild any cached DefinitionService.
@@ -757,7 +765,10 @@ class MainWindow(QMainWindow):
         tab) rebuilds its processor and picks up the newly-available index.
         """
         logger.info("JMdict migration complete: %s (%s entries)", dict_id, meta.get("entry_count"))
-        self.status_bar.set_operation(f"JMdict ready ({meta.get('entry_count', 0):,} entries)", "info")
+        self.status_bar.set_operation(
+            tr_format(self.tr("JMdict ready (%1 entries)"), f"{meta.get('entry_count', 0):,}"),
+            "info",
+        )
         self.config_refreshed.emit(self.config)
 
     def _check_for_updates(self) -> None:
