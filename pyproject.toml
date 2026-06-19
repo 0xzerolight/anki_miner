@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "anki-miner"
 dynamic = ["version"]
-description = "Automated Japanese vocabulary mining from anime subtitles with Anki integration"
+description = "Automated Japanese vocabulary mining from media with Anki integration"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "GPL-3.0-or-later"

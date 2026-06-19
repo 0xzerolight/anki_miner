@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Anki Miner
-Comment=Japanese vocabulary mining from anime subtitles
+Comment=Japanese vocabulary mining from media
 Exec=AnkiMiner
 Icon=anki-miner
 Categories=Education;Languages;
