@@ -153,7 +153,7 @@
     </message>
     <message>
         <source>Could not fetch decks. Is Anki running with AnkiConnect?</source>
-        <translation>デッキを取得できませんでした。AnkiConnect を使用して Anki が起動していますか?</translation>
+        <translation>デッキを取得できませんでした。AnkiConnect を使用して Anki が起動していますか？</translation>
     </message>
 </context><context>
     <name>AnkiSettingsPanel</name>
@@ -343,7 +343,7 @@
     </message>
     <message>
         <source>Japanese (平板/頭高/中高/尾高/起伏)</source>
-        <translation>日本語(平板/頭高/中高/尾高/起伏)</translation>
+        <translation>日本語（平板/頭高/中高/尾高/起伏）</translation>
     </message>
     <message>
         <source>Romaji (heiban/atamadaka/nakadaka/odaka/kifuku)</source>
@@ -379,7 +379,7 @@
     </message>
     <message>
         <source>"Apply to Note Type" writes a managed CSS block via AnkiConnect (never touches your own CSS; "Remove" reverts cleanly). Custom CSS is appended after the selected preset.</source>
-        <translation>「ノートタイプに適用」は AnkiConnect 経由で管理対象の CSS ブロックを書き込みます(あなた自身の CSS には一切触れません。「削除」できれいに元へ戻せます)。カスタム CSS は選択したプリセットの後に追加されます。</translation>
+        <translation>「ノートタイプに適用」は AnkiConnect 経由で管理対象の CSS ブロックを書き込みます（あなた自身の CSS には一切触れません。「削除」できれいに元へ戻せます）。カスタム CSS は選択したプリセットの後に追加されます。</translation>
     </message>
     <message>
         <source>Card style preset:</source>
@@ -515,7 +515,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>認識可能な音声パックが見つかりませんでした:
 %1
 
-対応形式: AJT (index.json + media/)、NHK16 (entries.json + audio/)、Forvo (話者ごとのサブフォルダ)、JPod レガシー ({reading} - {expression} のファイル名)。</translation>
+対応形式: AJT (index.json + media/)、NHK16 (entries.json + audio/)、Forvo（話者ごとのサブフォルダ）、JPod レガシー（{reading} - {expression} のファイル名）。</translation>
     </message>
     <message>
         <source>Importing audio pack…</source>
@@ -604,7 +604,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 
 Only the index files are deleted — your original audio files are untouched.
 This cannot be undone. You would need to re-import to use this pack again.</source>
-        <translation>'%1' を音声チェーンから削除しますか?
+        <translation>'%1' を音声チェーンから削除しますか？
 
 インデックスファイルのみが削除され、元の音声ファイルはそのまま残ります。
 この操作は取り消せません。このパックを再び使用するには再インポートが必要です。</translation>
@@ -629,11 +629,11 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
-        <translation>Google 翻訳 (合成 TTS)</translation>
+        <translation>Google 翻訳（合成 TTS）</translation>
     </message>
     <message>
         <source>JapanesePod101 (online)</source>
-        <translation>JapanesePod101 (オンライン)</translation>
+        <translation>JapanesePod101（オンライン）</translation>
     </message>
 </context><context>
     <name>AudioTracksDialog</name>
@@ -651,11 +651,11 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Auto-detect (currently: Track %1 — %2)</source>
-        <translation>自動検出 (現在: トラック %1 — %2)</translation>
+        <translation>自動検出（現在: トラック %1 — %2）</translation>
     </message>
     <message>
         <source>Auto-detect (no Japanese track found — will use first track)</source>
-        <translation>自動検出 (日本語トラックが見つかりません — 最初のトラックを使用します)</translation>
+        <translation>自動検出（日本語トラックが見つかりません — 最初のトラックを使用します）</translation>
     </message>
     <message>
         <source>Apply</source>
@@ -885,7 +885,7 @@ Mixing multiple shows in one folder can mispair episodes that share a number —
     </message>
     <message>
         <source>Starting queue processing (%1 series)...</source>
-        <translation>キューの処理を開始しています(%1シリーズ)...</translation>
+        <translation>キューの処理を開始しています（%1シリーズ）...</translation>
     </message>
     <message>
         <source>■ Cancel</source>
@@ -1077,7 +1077,7 @@ Unchecked: mine every word — good for building a complete or shareable deck.</
     </message>
     <message>
         <source>Known (skipped):</source>
-        <translation>既知(スキップ):</translation>
+        <translation>既知（スキップ）:</translation>
     </message>
     <message>
         <source>Cards to create:</source>
@@ -1466,7 +1466,7 @@ The dictionary was not removed.</source>
     <message numerus="yes">
         <source>Found %n unique word(s)</source>
         <translation>
-            <numerusform>%n 個の単語を検出しました(重複除去済み)</numerusform>
+            <numerusform>%n 個の単語を検出しました（重複除去済み）</numerusform>
         </translation>
     </message>
     <message>
@@ -1475,7 +1475,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Step 2/5 — Known-words filter bypassed (include everything mode)</source>
-        <translation>ステップ 2/5 — 既知単語フィルターをスキップ(すべて含めるモード)</translation>
+        <translation>ステップ 2/5 — 既知単語フィルターをスキップ（すべて含めるモード）</translation>
     </message>
     <message>
         <source>Step 2/5 — Filtering against known vocabulary</source>
@@ -1483,7 +1483,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Known word DB synced: %1 new words (%2 total)</source>
-        <translation>既知単語DBを同期しました: 新規 %1 単語(合計 %2)</translation>
+        <translation>既知単語DBを同期しました: 新規 %1 単語（合計 %2）</translation>
     </message>
     <message numerus="yes">
         <source>%n new word(s) to mine</source>
@@ -1498,7 +1498,7 @@ The dictionary was not removed.</source>
     <message numerus="yes">
         <source>All %n word(s) from this subtitle are already in your Anki collection — no new cards will be created. Card-format options (bold target word, etc.) only apply to newly mined cards.</source>
         <translation>
-            <numerusform>この字幕の %n 単語はすべてすでに Anki コレクションに存在します。新しいカードは作成されません。カード書式オプション(対象単語の太字など)は新しくマイニングしたカードにのみ適用されます。</numerusform>
+            <numerusform>この字幕の %n 単語はすべてすでに Anki コレクションに存在します。新しいカードは作成されません。カード書式オプション（対象単語の太字など）は新しくマイニングしたカードにのみ適用されます。</numerusform>
         </translation>
     </message>
     <message>
@@ -1527,11 +1527,11 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>i+1 filter: kept %1/%2 words (%3%)</source>
-        <translation>i+1 フィルター: %1/%2 単語を保持(%3%)</translation>
+        <translation>i+1 フィルター: %1/%2 単語を保持（%3%）</translation>
     </message>
     <message>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
-        <translation>文の長さフィルター: %1 単語を除去(上限: %2)</translation>
+        <translation>文の長さフィルター: %1 単語を除去（上限: %2）</translation>
     </message>
     <message>
         <source>Step 3/5 — Extracting media from video</source>
@@ -1578,7 +1578,7 @@ The dictionary was not removed.</source>
     <message numerus="yes">
         <source>Skipped %n word(s) Anki flagged as duplicates (same Expression as an existing card or another word in this batch).</source>
         <translation>
-            <numerusform>Anki が重複と判定した %n 単語をスキップしました(既存のカードまたはこの一括処理内の別の単語と同じ表現)。</numerusform>
+            <numerusform>Anki が重複と判定した %n 単語をスキップしました（既存のカードまたはこの一括処理内の別の単語と同じ表現）。</numerusform>
         </translation>
     </message>
     <message>
@@ -1645,7 +1645,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Plain (one word per line)</source>
-        <translation>プレーン(1行1単語)</translation>
+        <translation>プレーン（1行1単語）</translation>
     </message>
     <message>
         <source>%1 words</source>
@@ -1745,7 +1745,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words. Words missing from the frequency list are excluded. Applies only when frequency data is enabled (toggle in the Dictionaries tab).</source>
-        <translation>制限なしにする場合は0、たとえば上位10,000単語のみをマイニングする場合は10000に設定します。頻度リストにない単語は除外されます。頻度データが有効な場合にのみ適用されます(「辞書」タブで切り替え)。</translation>
+        <translation>制限なしにする場合は0、たとえば上位10,000単語のみをマイニングする場合は10000に設定します。頻度リストにない単語は除外されます。頻度データが有効な場合にのみ適用されます（「辞書」タブで切り替え）。</translation>
     </message>
     <message>
         <source>Known Words Database</source>
@@ -1773,7 +1773,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>View, remove, export, or reset the words you added to your local known words list from the Word Curator.</source>
-        <translation>Word Curatorからローカルの既知単語リストに追加した単語を表示、削除、エクスポート、またはリセットします。</translation>
+        <translation>単語キュレーターからローカルの既知単語リストに追加した単語を表示、削除、エクスポート、またはリセットします。</translation>
     </message>
     <message>
         <source>Excluded Decks</source>
@@ -1781,7 +1781,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Words in these decks (and their subdecks) are NOT treated as already known, so they stay mineable. Useful for kanji-shape decks like Remembering The Kanji that don't teach vocabulary.</source>
-        <translation>これらのデッキ(およびそのサブデッキ)に含まれる単語は既知として扱われないため、マイニング対象のままになります。語彙を扱わないRemembering The Kanjiのような漢字字形デッキに便利です。</translation>
+        <translation>これらのデッキ（およびそのサブデッキ）に含まれる単語は既知として扱われないため、マイニング対象のままになります。語彙を扱わないRemembering The Kanjiのような漢字字形デッキに便利です。</translation>
     </message>
     <message>
         <source>Add Deck…</source>
@@ -1841,7 +1841,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for anime that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
-        <translation>同梱された日本語の固有名詞(人名・地名)のリストをマイニングから除外します。登場人物名や地名が多く出てくるアニメに便利です。実際に必要な名前は上記のホワイトリストに追加することで対象に含められます。</translation>
+        <translation>同梱された日本語の固有名詞（人名・地名）のリストをマイニングから除外します。登場人物名や地名が多く出てくるアニメに便利です。実際に必要な名前は上記のホワイトリストに追加することで対象に含められます。</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
@@ -1849,7 +1849,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Exclude the bundled '%1' wordset (%2 entries) from mining.</source>
-        <translation>同梱の「%1」ワードセット(%2 件)をマイニングから除外します。</translation>
+        <translation>同梱の「%1」ワードセット（%2 件）をマイニングから除外します。</translation>
     </message>
     <message>
         <source>Subtitle Text Filtering</source>
@@ -1857,15 +1857,15 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Regex Filter</source>
-        <translation>正規表現フィルタ</translation>
+        <translation>正規表現フィルター</translation>
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
-        <translation>マイニングの前に字幕テキストでマッチして削除(または置換)するPython正規表現です。(田中)のような話者名や[ドア]のような効果音の説明を取り除くのに便利です。複数のパターンは | でつなげます。パターンのテストは https://regex101.com で行えます。</translation>
+        <translation>マイニングの前に字幕テキストでマッチして削除（または置換）するPython正規表現です。（田中）のような話者名や[ドア]のような効果音の説明を取り除くのに便利です。複数のパターンは | でつなげます。パターンのテストは https://regex101.com で行えます。</translation>
     </message>
     <message>
         <source>(empty = delete match)</source>
-        <translation>(空 = マッチを削除)</translation>
+        <translation>（空 = マッチを削除）</translation>
     </message>
     <message>
         <source>Replacement</source>
@@ -1873,19 +1873,19 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Text inserted in place of each match (empty deletes the match). Use Python backreferences (\1 \2) for capture groups. Note: NOT $1 $2 syntax like asbplayer; translate when copying patterns.</source>
-        <translation>各マッチの代わりに挿入されるテキストです(空の場合はマッチを削除します)。キャプチャグループにはPythonの後方参照(\1 \2)を使用します。注意: asbplayerのような $1 $2 構文ではありません。パターンをコピーする際は変換してください。</translation>
+        <translation>各マッチの代わりに挿入されるテキストです（空の場合はマッチを削除します）。キャプチャグループにはPythonの後方参照(\1 \2)を使用します。注意: asbplayerのような $1 $2 構文ではありません。パターンをコピーする際は変換してください。</translation>
     </message>
     <message>
         <source>Enable Subtitle Regex Filter</source>
-        <translation>字幕の正規表現フィルタを有効化</translation>
+        <translation>字幕の正規表現フィルターを有効化</translation>
     </message>
     <message>
         <source>Apply the filter to all parsed subtitle lines (mining and preview).</source>
-        <translation>解析されたすべての字幕行にフィルタを適用します(マイニングおよびプレビュー)。</translation>
+        <translation>解析されたすべての字幕行にフィルターを適用します（マイニングおよびプレビュー）。</translation>
     </message>
     <message>
         <source>Parens (Tanaka)</source>
-        <translation>丸括弧 (田中)</translation>
+        <translation>丸括弧（田中）</translation>
     </message>
     <message>
         <source>Brackets [SFX]</source>
@@ -1941,7 +1941,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
-        <translation>i+1 文フィルタ</translation>
+        <translation>i+1 文フィルター</translation>
     </message>
     <message>
         <source>Only Mine i+1 Sentences</source>
@@ -1957,7 +1957,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Enable Sentence Length Filter</source>
-        <translation>文の長さフィルタを有効化</translation>
+        <translation>文の長さフィルターを有効化</translation>
     </message>
     <message>
         <source>Drop words whose example sentence exceeds the audio-duration or character caps below. Either cap set to 0 means no limit for that dimension. Reduces deck size and speeds up reviews.</source>
@@ -2019,7 +2019,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Active theme. Top-right shows favorites; pick 'All themes…' to manage them. (Ctrl+T cycles favorites). Installed: %1</source>
-        <translation>現在のテーマ。右上にお気に入りが表示されます。管理するには「すべてのテーマ…」を選択してください。(Ctrl+T でお気に入りを順番に切り替えます)。インストール済み: %1</translation>
+        <translation>現在のテーマ。右上にお気に入りが表示されます。管理するには「すべてのテーマ…」を選択してください。（Ctrl+T でお気に入りを順番に切り替えます）。インストール済み: %1</translation>
     </message>
 </context><context>
     <name>KnownWordsManagerDialog</name>
@@ -2075,7 +2075,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
-        <translation>ローカルの既知単語リストに追加したすべての単語を削除しますか?この操作は元に戻せません。Anki と同期されたキャッシュには影響しません。</translation>
+        <translation>ローカルの既知単語リストに追加したすべての単語を削除しますか？この操作は元に戻せません。Anki と同期されたキャッシュには影響しません。</translation>
     </message>
 </context><context>
     <name>LanguagePanel</name>
@@ -2115,7 +2115,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Copied!</source>
-        <translation>コピーしました!</translation>
+        <translation>コピーしました！</translation>
     </message>
 </context><context>
     <name>MainWindow</name>
@@ -2253,7 +2253,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>JMdict ready (%1 entries)</source>
-        <translation>JMdict の準備が完了しました(%1 件)</translation>
+        <translation>JMdict の準備が完了しました（%1 件）</translation>
     </message>
 </context><context>
     <name>MediaSettingsPanel</name>
@@ -2263,7 +2263,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>MP3: universal compatibility. Opus: smaller files at equivalent quality (needs ffmpeg with libopus).</source>
-        <translation>MP3: 互換性が高い。Opus: 同等の品質でファイルサイズが小さい(libopus付きのffmpegが必要)。</translation>
+        <translation>MP3: 互換性が高い。Opus: 同等の品質でファイルサイズが小さい（libopus付きのffmpegが必要）。</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -2479,7 +2479,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>This video is part of the playlist '%1' (%2 videos). Add just this video or all of them?</source>
-        <translation>この動画はプレイリスト「%1」(%2 本の動画)の一部です。この動画だけを追加しますか、それともすべて追加しますか?</translation>
+        <translation>この動画はプレイリスト「%1」（%2 本の動画）の一部です。この動画だけを追加しますか、それともすべて追加しますか？</translation>
     </message>
     <message>
         <source>Just this video</source>
@@ -2495,7 +2495,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Playlist '%1' has %2 videos — more than the configured maximum (%3). Add the first %3?</source>
-        <translation>プレイリスト「%1」には %2 本の動画があり、設定された最大数(%3)を超えています。最初の %3 本を追加しますか?</translation>
+        <translation>プレイリスト「%1」には %2 本の動画があり、設定された最大数（%3）を超えています。最初の %3 本を追加しますか？</translation>
     </message>
     <message>
         <source>Add first %1</source>
@@ -2653,7 +2653,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Remove all %1 series from the queue?</source>
-        <translation>%1 件のシリーズすべてをキューから削除しますか?</translation>
+        <translation>%1 件のシリーズすべてをキューから削除しますか？</translation>
     </message>
     <message>
         <source>Queue is empty</source>
@@ -2775,7 +2775,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Undo (%1 cards)</source>
-        <translation>元に戻す (%1 枚のカード)</translation>
+        <translation>元に戻す（%1 枚のカード）</translation>
     </message>
     <message>
         <source>Close</source>
@@ -2791,7 +2791,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Undone (%1 cards deleted)</source>
-        <translation>元に戻しました (%1 枚のカードを削除)</translation>
+        <translation>元に戻しました（%1 枚のカードを削除）</translation>
     </message>
     <message>
         <source>Undo Failed</source>
@@ -2907,7 +2907,7 @@ Fix or disable the filter before saving.
 Details: %2</source>
         <translation>パターン: %1
 
-保存する前にフィルタを修正するか無効にしてください。
+保存する前にフィルターを修正するか無効にしてください。
 
 詳細: %2</translation>
     </message>
@@ -2965,7 +2965,7 @@ Details: %2</source>
     </message>
     <message>
         <source>Clear the local known-words cache? It will re-sync from Anki on the next mining run, applying your current deck exclusions. Words you added yourself from the Word Curator are kept.</source>
-        <translation>ローカルの既知単語キャッシュをクリアしますか？次回のマイニング実行時に、現在のデッキ除外設定を適用して Anki から再同期されます。Word Curator から自分で追加した単語は保持されます。</translation>
+        <translation>ローカルの既知単語キャッシュをクリアしますか？次回のマイニング実行時に、現在のデッキ除外設定を適用して Anki から再同期されます。単語キュレーター から自分で追加した単語は保持されます。</translation>
     </message>
     <message>
         <source>Could not clear the cache: %1</source>
@@ -3195,7 +3195,7 @@ Details: %2</source>
     <name>SubtitleViewer</name>
     <message>
         <source>Subtitle Timing Viewer</source>
-        <translation>字幕タイミングビューア</translation>
+        <translation>字幕タイミングビューアー</translation>
     </message>
     <message>
         <source>Offset:</source>
@@ -3283,7 +3283,7 @@ Details: %2</source>
     </message>
     <message>
         <source>Anki Miner v%1 is available!</source>
-        <translation>Anki Miner v%1が利用可能です!</translation>
+        <translation>Anki Miner v%1が利用可能です！</translation>
     </message>
     <message>
         <source>View release</source>
@@ -3309,7 +3309,7 @@ Details: %2</source>
     <name>WelcomeDialog</name>
     <message>
         <source>Anki Miner works best with a frequency list, pitch accent data, and a dictionary. Download the recommended set now?</source>
-        <translation>Anki Miner は頻度リスト、ピッチアクセントデータ、辞書があると最も効果的に動作します。推奨セットを今すぐダウンロードしますか?</translation>
+        <translation>Anki Miner は頻度リスト、ピッチアクセントデータ、辞書があると最も効果的に動作します。推奨セットを今すぐダウンロードしますか？</translation>
     </message>
     <message>
         <source>Welcome to Anki Miner</source>
@@ -3321,7 +3321,7 @@ Details: %2</source>
     </message>
     <message>
         <source>What are these resources?</source>
-        <translation>これらのリソースとは?</translation>
+        <translation>これらのリソースとは？</translation>
     </message>
     <message>
         <source>Skip — set up manually</source>
@@ -3359,7 +3359,7 @@ Details: %2</source>
     </message>
     <message>
         <source>Acts on highlighted rows when 2 or more are selected (Ctrl+Click or Shift+Click to select). Otherwise acts on all visible rows.</source>
-        <translation>2行以上が選択されている場合は強調表示された行に適用されます(Ctrl+クリックまたはShift+クリックで選択)。それ以外の場合は表示中のすべての行に適用されます。</translation>
+        <translation>2行以上が選択されている場合は強調表示された行に適用されます（Ctrl+クリックまたはShift+クリックで選択）。それ以外の場合は表示中のすべての行に適用されます。</translation>
     </message>
     <message>
         <source>Select All</source>
@@ -3379,7 +3379,7 @@ Details: %2</source>
     </message>
     <message>
         <source>Word (mined)</source>
-        <translation>単語(マイニング済み)</translation>
+        <translation>単語（マイニング済み）</translation>
     </message>
     <message>
         <source>Form in subtitle</source>
@@ -3555,11 +3555,11 @@ Details: %2</source>
     </message>
     <message>
         <source>%1 (probing...)</source>
-        <translation>%1 (確認中...)</translation>
+        <translation>%1（確認中...）</translation>
     </message>
     <message>
         <source>(probing...)</source>
-        <translation>(確認中...)</translation>
+        <translation>（確認中...）</translation>
     </message>
     <message>
         <source>Probe failed: %1</source>
@@ -3717,7 +3717,7 @@ Details: %2</source>
 Continue with import?</source>
         <translation>%1 はすでに存在し、置き換えられます。
 
-インポートを続行しますか?</translation>
+インポートを続行しますか？</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3725,7 +3725,7 @@ Continue with import?</source>
     </message>
     <message>
         <source> (skipped %1 display-only entries)</source>
-        <translation> (表示専用の %1 件のエントリをスキップしました)</translation>
+        <translation>（表示専用の %1 件のエントリをスキップしました）</translation>
     </message>
     <message>
         <source>Imported %1 entries from '%2'.</source>
