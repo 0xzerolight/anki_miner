@@ -241,16 +241,13 @@ class AnkiProbeController:
         config = self._get_config()
         probe_config = replace(config, ankiconnect_url=ankiconnect_url or config.ankiconnect_url)
 
-        def _t(s: str) -> str:
-            return QCoreApplication.translate("AnkiProbeController", s)
-
         try:
             service = AnkiService(probe_config)
         except ValueError as e:
             QMessageBox.warning(
                 self._parent,
-                _t("Add Deck"),
-                tr_format(_t("Cannot build AnkiService: %1"), e),
+                QCoreApplication.translate("AnkiProbeController", "Add Deck"),
+                tr_format(QCoreApplication.translate("AnkiProbeController", "Cannot build AnkiService: %1"), e),
             )
             return
 
@@ -263,16 +260,14 @@ class AnkiProbeController:
 
     def _on_fetch_decks_finished(self, deck_names: list[str]) -> None:
         """Hand the fetched deck list to the panel, which opens the picker."""
-
-        def _t(s: str) -> str:
-            return QCoreApplication.translate("AnkiProbeController", s)
-
         self._filtering_panel.set_add_deck_button_enabled(True)
         if not deck_names:
             QMessageBox.warning(
                 self._parent,
-                _t("Add Deck"),
-                _t("Could not fetch decks. Is Anki running with AnkiConnect?"),
+                QCoreApplication.translate("AnkiProbeController", "Add Deck"),
+                QCoreApplication.translate(
+                    "AnkiProbeController", "Could not fetch decks. Is Anki running with AnkiConnect?"
+                ),
             )
             return
         self._filtering_panel.set_available_decks(deck_names)

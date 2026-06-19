@@ -114,12 +114,10 @@ class AudioPackImportFlow:
 
     def add_pack(self) -> None:
         """Prompt for a directory and import all detectable audio packs in it."""
-
-        def _t(s: str) -> str:
-            return QCoreApplication.translate("AudioPackImportFlow", s)
-
         chosen_dir = QFileDialog.getExistingDirectory(
-            self._parent, _t("Choose audio pack folder"), resolve_start_dir(None, file_mode=False)
+            self._parent,
+            QCoreApplication.translate("AudioPackImportFlow", "Choose audio pack folder"),
+            resolve_start_dir(None, file_mode=False),
         )
         if not chosen_dir:
             return
@@ -131,8 +129,8 @@ class AudioPackImportFlow:
             # the Qt slot — surface them as a dialog instead.
             QMessageBox.warning(
                 self._parent,
-                _t("Scan Failed"),
-                tr_format(_t("Could not scan folder: %1"), exc),
+                QCoreApplication.translate("AudioPackImportFlow", "Scan Failed"),
+                tr_format(QCoreApplication.translate("AudioPackImportFlow", "Could not scan folder: %1"), exc),
             )
             return
         # Sort by upstream source priority so completion order = priority order
@@ -142,12 +140,13 @@ class AudioPackImportFlow:
         if not packs:
             QMessageBox.warning(
                 self._parent,
-                _t("No Audio Packs Found"),
+                QCoreApplication.translate("AudioPackImportFlow", "No Audio Packs Found"),
                 tr_format(
-                    _t(
+                    QCoreApplication.translate(
+                        "AudioPackImportFlow",
                         "No recognisable audio packs were found in:\n%1\n\n"
                         "Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), "
-                        "Forvo (speaker subdirectories), JPod legacy ({reading} - {expression} stems)."
+                        "Forvo (speaker subdirectories), JPod legacy ({reading} - {expression} stems).",
                     ),
                     chosen_dir,
                 ),
@@ -157,7 +156,13 @@ class AudioPackImportFlow:
         # Import all detected packs sequentially using the same chained
         # state-machine pattern as DictionaryImportFlow.reimport_all.
         dest_root = self._get_config().audio_packs_root
-        dlg = QProgressDialog(_t("Importing audio pack…"), _t("Cancel"), 0, 0, self._parent)
+        dlg = QProgressDialog(
+            QCoreApplication.translate("AudioPackImportFlow", "Importing audio pack…"),
+            QCoreApplication.translate("AudioPackImportFlow", "Cancel"),
+            0,
+            0,
+            self._parent,
+        )
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
@@ -194,7 +199,7 @@ class AudioPackImportFlow:
             if imported:
                 lines.append(
                     tr_format(
-                        _t("Imported %1 audio pack(s):"),
+                        QCoreApplication.translate("AudioPackImportFlow", "Imported %1 audio pack(s):"),
                         len(imported),
                     )
                 )
@@ -202,14 +207,18 @@ class AudioPackImportFlow:
             if errors:
                 if lines:
                     lines.append("")
-                lines.append(_t("Failed:"))
+                lines.append(QCoreApplication.translate("AudioPackImportFlow", "Failed:"))
                 lines.extend(f"  • {name}: {msg}" for name, msg in errors)
             if state["cancelled"]:
                 if lines:
                     lines.append("")
-                lines.append(_t("Cancelled before remaining packs."))
+                lines.append(QCoreApplication.translate("AudioPackImportFlow", "Cancelled before remaining packs."))
 
-            QMessageBox.information(self._parent, _t("Audio Packs Added"), "\n".join(lines) or _t("Done."))
+            QMessageBox.information(
+                self._parent,
+                QCoreApplication.translate("AudioPackImportFlow", "Audio Packs Added"),
+                "\n".join(lines) or QCoreApplication.translate("AudioPackImportFlow", "Done."),
+            )
 
         def launch_next() -> None:
             idx = state["index"]
@@ -219,7 +228,14 @@ class AudioPackImportFlow:
                 return
 
             pack_dir, _fmt = packs[idx]
-            dlg.setLabelText(tr_format(_t("Pack %1 of %2: %3"), idx + 1, len(packs), pack_dir.name))
+            dlg.setLabelText(
+                tr_format(
+                    QCoreApplication.translate("AudioPackImportFlow", "Pack %1 of %2: %3"),
+                    idx + 1,
+                    len(packs),
+                    pack_dir.name,
+                )
+            )
 
             worker = AudioPackImportWorker.for_pack(pack_dir, dest_root)
             # Join the predecessor before dropping its reference (same as
@@ -265,12 +281,10 @@ class AudioPackImportFlow:
         importer overwrites the existing index in-place, preserving the
         pack_id so the chain entry keeps pointing at it correctly.
         """
-
-        def _t(s: str) -> str:
-            return QCoreApplication.translate("AudioPackImportFlow", s)
-
         chosen_dir = QFileDialog.getExistingDirectory(
-            self._parent, _t("Choose audio pack folder to re-import"), resolve_start_dir(None, file_mode=False)
+            self._parent,
+            QCoreApplication.translate("AudioPackImportFlow", "Choose audio pack folder to re-import"),
+            resolve_start_dir(None, file_mode=False),
         )
         if not chosen_dir:
             return
@@ -278,7 +292,13 @@ class AudioPackImportFlow:
         dest_root = self._get_config().audio_packs_root
         # Busy/indeterminate (maximum 0) like add_pack — import has no
         # percentage granularity, only progress message updates.
-        dlg = QProgressDialog(_t("Re-importing audio pack…"), _t("Cancel"), 0, 0, self._parent)
+        dlg = QProgressDialog(
+            QCoreApplication.translate("AudioPackImportFlow", "Re-importing audio pack…"),
+            QCoreApplication.translate("AudioPackImportFlow", "Cancel"),
+            0,
+            0,
+            self._parent,
+        )
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
@@ -299,8 +319,10 @@ class AudioPackImportFlow:
             dlg.close()
             QMessageBox.information(
                 self._parent,
-                _t("Audio Pack Re-imported"),
-                tr_format(_t("Re-imported %1 successfully."), imported_id),
+                QCoreApplication.translate("AudioPackImportFlow", "Audio Pack Re-imported"),
+                tr_format(
+                    QCoreApplication.translate("AudioPackImportFlow", "Re-imported %1 successfully."), imported_id
+                ),
             )
             current_chain = self._panel.get_chain()
             self._panel.refresh_registry()
@@ -309,7 +331,9 @@ class AudioPackImportFlow:
 
         def on_failed(err: str) -> None:
             dlg.close()
-            QMessageBox.warning(self._parent, _t("Re-import Failed"), err)
+            QMessageBox.warning(
+                self._parent, QCoreApplication.translate("AudioPackImportFlow", "Re-import Failed"), err
+            )
             self._set_import_buttons_enabled(True)
 
         worker.progress.connect(on_progress)

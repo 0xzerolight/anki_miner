@@ -147,6 +147,14 @@
         <source>Add Deck</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Cannot build AnkiService: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not fetch decks. Is Anki running with AnkiConnect?</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>AnkiSettingsPanel</name>
     <message>
@@ -479,6 +487,83 @@
     </message>
     <message>
         <source>Failed</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>AudioPackImportFlow</name>
+    <message>
+        <source>Choose audio pack folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not scan folder: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Audio Packs Found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No recognisable audio packs were found in:
+%1
+
+Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), Forvo (speaker subdirectories), JPod legacy ({reading} - {expression} stems).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Importing audio pack…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 audio pack(s):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled before remaining packs.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio Packs Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pack %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose audio pack folder to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-importing audio pack…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Failed</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -1032,6 +1117,157 @@ Unchecked: mine every word — good for building a complete or shareable deck.</
     </message>
     <message>
         <source>Error: %1</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>DictionaryImportFlow</name>
+    <message>
+        <source>Choose Yomitan dictionary zip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Yomitan zip (*.zip)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Importing dictionary…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 (%2 entries)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Invalid Zip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Zip does not match slot</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This zip is for '%1', but you are re-importing '%2'. Pick the matching zip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A mining run is in progress. Stop it before re-importing dictionaries.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-importing dictionary…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 (%2 entries)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>JMdict not found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimporting JMdict…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimport Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No dictionaries with saved sources were found.
+
+Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
+</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No dictionaries in the chain.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimporting dictionaries…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimported %1 dictionary/dictionaries:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped (no saved source — right-click a dictionary row → Re-import… to seed):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to restore</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All on-disk dictionaries are already listed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Found dictionaries on disk that aren't in your list:
+
+</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add them to the dictionary list?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore from Disk</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2171,6 +2407,38 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>more than %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Playlist</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This video is part of the playlist '%1' (%2 videos). Add just this video or all of them?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Just this video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add first %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add all %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Playlist '%1' has %2 videos — more than the configured maximum (%3). Add the first %3?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add first %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Skipped %1 already-queued video(s).</source>
         <translation type="unfinished" />
     </message>
@@ -2360,6 +2628,35 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>✓ %1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>✗ %1 — %2
+   Download manually: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources Installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources Partially Installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resource Download Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No resources were processed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources are downloaded from their original sources; their licenses apply.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3336,6 +3633,26 @@ Details: %2</source>
     </message>
     <message>
         <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ZipImportFlow</name>
+    <message>
+        <source>%1 already exists and will be replaced.
+
+Continue with import?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 display-only entries)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
         <translation type="unfinished" />
     </message>
 </context><context>

@@ -430,45 +430,51 @@ class PlaylistAddController:
         if url_info.kind == "playlist" and not over_cap:
             return "playlist"
 
-        def _t(s: str) -> str:
-            return QCoreApplication.translate("PlaylistAddController", s)
-
         if pl.total_count is not None:
             total_text = str(pl.total_count)
         elif over_cap:
-            total_text = tr_format(_t("more than %1"), cap)
+            total_text = tr_format(QCoreApplication.translate("PlaylistAddController", "more than %1"), cap)
         else:
             total_text = str(len(pl.entries))
 
         box = QMessageBox(self._parent)
         box.setIcon(QMessageBox.Icon.Question)
-        box.setWindowTitle(_t("Add Playlist"))
+        box.setWindowTitle(QCoreApplication.translate("PlaylistAddController", "Add Playlist"))
 
         single_button = None
         if url_info.kind == "video_in_playlist":
             box.setText(
                 tr_format(
-                    _t("This video is part of the playlist '%1' (%2 videos). Add just this video or all of them?"),
+                    QCoreApplication.translate(
+                        "PlaylistAddController",
+                        "This video is part of the playlist '%1' (%2 videos). Add just this video or all of them?",
+                    ),
                     pl.title,
                     total_text,
                 )
             )
-            single_button = box.addButton(_t("Just this video"), QMessageBox.ButtonRole.ActionRole)
+            single_button = box.addButton(
+                QCoreApplication.translate("PlaylistAddController", "Just this video"),
+                QMessageBox.ButtonRole.ActionRole,
+            )
             playlist_label = (
-                tr_format(_t("Add first %1 of %2"), cap, total_text)
+                tr_format(QCoreApplication.translate("PlaylistAddController", "Add first %1 of %2"), cap, total_text)
                 if over_cap
-                else tr_format(_t("Add all %1"), total_text)
+                else tr_format(QCoreApplication.translate("PlaylistAddController", "Add all %1"), total_text)
             )
         else:
             box.setText(
                 tr_format(
-                    _t("Playlist '%1' has %2 videos — more than the configured maximum (%3). Add the first %3?"),
+                    QCoreApplication.translate(
+                        "PlaylistAddController",
+                        "Playlist '%1' has %2 videos — more than the configured maximum (%3). Add the first %3?",
+                    ),
                     pl.title,
                     total_text,
                     cap,
                 )
             )
-            playlist_label = tr_format(_t("Add first %1"), cap)
+            playlist_label = tr_format(QCoreApplication.translate("PlaylistAddController", "Add first %1"), cap)
 
         playlist_button = box.addButton(playlist_label, QMessageBox.ButtonRole.AcceptRole)
         box.addButton(QMessageBox.StandardButton.Cancel)
