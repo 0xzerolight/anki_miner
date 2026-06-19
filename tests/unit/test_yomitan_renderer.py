@@ -230,6 +230,11 @@ class TestStylePassthrough:
             "src(https://evil/x.css)",
             # With whitespace before the paren — the tolerance the spec requires.
             "image-set  (https://evil/x.png 1x)",
+            # F9: vendor/Houdini image + paint sources also blocked.
+            "-moz-image-rect(url(https://evil/x.png), 0, 0, 0, 0)",
+            "element(#evil)",
+            "-moz-element(#evil)",
+            "paint(evilWorklet)",
         ],
     )
     def test_style_image_load_functions_blocked(self, value):
