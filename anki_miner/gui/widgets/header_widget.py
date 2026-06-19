@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.utils.i18n import tr_format
 
 # Sentinel item data marking the "All themes…" entry that opens the Themes
 # settings tab instead of switching themes. Picked to be distinct from any
@@ -57,7 +58,7 @@ class HeaderWidget(QWidget):
         branding_layout.addWidget(title_label)
 
         # Subtitle
-        subtitle_label = QLabel("Turn Immersion Into Vocabulary")
+        subtitle_label = QLabel(self.tr("Turn Immersion Into Vocabulary"))
         subtitle_label.setObjectName("caption")
         subtitle_font = QFont()
         subtitle_font.setPixelSize(FONT_SIZES.caption)
@@ -71,7 +72,7 @@ class HeaderWidget(QWidget):
         theme_layout = QHBoxLayout()
         theme_layout.setSpacing(SPACING.xs)
 
-        theme_label = QLabel("Theme:")
+        theme_label = QLabel(self.tr("Theme:"))
         theme_label.setObjectName("caption")
         theme_layout.addWidget(theme_label)
 
@@ -110,7 +111,7 @@ class HeaderWidget(QWidget):
                 self.theme_combo.addItem(display, key)
 
             # Sentinel entry that opens Settings → Themes.
-            self.theme_combo.addItem("All themes…", ALL_THEMES_SENTINEL)
+            self.theme_combo.addItem(self.tr("All themes…"), ALL_THEMES_SENTINEL)
 
             # Select active theme.
             for i in range(self.theme_combo.count()):
@@ -120,8 +121,13 @@ class HeaderWidget(QWidget):
 
             tooltip_names = ", ".join(available.values())
             self.theme_combo.setToolTip(
-                "Active theme. Top-right shows favorites; pick 'All themes…' to manage them. "
-                f"(Ctrl+T cycles favorites). Installed: {tooltip_names}"
+                tr_format(
+                    self.tr(
+                        "Active theme. Top-right shows favorites; pick 'All themes…' to manage them. "
+                        "(Ctrl+T cycles favorites). Installed: %1"
+                    ),
+                    tooltip_names,
+                )
             )
         finally:
             self.theme_combo.blockSignals(False)

@@ -14,6 +14,7 @@ Save.
 from collections.abc import Callable
 from dataclasses import replace
 
+from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from anki_miner.config import AnkiMinerConfig
@@ -23,6 +24,7 @@ from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
 from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
 from anki_miner.gui.workers.styling_worker import StylingWorker
 from anki_miner.services.anki_service import AnkiService
+from anki_miner.utils.i18n import tr_format
 
 
 class AnkiProbeController:
@@ -238,10 +240,18 @@ class AnkiProbeController:
         ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
         config = self._get_config()
         probe_config = replace(config, ankiconnect_url=ankiconnect_url or config.ankiconnect_url)
+
+        def _t(s: str) -> str:
+            return QCoreApplication.translate("AnkiProbeController", s)
+
         try:
             service = AnkiService(probe_config)
         except ValueError as e:
-            QMessageBox.warning(self._parent, "Add Deck", f"Cannot build AnkiService: {e}")
+            QMessageBox.warning(
+                self._parent,
+                _t("Add Deck"),
+                tr_format(_t("Cannot build AnkiService: %1"), e),
+            )
             return
 
         self._filtering_panel.set_add_deck_button_enabled(False)
@@ -253,12 +263,16 @@ class AnkiProbeController:
 
     def _on_fetch_decks_finished(self, deck_names: list[str]) -> None:
         """Hand the fetched deck list to the panel, which opens the picker."""
+
+        def _t(s: str) -> str:
+            return QCoreApplication.translate("AnkiProbeController", s)
+
         self._filtering_panel.set_add_deck_button_enabled(True)
         if not deck_names:
             QMessageBox.warning(
                 self._parent,
-                "Add Deck",
-                "Could not fetch decks. Is Anki running with AnkiConnect?",
+                _t("Add Deck"),
+                _t("Could not fetch decks. Is Anki running with AnkiConnect?"),
             )
             return
         self._filtering_panel.set_available_decks(deck_names)
@@ -266,4 +280,8 @@ class AnkiProbeController:
     def _on_fetch_decks_error(self, message: str) -> None:
         """Surface an unexpected deck-fetch worker exception."""
         self._filtering_panel.set_add_deck_button_enabled(True)
-        QMessageBox.warning(self._parent, "Add Deck", message)
+        QMessageBox.warning(
+            self._parent,
+            QCoreApplication.translate("AnkiProbeController", "Add Deck"),
+            message,
+        )

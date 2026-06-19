@@ -397,12 +397,12 @@ class WordPreviewDialog(QDialog):
 
     def _add_words_grouped_by_length(self) -> None:
         """Add words grouped by word length."""
-        # Define length ranges
+        # Define length ranges — the label strings are translatable
         ranges = [
-            (1, 2, "1-2 characters"),
-            (3, 4, "3-4 characters"),
-            (5, 6, "5-6 characters"),
-            (7, float("inf"), "7+ characters"),
+            (1, 2, self.tr("1-2 characters")),
+            (3, 4, self.tr("3-4 characters")),
+            (5, 6, self.tr("5-6 characters")),
+            (7, float("inf"), self.tr("7+ characters")),
         ]
 
         for min_len, max_len, label in ranges:

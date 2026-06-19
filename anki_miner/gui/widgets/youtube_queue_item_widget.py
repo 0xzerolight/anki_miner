@@ -8,7 +8,7 @@ while the item is PROCESSING. Callers drive all state changes through
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QFrame,
@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
+from anki_miner.utils.i18n import tr_format
 
 # ---------------------------------------------------------------------------
 # Status → rendering matrix
@@ -48,10 +49,10 @@ _STATUS_GLYPH: dict[YouTubeItemStatus, str] = {
     YouTubeItemStatus.ERROR: "✗",
 }
 
-# Sub-mode label text
+# Sub-mode label keys (translated at use site via QCoreApplication.translate)
 _SUB_MODE_LABEL: dict[str, str] = {
-    "manual_only": "Manual JA subs",
-    "auto_only": "Auto JA subs",
+    "manual_only": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Manual JA subs"),
+    "auto_only": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Auto JA subs"),
 }
 
 
@@ -157,10 +158,13 @@ class YouTubeQueueItemWidget(QFrame):
         status = item.status
         if status == YouTubeItemStatus.PROBING:
             if item.display_title:
-                return f"{item.display_title} (probing...)"
-            return "(probing...)"
+                return tr_format(self.tr("%1 (probing...)"), item.display_title)
+            return self.tr("(probing...)")
         if status == YouTubeItemStatus.PROBE_ERROR:
-            return f"Probe failed: {item.error_message or 'unknown error'}"
+            return tr_format(
+                self.tr("Probe failed: %1"),
+                item.error_message or self.tr("unknown error"),
+            )
         if item.video_info is not None:
             return item.video_info.title
         return item.url
@@ -169,11 +173,12 @@ class YouTubeQueueItemWidget(QFrame):
         """Return the appropriate second-line text for the given item state."""
         status = item.status
         if status == YouTubeItemStatus.COMPLETED:
-            return f"{item.cards_created} cards"
+            return tr_format(self.tr("%1 cards"), item.cards_created)
         if status == YouTubeItemStatus.ERROR:
             return item.error_message or ""
         if item.resolved_sub_mode is not None:
-            return _SUB_MODE_LABEL.get(item.resolved_sub_mode, "")
+            raw = _SUB_MODE_LABEL.get(item.resolved_sub_mode, "")
+            return QCoreApplication.translate("YouTubeQueueItemWidget", raw) if raw else ""
         return ""
 
     def _setup_ui(self) -> None:
@@ -221,7 +226,7 @@ class YouTubeQueueItemWidget(QFrame):
         self.remove_button = QPushButton("×")
         self.remove_button.setObjectName("danger")
         self.remove_button.setMaximumWidth(SPACING.xl)
-        self.remove_button.setToolTip("Remove from queue")
+        self.remove_button.setToolTip(self.tr("Remove from queue"))
         self.remove_button.clicked.connect(self.removed.emit)
         top_row.addWidget(self.remove_button)
 

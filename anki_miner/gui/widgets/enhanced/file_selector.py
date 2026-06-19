@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.base import ElidingLabel, make_label_fit_text
+from anki_miner.utils.i18n import tr_format
 
 
 class FileSelector(QWidget):
@@ -102,16 +103,16 @@ class FileSelector(QWidget):
         if self._placeholder:
             placeholder = self._placeholder
         elif self._file_mode:
-            placeholder = "Select file..."
+            placeholder = self.tr("Select file...")
         else:
-            placeholder = "Select folder..."
+            placeholder = self.tr("Select folder...")
 
         self.input.setPlaceholderText(placeholder)
         self.input.textChanged.connect(self._on_text_changed)
         main_layout.addWidget(self.input)
 
         # Browse button
-        self.browse_button = QPushButton("Browse...")
+        self.browse_button = QPushButton(self.tr("Browse..."))
         self.browse_button.clicked.connect(self._on_browse_clicked)
         main_layout.addWidget(self.browse_button)
 
@@ -172,14 +173,23 @@ class FileSelector(QWidget):
         start_dir = resolve_start_dir(self.input.text(), file_mode=self._file_mode, default_dir=self._default_dir)
         if self._file_mode:
             # File selection
-            file_path, _ = QFileDialog.getOpenFileName(self, f"Select {self._label_text}", start_dir, self._file_filter)
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                tr_format(self.tr("Select %1"), self._label_text),
+                start_dir,
+                self._file_filter,
+            )
             if file_path:
                 self.input.setText(file_path)
                 self.input.setCursorPosition(0)
                 self.input.setToolTip(file_path)
         else:
             # Folder selection
-            folder_path = QFileDialog.getExistingDirectory(self, f"Select {self._label_text}", start_dir)
+            folder_path = QFileDialog.getExistingDirectory(
+                self,
+                tr_format(self.tr("Select %1"), self._label_text),
+                start_dir,
+            )
             if folder_path:
                 self.input.setText(folder_path)
                 self.input.setCursorPosition(0)
@@ -226,11 +236,11 @@ class FileSelector(QWidget):
         path_str = self.input.text()
 
         if not path_str:
-            self.status_label.setText("No file selected" if self._file_mode else "No folder selected")
+            self.status_label.setText(self.tr("No file selected") if self._file_mode else self.tr("No folder selected"))
         elif self._is_valid:
             self.status_label.setText(Path(path_str).name)
         else:
-            self.status_label.setText("File not found" if self._file_mode else "Folder not found")
+            self.status_label.setText(self.tr("File not found") if self._file_mode else self.tr("Folder not found"))
 
     def get_path(self) -> str:
         """Get the current path.

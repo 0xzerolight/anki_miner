@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.constants import PATH_MAX_DISPLAY_LENGTH
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.utils.i18n import tr_format
 
 
 class QueueItemWidget(QFrame):
@@ -149,17 +150,17 @@ class QueueItemWidget(QFrame):
         footer_layout.addStretch()
 
         # Edit button
-        self.edit_button = QPushButton("Edit")
+        self.edit_button = QPushButton(self.tr("Edit"))
         self.edit_button.setObjectName("secondary")
         self.edit_button.clicked.connect(self.edited.emit)
-        self.edit_button.setToolTip("Edit anime and subtitle folders")
+        self.edit_button.setToolTip(self.tr("Edit anime and subtitle folders"))
         footer_layout.addWidget(self.edit_button)
 
         # Remove button
-        self.remove_button = QPushButton("Remove")
+        self.remove_button = QPushButton(self.tr("Remove"))
         self.remove_button.setObjectName("danger")
         self.remove_button.clicked.connect(self.removed.emit)
-        self.remove_button.setToolTip("Remove from queue")
+        self.remove_button.setToolTip(self.tr("Remove from queue"))
         footer_layout.addWidget(self.remove_button)
 
         main_layout.addLayout(footer_layout)
@@ -287,12 +288,12 @@ class QueueItemWidget(QFrame):
     def _update_status_badge(self) -> None:
         """Update the status badge display."""
         status_map = {
-            "pending": ("Pending", "pending"),
-            "processing": ("Processing", "processing"),
-            "complete": ("Complete", "complete"),
+            "pending": (self.tr("Pending"), "pending"),
+            "processing": (self.tr("Processing"), "processing"),
+            "complete": (self.tr("Complete"), "complete"),
         }
 
-        text, prop_value = status_map.get(self._status, ("Pending", "pending"))
+        text, prop_value = status_map.get(self._status, (self.tr("Pending"), "pending"))
         self.status_badge.setText(text)
         self.status_badge.setProperty("status", prop_value)
 
@@ -310,7 +311,7 @@ class QueueItemWidget(QFrame):
             self.anime_path_label.setText(display_path)
             self.anime_path_label.setToolTip(str(anime_path))
         else:
-            self.anime_path_label.setText("No anime folder selected")
+            self.anime_path_label.setText(self.tr("No anime folder selected"))
             self.anime_path_label.setToolTip("")
 
         if self._subtitle_folder:
@@ -320,7 +321,7 @@ class QueueItemWidget(QFrame):
             self.subtitle_path_label.setText(display_path)
             self.subtitle_path_label.setToolTip(str(subtitle_path))
         else:
-            self.subtitle_path_label.setText("No subtitle folder selected")
+            self.subtitle_path_label.setText(self.tr("No subtitle folder selected"))
             self.subtitle_path_label.setToolTip("")
 
     def _update_stats(self) -> None:
@@ -329,14 +330,27 @@ class QueueItemWidget(QFrame):
         offset_str = ""
         if self._subtitle_offset != 0.0:
             sign = "+" if self._subtitle_offset > 0 else ""
-            offset_str = f" • Offset: {sign}{self._subtitle_offset:.1f}s"
+            offset_str = tr_format(self.tr(" • Offset: %1"), f"{sign}{self._subtitle_offset:.1f}s")
 
         if self._status == "complete" and self._cards_created > 0:
-            stats_text = f"{self._episode_count} episodes • {self._cards_created} cards created{offset_str}"
+            stats_text = (
+                tr_format(
+                    self.tr("%1 episodes • %2 cards created"),
+                    self._episode_count,
+                    self._cards_created,
+                )
+                + offset_str
+            )
         elif self._episode_count > 0:
-            stats_text = f"{self._episode_count} episodes • Ready to process{offset_str}"
+            stats_text = (
+                tr_format(
+                    self.tr("%1 episodes • Ready to process"),
+                    self._episode_count,
+                )
+                + offset_str
+            )
         else:
-            stats_text = f"Not configured{offset_str}" if offset_str else "Not configured"
+            stats_text = (self.tr("Not configured") + offset_str) if offset_str else self.tr("Not configured")
 
         self.stats_label.setText(stats_text)
 

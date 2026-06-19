@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayo
 
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.utils import find_japanese_audio_stream, get_primary_video_codec
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,9 @@ class SubtitlePlayerWidget(QWidget):
 
         # AV1 fallback UI — hidden by default; shown when the watchdog fires on an
         # undecodable AV1 source (GPU can't hardware-decode AV1 on this machine).
-        self._av1_notice_label = QLabel("This video uses AV1, which your system can't decode for in-app preview.")
+        self._av1_notice_label = QLabel(
+            self.tr("This video uses AV1, which your system can't decode for in-app preview.")
+        )
         self._av1_notice_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._av1_notice_label.setWordWrap(True)
         self._av1_notice_label.setVisible(False)
@@ -113,7 +116,7 @@ class SubtitlePlayerWidget(QWidget):
 
         # Play/pause button row
         controls_layout = QHBoxLayout()
-        self.play_button = QPushButton("Play")
+        self.play_button = QPushButton(self.tr("Play"))
         self.play_button.setFixedWidth(80)
         self.play_button.clicked.connect(self.toggle_play_pause)
         controls_layout.addWidget(self.play_button)
@@ -302,9 +305,9 @@ class SubtitlePlayerWidget(QWidget):
             state: Current playback state.
         """
         if state == QMediaPlayer.PlaybackState.PlayingState:
-            self.play_button.setText("Pause")
+            self.play_button.setText(self.tr("Pause"))
         else:
-            self.play_button.setText("Play")
+            self.play_button.setText(self.tr("Play"))
 
     def _on_media_error(self, error: QMediaPlayer.Error, error_string: str) -> None:
         """Handle media player errors by showing message in subtitle label.
@@ -313,7 +316,7 @@ class SubtitlePlayerWidget(QWidget):
             error: QMediaPlayer.Error enum value.
             error_string: Human-readable error description.
         """
-        self.subtitle_label.setText(f"Video error: {error_string}")
+        self.subtitle_label.setText(tr_format(self.tr("Video error: %1"), error_string))
         self.subtitle_label.setVisible(True)
 
     def _on_video_frame_changed(self) -> None:
