@@ -25,7 +25,7 @@ def panel(qapp, qtbot):
     p.deleteLater()
 
 
-def _add_widget(panel, display_name, item_id, anime=None, subtitle=None, offset=0.0):
+def _add_widget(panel, display_name, item_id, video=None, subtitle=None, offset=0.0):
     """Add a configured QueueItemWidget directly to the panel.
 
     Mirrors what _add_series + the queue-population path do, without driving
@@ -34,8 +34,8 @@ def _add_widget(panel, display_name, item_id, anime=None, subtitle=None, offset=
     """
     widget = QueueItemWidget(display_name=display_name, parent=panel.queue_container)
     widget.item_id = item_id
-    if anime is not None and subtitle is not None:
-        widget.set_folders(anime, subtitle)
+    if video is not None and subtitle is not None:
+        widget.set_folders(video, subtitle)
     widget.subtitle_offset = offset
     panel.queue_layout.insertWidget(len(panel.queue_item_widgets), widget)
     panel.queue_item_widgets.append(widget)
@@ -114,20 +114,20 @@ def test_update_stats_text(panel, tmp_path):
 
 def test_get_valid_pairs_and_incomplete_items(panel, tmp_path):
     """Valid rows (existing folders) are returned; incomplete/invalid are flagged."""
-    anime = tmp_path / "anime"
+    video = tmp_path / "video"
     subs = tmp_path / "subs"
-    anime.mkdir()
+    video.mkdir()
     subs.mkdir()
 
-    valid = _add_widget(panel, "Valid", "id-1", anime=anime, subtitle=subs)
+    valid = _add_widget(panel, "Valid", "id-1", video=video, subtitle=subs)
     _add_widget(panel, "NoFolders", "id-2")  # incomplete: no folders set
-    _add_widget(panel, "Missing", "id-3", anime=tmp_path / "nope", subtitle=tmp_path / "gone")
+    _add_widget(panel, "Missing", "id-3", video=tmp_path / "nope", subtitle=tmp_path / "gone")
 
     pairs = panel.get_valid_pairs()
     # Exactly the valid row is returned, carrying its widget for id stamping.
     assert len(pairs) == 1
     assert valid in pairs[0]
-    assert (anime, subs) == (pairs[0][0], pairs[0][1])
+    assert (video, subs) == (pairs[0][0], pairs[0][1])
 
     incomplete = panel.get_incomplete_items()
     issues = {w.display_name: kind for w, kind in incomplete}

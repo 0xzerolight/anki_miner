@@ -22,13 +22,13 @@ def test_single_text_is_positive(qapp):
 
 def test_longer_text_is_at_least_as_wide(qapp):
     short = field_label_width("Deck Name:")
-    long = field_label_width("Anime Video Folder:")
+    long = field_label_width("Subtitle Folder:")
     assert long >= short
 
 
 def test_width_is_max_across_texts(qapp):
-    longest = field_label_width("Anime Video Folder:")
-    grouped = field_label_width("Subtitle Folder:", "Anime Video Folder:", "Deck Name:")
+    longest = field_label_width("Subtitle Folder:")
+    grouped = field_label_width("Subtitle Folder:", "Video Folder:", "Deck Name:")
     assert grouped == longest
 
 

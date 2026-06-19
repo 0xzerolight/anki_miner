@@ -787,7 +787,7 @@ The audio pack was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Anime Folder:</source>
+        <source>Video Folder:</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -823,7 +823,7 @@ The audio pack was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Please select valid anime and subtitle folders</source>
+        <source>Please select valid video and subtitle folders</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -897,7 +897,7 @@ Mixing multiple shows in one folder can mispair episodes that share a number —
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Processed %1 anime series
+        <source>Processed %1 series
 Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
@@ -943,7 +943,7 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Anime Video Folder:</source>
+        <source>Video Folder:</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1808,7 +1808,7 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for anime that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
+        <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for shows that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2495,7 +2495,7 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Edit anime and subtitle folders</source>
+        <source>Edit video and subtitle folders</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2519,7 +2519,7 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No anime folder selected</source>
+        <source>No video folder selected</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2545,7 +2545,7 @@ The dictionary was not removed.</source>
 </context><context>
     <name>QueuePanel</name>
     <message>
-        <source>Multi-Anime Queue</source>
+        <source>Multi-Series Queue</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2557,7 +2557,7 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Process all anime series in queue</source>
+        <source>Process all series in queue</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2569,15 +2569,11 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Add Anime Series</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Enter a name for series #%1:</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Anime Series %1</source>
+        <source>Series %1</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2585,7 +2581,7 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Anime Folder:</source>
+        <source>Video Folder:</source>
         <translation type="unfinished" />
     </message>
     <message>

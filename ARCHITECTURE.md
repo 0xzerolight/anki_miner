@@ -1,6 +1,6 @@
 # Architecture
 
-Anki Miner is a PyQt6 desktop application. It processes anime video/subtitle files through a 5-stage pipeline to create Japanese vocabulary flashcards in Anki.
+Anki Miner is a PyQt6 desktop application. It processes video/subtitle files through a 5-stage pipeline to create Japanese vocabulary flashcards in Anki.
 
 ## Processing Pipeline
 
@@ -185,10 +185,10 @@ The import flow is in `gui/controllers/audio_pack_import_flow.py`; the panel it 
 - Cleans up temp media files in `finally` block
 
 **Batch processing** (`gui/workers/batch_queue_worker.py`):
-There is no separate folder-orchestrator class; batch mining is driven directly by `BatchQueueWorkerThread` (a `CancellableWorker`). For each `BatchQueue` item it pairs files via `FilePairMatcher.find_pairs_by_episode_number(anime_folder, subtitle_folder)` (episode-number matching across two folders, not stem-name matching) and runs a fresh `EpisodeProcessor.process_episode` per pair sequentially. A per-item config copy with the item's `subtitle_offset` is made via `dataclasses.replace`. Per-pair failures are surfaced individually (the item is marked ERROR with a count) since `process_episode` returns failures as results rather than raising.
+There is no separate folder-orchestrator class; batch mining is driven directly by `BatchQueueWorkerThread` (a `CancellableWorker`). For each `BatchQueue` item it pairs files via `FilePairMatcher.find_pairs_by_episode_number(video_folder, subtitle_folder)` (episode-number matching across two folders, not stem-name matching) and runs a fresh `EpisodeProcessor.process_episode` per pair sequentially. A per-item config copy with the item's `subtitle_offset` is made via `dataclasses.replace`. Per-pair failures are surfaced individually (the item is marked ERROR with a count) since `process_episode` returns failures as results rather than raising.
 
 **DeckBuilderWorker** (`gui/workers/deck_builder_worker.py`):
-Whole-anime deck mining in two phases separated by a GUI confirm gate.
+Whole-series deck mining in two phases separated by a GUI confirm gate.
 
 Phase 1 — aggregate + select: `SubtitleParserService.count_lemmas` is called on every subtitle in the request. The raw per-file counters are summed by `services.corpus_aggregator.aggregate` into a single corpus `Counter`. `select` then ranks lemmas by in-corpus frequency and picks a candidate set according to the mode (ALL, TOP_N, COVERAGE_PCT). Coverage is computed over in-corpus mineable-word token counts (the same POS-filter as mining applies), not `frequency.csv`. A `DeckBuildPreview` is emitted and the worker blocks on a `threading.Event` gate until the GUI calls `confirm()` or `reject()`.
 
@@ -220,7 +220,7 @@ The `__post_init__` method uses `object.__setattr__` to convert string paths to 
 `MainWindow` contains a `QTabWidget` with seven tabs (registered in `gui/app.py` as Episode Mining, Batch Mining, Deck Builder, YouTube, Audiobook, Analytics, Settings):
 1. **SingleEpisodeTab** ("Episode Mining"): file selectors (drag-and-drop), subtitle offset control, process/preview buttons, log widget, progress widget.
 2. **BatchProcessingTab** ("Batch Mining"): folder selection, `BatchQueue` management via queue panel, dual progress bars.
-3. **Deck Builder**: whole-anime deck mining over a corpus of subtitles, driven by `DeckBuilderWorker` (see Orchestration). Two phases (aggregate/select, then build) separated by a GUI confirm gate.
+3. **Deck Builder**: whole-series deck mining over a corpus of subtitles, driven by `DeckBuilderWorker` (see Orchestration). Two phases (aggregate/select, then build) separated by a GUI confirm gate.
 4. **YouTubeTab** (`gui/widgets/youtube_tab.py`): URL input + Add button, `QListWidget` queue of `YouTubeQueueItemWidget` rows (per-row status glyph, title, duration, sub source line, remove button), action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. Deck/note-type/tags widgets are global (see `AnkiSettingsPanel`). URL classification (plain video, playlist, video-in-playlist, Mix) is done without network access by `utils/youtube_url.py` (`classify_youtube_url`); playlist URLs dispatch to `YouTubePlaylistResolveWorker` then `YouTubePlaylistProbeWorker`; mixed watch+list URLs show a choice dialog; playlists over the `youtube_playlist_max` cap show an over-cap confirm.
 5. **AudiobookTab** (`gui/widgets/audiobook_tab.py`): audio + subtitle file selectors (subtitle auto-filled from a same-stem `.srt`/`.vtt`/`.ass`/`.ssa` next to the audio file) + Add button, `QListWidget` queue of `AudiobookQueueItemWidget` rows, action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. No probe stage — local pairs enter the queue READY. Mining runs `process_episode` with `audio_only=True`: no per-word screenshots; embedded cover art is extracted once per book and shared as every card's Picture (blank if absent), and the keep/drop decision keys on audio clip success. Stats/history identity: `series_name_override="Audiobook"`, `episode_name_override=<audio file stem>`.
 6. **AnalyticsTab**: mining statistics dashboard (queries `StatsService`).
