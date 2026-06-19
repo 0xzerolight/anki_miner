@@ -145,16 +145,22 @@ _STYLE_SHORTCUT_KEYS = frozenset(
 
 # Patterns/substrings forbidden inside any style value. CSS-escape sequences,
 # function calls, and angle brackets are the realistic injection vectors here.
-# The resource-loading image functions (image-set, image, cross-fade, src) are
-# listed explicitly because they can fetch remote URLs in unquoted form and
-# therefore bypass the url() guard — e.g. `background: image-set(https://… 1x)`.
+# The resource-loading image functions (image-set, image, cross-fade, src,
+# image-rect, element, paint) are listed explicitly because they can reference
+# remote URLs or external paint sources in unquoted form and therefore bypass
+# the url() guard — e.g. `background: image-set(https://… 1x)`. The vendor and
+# Houdini variants (-moz-image-rect, -moz-element, paint()) are blocked too as
+# defense-in-depth even though Qt's Chromium can't fetch from all of them.
 # calc/rgb/rgba/hsl/hsla/var are intentionally NOT listed: they carry no URLs.
 _STYLE_VALUE_BAD_RE = re.compile(
     r"""(?ix)
     (?:url\s*\() |
     (?:[a-z-]*image-set\s*\() |
+    (?:[a-z-]*image-rect\s*\() |
     (?:[a-z-]*cross-fade\s*\() |
     (?:(?<![a-z])image\s*\() |
+    (?:[a-z-]*element\s*\() |
+    (?:paint\s*\() |
     (?:src\s*\() |
     (?:expression\s*\() |
     (?:javascript:) |
