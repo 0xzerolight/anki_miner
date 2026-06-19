@@ -2,6 +2,56 @@
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
+    <name>AboutDialog</name>
+    <message>
+        <source>Turn Immersion Into Vocabulary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine Japanese vocabulary cards straight from video — screenshots, audio, and definitions, automatically into Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch tabs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cycle favorite themes</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Run system validation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show this dialog</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>About Anki Miner</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>GitHub</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Version %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keyboard Shortcuts</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>EpisodeProcessor</name>
     <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
@@ -173,6 +223,114 @@
     </message>
     <message>
         <source>Restart Anki Miner to apply the new language.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>MainWindow</name>
+    <message>
+        <source>Anki Miner updated</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Updated to v%1.&lt;br&gt;&lt;br&gt;See what's new: &lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;release notes&lt;/a&gt;</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>&amp;Tools</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create Desktop Shortcut...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download Recommended Resources...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>&amp;Help</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>About Anki Miner</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Log Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open the folder containing anki_miner.log in your file manager</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Report a Bug / Suggest a Feature</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Report a bug or suggest a feature on GitHub</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>⭐ Star - help the project</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Star the project on GitHub</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Desktop Shortcut</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shortcut created.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed to create desktop shortcut.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>System validation passed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Validation Issues</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>System validation found issues:
+
+%1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Validation already running</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Running system validation...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Validation error: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Validation Error</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Migrating JMdict to SQLite…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>JMdict ready (%1 entries)</source>
         <translation type="unfinished" />
     </message>
 </context><context>

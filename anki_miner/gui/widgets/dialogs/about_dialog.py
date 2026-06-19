@@ -10,28 +10,30 @@ not in this dialog.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QIcon
 from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import EnhancedDialog
+from anki_miner.utils.i18n import tr_format
 
 GITHUB_URL = "https://github.com/0xzerolight/anki_miner"
 
-ABOUT_TAGLINE = "Turn Immersion Into Vocabulary"
-ABOUT_BLURB = (
+ABOUT_TAGLINE = QT_TRANSLATE_NOOP("AboutDialog", "Turn Immersion Into Vocabulary")
+ABOUT_BLURB = QT_TRANSLATE_NOOP(
+    "AboutDialog",
     "Mine Japanese vocabulary cards straight from video — screenshots, audio, "
-    "and definitions, automatically into Anki."
+    "and definitions, automatically into Anki.",
 )
 
 ABOUT_SHORTCUTS: list[tuple[str, str]] = [
-    ("Ctrl+1..7", "Switch tabs"),
-    ("Ctrl+T", "Cycle favorite themes"),
-    ("Ctrl+,", "Open Settings"),
-    ("Ctrl+Shift+V", "Run system validation"),
-    ("F1", "Show this dialog"),
+    ("Ctrl+1..7", QT_TRANSLATE_NOOP("AboutDialog", "Switch tabs")),
+    ("Ctrl+T", QT_TRANSLATE_NOOP("AboutDialog", "Cycle favorite themes")),
+    ("Ctrl+,", QT_TRANSLATE_NOOP("AboutDialog", "Open Settings")),
+    ("Ctrl+Shift+V", QT_TRANSLATE_NOOP("AboutDialog", "Run system validation")),
+    ("F1", QT_TRANSLATE_NOOP("AboutDialog", "Show this dialog")),
 ]
 
 
@@ -40,7 +42,7 @@ class AboutDialog(EnhancedDialog):
 
     def __init__(self, version: str, parent=None):
         """Build the dialog for the given version string."""
-        super().__init__(parent, title="About Anki Miner")
+        super().__init__(parent, title=self.tr("About Anki Miner"))
         self.setMinimumWidth(440)
         self._build(version)
 
@@ -49,8 +51,8 @@ class AboutDialog(EnhancedDialog):
         self.add_content(self._blurb_label())
         self.add_content(self._shortcuts_section())
 
-        self.add_button("GitHub", "secondary", self._open_github)
-        self.add_close_button("Close")
+        self.add_button(self.tr("GitHub"), "secondary", self._open_github)
+        self.add_close_button(self.tr("Close"))
 
     def _header_row(self, version: str) -> QWidget:
         row = QWidget()
@@ -73,10 +75,10 @@ class AboutDialog(EnhancedDialog):
         name = QLabel("Anki Miner")
         name.setObjectName("heading1")
 
-        ver = QLabel(f"Version {version}")
+        ver = QLabel(tr_format(self.tr("Version %1"), version))
         ver.setObjectName("caption")
 
-        tagline = QLabel(ABOUT_TAGLINE)
+        tagline = QLabel(self.tr(ABOUT_TAGLINE))
         tagline.setObjectName("caption")
 
         text_layout.addWidget(name)
@@ -87,7 +89,7 @@ class AboutDialog(EnhancedDialog):
         return row
 
     def _blurb_label(self) -> QLabel:
-        blurb = QLabel(ABOUT_BLURB)
+        blurb = QLabel(self.tr(ABOUT_BLURB))
         blurb.setWordWrap(True)
         return blurb
 
@@ -97,7 +99,7 @@ class AboutDialog(EnhancedDialog):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(SPACING.xs)
 
-        heading = QLabel("Keyboard Shortcuts")
+        heading = QLabel(self.tr("Keyboard Shortcuts"))
         heading.setObjectName("heading3")
         layout.addWidget(heading)
 
@@ -112,7 +114,7 @@ class AboutDialog(EnhancedDialog):
             key_font.setPixelSize(FONT_SIZES.body_sm)
             key_label.setFont(key_font)
             grid.addWidget(key_label, r, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-            grid.addWidget(QLabel(desc), r, 1)
+            grid.addWidget(QLabel(self.tr(desc)), r, 1)
         grid.setColumnStretch(1, 1)
         layout.addLayout(grid)
 
