@@ -153,7 +153,7 @@ class QueueItemWidget(QFrame):
         self.edit_button = QPushButton(self.tr("Edit"))
         self.edit_button.setObjectName("secondary")
         self.edit_button.clicked.connect(self.edited.emit)
-        self.edit_button.setToolTip(self.tr("Edit anime and subtitle folders"))
+        self.edit_button.setToolTip(self.tr("Edit video and subtitle folders"))
         footer_layout.addWidget(self.edit_button)
 
         # Remove button
@@ -311,7 +311,7 @@ class QueueItemWidget(QFrame):
             self.video_path_label.setText(display_path)
             self.video_path_label.setToolTip(str(video_path))
         else:
-            self.video_path_label.setText(self.tr("No anime folder selected"))
+            self.video_path_label.setText(self.tr("No video folder selected"))
             self.video_path_label.setToolTip("")
 
         if self._subtitle_folder:

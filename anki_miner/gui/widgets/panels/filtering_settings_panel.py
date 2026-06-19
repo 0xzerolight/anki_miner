@@ -197,7 +197,7 @@ class FilteringSettingsPanel(FormPanel):
         wordsets_helper = QLabel(
             self.tr(
                 "Exclude bundled lists of Japanese proper nouns (people and place "
-                "names) from mining. Useful for anime that drop lots of character "
+                "names) from mining. Useful for shows that drop lots of character "
                 "and place names. A name you actually want is rescued by the "
                 "whitelist above."
             )
