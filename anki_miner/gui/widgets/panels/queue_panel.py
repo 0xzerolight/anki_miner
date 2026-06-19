@@ -25,6 +25,7 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class QueuePanel(QFrame):
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
         # Section header with Add button
-        header = SectionHeader(title="Multi-Anime Queue", action_text="Add Series")
+        header = SectionHeader(title=self.tr("Multi-Anime Queue"), action_text=self.tr("Add Series"))
         header.action_clicked.connect(self._add_series)
         layout.addWidget(header)
 
@@ -92,14 +93,14 @@ class QueuePanel(QFrame):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
 
-        self.process_queue_button = ModernButton("Process Queue", variant="primary")
+        self.process_queue_button = ModernButton(self.tr("Process Queue"), variant="primary")
         self.process_queue_button.clicked.connect(self.process_requested.emit)
-        self.process_queue_button.setToolTip("Process all anime series in queue")
+        self.process_queue_button.setToolTip(self.tr("Process all anime series in queue"))
         button_layout.addWidget(self.process_queue_button)
 
-        clear_button = ModernButton("Clear All", variant="ghost")
+        clear_button = ModernButton(self.tr("Clear All"), variant="ghost")
         clear_button.clicked.connect(self._clear_queue)
-        clear_button.setToolTip("Remove all items from queue")
+        clear_button.setToolTip(self.tr("Remove all items from queue"))
         button_layout.addWidget(clear_button)
 
         button_layout.addStretch()
@@ -115,9 +116,9 @@ class QueuePanel(QFrame):
         # Prompt for series name
         name, ok = QInputDialog.getText(
             self,
-            "Add Anime Series",
-            f"Enter a name for series #{len(self.queue_item_widgets) + 1}:",
-            text=f"Anime Series {len(self.queue_item_widgets) + 1}",
+            self.tr("Add Anime Series"),
+            tr_format(self.tr("Enter a name for series #%1:"), len(self.queue_item_widgets) + 1),
+            text=tr_format(self.tr("Anime Series %1"), len(self.queue_item_widgets) + 1),
         )
         if not ok or not name.strip():
             return
@@ -154,23 +155,23 @@ class QueuePanel(QFrame):
         """
         # Create simple edit dialog
         dialog = QDialog(self)
-        dialog.setWindowTitle(f"Edit: {widget.display_name}")
+        dialog.setWindowTitle(tr_format(self.tr("Edit: %1"), widget.display_name))
         dialog.setMinimumWidth(600)
 
         layout = QVBoxLayout()
 
         # Shared label-column width so every labeled row lines up.
-        label_w = field_label_width("Anime Folder:", "Subtitle Folder:", "Subtitle Offset:")
+        label_w = field_label_width(self.tr("Anime Folder:"), self.tr("Subtitle Folder:"), self.tr("Subtitle Offset:"))
 
         # Anime folder selector
-        anime_selector = FileSelector(label="Anime Folder:", file_mode=False, label_width=label_w)
+        anime_selector = FileSelector(label=self.tr("Anime Folder:"), file_mode=False, label_width=label_w)
         current_anime, _ = widget.get_folders()
         if current_anime:
             anime_selector.set_path(str(current_anime))
         layout.addWidget(anime_selector)
 
         # Subtitle folder selector
-        subtitle_selector = FileSelector(label="Subtitle Folder:", file_mode=False, label_width=label_w)
+        subtitle_selector = FileSelector(label=self.tr("Subtitle Folder:"), file_mode=False, label_width=label_w)
         _, current_subtitle = widget.get_folders()
         if current_subtitle:
             subtitle_selector.set_path(str(current_subtitle))
@@ -178,15 +179,15 @@ class QueuePanel(QFrame):
 
         # Subtitle offset input
         offset_layout = QHBoxLayout()
-        offset_label = QLabel("Subtitle Offset:")
+        offset_label = QLabel(self.tr("Subtitle Offset:"))
         offset_label.setObjectName("field-label")
         offset_label.setFixedWidth(label_w)
         offset_spinbox = QDoubleSpinBox()
         offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
         offset_spinbox.setSingleStep(0.5)
         offset_spinbox.setValue(widget.subtitle_offset)
-        offset_spinbox.setSuffix(" seconds")
-        offset_spinbox.setToolTip("Adjust subtitle timing (positive = later, negative = earlier)")
+        offset_spinbox.setSuffix(self.tr(" seconds"))
+        offset_spinbox.setToolTip(self.tr("Adjust subtitle timing (positive = later, negative = earlier)"))
         offset_layout.addWidget(offset_label)
         offset_layout.addWidget(offset_spinbox)
         offset_layout.addStretch()
@@ -223,13 +224,13 @@ class QueuePanel(QFrame):
     def _clear_queue(self) -> None:
         """Clear all items from the queue."""
         if not self.queue_item_widgets:
-            QMessageBox.information(self, "Empty Queue", "Queue is already empty.")
+            QMessageBox.information(self, self.tr("Empty Queue"), self.tr("Queue is already empty."))
             return
 
         reply = QMessageBox.question(
             self,
-            "Clear Queue",
-            f"Remove all {len(self.queue_item_widgets)} series from the queue?",
+            self.tr("Clear Queue"),
+            tr_format(self.tr("Remove all %1 series from the queue?"), len(self.queue_item_widgets)),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
@@ -251,11 +252,13 @@ class QueuePanel(QFrame):
             total_cards += widget.get_cards_created()
 
         if series_count == 0:
-            text = "Queue is empty"
+            text = self.tr("Queue is empty")
         elif total_cards > 0:
-            text = f"{series_count} series - {total_episodes} episodes - {total_cards} cards created"
+            text = tr_format(
+                self.tr("%1 series - %2 episodes - %3 cards created"), series_count, total_episodes, total_cards
+            )
         else:
-            text = f"{series_count} series - {total_episodes} episodes - Ready to process"
+            text = tr_format(self.tr("%1 series - %2 episodes - Ready to process"), series_count, total_episodes)
 
         self.queue_stats_label.setText(text)
 

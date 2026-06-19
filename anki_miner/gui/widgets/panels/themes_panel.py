@@ -44,6 +44,7 @@ from anki_miner.gui.resources.styles.theme import (
     ThemeGroupEntry,
 )
 from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -119,8 +120,10 @@ class ThemesPanel(QWidget):
         layout.setSpacing(SPACING.sm)
 
         intro = QLabel(
-            "Star themes to add them to the top-right selector. Click any row to preview — "
-            "the change applies live across the app. Press <b>Revert</b> to undo your preview."
+            self.tr(
+                "Star themes to add them to the top-right selector. Click any row to preview — "
+                "the change applies live across the app. Press <b>Revert</b> to undo your preview."
+            )
         )
         intro.setWordWrap(True)
         intro.setTextFormat(Qt.TextFormat.RichText)
@@ -131,15 +134,15 @@ class ThemesPanel(QWidget):
         font_row = QHBoxLayout()
         font_row.setSpacing(SPACING.sm)
 
-        font_label = QLabel("Text size")
-        font_label.setToolTip("Scale all UI text. Applies live across the app.")
+        font_label = QLabel(self.tr("Text size"))
+        font_label.setToolTip(self.tr("Scale all UI text. Applies live across the app."))
         font_row.addWidget(font_label)
 
         self.font_scale_combo = QComboBox()
         self.font_scale_combo.setObjectName("fontScaleCombo")
-        self.font_scale_combo.setToolTip("Scale all UI text. Applies live across the app.")
+        self.font_scale_combo.setToolTip(self.tr("Scale all UI text. Applies live across the app."))
         for p in FONT_SCALE_PRESETS:
-            self.font_scale_combo.addItem(f"{p}%", p)
+            self.font_scale_combo.addItem(tr_format(self.tr("%1%"), p), p)
         # `activated` fires only on user interaction; `currentIndexChanged`
         # would also fire on the programmatic setCurrentIndex in
         # _sync_font_scale_combo, re-triggering the expensive apply.
@@ -157,7 +160,7 @@ class ThemesPanel(QWidget):
         # without disturbing other trees in the app.
         self.tree.setObjectName("themesPanelTree")
         self.tree.setColumnCount(3)
-        self.tree.setHeaderLabels(["Name", "Status", ""])
+        self.tree.setHeaderLabels([self.tr("Name"), self.tr("Status"), ""])
         self.tree.setRootIsDecorated(True)
         self.tree.setUniformRowHeights(True)
         self.tree.setAlternatingRowColors(True)
@@ -181,16 +184,20 @@ class ThemesPanel(QWidget):
         buttons = QHBoxLayout()
         buttons.setSpacing(SPACING.sm)
 
-        self.open_folder_btn = ModernButton("Open themes folder", variant="secondary")
+        self.open_folder_btn = ModernButton(self.tr("Open themes folder"), variant="secondary")
         self.open_folder_btn.setToolTip(
-            f"Open {self._themes_root} in your file manager. "
-            "Drop Anki Miner theme JSON files here to install them; they appear here on next launch."
+            tr_format(
+                self.tr(
+                    "Open %1 in your file manager. Drop Anki Miner theme JSON files here to install them; they appear here on next launch."
+                ),
+                self._themes_root,
+            )
         )
         self.open_folder_btn.clicked.connect(self._open_themes_folder)
         buttons.addWidget(self.open_folder_btn)
 
-        self.revert_btn = ModernButton("Revert", variant="secondary")
-        self.revert_btn.setToolTip("Restore the theme that was active when this tab was opened.")
+        self.revert_btn = ModernButton(self.tr("Revert"), variant="secondary")
+        self.revert_btn.setToolTip(self.tr("Restore the theme that was active when this tab was opened."))
         self.revert_btn.clicked.connect(self._revert_preview)
         buttons.addWidget(self.revert_btn)
 
@@ -219,7 +226,7 @@ class ThemesPanel(QWidget):
                     item = QTreeWidgetItem(
                         [
                             entry.display_name,
-                            "Active" if entry.key == active else "",
+                            self.tr("Active") if entry.key == active else "",
                             "",
                         ]
                     )
@@ -242,7 +249,7 @@ class ThemesPanel(QWidget):
                         child = QTreeWidgetItem(
                             [
                                 entry.variant_name,
-                                "Active" if entry.key == active else "",
+                                self.tr("Active") if entry.key == active else "",
                                 "",
                             ]
                         )
@@ -289,7 +296,7 @@ class ThemesPanel(QWidget):
         button.setText(_STAR_FILLED if is_favorite else _STAR_OUTLINE)
         button.setAutoRaise(True)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
-        button.setToolTip("Click to add to / remove from favorites.")
+        button.setToolTip(self.tr("Click to add to / remove from favorites."))
         # `key` captured per-row via default arg, sidesteps closure-over-loop-var.
         button.clicked.connect(lambda _checked=False, k=key: self._toggle_favorite(k))
         # Register so _refresh_favorite_state can update this row in place,
@@ -352,15 +359,17 @@ class ThemesPanel(QWidget):
 
         if n_fav == 0:
             button.setText(_STAR_OUTLINE)
-            tooltip = f"Favorite all {n_total} {family_name} variants."
+            tooltip = tr_format(self.tr("Favorite all %1 %2 variants."), n_total, family_name)
             button.setStyleSheet(f"font-size: {font_size}px;")
         elif n_fav == n_total:
             button.setText(_STAR_FILLED)
-            tooltip = f"Unfavorite all {n_total} {family_name} variants."
+            tooltip = tr_format(self.tr("Unfavorite all %1 %2 variants."), n_total, family_name)
             button.setStyleSheet(f"font-size: {font_size}px;")
         else:
             button.setText(_STAR_FILLED)
-            tooltip = f"{n_fav} of {n_total} {family_name} variants favorited. " f"Click to favorite all."
+            tooltip = tr_format(
+                self.tr("%1 of %2 %3 variants favorited. Click to favorite all."), n_fav, n_total, family_name
+            )
             button.setStyleSheet(f"font-size: {font_size}px;")
             effect = QGraphicsOpacityEffect(button)
             effect.setOpacity(_FAMILY_STAR_PARTIAL_OPACITY)
@@ -431,7 +440,7 @@ class ThemesPanel(QWidget):
             for descendant in walk(root.child(i)):
                 key = descendant.data(self.COL_NAME, Qt.ItemDataRole.UserRole)
                 if isinstance(key, str):
-                    descendant.setText(self.COL_STATUS, "Active" if key == new_active_key else "")
+                    descendant.setText(self.COL_STATUS, self.tr("Active") if key == new_active_key else "")
 
     def _toggle_favorite(self, key: str) -> None:
         """Star/unstar `key`, refresh the affected row, notify listeners."""

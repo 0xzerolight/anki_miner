@@ -29,109 +29,115 @@ class MediaSettingsPanel(FormPanel):
         self.audio_format_combo = QComboBox()
         self.audio_format_combo.addItems(["mp3", "opus"])
         self.add_field(
-            "Audio Format",
+            self.tr("Audio Format"),
             self.audio_format_combo,
-            helper="MP3: universal compatibility. Opus: smaller files at equivalent quality (needs ffmpeg with libopus).",
+            helper=self.tr(
+                "MP3: universal compatibility. Opus: smaller files at equivalent quality (needs ffmpeg with libopus)."
+            ),
         )
 
         # Audio bitrate (Issue #18)
         self.audio_bitrate_spinbox = QSpinBox()
         self.audio_bitrate_spinbox.setRange(32, 320)
         self.audio_bitrate_spinbox.setSingleStep(16)
-        self.audio_bitrate_spinbox.setSuffix(" kbps")
+        self.audio_bitrate_spinbox.setSuffix(self.tr(" kbps"))
         self.add_field(
-            "Audio Bitrate",
+            self.tr("Audio Bitrate"),
             self.audio_bitrate_spinbox,
-            helper="Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.",
+            helper=self.tr(
+                "Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults."
+            ),
         )
 
         # Audio padding
         self.audio_padding_spinbox = QDoubleSpinBox()
         self.audio_padding_spinbox.setRange(0.0, 5.0)
         self.audio_padding_spinbox.setSingleStep(0.1)
-        self.audio_padding_spinbox.setSuffix(" seconds")
+        self.audio_padding_spinbox.setSuffix(self.tr(" seconds"))
         self.add_field(
-            "Audio Padding",
+            self.tr("Audio Padding"),
             self.audio_padding_spinbox,
-            helper="Extra padding before and after the subtitle timing.",
+            helper=self.tr("Extra padding before and after the subtitle timing."),
         )
 
         # Screenshot offset
         self.screenshot_offset_spinbox = QDoubleSpinBox()
         self.screenshot_offset_spinbox.setRange(0.0, 10.0)
         self.screenshot_offset_spinbox.setSingleStep(0.1)
-        self.screenshot_offset_spinbox.setSuffix(" seconds")
+        self.screenshot_offset_spinbox.setSuffix(self.tr(" seconds"))
         self.add_field(
-            "Screenshot Offset",
+            self.tr("Screenshot Offset"),
             self.screenshot_offset_spinbox,
-            helper="Offset from subtitle start when capturing the screenshot.",
+            helper=self.tr("Offset from subtitle start when capturing the screenshot."),
         )
 
         # Max workers
         self.max_workers_spinbox = QSpinBox()
         self.max_workers_spinbox.setRange(1, 20)
         self.add_field(
-            "Max Parallel Workers",
+            self.tr("Max Parallel Workers"),
             self.max_workers_spinbox,
-            helper="Higher = faster, but uses more CPU and memory.",
+            helper=self.tr("Higher = faster, but uses more CPU and memory."),
         )
 
         # Animated screenshot toggle
-        self.animated_checkbox = QCheckBox("Enable animated screenshots")
+        self.animated_checkbox = QCheckBox(self.tr("Enable animated screenshots"))
         self.animated_checkbox.setToolTip(
-            "Capture a short video clip instead of a static frame. "
-            "Larger files, slower encode; not all Anki clients render animated AVIF/WebP."
+            self.tr(
+                "Capture a short video clip instead of a static frame. "
+                "Larger files, slower encode; not all Anki clients render animated AVIF/WebP."
+            )
         )
-        self.add_field("Animated Screenshots", self.animated_checkbox)
+        self.add_field(self.tr("Animated Screenshots"), self.animated_checkbox)
 
         # Format
         self.animated_format_combo = QComboBox()
         self.animated_format_combo.addItems(["avif", "webp"])
         self.add_field(
-            "Animated Format",
+            self.tr("Animated Format"),
             self.animated_format_combo,
-            helper="AVIF: smaller files; WebP: broader Anki client support",
+            helper=self.tr("AVIF: smaller files; WebP: broader Anki client support"),
         )
 
         # Match audio duration toggle
-        self.animated_match_audio_checkbox = QCheckBox("Match audio duration")
+        self.animated_match_audio_checkbox = QCheckBox(self.tr("Match audio duration"))
         self.animated_match_audio_checkbox.setToolTip(
-            "Animated clip spans the audio clip's time range. Overrides Clip Duration."
+            self.tr("Animated clip spans the audio clip's time range. Overrides Clip Duration.")
         )
-        self.add_field("Match Audio Duration", self.animated_match_audio_checkbox)
+        self.add_field(self.tr("Match Audio Duration"), self.animated_match_audio_checkbox)
 
         # Clip duration
         self.animated_duration_spinbox = QDoubleSpinBox()
         self.animated_duration_spinbox.setRange(0.5, 10.0)
         self.animated_duration_spinbox.setSingleStep(0.5)
-        self.animated_duration_spinbox.setSuffix(" seconds")
+        self.animated_duration_spinbox.setSuffix(self.tr(" seconds"))
         self.animated_duration_spinbox.setToolTip(
-            "Clip length, capped by subtitle duration. Ignored if Match Audio Duration is on."
+            self.tr("Clip length, capped by subtitle duration. Ignored if Match Audio Duration is on.")
         )
-        self.add_field("Clip Duration", self.animated_duration_spinbox)
+        self.add_field(self.tr("Clip Duration"), self.animated_duration_spinbox)
 
         # FPS
         self.animated_fps_spinbox = QSpinBox()
         self.animated_fps_spinbox.setRange(5, 30)
-        self.animated_fps_spinbox.setToolTip("Frames per second for animated clips")
-        self.add_field("FPS", self.animated_fps_spinbox)
+        self.animated_fps_spinbox.setToolTip(self.tr("Frames per second for animated clips"))
+        self.add_field(self.tr("FPS"), self.animated_fps_spinbox)
 
         # Height
         self.animated_height_spinbox = QSpinBox()
         self.animated_height_spinbox.setRange(240, 1080)
         self.animated_height_spinbox.setSingleStep(120)
-        self.animated_height_spinbox.setSuffix(" px")
+        self.animated_height_spinbox.setSuffix(self.tr(" px"))
         self.add_field(
-            "Height",
+            self.tr("Height"),
             self.animated_height_spinbox,
-            helper="Output height; aspect ratio preserved",
+            helper=self.tr("Output height; aspect ratio preserved"),
         )
 
         # Quality
         self.animated_quality_spinbox = QSpinBox()
         self.animated_quality_spinbox.setRange(0, 100)
-        self.animated_quality_spinbox.setToolTip("0 = smallest file, 100 = best quality")
-        self.add_field("Quality", self.animated_quality_spinbox)
+        self.animated_quality_spinbox.setToolTip(self.tr("0 = smallest file, 100 = best quality"))
+        self.add_field(self.tr("Quality"), self.animated_quality_spinbox)
 
         self.animated_checkbox.toggled.connect(self._set_animated_enabled)
         self.animated_match_audio_checkbox.toggled.connect(self._set_match_audio)
