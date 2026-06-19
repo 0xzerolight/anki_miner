@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import QApplication, QWidget
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.gui.i18n import install_translators
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
@@ -231,6 +232,11 @@ def main():
     icon_path = get_resource_dir() / "icons" / "anki_miner.svg"
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
+
+    # Install UI translators BEFORE any widget is built — widgets capture their
+    # tr() strings at construction time, and language is restart-to-apply (no
+    # live retranslateUi). Stash on `app` so the translators outlive this call.
+    app._translators = install_translators(app, _early_config.ui_language)  # type: ignore[attr-defined]
 
     # Seed the theme singleton from gui_config.json so the initial paint uses
     # the right active theme and the favorites combo is correctly populated.
