@@ -43,6 +43,7 @@ from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWor
 from anki_miner.services.frequency import import_yomitan_freq_zip
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent import import_yomitan_pitch_zip
+from anki_miner.utils.i18n import tr_format
 
 
 @runtime_checkable
@@ -166,15 +167,17 @@ class SettingsTab(QWidget):
         self.language_panel = LanguagePanel(self.config.ui_language)
 
         # Add tabs with scroll areas for each panel
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.anki_panel), "Anki")
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.media_panel), "Media")
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.dictionary_panel), "Dictionaries")
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.audio_panel), "Audio")
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), "Filtering")
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), "YouTube")
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.anki_panel), self.tr("Anki"))
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.media_panel), self.tr("Media"))
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.dictionary_panel), self.tr("Dictionaries"))
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.audio_panel), self.tr("Audio"))
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), self.tr("Filtering"))
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), self.tr("YouTube"))
         # Themes tab — sub-tab index captured so MainWindow / shortcuts can
         # jump straight to it via :meth:`open_themes_subtab`.
-        self._themes_subtab_index = self.tab_widget.addTab(self._wrap_in_scroll_area(self.themes_panel), "Themes")
+        self._themes_subtab_index = self.tab_widget.addTab(
+            self._wrap_in_scroll_area(self.themes_panel), self.tr("Themes")
+        )
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.language_panel), self.tr("Language"))
         # Reset preview baseline when the user navigates away from Themes so
         # a later visit reverts to their last-chosen theme, not session start.
@@ -183,9 +186,9 @@ class SettingsTab(QWidget):
         layout.addWidget(self.tab_widget)
 
         # Updates row — single top-level toggle, no panel needed for one checkbox.
-        self.check_for_updates_checkbox = QCheckBox("Check for updates on startup")
+        self.check_for_updates_checkbox = QCheckBox(self.tr("Check for updates on startup"))
         self.check_for_updates_checkbox.setToolTip(
-            "When enabled, Anki Miner queries GitHub for new releases on launch."
+            self.tr("When enabled, Anki Miner queries GitHub for new releases on launch.")
         )
         layout.addWidget(self.check_for_updates_checkbox)
 
@@ -194,14 +197,14 @@ class SettingsTab(QWidget):
         button_layout.setSpacing(SPACING.sm)
         button_layout.addStretch()
 
-        self.reset_button = ModernButton("Reset to Defaults", variant="secondary")
+        self.reset_button = ModernButton(self.tr("Reset to Defaults"), variant="secondary")
         self.reset_button.clicked.connect(self._on_reset_clicked)
-        self.reset_button.setToolTip("Reset all settings to default values (Ctrl+R)")
+        self.reset_button.setToolTip(self.tr("Reset all settings to default values (Ctrl+R)"))
         button_layout.addWidget(self.reset_button)
 
-        self.save_button = ModernButton("Save Settings", variant="primary")
+        self.save_button = ModernButton(self.tr("Save Settings"), variant="primary")
         self.save_button.clicked.connect(self._on_save_clicked)
-        self.save_button.setToolTip("Save settings to disk (Ctrl+S)")
+        self.save_button.setToolTip(self.tr("Save settings to disk (Ctrl+S)"))
         button_layout.addWidget(self.save_button)
 
         # Inline, non-modal save confirmation (replaces the old "Settings Saved"
@@ -398,15 +401,18 @@ class SettingsTab(QWidget):
             if not new_dicts_root.is_dir():
                 QMessageBox.warning(
                     self,
-                    "Invalid dictionary folder",
-                    f"{new_dicts_root} is not a directory.\n\nPick an existing folder or click Reset to default.",
+                    self.tr("Invalid dictionary folder"),
+                    tr_format(
+                        self.tr("%1 is not a directory.\n\nPick an existing folder or click Reset to default."),
+                        new_dicts_root,
+                    ),
                 )
                 return
             if not os.access(new_dicts_root, os.W_OK):
                 QMessageBox.warning(
                     self,
-                    "Dictionary folder not writable",
-                    f"Cannot write to {new_dicts_root}.\n\nPick a folder you own.",
+                    self.tr("Dictionary folder not writable"),
+                    tr_format(self.tr("Cannot write to %1.\n\nPick a folder you own."), new_dicts_root),
                 )
                 return
 
@@ -417,8 +423,10 @@ class SettingsTab(QWidget):
         if cookies_file and not Path(cookies_file).is_file():
             QMessageBox.warning(
                 self,
-                "Cookies file not found",
-                f"{cookies_file} is not a file.\n\nPick an exported cookies.txt or clear the field.",
+                self.tr("Cookies file not found"),
+                tr_format(
+                    self.tr("%1 is not a file.\n\nPick an exported cookies.txt or clear the field."), cookies_file
+                ),
             )
             return
 
@@ -433,8 +441,12 @@ class SettingsTab(QWidget):
             except re.error as e:
                 QMessageBox.warning(
                     self,
-                    "Invalid Subtitle Regex",
-                    f"Pattern: {subtitle_regex}\n\nFix or disable the filter before saving.\n\nDetails: {e}",
+                    self.tr("Invalid Subtitle Regex"),
+                    tr_format(
+                        self.tr("Pattern: %1\n\nFix or disable the filter before saving.\n\nDetails: %2"),
+                        subtitle_regex,
+                        e,
+                    ),
                 )
                 return
 
@@ -526,7 +538,7 @@ class SettingsTab(QWidget):
         # Emit signal to notify listeners of config change
         self.config = new_config
         self.config_changed.emit(new_config)
-        self._flash_save_status("✓ Saved")
+        self._flash_save_status(self.tr("✓ Saved"))
 
     def _flash_save_status(self, text: str) -> None:
         """Show a transient, non-modal confirmation beside the Save button.
@@ -553,10 +565,10 @@ class SettingsTab(QWidget):
             commit_slot_attr="_pending_pitch_commit",
             decline_fallback=self.config.pitch_accent_path,
             labels=YomitanCsvLabels(
-                progress="Importing pitch accent dictionary…",
-                overwrite_title="Overwrite Pitch Accent File?",
-                failure_title="Pitch Accent Import Failed",
-                success_title="Pitch accent dictionary imported",
+                progress=self.tr("Importing pitch accent dictionary…"),
+                overwrite_title=self.tr("Overwrite Pitch Accent File?"),
+                failure_title=self.tr("Pitch Accent Import Failed"),
+                success_title=self.tr("Pitch accent dictionary imported"),
             ),
         )
 
@@ -575,10 +587,10 @@ class SettingsTab(QWidget):
             commit_slot_attr="_pending_freq_commit",
             decline_fallback=self.config.frequency_list_path,
             labels=YomitanCsvLabels(
-                progress="Importing frequency dictionary…",
-                overwrite_title="Overwrite Frequency List?",
-                failure_title="Frequency Import Failed",
-                success_title="Frequency dictionary imported",
+                progress=self.tr("Importing frequency dictionary…"),
+                overwrite_title=self.tr("Overwrite Frequency List?"),
+                failure_title=self.tr("Frequency Import Failed"),
+                success_title=self.tr("Frequency dictionary imported"),
             ),
         )
 
@@ -594,8 +606,8 @@ class SettingsTab(QWidget):
         """Handle reset button click."""
         reply = QMessageBox.question(
             self,
-            "Reset Settings",
-            "Reset all settings to defaults?",
+            self.tr("Reset Settings"),
+            self.tr("Reset all settings to defaults?"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
@@ -605,7 +617,7 @@ class SettingsTab(QWidget):
             self.config = create_default_config()
             self._load_config()
             self.config_changed.emit(self.config)
-            self._flash_save_status("✓ Reset to defaults")
+            self._flash_save_status(self.tr("✓ Reset to defaults"))
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration from external source.
@@ -726,10 +738,12 @@ class SettingsTab(QWidget):
         """
         confirm = QMessageBox.question(
             self,
-            "Rebuild Known Words DB",
-            "Clear the local known-words cache? It will re-sync from Anki on the "
-            "next mining run, applying your current deck exclusions. Words you "
-            "added yourself from the Word Curator are kept.",
+            self.tr("Rebuild Known Words DB"),
+            self.tr(
+                "Clear the local known-words cache? It will re-sync from Anki on the "
+                "next mining run, applying your current deck exclusions. Words you "
+                "added yourself from the Word Curator are kept."
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -743,13 +757,15 @@ class SettingsTab(QWidget):
             # Anki-synced rows are rebuilt from Anki on the next run.
             removed = db.clear(preserve_user=True)
         except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
-            QMessageBox.warning(self, "Rebuild Known Words DB", f"Could not clear the cache: {e}")
+            QMessageBox.warning(
+                self, self.tr("Rebuild Known Words DB"), tr_format(self.tr("Could not clear the cache: %1"), e)
+            )
             return
 
         QMessageBox.information(
             self,
-            "Rebuild Known Words DB",
-            f"Cleared {removed} cached word(s). The cache will rebuild on the next run.",
+            self.tr("Rebuild Known Words DB"),
+            tr_format(self.tr("Cleared %1 cached word(s). The cache will rebuild on the next run."), removed),
         )
 
     def _on_manage_known_words(self) -> None:
@@ -760,4 +776,6 @@ class SettingsTab(QWidget):
             db = KnownWordDB(self.config.known_words_db_path)
             KnownWordsManagerDialog(db, self).exec()
         except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
-            QMessageBox.warning(self, "Manage Known Words", f"Could not open the known words list: {e}")
+            QMessageBox.warning(
+                self, self.tr("Manage Known Words"), tr_format(self.tr("Could not open the known words list: %1"), e)
+            )

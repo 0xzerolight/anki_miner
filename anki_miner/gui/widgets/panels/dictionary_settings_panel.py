@@ -30,6 +30,7 @@ from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ class _ChainRow(QWidget):
         layout.addWidget(name_label, 1)
 
         if stale:
-            self.stale_label = QLabel("<i> — re-import to refresh</i>")
+            self.stale_label = QLabel(self.tr("<i> — re-import to refresh</i>"))
             self.stale_label.setStyleSheet("color: gray; font-size: 10px;")
             layout.addWidget(self.stale_label)
 
@@ -112,12 +113,12 @@ class _ChainRow(QWidget):
                 badge.setStyleSheet("color: gray; font-size: 10px;")
             layout.addWidget(badge)
         if count:
-            count_label = QLabel(f"{count:,} entries")
+            count_label = QLabel(tr_format(self.tr("%1 entries"), f"{count:,}"))
             count_label.setStyleSheet("color: gray; font-size: 10px;")
             layout.addWidget(count_label)
 
         if stale:
-            self.reimport_button = QPushButton("Re-import")
+            self.reimport_button = QPushButton(self.tr("Re-import"))
             layout.addWidget(self.reimport_button)
 
     def get_enabled(self) -> bool:
@@ -251,13 +252,13 @@ class DictionarySettingsPanel(FormPanel):
         self.dicts_root_selector = FileSelector(
             label="",
             file_mode=False,
-            placeholder="Select dictionary storage folder...",
+            placeholder=self.tr("Select dictionary storage folder..."),
             default_dir=ANKI_MINER_HOME / "dicts",
         )
         self.dicts_root_selector.set_path(str(self._dicts_root))
         storage_layout.addWidget(self.dicts_root_selector, 1)
 
-        self._reset_dicts_root_btn = QPushButton("Reset to default")
+        self._reset_dicts_root_btn = QPushButton(self.tr("Reset to default"))
         self._reset_dicts_root_btn.clicked.connect(self._on_reset_dicts_root)
         # FileSelector is two rows tall (input+Browse, then status caption); top-
         # align so Reset lines up with the Browse button in the top row, not the
@@ -265,23 +266,25 @@ class DictionarySettingsPanel(FormPanel):
         storage_layout.addWidget(self._reset_dicts_root_btn, alignment=Qt.AlignmentFlag.AlignTop)
 
         self.add_field(
-            "Storage Folder",
+            self.tr("Storage Folder"),
             storage_container,
-            helper=(
+            helper=self.tr(
                 "Where indexed dictionaries are stored. Existing dictionaries at "
                 "the old location are not moved automatically."
             ),
         )
 
-        self.add_section("Active Dictionaries")
+        self.add_section(self.tr("Active Dictionaries"))
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
         layout.addWidget(
             QLabel(
-                "Top entry fills the MainDefinition field. "
-                "Offline dictionaries are recommended; they're faster than Jisho."
+                self.tr(
+                    "Top entry fills the MainDefinition field. "
+                    "Offline dictionaries are recommended; they're faster than Jisho."
+                )
             )
         )
 
@@ -292,33 +295,35 @@ class DictionarySettingsPanel(FormPanel):
         layout.addWidget(self._list)
 
         buttons = QHBoxLayout()
-        self._add_btn = QPushButton("+ Add Dictionary…")
+        self._add_btn = QPushButton(self.tr("+ Add Dictionary…"))
         self._add_btn.clicked.connect(self.add_dict_requested.emit)
         buttons.addWidget(self._add_btn)
 
-        self._reimport_btn = QPushButton("Reimport All")
+        self._reimport_btn = QPushButton(self.tr("Reimport All"))
         self._reimport_btn.clicked.connect(self.reimport_all_requested.emit)
         buttons.addWidget(self._reimport_btn)
 
-        self._restore_btn = QPushButton("Restore from Disk")
+        self._restore_btn = QPushButton(self.tr("Restore from Disk"))
         self._restore_btn.setToolTip(
-            "Re-add dictionaries found in the storage folder that aren't in the "
-            "list above (e.g. after a settings reset). No re-import needed."
+            self.tr(
+                "Re-add dictionaries found in the storage folder that aren't in the "
+                "list above (e.g. after a settings reset). No re-import needed."
+            )
         )
         self._restore_btn.clicked.connect(self.rescan_requested.emit)
         buttons.addWidget(self._restore_btn)
 
         self._up_btn = QPushButton("↑")
-        self._up_btn.setToolTip("Move up in priority")
+        self._up_btn.setToolTip(self.tr("Move up in priority"))
         self._up_btn.clicked.connect(lambda: self.move_up(self._list.currentRow()))
         buttons.addWidget(self._up_btn)
 
         self._down_btn = QPushButton("↓")
-        self._down_btn.setToolTip("Move down in priority")
+        self._down_btn.setToolTip(self.tr("Move down in priority"))
         self._down_btn.clicked.connect(lambda: self.move_down(self._list.currentRow()))
         buttons.addWidget(self._down_btn)
 
-        self._remove_btn = QPushButton("Remove")
+        self._remove_btn = QPushButton(self.tr("Remove"))
         self._remove_btn.clicked.connect(lambda: self.remove(self._list.currentRow()))
         buttons.addWidget(self._remove_btn)
 
@@ -326,28 +331,28 @@ class DictionarySettingsPanel(FormPanel):
         self.add_field("", container)
 
         # Pitch accent section unchanged
-        self.add_section("Pitch Accent")
+        self.add_section(self.tr("Pitch Accent"))
         self.pitch_accent_selector = FileSelector(
             label="",
             file_mode=True,
             file_filter="Pitch accent (*.csv *.tsv *.txt *.zip);;All Files (*)",
-            placeholder="Select pitch accent CSV/TSV or Yomitan zip...",
+            placeholder=self.tr("Select pitch accent CSV/TSV or Yomitan zip..."),
             default_dir=ANKI_MINER_HOME,
         )
         self.add_field(
-            "Pitch Accent File",
+            self.tr("Pitch Accent File"),
             self.pitch_accent_selector,
-            helper=(
+            helper=self.tr(
                 "CSV/TSV with columns (reading, kanji, pattern), or a "
                 "Yomitan-format pitch zip (e.g. Kanjium, NHK). Yomitan zips "
                 "are imported into ~/.anki_miner/pitch_accent.csv on Save."
             ),
         )
-        self.use_pitch_accent_checkbox = QCheckBox("Enable Pitch Accent")
+        self.use_pitch_accent_checkbox = QCheckBox(self.tr("Enable Pitch Accent"))
         self.add_field(
             "",
             self.use_pitch_accent_checkbox,
-            helper="Looks up and writes pitch patterns to mapped fields.",
+            helper=self.tr("Looks up and writes pitch patterns to mapped fields."),
         )
 
         # Frequency List section. Mirrors the Pitch Accent section above: the
@@ -356,28 +361,28 @@ class DictionarySettingsPanel(FormPanel):
         # the Filtering tab. The selector accepts CSV/TSV directly, or a
         # Yomitan-format frequency zip converted to CSV on Save (see
         # SettingsTab._on_save_clicked).
-        self.add_section("Frequency List")
+        self.add_section(self.tr("Frequency List"))
         self.frequency_selector = FileSelector(
             label="",
             file_mode=True,
             file_filter="Frequency list (*.csv *.tsv *.txt *.zip);;All Files (*)",
-            placeholder="Select frequency list CSV/TSV or Yomitan zip...",
+            placeholder=self.tr("Select frequency list CSV/TSV or Yomitan zip..."),
             default_dir=ANKI_MINER_HOME,
         )
         self.add_field(
-            "Frequency List File",
+            self.tr("Frequency List File"),
             self.frequency_selector,
-            helper=(
+            helper=self.tr(
                 "CSV/TSV with columns (word, rank), or a Yomitan-format "
                 "frequency zip (e.g. JPDB, BCCWJ). Yomitan zips are imported "
                 "into ~/.anki_miner/frequency.csv on Save."
             ),
         )
-        self.use_frequency_checkbox = QCheckBox("Enable Frequency Data")
+        self.use_frequency_checkbox = QCheckBox(self.tr("Enable Frequency Data"))
         self.add_field(
             "",
             self.use_frequency_checkbox,
-            helper="Enable to display word frequency rank on cards",
+            helper=self.tr("Enable to display word frequency rank on cards"),
         )
         self.frequency_selector.path_validated.connect(self._validate_frequency_file)
 
@@ -394,7 +399,9 @@ class DictionarySettingsPanel(FormPanel):
             return
 
         if path_str.lower().endswith(".zip"):
-            self.frequency_selector.status_label.setText(f"{Path(path_str).name} (Yomitan zip — will import on Save)")
+            self.frequency_selector.status_label.setText(
+                tr_format(self.tr("%1 (Yomitan zip — will import on Save)"), Path(path_str).name)
+            )
             return
 
         try:
@@ -403,9 +410,11 @@ class DictionarySettingsPanel(FormPanel):
             service = FrequencyService(Path(path_str))
             service.load()
             count = service.entry_count
-            self.frequency_selector.status_label.setText(f"{Path(path_str).name} ({count:,} entries)")
+            self.frequency_selector.status_label.setText(
+                tr_format(self.tr("%1 (%2 entries)"), Path(path_str).name, f"{count:,}")
+            )
         except Exception as e:
-            self.frequency_selector.status_label.setText(f"Could not parse file: {e}")
+            self.frequency_selector.status_label.setText(tr_format(self.tr("Could not parse file: %1"), e))
 
     def set_chain(self, chain: tuple[ChainEntry, ...]) -> None:
         self._chain = list(chain)
@@ -456,9 +465,13 @@ class DictionarySettingsPanel(FormPanel):
 
         reply = QMessageBox.question(
             self,
-            "Remove dictionary",
-            f"Remove '{display}' and delete its files from disk?\n\n"
-            "This cannot be undone. You would need to reimport from the source zip.",
+            self.tr("Remove dictionary"),
+            tr_format(
+                self.tr(
+                    "Remove '%1' and delete its files from disk?\n\nThis cannot be undone. You would need to reimport from the source zip."
+                ),
+                display,
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -472,8 +485,8 @@ class DictionarySettingsPanel(FormPanel):
         if self._release_callback is not None and not self._release_callback():
             QMessageBox.warning(
                 self,
-                "Remove failed",
-                "A mining run is in progress. Stop it before removing dictionaries.",
+                self.tr("Remove failed"),
+                self.tr("A mining run is in progress. Stop it before removing dictionaries."),
             )
             return
 
@@ -484,8 +497,8 @@ class DictionarySettingsPanel(FormPanel):
                 logger.error("Failed to delete dictionary folder %s: %s", dict_dir, e)
                 QMessageBox.warning(
                     self,
-                    "Remove failed",
-                    f"Could not delete {dict_dir}:\n{e}\n\n" "The dictionary was not removed.",
+                    self.tr("Remove failed"),
+                    tr_format(self.tr("Could not delete %1:\n%2\n\nThe dictionary was not removed."), dict_dir, e),
                 )
                 return
 
@@ -523,8 +536,8 @@ class DictionarySettingsPanel(FormPanel):
             return
 
         menu = QMenu(self._list)
-        reimport_action = menu.addAction("Re-import…")
-        remove_action = menu.addAction("Remove")
+        reimport_action = menu.addAction(self.tr("Re-import…"))
+        remove_action = menu.addAction(self.tr("Remove"))
         viewport = self._list.viewport()
         global_pos = viewport.mapToGlobal(pos) if viewport is not None else self._list.mapToGlobal(pos)
         chosen = menu.exec(global_pos)
@@ -569,8 +582,8 @@ class DictionarySettingsPanel(FormPanel):
                     fmt = meta.format if meta else "missing"
                     count = meta.entry_count if meta else 0
                 else:
-                    display = "Jisho (online fallback)"
-                    fmt = "⚠ rate-limited, slower"
+                    display = self.tr("Jisho (online fallback)")
+                    fmt = self.tr("⚠ rate-limited, slower")
                     count = 0
                 stale = meta is not None and not meta.schema_ok
                 row = _ChainRow(entry, display, fmt, count, stale=stale)

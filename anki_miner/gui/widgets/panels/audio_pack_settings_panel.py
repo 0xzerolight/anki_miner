@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AudioSourceEntry
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.services.audio_packs.registry import AudioPackMeta, AudioPackRegistry
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -126,12 +127,12 @@ class _PackRow(QWidget):
             layout.addWidget(badge)
 
         if count:
-            count_label = QLabel(f"{count:,} entries")
+            count_label = QLabel(tr_format(self.tr("%1 entries"), f"{count:,}"))
             count_label.setStyleSheet("color: gray; font-size: 10px;")
             layout.addWidget(count_label)
 
         if dir_missing:
-            missing_label = QLabel("⚠ folder missing — re-import")
+            missing_label = QLabel(self.tr("⚠ folder missing — re-import"))
             missing_label.setStyleSheet("color: #d97706; font-size: 10px;")
             layout.addWidget(missing_label)
 
@@ -183,14 +184,16 @@ class AudioPackSettingsPanel(FormPanel):
         self._rebuild_list()
 
     def _setup_fields(self) -> None:
-        self.add_section("Active Audio Sources")
+        self.add_section(self.tr("Active Audio Sources"))
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
         layout.addWidget(
             QLabel(
-                "Top entry is tried first. " "Local audio packs are recommended; they're faster than JPod101 online."
+                self.tr(
+                    "Top entry is tried first. Local audio packs are recommended; they're faster than JPod101 online."
+                )
             )
         )
 
@@ -201,21 +204,21 @@ class AudioPackSettingsPanel(FormPanel):
         layout.addWidget(self._list)
 
         buttons = QHBoxLayout()
-        self._add_btn = QPushButton("+ Add Audio Pack…")
+        self._add_btn = QPushButton(self.tr("+ Add Audio Pack…"))
         self._add_btn.clicked.connect(self.add_pack_requested.emit)
         buttons.addWidget(self._add_btn)
 
         self._up_btn = QPushButton("↑")
-        self._up_btn.setToolTip("Move up in priority")
+        self._up_btn.setToolTip(self.tr("Move up in priority"))
         self._up_btn.clicked.connect(lambda: self.move_up(self._list.currentRow()))
         buttons.addWidget(self._up_btn)
 
         self._down_btn = QPushButton("↓")
-        self._down_btn.setToolTip("Move down in priority")
+        self._down_btn.setToolTip(self.tr("Move down in priority"))
         self._down_btn.clicked.connect(lambda: self.move_down(self._list.currentRow()))
         buttons.addWidget(self._down_btn)
 
-        self._remove_btn = QPushButton("Remove")
+        self._remove_btn = QPushButton(self.tr("Remove"))
         self._remove_btn.clicked.connect(lambda: self.remove(self._list.currentRow()))
         buttons.addWidget(self._remove_btn)
 
@@ -277,10 +280,13 @@ class AudioPackSettingsPanel(FormPanel):
 
         reply = QMessageBox.question(
             self,
-            "Remove audio pack",
-            f"Remove '{display}' from the audio chain?\n\n"
-            "Only the index files are deleted — your original audio files are untouched.\n"
-            "This cannot be undone. You would need to re-import to use this pack again.",
+            self.tr("Remove audio pack"),
+            tr_format(
+                self.tr(
+                    "Remove '%1' from the audio chain?\n\nOnly the index files are deleted — your original audio files are untouched.\nThis cannot be undone. You would need to re-import to use this pack again."
+                ),
+                display,
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -294,8 +300,10 @@ class AudioPackSettingsPanel(FormPanel):
                 logger.error("Failed to delete audio pack index folder %s: %s", pack_index_dir, e)
                 QMessageBox.warning(
                     self,
-                    "Remove failed",
-                    f"Could not delete {pack_index_dir}:\n{e}\n\n" "The audio pack was not removed.",
+                    self.tr("Remove failed"),
+                    tr_format(
+                        self.tr("Could not delete %1:\n%2\n\nThe audio pack was not removed."), pack_index_dir, e
+                    ),
                 )
                 return
 
@@ -327,8 +335,8 @@ class AudioPackSettingsPanel(FormPanel):
             return
 
         menu = QMenu(self._list)
-        reimport_action = menu.addAction("Re-import…")
-        remove_action = menu.addAction("Remove")
+        reimport_action = menu.addAction(self.tr("Re-import…"))
+        remove_action = menu.addAction(self.tr("Remove"))
         viewport = self._list.viewport()
         global_pos = viewport.mapToGlobal(pos) if viewport is not None else self._list.mapToGlobal(pos)
         chosen = menu.exec(global_pos)
@@ -367,12 +375,12 @@ class AudioPackSettingsPanel(FormPanel):
                     count = meta.entry_count if meta else 0
                     dir_missing = meta is not None and not meta.pack_dir_exists
                 elif entry.kind == "googletts":
-                    display = "Google Translate (synthetic TTS)"
+                    display = self.tr("Google Translate (synthetic TTS)")
                     fmt = "online"
                     count = 0
                     dir_missing = False
                 else:  # jpod101
-                    display = "JapanesePod101 (online)"
+                    display = self.tr("JapanesePod101 (online)")
                     fmt = "online"
                     count = 0
                     dir_missing = False
