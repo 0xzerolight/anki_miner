@@ -128,15 +128,14 @@ class ZipImportFlow:
 
         # Overwrite guard. atomic_write_csv only protects against mid-write
         # failures, not intentional clobbering of a user's existing CSV.
-        def _t(s: str) -> str:
-            return QCoreApplication.translate("ZipImportFlow", s)
-
         if dest_csv.exists() and dest_csv.stat().st_size > 0:
             reply = QMessageBox.question(
                 self._parent,
                 labels.overwrite_title,
                 tr_format(
-                    _t("%1 already exists and will be replaced.\n\nContinue with import?"),
+                    QCoreApplication.translate(
+                        "ZipImportFlow", "%1 already exists and will be replaced.\n\nContinue with import?"
+                    ),
                     dest_csv,
                 ),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -147,7 +146,9 @@ class ZipImportFlow:
                 # commit with the existing path unchanged.
                 return decline_fallback
 
-        dlg = QProgressDialog(labels.progress, _t("Cancel"), 0, 100, self._parent)
+        dlg = QProgressDialog(
+            labels.progress, QCoreApplication.translate("ZipImportFlow", "Cancel"), 0, 100, self._parent
+        )
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
@@ -201,7 +202,7 @@ class ZipImportFlow:
             selector.set_path(str(dest_csv))
             skipped_note = (
                 tr_format(
-                    _t(" (skipped %1 display-only entries)"),
+                    QCoreApplication.translate("ZipImportFlow", " (skipped %1 display-only entries)"),
                     f"{result.skipped_display_only:,}",
                 )
                 if result.skipped_display_only
@@ -211,7 +212,7 @@ class ZipImportFlow:
                 self._parent,
                 labels.success_title,
                 tr_format(
-                    _t("Imported %1 entries from '%2'."),
+                    QCoreApplication.translate("ZipImportFlow", "Imported %1 entries from '%2'."),
                     f"{result.entry_count:,}",
                     result.source_name,
                 )
