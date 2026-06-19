@@ -794,8 +794,16 @@ class EpisodeProcessor:
         # report cards_created=0 with no note IDs — a successful run reported as
         # a failure (T-19). The cache is additive and self-heals on the next
         # run, so dropping this one write is safe; warn and keep the result.
+        #
+        # Undo must revert only the 'mined' rows THIS session inserted, never a
+        # 'mined' row a prior session created that this run merely re-encountered
+        # (Anki-duplicate-skipped). Snapshot the existing 'mined' lemmas BEFORE
+        # the insert and report only the genuinely-new ones for the Undo path.
+        mined_forms_for_undo = sorted(mined_words)
         if self.known_word_db and self.known_word_db.is_available() and card_data:
             try:
+                already_mined = self.known_word_db.get_words_by_source("mined")
+                mined_forms_for_undo = sorted(mined_words - already_mined)
                 self.known_word_db.add_words(mined_words, source="mined")
             except sqlite3.Error as e:
                 logger.warning(
@@ -805,7 +813,7 @@ class EpisodeProcessor:
                     e,
                 )
 
-        return cards_created, created_note_ids, sorted(mined_words)
+        return cards_created, created_note_ids, mined_forms_for_undo
 
     def process_episode(
         self,
