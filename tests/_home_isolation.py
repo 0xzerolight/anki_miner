@@ -28,6 +28,7 @@ from pathlib import Path
 HOME_CONSUMERS = (
     ("anki_miner.config.paths", "ANKI_MINER_HOME", lambda home: home),
     ("anki_miner.config.config", "ANKI_MINER_HOME", lambda home: home),
+    ("anki_miner.gui.app", "ANKI_MINER_HOME", lambda home: home),
     ("anki_miner.gui.utils.service_factory", "ANKI_MINER_HOME", lambda home: home),
     ("anki_miner.gui.utils.recent_files", "ANKI_MINER_HOME", lambda home: home),
     (
