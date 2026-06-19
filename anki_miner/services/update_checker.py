@@ -90,7 +90,10 @@ def _validate_github_url(url: str) -> bool:
         parts = urllib.parse.urlsplit(url)
     except ValueError:
         return False
-    return parts.scheme == "https" and parts.netloc in _GITHUB_URL_ALLOWLIST
+    # Hosts are case-insensitive; urlsplit lowercases the scheme but not the
+    # netloc, so normalise it before the allowlist check or a "GitHub.com" URL
+    # is wrongly rejected.
+    return parts.scheme == "https" and parts.netloc.lower() in _GITHUB_URL_ALLOWLIST
 
 
 def _pick_asset(assets: list[dict], target: str) -> str | None:
