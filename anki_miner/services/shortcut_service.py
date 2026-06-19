@@ -17,7 +17,7 @@ from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 APP_NAME = "Anki Miner"
 APP_ID = "anki-miner"
-APP_COMMENT = "Japanese vocabulary mining from anime subtitles"
+APP_COMMENT = "Japanese vocabulary mining from media"
 ICON_FILENAME = "anki_miner.svg"
 
 # These helpers run synchronously on the GUI thread; bound them so a hung
