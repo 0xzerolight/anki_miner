@@ -16,11 +16,12 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QEventLoop, Qt
+from PyQt6.QtCore import QCoreApplication, QEventLoop, Qt
 from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.gui.workers.resource_download_worker import ResourceDownloadWorker
 from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
+from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
@@ -55,8 +56,14 @@ def _run_download_modal(parent: QWidget, config: AnkiMinerConfig, download_dir: 
 
     Returns ``None`` only if cancelled before the worker emitted a summary.
     """
-    dlg = QProgressDialog("Preparing download…", "Cancel", 0, 100, parent)
-    dlg.setWindowTitle("Downloading Recommended Resources")
+    dlg = QProgressDialog(
+        QCoreApplication.translate("ResourceDownloadDialog", "Preparing download…"),
+        QCoreApplication.translate("ResourceDownloadDialog", "Cancel"),
+        0,
+        100,
+        parent,
+    )
+    dlg.setWindowTitle(QCoreApplication.translate("ResourceDownloadDialog", "Downloading Recommended Resources"))
     dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
     dlg.setMinimumDuration(0)
     dlg.show()
@@ -80,12 +87,16 @@ def _run_download_modal(parent: QWidget, config: AnkiMinerConfig, download_dir: 
         if total_bytes > 0:
             dlg.setMaximum(total_bytes)
             dlg.setValue(cur)
-        dlg.setLabelText(f"{name}: {msg}")
+        dlg.setLabelText(tr_format(QCoreApplication.translate("ResourceDownloadDialog", "%1: %2"), name, msg))
 
     def on_item_done(spec_id: str, ok: bool, _detail: str) -> None:
         name = names.get(spec_id, spec_id)
-        status = "done" if ok else "failed"
-        dlg.setLabelText(f"{name}: {status}")
+        status = (
+            QCoreApplication.translate("ResourceDownloadDialog", "done")
+            if ok
+            else QCoreApplication.translate("ResourceDownloadDialog", "failed")
+        )
+        dlg.setLabelText(tr_format(QCoreApplication.translate("ResourceDownloadDialog", "%1: %2"), name, status))
 
     def on_finished(summary: object) -> None:
         from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
@@ -123,17 +134,21 @@ def _show_results_dialog(parent: QWidget, summary: ResourceDownloadSummary) -> N
             lines.append(f"✗ {result.display_name} — {result.detail}\n" f"   Download manually: {result.url}")
 
     if not summary.failed:
-        title = "Resources Installed"
+        title = QCoreApplication.translate("ResourceDownloadDialog", "Resources Installed")
         icon = QMessageBox.Icon.Information
     elif summary.succeeded:
-        title = "Resources Partially Installed"
+        title = QCoreApplication.translate("ResourceDownloadDialog", "Resources Partially Installed")
         icon = QMessageBox.Icon.Warning
     else:
-        title = "Resource Download Failed"
+        title = QCoreApplication.translate("ResourceDownloadDialog", "Resource Download Failed")
         icon = QMessageBox.Icon.Warning
 
-    body = "\n".join(lines) if lines else "No resources were processed."
-    body = f"{body}\n\n{LICENSE_NOTE}"
+    body = (
+        "\n".join(lines)
+        if lines
+        else QCoreApplication.translate("ResourceDownloadDialog", "No resources were processed.")
+    )
+    body = f"{body}\n\n{QCoreApplication.translate('ResourceDownloadDialog', 'Resources are downloaded from their original sources; their licenses apply.')}"
 
     box = QMessageBox(parent)
     box.setIcon(icon)

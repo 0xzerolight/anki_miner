@@ -25,6 +25,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.services.known_word_db import KnownWordDB
+from anki_miner.utils.i18n import tr_format
 
 
 class KnownWordsManagerDialog(QDialog):
@@ -40,7 +41,7 @@ class KnownWordsManagerDialog(QDialog):
         self._refresh()
 
     def _setup_ui(self) -> None:
-        self.setWindowTitle("Manage Known Words")
+        self.setWindowTitle(self.tr("Manage Known Words"))
         self.setMinimumWidth(480)
         self.setMinimumHeight(520)
 
@@ -48,7 +49,7 @@ class KnownWordsManagerDialog(QDialog):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.lg, SPACING.lg, SPACING.lg, SPACING.lg)
 
-        header = QLabel("Local Known Words")
+        header = QLabel(self.tr("Local Known Words"))
         font = QFont()
         font.setPixelSize(16)
         font.setWeight(QFont.Weight.Bold)
@@ -56,16 +57,18 @@ class KnownWordsManagerDialog(QDialog):
         layout.addWidget(header)
 
         helper = QLabel(
-            "Words you added from the Word Curator. These are ignored on every "
-            "mining run, kept when you rebuild the cache, and exportable for "
-            "re-import into jiten.moe."
+            self.tr(
+                "Words you added from the Word Curator. These are ignored on every "
+                "mining run, kept when you rebuild the cache, and exportable for "
+                "re-import into jiten.moe."
+            )
         )
         helper.setObjectName("helper-text")
         helper.setWordWrap(True)
         layout.addWidget(helper)
 
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Filter…")
+        self.search_input.setPlaceholderText(self.tr("Filter…"))
         self.search_input.textChanged.connect(self._on_search_changed)
         layout.addWidget(self.search_input)
 
@@ -78,17 +81,17 @@ class KnownWordsManagerDialog(QDialog):
         layout.addWidget(self.count_label)
 
         buttons = QHBoxLayout()
-        self.remove_button = ModernButton("Remove Selected", variant="secondary")
+        self.remove_button = ModernButton(self.tr("Remove Selected"), variant="secondary")
         self.remove_button.clicked.connect(self._on_remove)
-        self.export_button = ModernButton("Export…", variant="secondary")
+        self.export_button = ModernButton(self.tr("Export…"), variant="secondary")
         self.export_button.clicked.connect(self._on_export)
-        self.reset_button = ModernButton("Reset User List", variant="danger")
+        self.reset_button = ModernButton(self.tr("Reset User List"), variant="danger")
         self.reset_button.clicked.connect(self._on_reset)
         buttons.addWidget(self.remove_button)
         buttons.addWidget(self.export_button)
         buttons.addWidget(self.reset_button)
         buttons.addStretch()
-        close_button = ModernButton("Close", variant="primary")
+        close_button = ModernButton(self.tr("Close"), variant="primary")
         close_button.clicked.connect(self.accept)
         buttons.addWidget(close_button)
         layout.addLayout(buttons)
@@ -107,7 +110,7 @@ class KnownWordsManagerDialog(QDialog):
         self._on_search_changed(self.search_input.text())
 
         cached = max(0, self._db.word_count() - len(user_words))
-        self.count_label.setText(f"{len(user_words)} user word(s) · {cached} cached from Anki")
+        self.count_label.setText(tr_format(self.tr("%1 user word(s) · %2 cached from Anki"), len(user_words), cached))
 
     def _on_search_changed(self, text: str) -> None:
         needle = text.lower()
@@ -141,23 +144,29 @@ class KnownWordsManagerDialog(QDialog):
 
         path_str, _ = QFileDialog.getSaveFileName(
             self,
-            "Export Known Words",
+            self.tr("Export Known Words"),
             str(Path(resolve_start_dir(None, file_mode=True)) / "known_words.txt"),
             "Text Files (*.txt);;All Files (*)",
         )
         if not path_str:
             return
         count = self.export_to(Path(path_str))
-        QMessageBox.information(self, "Export Complete", f"Exported {count} word(s) to:\n{path_str}")
+        QMessageBox.information(
+            self,
+            self.tr("Export Complete"),
+            tr_format(self.tr("Exported %1 word(s) to:\n%2"), count, path_str),
+        )
 
     def _on_reset(self) -> None:
         if self.word_list.count() == 0:
             return
         reply = QMessageBox.question(
             self,
-            "Reset User List",
-            "Remove ALL words you added to the local known words list? "
-            "This cannot be undone. The Anki-synced cache is not affected.",
+            self.tr("Reset User List"),
+            self.tr(
+                "Remove ALL words you added to the local known words list? "
+                "This cannot be undone. The Anki-synced cache is not affected."
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

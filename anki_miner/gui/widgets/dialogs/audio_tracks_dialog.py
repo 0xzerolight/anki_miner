@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.utils.audio_track_detector import AudioStream
+from anki_miner.utils.i18n import tr_format
 
 _AUTO_BUTTON_ID = 10_000  # sentinel button-group ID for the Auto radio (avoids Qt's reserved -1/-2)
 
@@ -48,7 +49,7 @@ class AudioTracksDialog(QDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Audio Track")
+        self.setWindowTitle(self.tr("Audio Track"))
         self.setMinimumWidth(400)
 
         # _result holds the audio_index to return, or None for Auto.
@@ -72,13 +73,13 @@ class AudioTracksDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _build_zero_track(self, layout: QVBoxLayout) -> None:
-        layout.addWidget(QLabel("No audio tracks found in this file."))
+        layout.addWidget(QLabel(self.tr("No audio tracks found in this file.")))
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.accept)
         layout.addWidget(buttons)
 
     def _build_single_track(self, layout: QVBoxLayout, stream: AudioStream) -> None:
-        layout.addWidget(QLabel("This file has only one audio track."))
+        layout.addWidget(QLabel(self.tr("This file has only one audio track.")))
         layout.addWidget(QLabel(_format_track_label(stream)))
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.accept)
@@ -99,9 +100,13 @@ class AudioTracksDialog(QDialog):
         # Auto radio
         if auto_detected is not None:
             lang = auto_detected.language_tag or "und"
-            auto_text = f"Auto-detect (currently: Track {auto_detected.audio_index + 1} — {lang})"
+            auto_text = tr_format(
+                self.tr("Auto-detect (currently: Track %1 — %2)"),
+                auto_detected.audio_index + 1,
+                lang,
+            )
         else:
-            auto_text = "Auto-detect (no Japanese track found — will use first track)"
+            auto_text = self.tr("Auto-detect (no Japanese track found — will use first track)")
         auto_radio = QRadioButton(auto_text)
         self._button_group.addButton(auto_radio, _AUTO_BUTTON_ID)
         layout.addWidget(auto_radio)
@@ -127,7 +132,7 @@ class AudioTracksDialog(QDialog):
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         ok_btn = buttons.button(QDialogButtonBox.StandardButton.Ok)
         if ok_btn is not None:
-            ok_btn.setText("Apply")
+            ok_btn.setText(self.tr("Apply"))
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
