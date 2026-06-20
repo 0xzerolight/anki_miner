@@ -51,6 +51,11 @@ class SubtitlePlayerWidget(QWidget):
         # AV1 watchdog state — populated by set_source
         self._is_av1: bool = False
         self._got_video_frame: bool = False
+        # Set when the media loads while the widget is still hidden; the watchdog
+        # is then armed from showEvent instead. Qt presents the first paused frame
+        # only once the video sink is on screen, so starting the 2 s decode clock
+        # at LoadedMedia while hidden gives a false fallback (Issue #82).
+        self._av1_watchdog_pending: bool = False
 
         # Single-shot watchdog: fires 2 s after LoadedMedia/BufferedMedia if no frame decoded.
         self._av1_watchdog = QTimer(self)
@@ -152,6 +157,7 @@ class SubtitlePlayerWidget(QWidget):
 
         # Reset per-source watchdog state and restore normal video widget visibility.
         self._got_video_frame = False
+        self._av1_watchdog_pending = False
         self._av1_watchdog.stop()
         self._av1_notice_label.setVisible(False)
         self.video_widget.setVisible(True)
@@ -211,6 +217,7 @@ class SubtitlePlayerWidget(QWidget):
             self.audio_output.deleteLater()
         self.player = None
         self.audio_output = None
+        self._av1_watchdog_pending = False
 
     def closeEvent(self, event) -> None:
         """Tear down the multimedia backend deterministically on widget close.
@@ -346,11 +353,18 @@ class SubtitlePlayerWidget(QWidget):
     def _on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
         """Arm the AV1 watchdog when the media is loaded and the source is AV1.
 
-        Design assumption: Qt presents the first decoded frame at LoadedMedia even
-        while paused, so a hardware-decodable AV1 source sets ``_got_video_frame``
-        before or shortly after LoadedMedia arrives, and the watchdog never fires.
-        A source whose codec Qt cannot decode never produces a frame — the watchdog
-        fires after the timeout and reveals the fallback UI.
+        Design assumption: once the widget is on screen, Qt presents the first
+        decoded frame at LoadedMedia even while paused, so a hardware-decodable AV1
+        source sets ``_got_video_frame`` before or shortly after LoadedMedia
+        arrives, and the watchdog never fires. A source whose codec Qt cannot
+        decode never produces a frame — the watchdog fires after the timeout and
+        reveals the fallback UI.
+
+        Qt only presents that first paused frame once the video sink is visible.
+        Both callers ``set_source`` during dialog construction, before ``.exec()``
+        shows the window, so LoadedMedia routinely fires while hidden. Arming the
+        2 s clock then would expire before the window is even composited — a false
+        fallback (Issue #82). When hidden, defer arming to ``showEvent``.
 
         The watchdog is only armed when ``_is_av1`` is True; non-AV1 sources skip
         this path entirely.
@@ -359,6 +373,25 @@ class SubtitlePlayerWidget(QWidget):
             status: The new QMediaPlayer media status.
         """
         if status in (_LOADED_MEDIA, _BUFFERED_MEDIA) and self._is_av1 and not self._got_video_frame:
+            if self.isVisible():
+                self._av1_watchdog.start(2000)
+            else:
+                self._av1_watchdog_pending = True
+
+    def showEvent(self, event) -> None:
+        """Arm a watchdog deferred while the widget was hidden.
+
+        The decode-deadline clock must start only once the video sink is on
+        screen; see ``_on_media_status_changed`` (Issue #82).
+        """
+        super().showEvent(event)
+        if (
+            self._av1_watchdog_pending
+            and self._is_av1
+            and not self._got_video_frame
+            and not self._av1_watchdog.isActive()
+        ):
+            self._av1_watchdog_pending = False
             self._av1_watchdog.start(2000)
 
     def _on_av1_watchdog_timeout(self) -> None:
