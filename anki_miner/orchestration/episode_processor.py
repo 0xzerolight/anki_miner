@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
+import re
 import shutil
 import sqlite3
 import tempfile
@@ -105,6 +106,20 @@ def _format_timestamp(seconds: float) -> str:
     h, rem = divmod(total, 3600)
     m, s = divmod(rem, 60)
     return f"{h:02d}:{m:02d}:{s:02d}"
+
+
+# Strips a contiguous trailing run of ``[...]`` groups plus an optional
+# ``-ReleaseGroup`` suffix (Issue #83). ``[^\]]*`` (no nested brackets) keeps this
+# linear-time and confines the match to a *trailing* block, so mid-title brackets
+# like ``[Blu-ray]`` survive. End-anchored, so a leading series/season prefix is
+# never touched.
+_ARR_METADATA_RE = re.compile(r"\s*(?:\[[^\]]*\]\s*)+(?:-\S+)?\s*$")
+
+
+def _sanitize_source_label(label: str) -> str:
+    """Remove *arr release metadata (e.g. ``[WEBRip-1080p][JA]-Trix``) from a
+    source label, leaving the human-readable title."""
+    return _ARR_METADATA_RE.sub("", label).strip()
 
 
 @dataclass
@@ -1015,7 +1030,7 @@ class EpisodeProcessor:
             subtitle_file_str=str(subtitle_file),
             episode_name=episode_name,
             series_name=series_name,
-            source_label=source_label_override or f"{series_name} — {episode_name}",
+            source_label=source_label_override or _sanitize_source_label(f"{series_name} — {episode_name}"),
         )
         # Outside the try/except so SetupError propagates to callers instead of
         # being absorbed into a "completed" ProcessingResult.  Before temp-folder
