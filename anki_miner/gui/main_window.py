@@ -287,7 +287,7 @@ class MainWindow(QMainWindow):
         # "Join Discord" button.
         discord_button = QToolButton(corner_widget)
         discord_button.setObjectName("discord_button")
-        discord_button.setText(self.tr("💬 Discord"))
+        discord_button.setText(self.tr("Join Discord"))
         discord_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         discord_button.setAutoRaise(True)
         discord_button.setToolTip(self.tr("Join the community on Discord"))

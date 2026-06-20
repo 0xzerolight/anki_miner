@@ -89,7 +89,7 @@ def test_corner_has_report_and_star_buttons(main_window):
     assert discord is not None, "Discord button missing from corner container"
     assert report.text() == "Report a Bug / Suggest a Feature"
     assert "Star - help the project" in star.text()
-    assert "Discord" in discord.text()
+    assert discord.text() == "Join Discord"
     assert report.autoRaise() is True
     assert star.autoRaise() is True
     assert discord.autoRaise() is True
