@@ -83,12 +83,17 @@ def test_corner_has_report_and_star_buttons(main_window):
     container = _corner_container(main_window)
     report = container.findChild(QToolButton, "report_issue_button")
     star = container.findChild(QToolButton, "github_star_button")
+    discord = container.findChild(QToolButton, "discord_button")
     assert report is not None, "Report button missing from corner container"
     assert star is not None, "Star button missing from corner container"
+    assert discord is not None, "Discord button missing from corner container"
     assert report.text() == "Report a Bug / Suggest a Feature"
     assert "Star - help the project" in star.text()
+    assert "Discord" in discord.text()
     assert report.autoRaise() is True
     assert star.autoRaise() is True
+    assert discord.autoRaise() is True
+    assert discord.toolTip() == "Join the community on Discord"
 
 
 def test_report_button_opens_issues_url(main_window, monkeypatch):
@@ -128,6 +133,21 @@ def test_star_button_opens_repo_url(main_window, monkeypatch):
 
     assert len(captured) == 1
     assert captured[0].toString() == "https://github.com/0xzerolight/anki_miner"
+
+
+def test_discord_button_opens_invite_url(main_window, monkeypatch):
+    """Clicking the Discord button opens the community invite via QDesktopServices."""
+    captured: list[QUrl] = []
+    from PyQt6.QtGui import QDesktopServices
+
+    monkeypatch.setattr(QDesktopServices, "openUrl", lambda url: captured.append(url) or True)
+
+    discord = _corner_container(main_window).findChild(QToolButton, "discord_button")
+    assert discord is not None
+    discord.click()
+
+    assert len(captured) == 1
+    assert captured[0].toString() == "https://discord.com/invite/aDtQyZzUVP"
 
 
 def test_about_dialog_builds_and_shows_version(qtbot):
