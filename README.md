@@ -8,6 +8,7 @@
 <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
 <a href="https://github.com/0xzerolight/anki_miner/releases/latest"><img src="https://img.shields.io/github/downloads/0xzerolight/anki_miner/total.svg" alt="GitHub downloads"></a>
 <a href="https://github.com/0xzerolight/anki_miner/stargazers"><img src="https://img.shields.io/github/stars/0xzerolight/anki_miner?style=social" alt="GitHub stars"></a>
+<a href="https://discord.com/invite/aDtQyZzUVP"><img src="https://img.shields.io/discord/1517634859110240326?logo=discord&logoColor=white&label=Discord&color=5865F2" alt="Discord community"></a>
 </p>
 
 <p align="center">
@@ -195,7 +196,7 @@ If you want to support the project, please share it with others who may benefit 
 - Security: [SECURITY.md](SECURITY.md).
 
 Bug reports and feature requests → [Issues](https://github.com/0xzerolight/anki_miner/issues).
-General questions and discussion → [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
+General questions and discussion → [Discussions](https://github.com/0xzerolight/anki_miner/discussions) or [Discord](https://discord.com/invite/aDtQyZzUVP).
 
 ## Special Thanks
 
