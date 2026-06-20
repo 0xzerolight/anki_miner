@@ -680,14 +680,22 @@ class TestAv1WatchdogFallback:
     visible.  Non-AV1 sources never arm the watchdog.
     """
 
-    def _make_widget_av1(self, qtbot, fake_media_classes):
-        """Helper: build a widget with an AV1 source loaded (watchdog NOT yet armed)."""
+    def _make_widget_av1(self, qtbot, fake_media_classes, *, show=True):
+        """Helper: build a widget with an AV1 source loaded (watchdog NOT yet armed).
+
+        ``show`` defaults to True because the watchdog only arms on LoadedMedia
+        when the widget is on screen (Issue #82); pass ``show=False`` to exercise
+        the hidden/deferred path.
+        """
         with (
             patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
             patch(f"{MODULE}.get_primary_video_codec", return_value="av1"),
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
+            if show:
+                widget.show()
+                qtbot.waitUntil(widget.isVisible)
             widget.set_source(Path("/tmp/av1.mkv"), [], 0.0)
         return widget
 
@@ -839,3 +847,74 @@ class TestAv1WatchdogFallback:
         # Use isHidden() — the widget isn't show()n, so isVisible() requires parent to be shown.
         assert not widget.video_widget.isHidden(), "video_widget should be restored on new source"
         assert widget._av1_notice_label.isHidden(), "fallback notice should be hidden on new source"
+
+    # ------------------------------------------------------------------
+    # 5. Visibility gating (Issue #82): LoadedMedia while hidden must not arm
+    # ------------------------------------------------------------------
+
+    def test_loaded_media_while_hidden_does_not_arm(self, qtbot, fake_media_classes):
+        """LoadedMedia firing before the dialog is shown must NOT arm the watchdog.
+
+        Both callers set_source during dialog construction, before .exec() shows
+        the window. Arming the 2 s decode clock while hidden expires before the
+        first paused frame can be presented — the Issue #82 false fallback.
+        """
+        widget = self._make_widget_av1(qtbot, fake_media_classes, show=False)
+
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+
+        assert not widget._av1_watchdog.isActive(), "Watchdog must not arm while hidden"
+        assert widget._av1_watchdog_pending, "Arming should be deferred to showEvent"
+        assert not widget.video_widget.isHidden(), "no fallback while hidden"
+        assert widget._av1_notice_label.isHidden(), "fallback notice must stay hidden"
+
+    def test_show_arms_deferred_watchdog(self, qtbot, fake_media_classes):
+        """Once the widget is shown, the deferred watchdog arms."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes, show=False)
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+        assert not widget._av1_watchdog.isActive()
+
+        widget.show()
+        qtbot.waitUntil(widget.isVisible)
+
+        assert widget._av1_watchdog.isActive(), "showEvent should arm the deferred watchdog"
+        assert not widget._av1_watchdog_pending, "pending flag cleared after arming"
+
+    def test_loaded_media_while_visible_arms_immediately(self, qtbot, fake_media_classes):
+        """When the widget is already on screen, LoadedMedia arms right away."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes, show=True)
+
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+
+        assert widget._av1_watchdog.isActive(), "visible widget should arm immediately"
+        assert not widget._av1_watchdog_pending
+
+    def test_frame_before_show_keeps_watchdog_disarmed(self, qtbot, fake_media_classes):
+        """A frame decoded before the widget is shown must keep the watchdog disarmed.
+
+        showEvent must not arm once a frame has already arrived.
+        """
+        widget = self._make_widget_av1(qtbot, fake_media_classes, show=False)
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+        widget._on_video_frame_changed()  # frame arrives while still hidden
+
+        widget.show()
+        qtbot.waitUntil(widget.isVisible)
+
+        assert not widget._av1_watchdog.isActive(), "no arming after a frame already decoded"
+        assert not widget.video_widget.isHidden()
+        assert widget._av1_notice_label.isHidden()
+
+    def test_set_source_clears_pending_flag(self, qtbot, fake_media_classes):
+        """Re-sourcing resets the deferred-arming flag."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes, show=False)
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+        assert widget._av1_watchdog_pending
+
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value="h264"),
+        ):
+            widget.set_source(Path("/tmp/h264.mkv"), [], 0.0)
+
+        assert not widget._av1_watchdog_pending, "set_source must reset the pending flag"
