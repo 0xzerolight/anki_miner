@@ -2204,6 +2204,14 @@ The dictionary was not removed.</source>
         <translation>GitHub でプロジェクトにスターを付けます</translation>
     </message>
     <message>
+        <source>Join Discord</source>
+        <translation>Discord に参加</translation>
+    </message>
+    <message>
+        <source>Join the community on Discord</source>
+        <translation>Discord でコミュニティに参加する</translation>
+    </message>
+    <message>
         <source>Desktop Shortcut</source>
         <translation>デスクトップショートカット</translation>
     </message>
