@@ -284,6 +284,16 @@ class MainWindow(QMainWindow):
         star_button.clicked.connect(self._open_github_repo)
         corner_layout.addWidget(star_button)
 
+        # "Join Discord" button.
+        discord_button = QToolButton(corner_widget)
+        discord_button.setObjectName("discord_button")
+        discord_button.setText(self.tr("💬 Discord"))
+        discord_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        discord_button.setAutoRaise(True)
+        discord_button.setToolTip(self.tr("Join the community on Discord"))
+        discord_button.clicked.connect(self._open_discord)
+        corner_layout.addWidget(discord_button)
+
         menu_bar.setCornerWidget(corner_widget, Qt.Corner.TopRightCorner)
 
     def _setup_shortcuts(self) -> None:
@@ -378,6 +388,13 @@ class MainWindow(QMainWindow):
         from PyQt6.QtGui import QDesktopServices
 
         QDesktopServices.openUrl(QUrl("https://github.com/0xzerolight/anki_miner"))
+
+    def _open_discord(self) -> None:
+        """Open the Discord community invite in the default browser."""
+        from PyQt6.QtCore import QUrl
+        from PyQt6.QtGui import QDesktopServices
+
+        QDesktopServices.openUrl(QUrl("https://discord.com/invite/aDtQyZzUVP"))
 
     def _open_log_folder(self) -> None:
         """Open the log folder in the system file manager (Help → Open Log Folder)."""
