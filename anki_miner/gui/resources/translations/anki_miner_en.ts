@@ -2171,6 +2171,14 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Join Discord</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Join the community on Discord</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Desktop Shortcut</source>
         <translation type="unfinished" />
     </message>
