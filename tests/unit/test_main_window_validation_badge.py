@@ -98,3 +98,32 @@ class TestValidationResultUpdatesBadge:
             window._on_validation_result(_result(ankiconnect_ok=True))  # no Settings tab
         finally:
             window.deleteLater()
+
+
+class TestValidationTriggersStylingReconcile:
+    """A reachable AnkiConnect is the cue to reconcile card styling (Issue #44)."""
+
+    def test_passing_validation_reconciles_styling(self, window_with_settings):
+        from unittest.mock import MagicMock
+
+        window, settings_tab = window_with_settings
+        settings_tab.notify_anki_connected = MagicMock()
+
+        window._on_validation_result(_result(ankiconnect_ok=True))
+
+        settings_tab.notify_anki_connected.assert_called_once()
+
+    def test_failing_validation_does_not_reconcile(self, window_with_settings):
+        from unittest.mock import MagicMock
+
+        window, settings_tab = window_with_settings
+        settings_tab.notify_anki_connected = MagicMock()
+
+        window._on_validation_result(
+            _result(
+                ankiconnect_ok=False,
+                issues=[ValidationIssue(component="AnkiConnect", severity="ERROR", message="down")],
+            )
+        )
+
+        settings_tab.notify_anki_connected.assert_not_called()
