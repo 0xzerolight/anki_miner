@@ -58,6 +58,9 @@ def test_full_window_builds_clean(tmp_path: Path, qtbot) -> None:
         # The injected config reached the live window (startup isolation worked).
         assert driver.window.get_config().anki_deck_name == e2e.deck_name
         assert driver.window.config.check_for_updates is False
+        # yt-dlp auto-update is off too: it shells out + hits GitHub on startup
+        # and would outlive teardown, tripping the worker-release race.
+        assert driver.window.config.auto_update_ytdlp is False
         # No startup validation worker was spawned (it needs Anki + crashes at
         # teardown — see AppDriver for the patch).
         assert driver.window.background_tasks.validation_worker is None

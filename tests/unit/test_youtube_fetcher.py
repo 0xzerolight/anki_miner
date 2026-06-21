@@ -22,6 +22,7 @@ from anki_miner.exceptions.youtube import (
     FfmpegNotFoundError,
     VideoTooLongError,
     YouTubeFetchError,
+    YtdlpNotFoundError,
 )
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 
@@ -103,7 +104,7 @@ def _js_runtime_capability(request: pytest.FixtureRequest, monkeypatch: pytest.M
     real = yf._ytdlp_supports_js_runtimes  # the lru_cache-wrapped function
     real.cache_clear()
     if "real_ytdlp" not in request.keywords:
-        monkeypatch.setattr(yf, "_ytdlp_supports_js_runtimes", lambda: False)
+        monkeypatch.setattr(yf, "_ytdlp_supports_js_runtimes", lambda _path: False)
     yield
     real.cache_clear()
 
@@ -121,7 +122,7 @@ def _remote_component_capability(request: pytest.FixtureRequest, monkeypatch: py
     real = yf._ytdlp_supports_remote_components  # the lru_cache-wrapped function
     real.cache_clear()
     if "real_ytdlp" not in request.keywords:
-        monkeypatch.setattr(yf, "_ytdlp_supports_remote_components", lambda: False)
+        monkeypatch.setattr(yf, "_ytdlp_supports_remote_components", lambda _path: False)
     yield
     real.cache_clear()
 
@@ -1393,7 +1394,7 @@ class TestJsRuntimeArgs:
     def _enable_capability(self, monkeypatch: pytest.MonkeyPatch, supported: bool) -> None:
         from anki_miner.services import youtube_fetcher as yf
 
-        monkeypatch.setattr(yf, "_ytdlp_supports_js_runtimes", lambda: supported)
+        monkeypatch.setattr(yf, "_ytdlp_supports_js_runtimes", lambda _path: supported)
 
     def test_probe_adds_js_runtime_node(self, service: YouTubeFetcherService, monkeypatch: pytest.MonkeyPatch) -> None:
         self._enable_capability(monkeypatch, True)
@@ -1473,7 +1474,7 @@ class TestJsRuntimeArgs:
         yf._ytdlp_supports_js_runtimes.cache_clear()
         help_text = "Usage: yt-dlp [OPTIONS] URL\n  --js-runtimes RUNTIME[:PATH]  ...\n"
         with patch("subprocess.run", return_value=_fake_run(0, help_text)):
-            assert yf._ytdlp_supports_js_runtimes() is True
+            assert yf._ytdlp_supports_js_runtimes("yt-dlp") is True
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_false_when_flag_absent(self) -> None:
@@ -1481,7 +1482,7 @@ class TestJsRuntimeArgs:
 
         yf._ytdlp_supports_js_runtimes.cache_clear()
         with patch("subprocess.run", return_value=_fake_run(0, "Usage: yt-dlp [OPTIONS] URL\n  --version\n")):
-            assert yf._ytdlp_supports_js_runtimes() is False
+            assert yf._ytdlp_supports_js_runtimes("yt-dlp") is False
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_false_when_ytdlp_missing(self) -> None:
@@ -1489,7 +1490,7 @@ class TestJsRuntimeArgs:
 
         yf._ytdlp_supports_js_runtimes.cache_clear()
         with patch("subprocess.run", side_effect=FileNotFoundError):
-            assert yf._ytdlp_supports_js_runtimes() is False
+            assert yf._ytdlp_supports_js_runtimes("yt-dlp") is False
 
 
 class TestRemoteComponentArgs:
@@ -1501,7 +1502,7 @@ class TestRemoteComponentArgs:
     def _enable_capability(self, monkeypatch: pytest.MonkeyPatch, supported: bool) -> None:
         from anki_miner.services import youtube_fetcher as yf
 
-        monkeypatch.setattr(yf, "_ytdlp_supports_remote_components", lambda: supported)
+        monkeypatch.setattr(yf, "_ytdlp_supports_remote_components", lambda _path: supported)
 
     def test_probe_adds_remote_components(
         self, service: YouTubeFetcherService, monkeypatch: pytest.MonkeyPatch
@@ -1566,7 +1567,7 @@ class TestRemoteComponentArgs:
         yf._ytdlp_supports_remote_components.cache_clear()
         help_text = "Usage: yt-dlp [OPTIONS] URL\n  --remote-components COMPONENT  ...\n"
         with patch("subprocess.run", return_value=_fake_run(0, help_text)):
-            assert yf._ytdlp_supports_remote_components() is True
+            assert yf._ytdlp_supports_remote_components("yt-dlp") is True
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_false_when_flag_absent(self) -> None:
@@ -1574,7 +1575,7 @@ class TestRemoteComponentArgs:
 
         yf._ytdlp_supports_remote_components.cache_clear()
         with patch("subprocess.run", return_value=_fake_run(0, "Usage: yt-dlp [OPTIONS] URL\n  --version\n")):
-            assert yf._ytdlp_supports_remote_components() is False
+            assert yf._ytdlp_supports_remote_components("yt-dlp") is False
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_false_when_ytdlp_missing(self) -> None:
@@ -1582,7 +1583,7 @@ class TestRemoteComponentArgs:
 
         yf._ytdlp_supports_remote_components.cache_clear()
         with patch("subprocess.run", side_effect=FileNotFoundError):
-            assert yf._ytdlp_supports_remote_components() is False
+            assert yf._ytdlp_supports_remote_components("yt-dlp") is False
 
 
 # ---------------------------------------------------------------------------
@@ -1947,3 +1948,68 @@ class TestNoWindowSpawn:
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
         assert captured["kwargs"].get("creationflags") == 0x424242
+
+
+# ---------------------------------------------------------------------------
+# yt-dlp resolver integration + YtdlpNotFoundError
+# ---------------------------------------------------------------------------
+
+
+class TestYtdlpResolverIntegration:
+    """The fetcher resolves the yt-dlp binary via ytdlp_resolver."""
+
+    def test_default_command_uses_bare_literal(self, service: YouTubeFetcherService) -> None:
+        """Under the default test config, cmd[0] is the bare literal 'yt-dlp'."""
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            service.probe_metadata("https://youtu.be/abc123")
+        assert mrun.call_args.args[0][0] == "yt-dlp"
+
+    def test_resolved_path_flows_into_probe_metadata(self, yt_config: AnkiMinerConfig, tmp_path: Path) -> None:
+        binary = tmp_path / "managed-yt-dlp"
+        binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
+        cfg = replace(yt_config, ytdlp_location=binary)
+        svc = YouTubeFetcherService(cfg)
+        payload = _make_metadata()
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+            svc.probe_metadata("https://youtu.be/abc123")
+        assert mrun.call_args.args[0][0] == str(binary)
+
+    def test_resolved_path_flows_into_fetch_cmd(self, yt_config: AnkiMinerConfig, tmp_path: Path) -> None:
+        binary = tmp_path / "managed-yt-dlp"
+        binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
+        cfg = replace(yt_config, ytdlp_location=binary)
+        svc = YouTubeFetcherService(cfg)
+        cmd = svc._build_fetch_cmd("https://youtu.be/abc123", tmp_path, "manual_only")
+        assert cmd[0] == str(binary)
+
+
+class TestYtdlpNotFound:
+    """FileNotFoundError from yt-dlp must surface as YtdlpNotFoundError."""
+
+    def test_probe_metadata_missing_binary(self, service: YouTubeFetcherService) -> None:
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError()),
+            pytest.raises(YtdlpNotFoundError, match="Update yt-dlp now"),
+        ):
+            service.probe_metadata("https://youtu.be/abc123")
+
+    def test_probe_playlist_missing_binary(self, service: YouTubeFetcherService) -> None:
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError()),
+            pytest.raises(YtdlpNotFoundError, match="Update yt-dlp now"),
+        ):
+            service.probe_playlist("https://youtu.be/abc123", limit=5)
+
+    def test_fetch_video_missing_binary(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", side_effect=FileNotFoundError()),
+            pytest.raises(YtdlpNotFoundError, match="Update yt-dlp now"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_ytdlp_not_found_is_youtube_fetch_error(self) -> None:
+        assert issubclass(YtdlpNotFoundError, YouTubeFetchError)

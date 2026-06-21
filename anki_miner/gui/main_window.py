@@ -89,6 +89,7 @@ class MainWindow(QMainWindow):
         self.background_tasks.validation_result.connect(self._on_validation_finished)
         self.background_tasks.validation_error.connect(self._on_validation_error)
         self.background_tasks.update_check_result.connect(self._on_update_check_result)
+        self.background_tasks.ytdlp_update_result.connect(self._on_ytdlp_update_result)
         self.background_tasks.jmdict_migration_finished.connect(self._on_jmdict_migration_finished)
 
         # Config-bound services (validation + the AnkiService shared across undo
@@ -121,6 +122,11 @@ class MainWindow(QMainWindow):
 
         # One-time JMdict XML → SQLite migration (background)
         self._maybe_migrate_jmdict()
+
+        # yt-dlp background self-update (throttled, deferred so the window paints
+        # first). Silent on the auto path — no dialog (see _on_ytdlp_update_result).
+        if self.config.auto_update_ytdlp:
+            QTimer.singleShot(0, lambda: self.background_tasks.start_ytdlp_update(self.config, force=False))
 
         # Post-update confirmation: if last_known_version differs from the
         # currently running __version__, show a one-shot info dialog. Save the
@@ -233,6 +239,10 @@ class MainWindow(QMainWindow):
         resources_action = tools_menu.addAction(self.tr("Download Recommended Resources..."))
         assert resources_action is not None
         resources_action.triggered.connect(self._download_recommended_resources)
+
+        setup_wizard_action = tools_menu.addAction(self.tr("Setup Wizard..."))
+        assert setup_wizard_action is not None
+        setup_wizard_action.triggered.connect(self._run_setup_wizard_tool)
 
         # Help menu
         help_menu = menu_bar.addMenu(self.tr("&Help"))
@@ -434,44 +444,48 @@ class MainWindow(QMainWindow):
             # to all tabs incl. Settings, and persists to disk.
             self.update_config(new_config)
 
-    def _maybe_offer_first_run_setup(self) -> None:
-        """Offer the recommended-resources download on first launch; persist flag.
+    def _run_setup_wizard_tool(self) -> None:
+        """Tools-menu handler: re-run the guided setup wizard (re-runnable).
 
-        Mirrors ``_maybe_create_shortcut_on_first_run``: set-up users (who already
-        have frequency + pitch files) are never nagged — we just persist the flag
-        and return. Fresh installs see the Welcome dialog; if they choose to
-        download, the resulting config is folded in. In every branch the
-        first_run_setup_done flag is set and persisted exactly once.
+        Unlike the first-run offer, this NEVER touches ``first_run_setup_done`` —
+        it just applies the wizard's returned config via ``update_config`` so
+        deck/note-type/fields/resources propagate and services rebuild.
         """
-        from anki_miner.gui.utils.resource_setup import should_offer_first_run_setup
-        from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
-        from anki_miner.gui.widgets.dialogs.welcome_dialog import WelcomeDialog
+        from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard
+
+        new_config = run_setup_wizard(self, self.config)
+        if new_config is not None:
+            self.update_config(new_config)
+
+    def _maybe_offer_first_run_setup(self) -> None:
+        """Offer the guided setup wizard on first launch; persist the flag.
+
+        Broadened (Task 3): the wizard is offered whenever the run hasn't been
+        completed (``not first_run_setup_done``) — no longer gated on freq/pitch
+        file presence, since the wizard's Resources step covers those. The
+        wizard's returned (possibly partial) config is folded in via
+        ``update_config``. The ``finally`` guarantees ``first_run_setup_done`` is
+        set even if the wizard raises, so it never re-fires on the next launch.
+        """
+        from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard
 
         # Re-entrancy / idempotency guard: never run twice, and never re-enter if
         # the 0ms timer fires inside a nested modal loop. Set before any work so a
-        # re-entrant fire during dialog.exec() bails out immediately.
+        # re-entrant fire during the wizard's exec() bails out immediately.
         if self._first_run_setup_handled:
             return
         self._first_run_setup_handled = True
 
-        if not should_offer_first_run_setup(self.config):
-            self.update_config(replace(self.config, first_run_setup_done=True))
-            return
-
         config = self.config
         try:
-            dialog = WelcomeDialog(self)
-            if dialog.exec() == WelcomeDialog.DialogCode.Accepted:
-                downloaded = run_resource_download(self, config)
-                if downloaded is not None:
-                    config = downloaded
+            returned = run_setup_wizard(self, config)
+            if returned is not None:
+                config = returned
         finally:
-            # Persist once, combining any downloaded config with the flag so we
-            # don't double-save or clobber the resource mutations. The finally
-            # guarantees the flag is set even if the dialog/download raises, so
-            # the Welcome dialog never re-fires on the next launch. `config` is
-            # the post-download config when a download succeeded, else the
-            # original — so the flag lands on the right one.
+            # Persist once, combining any wizard mutations with the flag so we
+            # don't double-save or clobber them. The finally guarantees the flag
+            # is set even if the wizard raises, so it never re-fires. `config` is
+            # the wizard's returned config when it completed, else the original.
             self.update_config(replace(config, first_run_setup_done=True))
 
     def _show_about(self) -> None:
@@ -843,6 +857,20 @@ class MainWindow(QMainWindow):
         else:
             self._update_banner.update_info(info)
             self._update_banner.setVisible(True)
+
+    def _on_ytdlp_update_result(self, result: object) -> None:
+        """Handle a yt-dlp background-update result.
+
+        Auto path is no-nag: log always; on ``installed`` show a brief status-bar
+        line. No dialog here — the manual path's dialog lives in SettingsTab
+        (:meth:`SettingsTab.set_ytdlp_status_from_result`), driven off the same
+        signal but gated on a user-initiated click.
+        """
+        action = getattr(result, "action", "")
+        message = getattr(result, "message", "") or ""
+        logger.info("yt-dlp update result: action=%s %s", action, message)
+        if action == "installed" and message:
+            self.status_bar.showMessage(message, 5000)
 
     def _on_skip_update_requested(self, version: str) -> None:
         """Persist the skipped version and hide the banner.

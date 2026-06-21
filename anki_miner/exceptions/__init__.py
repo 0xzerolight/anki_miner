@@ -10,6 +10,7 @@ from .youtube import (
     FfmpegNotFoundError,
     VideoTooLongError,
     YouTubeFetchError,
+    YtdlpNotFoundError,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "FfmpegNotFoundError",
     "VideoTooLongError",
     "YouTubeFetchError",
+    "YtdlpNotFoundError",
 ]
