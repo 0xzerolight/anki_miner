@@ -21,6 +21,7 @@ from unittest.mock import MagicMock
 
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
+from anki_miner.gui.workers.fetch_notetypes_worker import FetchNotetypesWorker
 from anki_miner.gui.workers.update_worker import UpdateWorkerThread
 from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
 
@@ -188,6 +189,56 @@ def test_fetch_decks_uses_its_error_prefix():
     worker.run()
 
     assert errors.calls == ["Error fetching deck names: connection refused"]
+
+
+# ===========================================================================
+# FetchNotetypesWorker — factory-specific payload over SingleCallWorker
+# ===========================================================================
+
+
+def test_fetch_notetypes_factory_returns_single_call_worker():
+    worker = FetchNotetypesWorker(MagicMock())
+    assert isinstance(worker, SingleCallWorker)
+
+
+def test_fetch_notetypes_calls_get_model_names_and_emits():
+    service = MagicMock()
+    service.get_model_names.return_value = ["Basic", "Lapis"]
+    worker = FetchNotetypesWorker(service)
+    results = _Capture()
+    worker.result_ready.connect(results)
+
+    worker.run()
+
+    service.get_model_names.assert_called_once_with()
+    assert results.calls == [["Basic", "Lapis"]]
+
+
+def test_fetch_notetypes_empty_list_emitted_not_error():
+    service = MagicMock()
+    service.get_model_names.return_value = []
+    worker = FetchNotetypesWorker(service)
+    results = _Capture()
+    errors = _Capture()
+    worker.result_ready.connect(results)
+    worker.error.connect(errors)
+
+    worker.run()
+
+    assert results.calls == [[]]
+    assert errors.calls == []
+
+
+def test_fetch_notetypes_uses_its_error_prefix():
+    service = MagicMock()
+    service.get_model_names.side_effect = RuntimeError("connection refused")
+    worker = FetchNotetypesWorker(service)
+    errors = _Capture()
+    worker.error.connect(errors)
+
+    worker.run()
+
+    assert errors.calls == ["Error fetching note type names: connection refused"]
 
 
 # ===========================================================================
