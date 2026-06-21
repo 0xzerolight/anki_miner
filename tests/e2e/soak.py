@@ -904,7 +904,7 @@ def run_inprocess_soak(
         gateway = _maybe_gateway(e2e, preview=preview)
         # ONE driver reused across every session (leak detection depends on it).
         # Full-window builds a real MainWindow (with the episode tab mounted +
-        # ResultsDialog/WordPreviewDialog/WelcomeDialog/curation patched); the
+        # ResultsDialog/WordPreviewDialog/run_setup_wizard/curation patched); the
         # default path drives the bare tab. AppDriver holds the dialog/responder
         # patches open for its lifetime, so the responder used per session by
         # run_one_session simply re-patches curation (a harmless re-entry).
