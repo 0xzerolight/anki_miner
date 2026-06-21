@@ -11,6 +11,7 @@ from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.card_styling import (
     apply_managed_block,
     build_managed_block,
+    detect_applied_preset,
     strip_managed_block,
 )
 
@@ -76,3 +77,41 @@ class StylingWorker(CancellableWorker):
             logger.exception("StylingWorker unhandled exception")
             if not self.check_cancelled():
                 self.error.emit(f"Styling update failed: {e}")
+
+
+class StylingProbeWorker(CancellableWorker):
+    """Read-only probe: reports which preset (if any) is live on the note type.
+
+    Reads the note type's current CSS off the main thread and emits what's
+    actually applied — the basis for the Settings status line and the one-time
+    migration reseed. Pure read: never writes. ``AnkiConnectionError`` (Anki
+    down, note type missing) flows out via the inherited ``error`` signal so the
+    caller can show an "Anki offline" status and defer.
+    """
+
+    # (present, preset_id): present=False → no managed block (Off); present=True
+    # with preset_id="" → a legacy block whose preset id wasn't recorded.
+    result_ready = pyqtSignal(bool, str)
+
+    def __init__(self, service: AnkiService, *, note_type: str, parent=None):
+        super().__init__(parent)
+        self.service = service
+        self.note_type = note_type
+
+    def run(self) -> None:
+        try:
+            if self.check_cancelled():
+                return
+
+            existing = self.service.get_model_styling(self.note_type)
+            applied = detect_applied_preset(existing)
+
+            if not self.check_cancelled():
+                self.result_ready.emit(applied is not None, applied or "")
+        except AnkiConnectionError as e:
+            if not self.check_cancelled():
+                self.error.emit(str(e))
+        except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+            logger.exception("StylingProbeWorker unhandled exception")
+            if not self.check_cancelled():
+                self.error.emit(f"Styling probe failed: {e}")
