@@ -76,8 +76,13 @@ class SubtitlePlayerWidget(QWidget):
 
         # AV1 fallback UI — hidden by default; shown when the watchdog fires on an
         # undecodable AV1 source (GPU can't hardware-decode AV1 on this machine).
+        # The player is left running, so audio + subtitle overlay keep playing for
+        # sync checking; only the video frame is unavailable.
         self._av1_notice_label = QLabel(
-            self.tr("This video uses AV1, which your system can't decode for in-app preview.")
+            self.tr(
+                "This video uses AV1, which your system can't decode for in-app preview. "
+                "Audio and subtitles still play."
+            )
         )
         self._av1_notice_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._av1_notice_label.setWordWrap(True)
@@ -334,10 +339,10 @@ class SubtitlePlayerWidget(QWidget):
         when a frame is successfully decoded.
 
         Recovery: if the fallback notice is already showing (slow software decode
-        that produced its first frame only after the 2 s watchdog fired and
-        stopped the player), undo the fallback — hide the notice, restore the
-        video widget, and resume playback so the preview plays rather than
-        staying stuck on the notice.
+        that produced its first frame only after the 2 s watchdog fired), undo the
+        fallback — hide the notice, restore the video widget, and resume playback so
+        the preview shows video rather than staying on the audio-only notice.
+        ``play()`` is a no-op if audio is already playing and resumes it if paused.
         """
         self._got_video_frame = True
         self._av1_watchdog.stop()
@@ -399,13 +404,13 @@ class SubtitlePlayerWidget(QWidget):
 
         If ``_got_video_frame`` is still False when this fires, the AV1 video
         could not be decoded (no hardware decoder available on this machine).
-        The player is stopped and the fallback notice is shown in place of the
-        video widget.
+        The video widget is hidden and the fallback notice shown in its place, but
+        the player is left running so audio keeps playing (or stays playable) and
+        the subtitle overlay keeps updating from ``positionChanged`` — letting the
+        user verify audio/subtitle sync even without a video preview.
         """
         if self._is_av1 and not self._got_video_frame:
-            logger.info("AV1 watchdog fired — no decoded frame within 2 s; showing AV1 fallback notice")
-            if self.player is not None:
-                self.player.stop()
+            logger.info("AV1 watchdog fired — no decoded frame within 2 s; hiding video, keeping audio/subtitles")
             self.video_widget.setVisible(False)
             self._av1_notice_label.setVisible(True)
 
