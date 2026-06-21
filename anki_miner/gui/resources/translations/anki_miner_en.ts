@@ -144,11 +144,47 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Add Deck</source>
+        <source>Card styling will sync once Anki is reachable.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Cannot build AnkiService: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enter a note type name before styling can sync.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Syncing card styling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't reach Anki — card styling will sync when it's back. (%1)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki offline — card styling state will sync when reachable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Off — Anki Miner isn't styling this note type.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Live in Anki: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki offline — styling will be removed when reachable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki offline — “%1” will apply when reachable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Deck</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -378,7 +414,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>"Apply to Note Type" writes a managed CSS block via AnkiConnect (never touches your own CSS; "Remove" reverts cleanly). Custom CSS is appended after the selected preset.</source>
+        <source>Choose how mined cards look, then click Save Settings — Anki Miner writes a managed CSS block into the note type via AnkiConnect (your own CSS is never touched). “Off” removes it; “Custom CSS only” applies just your CSS below.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -386,7 +422,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Pick a bundled preset; your custom CSS below is appended after it.</source>
+        <source>Applied to the note type on Save. Your custom CSS below is appended after the preset.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -395,22 +431,6 @@
     </message>
     <message>
         <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Apply to Note Type</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Write the managed CSS block into the note type via AnkiConnect</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove Anki Miner Styles</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Strip Anki Miner's managed CSS block from the note type</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -470,11 +490,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Applying styles to note type...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Removing styles from note type...</source>
+        <source>Not applied yet — Save Settings to sync to Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
