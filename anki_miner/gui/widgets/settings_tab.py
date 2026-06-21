@@ -88,6 +88,10 @@ class SettingsTab(QWidget):
             "last_known_version",
             "first_run_shortcut_done",
             "first_run_setup_done",
+            # Styling-sync state flag, written by the reconcile flow — never a
+            # panel field, so a migrated-only change must not force a panel reload
+            # (which would clobber unsaved edits, OVH-007).
+            "card_style_migrated",
         }
     )
 
@@ -132,6 +136,7 @@ class SettingsTab(QWidget):
             anki_panel=self.anki_panel,
             filtering_panel=self.filtering_panel,
             get_config=lambda: self.config,
+            persist_styling=self._persist_styling_state,
         )
         # Ordered list of panels that participate in the Save round-trip.
         # _load_config calls load_from_config on each; _on_save_clicked folds
@@ -231,8 +236,6 @@ class SettingsTab(QWidget):
         self.anki_panel.notetype_sync_requested.connect(self.validation_requested.emit)
         self.anki_panel.test_connection_requested.connect(self.validation_requested.emit)
         self.anki_panel.fetch_fields_requested.connect(self._anki_probe.fetch_fields)
-        self.anki_panel.apply_styling_requested.connect(self._anki_probe.apply_styling)
-        self.anki_panel.remove_styling_requested.connect(self._anki_probe.remove_styling)
 
         # Dictionary panel signals — wire Add/Reimport to the import flow
         # controller, which owns the worker dialogs (T-66).
@@ -540,6 +543,11 @@ class SettingsTab(QWidget):
         self.config_changed.emit(new_config)
         self._flash_save_status(self.tr("✓ Saved"))
 
+        # Auto-sync card styling into the note type (Issue #44). Runs after the
+        # config is persisted so it works against the just-saved note type; it
+        # never blocks the save and defers gracefully when Anki is unreachable.
+        self._anki_probe.sync_styling()
+
     def _flash_save_status(self, text: str) -> None:
         """Show a transient, non-modal confirmation beside the Save button.
 
@@ -715,6 +723,28 @@ class SettingsTab(QWidget):
         new_config = replace(self.config, dictionary_chain=new_chain)
         self.config = new_config
         self.config_changed.emit(new_config)
+
+    def _persist_styling_state(self, preset: str, migrated: bool) -> None:
+        """Persist a card-styling reseed/sync outcome (Issue #44).
+
+        Called by :class:`AnkiProbeController` after the one-time migration reseed
+        or a confirmed sync, so the dropdown selection and the ``card_style_migrated``
+        flag survive a relaunch. Narrow persist (like the chain mutations) — not
+        the full Save pipeline — so it never trips the unrelated Save validations.
+        """
+        new_config = replace(self.config, card_style_preset=preset, card_style_migrated=migrated)
+        self.config = new_config
+        self.config_changed.emit(new_config)
+
+    def notify_anki_connected(self) -> None:
+        """Reconcile card styling now that AnkiConnect is reachable (Issue #44).
+
+        Called by ``MainWindow`` on a successful AnkiConnect validation (startup
+        auto-check or Test Connection), the natural "Anki is up" signal. Drives
+        the read-only probe → one-time migration reseed → deferred-change sync →
+        live status refresh.
+        """
+        self._anki_probe.reconcile_styling()
 
     def _persist_audio_chain_change(self, new_chain: tuple[AudioSourceEntry, ...]) -> None:
         """Save an audio chain mutation to disk and notify listeners.
