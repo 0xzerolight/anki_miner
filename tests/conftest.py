@@ -186,6 +186,22 @@ def _drain_qt_deletes():
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
 
 
+@pytest.fixture(autouse=True)
+def _no_real_ytdlp_autoupdate(monkeypatch):
+    """Stop real-MainWindow tests spawning the live yt-dlp self-update thread.
+
+    MainWindow.__init__ schedules a ``singleShot(0)`` that builds a real
+    YtdlpUpdateWorker QThread running a blocking ``yt-dlp --version`` subprocess.
+    The autouse ``_drain_qt_deletes`` flush fires that queued lambda, then a later
+    flush destroys the still-running parented QThread mid-subprocess -> SIGABRT.
+    No-op the trigger so no unit test ever spawns it. The worker's own tests drive
+    it directly (stub updater + worker.wait()) and are unaffected.
+    """
+    from anki_miner.gui.main_window import MainWindow
+
+    monkeypatch.setattr(MainWindow, "_maybe_start_ytdlp_update", lambda self: None, raising=False)
+
+
 @pytest.fixture
 def temp_dir(tmp_path):
     """Provide a temporary directory for test files."""
