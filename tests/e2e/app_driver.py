@@ -16,8 +16,8 @@ Why ``MainWindow`` needs isolating
 the isolated test home) and runs heavy, partly-blocking/networked startup:
 
 * an update check (gated on ``config.check_for_updates``),
-* a first-run desktop-shortcut + recommended-resources offer (gated on the
-  ``first_run_*_done`` flags; the latter pops a ``WelcomeDialog``),
+* a first-run desktop-shortcut + guided setup offer (gated on the
+  ``first_run_*_done`` flags; the latter launches the Setup Wizard),
 * a post-update info dialog (gated on ``last_known_version`` differing), and
 * an UNCONDITIONAL startup system-validation worker (a ``QThread`` that hits
   AnkiConnect — unreachable in the offscreen harness, and whose ``finished``
@@ -28,7 +28,7 @@ into the test home (the harness mining config plus ``check_for_updates=False`` a
 both ``first_run_*_done=True`` and ``last_known_version`` pinned to the running
 version), AND patches ``BackgroundTaskController.start_validation`` to a no-op for
 the window's lifetime so the startup validation thread never spawns. The post-run
-``ResultsDialog`` / first-run ``WelcomeDialog`` / curation modal are all neutralised
+``ResultsDialog`` / first-run ``run_setup_wizard`` / curation modal are all neutralised
 by an :class:`~tests.e2e.curation.AutoCurationResponder` held open in
 ``full_window=True`` mode. These patches/responder are entered on construction and
 exited on :meth:`teardown` (and therefore :meth:`dispose`, which calls it).

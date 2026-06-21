@@ -140,17 +140,17 @@ def test_exit_restores_on_exception(qapp, qtbot):
 
 
 def test_full_window_patches_and_restores_extra_dialogs(qapp, qtbot):
-    """full_window=True also patches ResultsDialog + WelcomeDialog, then restores."""
+    """full_window=True also patches ResultsDialog + run_setup_wizard, then restores."""
     import anki_miner.gui.main_window as main_window
-    import anki_miner.gui.widgets.dialogs.welcome_dialog as welcome
+    import anki_miner.gui.widgets.dialogs.setup_wizard as setup_wizard
 
     orig_results = main_window.ResultsDialog
-    orig_welcome = welcome.WelcomeDialog
+    orig_wizard = setup_wizard.run_setup_wizard
     with AutoCurationResponder(policy="all", full_window=True):
         assert main_window.ResultsDialog is not orig_results
-        assert welcome.WelcomeDialog is not orig_welcome
+        assert setup_wizard.run_setup_wizard is not orig_wizard
     assert main_window.ResultsDialog is orig_results
-    assert welcome.WelcomeDialog is orig_welcome
+    assert setup_wizard.run_setup_wizard is orig_wizard
 
 
 def test_dialogcode_accepted_is_real_enum(qapp, qtbot):

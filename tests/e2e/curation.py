@@ -39,10 +39,10 @@ from tests.e2e.config import validate_curation_policy
 # (not their definition sites — see the module docstring).
 _CURATION_TARGET = "anki_miner.gui.widgets._mining_tab_base.WordCurationDialog"
 _RESULTS_TARGET = "anki_miner.gui.main_window.ResultsDialog"
-# WelcomeDialog is imported function-locally inside
+# run_setup_wizard is imported function-locally inside
 # MainWindow._maybe_offer_first_run_setup, so the only stable target is its
-# definition module.
-_WELCOME_TARGET = "anki_miner.gui.widgets.dialogs.welcome_dialog.WelcomeDialog"
+# definition module (it replaced the retired WelcomeDialog flow).
+_SETUP_WIZARD_TARGET = "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard"
 # WordPreviewDialog is imported at module top into main_window and exec()'d
 # modally by _on_word_preview (the preview sibling of _on_processing_result), so
 # a full-window PREVIEW run would block on it. Patch the name as imported there.
@@ -114,29 +114,15 @@ def _make_fake_results_dialog() -> type:
     return _FakeResultsDialog
 
 
-def _make_fake_welcome_dialog() -> type:
-    """Build a no-op ``WelcomeDialog`` fake that auto-skips the download.
+def _fake_run_setup_wizard(parent: Any, config: Any) -> Any:
+    """No-op stand-in for ``run_setup_wizard`` that auto-skips the first-run flow.
 
-    ``MainWindow._maybe_offer_first_run_setup`` checks ``dialog.exec() ==
-    WelcomeDialog.DialogCode.Accepted`` and only triggers the resource download
-    on Accepted. The fake returns ``Rejected`` so the first-run offer is skipped
-    (no network), then the caller persists ``first_run_setup_done`` as usual.
+    ``MainWindow._maybe_offer_first_run_setup`` calls ``run_setup_wizard(self,
+    config)`` and folds its return into the config. Returning the config unchanged
+    is a zero-touch skip (no Qt modal, no AnkiConnect, no network), after which
+    the caller persists ``first_run_setup_done`` as usual.
     """
-    from anki_miner.gui.widgets.dialogs.welcome_dialog import WelcomeDialog as _Real
-
-    real_dialog_code = _Real.DialogCode
-
-    class _FakeWelcomeDialog:
-        DialogCode = real_dialog_code
-
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            pass
-
-        def exec(self) -> Any:
-            # Rejected ⇒ "skip / set up manually" ⇒ no download is attempted.
-            return real_dialog_code.Rejected
-
-    return _FakeWelcomeDialog
+    return config
 
 
 def _make_fake_word_preview_dialog() -> type:
@@ -172,8 +158,8 @@ class AutoCurationResponder:
             selection — completed with 0 cards, not a cancel).
         first_n: Cap used when ``policy == "first_n"``.
         full_window: When True, also patch the post-run ``ResultsDialog``, the
-            preview ``WordPreviewDialog``, and the first-run ``WelcomeDialog`` so
-            a full ``MainWindow``-driven run does not block on any of them.
+            preview ``WordPreviewDialog``, and the first-run ``run_setup_wizard``
+            so a full ``MainWindow``-driven run does not block on any of them.
 
     Attributes:
         offered: One entry per dialog opened, each the list of words that dialog
@@ -204,7 +190,7 @@ class AutoCurationResponder:
             stack.enter_context(patch(_CURATION_TARGET, _make_fake_curation_dialog(self)))
             if self.full_window:
                 stack.enter_context(patch(_RESULTS_TARGET, _make_fake_results_dialog()))
-                stack.enter_context(patch(_WELCOME_TARGET, _make_fake_welcome_dialog()))
+                stack.enter_context(patch(_SETUP_WIZARD_TARGET, _fake_run_setup_wizard))
                 stack.enter_context(patch(_WORD_PREVIEW_TARGET, _make_fake_word_preview_dialog()))
         except Exception:
             # If a later patch fails, unwind the ones already started.
