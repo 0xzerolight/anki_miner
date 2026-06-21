@@ -103,7 +103,11 @@ def detect_applied_preset(existing_css: str) -> str | None:
     block = _BLOCK_RE.search(existing_css)
     if block is None:
         return None
-    match = _PRESET_RE.search(block.group(0))
+    # Search only the BEGIN marker line, not the whole block: user custom CSS in
+    # the body can contain the literal ``preset=`` (e.g. ``content:"preset=x"``)
+    # and would otherwise be misdetected as the recorded preset id.
+    begin = re.search(_BEGIN_RE, block.group(0))
+    match = _PRESET_RE.search(begin.group(0)) if begin else None
     return match.group(1) if match else ""
 
 
