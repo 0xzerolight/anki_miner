@@ -15,6 +15,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 
+## [2.6.6] - 2026-06-21
+
+### Added
+- **Guided setup wizard.** First launch now walks you through connecting to Anki, choosing a note type and field mapping, and fetching the recommended dictionary/frequency/pitch resources — replacing the old single-screen welcome dialog. Re-runnable anytime from Tools → Setup Wizard.
+- **Japanese UI.** A complete Japanese (`ja`) translation, selectable in Settings → language picker (restart to apply). English stays the default; the translation catalog is drift-guarded in CI.
+- **yt-dlp auto-update.** The YouTube downloader can self-update in the background so mining keeps working when YouTube changes, with a manual "Update yt-dlp" button and a configurable binary location for users who supply their own.
+- **Card-styling "Off" preset.** A new Off option leaves your note template untouched. Styling now applies automatically on Save with an inline status line instead of a separate step.
+- **Join Discord button** in the menu-bar corner for the community server.
+
+### Changed
+- **Media-agnostic wording.** "Anime" is renamed to "Video" across the UI, and `*arr`-style metadata tags are stripped from the card Source label — mining has always worked on any video, and the wording now reflects that.
+- **Card styling defaults to Off.** Existing configs are migrated once; nothing is rewritten on your cards unless you pick a preset.
+
+### Fixed
+- **AV1 preview fallback.** When the preview pane can't decode an AV1 video, it now plays the audio and shows subtitles instead of a dead player. Mining is unaffected — screenshots still come from FFmpeg.
+- **Nord theme input-field borders are visible again** (#85).
+- **Custom AnkiConnect port honored in setup.** The setup wizard reads the AnkiConnect URL from config off the UI thread, so a non-default port connects correctly.
+
+
 ## [2.6.5] - 2026-06-19
 
 ### Added
