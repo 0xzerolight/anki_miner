@@ -197,3 +197,92 @@ def test_populate_from_field_list_uses_field_keywords(qtbot):
     assert fields["definition"] == "MainDefinition"
     assert fields["glossary"] == "Glossary"
     assert fields["source"] == "Source"
+
+
+# ---------------------------------------------------------------------------
+# Task 3: pure auto_map_fields helper (Qt-free)
+# ---------------------------------------------------------------------------
+
+
+def test_auto_map_fields_importable_and_returns_all_keys():
+    """auto_map_fields is a module-level pure function returning every key."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import (  # noqa: PLC0415
+        _FIELD_KEYWORDS,
+        auto_map_fields,
+    )
+
+    result = auto_map_fields([])
+    assert set(result.keys()) == set(_FIELD_KEYWORDS.keys())
+    # Nothing matched → every value is empty string.
+    assert all(v == "" for v in result.values())
+
+
+def test_auto_map_fields_matches_common_lapis_fields():
+    """The helper maps a typical Lapis-style field list exactly like the old inline logic."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields  # noqa: PLC0415
+
+    result = auto_map_fields(
+        [
+            "Expression",
+            "Sentence",
+            "MainDefinition",
+            "Glossary",
+            "Picture",
+            "SentenceAudio",
+            "ExpressionAudio",
+            "ExpressionFurigana",
+            "ExpressionReading",
+            "SentenceFurigana",
+            "SentenceReading",
+            "PitchPosition",
+            "PitchCategory",
+            "Frequency",
+            "Source",
+        ]
+    )
+    assert result["word"] == "Expression"
+    assert result["sentence"] == "Sentence"
+    assert result["definition"] == "MainDefinition"
+    assert result["glossary"] == "Glossary"
+    assert result["picture"] == "Picture"
+    assert result["audio"] == "SentenceAudio"
+    assert result["expression_audio"] == "ExpressionAudio"
+    assert result["source"] == "Source"
+
+
+def test_auto_map_fields_normalizes_spaces_and_underscores_case_insensitive():
+    """Matching strips spaces/underscores from the field name, case-insensitive.
+
+    The WHOLE normalized field name must equal a keyword (exact prior behavior):
+    "main_definition" → "maindefinition" matches; "pitch accent" → "pitchaccent"
+    matches; an unrelated prefix like "my expression" → "myexpression" does NOT.
+    """
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields  # noqa: PLC0415
+
+    result = auto_map_fields(["EXPRESSION", "main_definition", "Pitch Accent"])
+    assert result["word"] == "EXPRESSION"
+    assert result["definition"] == "main_definition"
+    assert result["pitch_position"] == "Pitch Accent"
+
+    # A field name that is not exactly a keyword (after normalization) must not match.
+    assert auto_map_fields(["my expression"])["word"] == ""
+
+
+def test_auto_map_fields_first_match_wins_per_key():
+    """First field that matches a key's keywords wins (loop order over field_names)."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields  # noqa: PLC0415
+
+    # Both "Expression" and "Vocab" match the word key; the first in the list wins.
+    result = auto_map_fields(["Expression", "Vocab"])
+    assert result["word"] == "Expression"
+    result2 = auto_map_fields(["Vocab", "Expression"])
+    assert result2["word"] == "Vocab"
+
+
+def test_auto_map_fields_does_not_hijack_sentence_audio_for_expression_audio():
+    """SentenceAudio maps to audio, ExpressionAudio to expression_audio (no cross-talk)."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields  # noqa: PLC0415
+
+    result = auto_map_fields(["SentenceAudio", "ExpressionAudio"])
+    assert result["audio"] == "SentenceAudio"
+    assert result["expression_audio"] == "ExpressionAudio"
