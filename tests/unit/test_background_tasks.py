@@ -193,3 +193,84 @@ class TestReleaseWorkerPreservesReplacedHandle:
         worker_b.deleteLater.assert_not_called()
         # A still gets its deleteLater (cleanup is unconditional).
         worker_a.deleteLater.assert_called_once()
+
+
+class _FakeYtdlpWorker(QObject):
+    """Fake yt-dlp worker with real, connectable result_ready/error/finished signals."""
+
+    finished = pyqtSignal()
+    result_ready = pyqtSignal(object)
+    error = pyqtSignal(str)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._running = False
+        self.deleteLater = MagicMock()  # type: ignore[method-assign]
+
+    def isRunning(self) -> bool:  # noqa: N802 (Qt naming)
+        return self._running
+
+    def start(self) -> None:
+        self._running = True
+
+    def emit_finished(self) -> None:
+        self._running = False
+        self.finished.emit()
+
+
+class TestStartYtdlpUpdate:
+    """start_ytdlp_update mirrors check_for_updates: guard, wire, start."""
+
+    def _patch(self, monkeypatch, worker, captured=None):
+        def _make_worker(updater, *, force, parent=None):
+            if captured is not None:
+                captured["force"] = force
+                captured["updater"] = updater
+            return worker
+
+        monkeypatch.setattr("anki_miner.gui.workers.ytdlp_update_worker.YtdlpUpdateWorker", _make_worker)
+        monkeypatch.setattr("anki_miner.services.ytdlp_updater.YtdlpUpdater", lambda config: MagicMock(name="updater"))
+
+    def test_starts_and_forwards_result(self, controller, qtbot, monkeypatch):
+        from anki_miner.config import AnkiMinerConfig
+
+        worker = _FakeYtdlpWorker()
+        captured: dict = {}
+        self._patch(monkeypatch, worker, captured)
+
+        forwarded: list = []
+        controller.ytdlp_update_result.connect(forwarded.append)
+
+        controller.start_ytdlp_update(AnkiMinerConfig(), force=True)
+
+        assert captured["force"] is True
+        assert controller.ytdlp_update_worker is worker
+
+        sentinel = object()
+        worker.result_ready.emit(sentinel)
+        assert forwarded == [sentinel]
+
+    def test_refused_while_running(self, controller, qtbot, monkeypatch):
+        from anki_miner.config import AnkiMinerConfig
+
+        worker_a = _FakeYtdlpWorker()
+        self._patch(monkeypatch, worker_a)
+
+        controller.start_ytdlp_update(AnkiMinerConfig(), force=False)
+        assert controller.ytdlp_update_worker is worker_a
+
+        # A second start while running must not replace the handle.
+        controller.start_ytdlp_update(AnkiMinerConfig(), force=False)
+        assert controller.ytdlp_update_worker is worker_a
+
+    def test_handle_nulled_after_finished(self, controller, qtbot, monkeypatch):
+        from anki_miner.config import AnkiMinerConfig
+
+        worker = _FakeYtdlpWorker()
+        self._patch(monkeypatch, worker)
+
+        controller.start_ytdlp_update(AnkiMinerConfig(), force=False)
+        worker.emit_finished()
+
+        assert controller.ytdlp_update_worker is None
+        worker.deleteLater.assert_called_once()
