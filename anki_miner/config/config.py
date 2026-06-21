@@ -216,17 +216,24 @@ class AnkiMinerConfig:
     # Card styling (Issue #44). anki_miner emits definition HTML with its own
     # class scheme (`.yomitan-glossary`, `gloss-sc-*`, `data-sc-*`), but ships no
     # CSS — the look depends on the note type's card-template CSS. These fields
-    # back the Settings → Card Styling section, which pushes a managed CSS block
-    # into the configured note type via AnkiConnect `updateModelStyling`. UI/
-    # persistence only here — nothing is applied automatically during mining; the
-    # explicit "Apply to note type" button triggers it. `card_style_preset` is a
-    # preset id (one of the `card_style_presets.PRESETS` ids — default /
-    # yomitan-classic / minimal / none) selecting which bundled preset's CSS fills
-    # the managed block. `custom_card_css` is the user's own CSS (Yomitan/Jitendex
-    # snippets work verbatim) appended after the preset. Distinct from the app-UI
-    # `theme` fields below.
-    card_style_preset: str = "default"
+    # back the Settings → Card Styling section, which auto-syncs a managed CSS
+    # block into the configured note type via AnkiConnect `updateModelStyling`
+    # whenever Settings are saved (no separate Apply/Remove buttons). The dropdown
+    # is the *desired* state; a status line reports what's actually live in Anki.
+    # `card_style_preset` is a preset id (one of the `card_style_presets.PRESETS`
+    # ids — off / default / yomitan-classic / minimal / none); `"off"` strips the
+    # managed block, `"none"` writes a block with only `custom_card_css`. Default
+    # is `"off"` so a fresh install never touches a note type without an explicit
+    # choice. `custom_card_css` (Yomitan/Jitendex snippets work verbatim) is
+    # appended after the preset. Distinct from the app-UI `theme` fields below.
+    #
+    # `card_style_migrated` gates the one-time, surprise-free reseed: on the first
+    # AnkiConnect-reachable run it reads the note type's managed block and sets the
+    # dropdown to match reality (block's preset, or Off when absent), discarding
+    # any stale pre-auto-sync selection. False until that reseed completes.
+    card_style_preset: str = "off"
     custom_card_css: str = ""
+    card_style_migrated: bool = False
 
     # Deduplication settings
     deduplicate_sentences: bool = True

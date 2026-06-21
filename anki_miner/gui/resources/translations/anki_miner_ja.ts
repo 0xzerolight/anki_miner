@@ -144,12 +144,48 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Add Deck</source>
-        <translation>デッキを追加</translation>
+        <source>Card styling will sync once Anki is reachable.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cannot build AnkiService: %1</source>
         <translation>AnkiService を構築できません: %1</translation>
+    </message>
+    <message>
+        <source>Enter a note type name before styling can sync.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Syncing card styling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't reach Anki — card styling will sync when it's back. (%1)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki offline — card styling state will sync when reachable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Off — Anki Miner isn't styling this note type.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Live in Anki: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki offline — styling will be removed when reachable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki offline — “%1” will apply when reachable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Deck</source>
+        <translation>デッキを追加</translation>
     </message>
     <message>
         <source>Could not fetch decks. Is Anki running with AnkiConnect?</source>
@@ -378,16 +414,16 @@
         <translation>カードのスタイル</translation>
     </message>
     <message>
-        <source>"Apply to Note Type" writes a managed CSS block via AnkiConnect (never touches your own CSS; "Remove" reverts cleanly). Custom CSS is appended after the selected preset.</source>
-        <translation>「ノートタイプに適用」は AnkiConnect 経由で管理対象の CSS ブロックを書き込みます（あなた自身の CSS には一切触れません。「削除」できれいに元へ戻せます）。カスタム CSS は選択したプリセットの後に追加されます。</translation>
+        <source>Choose how mined cards look, then click Save Settings — Anki Miner writes a managed CSS block into the note type via AnkiConnect (your own CSS is never touched). “Off” removes it; “Custom CSS only” applies just your CSS below.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Card style preset:</source>
         <translation>カードスタイルのプリセット:</translation>
     </message>
     <message>
-        <source>Pick a bundled preset; your custom CSS below is appended after it.</source>
-        <translation>同梱のプリセットを選択してください。下のカスタム CSS はその後に追加されます。</translation>
+        <source>Applied to the note type on Save. Your custom CSS below is appended after the preset.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Custom CSS:</source>
@@ -396,22 +432,6 @@
     <message>
         <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
         <translation>公開されている Yomitan/Jitendex のスニペットはそのまま使えます。古いエントリの data-sc-* フックを更新するには辞書を再インポートしてください。</translation>
-    </message>
-    <message>
-        <source>Apply to Note Type</source>
-        <translation>ノートタイプに適用</translation>
-    </message>
-    <message>
-        <source>Write the managed CSS block into the note type via AnkiConnect</source>
-        <translation>AnkiConnect 経由で管理対象の CSS ブロックをノートタイプに書き込みます</translation>
-    </message>
-    <message>
-        <source>Remove Anki Miner Styles</source>
-        <translation>Anki Miner のスタイルを削除</translation>
-    </message>
-    <message>
-        <source>Strip Anki Miner's managed CSS block from the note type</source>
-        <translation>ノートタイプから Anki Miner の管理対象 CSS ブロックを取り除きます</translation>
     </message>
     <message>
         <source>Syncing deck list...</source>
@@ -470,12 +490,8 @@
         <translation>ノートタイプが見つかりません</translation>
     </message>
     <message>
-        <source>Applying styles to note type...</source>
-        <translation>ノートタイプにスタイルを適用中...</translation>
-    </message>
-    <message>
-        <source>Removing styles from note type...</source>
-        <translation>ノートタイプからスタイルを削除中...</translation>
+        <source>Not applied yet — Save Settings to sync to Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Working...</source>
