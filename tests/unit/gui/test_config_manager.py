@@ -174,8 +174,10 @@ class TestCardStylingRoundTrip:
 
         loaded = GUIConfigManager.load_config()
 
-        assert loaded.card_style_preset == "default"
+        # New default is "off" (opt-in); the one-time reseed flag starts False.
+        assert loaded.card_style_preset == "off"
         assert loaded.custom_card_css == ""
+        assert loaded.card_style_migrated is False
 
     def test_legacy_boolean_migrates_to_preset_id(self, tmp_path, monkeypatch):
         """A pre-preset JSON with use_default_card_stylesheet=False maps to "none"."""
@@ -208,6 +210,27 @@ class TestCardStylingRoundTrip:
         # An already-present preset id is left untouched.
         existing = {"card_style_preset": "minimal", "use_default_card_stylesheet": True}
         assert GUIConfigManager._migrate_card_style_preset(existing)["card_style_preset"] == "minimal"
+
+    def test_migrate_card_style_preset_coerces_unknown_id_to_off(self):
+        """An unrecognised/corrupt preset id is coerced to "off" (never writes styling)."""
+        assert GUIConfigManager._migrate_card_style_preset({"card_style_preset": "bogus"})["card_style_preset"] == "off"
+        # Known ids — including "off" itself — pass through unchanged.
+        for valid in ("off", "default", "yomitan-classic", "minimal", "none"):
+            assert (
+                GUIConfigManager._migrate_card_style_preset({"card_style_preset": valid})["card_style_preset"] == valid
+            )
+
+    def test_save_and_load_preserves_migrated_flag(self, tmp_path, monkeypatch):
+        """card_style_migrated must round-trip so the reseed only runs once."""
+        cfg_file = tmp_path / "gui_config.json"
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        config = replace(create_default_config(), card_style_preset="minimal", card_style_migrated=True)
+        GUIConfigManager.save_config(config)
+
+        loaded = GUIConfigManager.load_config()
+        assert loaded.card_style_preset == "minimal"
+        assert loaded.card_style_migrated is True
 
 
 class TestDictsRootRoundTrip:
