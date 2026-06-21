@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt, QUrl
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -446,7 +446,10 @@ class ResourcesPage(QWizardPage):
 
         layout = QVBoxLayout(self)
 
-        blurb = QLabel(self.tr(RESOURCES_BLURB))
+        # RESOURCES_BLURB is registered under the "SetupWizard" context (module-level
+        # QT_TRANSLATE_NOOP), so look it up there rather than via self.tr(), which would
+        # query the "ResourcesPage" context and miss the translation.
+        blurb = QLabel(QCoreApplication.translate("SetupWizard", RESOURCES_BLURB))
         blurb.setWordWrap(True)
         layout.addWidget(blurb)
 
