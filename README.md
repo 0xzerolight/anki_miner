@@ -148,14 +148,6 @@ The pitch and frequency pickers accept a raw CSV/TSV or a Yomitan zip, auto-conv
 
 Proper-noun filtering uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html) (JMdict/EDICT project, EDRDG, CC BY-SA 4.0).
 
-## Recommended Note Type
-
-Anki Miner requires a Japanese mining note type with specific fields. The default expected type is **Lapis** — a community mining note type that includes Expression, Sentence, Reading, Definition, and related fields.
-
-- **Lapis**: download from [AnkiWeb #1566028](https://ankiweb.net/shared/info/1566028) (shared deck includes the note type).
-- Any mining note type works as long as the field names are mapped. Use **Settings → Anki → Auto-Map Fields from Note Type** to map automatically after selecting your note type, or configure field mappings manually in the same panel.
-- The Setup Wizard also walks through field mapping on first launch.
-
 ## Troubleshooting
 
 | Issue                    | Solution                                                                         |
