@@ -201,6 +201,7 @@ class _FakeSettingsTab(SettingsTab):
             anki_panel=MagicMock(),
             filtering_panel=MagicMock(),
             get_config=MagicMock(),
+            persist_styling=MagicMock(),
         )
         self._anki_probe._fetch_fields_worker = _FakeWorker(running=fields_running, wait_result=wait_result)
         self._anki_probe._fetch_decks_worker = _FakeWorker(running=decks_running, wait_result=wait_result)

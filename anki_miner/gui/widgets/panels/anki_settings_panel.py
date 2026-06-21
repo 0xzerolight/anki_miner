@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base import FormPanel, StatusBadge, make_label_fit_text
 from anki_miner.gui.widgets.enhanced import ModernButton
-from anki_miner.services.dictionary.card_style_presets import PRESETS
+from anki_miner.services.dictionary.card_style_presets import OFF_PRESET_ID, PRESETS
 
 
 class AnkiSettingsPanel(FormPanel):
@@ -42,8 +42,6 @@ class AnkiSettingsPanel(FormPanel):
     notetype_sync_requested = pyqtSignal()
     test_connection_requested = pyqtSignal()
     fetch_fields_requested = pyqtSignal()
-    apply_styling_requested = pyqtSignal()
-    remove_styling_requested = pyqtSignal()
 
     # Dynamically created by _add_labeled_field_with_button via setattr
     deck_input: QLineEdit
@@ -53,6 +51,10 @@ class AnkiSettingsPanel(FormPanel):
 
     def __init__(self, parent=None):
         """Initialize the Anki settings panel."""
+        # Set True when the user edits the styling preset/CSS this session. Lets
+        # the one-time migration reseed honor a deliberate in-session choice
+        # instead of overwriting it with the detected Anki state.
+        self._styling_user_touched = False
         super().__init__("Anki Configuration", parent=parent)
         self._setup_fields()
 
@@ -293,13 +295,16 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Stores the show/episode and timestamp the word came from. Blank = skip."),
         )
 
-        # Card Styling section (Issue #44)
+        # Card Styling section (Issue #44). The dropdown is the *desired* state;
+        # styling auto-syncs into the note type on Save (no Apply/Remove buttons).
+        # The status line below reports what's actually live in Anki.
         self.add_section(self.tr("Card Styling"))
 
         styling_helper = QLabel(
             self.tr(
-                '"Apply to Note Type" writes a managed CSS block via AnkiConnect (never touches your own CSS; '
-                '"Remove" reverts cleanly). Custom CSS is appended after the selected preset.'
+                "Choose how mined cards look, then click Save Settings — Anki Miner writes a managed "
+                "CSS block into the note type via AnkiConnect (your own CSS is never touched). "
+                "“Off” removes it; “Custom CSS only” applies just your CSS below."
             )
         )
         styling_helper.setObjectName("helper-text")
@@ -315,8 +320,9 @@ class AnkiSettingsPanel(FormPanel):
         for preset in PRESETS:
             self.card_style_preset_combo.addItem(preset.display_name, preset.id)
         self.card_style_preset_combo.setToolTip(
-            self.tr("Pick a bundled preset; your custom CSS below is appended after it.")
+            self.tr("Applied to the note type on Save. Your custom CSS below is appended after the preset.")
         )
+        self.card_style_preset_combo.currentIndexChanged.connect(self._on_styling_choice_changed)
         self.add_widget(self.card_style_preset_combo)
 
         css_label = QLabel(self.tr("Custom CSS:"))
@@ -341,23 +347,16 @@ class AnkiSettingsPanel(FormPanel):
         self.custom_css_edit.setFont(mono_font)
         self.custom_css_edit.setMinimumHeight(120)
         self.custom_css_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+        self.custom_css_edit.textChanged.connect(self._on_styling_choice_changed)
         self.add_widget(self.custom_css_edit)
 
-        styling_button_layout = QHBoxLayout()
-        styling_button_layout.addStretch()
-        self.apply_styling_button = ModernButton(self.tr("Apply to Note Type"), variant="primary")
-        self.apply_styling_button.setToolTip(self.tr("Write the managed CSS block into the note type via AnkiConnect"))
-        self.apply_styling_button.clicked.connect(self._on_apply_styling)
-        styling_button_layout.addWidget(self.apply_styling_button)
-        self.remove_styling_button = ModernButton(self.tr("Remove Anki Miner Styles"), variant="secondary")
-        self.remove_styling_button.setToolTip(self.tr("Strip Anki Miner's managed CSS block from the note type"))
-        self.remove_styling_button.clicked.connect(self._on_remove_styling)
-        styling_button_layout.addWidget(self.remove_styling_button)
-        self.add_layout(styling_button_layout)
-
+        # Reflects what's actually live in Anki (set by the sync/reconcile flow).
         self.styling_status = QLabel()
         self.styling_status.setObjectName("validation-status")
+        self.styling_status.setWordWrap(True)
         self.add_widget(self.styling_status)
+
+        self._update_custom_css_enabled()
 
     def _add_labeled_field_with_button(
         self,
@@ -621,19 +620,33 @@ class AnkiSettingsPanel(FormPanel):
         if index >= 0:
             self.pitch_category_format_combo.setCurrentIndex(index)
 
-    # === Card Styling (Issue #44) ===
-    def _on_apply_styling(self) -> None:
-        """Handle the Apply-to-note-type button click."""
-        self.set_styling_status(None, self.tr("Applying styles to note type..."))
-        self.apply_styling_requested.emit()
+    # === Card Styling (Issue #44 / auto-sync) ===
+    def _on_styling_choice_changed(self) -> None:
+        """React to a user edit of the preset / custom CSS.
 
-    def _on_remove_styling(self) -> None:
-        """Handle the Remove-styles button click."""
-        self.set_styling_status(None, self.tr("Removing styles from note type..."))
-        self.remove_styling_requested.emit()
+        Programmatic loads block signals (see :meth:`set_card_style_preset` /
+        :meth:`set_custom_css`), so this only fires for genuine user edits: it
+        flags the in-session choice, greys the CSS box when "Off" is picked, and
+        flashes a "Save to apply" hint so the desired-vs-live gap is never silent.
+        """
+        self._styling_user_touched = True
+        self._update_custom_css_enabled()
+        self.set_styling_status(None, self.tr("Not applied yet — Save Settings to sync to Anki."))
+
+    def _update_custom_css_enabled(self) -> None:
+        """Grey out the custom CSS box when styling is Off (text preserved)."""
+        self.custom_css_edit.setEnabled(self.get_card_style_preset() != OFF_PRESET_ID)
+
+    def is_styling_user_touched(self) -> bool:
+        """Whether the user edited the styling preset/CSS this session."""
+        return self._styling_user_touched
+
+    def reset_styling_user_touched(self) -> None:
+        """Clear the in-session styling-edit flag (after a sync/reseed settles it)."""
+        self._styling_user_touched = False
 
     def set_styling_status(self, ok: bool | None, message: str = "") -> None:
-        """Update the card-styling status line (None=working, True=ok, False=error)."""
+        """Update the card-styling status line (None=pending, True=ok, False=error)."""
         if ok is None:
             self.styling_status.setText(message or self.tr("Working..."))
             self.styling_status.setProperty("status", "checking")
@@ -648,31 +661,39 @@ class AnkiSettingsPanel(FormPanel):
             style.unpolish(self.styling_status)
             style.polish(self.styling_status)
 
-    def set_styling_buttons_enabled(self, enabled: bool) -> None:
-        """Enable/disable both styling action buttons (during an in-flight worker)."""
-        self.apply_styling_button.setEnabled(enabled)
-        self.remove_styling_button.setEnabled(enabled)
-
     def get_card_style_preset(self) -> str:
-        """Return the selected preset id (falls back to default)."""
+        """Return the selected preset id (falls back to "off")."""
         data = self.card_style_preset_combo.currentData()
-        return data if isinstance(data, str) and data else "default"
+        return data if isinstance(data, str) and data else OFF_PRESET_ID
 
     def set_card_style_preset(self, value: str) -> None:
-        """Select the preset combo by id, falling back to default."""
+        """Select the preset combo by id, falling back to "off".
+
+        Blocks the combo's change signal so a programmatic load/reseed never
+        registers as a user edit (which would set ``_styling_user_touched``).
+        """
         index = self.card_style_preset_combo.findData(value)
         if index < 0:
-            index = self.card_style_preset_combo.findData("default")
+            index = self.card_style_preset_combo.findData(OFF_PRESET_ID)
         if index >= 0:
-            self.card_style_preset_combo.setCurrentIndex(index)
+            blocked = self.card_style_preset_combo.blockSignals(True)
+            try:
+                self.card_style_preset_combo.setCurrentIndex(index)
+            finally:
+                self.card_style_preset_combo.blockSignals(blocked)
+        self._update_custom_css_enabled()
 
     def get_custom_css(self) -> str:
         """Return the user's custom CSS text."""
         return self.custom_css_edit.toPlainText()
 
     def set_custom_css(self, value: str) -> None:
-        """Set the custom CSS editor contents."""
-        self.custom_css_edit.setPlainText(value)
+        """Set the custom CSS editor contents (without marking a user edit)."""
+        blocked = self.custom_css_edit.blockSignals(True)
+        try:
+            self.custom_css_edit.setPlainText(value)
+        finally:
+            self.custom_css_edit.blockSignals(blocked)
 
     # === Simple field accessors (OVH-020) ===
 
@@ -728,6 +749,8 @@ class AnkiSettingsPanel(FormPanel):
         self.set_card_fields(config.anki_fields)
         self.set_card_style_preset(config.card_style_preset)
         self.set_custom_css(config.custom_card_css)
+        # A fresh load reflects persisted state, not a user edit.
+        self.reset_styling_user_touched()
         self.set_pitch_category_format(config.pitch_category_format)
 
     def contribute(self, config):
