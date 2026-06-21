@@ -405,9 +405,10 @@ class SubtitlePlayerWidget(QWidget):
         If ``_got_video_frame`` is still False when this fires, the AV1 video
         could not be decoded (no hardware decoder available on this machine).
         The video widget is hidden and the fallback notice shown in its place, but
-        the player is left running so audio keeps playing (or stays playable) and
-        the subtitle overlay keeps updating from ``positionChanged`` — letting the
-        user verify audio/subtitle sync even without a video preview.
+        the player is left running so audio stays playable (callers such as the
+        curation dialog keep it paused after seeking, so playback is on-demand, not
+        automatic) and the subtitle overlay keeps updating from ``positionChanged``
+        — letting the user verify audio/subtitle sync even without a video preview.
         """
         if self._is_av1 and not self._got_video_frame:
             logger.info("AV1 watchdog fired — no decoded frame within 2 s; hiding video, keeping audio/subtitles")
