@@ -125,8 +125,7 @@ class MainWindow(QMainWindow):
 
         # yt-dlp background self-update (throttled, deferred so the window paints
         # first). Silent on the auto path — no dialog (see _on_ytdlp_update_result).
-        if self.config.auto_update_ytdlp:
-            QTimer.singleShot(0, lambda: self.background_tasks.start_ytdlp_update(self.config, force=False))
+        self._maybe_start_ytdlp_update()
 
         # Post-update confirmation: if last_known_version differs from the
         # currently running __version__, show a one-shot info dialog. Save the
@@ -824,6 +823,18 @@ class MainWindow(QMainWindow):
     def _check_for_updates(self) -> None:
         """Check for application updates in background thread."""
         self.background_tasks.check_for_updates()
+
+    def _maybe_start_ytdlp_update(self) -> None:
+        """Kick off the throttled yt-dlp self-update (deferred so the window paints first).
+
+        Extracted from __init__ so the unit-test harness has a single seam to no-op
+        (like _check_for_updates / _maybe_migrate_jmdict). Without that seam, every
+        real-MainWindow test spawned a live YtdlpUpdateWorker QThread running a blocking
+        `yt-dlp --version` subprocess; the autouse _drain_qt_deletes flush could then
+        destroy the running QThread mid-subprocess -> SIGABRT. Identical runtime behavior.
+        """
+        if self.config.auto_update_ytdlp:
+            QTimer.singleShot(0, lambda: self.background_tasks.start_ytdlp_update(self.config, force=False))
 
     def _on_update_check_result(self, info: object) -> None:
         """Handle update check result.
