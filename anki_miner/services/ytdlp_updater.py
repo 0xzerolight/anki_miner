@@ -127,6 +127,9 @@ class YtdlpUpdater:
         Runs ``<yt-dlp> --version``. FileNotFoundError / timeout / any error
         yields None. Never raises.
         """
+        # Resolves (and caches) the pre-install yt-dlp path; check_and_update
+        # clears the resolver cache after a successful install so the next
+        # resolve picks up the freshly downloaded binary.
         cmd = [ytdlp_resolver.resolve_ytdlp(self._config), "--version"]
         try:
             proc = subprocess.run(
