@@ -214,19 +214,19 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Auto-Map Fields from Note Type</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Field Mappings</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Fetch Fields from Note Type</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Query AnkiConnect for the note type's field names and auto-map them</source>
         <translation type="unfinished" />
     </message>
     <message>
