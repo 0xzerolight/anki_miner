@@ -4,18 +4,24 @@ import re
 
 from anki_miner.services.dictionary.card_style_presets import (
     DEFAULT_PRESET_ID,
+    OFF_PRESET_ID,
     PRESETS,
     load_preset_css,
 )
 from anki_miner.services.dictionary.card_styling import load_default_card_css
 
-EXPECTED_ORDER = ["default", "yomitan-classic", "minimal", "none"]
+EXPECTED_ORDER = ["off", "default", "yomitan-classic", "minimal", "none"]
 NON_EMPTY_IDS = ["default", "yomitan-classic", "minimal"]
 
 
 class TestPresetsRegistry:
     def test_ids_in_exact_order(self):
         assert [p.id for p in PRESETS] == EXPECTED_ORDER
+
+    def test_off_leads_the_list(self):
+        # "Off" must be first so the dropdown opens on the un-styled / opt-out state.
+        assert PRESETS[0].id == OFF_PRESET_ID
+        assert PRESETS[0].display_name == "Off"
 
     def test_ids_unique(self):
         ids = [p.id for p in PRESETS]
@@ -25,13 +31,22 @@ class TestPresetsRegistry:
         for p in PRESETS:
             assert p.display_name.strip()
 
-    def test_none_entry_has_no_filename(self):
+    def test_sentinel_entries_have_no_filename(self):
+        for sentinel_id in (OFF_PRESET_ID, "none"):
+            entry = next(p for p in PRESETS if p.id == sentinel_id)
+            assert entry.filename is None
+
+    def test_none_renamed_to_custom_css_only(self):
         none = next(p for p in PRESETS if p.id == "none")
-        assert none.filename is None
+        assert none.display_name == "Custom CSS only"
 
     def test_default_preset_id_constant(self):
         assert DEFAULT_PRESET_ID == "default"
         assert any(p.id == DEFAULT_PRESET_ID for p in PRESETS)
+
+    def test_off_preset_id_constant(self):
+        assert OFF_PRESET_ID == "off"
+        assert any(p.id == OFF_PRESET_ID for p in PRESETS)
 
 
 class TestLoadPresetCss:
@@ -40,8 +55,9 @@ class TestLoadPresetCss:
             css = load_preset_css(preset_id)
             assert css.strip(), f"{preset_id} CSS should be non-empty"
 
-    def test_empty_for_none(self):
+    def test_empty_for_sentinels(self):
         assert load_preset_css("none") == ""
+        assert load_preset_css(OFF_PRESET_ID) == ""
 
     def test_empty_for_unknown_id(self):
         assert load_preset_css("does-not-exist") == ""

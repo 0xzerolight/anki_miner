@@ -357,20 +357,31 @@ class GUIConfigManager:
 
     @staticmethod
     def _migrate_card_style_preset(data: dict[str, Any]) -> dict[str, Any]:
-        """Map the pre-preset card-styling boolean to a preset id.
+        """Normalise the card-styling preset id across schema versions.
 
-        Before card-style presets there was a single boolean
-        ``use_default_card_stylesheet``. The new ``card_style_preset`` field
-        carries a preset id instead, so an old config's ``True`` maps to
-        ``"default"`` (the bundled stylesheet) and ``False`` maps to ``"none"``
-        (custom CSS only). The legacy key is left in place — the valid-keys
-        filter in ``load_config`` drops it. A config that already has
-        ``card_style_preset`` (or neither key) is returned unchanged.
+        Two migrations, in order:
+
+        1. Pre-preset boolean ``use_default_card_stylesheet`` → preset id
+           (``True`` → ``"default"``, ``False`` → ``"none"``). The legacy key is
+           left in place; the valid-keys filter in ``load_config`` drops it.
+        2. Any ``card_style_preset`` value that is not a known preset id is
+           coerced to ``"off"`` so an unrecognised/corrupt value can never write
+           styling. Known ids come from ``card_style_presets.PRESETS``.
+
+        ``card_style_migrated`` is intentionally NOT set here: a config saved
+        before auto-sync simply lacks the key, so it defaults to ``False`` and the
+        one-time reseed runs on the next AnkiConnect-reachable launch (see
+        ``AnkiProbeController.reconcile_styling``).
         """
-        if "card_style_preset" in data:
-            return data
-        if "use_default_card_stylesheet" in data:
+        from anki_miner.services.dictionary.card_style_presets import OFF_PRESET_ID, PRESETS
+
+        if "card_style_preset" not in data and "use_default_card_stylesheet" in data:
             data["card_style_preset"] = "default" if data["use_default_card_stylesheet"] else "none"
+
+        if "card_style_preset" in data:
+            valid_ids = {p.id for p in PRESETS}
+            if data["card_style_preset"] not in valid_ids:
+                data["card_style_preset"] = OFF_PRESET_ID
         return data
 
     @staticmethod

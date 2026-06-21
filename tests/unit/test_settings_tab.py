@@ -782,3 +782,49 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
             assert widget.filtering_panel.blacklist_selector.get_path() == ""
         finally:
             widget.deleteLater()
+
+
+class TestCardStylingSyncWiring:
+    """Save triggers a styling sync; the connect signal triggers a reconcile (Issue #44)."""
+
+    def test_save_calls_sync_styling(self, tab, monkeypatch):
+        from unittest.mock import MagicMock
+
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+        tab._anki_probe.sync_styling = MagicMock()
+
+        tab._on_save_clicked()
+
+        tab._anki_probe.sync_styling.assert_called_once()
+
+    def test_notify_anki_connected_reconciles(self, tab):
+        from unittest.mock import MagicMock
+
+        tab._anki_probe.reconcile_styling = MagicMock()
+
+        tab.notify_anki_connected()
+
+        tab._anki_probe.reconcile_styling.assert_called_once()
+
+    def test_persist_styling_state_updates_config_and_emits(self, tab):
+        received = []
+        tab.config_changed.connect(received.append)
+
+        tab._persist_styling_state("minimal", True)
+
+        assert tab.config.card_style_preset == "minimal"
+        assert tab.config.card_style_migrated is True
+        assert received and received[-1].card_style_preset == "minimal"
+
+    def test_migrated_only_change_does_not_reload_panels(self, tab):
+        """A reseed that flips only card_style_migrated must not reload panels (OVH-007)."""
+        from unittest.mock import MagicMock
+
+        tab._load_config = MagicMock()
+        updated = replace(tab.config, card_style_migrated=not tab.config.card_style_migrated)
+
+        tab.update_config(updated)
+
+        tab._load_config.assert_not_called()
