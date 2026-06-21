@@ -3134,7 +3134,7 @@ Details: %2</source>
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
-        <source>This video uses AV1, which your system can't decode for in-app preview.</source>
+        <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
         <translation type="unfinished" />
     </message>
     <message>
