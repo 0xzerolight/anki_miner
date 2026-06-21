@@ -126,3 +126,74 @@ def test_expression_audio_field_defaults_empty_and_roundtrips(qtbot):
     assert panel.get_card_fields()["expression_audio"] == ""
     panel.set_card_fields({"expression_audio": "ExpressionAudio"})
     assert panel.get_card_fields()["expression_audio"] == "ExpressionAudio"
+
+
+# ---------------------------------------------------------------------------
+# Task 1: Auto-Map Fields button prominence + _FIELD_KEYWORDS constant
+# ---------------------------------------------------------------------------
+
+
+def test_fetch_fields_button_label(qtbot):
+    """Button text must be the new 'Auto-Map Fields from Note Type' label."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.fetch_fields_button.text() == "Auto-Map Fields from Note Type"
+
+
+def test_fetch_fields_button_variant_is_primary(qtbot):
+    """Button must use the primary variant (objectName == 'primary')."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.fetch_fields_button.objectName() == "primary"
+
+
+def test_fetch_fields_button_emits_signal(qtbot):
+    """Clicking the button must still emit fetch_fields_requested after the move."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    with qtbot.waitSignal(panel.fetch_fields_requested, timeout=1000):
+        panel.fetch_fields_button.click()
+
+
+def test_field_keywords_constant_importable():
+    """_FIELD_KEYWORDS must be importable at module level."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import _FIELD_KEYWORDS  # noqa: PLC0415
+
+    assert isinstance(_FIELD_KEYWORDS, dict)
+    # Check a representative sample of keys and keywords
+    assert "word" in _FIELD_KEYWORDS
+    assert "expression" in _FIELD_KEYWORDS["word"]
+    assert "sentence" in _FIELD_KEYWORDS
+    assert "sentence" in _FIELD_KEYWORDS["sentence"]
+
+
+def test_populate_from_field_list_uses_field_keywords(qtbot):
+    """populate_from_field_list must still auto-map using the extracted constant."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    # Use names that match via _FIELD_KEYWORDS lookup
+    panel.populate_from_field_list(
+        [
+            "Expression",
+            "Sentence",
+            "MainDefinition",
+            "Glossary",
+            "Picture",
+            "SentenceAudio",
+            "ExpressionAudio",
+            "ExpressionFurigana",
+            "ExpressionReading",
+            "SentenceFurigana",
+            "SentenceReading",
+            "PitchPosition",
+            "PitchCategory",
+            "Frequency",
+            "Source",
+        ]
+    )
+    fields = panel.get_card_fields()
+    assert fields["word"] == "Expression"
+    assert fields["sentence"] == "Sentence"
+    assert fields["definition"] == "MainDefinition"
+    assert fields["glossary"] == "Glossary"
+    assert fields["source"] == "Source"

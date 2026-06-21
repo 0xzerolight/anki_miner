@@ -214,20 +214,20 @@
         <translation>以下でフィールドを対応付ける Anki のノートタイプです。</translation>
     </message>
     <message>
+        <source>Auto-Map Fields from Note Type</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Field Mappings</source>
         <translation>カードフィールドの対応付け</translation>
     </message>
     <message>
         <source>Map data to note fields (names must match exactly). Blank = skip.</source>
         <translation>データをノートのフィールドに対応付けます（名前は完全に一致する必要があります）。空欄 = スキップ。</translation>
-    </message>
-    <message>
-        <source>Fetch Fields from Note Type</source>
-        <translation>ノートタイプからフィールドを取得</translation>
-    </message>
-    <message>
-        <source>Query AnkiConnect for the note type's field names and auto-map them</source>
-        <translation>AnkiConnect にノートタイプのフィールド名を問い合わせて自動的に対応付けます</translation>
     </message>
     <message>
         <source>Expression Field</source>
