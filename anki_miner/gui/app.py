@@ -347,6 +347,13 @@ def main():
     # nothing (T-53). Routing it to _run_validation also drives the Anki
     # connection badge via _on_validation_result.
     _connect_settings_validation(window, settings_tab)
+    # yt-dlp manual update: the YouTube panel's "Update yt-dlp now" button →
+    # forced background update. Results flow back to MainWindow (status bar /
+    # error dialog) and to the panel's status line.
+    settings_tab.ytdlp_update_requested.connect(
+        lambda: window.background_tasks.start_ytdlp_update(window.get_config(), force=True)
+    )
+    window.background_tasks.ytdlp_update_result.connect(settings_tab.set_ytdlp_status_from_result)
     # Wire the Dictionary Settings panel's pre-remove hook so deleting a
     # dictionary closes cached sqlite handles across every tab first — Win11
     # rejects the rmtree otherwise (Issue #30).

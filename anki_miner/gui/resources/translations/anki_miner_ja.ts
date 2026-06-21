@@ -142,6 +142,36 @@
         <translation>マイルストーン</translation>
     </message>
 </context><context>
+    <name>AnkiConnectPage</name>
+    <message>
+        <source>Connect to Anki</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner talks to Anki through the AnkiConnect add-on.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>AnkiConnect is a free Anki add-on. In Anki: Tools → Add-ons → Get Add-ons…, paste the code &lt;b&gt;%1&lt;/b&gt;, then restart Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open the AnkiConnect add-on page</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>AnkiConnect URL:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recheck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checking connection...</source>
+        <translation type="unfinished">接続を確認中...</translation>
+    </message>
+</context><context>
     <name>AnkiProbeController</name>
     <message>
         <source>Card styling will sync once Anki is reachable.</source>
@@ -250,20 +280,20 @@
         <translation>以下でフィールドを対応付ける Anki のノートタイプです。</translation>
     </message>
     <message>
+        <source>Auto-Map Fields from Note Type</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Field Mappings</source>
         <translation>カードフィールドの対応付け</translation>
     </message>
     <message>
         <source>Map data to note fields (names must match exactly). Blank = skip.</source>
         <translation>データをノートのフィールドに対応付けます（名前は完全に一致する必要があります）。空欄 = スキップ。</translation>
-    </message>
-    <message>
-        <source>Fetch Fields from Note Type</source>
-        <translation>ノートタイプからフィールドを取得</translation>
-    </message>
-    <message>
-        <source>Query AnkiConnect for the note type's field names and auto-map them</source>
-        <translation>AnkiConnect にノートタイプのフィールド名を問い合わせて自動的に対応付けます</translation>
     </message>
     <message>
         <source>Expression Field</source>
@@ -1156,6 +1186,28 @@ Unchecked: mine every word — good for building a complete or shareable deck.</
         <translation>エラー: %1</translation>
     </message>
 </context><context>
+    <name>DeckPage</name>
+    <message>
+        <source>Choose a Deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined cards go into this deck.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation type="unfinished">更新</translation>
+    </message>
+    <message>
+        <source>Enter a deck name.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck not found — it will be created automatically when mining starts.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>DictionaryImportFlow</name>
     <message>
         <source>Choose Yomitan dictionary zip</source>
@@ -1466,6 +1518,44 @@ The dictionary was not removed.</source>
     <message>
         <source>⚠ rate-limited, slower</source>
         <translation>⚠ レート制限あり、低速</translation>
+    </message>
+</context><context>
+    <name>DonePage</name>
+    <message>
+        <source>All Set</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Review your setup. You can change anything later in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Yes</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>AnkiConnect reachable: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Note type: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mapped fields: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources downloaded: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2184,6 +2274,10 @@ The dictionary was not removed.</source>
         <translation>推奨リソースをダウンロード...</translation>
     </message>
     <message>
+        <source>Setup Wizard...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&amp;Help</source>
         <translation>ヘルプ(&amp;H)</translation>
     </message>
@@ -2416,6 +2510,41 @@ The dictionary was not removed.</source>
     <message>
         <source>Button</source>
         <translation>ボタン</translation>
+    </message>
+</context><context>
+    <name>NoteTypePage</name>
+    <message>
+        <source>Choose a Note Type</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick the Anki note type whose fields will hold mined data.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation type="unfinished">更新</translation>
+    </message>
+    <message>
+        <source>Auto-Map Fields from Note Type</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No fields found. Make sure Anki is running and the note type name is spelled exactly as in Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This note type does not look set up for Japanese mining (no obvious word/sentence fields). Import a recommended mining note type in Anki, then &lt;a href="%1"&gt;recheck&lt;/a&gt;. See: &lt;a href="%1"&gt;recommended note type&lt;/a&gt;.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mapped: %1
+You can fine-tune these later in Settings → Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No fields could be auto-mapped.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>PairPreviewDialog</name>
@@ -2744,6 +2873,28 @@ The dictionary was not removed.</source>
         <translation>リソースは元の配布元からダウンロードされ、それぞれのライセンスが適用されます。</translation>
     </message>
 </context><context>
+    <name>ResourcesPage</name>
+    <message>
+        <source>Recommended Resources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency, pitch accent, and a dictionary (optional).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>What are these resources?</source>
+        <translation type="unfinished">これらのリソースとは？</translation>
+    </message>
+    <message>
+        <source>Download recommended resources</source>
+        <translation type="unfinished">推奨リソースをダウンロード</translation>
+    </message>
+    <message>
+        <source>Resources updated.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ResultsDialog</name>
     <message>
         <source>Processing Results</source>
@@ -2880,6 +3031,18 @@ The dictionary was not removed.</source>
         <translation>設定をディスクに保存します (Ctrl+S)</translation>
     </message>
     <message>
+        <source>Updating yt-dlp…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>yt-dlp update</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not update yt-dlp. Check your connection and retry.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Invalid dictionary folder</source>
         <translation>無効な辞書フォルダ</translation>
     </message>
@@ -3002,6 +3165,20 @@ Details: %2</source>
     <message>
         <source>Could not open the known words list: %1</source>
         <translation>既知単語リストを開けませんでした: %1</translation>
+    </message>
+</context><context>
+    <name>SetupWizard</name>
+    <message>
+        <source>Anki Miner works best with a frequency list, pitch accent data, and a dictionary. Download the recommended set now?</source>
+        <translation type="unfinished">Anki Miner は頻度リスト、ピッチアクセントデータ、辞書があると最も効果的に動作します。推奨セットを今すぐダウンロードしますか？</translation>
+    </message>
+    <message>
+        <source>Anki Miner Setup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip Setup</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>SingleEpisodeTab</name>
@@ -3326,32 +3503,6 @@ Details: %2</source>
         <translation>アーカイブをダウンロード</translation>
     </message>
 </context><context>
-    <name>WelcomeDialog</name>
-    <message>
-        <source>Anki Miner works best with a frequency list, pitch accent data, and a dictionary. Download the recommended set now?</source>
-        <translation>Anki Miner は頻度リスト、ピッチアクセントデータ、辞書があると最も効果的に動作します。推奨セットを今すぐダウンロードしますか？</translation>
-    </message>
-    <message>
-        <source>Welcome to Anki Miner</source>
-        <translation>Anki Miner へようこそ</translation>
-    </message>
-    <message>
-        <source>Let's get you set up with the recommended resources.</source>
-        <translation>推奨リソースのセットアップを行います。</translation>
-    </message>
-    <message>
-        <source>What are these resources?</source>
-        <translation>これらのリソースとは？</translation>
-    </message>
-    <message>
-        <source>Skip — set up manually</source>
-        <translation>スキップ — 手動でセットアップ</translation>
-    </message>
-    <message>
-        <source>Download recommended resources</source>
-        <translation>推奨リソースをダウンロード</translation>
-    </message>
-</context><context>
     <name>WordCurationDialog</name>
     <message>
         <source>Word Curation</source>
@@ -3638,6 +3789,18 @@ Details: %2</source>
     <message>
         <source>When adding a playlist, at most this many videos are queued.</source>
         <translation>プレイリストを追加する際、この数を上限として動画がキューに追加されます。</translation>
+    </message>
+    <message>
+        <source>Update yt-dlp now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the latest yt-dlp into Anki Miner's own folder. Keeping yt-dlp current is what fixes most 'YouTube broke' errors.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>yt-dlp</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>YouTubeTab</name>

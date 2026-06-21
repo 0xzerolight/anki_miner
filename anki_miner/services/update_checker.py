@@ -9,7 +9,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
-from packaging.version import InvalidVersion, Version
+from anki_miner.utils.version_compare import is_newer
 
 logger = logging.getLogger(__name__)
 
@@ -196,16 +196,9 @@ class UpdateChecker:
     def _is_newer(latest: str, current: str) -> bool:
         """Compare two version strings using PEP 440 semantics.
 
-        Uses :class:`packaging.version.Version` so prerelease (``2.3.5-rc1``)
-        and post-release (``2.3.5.post1``) tags compare correctly. A naive
-        ``tuple(int(x) for x in s.split("."))`` breaks on these.
-
-        ``packaging`` is declared as an EXPLICIT runtime dependency in
-        pyproject.toml — do not assume setuptools (and its transitive
-        ``packaging``) is present at runtime. pipx-isolated venvs strip
-        setuptools after install; before the dep was explicit, pipx-installed
-        anki-miner crashed with ``ModuleNotFoundError: No module named
-        'packaging'`` on the first update check.
+        Thin alias over :func:`anki_miner.utils.version_compare.is_newer` (shared
+        with the yt-dlp updater). Kept as a static method so existing call sites
+        and tests that reference ``UpdateChecker._is_newer`` stay valid.
 
         Args:
             latest: Latest version string (e.g. "2.1.0")
@@ -215,7 +208,4 @@ class UpdateChecker:
             True if ``latest`` is strictly newer than ``current``. Returns
             False if either string is empty or unparseable.
         """
-        try:
-            return Version(latest) > Version(current)
-        except (InvalidVersion, TypeError):
-            return False
+        return is_newer(latest, current)

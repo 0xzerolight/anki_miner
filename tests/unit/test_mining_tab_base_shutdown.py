@@ -221,6 +221,7 @@ class TestBackgroundTasksShutdownDuckTyped:
         ctrl.shutdown = BackgroundTaskController.shutdown.__get__(ctrl)
         ctrl.validation_worker = None
         ctrl.update_worker = None
+        ctrl.ytdlp_update_worker = None
         ctrl.jmdict_migration_worker = None
         ctrl.prewarm_worker = None
         ctrl._join_worker_for_close = MagicMock(return_value=True)

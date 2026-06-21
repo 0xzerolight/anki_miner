@@ -125,6 +125,25 @@ class AnkiService:
             return []
         return list(result or [])
 
+    def get_model_names(self) -> list[str]:
+        """Get all note type (model) names from AnkiConnect.
+
+        Mirrors :meth:`get_deck_names`: swallows :class:`AnkiConnectionError`
+        and returns an empty list so a read-only probe never raises.
+
+        Returns:
+            List of note type names, or empty list on error.
+        """
+        try:
+            result = post_action(
+                self.config.ankiconnect_url,
+                "modelNames",
+                timeout=15,
+            )
+        except AnkiConnectionError:
+            return []
+        return list(result or [])
+
     def get_model_styling(self, model_name: str | None = None) -> str:
         """Return the note type's current card CSS via AnkiConnect ``modelStyling``.
 

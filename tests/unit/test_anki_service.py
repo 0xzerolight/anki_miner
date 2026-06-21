@@ -2887,6 +2887,34 @@ class TestGetDeckNames:
             assert service.get_deck_names() == []
 
 
+class TestGetModelNames:
+    """Tests for AnkiService.get_model_names (Task 3 setup wizard)."""
+
+    def test_returns_model_list(self, test_config):
+        """Should return the modelNames result as a list."""
+        service = AnkiService(test_config)
+        resp = _mock_response(result=["Basic", "Lapis", "Cloze"])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            assert service.get_model_names() == ["Basic", "Lapis", "Cloze"]
+        assert mock_post.call_args[1]["json"]["action"] == "modelNames"
+
+    def test_none_result_returns_empty(self, test_config):
+        """Should coerce a None result to an empty list."""
+        service = AnkiService(test_config)
+        resp = _mock_response(result=None)
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            assert service.get_model_names() == []
+
+    def test_connection_error_returns_empty(self, test_config):
+        """Should swallow AnkiConnectionError and return an empty list."""
+        service = AnkiService(test_config)
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=AnkiConnectionError("down"),
+        ):
+            assert service.get_model_names() == []
+
+
 class TestModelStyling:
     """Tests for AnkiService.get_model_styling / update_model_styling (Issue #44)."""
 

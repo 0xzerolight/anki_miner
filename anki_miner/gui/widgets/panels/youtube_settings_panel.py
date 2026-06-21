@@ -3,10 +3,11 @@
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtWidgets import QComboBox, QSpinBox
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QSpinBox, QWidget
 
 from anki_miner.gui.widgets.base import FormPanel
-from anki_miner.gui.widgets.enhanced import FileSelector
+from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
 
 # Ordered pairs of (display label, config value) for the browser dropdown.
 # The sentinel "None" label maps to a Python ``None`` value in the config.
@@ -30,7 +31,12 @@ class YouTubeSettingsPanel(FormPanel):
     Provides:
     - Cookies-from-browser selection (bot-detection workaround)
     - Max video duration cap (in minutes)
+    - A manual "Update yt-dlp now" trigger + status line
     """
+
+    #: Emitted when the user clicks "Update yt-dlp now". The wiring (SettingsTab
+    #: → MainWindow.background_tasks.start_ytdlp_update) lives outside the panel.
+    update_ytdlp_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialize the YouTube settings panel."""
@@ -89,7 +95,33 @@ class YouTubeSettingsPanel(FormPanel):
             helper=self.tr("When adding a playlist, at most this many videos are queued."),
         )
 
+        # yt-dlp updater: manual trigger + status. yt-dlp also self-updates in
+        # the background on startup; this is the explicit "do it now" button.
+        self.update_ytdlp_button = ModernButton(self.tr("Update yt-dlp now"), variant="secondary")
+        self.update_ytdlp_button.setToolTip(
+            self.tr(
+                "Download the latest yt-dlp into Anki Miner's own folder. "
+                "Keeping yt-dlp current is what fixes most 'YouTube broke' errors."
+            )
+        )
+        self.update_ytdlp_button.clicked.connect(self.update_ytdlp_requested)
+
+        self.ytdlp_status_label = QLabel("")
+        self.ytdlp_status_label.setObjectName("settings-save-status")
+
+        ytdlp_container = QWidget()
+        ytdlp_row = QHBoxLayout(ytdlp_container)
+        ytdlp_row.setContentsMargins(0, 0, 0, 0)
+        ytdlp_row.addWidget(self.update_ytdlp_button)
+        ytdlp_row.addWidget(self.ytdlp_status_label)
+        ytdlp_row.addStretch()
+        self.add_field(self.tr("yt-dlp"), ytdlp_container)
+
         self.add_stretch()
+
+    def set_ytdlp_status(self, text: str) -> None:
+        """Set the yt-dlp status line (shown next to the Update button)."""
+        self.ytdlp_status_label.setText(text)
 
     # ------------------------------------------------------------------
     # Value helpers (config <-> widget conversion)

@@ -57,15 +57,3 @@ def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSum
         use_frequency_data=use_frequency_data,
         use_pitch_accent=use_pitch_accent,
     )
-
-
-def should_offer_first_run_setup(config: AnkiMinerConfig) -> bool:
-    """Return True if the user looks un-set-up (missing freq or pitch data).
-
-    File presence is the reliable fresh-install signal: ValidationService gates
-    its missing-resource warnings on ``use_frequency_data`` / ``use_pitch_accent``,
-    which default False on fresh installs, so it cannot detect a fresh user. We
-    check the files directly so existing users who already have resources aren't
-    nagged, while fresh installs still get the offer.
-    """
-    return not config.frequency_list_path.is_file() or not config.pitch_accent_path.is_file()
