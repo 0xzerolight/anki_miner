@@ -202,6 +202,22 @@ class ValidationService:
             issues=issues,
         )
 
+    def check_ankiconnect(self) -> tuple[bool, str]:
+        """Public wrapper over :meth:`_check_ankiconnect` (setup wizard).
+
+        Returns:
+            Tuple of (success, message) — identical to the private method.
+        """
+        return self._check_ankiconnect()
+
+    def check_field_names(self) -> tuple[bool, str]:
+        """Public wrapper over :meth:`_check_field_names_exist` (setup wizard).
+
+        Returns:
+            Tuple of (success, message) — identical to the private method.
+        """
+        return self._check_field_names_exist()
+
     def _check_ankiconnect(self) -> tuple[bool, str]:
         """Check if AnkiConnect is running and accessible.
 

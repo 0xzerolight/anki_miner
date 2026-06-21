@@ -967,3 +967,40 @@ class TestOptionalResourceWarnings:
         assert not self._has_warning(result, "Offline Dictionary")
         assert not self._has_warning(result, "Pitch Accent")
         assert not self._has_warning(result, "Frequency Data")
+
+
+class TestPublicChecks:
+    """Public thin wrappers over the private check methods (Task 3 setup wizard)."""
+
+    def test_check_ankiconnect_delegates_to_private(self, test_config):
+        service = ValidationService(test_config)
+        with patch.object(service, "_check_ankiconnect", return_value=(True, "v6 ok")) as priv:
+            assert service.check_ankiconnect() == (True, "v6 ok")
+        priv.assert_called_once_with()
+
+    def test_check_ankiconnect_returns_same_tuple_on_success(self, test_config):
+        service = ValidationService(test_config)
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"result": 6, "error": None}
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
+            public = service.check_ankiconnect()
+            private = service._check_ankiconnect()
+        assert public == private
+        assert public[0] is True
+
+    def test_check_field_names_delegates_to_private(self, test_config):
+        service = ValidationService(test_config)
+        with patch.object(service, "_check_field_names_exist", return_value=(False, "missing X")) as priv:
+            assert service.check_field_names() == (False, "missing X")
+        priv.assert_called_once_with()
+
+    def test_check_field_names_returns_same_tuple(self, test_config):
+        service = ValidationService(test_config)
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"result": ["word", "sentence"], "error": None}
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
+            public = service.check_field_names()
+        assert isinstance(public, tuple) and len(public) == 2
+        assert isinstance(public[0], bool) and isinstance(public[1], str)
