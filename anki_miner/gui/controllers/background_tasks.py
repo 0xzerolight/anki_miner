@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from anki_miner.gui.main_window import MainWindow
     from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
     from anki_miner.gui.workers.update_worker import UpdateWorkerThread
+    from anki_miner.gui.workers.ytdlp_update_worker import YtdlpUpdateWorker
     from anki_miner.services import ValidationService
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,7 @@ class BackgroundTaskController(QObject):
     validation_result = pyqtSignal(object)  # ValidationResult
     validation_error = pyqtSignal(str)
     update_check_result = pyqtSignal(object)  # UpdateInfo | None
+    ytdlp_update_result = pyqtSignal(object)  # YtdlpUpdateResult
     jmdict_migration_finished = pyqtSignal(str, dict)  # (dict_id, meta)
 
     def __init__(self, window: MainWindow) -> None:
@@ -99,6 +101,7 @@ class BackgroundTaskController(QObject):
         # aren't GC'd mid-run and so shutdown() can join them.
         self.validation_worker: ValidationWorkerThread | None = None
         self.update_worker: UpdateWorkerThread | None = None
+        self.ytdlp_update_worker: YtdlpUpdateWorker | None = None
         self.jmdict_migration_worker: DictionaryImportWorker | None = None
         # Best-effort cache prewarm worker, scheduled by ``app.main()`` after
         # the first paint and adopted via set_prewarm(); cleared once it
@@ -148,6 +151,30 @@ class BackgroundTaskController(QObject):
         self.update_worker = worker
         worker.result_ready.connect(self.update_check_result)
         worker.finished.connect(lambda w=worker: self._release_worker("update_worker", w))
+        worker.start()
+
+    def start_ytdlp_update(self, config: AnkiMinerConfig, *, force: bool = False) -> None:
+        """Start the yt-dlp auto-download/self-update worker unless one is running.
+
+        Mirrors :meth:`check_for_updates`: guards against a concurrent run, lazy-
+        imports the updater + worker, forwards ``result_ready`` to
+        :attr:`ytdlp_update_result`, and releases the handle on ``finished``.
+
+        Args:
+            config: Live config (resolves the current yt-dlp + override).
+            force: When True, bypass the 24h throttle (manual "Update now").
+        """
+        if self.ytdlp_update_worker is not None and self.ytdlp_update_worker.isRunning():
+            return
+
+        from anki_miner.gui.workers import ytdlp_update_worker as worker_mod
+        from anki_miner.services import ytdlp_updater as updater_mod
+
+        updater = updater_mod.YtdlpUpdater(config)
+        worker = worker_mod.YtdlpUpdateWorker(updater, force=force, parent=self)
+        self.ytdlp_update_worker = worker
+        worker.result_ready.connect(self.ytdlp_update_result)
+        worker.finished.connect(lambda w=worker: self._release_worker("ytdlp_update_worker", w))
         worker.start()
 
     def maybe_migrate_jmdict(self, config: AnkiMinerConfig) -> bool:
@@ -218,9 +245,11 @@ class BackgroundTaskController(QObject):
             if not self._join_worker_for_close(worker, timeout_ms=timeout_ms):
                 laggards.append(worker)
 
-        # Controller-owned workers: validation, update check, JMdict migration.
+        # Controller-owned workers: validation, update check, yt-dlp update,
+        # JMdict migration.
         join(self.validation_worker)
         join(self.update_worker)
+        join(self.ytdlp_update_worker)
         join(self.jmdict_migration_worker)
 
         # The best-effort prewarm worker has no cancel hook (it's a short,
