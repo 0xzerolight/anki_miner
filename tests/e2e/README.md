@@ -73,12 +73,13 @@ Additional soak flags:
 
 By default the soak drives the bare `SingleEpisodeTab`. `--full-window` instead
 drives a real `MainWindow` (the episode tab mounted + the post-run
-`ResultsDialog` / preview `WordPreviewDialog` / first-run `WelcomeDialog` /
+`ResultsDialog` / preview `WordPreviewDialog` / first-run setup wizard /
 curation modal all patched to non-blocking no-ops), so dialog wiring, tab
 switching, the menu bar, and the results-display slot are exercised too — the
 GUI surface the bare-tab path skips. Startup is isolated by writing a disabling
-`gui_config.json` into the test home (update check off, first-run flags done) and
-no-op'ing the startup validation worker. In-process mode only.
+`gui_config.json` into the test home (update check off, yt-dlp auto-update off,
+first-run flags done) and no-op'ing the startup validation worker. In-process
+mode only.
 
 ## GUI-consistency coverage
 
