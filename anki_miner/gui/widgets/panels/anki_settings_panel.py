@@ -20,6 +20,29 @@ from anki_miner.gui.widgets.base import FormPanel, StatusBadge, make_label_fit_t
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.services.dictionary.card_style_presets import PRESETS
 
+# Keywords used by populate_from_field_list to auto-map Anki field names.
+# Each key is a card data type; the list is lowercase/stripped patterns that
+# a field name must match (after lowercasing and removing spaces/underscores).
+# Exported at module level so setup wizards and future callers can reuse the
+# same sets without duplication.
+_FIELD_KEYWORDS: dict[str, list[str]] = {
+    "word": ["expression", "word", "vocab"],
+    "sentence": ["sentence", "context", "example"],
+    "definition": ["definition", "meaning", "maindefinition"],
+    "glossary": ["glossary", "definitions", "dictionary"],
+    "picture": ["picture", "image", "screenshot", "photo"],
+    "audio": ["audio", "sound", "sentenceaudio"],
+    "expression_audio": ["expressionaudio", "wordaudio"],
+    "expression_furigana": ["expressionfurigana", "wordfurigana"],
+    "expression_reading": ["expressionreading", "wordreading", "reading"],
+    "sentence_furigana": ["sentencefurigana", "contextfurigana"],
+    "sentence_reading": ["sentencereading", "contextreading"],
+    "pitch_position": ["pitchposition", "pitchaccent", "pitch"],
+    "pitch_category": ["pitchcategory", "accenttype", "accentcategory"],
+    "frequency": ["frequency", "freq", "rank", "frequencyrank"],
+    "source": ["source", "origin"],
+}
+
 
 class AnkiSettingsPanel(FormPanel):
     """Panel for Anki connection and configuration settings.
@@ -124,6 +147,14 @@ class AnkiSettingsPanel(FormPanel):
         self.notetype_status.setObjectName("validation-status")
         self.add_widget(self.notetype_status)
 
+        # Auto-Map Fields button — prominent, immediately below the Note Type row
+        self.fetch_fields_button = ModernButton(self.tr("Auto-Map Fields from Note Type"), variant="primary")
+        self.fetch_fields_button.setToolTip(
+            self.tr("Query AnkiConnect for this note type's fields and fill the mappings below automatically.")
+        )
+        self.fetch_fields_button.clicked.connect(self._on_fetch_fields)
+        self.add_widget(self.fetch_fields_button)
+
         # Card Field Mappings section
         self.add_section(self.tr("Card Field Mappings"))
 
@@ -132,17 +163,6 @@ class AnkiSettingsPanel(FormPanel):
         card_fields_helper.setObjectName("helper-text")
         card_fields_helper.setWordWrap(True)
         self.add_widget(card_fields_helper)
-
-        # Fetch fields from note type button
-        fetch_layout = QHBoxLayout()
-        fetch_layout.addStretch()
-        self.fetch_fields_button = ModernButton(self.tr("Fetch Fields from Note Type"), variant="secondary")
-        self.fetch_fields_button.setToolTip(
-            self.tr("Query AnkiConnect for the note type's field names and auto-map them")
-        )
-        self.fetch_fields_button.clicked.connect(self._on_fetch_fields)
-        fetch_layout.addWidget(self.fetch_fields_button)
-        self.add_layout(fetch_layout)
 
         # Expression field (word)
         self.expression_field_input = QLineEdit()
@@ -501,59 +521,27 @@ class AnkiSettingsPanel(FormPanel):
         Args:
             field_names: List of field names from AnkiConnect
         """
-        # Mapping of data keys to input widgets and keywords to match
-        mapping = {
-            "word": (self.expression_field_input, ["expression", "word", "vocab"]),
-            "sentence": (self.sentence_field_input, ["sentence", "context", "example"]),
-            "definition": (
-                self.definition_field_input,
-                ["definition", "meaning", "maindefinition"],
-            ),
-            "glossary": (
-                self.glossary_field_input,
-                ["glossary", "definitions", "dictionary"],
-            ),
-            "picture": (self.picture_field_input, ["picture", "image", "screenshot", "photo"]),
-            "audio": (self.audio_field_input, ["audio", "sound", "sentenceaudio"]),
-            "expression_audio": (
-                self.expression_audio_field_input,
-                ["expressionaudio", "wordaudio"],
-            ),
-            "expression_furigana": (
-                self.expression_furigana_field_input,
-                ["expressionfurigana", "wordfurigana"],
-            ),
-            "expression_reading": (
-                self.expression_reading_field_input,
-                ["expressionreading", "wordreading", "reading"],
-            ),
-            "sentence_furigana": (
-                self.sentence_furigana_field_input,
-                ["sentencefurigana", "contextfurigana"],
-            ),
-            "sentence_reading": (
-                self.sentence_reading_field_input,
-                ["sentencereading", "contextreading"],
-            ),
-            "pitch_position": (
-                self.pitch_position_field_input,
-                ["pitchposition", "pitchaccent", "pitch"],
-            ),
-            "pitch_category": (
-                self.pitch_category_field_input,
-                ["pitchcategory", "accenttype", "accentcategory"],
-            ),
-            "frequency": (
-                self.frequency_field_input,
-                ["frequency", "freq", "rank", "frequencyrank"],
-            ),
-            "source": (
-                self.source_field_input,
-                ["source", "origin"],
-            ),
+        # Map each data key to its input widget; keywords come from the module-level constant.
+        widget_map = {
+            "word": self.expression_field_input,
+            "sentence": self.sentence_field_input,
+            "definition": self.definition_field_input,
+            "glossary": self.glossary_field_input,
+            "picture": self.picture_field_input,
+            "audio": self.audio_field_input,
+            "expression_audio": self.expression_audio_field_input,
+            "expression_furigana": self.expression_furigana_field_input,
+            "expression_reading": self.expression_reading_field_input,
+            "sentence_furigana": self.sentence_furigana_field_input,
+            "sentence_reading": self.sentence_reading_field_input,
+            "pitch_position": self.pitch_position_field_input,
+            "pitch_category": self.pitch_category_field_input,
+            "frequency": self.frequency_field_input,
+            "source": self.source_field_input,
         }
 
-        for _key, (widget, keywords) in mapping.items():
+        for key, widget in widget_map.items():
+            keywords = _FIELD_KEYWORDS.get(key, [])
             for field_name in field_names:
                 if field_name.lower().replace(" ", "").replace("_", "") in [kw.lower() for kw in keywords]:
                     widget.setText(field_name)
