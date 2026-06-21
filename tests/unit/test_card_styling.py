@@ -79,6 +79,16 @@ class TestDetectAppliedPreset:
         # Present (not None) but unknown source → "".
         assert detect_applied_preset(legacy) == ""
 
+    def test_legacy_block_with_preset_in_body_not_misdetected(self):
+        # User custom CSS containing the literal ``preset=`` must NOT be read as
+        # the recorded preset id — only the BEGIN marker line is authoritative.
+        legacy = f'{LEGACY_BEGIN}\n.x{{content:"preset=evil"}}\n{END_MARKER}'
+        assert detect_applied_preset(legacy) == ""
+
+    def test_current_id_wins_over_preset_decoy_in_body(self):
+        block = build_managed_block(preset="minimal", custom_css='.x{content:"preset=evil"}')
+        assert detect_applied_preset(block) == "minimal"
+
 
 class TestApplyManagedBlock:
     def test_first_time_appends_after_user_css(self):
