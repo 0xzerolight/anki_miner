@@ -76,12 +76,15 @@ def _disabling_gui_config(config: AnkiMinerConfig) -> AnkiMinerConfig:
     Carries the harness mining settings (deck / note-type / dicts / known-words
     paths from ``build_app_config``) so the mounted episode tab mines correctly,
     and pins the gates that would otherwise fire networked/modal startup work:
-    update check off, both first-run flags done, and ``last_known_version`` equal
-    to the running version (so the post-update info dialog never opens).
+    update check off, yt-dlp auto-update off (it shells out to ``yt-dlp --version``
+    and hits GitHub on startup, outliving teardown), both first-run flags done, and
+    ``last_known_version`` equal to the running version (so the post-update info
+    dialog never opens).
     """
     return dataclasses.replace(
         config,
         check_for_updates=False,
+        auto_update_ytdlp=False,
         first_run_shortcut_done=True,
         first_run_setup_done=True,
         last_known_version=__version__,
