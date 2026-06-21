@@ -5,10 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry, create_default_config
-from anki_miner.gui.utils.resource_setup import (
-    apply_download_summary,
-    should_offer_first_run_setup,
-)
+from anki_miner.gui.utils.resource_setup import apply_download_summary
 from anki_miner.gui.workers.resource_download_worker import (
     ResourceDownloadResult,
     ResourceDownloadSummary,
@@ -139,48 +136,6 @@ class TestApplyDownloadSummary:
         assert result.dictionary_chain[0].dict_id == "jitendex"
         assert result.use_frequency_data is True
         assert result.use_pitch_accent is True
-
-
-class TestShouldOfferFirstRunSetup:
-    def test_true_when_both_files_missing(self, tmp_path) -> None:
-        config = replace(
-            create_default_config(),
-            frequency_list_path=tmp_path / "frequency.csv",
-            pitch_accent_path=tmp_path / "pitch.csv",
-        )
-        assert should_offer_first_run_setup(config) is True
-
-    def test_true_when_only_freq_missing(self, tmp_path) -> None:
-        pitch = tmp_path / "pitch.csv"
-        pitch.write_text("data")
-        config = replace(
-            create_default_config(),
-            frequency_list_path=tmp_path / "frequency.csv",
-            pitch_accent_path=pitch,
-        )
-        assert should_offer_first_run_setup(config) is True
-
-    def test_true_when_only_pitch_missing(self, tmp_path) -> None:
-        freq = tmp_path / "frequency.csv"
-        freq.write_text("data")
-        config = replace(
-            create_default_config(),
-            frequency_list_path=freq,
-            pitch_accent_path=tmp_path / "pitch.csv",
-        )
-        assert should_offer_first_run_setup(config) is True
-
-    def test_false_when_both_present(self, tmp_path) -> None:
-        freq = tmp_path / "frequency.csv"
-        freq.write_text("data")
-        pitch = tmp_path / "pitch.csv"
-        pitch.write_text("data")
-        config = replace(
-            create_default_config(),
-            frequency_list_path=freq,
-            pitch_accent_path=pitch,
-        )
-        assert should_offer_first_run_setup(config) is False
 
 
 class TestFirstRunSetupDoneRoundTrip:
