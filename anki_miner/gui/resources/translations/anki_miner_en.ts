@@ -2828,6 +2828,18 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Updating yt-dlp…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>yt-dlp update</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not update yt-dlp. Check your connection and retry.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Invalid dictionary folder</source>
         <translation type="unfinished" />
     </message>
@@ -3575,6 +3587,18 @@ Details: %2</source>
     </message>
     <message>
         <source>When adding a playlist, at most this many videos are queued.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update yt-dlp now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the latest yt-dlp into Anki Miner's own folder. Keeping yt-dlp current is what fixes most 'YouTube broke' errors.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>yt-dlp</source>
         <translation type="unfinished" />
     </message>
 </context><context>
