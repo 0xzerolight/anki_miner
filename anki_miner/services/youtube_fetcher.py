@@ -25,11 +25,16 @@ from anki_miner.exceptions.youtube import (
     FfmpegNotFoundError,
     VideoTooLongError,
     YouTubeFetchError,
+    YtdlpNotFoundError,
 )
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 from anki_miner.utils.subprocess_utils import no_window_kwargs
+from anki_miner.utils.ytdlp_resolver import resolve_ytdlp
+
+# Message appended to YtdlpNotFoundError so the user can self-serve the fix.
+_YTDLP_MISSING_HINT = "yt-dlp executable not found. Use Settings → YouTube → Update yt-dlp now, then retry."
 
 logger = logging.getLogger(__name__)
 
@@ -59,18 +64,20 @@ _CANCEL_POLL_INTERVAL_S = 0.5
 _JS_RUNTIMES = ("node", "bun", "quickjs")
 
 
-@functools.lru_cache(maxsize=1)
-def _ytdlp_supports_js_runtimes() -> bool:
-    """True if the installed yt-dlp recognizes ``--js-runtimes``.
+# Keyed on the resolved yt-dlp path (unbounded cache), NOT a 1-entry cache: the
+# resolved path changes after a self-update download, and a 1-entry cache keyed
+# on nothing would then report the OLD binary's capabilities for the NEW one.
+@functools.cache
+def _ytdlp_supports_js_runtimes(ytdlp_path: str) -> bool:
+    """True if the yt-dlp at *ytdlp_path* recognizes ``--js-runtimes``.
 
-    Cached for the process lifetime; the binary on PATH does not change mid-run.
-    Guards against older yt-dlp that lacks the flag — passing an unknown option
-    would break all YouTube mining. Any failure (yt-dlp missing, timeout) returns
-    False -> behave as before.
+    Cached per resolved path. Guards against older yt-dlp that lacks the flag —
+    passing an unknown option would break all YouTube mining. Any failure (yt-dlp
+    missing, timeout) returns False -> behave as before.
     """
     try:
         proc = subprocess.run(
-            ["yt-dlp", "--help"],
+            [ytdlp_path, "--help"],
             capture_output=True,
             text=True,
             timeout=30,
@@ -81,18 +88,18 @@ def _ytdlp_supports_js_runtimes() -> bool:
     return "--js-runtimes" in (proc.stdout or "")
 
 
-@functools.lru_cache(maxsize=1)
-def _ytdlp_supports_remote_components() -> bool:
-    """True if the installed yt-dlp recognizes ``--remote-components``.
+@functools.cache
+def _ytdlp_supports_remote_components(ytdlp_path: str) -> bool:
+    """True if the yt-dlp at *ytdlp_path* recognizes ``--remote-components``.
 
-    Cached for the process lifetime; the binary on PATH does not change mid-run.
-    Probed separately from ``--js-runtimes`` so an older yt-dlp that knows one
-    flag but not the other still degrades safely. Any failure (yt-dlp missing,
-    timeout) returns False -> behave as before. Issue #64.
+    Cached per resolved path (see ``_ytdlp_supports_js_runtimes`` for why the
+    path is the cache key). Probed separately from ``--js-runtimes`` so an older
+    yt-dlp that knows one flag but not the other still degrades safely. Any
+    failure (yt-dlp missing, timeout) returns False -> behave as before. Issue #64.
     """
     try:
         proc = subprocess.run(
-            ["yt-dlp", "--help"],
+            [ytdlp_path, "--help"],
             capture_output=True,
             text=True,
             timeout=30,
@@ -130,6 +137,14 @@ class YouTubeFetcherService:
         # subprocess; exactly one caller must proceed.
         self._kill_lock = threading.Lock()
 
+    def _ytdlp(self) -> str:
+        """Resolve the yt-dlp executable to invoke for this fetcher's config.
+
+        Picks up a config override, the app-managed downloaded copy
+        (~/.anki_miner/bin/), a bundled binary, or the bare literal on PATH.
+        """
+        return resolve_ytdlp(self._config)
+
     # ------------------------------------------------------------------
     # probe_metadata
     # ------------------------------------------------------------------
@@ -149,7 +164,7 @@ class YouTubeFetcherService:
         """
         logger.info("youtube probe starting: %s", url)
         cmd: list[str] = [
-            "yt-dlp",
+            self._ytdlp(),
             "--skip-download",
             "--dump-single-json",
             "--no-playlist",
@@ -174,7 +189,7 @@ class YouTubeFetcherService:
         except subprocess.TimeoutExpired as e:
             raise YouTubeFetchError(f"yt-dlp metadata probe timed out after {e.timeout}s") from e
         except FileNotFoundError as e:
-            raise YouTubeFetchError("yt-dlp executable not found on PATH. Install yt-dlp and retry.") from e
+            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from e
 
         if proc.returncode != 0:
             stderr_tail = (proc.stderr or "").strip().splitlines()[-20:]
@@ -279,7 +294,7 @@ class YouTubeFetcherService:
         """
         logger.info("youtube playlist probe starting: %s (limit=%s)", url, limit)
         cmd: list[str] = [
-            "yt-dlp",
+            self._ytdlp(),
             "--skip-download",
             "--flat-playlist",
             "--dump-single-json",
@@ -304,7 +319,7 @@ class YouTubeFetcherService:
         except subprocess.TimeoutExpired as e:
             raise YouTubeFetchError(f"yt-dlp playlist probe timed out after {e.timeout}s") from e
         except FileNotFoundError as e:
-            raise YouTubeFetchError("yt-dlp executable not found on PATH. Install yt-dlp and retry.") from e
+            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from e
 
         if proc.returncode != 0:
             stderr_tail = (proc.stderr or "").strip().splitlines()[-20:]
@@ -434,14 +449,19 @@ class YouTubeFetcherService:
         # Local reference kept for the finally's wait(): _kill_tree claims
         # (nulls) self._popen when it kills, so the shared handle may be gone
         # by the time the reader loop unwinds.
-        popen = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            bufsize=1,
-            text=True,
-            **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
-        )
+        try:
+            popen = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=1,
+                text=True,
+                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
+            )
+        except FileNotFoundError as e:
+            # The probes guard their own subprocess.run; the fetch Popen had no
+            # such guard, so a missing yt-dlp leaked a raw FileNotFoundError.
+            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from e
         self._popen = popen
 
         tail: collections.deque[str] = collections.deque(maxlen=50)
@@ -578,7 +598,7 @@ class YouTubeFetcherService:
         output_tpl = f"{workspace}/%(id)s.%(ext)s"
         fmt = f"bestvideo[height<={max_height}]+bestaudio/" f"best[height<={max_height}]"
 
-        cmd: list[str] = ["yt-dlp"]
+        cmd: list[str] = [self._ytdlp()]
         if sub_mode == "manual_only":
             cmd.append("--write-sub")
         elif sub_mode == "auto_only":
@@ -646,7 +666,7 @@ class YouTubeFetcherService:
         lacks the flag or no supported runtime is on PATH (deno, yt-dlp's default,
         needs no flag). Issue #64.
         """
-        if not _ytdlp_supports_js_runtimes():
+        if not _ytdlp_supports_js_runtimes(self._ytdlp()):
             return []
         for runtime in _JS_RUNTIMES:
             if shutil.which(runtime):
@@ -670,7 +690,7 @@ class YouTubeFetcherService:
         — yt-dlp prefers a local copy and the flag only *allows* a fetch when one is
         missing. No-op when the installed yt-dlp lacks the flag. Issue #64.
         """
-        if not _ytdlp_supports_remote_components():
+        if not _ytdlp_supports_remote_components(self._ytdlp()):
             return []
         return ["--remote-components", "ejs:github"]
 
