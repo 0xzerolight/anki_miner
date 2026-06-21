@@ -44,6 +44,33 @@ _FIELD_KEYWORDS: dict[str, list[str]] = {
 }
 
 
+def auto_map_fields(field_names: list[str]) -> dict[str, str]:
+    """Map Anki field names to card data keys via :data:`_FIELD_KEYWORDS`.
+
+    Pure (Qt-free) so the setup wizard and the settings panel share one
+    matching algorithm. For every key in ``_FIELD_KEYWORDS``, returns the first
+    field name (in ``field_names`` order) that matches after lowercasing and
+    removing spaces/underscores; unmatched keys map to ``""``.
+
+    Args:
+        field_names: Field names fetched from AnkiConnect.
+
+    Returns:
+        ``{field_key: matched_field_name_or_""}`` for every key in
+        ``_FIELD_KEYWORDS``.
+    """
+    mapping: dict[str, str] = {}
+    for key, keywords in _FIELD_KEYWORDS.items():
+        normalized = [kw.lower() for kw in keywords]
+        matched = ""
+        for field_name in field_names:
+            if field_name.lower().replace(" ", "").replace("_", "") in normalized:
+                matched = field_name
+                break
+        mapping[key] = matched
+    return mapping
+
+
 class AnkiSettingsPanel(FormPanel):
     """Panel for Anki connection and configuration settings.
 
@@ -521,7 +548,8 @@ class AnkiSettingsPanel(FormPanel):
         Args:
             field_names: List of field names from AnkiConnect
         """
-        # Map each data key to its input widget; keywords come from the module-level constant.
+        # Map each data key to its input widget; the matching algorithm lives in
+        # the module-level pure helper so the setup wizard reuses it verbatim.
         widget_map = {
             "word": self.expression_field_input,
             "sentence": self.sentence_field_input,
@@ -540,12 +568,12 @@ class AnkiSettingsPanel(FormPanel):
             "source": self.source_field_input,
         }
 
+        # Only overwrite a widget when a field actually matched — an empty result
+        # leaves the existing value untouched (exact prior behavior).
+        mapped = auto_map_fields(field_names)
         for key, widget in widget_map.items():
-            keywords = _FIELD_KEYWORDS.get(key, [])
-            for field_name in field_names:
-                if field_name.lower().replace(" ", "").replace("_", "") in [kw.lower() for kw in keywords]:
-                    widget.setText(field_name)
-                    break
+            if mapped.get(key):
+                widget.setText(mapped[key])
 
     # Getters for card field values
     def get_card_fields(self) -> dict:
