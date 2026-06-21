@@ -89,6 +89,7 @@ class MainWindow(QMainWindow):
         self.background_tasks.validation_result.connect(self._on_validation_finished)
         self.background_tasks.validation_error.connect(self._on_validation_error)
         self.background_tasks.update_check_result.connect(self._on_update_check_result)
+        self.background_tasks.ytdlp_update_result.connect(self._on_ytdlp_update_result)
         self.background_tasks.jmdict_migration_finished.connect(self._on_jmdict_migration_finished)
 
         # Config-bound services (validation + the AnkiService shared across undo
@@ -121,6 +122,11 @@ class MainWindow(QMainWindow):
 
         # One-time JMdict XML → SQLite migration (background)
         self._maybe_migrate_jmdict()
+
+        # yt-dlp background self-update (throttled, deferred so the window paints
+        # first). Silent on the auto path — no dialog (see _on_ytdlp_update_result).
+        if self.config.auto_update_ytdlp:
+            QTimer.singleShot(0, lambda: self.background_tasks.start_ytdlp_update(self.config, force=False))
 
         # Post-update confirmation: if last_known_version differs from the
         # currently running __version__, show a one-shot info dialog. Save the
@@ -823,6 +829,20 @@ class MainWindow(QMainWindow):
         else:
             self._update_banner.update_info(info)
             self._update_banner.setVisible(True)
+
+    def _on_ytdlp_update_result(self, result: object) -> None:
+        """Handle a yt-dlp background-update result.
+
+        Auto path is no-nag: log always; on ``installed`` show a brief status-bar
+        line. No dialog here — the manual path's dialog lives in SettingsTab
+        (:meth:`SettingsTab.set_ytdlp_status_from_result`), driven off the same
+        signal but gated on a user-initiated click.
+        """
+        action = getattr(result, "action", "")
+        message = getattr(result, "message", "") or ""
+        logger.info("yt-dlp update result: action=%s %s", action, message)
+        if action == "installed" and message:
+            self.status_bar.showMessage(message, 5000)
 
     def _on_skip_update_requested(self, version: str) -> None:
         """Persist the skipped version and hide the banner.

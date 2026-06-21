@@ -69,10 +69,13 @@ class SettingsTab(QWidget):
     Signals:
         validation_requested: Emitted when validation should be triggered
         config_changed: Emitted when configuration is saved (passes new config)
+        ytdlp_update_requested: Emitted when the YouTube panel's "Update yt-dlp
+            now" button is clicked (manual, forced).
     """
 
     validation_requested = pyqtSignal()
     config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
+    ytdlp_update_requested = pyqtSignal()
 
     # Fields written OUTSIDE the Settings Save path (theme selector, update
     # banner, first-run flags).  An update_config call that touches ONLY these
@@ -100,6 +103,9 @@ class SettingsTab(QWidget):
         """
         super().__init__(parent)
         self.config = config
+        # True between a manual "Update yt-dlp now" click and its result, so the
+        # shared result signal can surface a dialog on the manual path only.
+        self._ytdlp_manual_pending = False
         self._setup_ui()
         # Controllers (T-66) own worker lifecycles + dialogs; the tab keeps
         # widgets, signal wiring, and config assembly. Dependency is one-way:
@@ -278,6 +284,45 @@ class SettingsTab(QWidget):
         self.themes_panel.font_scale_changed.connect(self._on_font_scale_changed)
 
         self.language_panel.language_changed.connect(self._on_language_changed)
+
+        # YouTube panel: manual "Update yt-dlp now" → re-emit to MainWindow
+        # (app.py routes it to background_tasks.start_ytdlp_update(force=True)).
+        self.youtube_panel.update_ytdlp_requested.connect(self._on_ytdlp_update_clicked)
+
+    def _on_ytdlp_update_clicked(self) -> None:
+        """Mark the next yt-dlp result as user-initiated, then request the update.
+
+        The manual path may surface a message box on failure; the auto (startup)
+        path must stay silent. The flag distinguishes them on the shared result
+        signal — see :meth:`set_ytdlp_status_from_result`.
+        """
+        self._ytdlp_manual_pending = True
+        self.youtube_panel.set_ytdlp_status(self.tr("Updating yt-dlp…"))
+        self.ytdlp_update_requested.emit()
+
+    def set_ytdlp_status(self, text: str) -> None:
+        """Forward a yt-dlp updater status line to the YouTube panel."""
+        self.youtube_panel.set_ytdlp_status(text)
+
+    def set_ytdlp_status_from_result(self, result: object) -> None:
+        """Update the YouTube panel status from a yt-dlp update result.
+
+        Always refreshes the status line. On a user-initiated (manual) trigger,
+        also pops a warning dialog for ``failed`` / ``unavailable``; the auto
+        startup path stays silent (no-nag).
+        """
+        message = getattr(result, "message", "") or ""
+        action = getattr(result, "action", "")
+        self.youtube_panel.set_ytdlp_status(message)
+
+        manual = getattr(self, "_ytdlp_manual_pending", False)
+        self._ytdlp_manual_pending = False
+        if manual and action in ("failed", "unavailable"):
+            QMessageBox.warning(
+                self,
+                self.tr("yt-dlp update"),
+                message or self.tr("Could not update yt-dlp. Check your connection and retry."),
+            )
 
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts."""
