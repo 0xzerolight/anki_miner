@@ -718,15 +718,40 @@ class TestAv1WatchdogFallback:
         assert widget.video_widget.isHidden(), "video_widget should be hidden after fallback"
         assert not widget._av1_notice_label.isHidden(), "fallback notice should be visible"
 
-    def test_watchdog_fires_stops_player(self, qtbot, fake_media_classes):
-        """When the watchdog fires, the player is stopped."""
+    def test_watchdog_fires_keeps_player_for_audio(self, qtbot, fake_media_classes):
+        """When the watchdog fires, the player is NOT stopped — audio keeps playing."""
         widget = self._make_widget_av1(qtbot, fake_media_classes)
         widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
 
         fake_media_classes["player"].reset_mock()
         widget._on_av1_watchdog_timeout()
 
-        fake_media_classes["player"].stop.assert_called_once()
+        fake_media_classes["player"].stop.assert_not_called()
+
+    def test_watchdog_fallback_keeps_subtitles_updating(self, qtbot, fake_media_classes):
+        """After the fallback, subtitle overlay still updates from playback position.
+
+        The video is gone but audio plays on, so the subtitle label must track
+        position — that's what lets the user verify audio/subtitle sync.
+        """
+        widget = self._make_widget_av1(qtbot, fake_media_classes)
+        widget.subtitle_entries = [(1.0, 3.0, "テスト")]
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+        widget._on_av1_watchdog_timeout()
+        assert widget.video_widget.isHidden()
+
+        fake_media_classes["player"].duration.return_value = 10000
+        widget._on_position_changed(2000)  # 2.0 s — inside [1.0, 3.0]
+
+        assert widget.subtitle_label.text() == "テスト"
+        assert not widget.subtitle_label.isHidden()
+
+    def test_av1_notice_mentions_audio_subtitles(self, qtbot, fake_media_classes):
+        """The fallback notice keeps the AV1 message and states audio/subtitles play."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes)
+        text = widget._av1_notice_label.text()
+        assert "AV1" in text
+        assert "Audio and subtitles still play" in text
 
     def test_late_frame_after_fallback_restores_video_and_resumes(self, qtbot, fake_media_classes):
         """A frame decoded AFTER the watchdog fired (slow software decode) undoes
@@ -734,7 +759,7 @@ class TestAv1WatchdogFallback:
         widget = self._make_widget_av1(qtbot, fake_media_classes)
         widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
         widget._on_av1_watchdog_timeout()
-        # Fallback is showing, player stopped.
+        # Fallback is showing, audio still playing.
         assert widget.video_widget.isHidden()
         assert not widget._av1_notice_label.isHidden()
 

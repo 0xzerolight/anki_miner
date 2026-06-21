@@ -3180,8 +3180,8 @@ Details: %2</source>
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
-        <source>This video uses AV1, which your system can't decode for in-app preview.</source>
-        <translation>この動画はAV1を使用しており、お使いのシステムではアプリ内プレビュー用にデコードできません。</translation>
+        <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
+        <translation>この動画はAV1を使用しており、お使いのシステムではアプリ内プレビュー用にデコードできません。音声と字幕は引き続き再生されます。</translation>
     </message>
     <message>
         <source>Play</source>
