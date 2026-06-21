@@ -265,6 +265,7 @@ class _FakeRealSettingsTab:
             anki_panel=MagicMock(),
             filtering_panel=MagicMock(),
             get_config=MagicMock(),
+            persist_styling=MagicMock(),
         )
         self._dict_import_flow = DictionaryImportFlow(
             parent=parent,
@@ -286,12 +287,13 @@ class _FakeRealSettingsTab:
 class TestRealSettingsTabIterCloseWorkers:
     """The real SettingsTab.iter_close_workers method chains all four flows."""
 
-    def test_idle_tab_returns_five_nones(self):
+    def test_idle_tab_returns_all_nones(self):
         tab = _FakeRealSettingsTab()
         workers = tab.iter_close_workers()
-        # 3 from AnkiProbeController + 1 DictionaryImportFlow + 1 AudioPackImportFlow
-        # + 2 ZipImportFlow = 7 entries, all None when idle
-        assert len(workers) == 7
+        # 4 from AnkiProbeController (fetch fields, fetch decks, styling write,
+        # styling probe) + 1 DictionaryImportFlow + 1 AudioPackImportFlow
+        # + 2 ZipImportFlow = 8 entries, all None when idle
+        assert len(workers) == 8
         assert all(w is None for w in workers)
 
     def test_dict_import_worker_surfaces(self):
