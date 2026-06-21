@@ -174,6 +174,32 @@ class TestYouTubeConfig:
         assert config.ffmpeg_location == temp_dir / "ffmpeg"
         assert config.ffprobe_location == temp_dir / "ffprobe"
 
+    def test_ytdlp_location_defaults_none(self):
+        """ytdlp_location defaults to None."""
+        config = AnkiMinerConfig()
+        assert config.ytdlp_location is None
+
+    def test_ytdlp_location_coerced_from_string(self, temp_dir):
+        """ytdlp_location is coerced to Path when passed as str."""
+        config = AnkiMinerConfig(ytdlp_location=str(temp_dir / "yt-dlp"))
+        assert isinstance(config.ytdlp_location, Path)
+        assert config.ytdlp_location == temp_dir / "yt-dlp"
+
+    def test_ytdlp_location_empty_string_becomes_none(self):
+        """An empty ytdlp_location string normalizes to None."""
+        config = AnkiMinerConfig(ytdlp_location="")
+        assert config.ytdlp_location is None
+
+    def test_ytdlp_location_accepts_path(self, temp_dir):
+        """ytdlp_location accepts a Path object directly."""
+        config = AnkiMinerConfig(ytdlp_location=temp_dir / "yt-dlp")
+        assert config.ytdlp_location == temp_dir / "yt-dlp"
+
+    def test_auto_update_ytdlp_defaults_true(self):
+        """auto_update_ytdlp defaults to True (background update on)."""
+        config = AnkiMinerConfig()
+        assert config.auto_update_ytdlp is True
+
 
 def test_dictionary_chain_default():
     from anki_miner.config import AnkiMinerConfig, ChainEntry
