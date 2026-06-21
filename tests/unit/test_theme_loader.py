@@ -295,3 +295,16 @@ class TestBuiltinThemeFiles:
             data = json.load(f)
 
         assert len(data["colors"]) == 46, f"{theme_path.name}: {len(data['colors'])} colors"
+
+    @pytest.mark.parametrize("theme_path", _BUILTIN_THEME_PATHS, ids=lambda p: p.stem)
+    def test_builtin_theme_input_border_visible(self, theme_path: Path):
+        # Issue #85: an input field whose border equals its background renders an
+        # invisible box (no visual cue when unfocused). Every theme must give the
+        # border a value distinct from input-bg.
+        with open(theme_path) as f:
+            colors = json.load(f)["colors"]
+
+        assert colors["border"] != colors["input-bg"], (
+            f"{theme_path.name}: border {colors['border']} equals input-bg "
+            f"{colors['input-bg']} - unfocused input fields have no visible border"
+        )
