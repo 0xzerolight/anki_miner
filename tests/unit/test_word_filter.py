@@ -862,3 +862,94 @@ class TestWordFilterService:
             assert result[0].lemma == "X"
             assert result[0].sentence == "X plus blacklisted Y"
             assert result[0].start_time == 5.0
+
+
+class TestAttachSentenceCandidates:
+    """Tests for WordFilterService.attach_sentence_candidates."""
+
+    @staticmethod
+    def _line(
+        lemmas: set[str],
+        text: str,
+        start: float = 0.0,
+        end: float = 1.0,
+    ) -> LineLemmas:
+        return LineLemmas(
+            line_text=text,
+            lemmas=frozenset(lemmas),
+            start_time=start,
+            end_time=end,
+            duration=end - start,
+        )
+
+    def test_word_on_single_line_gets_no_candidates(self, test_config):
+        service = WordFilterService(test_config)
+        word = create_word("X", sentence="only line")
+        line_index = [self._line({"X"}, text="only line")]
+
+        service.attach_sentence_candidates([word], line_index)
+
+        assert word.sentence_candidates == []
+
+    def test_repeated_word_collects_one_variant_per_line(self, test_config):
+        service = WordFilterService(test_config)
+        word = create_word("X", sentence="first")
+        line_index = [
+            self._line({"X"}, text="first", start=1.0, end=2.0),
+            self._line({"Y"}, text="unrelated", start=3.0, end=4.0),
+            self._line({"X", "Y"}, text="second", start=5.0, end=6.0),
+        ]
+
+        service.attach_sentence_candidates([word], line_index)
+
+        assert len(word.sentence_candidates) == 2
+        sentences = [c.sentence for c in word.sentence_candidates]
+        assert sentences == ["first", "second"]
+        # Timing follows each candidate line.
+        assert word.sentence_candidates[1].start_time == 5.0
+        assert word.sentence_candidates[1].end_time == 6.0
+
+    def test_current_sentence_is_among_candidates(self, test_config):
+        """The word's current pick is always present so the curator can default-select it."""
+        service = WordFilterService(test_config)
+        word = create_word("X", sentence="line A")
+        line_index = [
+            self._line({"X"}, text="line A", start=0.0, end=1.0),
+            self._line({"X"}, text="line B", start=2.0, end=3.0),
+        ]
+
+        service.attach_sentence_candidates([word], line_index)
+
+        assert any(c.sentence == "line A" and c.start_time == 0.0 for c in word.sentence_candidates)
+
+    def test_candidate_count_capped(self, test_config):
+        service = WordFilterService(test_config)
+        word = create_word("X")
+        line_index = [self._line({"X"}, text=f"line {i}", start=float(i), end=float(i) + 1) for i in range(20)]
+
+        service.attach_sentence_candidates([word], line_index, max_candidates=5)
+
+        assert len(word.sentence_candidates) == 5
+        # Earliest-first.
+        assert [c.sentence for c in word.sentence_candidates] == [f"line {i}" for i in range(5)]
+
+    def test_candidate_variants_are_leaves(self, test_config):
+        """Candidate variants must not carry their own candidates (no recursion)."""
+        service = WordFilterService(test_config)
+        word = create_word("X")
+        line_index = [
+            self._line({"X"}, text="a", start=0.0, end=1.0),
+            self._line({"X"}, text="b", start=2.0, end=3.0),
+        ]
+
+        service.attach_sentence_candidates([word], line_index)
+
+        assert all(c.sentence_candidates == [] for c in word.sentence_candidates)
+
+    def test_empty_line_index_is_noop(self, test_config):
+        service = WordFilterService(test_config)
+        word = create_word("X")
+
+        service.attach_sentence_candidates([word], [])
+
+        assert word.sentence_candidates == []
