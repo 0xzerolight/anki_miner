@@ -154,6 +154,73 @@ class DefinitionService:
             progress_callback.on_complete()
         return results
 
+    def has_offline_definitions(self, words: list[str]) -> dict[str, bool]:
+        """Report which words have a definition in any OFFLINE provider.
+
+        Offline-only existence probe used to drop no-definition words BEFORE
+        the curation dialog (the curator must not surface words that can never
+        become cards). Mirrors the fast-path structure of get_definitions_batch
+        but excludes online providers (e.g. Jisho) so the check never blocks on
+        network I/O — matching the offline-only contract of lookup_all_offline.
+
+        A word is True iff some offline provider returns a truthy hit. The same
+        never-raises provider boundary applies: a provider raising an
+        unanticipated exception degrades to "miss + continue", never aborting.
+
+        Returns a dict keyed by the deduped input words; every input word is
+        present exactly once.
+        """
+        self.ensure_loaded()
+
+        deduped = list(dict.fromkeys(words))
+        found: dict[str, bool] = dict.fromkeys(deduped, False)
+        remaining = list(deduped)
+
+        for provider in self._providers:
+            if not remaining:
+                break
+            if provider.is_online or not provider.is_available():
+                continue
+            batch_fn = getattr(provider, "lookup_many", None)
+            if callable(batch_fn):
+                try:
+                    hits = batch_fn(remaining)
+                except Exception as e:
+                    logger.warning(
+                        "Provider '%s' raised during lookup_many; skipping: %s",
+                        provider.name,
+                        e,
+                    )
+                    continue
+                still_remaining: list[str] = []
+                for word in remaining:
+                    if hits.get(word):
+                        found[word] = True
+                    else:
+                        still_remaining.append(word)
+                remaining = still_remaining
+            else:
+                still_remaining = []
+                for word in remaining:
+                    try:
+                        result = provider.lookup(word)
+                    except Exception as e:
+                        logger.warning(
+                            "Provider '%s' raised during lookup of '%s'; skipping: %s",
+                            provider.name,
+                            word,
+                            e,
+                        )
+                        still_remaining.append(word)
+                        continue
+                    if result:
+                        found[word] = True
+                    else:
+                        still_remaining.append(word)
+                remaining = still_remaining
+
+        return found
+
     def get_glossary(self, word: str) -> str | None:
         """Collect hits from all enabled providers and concatenate as one HTML blob.
 

@@ -189,6 +189,10 @@ class TestEpisodePipeline:
                 side_effect=lambda words, *a, **kw: ["a definition"] * len(words),
             ),
             patch(
+                "anki_miner.services.definition_service.DefinitionService.has_offline_definitions",
+                side_effect=lambda lemmas: dict.fromkeys(lemmas, True),
+            ),
+            patch(
                 "anki_miner.services.definition_service.DefinitionService.get_glossaries_batch",
                 side_effect=lambda words, *a, **kw: [None] * len(words),
             ),
@@ -255,6 +259,10 @@ class TestEpisodePipeline:
             patch("anki_miner.services.media_extractor.subprocess.Popen") as mock_popen,
             patch("anki_miner.services.media_extractor.ensure_directory"),
             patch("anki_miner.services.anki_service.requests.post", return_value=find_resp),
+            patch(
+                "anki_miner.services.definition_service.DefinitionService.has_offline_definitions",
+                side_effect=lambda lemmas: dict.fromkeys(lemmas, True),
+            ),
         ):
 
             subtitle_parser = SubtitleParserService(config)
@@ -444,9 +452,15 @@ class TestIPlusOneFilterIntegration:
 
         post_seq = self._make_anki_post_mock(known_words)
 
-        with patch(
-            "anki_miner.services.anki_service.requests.post",
-            side_effect=post_seq,
+        with (
+            patch(
+                "anki_miner.services.anki_service.requests.post",
+                side_effect=post_seq,
+            ),
+            patch(
+                "anki_miner.services.definition_service.DefinitionService.has_offline_definitions",
+                side_effect=lambda lemmas: dict.fromkeys(lemmas, True),
+            ),
         ):
             subtitle_parser = SubtitleParserService(config)
             word_filter = WordFilterService(config)
