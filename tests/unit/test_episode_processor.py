@@ -4137,3 +4137,99 @@ class TestOfflineDefinitionPreFilter:
 
         mock_services["definition_service"].has_offline_definitions.assert_not_called()
         assert captured["lemmas"] == ["食べる", "走る"]
+
+
+class TestWithinRunDuplicateCollapse:
+    """Words colliding on mined_form within one run are collapsed before the
+    curator, so it never offers a word Anki will silently skip as a duplicate."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _build(self, config, mock_services):
+        return EpisodeProcessor(
+            config=config,
+            subtitle_parser=mock_services["subtitle_parser"],
+            word_filter=mock_services["word_filter"],
+            media_extractor=mock_services["media_extractor"],
+            definition_service=mock_services["definition_service"],
+            anki_service=mock_services["anki_service"],
+            presenter=NullPresenter(),
+        )
+
+    def _prime(self, mock_services, words):
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.side_effect = lambda f: (
+            mock_services["subtitle_parser"].parse_subtitle_file.return_value,
+            [],
+        )
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = list(words)
+        # Every word survives the offline-definition pre-filter so the collapse
+        # is the only thing acting on the list the curator receives.
+        mock_services["definition_service"].has_offline_definitions.side_effect = lambda lemmas: dict.fromkeys(
+            lemmas, True
+        )
+
+    def test_duplicate_mined_forms_collapsed_before_curation(self, test_config, mock_services, tmp_path):
+        # Two verbs share lemma 食べる ⇒ identical mined_form (mined_form == lemma
+        # for verbs). The curator must see exactly one.
+        dup_a, dup_b = _make_word("食べる", start_time=1.0), _make_word("食べる", start_time=9.0)
+        self._prime(mock_services, [dup_a, dup_b])
+
+        captured: dict = {}
+
+        def cb(words):
+            captured["mined_forms"] = [w.mined_form for w in words]
+            return None
+
+        proc = self._build(test_config, mock_services)
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
+
+        assert captured["mined_forms"] == ["食べる"]
+
+    def test_distinct_mined_forms_not_collapsed(self, test_config, mock_services, tmp_path):
+        w1, w2 = _make_word("食べる"), _make_word("走る", start_time=5.0)
+        self._prime(mock_services, [w1, w2])
+
+        captured: dict = {}
+
+        def cb(words):
+            captured["mined_forms"] = [w.mined_form for w in words]
+            return None
+
+        proc = self._build(test_config, mock_services)
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
+
+        assert captured["mined_forms"] == ["食べる", "走る"]
+
+    def test_duplicates_preserved_when_allow_duplicate_cards(self, test_config, mock_services, tmp_path):
+        # Deck Builder parity: allow_duplicate_cards=True ⇒ Anki creates both, so
+        # showing both is correct and the collapse must be skipped.
+        config = replace(test_config, allow_duplicate_cards=True)
+        dup_a, dup_b = _make_word("食べる", start_time=1.0), _make_word("食べる", start_time=9.0)
+        self._prime(mock_services, [dup_a, dup_b])
+
+        captured: dict = {}
+
+        def cb(words):
+            captured["mined_forms"] = [w.mined_form for w in words]
+            return None
+
+        proc = self._build(config, mock_services)
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
+
+        assert captured["mined_forms"] == ["食べる", "食べる"]
