@@ -43,6 +43,7 @@ dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
     "pytest-qt>=4.4.0",
+    "pytest-xdist>=3.6.0",
     "black>=26.3.1",
     "mypy>=1.15.0",
     "ruff>=0.9.0",
@@ -103,7 +104,7 @@ python_functions = ["test_*"]
 # Coverage is computed but never gated, so it's dropped from default runs
 # (CI + local) to avoid paying for an ungated metric. Run it explicitly when
 # needed: pytest --cov=anki_miner
-addopts = "-v -m \"not e2e\""
+addopts = "-n auto --dist loadfile -m \"not e2e\""
 # The app is PyQt6-only. A stray PySide6 install (e.g. the i18n build dep)
 # must not flip pytest-qt's binding auto-detection to PySide6, which would
 # make qtbot reject every PyQt6 widget. Pin it.
