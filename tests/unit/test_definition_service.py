@@ -759,3 +759,84 @@ class TestProviderRaisesMidChain:
         caplog.set_level(logging.WARNING)
         service.get_definitions_batch(["w"])
         assert "BadProv" in caplog.text
+
+
+class TestHasOfflineDefinitions:
+    """Offline-only existence probe used to pre-filter the curation dialog."""
+
+    def test_reports_true_only_for_offline_hits(self, test_config):
+        p = make_batch_provider("Off", table={"a": "<div>a</div>", "b": None})
+        service = DefinitionService(test_config, providers=[p])
+
+        result = service.has_offline_definitions(["a", "b"])
+
+        assert result == {"a": True, "b": False}
+
+    def test_per_word_fallback_provider(self, test_config):
+        """Providers lacking lookup_many are consulted per-word."""
+        p = make_provider("Legacy", return_value=None)
+        p.is_online = False
+        p.lookup.side_effect = lambda w: "<div>hit</div>" if w == "x" else None
+        service = DefinitionService(test_config, providers=[p])
+
+        result = service.has_offline_definitions(["x", "y"])
+
+        assert result == {"x": True, "y": False}
+
+    def test_online_provider_ignored_even_with_hit(self, test_config):
+        """Online providers never contribute and never get queried."""
+        online = make_provider("Jisho", return_value="<div>online</div>")
+        online.is_online = True
+        service = DefinitionService(test_config, providers=[online])
+
+        result = service.has_offline_definitions(["x"])
+
+        assert result == {"x": False}
+        online.lookup.assert_not_called()
+
+    def test_offline_hit_short_circuits_remaining_providers(self, test_config):
+        """A word resolved offline is not re-queried against later providers."""
+        p1 = make_batch_provider("First", table={"x": "<div>x</div>"})
+        p2 = make_batch_provider("Second", table={"x": "<div>x2</div>"})
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        result = service.has_offline_definitions(["x"])
+
+        assert result == {"x": True}
+        # Second provider only sees words still unresolved after the first.
+        assert p2.lookup_many.call_args is None or "x" not in p2.lookup_many.call_args[0][0]
+
+    def test_skips_unavailable_provider(self, test_config):
+        unavail = make_batch_provider("Bad", available=False, table={"x": "<div>x</div>"})
+        ok = make_batch_provider("Good", table={"x": "<div>x</div>"})
+        service = DefinitionService(test_config, providers=[unavail, ok])
+
+        result = service.has_offline_definitions(["x"])
+
+        assert result == {"x": True}
+        unavail.lookup_many.assert_not_called()
+
+    def test_provider_exception_degrades_to_miss(self, test_config):
+        """A raising provider is treated as a miss, never aborting the probe."""
+        boom = make_provider("Boom")
+        boom.is_online = False
+        boom.lookup.side_effect = RuntimeError("offline boom")
+        service = DefinitionService(test_config, providers=[boom])
+
+        result = service.has_offline_definitions(["x"])
+
+        assert result == {"x": False}
+
+    def test_dedupes_keys(self, test_config):
+        p = make_batch_provider("Off", table={"a": "<div>a</div>"})
+        service = DefinitionService(test_config, providers=[p])
+
+        result = service.has_offline_definitions(["a", "a", "a"])
+
+        assert result == {"a": True}
+
+    def test_empty_words(self, test_config):
+        p = make_batch_provider("Off", table={})
+        service = DefinitionService(test_config, providers=[p])
+
+        assert service.has_offline_definitions([]) == {}

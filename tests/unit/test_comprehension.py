@@ -66,6 +66,7 @@ class TestComprehensionCalculation:
     def mock_services(self):
         subtitle_parser = MagicMock()
         word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
         media_extractor = MagicMock()
         definition_service = MagicMock()
         anki_service = MagicMock()
