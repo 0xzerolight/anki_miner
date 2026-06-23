@@ -686,6 +686,13 @@ class EpisodeProcessor:
         # off by default). Keyed on word.lemma, the same key Phase 4 looks up.
         # Gated on bypass_optional_filters so the Deck Builder preview-parity
         # path is unaffected (Phase 5 stays the skip point there).
+        #
+        # Known, intentional asymmetry: this probe is offline-only, but Phase 5
+        # looks definitions up over the FULL chain (get_definitions_batch, which
+        # includes Jisho when enabled). A user who turns Jisho on therefore has
+        # words with a Jisho-only definition dropped here before the curator —
+        # accepted on purpose so Phase 2 never blocks on network I/O. Do not
+        # "fix" this by calling online providers here.
         if not self.config.bypass_optional_filters and unknown_words:
             has_def = self.definition_service.has_offline_definitions([w.lemma for w in unknown_words])
             kept_words = [w for w in unknown_words if has_def.get(w.lemma)]
@@ -702,6 +709,37 @@ class EpisodeProcessor:
                         len(dropped),
                         preview,
                         more,
+                    )
+                )
+
+        # Within-run duplicate collapse. Two distinct surfaces/lemmas can resolve
+        # to the same mined_form in one episode (e.g. a verb's lemma and another
+        # token's surface coincide). Anki dedups on the Expression first field,
+        # which IS mined_form, so it silently skips the second as a duplicate
+        # (anki_service.last_skipped_duplicates, warned at Phase 5). filter_unknown
+        # already removes mined_forms that exist as cards in Anki; this collapses
+        # the WITHIN-RUN collisions it can't see, so the curator never offers a
+        # word Anki will drop. Keep the first occurrence (stable order).
+        #
+        # Gated on allow_duplicate_cards: the Deck Builder sets it True (and
+        # bypass_optional_filters True) to intentionally re-card duplicates, in
+        # which case Anki creates both and showing both is correct — collapsing
+        # there would diverge from its raw-lemma preview parity.
+        if not self.config.allow_duplicate_cards and unknown_words:
+            seen: set[str] = set()
+            collapsed: list[TokenizedWord] = []
+            for word in unknown_words:
+                if word.mined_form in seen:
+                    continue
+                seen.add(word.mined_form)
+                collapsed.append(word)
+            removed = len(unknown_words) - len(collapsed)
+            unknown_words = collapsed
+            if removed:
+                self.presenter.show_info(
+                    tr_format(
+                        QCoreApplication.translate("EpisodeProcessor", "Collapsed %1 duplicate-expression word(s)"),
+                        removed,
                     )
                 )
 
