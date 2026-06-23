@@ -1,6 +1,7 @@
 """Pytest configuration and shared fixtures."""
 
 import os
+import sys
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -184,6 +185,43 @@ def _drain_qt_deletes():
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
         app.processEvents()
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+
+
+@pytest.fixture(autouse=True)
+def _reset_theme_state():
+    """Reset the ``Theme`` class-level singleton to defaults around every test.
+
+    ``Theme`` keeps all state on the class. Tests that call
+    ``Theme.initialize(shipped_dir=<tmp>)`` with custom themes lacking the
+    built-in ``dark``/``light`` keys never restore it, so the polluted
+    ``_themes``/``_shipped_dir_override`` leak into later tests on the same
+    xdist ``--dist loadfile`` worker. The victim
+    (``test_theme_alternating_rows``) then reads a ``_themes`` without ``dark``:
+    ``get_colors("dark")`` falls back to the first theme (#000000) and
+    ``get_stylesheet("dark")`` leaves ``${color-*}`` unresolved -> assertion
+    fails. The flake only surfaces when scheduling happens to place a polluter
+    file first.
+
+    Reset at setup so each test starts pristine regardless of predecessors;
+    ``Theme`` then lazily rediscovers the real shipped themes on next use.
+    Guarded on the module already being imported so non-GUI tests do not pay a
+    forced PyQt import. Defaults mirror the class declarations in
+    ``theme.py``; ``_qss_template`` is an immutable shipped resource, left
+    cached.
+    """
+    mod = sys.modules.get("anki_miner.gui.resources.styles.theme")
+    if mod is not None:
+        theme_cls = mod.Theme
+        theme_cls._instance = None
+        theme_cls._current_mode = "light"
+        theme_cls._favorites = ("light", "dark")
+        theme_cls._themes = {}
+        theme_cls._user_dir = None
+        theme_cls._shipped_dir_override = None
+        theme_cls._state_listener = None
+        theme_cls._compiled_qss = {}
+        theme_cls._font_scale = 1.0
+    yield
 
 
 @pytest.fixture(autouse=True)
