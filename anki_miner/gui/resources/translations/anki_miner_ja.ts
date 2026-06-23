@@ -1640,6 +1640,14 @@ The dictionary was not removed.</source>
         <translation>文の長さフィルター: %1 単語を除去（上限: %2）</translation>
     </message>
     <message>
+        <source>Skipped %1 words with no definition found: %2%3</source>
+        <translation>語義が見つからなかった %1 単語をスキップしました: %2%3</translation>
+    </message>
+    <message>
+        <source>Collapsed %1 duplicate-expression word(s)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Step 3/5 — Extracting media from video</source>
         <translation>ステップ 3/5 — 動画からメディアを抽出中</translation>
     </message>
@@ -1664,10 +1672,6 @@ The dictionary was not removed.</source>
     <message>
         <source>Step 5/5 — Creating Anki cards</source>
         <translation>ステップ 5/5 — Anki カードを作成中</translation>
-    </message>
-    <message>
-        <source>Skipped %1 words with no definition found: %2%3</source>
-        <translation>語義が見つからなかった %1 単語をスキップしました: %2%3</translation>
     </message>
     <message numerus="yes">
         <source>Successfully created %n card(s)</source>
@@ -3567,6 +3571,20 @@ Details: %2</source>
     <message>
         <source>Freq. Rank</source>
         <translation>頻度順位</translation>
+    </message>
+    <message>
+        <source>Sentences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1
+
+(%2 sentences available — focus the row, then pick one under “Sentences”)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Copy lemma</source>
