@@ -167,6 +167,13 @@ class DefinitionService:
         never-raises provider boundary applies: a provider raising an
         unanticipated exception degrades to "miss + continue", never aborting.
 
+        Known, intentional asymmetry vs. Phase 5: the actual card-build step uses
+        get_definitions_batch over the FULL chain (online providers included). When
+        a user enables Jisho, a word whose only definition is from Jisho is dropped
+        by this probe before the curation dialog — accepted on purpose so the
+        pre-curator filter never blocks on network I/O. Do not add online providers
+        here to "close" the gap.
+
         Returns a dict keyed by the deduped input words; every input word is
         present exactly once.
         """
