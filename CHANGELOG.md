@@ -15,6 +15,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 
+## [2.6.7] - 2026-06-23
+
+### Added
+- **Sentence picker in the word curator.** When a word appears in more than one subtitle line, the curation dialog now lets you choose which sentence is mined onto the card instead of always taking the first occurrence.
+
+### Changed
+- **Words with no definition are dropped before the curation dialog.** An offline definition filter runs ahead of curation, so words that would land on a blank card no longer show up to curate.
+
+### Fixed
+- **AV1 preview "can't decode" notice no longer false-fires.** The player nudges the first-frame decode so machines that can decode AV1 stop getting the fallback notice by mistake.
+
+
 ## [2.6.6] - 2026-06-21
 
 ### Added
