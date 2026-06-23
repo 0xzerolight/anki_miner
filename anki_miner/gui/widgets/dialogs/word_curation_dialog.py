@@ -389,13 +389,34 @@ class WordCurationDialog(QDialog):
     # Keyboard shortcuts
     # ------------------------------------------------------------------
 
+    def _install_play_pause_shortcut(self, widget: QWidget) -> None:
+        """Install a widget-scoped Space play/pause shortcut on ``widget``.
+
+        ``WidgetWithChildrenShortcut`` so it only fires when ``widget`` (or one of
+        its children) has focus — never the Search box. Installed on every pane the
+        user clicks into to preview a scene (the table plus the right-pane player,
+        sentence picker, and dictionary), so Space keeps reaching the player after
+        focus leaves the table. A window-scoped shortcut can't be used: it would
+        swallow spaces typed in the Search box (Issue #55).
+        """
+        shortcut = QShortcut(QKeySequence(Qt.Key.Key_Space), widget)
+        shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        shortcut.activated.connect(self._toggle_play_pause)
+
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts for word curation."""
-        # Space: Play/pause the player (Issue #55). Scoped to the table so it doesn't
-        # swallow spaces typed in the Search box.
-        space_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Space), self.table)
-        space_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        space_shortcut.activated.connect(self._toggle_play_pause)
+        # Space: Play/pause the player (Issue #55). Scoped per widget (not the
+        # window) so it doesn't swallow spaces typed in the Search box. Installed
+        # on the table and on each interactive preview pane — focus leaves the
+        # table the moment a sentence/scene is clicked, so the table alone isn't
+        # enough.
+        self._install_play_pause_shortcut(self.table)
+        if self._show_player and hasattr(self, "player_widget"):
+            self._install_play_pause_shortcut(self.player_widget)
+        if self._has_candidates and hasattr(self, "sentence_list"):
+            self._install_play_pause_shortcut(self.sentence_list)
+        if self._show_dict and hasattr(self, "definition_view"):
+            self._install_play_pause_shortcut(self.definition_view)
 
         # S: Toggle checkbox of selected rows (or current row if none selected).
         # Relocated off Space, which is now play/pause (Issue #55).
@@ -604,10 +625,10 @@ class WordCurationDialog(QDialog):
         # Player pane: seek to the chosen sentence's offset-adjusted video position
         # and pause (show the frame without autoplaying). start_time is already
         # raw+offset from the mining parse; ctx.offset only aligns the subtitle
-        # overlay — see the set_source call in _create_player_widget.
-        if self._show_player and hasattr(self, "player_widget"):
-            self.player_widget.seek_seconds(chosen.start_time)
-            self.player_widget.pause()
+        # overlay — see the set_source call in _create_player_widget. This handler
+        # already runs from the debounce timer (outside any active event handler),
+        # so the seek can be issued directly — see _on_candidate_chosen.
+        self._preview_scene(chosen.start_time)
 
         # Dictionary pane: look up by lemma (definitions key on lemma, not mined_form).
         if self._show_dict and hasattr(self, "definition_view"):
@@ -693,9 +714,19 @@ class WordCurationDialog(QDialog):
                 item.setToolTip(self._sentence_tooltip(chosen.sentence, n_candidates))
                 self.table.blockSignals(False)
 
-        # Preview the chosen scene.
+        # Preview the chosen scene. Defer the seek to the next event-loop tick:
+        # this handler runs synchronously inside the list's currentRowChanged
+        # emission (mid mouse-press), and an in-event setPosition+pause doesn't
+        # reliably present the new frame — it took a couple of clicks to land.
+        # The word-focus path already seeks from a (debounce) timer, i.e. outside
+        # any active event handler; deferring here makes the two paths identical.
+        start_time = chosen.start_time
+        QTimer.singleShot(0, lambda: self._preview_scene(start_time))
+
+    def _preview_scene(self, start_time: float) -> None:
+        """Seek the player to ``start_time`` and pause, showing the frame."""
         if self._show_player and hasattr(self, "player_widget"):
-            self.player_widget.seek_seconds(chosen.start_time)
+            self.player_widget.seek_seconds(start_time)
             self.player_widget.pause()
 
     def _visual_row_for_index(self, idx: int) -> int | None:
