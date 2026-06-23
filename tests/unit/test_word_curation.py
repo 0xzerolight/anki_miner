@@ -37,6 +37,12 @@ class TestCurationCallback:
     @pytest.fixture
     def mock_services(self):
         subtitle_parser = MagicMock()
+        # Curation builds the line index too, so mirror parse_subtitle_file's
+        # configured return through the with-index path (no candidates).
+        subtitle_parser.parse_subtitle_file_with_index.side_effect = lambda f: (
+            subtitle_parser.parse_subtitle_file.return_value,
+            [],
+        )
         word_filter = MagicMock()
         word_filter.deduplicate_by_sentence.side_effect = lambda w: w
         media_extractor = MagicMock()
