@@ -144,17 +144,24 @@ class TestPickerSelection:
         assert chosen.sentence == "朝ごはんを食べる"
 
 
+def _dialog_with_stub_player(mixed_words, tmp_path):
+    """A curation dialog whose player widget is a real QWidget stub.
+
+    A real QWidget is needed so the per-widget Space shortcut can be installed
+    on it; ``_create_player_widget`` is patched to skip real Qt multimedia setup.
+    """
+    from PyQt6.QtWidgets import QWidget
+
+    video: Path = tmp_path / "v.mkv"
+    video.write_bytes(b"")
+    ctx = CurationMediaContext(video_file=video, subtitle_entries=[(1.0, 3.0, "x")], offset=0.0)
+    with patch.object(WordCurationDialog, "_create_player_widget", return_value=QWidget()):
+        return WordCurationDialog(mixed_words, media_context=ctx)
+
+
 class TestPickerPlayerSeek:
     def test_pick_seeks_player_to_chosen_scene(self, qtbot, mixed_words, tmp_path):
-        from PyQt6.QtWidgets import QWidget
-
-        video: Path = tmp_path / "v.mkv"
-        video.write_bytes(b"")
-        ctx = CurationMediaContext(video_file=video, subtitle_entries=[(1.0, 3.0, "x")], offset=0.0)
-
-        real_stub = QWidget()
-        with patch.object(WordCurationDialog, "_create_player_widget", return_value=real_stub):
-            dlg = WordCurationDialog(mixed_words, media_context=ctx)
+        dlg = _dialog_with_stub_player(mixed_words, tmp_path)
         qtbot.addWidget(dlg)
         mock_player = MagicMock()
         dlg.player_widget = mock_player
@@ -163,4 +170,39 @@ class TestPickerPlayerSeek:
         mock_player.reset_mock()
         dlg.sentence_list.setCurrentRow(2)  # pick the 9.0s scene
 
+        # The pick's seek is deferred to the next event-loop tick (off the
+        # synchronous currentRowChanged emission), so drive the loop before
+        # asserting — a single click must land the preview.
+        qtbot.waitUntil(lambda: mock_player.seek_seconds.called, timeout=1000)
         mock_player.seek_seconds.assert_called_with(9.0)
+        mock_player.pause.assert_called()
+
+
+class TestPlayPauseShortcut:
+    """Space play/pause must reach the player from every pane the user clicks
+    into to preview a scene — not just the word table (Issue: dead Space after
+    interacting with the sentence picker)."""
+
+    @staticmethod
+    def _has_space_play_pause(widget) -> bool:
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtGui import QKeySequence, QShortcut
+
+        space = QKeySequence(Qt.Key.Key_Space)
+        ctx = Qt.ShortcutContext.WidgetWithChildrenShortcut
+        # Direct children only: a shortcut parented to ``widget`` lists under it.
+        return any(
+            sc.key() == space and sc.context() == ctx
+            for sc in widget.findChildren(QShortcut, options=Qt.FindChildOption.FindDirectChildrenOnly)
+        )
+
+    def test_space_shortcut_on_table_and_sentence_list(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        assert self._has_space_play_pause(dlg.table)
+        assert self._has_space_play_pause(dlg.sentence_list)
+
+    def test_space_shortcut_on_player_pane(self, qtbot, mixed_words, tmp_path):
+        dlg = _dialog_with_stub_player(mixed_words, tmp_path)
+        qtbot.addWidget(dlg)
+        assert self._has_space_play_pause(dlg.player_widget)
