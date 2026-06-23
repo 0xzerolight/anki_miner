@@ -373,10 +373,14 @@ class EpisodeProcessor:
         self,
         ctx: _EpisodeContext,
         subtitle_file: Path,
+        want_line_index: bool = False,
     ) -> tuple[list[TokenizedWord], list[LineLemmas] | None]:
         """Phase 1: parse subtitles into tokenized words (and optionally a line index).
 
-        Returns the raw parse output; mutates ``ctx.total_words_found``.
+        Returns the raw parse output; mutates ``ctx.total_words_found``. The
+        line index is built when the i+1 filter needs it OR when a caller asks
+        via ``want_line_index`` (interactive curation uses it to offer
+        alternative example sentences per word).
         """
         self.presenter.show_info(
             tr_format(
@@ -385,7 +389,7 @@ class EpisodeProcessor:
             )
         )
         line_index: list[LineLemmas] | None = None
-        if self.config.use_i_plus_one_filter:
+        if self.config.use_i_plus_one_filter or want_line_index:
             all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(subtitle_file)
         else:
             all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file)
@@ -1065,8 +1069,12 @@ class EpisodeProcessor:
         if cancel_event is not None:
             self._external_cancel = cancel_event.is_set
 
+        # Interactive curation offers a per-word sentence picker, which needs
+        # the line index (all lines each lemma appears on). Build it for that
+        # path too — not just the i+1 filter.
+        want_line_index = curation_callback is not None and not preview_mode
         try:
-            all_words, line_index = self._phase1_parse(ctx, subtitle_file)
+            all_words, line_index = self._phase1_parse(ctx, subtitle_file, want_line_index=want_line_index)
             if not all_words:
                 self.presenter.show_warning(
                     QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
@@ -1083,6 +1091,11 @@ class EpisodeProcessor:
                 return self._cancelled_result_from_ctx(ctx)
 
             if curation_callback is not None and not preview_mode:
+                if line_index is not None:
+                    # Attach alternative example sentences so the curator can
+                    # offer a per-word sentence picker (no-op for words that
+                    # appear on a single line).
+                    self.word_filter.attach_sentence_candidates(unknown_words, line_index)
                 curated = curation_callback(unknown_words)
                 if curated is None:
                     # The user cancelled/rejected the curation dialog.
