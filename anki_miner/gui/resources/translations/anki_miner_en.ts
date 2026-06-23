@@ -1610,6 +1610,14 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Skipped %1 words with no definition found: %2%3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Collapsed %1 duplicate-expression word(s)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Step 3/5 — Extracting media from video</source>
         <translation type="unfinished" />
     </message>
@@ -1633,10 +1641,6 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Step 5/5 — Creating Anki cards</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Skipped %1 words with no definition found: %2%3</source>
         <translation type="unfinished" />
     </message>
     <message numerus="yes">
@@ -3520,6 +3524,20 @@ Details: %2</source>
     </message>
     <message>
         <source>Freq. Rank</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1
+
+(%2 sentences available — focus the row, then pick one under “Sentences”)</source>
         <translation type="unfinished" />
     </message>
     <message>
