@@ -168,21 +168,21 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
 - Discuss the roadmap — [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
 
 - **Features**:
-  - UI language selection.
-  - Local subtitle creation tab: Opt-in tab to locally generate subtitles.
-  - Card modification tab: Modifying content in existing Anki cards.
-  - Media library: Expand Analytics tab to display local media library across all media forms.
-  - Reading tab: Mine manga and books.
+  - [x] UI language selection.
+  - [ ] Local subtitle creation tab: Opt-in tab to locally generate subtitles.
+  - [ ] Card modification tab: Modifying content in existing Anki cards.
+  - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
+  - [ ] Reading tab: Mine manga and books.
 
 - **Improvements**:
-  - Improved user onboarding: automatic recommended resource fetching, easier setup.
+  - [ ] Improved user onboarding: automatic recommended resource fetching, easier setup.
 
 - **Researching/Under consideration**:
-  - Android port.
-  - Jellyfin integration.
+  - [ ] Android port.
+  - [ ] Jellyfin integration.
 
 - **Long-term**:
-  - Beyond Japanese: Mining other languages.
+  - [ ] Beyond Japanese: Mining other languages.
 
 ## Contributing
 
