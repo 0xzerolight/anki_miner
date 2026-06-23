@@ -331,68 +331,109 @@ class WordFilterService:
             match = earliest.get(word.lemma)
             if match is None:
                 continue
-
-            # Look up the lemma's morpheme position on the matched line so
-            # the bold span (and the surface form, which may have a
-            # different inflection on the new line) lands on the right
-            # token after the swap. If the entry is missing for any reason
-            # (e.g. legacy index without lemma_spans), fall back to the
-            # original surface/offsets — bold will then point at the old
-            # sentence, so we also disable the bolded fields below.
-            span_entry = next(
-                ((s, st, en) for (lemma_key, s, st, en) in match.lemma_spans if lemma_key == word.lemma),
-                None,
-            )
-            if span_entry is not None:
-                new_surface, new_start, new_end = span_entry
-            else:
-                new_surface, new_start, new_end = word.surface, -1, -1
-
-            if self.config.bold_target_in_sentence and span_entry is not None and self.tagger is not None:
-                new_bolded = wrap_target_plain(match.line_text, new_start, new_end)
-                new_furi_bolded = wrap_target_furigana(match.line_text, self.tagger, new_start, new_end)
-            else:
-                new_bolded = ""
-                new_furi_bolded = ""
-
-            # The swap above replaces ``surface``. For surface-mined POS (nouns
-            # and everything that is not 動詞/形容詞), ``mined_form`` IS the
-            # surface, so the new surface becomes the card's Expression — its
-            # ``expression_furigana``/``expression_reading`` (computed from the
-            # ORIGINAL surface at parse time) would otherwise go stale, leaving
-            # the Expression inconsistent with its own furigana/reading (T-37).
-            # Verbs/adjectives mine as ``lemma`` (unchanged by the swap), so
-            # their Expression fields stay valid and are left untouched.
-            # Recompute requires a tagger; production always supplies one
-            # (service_factory wires the shared parser tagger). When absent
-            # (tagger-less unit setup), the original values are kept as a
-            # best-effort fallback rather than recomputed.
-            expr_furigana = word.expression_furigana
-            expr_reading = word.expression_reading
-            surface_is_expression = word.pos not in ("動詞", "形容詞")
-            if surface_is_expression and new_surface != word.surface and self.tagger is not None:
-                expr_furigana = generate_furigana(new_surface, self.tagger)
-                expr_reading = generate_reading(new_surface, self.tagger)
-
-            result.append(
-                dataclasses.replace(
-                    word,
-                    surface=new_surface,
-                    surface_start=new_start,
-                    surface_end=new_end,
-                    sentence=match.line_text,
-                    start_time=match.start_time,
-                    end_time=match.end_time,
-                    duration=match.duration,
-                    expression_furigana=expr_furigana,
-                    expression_reading=expr_reading,
-                    sentence_furigana=match.sentence_furigana,
-                    sentence_reading=match.sentence_reading,
-                    sentence_bolded=new_bolded,
-                    sentence_furigana_bolded=new_furi_bolded,
-                )
-            )
+            result.append(self._swap_word_to_line(word, match))
         return result
+
+    def _swap_word_to_line(self, word: TokenizedWord, match: LineLemmas) -> TokenizedWord:
+        """Rebuild ``word`` as if it had been mined from the ``match`` line.
+
+        Shared by ``filter_i_plus_one`` (swap to the i+1 line) and
+        ``attach_sentence_candidates`` (build one variant per candidate line).
+        Swaps ``surface``/offsets/``sentence``/timing and the precomputed
+        ``sentence_furigana``/``sentence_reading``/bolded variants to the
+        matched line; recomputes ``expression_furigana``/``expression_reading``
+        for surface-mined POS whose Expression follows the new surface. The
+        returned word's ``sentence_candidates`` is cleared so candidate
+        variants stay leaves.
+        """
+        # Look up the lemma's morpheme position on the matched line so the
+        # bold span (and the surface form, which may have a different
+        # inflection on the new line) lands on the right token after the swap.
+        # If the entry is missing for any reason (e.g. legacy index without
+        # lemma_spans), fall back to the original surface/offsets — bold would
+        # then point at the old sentence, so we also disable the bolded fields.
+        span_entry = next(
+            ((s, st, en) for (lemma_key, s, st, en) in match.lemma_spans if lemma_key == word.lemma),
+            None,
+        )
+        if span_entry is not None:
+            new_surface, new_start, new_end = span_entry
+        else:
+            new_surface, new_start, new_end = word.surface, -1, -1
+
+        if self.config.bold_target_in_sentence and span_entry is not None and self.tagger is not None:
+            new_bolded = wrap_target_plain(match.line_text, new_start, new_end)
+            new_furi_bolded = wrap_target_furigana(match.line_text, self.tagger, new_start, new_end)
+        else:
+            new_bolded = ""
+            new_furi_bolded = ""
+
+        # The swap above replaces ``surface``. For surface-mined POS (nouns and
+        # everything that is not 動詞/形容詞), ``mined_form`` IS the surface, so
+        # the new surface becomes the card's Expression — its
+        # ``expression_furigana``/``expression_reading`` (computed from the
+        # ORIGINAL surface at parse time) would otherwise go stale, leaving the
+        # Expression inconsistent with its own furigana/reading (T-37).
+        # Verbs/adjectives mine as ``lemma`` (unchanged by the swap), so their
+        # Expression fields stay valid and are left untouched. Recompute
+        # requires a tagger; production always supplies one (service_factory
+        # wires the shared parser tagger). When absent (tagger-less unit setup),
+        # the original values are kept as a best-effort fallback.
+        expr_furigana = word.expression_furigana
+        expr_reading = word.expression_reading
+        surface_is_expression = word.pos not in ("動詞", "形容詞")
+        if surface_is_expression and new_surface != word.surface and self.tagger is not None:
+            expr_furigana = generate_furigana(new_surface, self.tagger)
+            expr_reading = generate_reading(new_surface, self.tagger)
+
+        return dataclasses.replace(
+            word,
+            surface=new_surface,
+            surface_start=new_start,
+            surface_end=new_end,
+            sentence=match.line_text,
+            start_time=match.start_time,
+            end_time=match.end_time,
+            duration=match.duration,
+            expression_furigana=expr_furigana,
+            expression_reading=expr_reading,
+            sentence_furigana=match.sentence_furigana,
+            sentence_reading=match.sentence_reading,
+            sentence_bolded=new_bolded,
+            sentence_furigana_bolded=new_furi_bolded,
+            sentence_candidates=[],
+        )
+
+    def attach_sentence_candidates(
+        self,
+        words: list[TokenizedWord],
+        line_index: list[LineLemmas],
+        max_candidates: int = 12,
+    ) -> None:
+        """Populate ``word.sentence_candidates`` for words that repeat across lines.
+
+        For each word, collects every ``line_index`` entry whose content lemmas
+        include ``word.lemma`` (subtitle order preserved). When a word appears on
+        two or more lines, builds one fully-swapped :class:`TokenizedWord`
+        variant per line (capped at ``max_candidates``, earliest-first) via
+        :meth:`_swap_word_to_line` and assigns the list — including the variant
+        for the word's current sentence, so the curator can default-select it.
+        Words on a single line are left untouched (empty candidates ⇒ no picker).
+
+        Mutates ``words`` in place. Safe to call with an empty ``line_index``.
+        """
+        if not line_index:
+            return
+        lines_by_lemma: dict[str, list[LineLemmas]] = {}
+        for line in line_index:
+            for lemma in line.lemmas:
+                lines_by_lemma.setdefault(lemma, []).append(line)
+
+        for word in words:
+            lines = lines_by_lemma.get(word.lemma, ())
+            if len(lines) < 2:
+                continue
+            word.sentence_candidates = [self._swap_word_to_line(word, line) for line in lines[:max_candidates]]
 
     def filter_by_episode_count(
         self,
