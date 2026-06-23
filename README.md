@@ -175,7 +175,7 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
   - [ ] Reading tab: Mine manga and books.
 
 - **Improvements**:
-  - [ ] Improved user onboarding: automatic recommended resource fetching, easier setup.
+  - [x] Improved user onboarding: automatic recommended resource fetching, easier setup.
 
 - **Researching/Under consideration**:
   - [ ] Android port.
