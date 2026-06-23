@@ -4030,3 +4030,98 @@ class TestMinedFormsOnResult:
         assert result.mined_forms == ["猫"]
         # The full set is still recorded in the DB.
         mock_known_db.add_words.assert_called_once_with({"食べる", "猫"}, source="mined")
+
+
+class TestOfflineDefinitionPreFilter:
+    """Pre-curator offline definition filter — words with no offline definition
+    are dropped before the curation dialog (and preview/batch) sees them."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _build(self, config, mock_services):
+        return EpisodeProcessor(
+            config=config,
+            subtitle_parser=mock_services["subtitle_parser"],
+            word_filter=mock_services["word_filter"],
+            media_extractor=mock_services["media_extractor"],
+            definition_service=mock_services["definition_service"],
+            anki_service=mock_services["anki_service"],
+            presenter=NullPresenter(),
+        )
+
+    def _prime(self, mock_services, words):
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = list(words)
+
+    def test_no_definition_words_dropped_before_curation(self, test_config, mock_services, tmp_path):
+        keep, drop = _make_word("食べる"), _make_word("走る", 5.0)
+        self._prime(mock_services, [keep, drop])
+        mock_services["definition_service"].has_offline_definitions.return_value = {
+            "食べる": True,
+            "走る": False,
+        }
+        mock_services["media_extractor"].extract_media_batch.return_value = [(keep, _make_media("k"))]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        captured: dict = {}
+
+        def cb(words):
+            captured["lemmas"] = [w.lemma for w in words]
+            return words
+
+        proc = self._build(test_config, mock_services)
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
+
+        assert captured["lemmas"] == ["食べる"]
+
+    def test_words_with_definition_retained(self, test_config, mock_services, tmp_path):
+        w1, w2 = _make_word("食べる"), _make_word("走る", 5.0)
+        self._prime(mock_services, [w1, w2])
+        mock_services["definition_service"].has_offline_definitions.return_value = {
+            "食べる": True,
+            "走る": True,
+        }
+
+        captured: dict = {}
+
+        def cb(words):
+            captured["lemmas"] = [w.lemma for w in words]
+            return None  # cancel after curation; we only assert the input
+
+        proc = self._build(test_config, mock_services)
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
+
+        assert captured["lemmas"] == ["食べる", "走る"]
+
+    def test_filter_skipped_when_bypass_optional_filters(self, test_config, mock_services, tmp_path):
+        config = replace(test_config, bypass_optional_filters=True)
+        w1, w2 = _make_word("食べる"), _make_word("走る", 5.0)
+        self._prime(mock_services, [w1, w2])
+
+        captured: dict = {}
+
+        def cb(words):
+            captured["lemmas"] = [w.lemma for w in words]
+            return None
+
+        proc = self._build(config, mock_services)
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
+
+        mock_services["definition_service"].has_offline_definitions.assert_not_called()
+        assert captured["lemmas"] == ["食べる", "走る"]

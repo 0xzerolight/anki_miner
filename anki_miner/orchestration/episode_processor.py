@@ -674,6 +674,33 @@ class EpisodeProcessor:
                     )
                 )
 
+        # Offline definition existence filter. Drops words whose lemma has no
+        # entry in any OFFLINE dictionary so the curation dialog never surfaces
+        # words that can never become cards (they would otherwise be silently
+        # skipped at Phase 5). Offline-only by design: matches the curator's
+        # no-network def-pane and the project's offline-first default (Jisho is
+        # off by default). Keyed on word.lemma, the same key Phase 4 looks up.
+        # Gated on bypass_optional_filters so the Deck Builder preview-parity
+        # path is unaffected (Phase 5 stays the skip point there).
+        if not self.config.bypass_optional_filters and unknown_words:
+            has_def = self.definition_service.has_offline_definitions([w.lemma for w in unknown_words])
+            kept_words = [w for w in unknown_words if has_def.get(w.lemma)]
+            dropped = [w.lemma for w in unknown_words if not has_def.get(w.lemma)]
+            unknown_words = kept_words
+            if dropped:
+                preview = ", ".join(dropped[:10])
+                more = f" (+{len(dropped) - 10} more)" if len(dropped) > 10 else ""
+                self.presenter.show_warning(
+                    tr_format(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor", "Skipped %1 words with no definition found: %2%3"
+                        ),
+                        len(dropped),
+                        preview,
+                        more,
+                    )
+                )
+
         # Record difficulty data if stats service available.
         # OVH-024: use the pre-filter comprehension-unknown count (all_unknown_lemmas),
         # NOT the post-filter mineable count (unknown_words). difficulty_score measures
