@@ -20,6 +20,8 @@ from PyQt6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMenu,
     QSplitter,
     QTableWidget,
@@ -113,6 +115,18 @@ class WordCurationDialog(QDialog):
         ctx = media_context
         self._show_player = ctx is not None and ctx.video_file is not None and ctx.video_file.exists()
         self._show_dict = lookup_fn is not None
+        # Sentence picker: shown when at least one word has alternative example
+        # sentences (it appears on >= 2 subtitle lines). The chosen variant per
+        # word index lives in self._chosen; get_selected_words falls back to the
+        # original word when the user never picks an alternative.
+        self._has_candidates = any(len(w.sentence_candidates) > 1 for w in words)
+        self._chosen: dict[int, TokenizedWord] = {}
+        # Context for the candidate list while a row is focused: the focused
+        # word's index + its candidate variants. Guards programmatic
+        # repopulation from being mistaken for a user pick.
+        self._candidate_list_index: int | None = None
+        self._candidate_list_words: list[TokenizedWord] = []
+        self._populating_candidates = False
 
         # Lookup result cache keyed by lemma (empty results are cached too).
         self._lookup_cache: dict[str, list[tuple[str, str]]] = {}
@@ -123,6 +137,7 @@ class WordCurationDialog(QDialog):
         self._focus_timer.setInterval(120)
         self._focus_timer.timeout.connect(self._on_focus_timer_fired)
         self._pending_word: TokenizedWord | None = None
+        self._pending_index: int | None = None
 
         # Debounce search keystrokes so a fast typist doesn't run setRowHidden
         # N times for N characters typed.  150 ms matches WordPreviewDialog.
@@ -144,7 +159,7 @@ class WordCurationDialog(QDialog):
         self.setWindowTitle(self.tr("Word Curation"))
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
-        if self._show_player or self._show_dict:
+        if self._show_player or self._show_dict or self._has_candidates:
             self.resize(1500, 760)
         else:
             self.resize(1100, 700)
@@ -161,8 +176,8 @@ class WordCurationDialog(QDialog):
         # Build the left pane (controls + table)
         left_pane = self._build_left_pane()
 
-        if self._show_player or self._show_dict:
-            # Horizontal splitter: left = word table, right = player + dict
+        if self._show_player or self._show_dict or self._has_candidates:
+            # Horizontal splitter: left = word table, right = player + sentences + dict
             h_splitter = QSplitter(Qt.Orientation.Horizontal)
             h_splitter.addWidget(left_pane)
 
@@ -284,7 +299,7 @@ class WordCurationDialog(QDialog):
         self.table.itemChanged.connect(self._on_item_changed)
 
         # Row-focus wiring — independent of checkbox state (itemSelectionChanged only).
-        if self._show_player or self._show_dict:
+        if self._show_player or self._show_dict or self._has_candidates:
             self.table.itemSelectionChanged.connect(self._on_row_focus_changed)
 
         # Right-click context menu (always present; useful for #43)
@@ -295,39 +310,60 @@ class WordCurationDialog(QDialog):
         return container
 
     def _build_right_pane(self) -> QWidget:
-        """Build the right pane: player (top) + definition browser (bottom).
+        """Build the right pane from whichever optional sub-panes are enabled.
 
-        Returns a vertical QSplitter when both panes are active, the bare
-        ``player_widget`` when only the player is enabled, or the bare
-        ``definition_view`` QTextBrowser when only the dictionary pane is
-        enabled.  In practice this method is only called when at least one
-        pane is enabled.
+        Stacks (top→bottom) the player, the sentence picker, and the definition
+        browser — only the enabled ones. Returns a vertical ``QSplitter`` when
+        two or more are enabled, otherwise the single enabled widget. Called
+        only when at least one sub-pane is enabled.
         """
-        if self._show_player and self._show_dict:
-            # Vertical splitter: player on top, definitions below
-            v_splitter = QSplitter(Qt.Orientation.Vertical)
+        panes: list[tuple[QWidget, int]] = []  # (widget, initial splitter size)
 
+        if self._show_player:
             self.player_widget = self._create_player_widget()
-            v_splitter.addWidget(self.player_widget)
+            panes.append((self.player_widget, 480))
 
+        if self._has_candidates:
+            panes.append((self._build_sentence_pane(), 240))
+
+        if self._show_dict:
             self.definition_view = QTextBrowser()
             self.definition_view.setReadOnly(True)
             self.definition_view.setOpenExternalLinks(False)
-            v_splitter.addWidget(self.definition_view)
+            panes.append((self.definition_view, 280))
 
-            v_splitter.setSizes([480, 280])
-            return v_splitter
+        if len(panes) == 1:
+            return panes[0][0]
 
-        elif self._show_player:
-            self.player_widget = self._create_player_widget()
-            return self.player_widget
+        v_splitter = QSplitter(Qt.Orientation.Vertical)
+        for widget, _ in panes:
+            v_splitter.addWidget(widget)
+        v_splitter.setSizes([size for _, size in panes])
+        return v_splitter
 
-        else:
-            # Only dict pane
-            self.definition_view = QTextBrowser()
-            self.definition_view.setReadOnly(True)
-            self.definition_view.setOpenExternalLinks(False)
-            return self.definition_view
+    def _build_sentence_pane(self) -> QWidget:
+        """Build the "Sentences" picker pane (label + candidate list).
+
+        The list is repopulated on row focus with the focused word's candidate
+        sentences; selecting one rewrites which sentence/scene gets mined.
+        """
+        container = QWidget()
+        vbox = QVBoxLayout(container)
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(SPACING.xs)
+
+        label = QLabel(self.tr("Sentences"))
+        label.setFont(self._make_font(12, QFont.Weight.Medium))
+        vbox.addWidget(label)
+
+        self.sentence_list = QListWidget()
+        self.sentence_list.setWordWrap(True)
+        self.sentence_list.setToolTip(
+            self.tr("Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.")
+        )
+        self.sentence_list.currentRowChanged.connect(self._on_candidate_chosen)
+        vbox.addWidget(self.sentence_list, 1)
+        return container
 
     def _create_player_widget(self) -> SubtitlePlayerWidget:
         """Instantiate and configure the SubtitlePlayerWidget."""
@@ -437,11 +473,11 @@ class WordCurationDialog(QDialog):
             # Reading
             self.table.setItem(row, 3, self._make_readonly_item(word.reading))
 
-            # Sentence (truncated)
-            sentence = word.sentence
-            display = sentence if len(sentence) <= 50 else sentence[:47] + "..."
-            item = self._make_readonly_item(display)
-            item.setToolTip(sentence)
+            # Sentence (truncated). A trailing "(N)" flags words with N
+            # alternative example sentences the user can pick from.
+            n_candidates = len(word.sentence_candidates)
+            item = self._make_readonly_item(self._sentence_display(word.sentence, n_candidates))
+            item.setToolTip(self._sentence_tooltip(word.sentence, n_candidates))
             self.table.setItem(row, 4, item)
 
             # Frequency Rank — sort numerically, not lexically (issue #6)
@@ -464,6 +500,22 @@ class WordCurationDialog(QDialog):
         item = QTableWidgetItem(text)
         item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
         return item
+
+    @staticmethod
+    def _sentence_display(sentence: str, n_candidates: int) -> str:
+        """Truncated sentence for the table cell, with a candidate-count badge."""
+        display = sentence if len(sentence) <= 50 else sentence[:47] + "..."
+        return f"{display}  ({n_candidates})" if n_candidates > 1 else display
+
+    def _sentence_tooltip(self, sentence: str, n_candidates: int) -> str:
+        """Full sentence tooltip, hinting at the picker when alternatives exist."""
+        if n_candidates > 1:
+            return tr_format(
+                self.tr("%1\n\n(%2 sentences available — focus the row, then pick one under “Sentences”)"),
+                sentence,
+                n_candidates,
+            )
+        return sentence
 
     # ------------------------------------------------------------------
     # Signal handlers — checkboxes and search
@@ -529,21 +581,32 @@ class WordCurationDialog(QDialog):
             return
 
         self._pending_word = self._words[original_index]
+        self._pending_index = original_index
         # (Re)start the debounce timer — rapid arrow-key scrolling only fires once.
         self._focus_timer.start()
 
     def _on_focus_timer_fired(self) -> None:
-        """Debounced handler: seek player + perform dictionary lookup."""
+        """Debounced handler: refresh sentence picker, seek player, look up definition."""
         word = self._pending_word
-        if word is None:
+        idx = self._pending_index
+        if word is None or idx is None:
             return
 
-        # Player pane: seek to the word's offset-adjusted video position and pause
-        # (show the frame without autoplaying). word.start_time is already raw+offset
-        # from the mining parse; ctx.offset only aligns the subtitle overlay — see the
-        # set_source call in _create_player_widget.
+        # Sentence picker: list the focused word's candidate sentences (no-op
+        # for single-occurrence words). Done first so seeking uses the chosen
+        # candidate's timing below.
+        if self._has_candidates:
+            self._populate_candidate_list(word, idx)
+
+        # The scene to preview follows the user's pick (defaults to the word).
+        chosen = self._chosen.get(idx, word)
+
+        # Player pane: seek to the chosen sentence's offset-adjusted video position
+        # and pause (show the frame without autoplaying). start_time is already
+        # raw+offset from the mining parse; ctx.offset only aligns the subtitle
+        # overlay — see the set_source call in _create_player_widget.
         if self._show_player and hasattr(self, "player_widget"):
-            self.player_widget.seek_seconds(word.start_time)
+            self.player_widget.seek_seconds(chosen.start_time)
             self.player_widget.pause()
 
         # Dictionary pane: look up by lemma (definitions key on lemma, not mined_form).
@@ -569,6 +632,79 @@ class WordCurationDialog(QDialog):
             parts.append(entry_html)
 
         self.definition_view.setHtml("".join(parts))
+
+    def _populate_candidate_list(self, word: TokenizedWord, idx: int) -> None:
+        """Fill the sentence picker for the focused word and select its current pick.
+
+        Repopulation is programmatic, so signals are blocked to avoid the
+        ``currentRowChanged`` handler treating it as a user pick. Words with no
+        alternatives clear the list.
+        """
+        if not hasattr(self, "sentence_list"):
+            return
+        candidates = word.sentence_candidates
+        self._populating_candidates = True
+        self.sentence_list.blockSignals(True)
+        self.sentence_list.clear()
+        self._candidate_list_index = idx
+        self._candidate_list_words = candidates
+
+        if len(candidates) > 1:
+            chosen = self._chosen.get(idx, word)
+            selected_row = 0
+            for i, cand in enumerate(candidates):
+                list_item = QListWidgetItem(cand.sentence)
+                list_item.setToolTip(cand.sentence)
+                self.sentence_list.addItem(list_item)
+                if self._same_pick(cand, chosen):
+                    selected_row = i
+            self.sentence_list.setCurrentRow(selected_row)
+            self.sentence_list.setEnabled(True)
+        else:
+            self.sentence_list.setEnabled(False)
+
+        self.sentence_list.blockSignals(False)
+        self._populating_candidates = False
+
+    @staticmethod
+    def _same_pick(a: TokenizedWord, b: TokenizedWord) -> bool:
+        """Whether two variants refer to the same example line (sentence + timing)."""
+        return a.sentence == b.sentence and a.start_time == b.start_time
+
+    def _on_candidate_chosen(self, list_row: int) -> None:
+        """Apply the user's sentence pick: record it, refresh the cell, seek the scene."""
+        if self._populating_candidates or list_row < 0:
+            return
+        idx = self._candidate_list_index
+        if idx is None or not (0 <= list_row < len(self._candidate_list_words)):
+            return
+        chosen = self._candidate_list_words[list_row]
+        self._chosen[idx] = chosen
+
+        # Refresh the table's Sentence cell for this word (its visual row may
+        # differ from idx because the table is sortable).
+        n_candidates = len(self._words[idx].sentence_candidates)
+        row = self._visual_row_for_index(idx)
+        if row is not None:
+            item = self.table.item(row, 4)
+            if item is not None:
+                self.table.blockSignals(True)
+                item.setText(self._sentence_display(chosen.sentence, n_candidates))
+                item.setToolTip(self._sentence_tooltip(chosen.sentence, n_candidates))
+                self.table.blockSignals(False)
+
+        # Preview the chosen scene.
+        if self._show_player and hasattr(self, "player_widget"):
+            self.player_widget.seek_seconds(chosen.start_time)
+            self.player_widget.pause()
+
+    def _visual_row_for_index(self, idx: int) -> int | None:
+        """Find the table row whose col-0 UserRole holds original word index ``idx``."""
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item is not None and item.data(Qt.ItemDataRole.UserRole) == idx:
+                return row
+        return None
 
     def _stop_player(self) -> None:
         """Stop the embedded player when the dialog closes (any exit path)."""
@@ -771,12 +907,17 @@ class WordCurationDialog(QDialog):
         self.word_count_label.setText(tr_format(self.tr("%1 of %2 words selected"), selected, total))
 
     def get_selected_words(self) -> list[TokenizedWord]:
-        """Return the list of checked words."""
+        """Return the checked words, each as the sentence variant the user picked.
+
+        Falls back to the original word when no alternative sentence was chosen
+        (the common case — single-occurrence words, or untouched multi-occurrence
+        words keep their default pick).
+        """
         selected = []
         for row in range(self.table.rowCount()):
             item = self.table.item(row, 0)
             if item and item.checkState() == Qt.CheckState.Checked:
                 original_index = item.data(Qt.ItemDataRole.UserRole)
                 if original_index is not None and 0 <= original_index < len(self._words):
-                    selected.append(self._words[original_index])
+                    selected.append(self._chosen.get(original_index, self._words[original_index]))
         return selected
