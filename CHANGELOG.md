@@ -22,9 +22,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 - **Words with no definition are dropped before the curation dialog.** An offline definition filter runs ahead of curation, so words that would land on a blank card no longer show up to curate.
+- **Duplicate expressions within a run are collapsed before curation.** When the same expression appears more than once in a single run, it now shows up once in the curation dialog instead of repeating.
 
 ### Fixed
 - **AV1 preview "can't decode" notice no longer false-fires.** The player nudges the first-frame decode so machines that can decode AV1 stop getting the fallback notice by mistake.
+- **Sentence-picker preview seeks correctly and Space toggles playback reliably.** Selecting a candidate sentence jumps the preview to the right spot, and the Space key starts and pauses playback as expected.
 
 
 ## [2.6.6] - 2026-06-21
