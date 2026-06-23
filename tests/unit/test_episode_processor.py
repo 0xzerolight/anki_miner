@@ -1659,6 +1659,10 @@ class TestProcessYoutubeUrl:
         }
 
     def _happy_pipeline(self, mock_services, word, media):
+        sp = mock_services["subtitle_parser"]
+        # Curation builds the line index; mirror the plain parse result through
+        # the with-index path (no sentence candidates).
+        sp.parse_subtitle_file_with_index.side_effect = lambda f: (sp.parse_subtitle_file.return_value, [])
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = [word]
@@ -2096,6 +2100,10 @@ class TestProcessYoutubeUrlCancelPropagation:
 
         word = _make_word("食べる")
         media = _make_media()
+        sp = mock_services["subtitle_parser"]
+        # Curation builds the line index; mirror the plain parse result through
+        # the with-index path (no sentence candidates).
+        sp.parse_subtitle_file_with_index.side_effect = lambda f: (sp.parse_subtitle_file.return_value, [])
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = [word]

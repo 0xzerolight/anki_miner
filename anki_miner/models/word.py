@@ -35,6 +35,14 @@ class TokenizedWord:
     # Empty string means "not precomputed" — card builder falls back to escape.
     sentence_bolded: str = ""
     sentence_furigana_bolded: str = ""
+    # Alternative example sentences for this word — one fully-swapped variant
+    # per subtitle line the lemma appears on (built by
+    # WordFilterService.attach_sentence_candidates from the parse line index).
+    # Includes the current pick, so a non-empty list always holds >= 2 entries.
+    # Empty ⇒ the word appears on a single line / candidates not attached, so
+    # the curator shows no sentence picker. Each entry is a leaf: its own
+    # sentence_candidates stays empty (no recursion).
+    sentence_candidates: list["TokenizedWord"] = field(default_factory=list)
 
     @property
     def mined_form(self) -> str:
