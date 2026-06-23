@@ -4073,6 +4073,10 @@ class TestOfflineDefinitionPreFilter:
 
     def _prime(self, mock_services, words):
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.side_effect = lambda f: (
+            mock_services["subtitle_parser"].parse_subtitle_file.return_value,
+            [],
+        )
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = list(words)
 
