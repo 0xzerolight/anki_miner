@@ -169,7 +169,8 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
 
 - **Features**:
   - [x] UI language selection.
-  - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles.
+  - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles. (coming in v2.7.0)
+  - [ ] Jimaku integration.
   - [ ] Card modification tab: Modifying content in existing Anki cards.
   - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
   - [ ] Reading tab: Mine manga and books.
