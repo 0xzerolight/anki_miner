@@ -40,6 +40,7 @@ from anki_miner.gui.widgets.panels import (
     YouTubeSettingsPanel,
 )
 from anki_miner.gui.widgets.panels.asr_settings_panel import AsrSettingsPanel
+from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
 from anki_miner.services.frequency import import_yomitan_freq_zip
 from anki_miner.services.known_word_db import KnownWordDB
@@ -158,6 +159,7 @@ class SettingsTab(QWidget):
             self.filtering_panel,
             self.youtube_panel,
             self.asr_panel,
+            self.subtitles_panel,
         ]
         self._connect_signals()
         self._load_config()
@@ -180,6 +182,7 @@ class SettingsTab(QWidget):
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
         self.asr_panel = AsrSettingsPanel()
+        self.subtitles_panel = SubtitlesSettingsPanel()
         self.themes_panel = ThemesPanel(self.config.themes_root)
         self.language_panel = LanguagePanel(self.config.ui_language)
 
@@ -191,6 +194,7 @@ class SettingsTab(QWidget):
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), self.tr("Filtering"))
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), self.tr("YouTube"))
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.asr_panel), self.tr("ASR"))
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.subtitles_panel), self.tr("Subtitles"))
         # Themes tab — sub-tab index captured so MainWindow / shortcuts can
         # jump straight to it via :meth:`open_themes_subtab`.
         self._themes_subtab_index = self.tab_widget.addTab(

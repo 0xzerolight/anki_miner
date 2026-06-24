@@ -828,3 +828,53 @@ class TestCardStylingSyncWiring:
         tab.update_config(updated)
 
         tab._load_config.assert_not_called()
+
+
+class TestSubtitlesPanelRegistration:
+    """subtitles_panel is in _save_panels and its tab appears in the Settings tab widget."""
+
+    def test_subtitles_panel_in_save_panels(self, tab):
+        assert tab.subtitles_panel in tab._save_panels
+
+    def test_subtitles_tab_exists(self, tab):
+        tab_titles = [tab.tab_widget.tabText(i) for i in range(tab.tab_widget.count())]
+        assert "Subtitles" in tab_titles
+
+    def test_subtitles_panel_loads_alass_location(self, test_config: AnkiMinerConfig, qtbot, tmp_path):
+        alass_path = tmp_path / "alass"
+        cfg = replace(test_config, alass_location=alass_path)
+        widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
+        try:
+            assert widget.subtitles_panel.alass_selector.get_path() == str(alass_path)
+        finally:
+            widget.deleteLater()
+
+    def test_save_persists_alass_location(self, tab, monkeypatch, tmp_path):
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+
+        alass_path = tmp_path / "alass"
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+
+        tab.subtitles_panel.alass_selector.set_path(str(alass_path))
+        tab._on_save_clicked()
+
+        assert len(received) == 1
+        assert received[0].alass_location == alass_path
+
+    def test_save_empty_alass_location_is_none(self, tab, monkeypatch):
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+
+        tab.subtitles_panel.alass_selector.set_path("")
+        tab._on_save_clicked()
+
+        assert len(received) == 1
+        assert received[0].alass_location is None
