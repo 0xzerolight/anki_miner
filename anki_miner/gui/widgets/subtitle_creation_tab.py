@@ -65,6 +65,7 @@ class SubtitleCreationTab(QWidget):
         self.worker_thread: SubtitleGenWorker | None = None
         self._custom_output_dir: Path | None = None
         self._total_files: int = 0
+        self._cancelled: bool = False
 
         self._setup_ui()
         self._refresh_engine_state()
@@ -320,6 +321,12 @@ class SubtitleCreationTab(QWidget):
             # Should not happen (button disabled), but guard anyway.
             return
 
+        # Reentrancy guard: a prior run's QThread may still be tearing down when
+        # queue_finished re-enabled the button. Never reassign self.worker_thread
+        # over a live thread.
+        if self.worker_thread is not None and self.worker_thread.isRunning():
+            return
+
         # Collect video file list
         video_files = self._collect_video_files()
         if not video_files:
@@ -356,6 +363,7 @@ class SubtitleCreationTab(QWidget):
             return
 
         # Build and start worker
+        self._cancelled = False
         self._total_files = len(video_files)
         self.log_widget.clear_log()
         self.progress_widget.reset()
@@ -374,6 +382,10 @@ class SubtitleCreationTab(QWidget):
         worker.file_progress.connect(self._on_file_progress)
         worker.file_finished.connect(self._on_file_finished)
         worker.queue_finished.connect(self._on_queue_finished)
+        # Lifecycle: free the QThread on real thread exit (not on queue_finished,
+        # which fires just before the thread ends). Clears the handle so the
+        # reentrancy guard and iter_close_workers see no stale worker.
+        worker.finished.connect(self._on_worker_finished)
 
         self.generate_button.setEnabled(False)
         self.cancel_button.show()
@@ -453,13 +465,24 @@ class SubtitleCreationTab(QWidget):
     def _on_queue_finished(self) -> None:
         self.generate_button.setEnabled(True)
         self.cancel_button.hide()
-        self.progress_widget.set_status(self.tr("Finished"))
+        # Reset for the next run's cancel button.
+        self.cancel_button.setText(self.tr("Cancel"))
+        self.cancel_button.setEnabled(True)
+        self.progress_widget.set_status(self.tr("Cancelled") if self._cancelled else self.tr("Finished"))
+
+    def _on_worker_finished(self) -> None:
+        """Release the QThread once it has actually exited."""
+        worker = self.worker_thread
+        if worker is not None:
+            worker.deleteLater()
+            self.worker_thread = None
 
     # ------------------------------------------------------------------
     # Cancel
     # ------------------------------------------------------------------
 
     def _on_cancel(self) -> None:
+        self._cancelled = True
         if self.worker_thread is not None:
             self.worker_thread.cancel()
         self.cancel_button.setText(self.tr("Cancelling…"))
