@@ -438,20 +438,32 @@ class MediaExtractorService:
         if cancel_event is not None and cancel_event.is_set():
             return False
 
-        if track_override is not None:
-            global_index: int | None = track_override
-        else:
-            global_index = self._get_japanese_audio_stream(video_file)
+        # Resolve track_override through the same audio-index → global-index
+        # helper as _extract_audio, so callers get identical semantics: the
+        # integer is an *audio* index (0-indexed among audio streams), not a
+        # raw ffprobe global stream index.
+        global_index = self._resolve_audio_track_global_index(video_file, track_override)
 
         proc_registry = _FfmpegProcRegistry()
 
         # Wire cancel_event → kill_all so long encodes can be interrupted.
+        # A done_event signals the watcher to exit on the normal success path
+        # so the daemon thread doesn't block forever holding the registry.
         cancel_thread: threading.Thread | None = None
+        done_event: threading.Event | None = None
         if cancel_event is not None:
+            done_event = threading.Event()
+            # Capture as non-optional locals so mypy and the closure agree on type.
+            _ce: threading.Event = cancel_event
+            _de: threading.Event = done_event
 
             def _watch() -> None:
-                cancel_event.wait()
-                proc_registry.kill_all()
+                # Poll with a short timeout so the thread wakes when either
+                # cancel fires OR the work finishes — without blocking forever.
+                while not _ce.is_set() and not _de.is_set():
+                    _ce.wait(timeout=0.05)
+                if _ce.is_set() and not _de.is_set():
+                    proc_registry.kill_all()
 
             cancel_thread = threading.Thread(target=_watch, daemon=True)
             cancel_thread.start()
@@ -488,13 +500,18 @@ class MediaExtractorService:
         # plenty of headroom.
         timeout = 300
 
-        if not self._run_ffmpeg(
+        success = self._run_ffmpeg(
             cmd,
             "Full audio extraction",
             timeout=timeout,
             context=out_wav.name,
             proc_registry=proc_registry,
-        ):
+        )
+        # Signal the cancel-watcher thread that the work is done so it exits
+        # cleanly without holding the registry open indefinitely.
+        if done_event is not None:
+            done_event.set()
+        if not success:
             return False
         return out_wav.exists()
 
