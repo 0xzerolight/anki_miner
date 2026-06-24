@@ -20,7 +20,6 @@ def tab(qapp, qtbot, test_config):
     )
     qtbot.addWidget(widget)
     yield widget
-    widget.deleteLater()
 
 
 # ---------------------------------------------------------------------------
