@@ -6,6 +6,22 @@ from pathlib import Path
 DEFAULT_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt")
 
 
+def find_sibling_subtitle(video_path: Path) -> Path | None:
+    """Return the highest-priority sibling subtitle for *video_path*, or None.
+
+    Looks in the same folder for a file whose stem matches *video_path*'s stem
+    and whose extension is one of DEFAULT_SUBTITLE_PRIORITY.  Returns the first
+    hit in priority order (.ass > .ssa > .srt), or None when no sibling exists.
+    """
+    folder = video_path.parent
+    stem = video_path.stem
+    for ext in DEFAULT_SUBTITLE_PRIORITY:
+        candidate = folder / f"{stem}{ext}"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 @dataclass
 class FilePair:
     """Represents a video/subtitle file pair."""
