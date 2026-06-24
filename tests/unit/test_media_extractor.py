@@ -3,6 +3,7 @@
 import dataclasses
 import json
 import subprocess
+import wave
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -1885,3 +1886,231 @@ class TestOVH044AudioFailedOnError:
         assert len(result) == 1
         # No spurious error for missing screenshot in audio_only mode
         assert recording_progress.errors == []
+
+
+# ---------------------------------------------------------------------------
+# Helper: write a minimal valid 32-bit float PCM WAV to a path
+# ---------------------------------------------------------------------------
+def _write_f32_wav(path: Path, num_samples: int, sample_rate: int = 16000) -> None:
+    """Write a mono 32-bit float PCM WAV file with *num_samples* samples of silence."""
+    import struct
+
+    # Write silence as raw f32le bytes — no numpy required for the helper itself.
+    raw = struct.pack(f"<{num_samples}f", *([0.0] * num_samples))
+    with wave.open(str(path), "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(4)  # 4 bytes = 32-bit float
+        wf.setframerate(sample_rate)
+        wf.writeframes(raw)
+
+
+class TestExtractFullAudio:
+    """Tests for MediaExtractorService.extract_full_audio."""
+
+    def test_correct_ffmpeg_args_jp_track(self, service, video_file, tmp_path):
+        """When JP track detected, command must use -map 0:N and pcm_f32le, -ar 16000, -ac 1."""
+        out_wav = tmp_path / "full.wav"
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(service, "_get_japanese_audio_stream", return_value=3),
+            patch.object(Path, "exists", return_value=True),
+        ):
+            result = service.extract_full_audio(video_file, out_wav)
+
+        assert result is True
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[0] == "ffmpeg"
+        assert "-y" in cmd
+        assert cmd[cmd.index("-i") + 1] == str(video_file)
+        assert "-map" in cmd
+        assert cmd[cmd.index("-map") + 1] == "0:3"
+        assert "-vn" in cmd
+        assert "-ar" in cmd
+        assert cmd[cmd.index("-ar") + 1] == "16000"
+        assert "-ac" in cmd
+        assert cmd[cmd.index("-ac") + 1] == "1"
+        assert "-c:a" in cmd
+        assert cmd[cmd.index("-c:a") + 1] == "pcm_f32le"
+        assert cmd[-1] == str(out_wav)
+
+    def test_falls_back_to_0a0_when_no_jp_track(self, service, video_file, tmp_path):
+        """When no JP track detected and no override, command must use -map 0:a:0."""
+        out_wav = tmp_path / "full.wav"
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+            patch.object(Path, "exists", return_value=True),
+        ):
+            result = service.extract_full_audio(video_file, out_wav)
+
+        assert result is True
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[cmd.index("-map") + 1] == "0:a:0"
+
+    def test_track_override_respected(self, service, video_file, tmp_path):
+        """track_override=2 must produce -map 0:2 without probing for JP."""
+        out_wav = tmp_path / "full.wav"
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(service, "_get_japanese_audio_stream") as mock_jp,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            result = service.extract_full_audio(video_file, out_wav, track_override=2)
+
+        assert result is True
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[cmd.index("-map") + 1] == "0:2"
+        mock_jp.assert_not_called()
+
+    def test_no_encoder_probe(self, service, video_file, tmp_path):
+        """extract_full_audio must NOT call _check_encoder_available (pcm_f32le is built-in)."""
+        out_wav = tmp_path / "full.wav"
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc),
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+            patch.object(service, "_check_encoder_available") as mock_probe,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            service.extract_full_audio(video_file, out_wav)
+
+        mock_probe.assert_not_called()
+
+    def test_returns_false_on_ffmpeg_failure(self, service, video_file, tmp_path):
+        """Non-zero ffmpeg exit must return False."""
+        out_wav = tmp_path / "full.wav"
+        mock_proc = _popen_mock(returncode=1, stderr="no audio stream")
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc),
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+        ):
+            result = service.extract_full_audio(video_file, out_wav)
+
+        assert result is False
+
+    def test_returns_false_when_output_missing_despite_success(self, service, video_file, tmp_path):
+        """ffmpeg exit 0 but output file absent → False."""
+        out_wav = tmp_path / "full.wav"
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc),
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+        ):
+            result = service.extract_full_audio(video_file, out_wav)
+
+        assert result is False
+
+    def test_cancel_event_aborts_before_ffmpeg(self, service, video_file, tmp_path):
+        """A pre-set cancel_event must abort without spawning ffmpeg."""
+        import threading
+
+        out_wav = tmp_path / "full.wav"
+        cancel = threading.Event()
+        cancel.set()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen") as mock_popen,
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+        ):
+            result = service.extract_full_audio(video_file, out_wav, cancel_event=cancel)
+
+        assert result is False
+        mock_popen.assert_not_called()
+
+    def test_uses_duration_scaled_timeout(self, service, video_file, tmp_path):
+        """Duration-scaled timeout must be used (not the 30-60s word-clip timeout)."""
+        out_wav = tmp_path / "full.wav"
+
+        with (
+            patch.object(service, "_run_ffmpeg", return_value=True) as mock_run,
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+            patch.object(Path, "exists", return_value=True),
+        ):
+            service.extract_full_audio(video_file, out_wav)
+
+        assert mock_run.called
+        call_args = mock_run.call_args
+        # _run_ffmpeg signature: (cmd, op_name, timeout, context="", proc_registry=None)
+        # timeout is the 3rd positional arg (index 2)
+        positional = call_args[0]
+        kw = call_args[1]
+        timeout = kw.get("timeout") if "timeout" in kw else (positional[2] if len(positional) > 2 else None)
+        assert timeout is not None
+        # must be substantially larger than the 30-60s word-clip timeouts
+        assert timeout > 60
+
+
+class TestWavToFloat32:
+    """Tests for wav_to_float32 helper.
+
+    numpy is an [asr] optional extra — tests are skipped when it is not installed.
+    """
+
+    def test_returns_correct_shape_sr_duration(self, tmp_path):
+        """wav_to_float32 on a generated f32 WAV returns correct shape, sr, and duration."""
+        np = pytest.importorskip("numpy")
+
+        from anki_miner.services.media_extractor import wav_to_float32
+
+        sample_rate = 16000
+        num_samples = 32000  # 2 seconds
+        wav_path = tmp_path / "test.wav"
+        _write_f32_wav(wav_path, num_samples, sample_rate)
+
+        samples, sr, duration = wav_to_float32(wav_path)
+
+        assert isinstance(samples, np.ndarray)
+        assert samples.dtype == np.float32
+        assert samples.shape == (num_samples,)
+        assert sr == sample_rate
+        assert abs(duration - 2.0) < 1e-6
+
+    def test_samples_in_valid_range(self, tmp_path):
+        """Samples from a silent WAV must be zero (or in [-1, 1])."""
+        np = pytest.importorskip("numpy")
+
+        from anki_miner.services.media_extractor import wav_to_float32
+
+        wav_path = tmp_path / "silent.wav"
+        _write_f32_wav(wav_path, 16000, 16000)
+
+        samples, sr, duration = wav_to_float32(wav_path)
+
+        assert np.all(samples == 0.0)
+
+    def test_non_silent_samples_preserved(self, tmp_path):
+        """Non-zero f32 PCM samples must survive the round-trip unchanged."""
+        import struct
+
+        np = pytest.importorskip("numpy")
+
+        from anki_miner.services.media_extractor import wav_to_float32
+
+        sample_rate = 16000
+        num_samples = 160
+        # Generate a linear ramp in [-1, 1] as raw f32le bytes.
+        step = 2.0 / (num_samples - 1)
+        original_list = [-1.0 + i * step for i in range(num_samples)]
+        raw = struct.pack(f"<{num_samples}f", *original_list)
+        original = np.frombuffer(raw, dtype=np.float32)
+
+        with wave.open(str(tmp_path / "tone.wav"), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(4)
+            wf.setframerate(sample_rate)
+            wf.writeframes(raw)
+
+        samples, sr, duration = wav_to_float32(tmp_path / "tone.wav")
+
+        np.testing.assert_array_equal(samples, original)
+        assert sr == sample_rate
+        assert abs(duration - num_samples / sample_rate) < 1e-6
