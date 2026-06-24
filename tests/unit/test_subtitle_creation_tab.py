@@ -102,6 +102,20 @@ def test_generate_button_exists(qtbot, tmp_path):
     assert tab.generate_button is not None
 
 
+def test_update_config_adopts_new_asr_model(qtbot, tmp_path):
+    """update_config swaps the config so a model switch in Settings is honored (C1)."""
+    import dataclasses
+
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+    assert tab.config.asr_model != "small"  # default is large-v3
+
+    new_config = dataclasses.replace(config, asr_model="small")
+    tab.update_config(new_config)
+
+    assert tab.config.asr_model == "small"
+
+
 def test_language_label_shows_japanese(qtbot, tmp_path):
     """Read-only Language: Japanese label must be present."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
