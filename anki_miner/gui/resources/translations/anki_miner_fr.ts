@@ -2307,8 +2307,8 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>Statistiques</translation>
     </message>
     <message>
-        <source>Subtitle Creation</source>
-        <translation>Création de sous-titres</translation>
+        <source>Subtitles</source>
+        <translation>Sous-titres</translation>
     </message>
     <message>
         <source>Settings</source>
@@ -2433,6 +2433,14 @@ Le dictionnaire n'a pas été supprimé.</translation>
     <message>
         <source>JMdict ready (%1 entries)</source>
         <translation>JMdict prêt (%1 entrées)</translation>
+    </message>
+    <message>
+        <source>Generate</source>
+        <translation>Générer</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>Re-synchroniser</translation>
     </message>
 </context><context>
     <name>MediaSettingsPanel</name>
@@ -3648,6 +3656,214 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
     <message>
         <source>Video error: %1</source>
         <translation>Erreur vidéo : %1</translation>
+    </message>
+</context><context>
+    <name>SubtitleRetimeTab</name>
+    <message>
+        <source>Input</source>
+        <translation>Entrée</translation>
+    </message>
+    <message>
+        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
+        <translation>alass introuvable ; installez-le ou définissez son chemin dans les Paramètres pour activer la re-synchronisation.</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation>Mode :</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation>Fichier unique</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>Dossier</translation>
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation>Fichier vidéo :</translation>
+    </message>
+    <message>
+        <source>Subtitle File:</source>
+        <translation>Fichier de sous-titres :</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Dossier vidéo :</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>Dossier de sous-titres :</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>Sortie</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>Sortie :</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>À côté de la vidéo source</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>Choisir un dossier…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Réinitialiser</translation>
+    </message>
+    <message>
+        <source>Overwrite existing subtitle files</source>
+        <translation>Écraser les fichiers de sous-titres existants</translation>
+    </message>
+    <message>
+        <source>Split penalty:</source>
+        <translation>Pénalité de découpe :</translation>
+    </message>
+    <message>
+        <source>Lower = more cut points for ad breaks; 1–20 is the useful range; default 7</source>
+        <translation>Valeur faible = plus de points de coupe pour les pauses publicitaires ; la plage utile est 1–20 ; valeur par défaut 7</translation>
+    </message>
+    <message>
+        <source>Actions</source>
+        <translation>Actions</translation>
+    </message>
+    <message>
+        <source>Retime Subtitles</source>
+        <translation>Re-synchroniser les sous-titres</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Annuler</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Progression</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Sélectionner le dossier de sortie</translation>
+    </message>
+    <message>
+        <source>Output directory is not writable: </source>
+        <translation>Le dossier de sortie n'est pas accessible en écriture : </translation>
+    </message>
+    <message>
+        <source>No Video File Selected</source>
+        <translation>Aucun fichier vidéo sélectionné</translation>
+    </message>
+    <message>
+        <source>Select a video file before retiming subtitles.</source>
+        <translation>Sélectionnez un fichier vidéo avant de re-synchroniser les sous-titres.</translation>
+    </message>
+    <message>
+        <source>No Subtitle File Selected</source>
+        <translation>Aucun fichier de sous-titres sélectionné</translation>
+    </message>
+    <message>
+        <source>Select a subtitle file before retiming subtitles.</source>
+        <translation>Sélectionnez un fichier de sous-titres avant de re-synchroniser les sous-titres.</translation>
+    </message>
+    <message>
+        <source>File Not Found</source>
+        <translation>Fichier introuvable</translation>
+    </message>
+    <message>
+        <source>Video file not found: </source>
+        <translation>Fichier vidéo introuvable : </translation>
+    </message>
+    <message>
+        <source>Subtitle file not found: </source>
+        <translation>Fichier de sous-titres introuvable : </translation>
+    </message>
+    <message>
+        <source>No Video Folder Selected</source>
+        <translation>Aucun dossier vidéo sélectionné</translation>
+    </message>
+    <message>
+        <source>Select a video folder before retiming subtitles.</source>
+        <translation>Sélectionnez un dossier vidéo avant de re-synchroniser les sous-titres.</translation>
+    </message>
+    <message>
+        <source>No Subtitle Folder Selected</source>
+        <translation>Aucun dossier de sous-titres sélectionné</translation>
+    </message>
+    <message>
+        <source>Select a subtitle folder before retiming subtitles.</source>
+        <translation>Sélectionnez un dossier de sous-titres avant de re-synchroniser les sous-titres.</translation>
+    </message>
+    <message>
+        <source>Folder Not Found</source>
+        <translation>Dossier introuvable</translation>
+    </message>
+    <message>
+        <source>Video folder not found: </source>
+        <translation>Dossier vidéo introuvable : </translation>
+    </message>
+    <message>
+        <source>Subtitle folder not found: </source>
+        <translation>Dossier de sous-titres introuvable : </translation>
+    </message>
+    <message>
+        <source>Matched %1 of %2 video files.</source>
+        <translation>%1 sur %2 fichiers vidéo appariés.</translation>
+    </message>
+    <message>
+        <source>Warning: %1 video file(s) could not be matched.</source>
+        <translation>Avertissement : %1 fichier(s) vidéo n'ont pas pu être appariés.</translation>
+    </message>
+    <message>
+        <source>No Pairs Matched</source>
+        <translation>Aucune paire trouvée</translation>
+    </message>
+    <message>
+        <source>No subtitle files could be matched to the video files in the selected folders.</source>
+        <translation>Aucun fichier de sous-titres n'a pu être associé aux fichiers vidéo des dossiers sélectionnés.</translation>
+    </message>
+    <message>
+        <source>Retiming file %1 of %2</source>
+        <translation>Re-synchronisation du fichier %1 sur %2</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Terminé : </translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Terminé</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Annulé</translation>
+    </message>
+    <message>
+        <source>Finished</source>
+        <translation>Terminé</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Annulation…</translation>
+    </message>
+</context><context>
+    <name>SubtitleRetimeWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation>Ignoré, existe déjà</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Terminé</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Annulé</translation>
+    </message>
+    <message>
+        <source>Retiming failed for %1</source>
+        <translation>La re-synchronisation a échoué pour %1</translation>
     </message>
 </context><context>
     <name>SubtitleViewer</name>

@@ -2298,8 +2298,8 @@ The dictionary was not removed.</source>
         <translation>分析</translation>
     </message>
     <message>
-        <source>Subtitle Creation</source>
-        <translation>字幕作成</translation>
+        <source>Subtitles</source>
+        <translation>字幕</translation>
     </message>
     <message>
         <source>Settings</source>
@@ -2424,6 +2424,14 @@ The dictionary was not removed.</source>
     <message>
         <source>JMdict ready (%1 entries)</source>
         <translation>JMdict の準備が完了しました（%1 件）</translation>
+    </message>
+    <message>
+        <source>Generate</source>
+        <translation>生成</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>リタイミング</translation>
     </message>
 </context><context>
     <name>MediaSettingsPanel</name>
@@ -3638,6 +3646,214 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Video error: %1</source>
         <translation>動画エラー: %1</translation>
+    </message>
+</context><context>
+    <name>SubtitleRetimeTab</name>
+    <message>
+        <source>Input</source>
+        <translation>入力</translation>
+    </message>
+    <message>
+        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
+        <translation>alass が見つかりません。リタイミングを有効にするには、インストールするか設定でパスを指定してください。</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation>モード:</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation>単一ファイル</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>フォルダ</translation>
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation>動画ファイル:</translation>
+    </message>
+    <message>
+        <source>Subtitle File:</source>
+        <translation>字幕ファイル:</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>動画フォルダ:</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>字幕フォルダ:</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>出力</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>出力:</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>元の動画と同じ場所</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>フォルダを選択…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>リセット</translation>
+    </message>
+    <message>
+        <source>Overwrite existing subtitle files</source>
+        <translation>既存の字幕ファイルを上書きする</translation>
+    </message>
+    <message>
+        <source>Split penalty:</source>
+        <translation>分割ペナルティ:</translation>
+    </message>
+    <message>
+        <source>Lower = more cut points for ad breaks; 1–20 is the useful range; default 7</source>
+        <translation>値が小さいほど CM 区切りでの分割点が増えます。有効範囲は 1〜20、デフォルトは 7</translation>
+    </message>
+    <message>
+        <source>Actions</source>
+        <translation>操作</translation>
+    </message>
+    <message>
+        <source>Retime Subtitles</source>
+        <translation>字幕をリタイミング</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>進捗</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>出力フォルダを選択</translation>
+    </message>
+    <message>
+        <source>Output directory is not writable: </source>
+        <translation>出力ディレクトリに書き込めません: </translation>
+    </message>
+    <message>
+        <source>No Video File Selected</source>
+        <translation>動画ファイルが選択されていません</translation>
+    </message>
+    <message>
+        <source>Select a video file before retiming subtitles.</source>
+        <translation>字幕をリタイミングする前に動画ファイルを選択してください。</translation>
+    </message>
+    <message>
+        <source>No Subtitle File Selected</source>
+        <translation>字幕ファイルが選択されていません</translation>
+    </message>
+    <message>
+        <source>Select a subtitle file before retiming subtitles.</source>
+        <translation>字幕をリタイミングする前に字幕ファイルを選択してください。</translation>
+    </message>
+    <message>
+        <source>File Not Found</source>
+        <translation>ファイルが見つかりません</translation>
+    </message>
+    <message>
+        <source>Video file not found: </source>
+        <translation>動画ファイルが見つかりません: </translation>
+    </message>
+    <message>
+        <source>Subtitle file not found: </source>
+        <translation>字幕ファイルが見つかりません: </translation>
+    </message>
+    <message>
+        <source>No Video Folder Selected</source>
+        <translation>動画フォルダが選択されていません</translation>
+    </message>
+    <message>
+        <source>Select a video folder before retiming subtitles.</source>
+        <translation>字幕をリタイミングする前に動画フォルダを選択してください。</translation>
+    </message>
+    <message>
+        <source>No Subtitle Folder Selected</source>
+        <translation>字幕フォルダが選択されていません</translation>
+    </message>
+    <message>
+        <source>Select a subtitle folder before retiming subtitles.</source>
+        <translation>字幕をリタイミングする前に字幕フォルダを選択してください。</translation>
+    </message>
+    <message>
+        <source>Folder Not Found</source>
+        <translation>フォルダが見つかりません</translation>
+    </message>
+    <message>
+        <source>Video folder not found: </source>
+        <translation>動画フォルダが見つかりません: </translation>
+    </message>
+    <message>
+        <source>Subtitle folder not found: </source>
+        <translation>字幕フォルダが見つかりません: </translation>
+    </message>
+    <message>
+        <source>Matched %1 of %2 video files.</source>
+        <translation>%2 件中 %1 件の動画ファイルとマッチしました。</translation>
+    </message>
+    <message>
+        <source>Warning: %1 video file(s) could not be matched.</source>
+        <translation>警告: %1 件の動画ファイルをマッチできませんでした。</translation>
+    </message>
+    <message>
+        <source>No Pairs Matched</source>
+        <translation>一致するペアがありません</translation>
+    </message>
+    <message>
+        <source>No subtitle files could be matched to the video files in the selected folders.</source>
+        <translation>選択したフォルダ内の動画ファイルに一致する字幕ファイルが見つかりませんでした。</translation>
+    </message>
+    <message>
+        <source>Retiming file %1 of %2</source>
+        <translation>%2 件中 %1 件目をリタイミング中</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>完了: </translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完了</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Finished</source>
+        <translation>終了</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+</context><context>
+    <name>SubtitleRetimeWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation>スキップしました（既に存在）</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完了</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Retiming failed for %1</source>
+        <translation>%1 のリタイミングに失敗しました</translation>
     </message>
 </context><context>
     <name>SubtitleViewer</name>
