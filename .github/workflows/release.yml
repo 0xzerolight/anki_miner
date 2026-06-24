@@ -255,7 +255,7 @@ jobs:
       # and must be user-provided at runtime.  Gated on ANKI_MINER_SMOKE=asr, same
       # pattern as the YouTube smoke above.
       - name: ASR bundled smoke (Linux/macOS)
-        if: false  # TODO(Task 6): enable once app.py handles ANKI_MINER_SMOKE=asr
+        if: runner.os != 'Windows'
         env:
           ANKI_MINER_SMOKE: asr
           HF_HUB_OFFLINE: "1"
@@ -266,7 +266,7 @@ jobs:
           grep -q "BUNDLED_SMOKE_PASS" asr_smoke.log
 
       - name: ASR bundled smoke (Windows)
-        if: false  # TODO(Task 6): enable once app.py handles ANKI_MINER_SMOKE=asr
+        if: runner.os == 'Windows'
         shell: pwsh
         env:
           ANKI_MINER_SMOKE: asr
