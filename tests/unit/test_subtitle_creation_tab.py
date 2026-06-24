@@ -200,7 +200,6 @@ def test_unwritable_output_dir_aborts_and_no_worker(qtbot, tmp_path):
     with (
         patch(_ENGINE_AVAILABLE, return_value=True),
         patch(_OS_ACCESS, return_value=False),
-        patch(_IS_DOWNLOADED, return_value=True),
         patch(
             _WORKER_CLS,
             side_effect=AssertionError("Worker must not be created when output not writable"),
@@ -208,6 +207,27 @@ def test_unwritable_output_dir_aborts_and_no_worker(qtbot, tmp_path):
     ):
         tab.generate_button.click()
 
+    assert tab.worker_thread is None
+
+
+def test_writable_check_precedes_model_check(qtbot, tmp_path):
+    """An unwritable output aborts before the model-downloaded guard runs (T2)."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "test.mp4"
+    video.write_bytes(b"fake")
+
+    tab = _make_tab(config, qtbot)
+    tab.file_selector.set_path(str(video))
+
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=False),
+        patch(_IS_DOWNLOADED) as is_downloaded,
+    ):
+        tab.generate_button.click()
+
+    # Writable check returns first, so the model guard is never consulted.
+    is_downloaded.assert_not_called()
     assert tab.worker_thread is None
 
 
