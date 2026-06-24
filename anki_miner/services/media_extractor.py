@@ -48,6 +48,14 @@ def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
     import numpy as np  # noqa: PLC0415  (intentional function-local import — numpy is an [asr] extra)
 
     with wave.open(str(path), "rb") as wf:
+        # Fail loudly on an unexpected layout rather than silently reinterpreting
+        # int16/stereo bytes as garbage float32. extract_full_audio always writes
+        # mono pcm_f32le; a mismatch means a stale or foreign WAV reached us.
+        if wf.getnchannels() != 1 or wf.getsampwidth() != 4 or wf.getcomptype() != "NONE":
+            raise ValueError(
+                "wav_to_float32 expects mono pcm_f32le; got "
+                f"channels={wf.getnchannels()} sampwidth={wf.getsampwidth()} comptype={wf.getcomptype()}"
+            )
         sample_rate = wf.getframerate()
         n_frames = wf.getnframes()
         raw = wf.readframes(n_frames)
