@@ -429,7 +429,7 @@ class MediaExtractorService:
         - Otherwise :meth:`_get_japanese_audio_stream` is called (cache + ``0:a:0``
           fallback).
 
-        A generous, duration-scaled timeout is applied so long files don't time out.
+        A generous flat timeout ceiling is applied so long files don't time out.
 
         Args:
             video_file: Path to the source video or audio file.
@@ -503,10 +503,11 @@ class MediaExtractorService:
             ]
         )
 
-        # Flat 300-second timeout: generous enough for a 2-hour file even at
-        # slow I/O speeds, and simple to reason about. Duration probing before
-        # the ffmpeg call would add latency; the flat value is a safe ceiling.
-        timeout = 300
+        # Flat 30-minute ceiling. Audio-only decode + 16 kHz resample runs far
+        # faster than realtime, so this comfortably covers multi-hour sources
+        # (the old 300 s could time out a long film on slow I/O). A flat value
+        # avoids an extra ffprobe round-trip; it is a ceiling, not a target.
+        timeout = 1800
 
         success = self._run_ffmpeg(
             cmd,
