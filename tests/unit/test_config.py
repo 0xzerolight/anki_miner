@@ -174,6 +174,27 @@ class TestYouTubeConfig:
         assert config.ffmpeg_location == temp_dir / "ffmpeg"
         assert config.ffprobe_location == temp_dir / "ffprobe"
 
+    def test_alass_location_defaults_none(self):
+        """alass_location defaults to None."""
+        config = AnkiMinerConfig()
+        assert config.alass_location is None
+
+    def test_alass_location_coerced_from_string(self, temp_dir):
+        """alass_location is coerced to Path when passed as str."""
+        config = AnkiMinerConfig(alass_location=str(temp_dir / "alass"))
+        assert isinstance(config.alass_location, Path)
+        assert config.alass_location == temp_dir / "alass"
+
+    def test_alass_location_empty_string_becomes_none(self):
+        """An empty alass_location string normalizes to None."""
+        config = AnkiMinerConfig(alass_location="")
+        assert config.alass_location is None
+
+    def test_alass_location_accepts_path(self, temp_dir):
+        """alass_location accepts a Path object directly."""
+        config = AnkiMinerConfig(alass_location=temp_dir / "alass")
+        assert config.alass_location == temp_dir / "alass"
+
     def test_ytdlp_location_defaults_none(self):
         """ytdlp_location defaults to None."""
         config = AnkiMinerConfig()
