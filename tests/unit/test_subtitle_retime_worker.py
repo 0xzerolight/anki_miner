@@ -49,11 +49,13 @@ def _capture(worker: SubtitleRetimeWorker) -> dict:
         "started": [],
         "progress": [],
         "finished": [],
+        "skipped": [],
         "queue_finished": [],
     }
     worker.file_started.connect(lambda idx: cap["started"].append(idx))
     worker.file_progress.connect(lambda idx, pct, msg: cap["progress"].append((idx, pct, msg)))
     worker.file_finished.connect(lambda idx, out, err: cap["finished"].append((idx, out, err)))
+    worker.file_skipped.connect(lambda idx, out: cap["skipped"].append((idx, out)))
     worker.queue_finished.connect(lambda: cap["queue_finished"].append(True))
     return cap
 
@@ -179,7 +181,7 @@ def test_output_path_preserves_subtitle_extension(qapp, tmp_path):
 
 
 def test_skip_if_exists_no_overwrite(qapp, tmp_path):
-    """Existing output → file_finished with existing path, retimer NOT called."""
+    """Existing output → file_skipped emitted, file_finished NOT emitted, retimer NOT called."""
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "ep01_orig.srt"
     out = tmp_path / "ep01.srt"
@@ -197,10 +199,15 @@ def test_skip_if_exists_no_overwrite(qapp, tmp_path):
     cap = _capture(worker)
     worker.run()
 
-    assert cap["finished"] == [(0, out, None)]
+    # Skip must emit file_skipped, NOT file_finished.
+    assert cap["skipped"] == [(0, out)]
+    assert cap["finished"] == []
     assert cap["queue_finished"] == [True]
     # Retimer must NOT have been called.
     assert retimer_calls == []
+    # "Skipped, exists" progress must still be emitted.
+    skipped_progress = [p for p in cap["progress"] if p[0] == 0 and p[1] == 100]
+    assert any("Skipped" in p[2] for p in skipped_progress)
 
 
 def test_overwrite_calls_retimer_on_existing(qapp, tmp_path):
@@ -509,3 +516,14 @@ def test_split_penalty_forwarded_to_retimer(qapp, tmp_path):
     worker.run()
 
     assert received_penalty == [42.0]
+
+
+# ---------------------------------------------------------------------------
+# file_skipped signal exists on the worker
+# ---------------------------------------------------------------------------
+
+
+def test_file_skipped_signal_exists(qapp, tmp_path):
+    """SubtitleRetimeWorker exposes a file_skipped(int, object) signal."""
+    worker = _make_worker([], retimer=_fake_retimer_success)
+    assert hasattr(worker, "file_skipped")

@@ -79,11 +79,13 @@ def _capture(worker: SubtitleGenWorker) -> dict:
         "started": [],
         "progress": [],
         "finished": [],
+        "skipped": [],
         "queue_finished": [],
     }
     worker.file_started.connect(lambda idx: cap["started"].append(idx))
     worker.file_progress.connect(lambda idx, pct, msg: cap["progress"].append((idx, pct, msg)))
     worker.file_finished.connect(lambda idx, out, err: cap["finished"].append((idx, out, err)))
+    worker.file_skipped.connect(lambda idx, out: cap["skipped"].append((idx, out)))
     worker.queue_finished.connect(lambda: cap["queue_finished"].append(True))
     return cap
 
@@ -321,7 +323,7 @@ def test_happy_path_srt_written_to_custom_dir(qapp, tmp_path, monkeypatch):
 
 
 def test_skip_if_exists_no_overwrite(qapp, tmp_path, monkeypatch):
-    """Existing SRT → file_finished with the existing path, no transcription."""
+    """Existing SRT → file_skipped emitted, file_finished NOT emitted, no transcription."""
     config = _make_config(tmp_path)
     existing_srt = tmp_path / "ep01.srt"
     existing_srt.write_text("OLD SRT")
@@ -346,12 +348,17 @@ def test_skip_if_exists_no_overwrite(qapp, tmp_path, monkeypatch):
     worker.run()
 
     assert cap["started"] == [0]
-    assert cap["finished"] == [(0, existing_srt, None)]
+    # Skip must emit file_skipped, NOT file_finished.
+    assert cap["skipped"] == [(0, existing_srt)]
+    assert cap["finished"] == []
     assert cap["queue_finished"] == [True]
     # Transcription must NOT have been called.
     assert transcribe_calls == []
     # Extractor must NOT have been called.
     assert extractor.calls == []
+    # "Skipped, exists" progress must still be emitted.
+    skipped_progress = [p for p in cap["progress"] if p[0] == 0 and p[1] == 100]
+    assert any("Skipped" in p[2] for p in skipped_progress)
 
 
 def test_overwrite_re_transcribes_existing(qapp, tmp_path, monkeypatch):
@@ -688,3 +695,16 @@ def test_final_progress_is_100_on_success(qapp, tmp_path, monkeypatch):
     file_progresses = [p for p in cap["progress"] if p[0] == 0]
     final_pct = file_progresses[-1][1]
     assert final_pct == 100, f"Expected final progress 100, got {final_pct}"
+
+
+# ---------------------------------------------------------------------------
+# file_skipped signal exists on the worker
+# ---------------------------------------------------------------------------
+
+
+def test_file_skipped_signal_exists(qapp, tmp_path):
+    """SubtitleGenWorker exposes a file_skipped(int, object) signal."""
+    config = _make_config(tmp_path)
+    extractor = _FakeExtractor()
+    worker = _make_worker([], config, extractor=extractor)
+    assert hasattr(worker, "file_skipped")

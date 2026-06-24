@@ -60,6 +60,7 @@ class _FakeWorker:
         self.file_started = MagicMock()
         self.file_progress = MagicMock()
         self.file_finished = MagicMock()
+        self.file_skipped = MagicMock()
         self.queue_finished = MagicMock()
         self.finished = MagicMock()  # native QThread.finished (lifecycle release)
         self.deleteLater = MagicMock()
@@ -633,3 +634,124 @@ def test_iter_close_workers_returns_active_worker(qtbot, tmp_path):
         tab.retime_button.click()
 
     assert fake_worker in list(tab.iter_close_workers())
+
+
+# ---------------------------------------------------------------------------
+# file_skipped slot: logs "Skipped:", advances progress once
+# ---------------------------------------------------------------------------
+
+
+def _capture_signal_slots(signal_mock):
+    """Capture slots connected to a _FakeWorker MagicMock signal; returns the list."""
+    slots: list = []
+    original_connect = signal_mock.connect
+
+    def _capture(slot):
+        slots.append(slot)
+        return original_connect(slot)
+
+    signal_mock.connect = _capture
+    return slots
+
+
+def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
+    """file_skipped(idx, out_path) logs 'Skipped: <name>', not 'Done:' (T1)."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "episode.mp4"
+    sub = tmp_path / "episode.srt"
+    video.write_bytes(b"fake")
+    sub.write_text("1\n")
+    out_srt = tmp_path / "episode.srt"
+
+    fake_worker = _FakeWorker()
+    skipped_slots = _capture_signal_slots(fake_worker.file_skipped)
+
+    tab = _make_tab(config, qtbot)
+    tab.video_file_selector.set_path(str(video))
+    tab.subtitle_file_selector.set_path(str(sub))
+
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.retime_button.click()
+
+    for slot in skipped_slots:
+        slot(0, out_srt)
+
+    log_text = tab.log_widget.text_edit.toPlainText()
+    assert "Skipped" in log_text
+    assert "episode.srt" in log_text
+    assert "Done" not in log_text
+
+
+def test_file_skipped_advances_progress(qtbot, tmp_path):
+    """file_skipped(idx, out_path) advances the progress bar exactly once (T2)."""
+    config = _make_config(tmp_path)
+    video1 = tmp_path / "ep01.mp4"
+    video2 = tmp_path / "ep02.mp4"
+    sub1 = tmp_path / "ep01.srt"
+    sub2 = tmp_path / "ep02.srt"
+    for p in (video1, video2, sub1, sub2):
+        p.write_bytes(b"fake")
+
+    fake_worker = _FakeWorker()
+    skipped_slots = _capture_signal_slots(fake_worker.file_skipped)
+
+    tab = _make_tab(config, qtbot)
+    tab.folder_mode_button.click()
+    from anki_miner.utils.file_pairing import FilePair
+
+    tab.video_folder_selector.set_path(str(tmp_path))
+    tab.subtitle_folder_selector.set_path(str(tmp_path))
+
+    fake_pairs = [FilePair(video1, sub1), FilePair(video2, sub2)]
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+        patch(_FIND_PAIRS, return_value=fake_pairs),
+    ):
+        tab.retime_button.click()
+
+    assert tab.progress_widget.progress_bar.value() == 0
+
+    for slot in skipped_slots:
+        slot(0, video1.with_suffix(".srt"))
+    assert tab.progress_widget.progress_bar.value() == 50
+
+    for slot in skipped_slots:
+        slot(1, video2.with_suffix(".srt"))
+    assert tab.progress_widget.progress_bar.value() == 100
+
+
+def test_file_finished_still_logs_done_for_success(qtbot, tmp_path):
+    """file_finished(idx, out_path, None) still logs 'Done: <name>' (success path unchanged)."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "episode.mp4"
+    sub = tmp_path / "episode.srt"
+    video.write_bytes(b"fake")
+    sub.write_text("1\n")
+    out_srt = tmp_path / "episode.srt"
+
+    fake_worker = _FakeWorker()
+    finished_slots = _capture_signal_slots(fake_worker.file_finished)
+
+    tab = _make_tab(config, qtbot)
+    tab.video_file_selector.set_path(str(video))
+    tab.subtitle_file_selector.set_path(str(sub))
+
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.retime_button.click()
+
+    for slot in finished_slots:
+        slot(0, out_srt, None)
+
+    log_text = tab.log_widget.text_edit.toPlainText()
+    assert "Done" in log_text
+    assert "episode.srt" in log_text
