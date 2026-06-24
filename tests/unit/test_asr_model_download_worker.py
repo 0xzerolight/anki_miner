@@ -33,7 +33,7 @@ def test_success_emits_finished_true(qapp, tmp_path, monkeypatch):
     worker = AsrModelDownloadWorker("large-v3", tmp_path)
 
     finished: list[tuple] = []
-    worker.finished.connect(lambda ok, msg: finished.append((ok, msg)))
+    worker.result_ready.connect(lambda ok, msg: finished.append((ok, msg)))
 
     _run_worker_sync(worker)
 
@@ -55,7 +55,7 @@ def test_success_emits_status_before_finished(qapp, tmp_path, monkeypatch):
     worker.status.connect(statuses.append)
 
     finished: list[tuple] = []
-    worker.finished.connect(lambda ok, msg: finished.append((ok, msg)))
+    worker.result_ready.connect(lambda ok, msg: finished.append((ok, msg)))
 
     _run_worker_sync(worker)
 
@@ -78,7 +78,7 @@ def test_failure_emits_finished_false(qapp, tmp_path, monkeypatch):
     worker = AsrModelDownloadWorker("large-v3", tmp_path)
 
     finished: list[tuple] = []
-    worker.finished.connect(lambda ok, msg: finished.append((ok, msg)))
+    worker.result_ready.connect(lambda ok, msg: finished.append((ok, msg)))
 
     _run_worker_sync(worker)
 
@@ -98,7 +98,7 @@ def test_failure_message_contains_error_text(qapp, tmp_path, monkeypatch):
     worker = AsrModelDownloadWorker("small", tmp_path)
 
     finished: list[tuple] = []
-    worker.finished.connect(lambda ok, msg: finished.append((ok, msg)))
+    worker.result_ready.connect(lambda ok, msg: finished.append((ok, msg)))
 
     _run_worker_sync(worker)
 
@@ -123,7 +123,7 @@ def test_cancel_before_run_skips_download(qapp, tmp_path, monkeypatch):
     worker.cancel()
 
     finished: list[tuple] = []
-    worker.finished.connect(lambda ok, msg: finished.append((ok, msg)))
+    worker.result_ready.connect(lambda ok, msg: finished.append((ok, msg)))
 
     _run_worker_sync(worker)
 
