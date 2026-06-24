@@ -171,7 +171,7 @@ class AudiobookQueueWorker(ProcessorOwningWorker):
             # only on Mine runs; passing it unconditionally is correct.
             curation_callback=self._curation_callback,
             episode_name_override=item.audio_file.stem,
-            series_name_override="Audiobook",
+            series_name_override="Audio",
             # Bridge Stop mid-mine into the processor's phase checkpoints.
             # Must be the event, NOT processor.cancel(): the sticky
             # _cancelled flag poisons the shared processor across runs.
