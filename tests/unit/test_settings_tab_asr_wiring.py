@@ -37,6 +37,7 @@ class TestSettingsTabAsrWiring:
         tab.asr_panel.download_model_button.click()
 
         assert len(received) == 1
+        assert received[0] == tab.asr_panel.get_model()
 
     def test_set_asr_model_status_forwards_to_panel(self, test_config: AnkiMinerConfig, qtbot):
         """set_asr_model_status() forwards text to asr_panel.model_status_label."""

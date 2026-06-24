@@ -17,6 +17,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.asr import model_manager
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ class AsrModelDownloadWorker(CancellableWorker):
         if self.check_cancelled():
             return
 
-        self.status.emit(f"Downloading {self._name}…")
+        self.status.emit(tr_format(self.tr("Downloading %1…"), self._name))
 
         try:
             model_manager.download(
@@ -69,4 +70,4 @@ class AsrModelDownloadWorker(CancellableWorker):
             return
 
         if not self.check_cancelled():
-            self.finished.emit(True, f"{self._name} downloaded successfully.")
+            self.finished.emit(True, tr_format(self.tr("%1 downloaded successfully."), self._name))
