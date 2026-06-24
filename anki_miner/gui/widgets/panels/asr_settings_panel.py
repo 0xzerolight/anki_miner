@@ -100,17 +100,13 @@ class AsrSettingsPanel(FormPanel):
         return "large-v3"
 
     def _refresh_status(self, name: str, models_root) -> None:
-        """Update the status label to reflect whether *name* is downloaded.
-
-        ``model_manager.is_downloaded`` is NotImplementedError until Task 2
-        merges — catch it gracefully so the panel renders without crashing.
-        """
+        """Update the status label to reflect whether *name* is downloaded."""
         try:
             if model_manager.is_downloaded(name, models_root):
                 self.set_model_status(self.tr("Downloaded"))
             else:
                 self.set_model_status(self.tr("Not downloaded"))
-        except (NotImplementedError, Exception):  # noqa: BLE001 — guard stubs
+        except Exception:  # noqa: BLE001 — guard any model_manager failure
             pass
 
     # ------------------------------------------------------------------
