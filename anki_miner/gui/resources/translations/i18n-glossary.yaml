@@ -1,25 +1,25 @@
 # Project glossary for UI translation consistency.
 # Seeded from existing anki_miner_ja.ts; review/extend before relying on it.
 terms:
-  deck:            { ja: "デッキ" }
-  card:            { ja: "カード" }
-  note type:       { ja: "ノートタイプ" }
-  field:           { ja: "フィールド" }
-  mining:          { ja: "マイニング" }
-  mine:            { ja: "マイニング" }
-  known words:     { ja: "既知単語" }
-  known word DB:   { ja: "既知単語DB" }
-  word list:       { ja: "単語リスト" }
-  subtitle:        { ja: "字幕" }
-  frequency:       { ja: "頻度" }
-  pitch accent:    { ja: "ピッチアクセント" }
-  lemma:           { ja: "見出し語" }
-  dictionary:      { ja: "辞書" }
-  definition:      { ja: "語義" }
-  screenshot:      { ja: "スクリーンショット" }
-  filter:          { ja: "フィルター" }
-  connection:      { ja: "接続" }
-  episode:         { ja: "エピソード" }
-  playlist:        { ja: "プレイリスト" }
-  setup wizard:    { ja: "セットアップウィザード" }
+  deck:            { ja: "デッキ",                 ru: "Колода" }
+  card:            { ja: "カード",                 ru: "Карточка" }
+  note type:       { ja: "ノートタイプ",           ru: "Тип заметки" }
+  field:           { ja: "フィールド",             ru: "Поле" }
+  mining:          { ja: "マイニング",             ru: "Майнинг" }
+  mine:            { ja: "マイニング",             ru: "Майнить" }
+  known words:     { ja: "既知単語",               ru: "Известные слова" }
+  known word DB:   { ja: "既知単語DB",             ru: "БД известных слов" }
+  word list:       { ja: "単語リスト",             ru: "Список слов" }
+  subtitle:        { ja: "字幕",                   ru: "Субтитры" }
+  frequency:       { ja: "頻度",                   ru: "Частотность" }
+  pitch accent:    { ja: "ピッチアクセント",       ru: "Тональное ударение" }
+  lemma:           { ja: "見出し語",               ru: "Лемма" }
+  dictionary:      { ja: "辞書",                   ru: "Словарь" }
+  definition:      { ja: "語義",                   ru: "Определение" }
+  screenshot:      { ja: "スクリーンショット",     ru: "Скриншот" }
+  filter:          { ja: "フィルター",             ru: "Фильтр" }
+  connection:      { ja: "接続",                   ru: "Подключение" }
+  episode:         { ja: "エピソード",             ru: "Эпизод" }
+  playlist:        { ja: "プレイリスト",           ru: "Плейлист" }
+  setup wizard:    { ja: "セットアップウィザード", ru: "Мастер настройки" }
 do_not_translate: [Anki, AnkiConnect, GitHub, YouTube, JPod101, Google, ffmpeg, MeCab, Yomitan, Jisho]
