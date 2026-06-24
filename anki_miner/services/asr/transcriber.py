@@ -7,8 +7,11 @@ bodies, but this skeleton must be importable without either package installed.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Callable
+
+from anki_miner.services.asr import _engine
 
 
 def transcribe(
@@ -37,8 +40,39 @@ def transcribe(
 
     Returns:
         A list of ``(start_s, end_s, text)`` tuples in chronological order.
-
-    Raises:
-        NotImplementedError: Wave B fills the body.
     """
-    raise NotImplementedError
+    # sample_rate is part of the public interface for callers that need it
+    # (e.g. resampling before passing the array); faster-whisper infers it
+    # from the audio array's shape directly.
+    del sample_rate
+
+    if cancel_event is not None and cancel_event.is_set():
+        if progress_cb is not None:
+            progress_cb(1.0)
+        return []
+
+    whisper_model_cls = _engine.get_whisper_model_cls()
+    cpu_threads = min(4, os.cpu_count() or 4)
+    model = whisper_model_cls(
+        model_name,
+        device="cpu",
+        compute_type="int8",
+        cpu_threads=cpu_threads,
+        download_root=models_root,
+        local_files_only=True,
+    )
+
+    segments_iter, _info = model.transcribe(audio, language="ja", vad_filter=False)
+
+    results: list[tuple[float, float, str]] = []
+    for seg in segments_iter:
+        if cancel_event is not None and cancel_event.is_set():
+            break
+        results.append((seg.start, seg.end, seg.text.strip()))
+        if progress_cb is not None and duration_s > 0:
+            progress_cb(min(seg.end / duration_s, 1.0))
+
+    if progress_cb is not None:
+        progress_cb(1.0)
+
+    return results
