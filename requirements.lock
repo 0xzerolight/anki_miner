@@ -21,6 +21,40 @@
 #
 # Generated from: /home/light/Projects/anki_miner/.venv (Linux/Python 3.13)
 # Pinned: 2026-06-17
+#
+# [asr] EXTRA — REGENERATION REQUIRED
+# ─────────────────────────────────────
+# The release.yml build install was changed to `pip install ".[asr]"
+# -c requirements.lock` (Windows/macOS/AppImage).  The [asr] extra pulls in
+# faster-whisper and its transitive closure (~100 MB: ctranslate2, tokenizers,
+# huggingface_hub, sympy, etc.).  These packages are NOT pinned below because
+# faster-whisper was not installable in the environment where this file was
+# last regenerated (binary wheel requires the real ctranslate2 native build).
+#
+# A maintainer must regenerate from an environment with [asr] installed:
+#
+#   python -m venv /tmp/lock-env
+#   /tmp/lock-env/bin/pip install -e ".[asr]"
+#   /tmp/lock-env/bin/pip freeze | grep -v "^anki.miner" >> requirements.lock
+#   # Or with uv for a universal cross-platform lock:
+#   uv pip compile --universal pyproject.toml --extra asr -o requirements.lock
+#
+# Transitive packages that must be pinned once [asr] can be installed:
+#   faster-whisper         (direct [asr] dep)
+#   ctranslate2            (faster-whisper dep; ships OS-specific native libs)
+#   tokenizers             (faster-whisper dep; HuggingFace tokeniser Rust wheel)
+#   huggingface_hub        (faster-whisper dep; model download/caching)
+#   filelock               (huggingface_hub dep)
+#   fsspec                 (huggingface_hub dep)
+#   tqdm                   (huggingface_hub dep)
+#   sympy                  (ctranslate2 dep)
+#   mpmath                 (sympy dep)
+#   av                     (faster-whisper optional; EXCLUDED from bundle via spec)
+#   onnxruntime            (ctranslate2 optional; EXCLUDED from bundle via spec)
+#
+# Until regenerated, these packages float to their latest compatible versions
+# on each release run — the constraints-only lock is non-breaking for unlisted
+# packages.  Regenerate before the first [asr]-enabled release.
 
 # Direct runtime dependencies
 certifi==2026.1.4

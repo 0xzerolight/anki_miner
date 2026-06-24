@@ -91,11 +91,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Use requirements.lock to pin transitive deps to known-good versions.
+          # Install with the [asr] extra so faster-whisper and ctranslate2 land in
+          # the PyInstaller tree for Windows, macOS, and the AppImage (Linux).
+          # requirements.lock pins transitive deps to known-good versions.
           # Version-constraint form (no --require-hashes): cross-platform safe
           # because an incomplete lock never fails the build on unlisted packages.
           # Upgrade to hash-pinning once a universal lock is generated with uv.
-          pip install . -c requirements.lock
+          # NOTE: the .deb package is system-managed; it does NOT bundle
+          # faster-whisper (users install the [asr] extra separately if desired).
+          # The deb-stage tree is built from dist/AnkiMiner which is a PyInstaller
+          # onedir — its Python deps are already embedded and the nfpm spec only
+          # declares system-level runtime deps (ffmpeg), not Python ones.
+          pip install ".[asr]" -c requirements.lock
 
       # PyInstaller bootloader handling. The prebuilt PyPI wheel ships a bootloader
       # binary whose hash AV vendors flag (malware reuses it), a major source of the
@@ -240,6 +247,38 @@ jobs:
             exit 1
           }
 
+      # Offline ASR bundled smoke: verify that faster-whisper + ctranslate2 native
+      # libs resolved correctly inside the bundle WITHOUT downloading any model.
+      # HF_HUB_OFFLINE=1 prevents any network access; the smoke only asserts that
+      # the ctranslate2 extension and its OpenMP runtime load (import + native-lib
+      # resolution).  A model download in CI is never acceptable: models are 150 MB+
+      # and must be user-provided at runtime.  Gated on ANKI_MINER_SMOKE=asr, same
+      # pattern as the YouTube smoke above.
+      - name: ASR bundled smoke (Linux/macOS)
+        if: false  # TODO(Task 6): enable once app.py handles ANKI_MINER_SMOKE=asr
+        env:
+          ANKI_MINER_SMOKE: asr
+          HF_HUB_OFFLINE: "1"
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          set -o pipefail
+          ./dist/AnkiMiner/AnkiMiner 2>&1 | tee asr_smoke.log
+          grep -q "BUNDLED_SMOKE_PASS" asr_smoke.log
+
+      - name: ASR bundled smoke (Windows)
+        if: false  # TODO(Task 6): enable once app.py handles ANKI_MINER_SMOKE=asr
+        shell: pwsh
+        env:
+          ANKI_MINER_SMOKE: asr
+          HF_HUB_OFFLINE: "1"
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          .\dist\AnkiMiner\AnkiMiner.exe 2>&1 | Tee-Object -FilePath asr_smoke.log
+          if (-not (Select-String -Path asr_smoke.log -Pattern "BUNDLED_SMOKE_PASS" -Quiet)) {
+            Write-Error "BUNDLED_SMOKE_PASS not found in ASR smoke"
+            exit 1
+          }
+
       # Assert the bundled ffmpeg actually landed in the dist tree AND has the
       # encoders the app requires (libmp3lame/libopus/libsvtav1/libwebp/libwebp_anim).
       # libwebp_anim is asserted separately because still-image libwebp builds
@@ -325,17 +364,40 @@ jobs:
         run: |
           # The .deb relies on system ffmpeg (licenses/ffmpeg/README.md), so it
           # must NOT ship the bundled GPL ffmpeg the PyInstaller tree carries.
-          # Stage a copy with ffmpeg/ffprobe stripped and package from it; the
-          # AppImage (built above) keeps its bundled ffmpeg.
+          # It must also NOT ship faster-whisper/ctranslate2 — the [asr] extra is
+          # installed for the whole Linux job so the AppImage onedir has the ASR
+          # libs, but the .deb must stay lean (users pip-install [asr] separately).
+          # Stage a copy with both ffmpeg and ASR libs stripped; the AppImage
+          # (built above) keeps everything.
           rm -rf dist/deb-stage
           cp -a dist/AnkiMiner dist/deb-stage
-          # Strip both onedir layouts: _internal/bin/ (recent PyInstaller) and bin/.
+          # Strip both onedir layouts: _internal/ (recent PyInstaller) and root.
+          # ffmpeg/ffprobe binaries:
           rm -f dist/deb-stage/_internal/bin/ffmpeg dist/deb-stage/_internal/bin/ffprobe
           rm -f dist/deb-stage/bin/ffmpeg dist/deb-stage/bin/ffprobe
-          # Fail closed if a layout change left a bundled ffmpeg in the stage tree.
-          if find dist/deb-stage -type f -name 'ffmpeg' -o -type f -name 'ffprobe' | grep -q .; then
-            echo "::error::Bundled ffmpeg/ffprobe still present in deb stage tree — GPL would ship in the .deb"
-            find dist/deb-stage -type f \( -name 'ffmpeg' -o -name 'ffprobe' \)
+          # ASR native libs (ctranslate2, faster_whisper Python package dirs and
+          # their shared libs; onnxruntime and av are excluded via spec but strip
+          # defensively in case the layout ever changes).
+          rm -rf dist/deb-stage/_internal/ctranslate2
+          rm -rf dist/deb-stage/_internal/faster_whisper
+          rm -rf dist/deb-stage/_internal/onnxruntime
+          rm -rf dist/deb-stage/_internal/av
+          rm -rf dist/deb-stage/ctranslate2
+          rm -rf dist/deb-stage/faster_whisper
+          rm -rf dist/deb-stage/onnxruntime
+          rm -rf dist/deb-stage/av
+          # Also strip the ctranslate2 shared lib itself (libctranslate2.so.*).
+          find dist/deb-stage -name 'libctranslate2*.so*' -delete
+          # Fail closed: verify no bundled ffmpeg, ffprobe, or ctranslate2/
+          # faster_whisper libs remain in the stage tree.
+          BAD=$(find dist/deb-stage -type f \( \
+            -name 'ffmpeg' -o -name 'ffprobe' -o \
+            -name 'libctranslate2*.so*' \) ; \
+            find dist/deb-stage -type d \( \
+            -name 'ctranslate2' -o -name 'faster_whisper' \))
+          if [ -n "$BAD" ]; then
+            echo "::error::ASR/ffmpeg artifacts still present in deb stage tree:"
+            echo "$BAD"
             exit 1
           fi
           VERSION=${{ steps.version.outputs.version }} ./nfpm package \
