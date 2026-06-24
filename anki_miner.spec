@@ -165,6 +165,11 @@ a = Analysis(
         "PySide2",
         "PySide6",
         "PyQt5",
+        # Unused audio/video bindings — we decode audio via ffmpeg, VAD is off,
+        # so av and onnxruntime are never imported at runtime.  Excluding them
+        # shaves ~100 MB from the bundle.
+        "av",
+        "onnxruntime",
     ],
     noarchive=False,
     optimize=0,
