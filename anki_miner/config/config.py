@@ -304,6 +304,16 @@ class AnkiMinerConfig:
     ffmpeg_location: Path | None = None
     ffprobe_location: Path | None = None
 
+    # ASR (Automatic Speech Recognition) settings. Used by the Local Subtitle
+    # Creation feature (offline transcription via faster-whisper). Requires
+    # the optional `[asr]` extra: pip install "anki-miner[asr]".
+    # `asr_model` selects the faster-whisper model size. Unknown values are
+    # silently reset to the default in __post_init__.
+    # `asr_models_root` is the directory where downloaded model weights are
+    # stored; derived from ANKI_MINER_HOME (never user-configurable directly).
+    asr_model: str = "large-v3"
+    asr_models_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "asr_models")
+
     # Theme settings (UI state — persisted via gui_config.json).
     # `theme_favorites` is the curated list that drives the top-right combo;
     # the active `theme` does not need to be in favorites.
@@ -386,6 +396,8 @@ class AnkiMinerConfig:
             )
         if isinstance(self.themes_root, str):
             object.__setattr__(self, "themes_root", Path(self.themes_root))
+        if isinstance(self.asr_models_root, str):
+            object.__setattr__(self, "asr_models_root", Path(self.asr_models_root))
         # JSON round-trip yields a list for theme_favorites; coerce to tuple
         # so the frozen dataclass stays internally immutable.
         if isinstance(self.theme_favorites, list):
@@ -416,6 +428,13 @@ class AnkiMinerConfig:
         # before its catalog is fully wired; install_translators no-ops on a
         # code with no .qm.
         object.__setattr__(self, "ui_language", str(self.ui_language).strip().lower() or "en")
+
+        # Validate asr_model: reset unknown values to the default so a stale or
+        # hand-edited config never silently passes an unsupported model name to
+        # faster-whisper. The authoritative set lives in services/asr/model_manager.py;
+        # duplicated here to keep config self-contained and import-free.
+        if self.asr_model not in {"large-v3", "small"}:
+            object.__setattr__(self, "asr_model", "large-v3")
 
         # Keep anki_word_field in sync with anki_fields["word"]
         word_field_from_mapping = self.anki_fields.get("word", "")

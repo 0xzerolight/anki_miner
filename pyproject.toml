@@ -39,6 +39,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+asr = [
+    "faster-whisper>=1.1.0",
+]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
@@ -114,6 +117,7 @@ markers = [
     "real_ytdlp: exercises the real _ytdlp_supports_js_runtimes (no autouse stub)",
     "e2e: real-service end-to-end GUI tests (require running Anki; excluded by default)",
     "soak: multi-session soak tests",
+    "asr: requires faster-whisper and a downloaded ASR model",
 ]
 
 [tool.black]
@@ -145,6 +149,10 @@ strict_equality = true
 
 [[tool.mypy.overrides]]
 module = ["fugashi.*", "pysubs2.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["faster_whisper.*", "ctranslate2.*"]
 ignore_missing_imports = true
 
 [tool.ruff]
