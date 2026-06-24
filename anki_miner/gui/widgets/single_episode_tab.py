@@ -45,6 +45,7 @@ from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+from anki_miner.utils.file_pairing import find_sibling_subtitle
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -327,12 +328,25 @@ class SingleEpisodeTab(MiningTabBase):
 
         return group
 
-    def _on_video_path_changed(self, _new_path: str) -> None:
+    def _on_video_path_changed(self, new_path: str) -> None:
         """Reset the audio-track override when the video file changes.
 
         Selection is per-run and must not silently carry over across files.
+        Also auto-fills the subtitle selector from a sibling subtitle when the
+        selector is currently empty and a matching sibling exists.
         """
         self._audio_track_override = None
+
+        if not new_path:
+            return
+
+        if self.subtitle_selector.get_path().strip():
+            # User already has a subtitle chosen — don't overwrite it.
+            return
+
+        sibling = find_sibling_subtitle(Path(new_path))
+        if sibling is not None:
+            self.subtitle_selector.set_path(str(sibling))
 
     def _on_tracks_clicked(self) -> None:
         """Open the AudioTracksDialog for manual audio track override selection."""
