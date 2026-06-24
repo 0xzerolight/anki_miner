@@ -26,6 +26,7 @@ from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
+from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.services.stats_service import StatsService
 
@@ -82,6 +83,31 @@ def _run_bundled_smoke() -> int:
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
     print(f"BUNDLED_SMOKE_PASS: yt_dlp extractors={extractor_count}")
+    return 0
+
+
+def _run_asr_bundled_smoke() -> int:
+    """Env-var-gated smoke path for PyInstaller ASR bundle validation.
+
+    Triggered by ANKI_MINER_SMOKE=asr. Verifies faster-whisper and ctranslate2
+    survived PyInstaller's collection by calling available() and importing
+    WhisperModel. No model download — HF_HUB_OFFLINE is honoured by the caller.
+    Not a CLI surface — the flag is hidden, env-var-only, and exits before any
+    Qt init.
+    """
+    from anki_miner.services.asr import _engine
+
+    try:
+        if not _engine.available():
+            raise RuntimeError(
+                "faster-whisper or ctranslate2 not importable from bundle " "(available() returned False)"
+            )
+        # Importing the class exercises ctranslate2 native lib resolution.
+        _engine.get_whisper_model_cls()
+    except Exception as exc:
+        print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
+    print("BUNDLED_SMOKE_PASS: asr faster_whisper+ctranslate2 resolved")
     return 0
 
 
@@ -200,6 +226,9 @@ def main():
     # bundling without spinning up a display.
     if os.environ.get("ANKI_MINER_SMOKE") == "youtube":
         sys.exit(_run_bundled_smoke())
+
+    if os.environ.get("ANKI_MINER_SMOKE") == "asr":
+        sys.exit(_run_asr_bundled_smoke())
 
     # Attach the rotating file handler to the DEFAULT path before loading config
     # so config-load diagnostics — including the OVH-001 .bak-recovery warnings
@@ -329,6 +358,10 @@ def main():
     # Analytics tab (non-mining: no presenter, no update_config wiring)
     analytics_tab = AnalyticsTab(stats_service)
     window.tabs.addTab(analytics_tab, QCoreApplication.translate("MainWindow", "Analytics"))
+
+    # Subtitle Creation tab (non-mining: no presenter, no update_config wiring)
+    subtitle_creation_tab = SubtitleCreationTab(window.get_config())
+    window.tabs.addTab(subtitle_creation_tab, QCoreApplication.translate("MainWindow", "Subtitle Creation"))
 
     settings_tab = SettingsTab(window.get_config())
     # from_settings=True suppresses the config_refreshed re-emit: SettingsTab
