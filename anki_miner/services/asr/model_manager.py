@@ -30,10 +30,13 @@ DEFAULT_MODEL: str = "large-v3"
 def is_downloaded(name: str, models_root: Path) -> bool:
     """Return True if the model *name* is present in *models_root*.
 
-    Checks recursively for a ``model.bin`` file anywhere under *models_root*
-    (excluding *models_root* itself). faster-whisper places model files in a
-    snapshot directory several levels deep under ``download_root``; treating
-    ``model.bin`` presence as the signal is robust to layout changes.
+    Checks recursively for a ``model.bin`` file whose containing path includes
+    *name* in at least one ancestor directory name (relative to *models_root*).
+    faster-whisper uses an HF-cache layout
+    ``models--<org>--faster-whisper-<name>/snapshots/<rev>/model.bin``; matching
+    on *name* in the path is robust to org-prefix changes while still being
+    model-specific (so ``is_downloaded("large-v3", root)`` is False when only
+    ``small`` is present, and vice-versa).
 
     Args:
         name: Model identifier (must be in ``KNOWN_MODELS``).
@@ -45,9 +48,20 @@ def is_downloaded(name: str, models_root: Path) -> bool:
     """
     if not models_root.exists():
         return False
-    # Walk all subdirectories (not models_root itself) looking for model.bin.
-    # Presence of model.bin anywhere below models_root is the signal.
-    return any(candidate.parent != models_root for candidate in models_root.rglob("model.bin"))
+    # Walk all subdirectories looking for model.bin whose path corresponds to
+    # the requested model name.  faster-whisper uses an HF-cache layout:
+    #   models--<org>--faster-whisper-<name>/snapshots/<rev>/model.bin
+    # so we accept a model.bin only when *name* appears in at least one of its
+    # ancestor directory names (relative to models_root).  This is deliberately
+    # kept robust: we never hardcode the org prefix.
+    for candidate in models_root.rglob("model.bin"):
+        if candidate.parent == models_root:
+            # model.bin sitting directly in models_root itself — not a valid layout
+            continue
+        rel_parts = candidate.relative_to(models_root).parts
+        if any(name in part for part in rel_parts):
+            return True
+    return False
 
 
 def download(name: str, models_root: Path, cancel_event=None) -> None:
