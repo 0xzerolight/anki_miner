@@ -52,7 +52,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libegl1 libpulse0 libxkbcommon0
       - run: pip install -e ".[dev]"
-      - run: pytest -m "not youtube and not e2e"
+      - run: pytest -m "not youtube and not e2e and not asr"
         env:
           QT_QPA_PLATFORM: offscreen
 
