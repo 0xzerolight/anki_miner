@@ -969,6 +969,167 @@ class TestOptionalResourceWarnings:
         assert not self._has_warning(result, "Frequency Data")
 
 
+class TestCheckAlass:
+    """Tests for _check_alass method — alass is optional (non-fatal)."""
+
+    def test_success(self, test_config):
+        """Present alass binary → ok result with version info."""
+        service = ValidationService(test_config)
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "alass 0.6.0"
+
+        with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result):
+            ok, message = service._check_alass()
+
+        assert ok is True
+        assert "alass" in message
+
+    def test_not_found(self, test_config):
+        """Missing alass binary → ok=False with descriptive message."""
+        service = ValidationService(test_config)
+
+        with patch(
+            "anki_miner.services.validation_service.subprocess.run",
+            side_effect=FileNotFoundError(),
+        ):
+            ok, message = service._check_alass()
+
+        assert ok is False
+        assert "alass" in message.lower()
+
+    def test_timeout(self, test_config):
+        """alass check timeout → ok=False."""
+        service = ValidationService(test_config)
+
+        with patch(
+            "anki_miner.services.validation_service.subprocess.run",
+            side_effect=subprocess.TimeoutExpired("alass", 10),
+        ):
+            ok, message = service._check_alass()
+
+        assert ok is False
+        assert "timed out" in message
+
+    def test_missing_alass_produces_warning_not_error_in_validate_setup(self, test_config, monkeypatch):
+        """Missing alass must NOT make validate_setup fail — it must surface as WARNING."""
+        from anki_miner.services import validation_service
+
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_ankiconnect",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_ffmpeg",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_ffprobe",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_deck_exists",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_note_type_exists",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_field_names_exist",
+            lambda self: (True, "ok"),
+        )
+        # Simulate missing alass
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_alass",
+            lambda self: (False, "alass not found — subtitle retiming will be unavailable"),
+        )
+
+        from dataclasses import replace
+
+        from anki_miner.config import ChainEntry
+
+        config = replace(
+            test_config,
+            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
+            use_pitch_accent=False,
+            use_frequency_data=False,
+        )
+        result = ValidationService(config).validate_setup()
+
+        # Must not block startup
+        assert result.all_passed is True
+        # Must surface as a WARNING issue
+        alass_issues = [i for i in result.issues if i.component == "alass"]
+        assert len(alass_issues) == 1
+        assert alass_issues[0].severity == "WARNING"
+        # Must NOT be an ERROR
+        assert not any(i.component == "alass" and i.severity == "ERROR" for i in result.issues)
+
+    def test_present_alass_produces_no_issue_in_validate_setup(self, test_config, monkeypatch):
+        """A present alass binary should add no issue to validate_setup results."""
+        from anki_miner.services import validation_service
+
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_ankiconnect",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_ffmpeg",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_ffprobe",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_deck_exists",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_note_type_exists",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_field_names_exist",
+            lambda self: (True, "ok"),
+        )
+        monkeypatch.setattr(
+            validation_service.ValidationService,
+            "_check_alass",
+            lambda self: (True, "alass 0.6.0 [system PATH]"),
+        )
+
+        from dataclasses import replace
+
+        from anki_miner.config import ChainEntry
+
+        config = replace(
+            test_config,
+            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
+            use_pitch_accent=False,
+            use_frequency_data=False,
+        )
+        result = ValidationService(config).validate_setup()
+
+        assert result.all_passed is True
+        assert not any(i.component == "alass" for i in result.issues)
+
+
 class TestPublicChecks:
     """Public thin wrappers over the private check methods (Task 3 setup wizard)."""
 
