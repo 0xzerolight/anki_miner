@@ -3532,6 +3532,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Finished</source>
         <translation type="unfinished" />
     </message>
@@ -3559,6 +3563,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Transcribing: %1%</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No speech detected in %1</source>
         <translation type="unfinished" />
     </message>
     <message>
