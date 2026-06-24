@@ -70,6 +70,20 @@ class SubtitleCreationTab(QWidget):
         self._refresh_engine_state()
 
     # ------------------------------------------------------------------
+    # Config refresh
+    # ------------------------------------------------------------------
+
+    def update_config(self, config: AnkiMinerConfig) -> None:
+        """Adopt a new application config (e.g. after the ASR model changes).
+
+        Wired to ``settings_tab.config_changed`` and ``window.config_refreshed``
+        in ``app.main`` so a model switch in Settings is reflected by the
+        model-downloaded guard and the worker. A run already in flight keeps the
+        config it captured at construction.
+        """
+        self.config = config
+
+    # ------------------------------------------------------------------
     # UI construction
     # ------------------------------------------------------------------
 
