@@ -221,6 +221,65 @@ jobs:
           Write-Host "Bundled ffmpeg landed in vendor/ffmpeg/:"
           Get-ChildItem vendor\ffmpeg
 
+      # ---------------------------------------------------------------------
+      # Fetch the alass subtitle-retiming binary per-OS and place it in
+      # vendor/alass/ BEFORE PyInstaller runs. The spec (anki_miner.spec)
+      # picks up whatever lands in vendor/alass/ and bundles it at
+      # sys._MEIPASS/bin/ — the path alass_resolver.py checks first when
+      # running frozen. macOS has no upstream v2.0.0 binary; the resolver
+      # falls back to PATH (brew install alass). URLs are pinned to
+      # immutable v2.0.0 release assets and every download is SHA256-
+      # verified for reproducibility/supply-chain safety. alass is GPL-3.0.
+      # ---------------------------------------------------------------------
+      - name: Fetch alass binary (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # kaegi/alass v2.0.0 static linux64 binary. Pinned to an immutable
+          # release asset; SHA256 verified fail-closed.
+          URL="https://github.com/kaegi/alass/releases/download/v2.0.0/alass-linux64"
+          SHA256="7bd0b9ae7e035d3ba940eacffb21243614df36231d47f21f0b4ce42001ab7fcd"
+          curl -fL "$URL" -o alass-dl
+          echo "${SHA256}  alass-dl" | sha256sum -c -
+          mkdir -p vendor/alass
+          cp alass-dl vendor/alass/alass
+          chmod +x vendor/alass/alass
+          rm -f alass-dl
+          mkdir -p licenses/alass
+          curl -fL "https://raw.githubusercontent.com/kaegi/alass/master/LICENSE" \
+            -o licenses/alass/LICENSE
+          echo "Bundled alass landed in vendor/alass/:"
+          ls -la vendor/alass/
+
+      - name: Fetch alass binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          # kaegi/alass v2.0.0 windows64 zip. Pinned to an immutable release
+          # asset; SHA256 verified fail-closed. The zip member is
+          # alass-windows64/bin/alass-cli.exe; renamed to alass.exe to match
+          # the sys._MEIPASS/bin/alass.exe path alass_resolver.py expects.
+          $url = "https://github.com/kaegi/alass/releases/download/v2.0.0/alass-windows64.zip"
+          $sha256 = "e81a72f97f592910e909a2352d6b8c0de0801c51ac1383bad4ebf3f2ecdd2fd8"
+          curl.exe -fL $url -o alass-dl.zip
+          $actual = (Get-FileHash alass-dl.zip -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $sha256) {
+            Write-Error "SHA256 mismatch for alass-dl.zip: expected $sha256 got $actual"
+            exit 1
+          }
+          New-Item -ItemType Directory -Force -Path vendor\alass | Out-Null
+          Expand-Archive -Path alass-dl.zip -DestinationPath alass-extracted -Force
+          $exe = Get-ChildItem -Path alass-extracted -Recurse -Filter "alass-cli.exe" | Select-Object -First 1
+          Copy-Item $exe.FullName vendor\alass\alass.exe -Force
+          New-Item -ItemType Directory -Force -Path licenses\alass | Out-Null
+          curl.exe -fL "https://raw.githubusercontent.com/kaegi/alass/master/LICENSE" `
+            -o licenses\alass\LICENSE
+          Remove-Item -Recurse -Force alass-extracted, alass-dl.zip
+          Write-Host "Bundled alass landed in vendor/alass/:"
+          Get-ChildItem vendor\alass
+
       - name: Build with PyInstaller
         run: pyinstaller anki_miner.spec
 

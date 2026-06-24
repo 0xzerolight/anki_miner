@@ -65,6 +65,14 @@ ffmpeg_license_datas = []
 if os.path.isdir(ffmpeg_license_dir):
     ffmpeg_license_datas.append((ffmpeg_license_dir, os.path.join("licenses", "ffmpeg")))
 
+# Bundle the alass GPL-3.0 license text if present (populated by a sibling CI task).
+# Conditional so local builds don't hard-fail before the license dir exists. Lands at
+# sys._MEIPASS/licenses/alass/ in the bundle.
+alass_license_dir = os.path.join(project_root, "licenses", "alass")
+alass_license_datas = []
+if os.path.isdir(alass_license_dir):
+    alass_license_datas.append((alass_license_dir, os.path.join("licenses", "alass")))
+
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
 # ML model has no positive trust signals to weigh against "packed binary that runs
@@ -157,7 +165,8 @@ a = Analysis(
         # unidic-lite dictionary data (required by fugashi/MeCab)
         (unidic_data, "unidic_lite"),
     ]
-    + ffmpeg_license_datas,
+    + ffmpeg_license_datas
+    + alass_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
