@@ -5,9 +5,11 @@ import hashlib
 import logging
 import subprocess
 import threading
+import wave
 from collections.abc import Callable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
+from typing import Any
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces import ProgressCallback
@@ -24,6 +26,35 @@ from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
+
+
+def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
+    """Read a mono 32-bit float PCM WAV and return (samples, sample_rate, duration_s).
+
+    The WAV produced by :meth:`MediaExtractorService.extract_full_audio` is
+    always 16 kHz mono ``pcm_f32le``, which maps directly to numpy float32
+    without any conversion.  The bytes are byte-for-byte identical to what
+    PyAV would yield at the same settings — no quality loss.
+
+    Args:
+        path: Path to the WAV file written by ``extract_full_audio``.
+
+    Returns:
+        A 3-tuple of:
+        - ``samples``: 1-D float32 numpy array in ``[-1.0, 1.0]``.
+        - ``sample_rate``: Frame rate in Hz (typically 16 000).
+        - ``duration_s``: Duration in seconds (``nframes / framerate``).
+    """
+    import numpy as np  # noqa: PLC0415  (intentional function-local import — numpy is an [asr] extra)
+
+    with wave.open(str(path), "rb") as wf:
+        sample_rate = wf.getframerate()
+        n_frames = wf.getnframes()
+        raw = wf.readframes(n_frames)
+
+    samples = np.frombuffer(raw, dtype=np.float32)
+    duration = n_frames / sample_rate
+    return samples, sample_rate, duration
 
 
 def _kill_quietly(proc: "subprocess.Popen[str]") -> None:
@@ -368,6 +399,104 @@ class MediaExtractorService:
         ):
             return None
         return output_path if output_path.exists() else None
+
+    def extract_full_audio(
+        self,
+        video_file: Path,
+        out_wav: Path,
+        *,
+        track_override: int | None = None,
+        cancel_event: "threading.Event | None" = None,
+    ) -> bool:
+        """Extract the full audio track from *video_file* as a 16 kHz mono float32 WAV.
+
+        The output format is ``pcm_f32le`` — a lossless raw PCM encoding that is
+        byte-identical to PyAV's float32 decode path and Whisper's expected input.
+        No encoder-availability probe is performed: all ffmpeg builds include the
+        ``pcm_*`` family of codecs.
+
+        Audio stream resolution follows the same logic as :meth:`_extract_audio`:
+
+        - When *track_override* is set, ``-map 0:<track_override>`` is used directly.
+        - Otherwise :meth:`_get_japanese_audio_stream` is called (cache + ``0:a:0``
+          fallback).
+
+        A generous, duration-scaled timeout is applied so long files don't time out.
+
+        Args:
+            video_file: Path to the source video or audio file.
+            out_wav: Destination path for the output WAV (will be overwritten).
+            track_override: Global ffprobe stream index to use; when given, JP
+                auto-detect is skipped entirely.
+            cancel_event: Optional :class:`threading.Event`; when set the call
+                returns ``False`` immediately without spawning ffmpeg.
+
+        Returns:
+            ``True`` on success (ffmpeg exited 0 and *out_wav* exists on disk);
+            ``False`` on any failure or cancellation.
+        """
+        if cancel_event is not None and cancel_event.is_set():
+            return False
+
+        if track_override is not None:
+            global_index: int | None = track_override
+        else:
+            global_index = self._get_japanese_audio_stream(video_file)
+
+        proc_registry = _FfmpegProcRegistry()
+
+        # Wire cancel_event → kill_all so long encodes can be interrupted.
+        cancel_thread: threading.Thread | None = None
+        if cancel_event is not None:
+
+            def _watch() -> None:
+                cancel_event.wait()
+                proc_registry.kill_all()
+
+            cancel_thread = threading.Thread(target=_watch, daemon=True)
+            cancel_thread.start()
+
+        cmd = [
+            resolve_ffmpeg(self.config),
+            "-y",
+            "-i",
+            str(video_file),
+        ]
+
+        if global_index is not None:
+            cmd.extend(["-map", f"0:{global_index}"])
+            logger.debug("extract_full_audio: using audio stream %d", global_index)
+        else:
+            cmd.extend(["-map", "0:a:0"])
+            logger.warning("extract_full_audio: no Japanese audio found, using first audio stream")
+
+        cmd.extend(
+            [
+                "-vn",
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
+                "-c:a",
+                "pcm_f32le",
+                str(out_wav),
+            ]
+        )
+
+        # Duration-scaled timeout: assume at most 10× realtime for a full file.
+        # A 2-hour film at 10× = 720s; floor at 300s so even short probes have
+        # plenty of headroom.
+        timeout = 300
+
+        if not self._run_ffmpeg(
+            cmd,
+            "Full audio extraction",
+            timeout=timeout,
+            context=out_wav.name,
+            proc_registry=proc_registry,
+        ):
+            return False
+        return out_wav.exists()
 
     def _extract_screenshot(
         self,
