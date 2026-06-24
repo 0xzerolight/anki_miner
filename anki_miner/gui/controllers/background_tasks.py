@@ -22,11 +22,15 @@ from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
     from PyQt6.QtCore import QThread
     from PyQt6.QtWidgets import QTabWidget
 
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.main_window import MainWindow
+    from anki_miner.gui.workers.asr_model_download_worker import AsrModelDownloadWorker
     from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
     from anki_miner.gui.workers.update_worker import UpdateWorkerThread
     from anki_miner.gui.workers.ytdlp_update_worker import YtdlpUpdateWorker
@@ -97,12 +101,13 @@ class BackgroundTaskController(QObject):
         super().__init__(window)
         self._window = window
 
-        # The four window-level worker handles. Held here so the QThreads
+        # The window-level worker handles. Held here so the QThreads
         # aren't GC'd mid-run and so shutdown() can join them.
         self.validation_worker: ValidationWorkerThread | None = None
         self.update_worker: UpdateWorkerThread | None = None
         self.ytdlp_update_worker: YtdlpUpdateWorker | None = None
         self.jmdict_migration_worker: DictionaryImportWorker | None = None
+        self.asr_model_download_worker: AsrModelDownloadWorker | None = None
         # Best-effort cache prewarm worker, scheduled by ``app.main()`` after
         # the first paint and adopted via set_prewarm(); cleared once it
         # finishes.
@@ -177,6 +182,40 @@ class BackgroundTaskController(QObject):
         worker.finished.connect(lambda w=worker: self._release_worker("ytdlp_update_worker", w))
         worker.start()
 
+    def start_asr_model_download(
+        self,
+        model_name: str,
+        models_root: Path,
+        on_status: Callable[[str], None],
+        on_finished: Callable[[bool, str], None],
+    ) -> None:
+        """Start an ASR model download worker unless one is already running.
+
+        Mirrors :meth:`start_ytdlp_update`: guards against a concurrent run,
+        lazy-imports the worker, connects ``status`` and ``finished`` to the
+        provided callbacks, and releases the handle on ``finished``.
+
+        Args:
+            model_name: Whisper model identifier (e.g. ``"large-v3"``).
+            models_root: Directory where model weights will be stored;
+                typically ``config.asr_models_root``.
+            on_status: Slot for ``status(str)`` — typically
+                ``SettingsTab.set_asr_model_status``.
+            on_finished: Slot for ``finished(bool, str)`` — called with
+                ``(ok, message)`` when the download completes or fails.
+        """
+        if self.asr_model_download_worker is not None and self.asr_model_download_worker.isRunning():
+            return
+
+        from anki_miner.gui.workers.asr_model_download_worker import AsrModelDownloadWorker
+
+        worker = AsrModelDownloadWorker(model_name, models_root, parent=self)
+        self.asr_model_download_worker = worker
+        worker.status.connect(on_status)
+        worker.finished.connect(on_finished)
+        worker.finished.connect(lambda _ok, _msg, w=worker: self._release_worker("asr_model_download_worker", w))
+        worker.start()
+
     def maybe_migrate_jmdict(self, config: AnkiMinerConfig) -> bool:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background.
 
@@ -246,11 +285,12 @@ class BackgroundTaskController(QObject):
                 laggards.append(worker)
 
         # Controller-owned workers: validation, update check, yt-dlp update,
-        # JMdict migration.
+        # JMdict migration, ASR model download.
         join(self.validation_worker)
         join(self.update_worker)
         join(self.ytdlp_update_worker)
         join(self.jmdict_migration_worker)
+        join(self.asr_model_download_worker)
 
         # The best-effort prewarm worker has no cancel hook (it's a short,
         # uninterruptible cache warm), so join it without timeout instead of

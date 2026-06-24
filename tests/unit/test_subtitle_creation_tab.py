@@ -387,6 +387,95 @@ def test_file_finished_error_appends_error_log(qtbot, tmp_path):
     assert "Audio extraction failed" in log_text
 
 
+def test_file_finished_advances_progress_bar(qtbot, tmp_path):
+    """file_finished increments the progress bar for each completed file."""
+    config = _make_config(tmp_path)
+    # Two videos so we can assert incremental advance.
+    video1 = tmp_path / "ep01.mp4"
+    video2 = tmp_path / "ep02.mp4"
+    video1.write_bytes(b"fake")
+    video2.write_bytes(b"fake")
+
+    fake_worker = _FakeWorker()
+    _started_slots: list = []
+    _finished_slots: list = []
+
+    orig_started = fake_worker.file_started.connect
+    orig_finished = fake_worker.file_finished.connect
+
+    def _capture_started(slot):
+        _started_slots.append(slot)
+        return orig_started(slot)
+
+    def _capture_finished(slot):
+        _finished_slots.append(slot)
+        return orig_finished(slot)
+
+    fake_worker.file_started.connect = _capture_started
+    fake_worker.file_finished.connect = _capture_finished
+
+    # Use folder mode so both files get picked up.
+    tab = _make_tab(config, qtbot)
+    tab.folder_mode_button.click()
+    tab.folder_selector.set_path(str(tmp_path))
+
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_IS_DOWNLOADED, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.generate_button.click()
+
+    # Bar starts at 0.
+    assert tab.progress_widget.progress_bar.value() == 0
+
+    # After first file done: 1/2 → 50%.
+    for slot in _finished_slots:
+        slot(0, tmp_path / "ep01.srt", None)
+    assert tab.progress_widget.progress_bar.value() == 50
+
+    # After second file done: 2/2 → 100%.
+    for slot in _finished_slots:
+        slot(1, tmp_path / "ep02.srt", None)
+    assert tab.progress_widget.progress_bar.value() == 100
+
+
+def test_file_started_sets_status(qtbot, tmp_path):
+    """file_started(idx) sets the progress status line to 'Transcribing file N of M'."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "episode.mp4"
+    video.write_bytes(b"fake")
+
+    fake_worker = _FakeWorker()
+    _started_slots: list = []
+
+    orig_started = fake_worker.file_started.connect
+
+    def _capture_started(slot):
+        _started_slots.append(slot)
+        return orig_started(slot)
+
+    fake_worker.file_started.connect = _capture_started
+
+    tab = _make_tab(config, qtbot)
+    tab.file_selector.set_path(str(video))
+
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_IS_DOWNLOADED, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.generate_button.click()
+
+    for slot in _started_slots:
+        slot(0)
+
+    status_text = tab.progress_widget.status_label.text()
+    assert "1" in status_text
+
+
 # ---------------------------------------------------------------------------
 # iter_close_workers
 # ---------------------------------------------------------------------------

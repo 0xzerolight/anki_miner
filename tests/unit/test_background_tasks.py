@@ -274,3 +274,100 @@ class TestStartYtdlpUpdate:
 
         assert controller.ytdlp_update_worker is None
         worker.deleteLater.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Fake ASR model download worker
+# ---------------------------------------------------------------------------
+
+
+class _FakeAsrDownloadWorker(QObject):
+    """Fake AsrModelDownloadWorker with real connectable status/finished signals."""
+
+    status = pyqtSignal(str)
+    finished = pyqtSignal(bool, str)
+
+    def __init__(self, name: str, models_root, parent=None) -> None:
+        super().__init__(parent)
+        self._name = name
+        self._models_root = models_root
+        self._running = False
+        self.deleteLater = MagicMock()  # type: ignore[method-assign]
+
+    def isRunning(self) -> bool:  # noqa: N802
+        return self._running
+
+    def start(self) -> None:
+        self._running = True
+
+    def emit_finished(self, ok: bool = True, message: str = "Done") -> None:
+        self._running = False
+        self.finished.emit(ok, message)
+
+
+class TestStartAsrModelDownload:
+    """start_asr_model_download: guard, construction, status/finished routing, handle release."""
+
+    def _patch(self, monkeypatch, worker: _FakeAsrDownloadWorker, captured: dict | None = None) -> None:
+        def _make_worker(name, models_root, parent=None):
+            if captured is not None:
+                captured["name"] = name
+                captured["models_root"] = models_root
+            return worker
+
+        monkeypatch.setattr(
+            "anki_miner.gui.workers.asr_model_download_worker.AsrModelDownloadWorker",
+            _make_worker,
+        )
+
+    def test_starts_and_routes_status(self, controller, qtbot, monkeypatch, tmp_path):
+        """Calling start_asr_model_download constructs the worker and routes status."""
+        worker = _FakeAsrDownloadWorker("large-v3", tmp_path)
+        captured: dict = {}
+        self._patch(monkeypatch, worker, captured)
+
+        status_received: list[str] = []
+        controller.start_asr_model_download("large-v3", tmp_path, status_received.append, lambda ok, msg: None)
+
+        assert captured["name"] == "large-v3"
+        assert controller.asr_model_download_worker is worker
+
+        worker.status.emit("Downloading large-v3…")
+        assert status_received == ["Downloading large-v3…"]
+
+    def test_routes_finished(self, controller, qtbot, monkeypatch, tmp_path):
+        """finished(ok, msg) is forwarded to the on_finished callback."""
+        worker = _FakeAsrDownloadWorker("small", tmp_path)
+        self._patch(monkeypatch, worker)
+
+        finished_calls: list[tuple] = []
+        controller.start_asr_model_download(
+            "small", tmp_path, lambda msg: None, lambda ok, msg: finished_calls.append((ok, msg))
+        )
+
+        worker.emit_finished(True, "small downloaded successfully.")
+        assert finished_calls == [(True, "small downloaded successfully.")]
+
+    def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
+        """A second start while one is running must not replace the handle."""
+        worker_a = _FakeAsrDownloadWorker("large-v3", tmp_path)
+        self._patch(monkeypatch, worker_a)
+        controller.start_asr_model_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
+        assert controller.asr_model_download_worker is worker_a
+
+        worker_b = _FakeAsrDownloadWorker("small", tmp_path)
+        self._patch(monkeypatch, worker_b)
+        controller.start_asr_model_download("small", tmp_path, lambda m: None, lambda ok, m: None)
+        # Handle must still point at worker_a; worker_b must not have been started.
+        assert controller.asr_model_download_worker is worker_a
+
+    def test_handle_nulled_after_finished(self, controller, qtbot, monkeypatch, tmp_path):
+        """Emitting finished must null the handle and schedule deleteLater."""
+        worker = _FakeAsrDownloadWorker("large-v3", tmp_path)
+        self._patch(monkeypatch, worker)
+        controller.start_asr_model_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
+
+        worker.emit_finished(True, "Done")
+
+        assert controller.asr_model_download_worker is None
+        worker.deleteLater.assert_called_once()

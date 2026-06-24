@@ -495,9 +495,9 @@ class MediaExtractorService:
             ]
         )
 
-        # Duration-scaled timeout: assume at most 10× realtime for a full file.
-        # A 2-hour film at 10× = 720s; floor at 300s so even short probes have
-        # plenty of headroom.
+        # Flat 300-second timeout: generous enough for a 2-hour file even at
+        # slow I/O speeds, and simple to reason about. Duration probing before
+        # the ffmpeg call would add latency; the flat value is a safe ceiling.
         timeout = 300
 
         success = self._run_ffmpeg(
