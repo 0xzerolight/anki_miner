@@ -755,7 +755,7 @@ The audio pack was not removed.</source>
 </context><context>
     <name>AudiobookTab</name>
     <message>
-        <source>Audiobook queue</source>
+        <source>Audio queue</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -775,7 +775,7 @@ The audio pack was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Pick an audiobook and its subtitle file above, then click Add.</source>
+        <source>Pick an audio file and its subtitle above, then click Add.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -783,7 +783,7 @@ The audio pack was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Show the word-selection popup for each audiobook before creating cards.</source>
+        <source>Show the word-selection popup for each audio file before creating cards.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2257,7 +2257,7 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audiobook</source>
+        <source>Audio</source>
         <translation type="unfinished" />
     </message>
     <message>

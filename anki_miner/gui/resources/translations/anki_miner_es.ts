@@ -764,8 +764,8 @@ El paquete de audio no se quitó.</translation>
 </context><context>
     <name>AudiobookTab</name>
     <message>
-        <source>Audiobook queue</source>
-        <translation>Cola de audiolibros</translation>
+        <source>Audio queue</source>
+        <translation>Cola de audio</translation>
     </message>
     <message>
         <source>Audio File:</source>
@@ -784,16 +784,16 @@ El paquete de audio no se quitó.</translation>
         <translation>Agregar el par de audio + subtítulos a la cola.</translation>
     </message>
     <message>
-        <source>Pick an audiobook and its subtitle file above, then click Add.</source>
-        <translation>Elija un audiolibro y su archivo de subtítulos arriba, luego haga clic en Agregar.</translation>
+        <source>Pick an audio file and its subtitle above, then click Add.</source>
+        <translation>Selecciona arriba un archivo de audio y sus subtítulos, luego haz clic en Agregar.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
         <translation>Revisar palabras antes de minar</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each audiobook before creating cards.</source>
-        <translation>Mostrar la ventana de selección de palabras para cada audiolibro antes de crear tarjetas.</translation>
+        <source>Show the word-selection popup for each audio file before creating cards.</source>
+        <translation>Muestra la ventana emergente de selección de palabras para cada archivo de audio antes de crear tarjetas.</translation>
     </message>
     <message>
         <source>Preview</source>
@@ -2299,8 +2299,8 @@ El diccionario no se quitó.</translation>
         <translation>YouTube</translation>
     </message>
     <message>
-        <source>Audiobook</source>
-        <translation>Audiolibro</translation>
+        <source>Audio</source>
+        <translation>Audio</translation>
     </message>
     <message>
         <source>Analytics</source>
