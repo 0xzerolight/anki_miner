@@ -68,6 +68,28 @@ jobs:
       - run: python -m build --wheel
       - run: python scripts/check_wheel_assets.py
 
+  test-asr:
+    # Installs the [asr] extra (faster-whisper + ctranslate2) and runs only the
+    # tests marked with @pytest.mark.asr.  The default lint/typecheck/test jobs
+    # keep .[dev] (no faster-whisper) so Task 2's import-seam + mypy overrides
+    # stay green there.  faster-whisper has binary wheels for Linux x86-64 on
+    # PyPI, so ubuntu-latest is the right runner.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - name: Install Qt system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libpulse0 libxkbcommon0
+      - run: pip install -e ".[dev,asr]"
+      - run: pytest -m "asr and not e2e"
+        env:
+          QT_QPA_PLATFORM: offscreen
+
   i18n-drift:
     runs-on: ubuntu-latest
     timeout-minutes: 15

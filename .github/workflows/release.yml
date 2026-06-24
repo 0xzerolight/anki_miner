@@ -91,11 +91,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Use requirements.lock to pin transitive deps to known-good versions.
+          # Install with the [asr] extra so faster-whisper and ctranslate2 land in
+          # the PyInstaller tree for Windows, macOS, and the AppImage (Linux).
+          # requirements.lock pins transitive deps to known-good versions.
           # Version-constraint form (no --require-hashes): cross-platform safe
           # because an incomplete lock never fails the build on unlisted packages.
           # Upgrade to hash-pinning once a universal lock is generated with uv.
-          pip install . -c requirements.lock
+          # NOTE: the .deb package is system-managed; it does NOT bundle
+          # faster-whisper (users install the [asr] extra separately if desired).
+          # The deb-stage tree is built from dist/AnkiMiner which is a PyInstaller
+          # onedir — its Python deps are already embedded and the nfpm spec only
+          # declares system-level runtime deps (ffmpeg), not Python ones.
+          pip install ".[asr]" -c requirements.lock
 
       # PyInstaller bootloader handling. The prebuilt PyPI wheel ships a bootloader
       # binary whose hash AV vendors flag (malware reuses it), a major source of the
@@ -237,6 +244,38 @@ jobs:
           .\dist\AnkiMiner\AnkiMiner.exe 2>&1 | Tee-Object -FilePath smoke.log
           if (-not (Select-String -Path smoke.log -Pattern "BUNDLED_SMOKE_PASS" -Quiet)) {
             Write-Error "BUNDLED_SMOKE_PASS not found"
+            exit 1
+          }
+
+      # Offline ASR bundled smoke: verify that faster-whisper + ctranslate2 native
+      # libs resolved correctly inside the bundle WITHOUT downloading any model.
+      # HF_HUB_OFFLINE=1 prevents any network access; the smoke only asserts that
+      # the ctranslate2 extension and its OpenMP runtime load (import + native-lib
+      # resolution).  A model download in CI is never acceptable: models are 150 MB+
+      # and must be user-provided at runtime.  Gated on ANKI_MINER_SMOKE=asr, same
+      # pattern as the YouTube smoke above.
+      - name: ASR bundled smoke (Linux/macOS)
+        if: runner.os != 'Windows'
+        env:
+          ANKI_MINER_SMOKE: asr
+          HF_HUB_OFFLINE: "1"
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          set -o pipefail
+          ./dist/AnkiMiner/AnkiMiner 2>&1 | tee asr_smoke.log
+          grep -q "BUNDLED_SMOKE_PASS" asr_smoke.log
+
+      - name: ASR bundled smoke (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ANKI_MINER_SMOKE: asr
+          HF_HUB_OFFLINE: "1"
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          .\dist\AnkiMiner\AnkiMiner.exe 2>&1 | Tee-Object -FilePath asr_smoke.log
+          if (-not (Select-String -Path asr_smoke.log -Pattern "BUNDLED_SMOKE_PASS" -Quiet)) {
+            Write-Error "BUNDLED_SMOKE_PASS not found in ASR smoke"
             exit 1
           }
 
