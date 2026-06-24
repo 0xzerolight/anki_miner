@@ -303,6 +303,9 @@ class AnkiMinerConfig:
     # distributable) or the bare literal on PATH.
     ffmpeg_location: Path | None = None
     ffprobe_location: Path | None = None
+    # Optional explicit override for the alass executable. When unset,
+    # subtitle retiming falls back to alass on PATH.
+    alass_location: Path | None = None
 
     # ASR (Automatic Speech Recognition) settings. Used by the Local Subtitle
     # Creation feature (offline transcription via faster-whisper). Requires
@@ -387,6 +390,12 @@ class AnkiMinerConfig:
                 self,
                 "ffprobe_location",
                 Path(self.ffprobe_location) if self.ffprobe_location else None,
+            )
+        if isinstance(self.alass_location, str):
+            object.__setattr__(
+                self,
+                "alass_location",
+                Path(self.alass_location) if self.alass_location else None,
             )
         if isinstance(self.ytdlp_location, str):
             object.__setattr__(
