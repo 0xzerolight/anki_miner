@@ -112,7 +112,14 @@ python_functions = ["test_*"]
 # Coverage is computed but never gated, so it's dropped from default runs
 # (CI + local) to avoid paying for an ungated metric. Run it explicitly when
 # needed: pytest --cov=anki_miner
-addopts = "-n auto --dist loadfile -m \"not e2e\""
+# --max-worker-restart=0: a pytest-qt teardown segfault kills an xdist worker
+# (`node down: Not properly terminated`). xdist's default is to restart the dead
+# worker and limp on, then the controller wedges near end-of-run and the job hangs
+# to the 20-min CI kill with no diagnostics. =0 makes the FIRST crash abort the
+# session immediately and surface the crashing worker, instead of the silent hang.
+# (pytest-timeout below cannot catch this — a segfault is dead before any timeout
+# thread fires; it covers genuine deadlocks, a separate failure mode.)
+addopts = "-n auto --dist loadfile --max-worker-restart=0 -m \"not e2e\""
 # A hung test (worker parked on event.wait()/QThread.wait() under parallel xdist)
 # otherwise blocks the whole job until the 20-min CI kill with no per-test info.
 # 120s is vast headroom for sub-second unit tests; only a true deadlock trips it.
