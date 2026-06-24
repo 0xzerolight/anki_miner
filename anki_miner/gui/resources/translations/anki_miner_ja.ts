@@ -764,8 +764,8 @@ The audio pack was not removed.</source>
 </context><context>
     <name>AudiobookTab</name>
     <message>
-        <source>Audiobook queue</source>
-        <translation>オーディオブックキュー</translation>
+        <source>Audio queue</source>
+        <translation>音声キュー</translation>
     </message>
     <message>
         <source>Audio File:</source>
@@ -784,16 +784,16 @@ The audio pack was not removed.</source>
         <translation>音声と字幕のペアをキューに追加します。</translation>
     </message>
     <message>
-        <source>Pick an audiobook and its subtitle file above, then click Add.</source>
-        <translation>上でオーディオブックとその字幕ファイルを選び、「追加」をクリックしてください。</translation>
+        <source>Pick an audio file and its subtitle above, then click Add.</source>
+        <translation>上で音声ファイルと字幕を選択し、「追加」をクリックしてください。</translation>
     </message>
     <message>
         <source>Review words before mining</source>
         <translation>マイニング前に単語を確認</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each audiobook before creating cards.</source>
-        <translation>カードを作成する前に、オーディオブックごとに単語選択ポップアップを表示します。</translation>
+        <source>Show the word-selection popup for each audio file before creating cards.</source>
+        <translation>カードを作成する前に、各音声ファイルの単語選択ポップアップを表示します。</translation>
     </message>
     <message>
         <source>Preview</source>
@@ -2290,8 +2290,8 @@ The dictionary was not removed.</source>
         <translation>YouTube</translation>
     </message>
     <message>
-        <source>Audiobook</source>
-        <translation>オーディオブック</translation>
+        <source>Audio</source>
+        <translation>音声</translation>
     </message>
     <message>
         <source>Analytics</source>

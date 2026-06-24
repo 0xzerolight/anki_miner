@@ -764,8 +764,8 @@ Le pack audio n'a pas été retiré.</translation>
 </context><context>
     <name>AudiobookTab</name>
     <message>
-        <source>Audiobook queue</source>
-        <translation>File d'attente des livres audio</translation>
+        <source>Audio queue</source>
+        <translation>File d'attente audio</translation>
     </message>
     <message>
         <source>Audio File:</source>
@@ -784,16 +784,16 @@ Le pack audio n'a pas été retiré.</translation>
         <translation>Ajouter la paire audio + sous-titres à la file d'attente.</translation>
     </message>
     <message>
-        <source>Pick an audiobook and its subtitle file above, then click Add.</source>
-        <translation>Choisissez un livre audio et son fichier de sous-titres ci-dessus, puis cliquez sur Ajouter.</translation>
+        <source>Pick an audio file and its subtitle above, then click Add.</source>
+        <translation>Sélectionnez ci-dessus un fichier audio et ses sous-titres, puis cliquez sur Ajouter.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
         <translation>Vérifier les mots avant l'extraction</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each audiobook before creating cards.</source>
-        <translation>Afficher la fenêtre de sélection des mots pour chaque livre audio avant de créer les cartes.</translation>
+        <source>Show the word-selection popup for each audio file before creating cards.</source>
+        <translation>Afficher la fenêtre de sélection des mots pour chaque fichier audio avant de créer les cartes.</translation>
     </message>
     <message>
         <source>Preview</source>
@@ -2299,8 +2299,8 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>YouTube</translation>
     </message>
     <message>
-        <source>Audiobook</source>
-        <translation>Livre audio</translation>
+        <source>Audio</source>
+        <translation>Audio</translation>
     </message>
     <message>
         <source>Analytics</source>

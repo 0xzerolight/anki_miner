@@ -764,8 +764,8 @@ The audio pack was not removed.</source>
 </context><context>
     <name>AudiobookTab</name>
     <message>
-        <source>Audiobook queue</source>
-        <translation>Очередь аудиокниг</translation>
+        <source>Audio queue</source>
+        <translation>Очередь аудио</translation>
     </message>
     <message>
         <source>Audio File:</source>
@@ -784,16 +784,16 @@ The audio pack was not removed.</source>
         <translation>Добавить пару «аудио + субтитры» в очередь.</translation>
     </message>
     <message>
-        <source>Pick an audiobook and its subtitle file above, then click Add.</source>
-        <translation>Выберите выше аудиокнигу и файл её субтитров, затем нажмите «Добавить».</translation>
+        <source>Pick an audio file and its subtitle above, then click Add.</source>
+        <translation>Выберите выше аудиофайл и субтитры к нему, затем нажмите «Добавить».</translation>
     </message>
     <message>
         <source>Review words before mining</source>
         <translation>Просмотреть слова перед майнингом</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each audiobook before creating cards.</source>
-        <translation>Показывать всплывающее окно выбора слов для каждой аудиокниги перед созданием карточек.</translation>
+        <source>Show the word-selection popup for each audio file before creating cards.</source>
+        <translation>Показывать всплывающее окно выбора слов для каждого аудиофайла перед созданием карточек.</translation>
     </message>
     <message>
         <source>Preview</source>
@@ -2308,8 +2308,8 @@ The dictionary was not removed.</source>
         <translation>YouTube</translation>
     </message>
     <message>
-        <source>Audiobook</source>
-        <translation>Аудиокнига</translation>
+        <source>Audio</source>
+        <translation>Аудио</translation>
     </message>
     <message>
         <source>Analytics</source>
