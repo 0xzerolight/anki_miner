@@ -155,6 +155,10 @@ ignore_missing_imports = true
 module = ["faster_whisper.*", "ctranslate2.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["numpy.*"]
+ignore_missing_imports = true
+
 [tool.ruff]
 line-length = 120
 target-version = "py311"
