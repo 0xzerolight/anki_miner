@@ -12,13 +12,24 @@ def find_sibling_subtitle(video_path: Path) -> Path | None:
     Looks in the same folder for a file whose stem matches *video_path*'s stem
     and whose extension is one of DEFAULT_SUBTITLE_PRIORITY.  Returns the first
     hit in priority order (.ass > .ssa > .srt), or None when no sibling exists.
+
+    Matching is case-insensitive on both stem and extension so a ``.SRT`` (or a
+    differing-case stem) is still found on case-sensitive filesystems.
     """
     folder = video_path.parent
-    stem = video_path.stem
+    stem_cf = video_path.stem.casefold()
+    try:
+        entries = [p for p in folder.iterdir() if p.is_file()]
+    except OSError:
+        return None
+    by_ext: dict[str, Path] = {}
+    for p in entries:
+        ext = p.suffix.lower()
+        if ext in DEFAULT_SUBTITLE_PRIORITY and p.stem.casefold() == stem_cf:
+            by_ext.setdefault(ext, p)
     for ext in DEFAULT_SUBTITLE_PRIORITY:
-        candidate = folder / f"{stem}{ext}"
-        if candidate.is_file():
-            return candidate
+        if ext in by_ext:
+            return by_ext[ext]
     return None
 
 

@@ -36,6 +36,11 @@ def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
     without any conversion.  The bytes are byte-for-byte identical to what
     PyAV would yield at the same settings — no quality loss.
 
+    Memory note: the whole track is loaded at once (~230 MB/hour at 16 kHz f32).
+    Fine for episodes; a multi-hour film loads ~1 GB. If that becomes a problem,
+    pass the WAV path straight to ``WhisperModel.transcribe`` (it decodes
+    internally) instead of materializing the float32 array here.
+
     Args:
         path: Path to the WAV file written by ``extract_full_audio``.
 
@@ -48,6 +53,14 @@ def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
     import numpy as np  # noqa: PLC0415  (intentional function-local import — numpy is an [asr] extra)
 
     with wave.open(str(path), "rb") as wf:
+        # Fail loudly on an unexpected layout rather than silently reinterpreting
+        # int16/stereo bytes as garbage float32. extract_full_audio always writes
+        # mono pcm_f32le; a mismatch means a stale or foreign WAV reached us.
+        if wf.getnchannels() != 1 or wf.getsampwidth() != 4 or wf.getcomptype() != "NONE":
+            raise ValueError(
+                "wav_to_float32 expects mono pcm_f32le; got "
+                f"channels={wf.getnchannels()} sampwidth={wf.getsampwidth()} comptype={wf.getcomptype()}"
+            )
         sample_rate = wf.getframerate()
         n_frames = wf.getnframes()
         raw = wf.readframes(n_frames)
@@ -421,7 +434,7 @@ class MediaExtractorService:
         - Otherwise :meth:`_get_japanese_audio_stream` is called (cache + ``0:a:0``
           fallback).
 
-        A generous, duration-scaled timeout is applied so long files don't time out.
+        A generous flat timeout ceiling is applied so long files don't time out.
 
         Args:
             video_file: Path to the source video or audio file.
@@ -495,10 +508,11 @@ class MediaExtractorService:
             ]
         )
 
-        # Flat 300-second timeout: generous enough for a 2-hour file even at
-        # slow I/O speeds, and simple to reason about. Duration probing before
-        # the ffmpeg call would add latency; the flat value is a safe ceiling.
-        timeout = 300
+        # Flat 30-minute ceiling. Audio-only decode + 16 kHz resample runs far
+        # faster than realtime, so this comfortably covers multi-hour sources
+        # (the old 300 s could time out a long film on slow I/O). A flat value
+        # avoids an extra ffprobe round-trip; it is a ceiling, not a target.
+        timeout = 1800
 
         success = self._run_ffmpeg(
             cmd,
@@ -511,9 +525,22 @@ class MediaExtractorService:
         # cleanly without holding the registry open indefinitely.
         if done_event is not None:
             done_event.set()
-        if not success:
+        if not success or not out_wav.exists():
             return False
-        return out_wav.exists()
+
+        # Guard against a zero-frame WAV: when the source has no decodable audio
+        # for the mapped stream, ffmpeg can still exit 0 and write a valid but
+        # empty WAV. Without this check that empty audio would transcribe to an
+        # empty SRT reported to the user as a clean "Done".
+        try:
+            with wave.open(str(out_wav), "rb") as wf:
+                if wf.getnframes() == 0:
+                    logger.warning("extract_full_audio: %s has no audio frames (no audio stream?)", out_wav.name)
+                    return False
+        except (wave.Error, OSError) as exc:
+            logger.warning("extract_full_audio: could not verify %s: %s", out_wav.name, exc)
+            return False
+        return True
 
     def _extract_screenshot(
         self,

@@ -40,6 +40,24 @@ def test_panel_has_status_label(qtbot):
     assert panel.model_status_label is not None
 
 
+def test_download_click_disables_button_until_refresh(qtbot, tmp_path):
+    """Clicking Download disables the button; _refresh_status re-enables it (M2)."""
+    panel = AsrSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.download_model_button.isEnabled()
+
+    requested: list[str] = []
+    panel.asr_download_requested.connect(requested.append)
+
+    panel.download_model_button.click()
+    assert requested  # signal fired
+    assert not panel.download_model_button.isEnabled()  # disabled in flight
+
+    # Completion path calls _refresh_status, which re-enables the button.
+    panel._refresh_status("large-v3", tmp_path / "asr_models")
+    assert panel.download_model_button.isEnabled()
+
+
 # ---------------------------------------------------------------------------
 # load_from_config / contribute round-trip
 # ---------------------------------------------------------------------------

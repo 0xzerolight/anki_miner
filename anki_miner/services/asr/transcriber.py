@@ -62,6 +62,10 @@ def transcribe(
         local_files_only=True,
     )
 
+    # vad_filter stays False on purpose: Silero VAD needs onnxruntime, which the
+    # PyInstaller bundle deliberately excludes (anki_miner.spec) to save ~100 MB.
+    # Enabling it here would crash only in the bundled build. Trade-off: on long
+    # silence/music stretches Whisper can hallucinate repeated text.
     segments_iter, _info = model.transcribe(audio, language="ja", vad_filter=False)
 
     results: list[tuple[float, float, str]] = []

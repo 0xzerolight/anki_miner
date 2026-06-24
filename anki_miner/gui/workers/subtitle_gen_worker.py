@@ -181,6 +181,14 @@ class SubtitleGenWorker(CancellableWorker):
                 self.file_finished.emit(idx, None, self.tr("Cancelled"))
                 return
 
+            # No recognized speech: surface it rather than writing a blank SRT
+            # and reporting a clean "Done". Empty audio is already rejected by
+            # extract_full_audio; this catches silence/music-only tracks.
+            if not segments:
+                logger.info("subtitle_gen_worker: no speech detected in %s", video_path)
+                self.file_finished.emit(idx, None, tr_format(self.tr("No speech detected in %1"), video_path.name))
+                return
+
             # --- Stage 4: write SRT ---
             if self._output_dir is not None:
                 self._output_dir.mkdir(parents=True, exist_ok=True)
