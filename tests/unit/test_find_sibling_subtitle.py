@@ -20,6 +20,14 @@ class TestFindSiblingSubtitle:
         srt.touch()
         assert find_sibling_subtitle(video) == srt
 
+    def test_finds_sibling_case_insensitively(self, tmp_path):
+        """An uppercase .SRT extension is still matched (M6, case-sensitive FS)."""
+        video = tmp_path / "episode01.mkv"
+        video.touch()
+        srt = tmp_path / "episode01.SRT"
+        srt.touch()
+        assert find_sibling_subtitle(video) == srt
+
     def test_ass_beats_ssa_beats_srt(self, tmp_path):
         """Priority: .ass > .ssa > .srt."""
         video = tmp_path / "ep01.mp4"
