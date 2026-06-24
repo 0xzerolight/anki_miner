@@ -98,7 +98,7 @@ def _build_tabs(monkeypatch, test_config):
         presenter=audiobook_presenter,
         stats_service=stats_service,
     )
-    app_module.register_mining_tab(window, audiobook_tab, audiobook_presenter, "Audiobook")
+    app_module.register_mining_tab(window, audiobook_tab, audiobook_presenter, "Audio")
 
     analytics_tab = AnalyticsTab(stats_service)
     window.tabs.addTab(analytics_tab, "Analytics")

@@ -351,9 +351,7 @@ def main():
         presenter=audiobook_presenter,
         stats_service=stats_service,
     )
-    register_mining_tab(
-        window, audiobook_tab, audiobook_presenter, QCoreApplication.translate("MainWindow", "Audiobook")
-    )
+    register_mining_tab(window, audiobook_tab, audiobook_presenter, QCoreApplication.translate("MainWindow", "Audio"))
 
     # Analytics tab (non-mining: no presenter, no update_config wiring)
     analytics_tab = AnalyticsTab(stats_service)

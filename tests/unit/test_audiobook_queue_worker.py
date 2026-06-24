@@ -299,7 +299,7 @@ def test_process_episode_kwargs(make_worker, mock_processor):
     assert call.kwargs["audio_only"] is True
     assert call.kwargs["preview_mode"] is True
     assert call.kwargs["episode_name_override"] == "my_audiobook"
-    assert call.kwargs["series_name_override"] == "Audiobook"
+    assert call.kwargs["series_name_override"] == "Audio"
     assert call.kwargs["curation_callback"] is _curation
 
 

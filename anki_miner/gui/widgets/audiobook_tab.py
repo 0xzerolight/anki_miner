@@ -161,7 +161,7 @@ class AudiobookTab(MiningTabBase):
         queue_layout.setSpacing(SPACING.sm)
         queue_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        queue_layout.addWidget(SectionHeader(self.tr("Audiobook queue")))
+        queue_layout.addWidget(SectionHeader(self.tr("Audio queue")))
 
         self.audio_selector = FileSelector(
             label=self.tr("Audio File:"),
@@ -195,7 +195,7 @@ class AudiobookTab(MiningTabBase):
         queue_layout.addWidget(self.list_widget, 1)
 
         # Empty-state hint (shown when the list is empty).
-        self.empty_label = QLabel(self.tr("Pick an audiobook and its subtitle file above, then click Add."))
+        self.empty_label = QLabel(self.tr("Pick an audio file and its subtitle above, then click Add."))
         self.empty_label.setObjectName("helper-text")
         self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         queue_layout.addWidget(self.empty_label)
@@ -204,7 +204,7 @@ class AudiobookTab(MiningTabBase):
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
         self.review_words_checkbox.setChecked(False)
         self.review_words_checkbox.setToolTip(
-            self.tr("Show the word-selection popup for each audiobook before creating cards.")
+            self.tr("Show the word-selection popup for each audio file before creating cards.")
         )
         queue_layout.addWidget(self.review_words_checkbox)
 
