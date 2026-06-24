@@ -29,12 +29,19 @@ JA_TS = TS_DIR / "anki_miner_ja.ts"
 JA_QM = TS_DIR / "anki_miner_ja.qm"
 RU_TS = TS_DIR / "anki_miner_ru.ts"
 RU_QM = TS_DIR / "anki_miner_ru.qm"
+FR_TS = TS_DIR / "anki_miner_fr.ts"
+FR_QM = TS_DIR / "anki_miner_fr.qm"
 
 # Every shipped catalog as (source .ts, compiled .qm). "en" is the source
 # language (all entries unfinished); the rest carry translations. pylupdate6
 # updates-or-creates a .ts, preserving existing translations on merge, so the
 # same primitive regenerates en and syncs translated catalogs without data loss.
-_CATALOGS: list[tuple[Path, Path]] = [(EN_TS, EN_QM), (JA_TS, JA_QM), (RU_TS, RU_QM)]
+_CATALOGS: list[tuple[Path, Path]] = [
+    (EN_TS, EN_QM),
+    (JA_TS, JA_QM),
+    (RU_TS, RU_QM),
+    (FR_TS, FR_QM),
+]
 
 
 def _python_sources() -> list[str]:

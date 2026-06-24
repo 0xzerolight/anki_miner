@@ -1,25 +1,25 @@
 # Project glossary for UI translation consistency.
 # Seeded from existing anki_miner_ja.ts; review/extend before relying on it.
 terms:
-  deck:            { ja: "デッキ",                 ru: "Колода" }
-  card:            { ja: "カード",                 ru: "Карточка" }
-  note type:       { ja: "ノートタイプ",           ru: "Тип заметки" }
-  field:           { ja: "フィールド",             ru: "Поле" }
-  mining:          { ja: "マイニング",             ru: "Майнинг" }
-  mine:            { ja: "マイニング",             ru: "Майнить" }
-  known words:     { ja: "既知単語",               ru: "Известные слова" }
-  known word DB:   { ja: "既知単語DB",             ru: "БД известных слов" }
-  word list:       { ja: "単語リスト",             ru: "Список слов" }
-  subtitle:        { ja: "字幕",                   ru: "Субтитры" }
-  frequency:       { ja: "頻度",                   ru: "Частотность" }
-  pitch accent:    { ja: "ピッチアクセント",       ru: "Тональное ударение" }
-  lemma:           { ja: "見出し語",               ru: "Лемма" }
-  dictionary:      { ja: "辞書",                   ru: "Словарь" }
-  definition:      { ja: "語義",                   ru: "Определение" }
-  screenshot:      { ja: "スクリーンショット",     ru: "Скриншот" }
-  filter:          { ja: "フィルター",             ru: "Фильтр" }
-  connection:      { ja: "接続",                   ru: "Подключение" }
-  episode:         { ja: "エピソード",             ru: "Эпизод" }
-  playlist:        { ja: "プレイリスト",           ru: "Плейлист" }
-  setup wizard:    { ja: "セットアップウィザード", ru: "Мастер настройки" }
+  deck:            { ja: "デッキ",                 ru: "Колода",              fr: "Paquet" }
+  card:            { ja: "カード",                 ru: "Карточка",            fr: "Carte" }
+  note type:       { ja: "ノートタイプ",           ru: "Тип заметки",         fr: "Type de note" }
+  field:           { ja: "フィールド",             ru: "Поле",                fr: "Champ" }
+  mining:          { ja: "マイニング",             ru: "Майнинг",             fr: "Extraction" }
+  mine:            { ja: "マイニング",             ru: "Майнить",             fr: "Extraire" }
+  known words:     { ja: "既知単語",               ru: "Известные слова",     fr: "Mots connus" }
+  known word DB:   { ja: "既知単語DB",             ru: "БД известных слов",   fr: "BD de mots connus" }
+  word list:       { ja: "単語リスト",             ru: "Список слов",         fr: "Liste de mots" }
+  subtitle:        { ja: "字幕",                   ru: "Субтитры",            fr: "Sous-titres" }
+  frequency:       { ja: "頻度",                   ru: "Частотность",         fr: "Fréquence" }
+  pitch accent:    { ja: "ピッチアクセント",       ru: "Тональное ударение",  fr: "Accent de hauteur" }
+  lemma:           { ja: "見出し語",               ru: "Лемма",               fr: "Lemme" }
+  dictionary:      { ja: "辞書",                   ru: "Словарь",             fr: "Dictionnaire" }
+  definition:      { ja: "語義",                   ru: "Определение",         fr: "Définition" }
+  screenshot:      { ja: "スクリーンショット",     ru: "Скриншот",            fr: "Capture d'écran" }
+  filter:          { ja: "フィルター",             ru: "Фильтр",              fr: "Filtre" }
+  connection:      { ja: "接続",                   ru: "Подключение",         fr: "Connexion" }
+  episode:         { ja: "エピソード",             ru: "Эпизод",              fr: "Épisode" }
+  playlist:        { ja: "プレイリスト",           ru: "Плейлист",            fr: "Liste de lecture" }
+  setup wizard:    { ja: "セットアップウィザード", ru: "Мастер настройки",    fr: "Assistant de configuration" }
 do_not_translate: [Anki, AnkiConnect, GitHub, YouTube, JPod101, Google, ffmpeg, MeCab, Yomitan, Jisho]
