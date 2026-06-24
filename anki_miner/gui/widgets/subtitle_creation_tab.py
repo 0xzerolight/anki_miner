@@ -64,6 +64,7 @@ class SubtitleCreationTab(QWidget):
         self.config = config
         self.worker_thread: SubtitleGenWorker | None = None
         self._custom_output_dir: Path | None = None
+        self._total_files: int = 0
 
         self._setup_ui()
         self._refresh_engine_state()
@@ -341,9 +342,10 @@ class SubtitleCreationTab(QWidget):
             return
 
         # Build and start worker
+        self._total_files = len(video_files)
         self.log_widget.clear_log()
         self.progress_widget.reset()
-        self.progress_widget.set_determinate(len(video_files))
+        self.progress_widget.set_determinate(self._total_files)
 
         worker = SubtitleGenWorker(
             self.config,
@@ -354,6 +356,7 @@ class SubtitleCreationTab(QWidget):
         self.worker_thread = worker
 
         # Wire signals
+        worker.file_started.connect(self._on_file_started)
         worker.file_progress.connect(self._on_file_progress)
         worker.file_finished.connect(self._on_file_finished)
         worker.queue_finished.connect(self._on_queue_finished)
@@ -416,10 +419,17 @@ class SubtitleCreationTab(QWidget):
     # Worker signal slots
     # ------------------------------------------------------------------
 
+    def _on_file_started(self, idx: int) -> None:
+        self.progress_widget.set_status(
+            tr_format(self.tr("Transcribing file %1 of %2"), str(idx + 1), str(self._total_files))
+        )
+
     def _on_file_progress(self, idx: int, pct: int, message: str) -> None:
         self.progress_widget.set_status(message)
 
     def _on_file_finished(self, idx: int, out_path: object, error_str: object) -> None:
+        # Advance the progress bar to reflect completed files.
+        self.progress_widget.set_progress(idx + 1, self._total_files)
         if error_str:
             self.log_widget.append_error(str(error_str))
         else:
