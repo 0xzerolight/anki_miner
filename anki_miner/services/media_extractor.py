@@ -36,6 +36,11 @@ def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
     without any conversion.  The bytes are byte-for-byte identical to what
     PyAV would yield at the same settings — no quality loss.
 
+    Memory note: the whole track is loaded at once (~230 MB/hour at 16 kHz f32).
+    Fine for episodes; a multi-hour film loads ~1 GB. If that becomes a problem,
+    pass the WAV path straight to ``WhisperModel.transcribe`` (it decodes
+    internally) instead of materializing the float32 array here.
+
     Args:
         path: Path to the WAV file written by ``extract_full_audio``.
 
