@@ -3064,6 +3064,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>ASR</translation>
     </message>
     <message>
+        <source>Subtitles</source>
+        <translation>字幕</translation>
+    </message>
+    <message>
         <source>Themes</source>
         <translation>テーマ</translation>
     </message>
@@ -3588,6 +3592,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>完了</translation>
     </message>
     <message>
+        <source>Skipped: </source>
+        <translation>スキップ: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>スキップ</translation>
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation>キャンセルされました</translation>
     </message>
@@ -3826,6 +3838,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>完了</translation>
     </message>
     <message>
+        <source>Skipped: </source>
+        <translation>スキップ: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>スキップ</translation>
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation>キャンセルされました</translation>
     </message>
@@ -3876,6 +3896,24 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Cancel</source>
         <translation>キャンセル</translation>
+    </message>
+</context><context>
+    <name>SubtitlesSettingsPanel</name>
+    <message>
+        <source>Subtitles</source>
+        <translation>字幕</translation>
+    </message>
+    <message>
+        <source>Optional: path to the alass executable</source>
+        <translation>省略可能: alass 実行ファイルのパス</translation>
+    </message>
+    <message>
+        <source>alass binary</source>
+        <translation>alass バイナリ</translation>
+    </message>
+    <message>
+        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a bundled alass or one found on your PATH.</source>
+        <translation>字幕のリタイミングに使用する alass 実行ファイルのパス（省略可能）。空白のままにすると、バンドルされた alass または PATH 上の alass が使用されます。</translation>
     </message>
 </context><context>
     <name>ThemesPanel</name>

@@ -3082,6 +3082,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>ASR</translation>
     </message>
     <message>
+        <source>Subtitles</source>
+        <translation>Субтитры</translation>
+    </message>
+    <message>
         <source>Themes</source>
         <translation>Темы</translation>
     </message>
@@ -3608,6 +3612,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Готово</translation>
     </message>
     <message>
+        <source>Skipped: </source>
+        <translation>Пропущено: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Пропущено</translation>
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation>Отменено</translation>
     </message>
@@ -3846,6 +3858,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Готово</translation>
     </message>
     <message>
+        <source>Skipped: </source>
+        <translation>Пропущено: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Пропущено</translation>
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation>Отменено</translation>
     </message>
@@ -3896,6 +3916,24 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Cancel</source>
         <translation>Отмена</translation>
+    </message>
+</context><context>
+    <name>SubtitlesSettingsPanel</name>
+    <message>
+        <source>Subtitles</source>
+        <translation>Субтитры</translation>
+    </message>
+    <message>
+        <source>Optional: path to the alass executable</source>
+        <translation>Необязательно: путь к исполняемому файлу alass</translation>
+    </message>
+    <message>
+        <source>alass binary</source>
+        <translation>Бинарный файл alass</translation>
+    </message>
+    <message>
+        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a bundled alass or one found on your PATH.</source>
+        <translation>Необязательно: путь к исполняемому файлу alass для пересинхронизации субтитров. Оставьте поле пустым, чтобы использовать встроенный alass или тот, что найден в PATH.</translation>
     </message>
 </context><context>
     <name>ThemesPanel</name>
