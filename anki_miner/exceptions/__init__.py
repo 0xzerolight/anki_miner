@@ -3,6 +3,7 @@
 from .anki import AnkiConnectionError
 from .base import AnkiMinerException
 from .media import SubtitleParseError
+from .subtitle import AlassNotFoundError, SubtitleRetimeError
 from .validation import SetupError
 from .youtube import (
     BotDetectionError,
@@ -18,6 +19,8 @@ __all__ = [
     "SetupError",
     "AnkiConnectionError",
     "SubtitleParseError",
+    "AlassNotFoundError",
+    "SubtitleRetimeError",
     "BotDetectionError",
     "CookieDatabaseLockedError",
     "FfmpegNotFoundError",
