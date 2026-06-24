@@ -8,6 +8,7 @@ from .filtering_settings_panel import FilteringSettingsPanel
 from .language_panel import LanguagePanel
 from .media_settings_panel import MediaSettingsPanel
 from .queue_panel import QueuePanel
+from .subtitles_settings_panel import SubtitlesSettingsPanel
 from .themes_panel import ThemesPanel
 from .youtube_settings_panel import YouTubeSettingsPanel
 
@@ -20,6 +21,7 @@ __all__ = [
     "FilteringSettingsPanel",
     "LanguagePanel",
     "QueuePanel",
+    "SubtitlesSettingsPanel",
     "ThemesPanel",
     "YouTubeSettingsPanel",
 ]
