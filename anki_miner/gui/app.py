@@ -26,7 +26,7 @@ from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
-from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
+from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.services.stats_service import StatsService
 
@@ -359,13 +359,13 @@ def main():
     analytics_tab = AnalyticsTab(stats_service)
     window.tabs.addTab(analytics_tab, QCoreApplication.translate("MainWindow", "Analytics"))
 
-    # Subtitle Creation tab (non-mining: no presenter). It DOES need config
-    # updates so an ASR model switch in Settings reaches the model-downloaded
-    # guard and the worker: config_changed is auto-wired by the loop below
-    # (it has update_config); config_refreshed is wired explicitly near the
-    # SettingsTab refresh connection.
-    subtitle_creation_tab = SubtitleCreationTab(window.get_config())
-    window.tabs.addTab(subtitle_creation_tab, QCoreApplication.translate("MainWindow", "Subtitle Creation"))
+    # Subtitles tab (non-mining: no presenter). Nests Generate (SubtitleCreationTab)
+    # and Retime (SubtitleRetimeTab) as inner tabs. It DOES need config updates so
+    # an ASR model switch in Settings reaches the model-downloaded guard and the
+    # worker: config_changed is auto-wired by the loop below (it has update_config);
+    # config_refreshed is wired explicitly near the SettingsTab refresh connection.
+    subtitles_tab = SubtitlesTab(window.get_config())
+    window.tabs.addTab(subtitles_tab, QCoreApplication.translate("MainWindow", "Subtitles"))
 
     settings_tab = SettingsTab(window.get_config())
     # from_settings=True suppresses the config_refreshed re-emit: SettingsTab
@@ -428,9 +428,10 @@ def main():
     # Mining tabs are already wired via register_mining_tab's config_refreshed
     # connection.
     window.config_refreshed.connect(settings_tab.update_config)
-    # The Subtitle Creation tab is non-mining (not registered via
-    # register_mining_tab), so its config_refreshed connection is wired here too.
-    window.config_refreshed.connect(subtitle_creation_tab.update_config)
+    # The Subtitles tab is non-mining (not registered via register_mining_tab),
+    # so its config_refreshed connection is wired here too. SubtitlesTab.update_config
+    # fans out to both Generate and Retime children.
+    window.config_refreshed.connect(subtitles_tab.update_config)
 
     # All tabs are now registered — create the count-driven Ctrl+N shortcuts.
     # This must come AFTER all addTab calls so self.tabs.count() is final.
