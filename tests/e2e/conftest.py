@@ -16,6 +16,16 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
 
+def pytest_collection_modifyitems(items):
+    """Exempt e2e tests from the global per-test timeout (pyproject sets 120s as
+    a deadlock backstop for unit tests). Real-service e2e/soak runs drive ffmpeg,
+    Anki, and multi-session loops that legitimately exceed it. e2e is excluded
+    from CI, so this only affects explicit ``pytest -m e2e`` runs."""
+    for item in items:
+        if item.get_closest_marker("e2e"):
+            item.add_marker(pytest.mark.timeout(0))
+
+
 @pytest.fixture
 def isolated_home(tmp_path: Path):
     """Point the process at a tmp home and restore the patches on teardown.
