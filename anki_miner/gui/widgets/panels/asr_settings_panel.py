@@ -74,6 +74,10 @@ class AsrSettingsPanel(FormPanel):
 
     def _on_download_clicked(self) -> None:
         """Emit the download-requested signal with the selected model name."""
+        # Disable while in flight so a second click isn't silently swallowed by
+        # the controller's isRunning guard with no visible feedback. Re-enabled
+        # by _refresh_status, which the download flow calls on completion.
+        self.download_model_button.setEnabled(False)
         self.asr_download_requested.emit(self.model_combo.currentText())
 
     def set_model_status(self, text: str) -> None:
@@ -100,7 +104,13 @@ class AsrSettingsPanel(FormPanel):
         return "large-v3"
 
     def _refresh_status(self, name: str, models_root) -> None:
-        """Update the status label to reflect whether *name* is downloaded."""
+        """Update the status label to reflect whether *name* is downloaded.
+
+        Also re-enables the Download button: this runs both on config load and
+        when a download completes (success or failure), which is exactly when
+        the button should become clickable again.
+        """
+        self.download_model_button.setEnabled(True)
         try:
             if model_manager.is_downloaded(name, models_root):
                 self.set_model_status(self.tr("Downloaded"))
