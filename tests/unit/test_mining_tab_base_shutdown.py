@@ -223,6 +223,7 @@ class TestBackgroundTasksShutdownDuckTyped:
         ctrl.update_worker = None
         ctrl.ytdlp_update_worker = None
         ctrl.jmdict_migration_worker = None
+        ctrl.asr_model_download_worker = None
         ctrl.prewarm_worker = None
         ctrl._join_worker_for_close = MagicMock(return_value=True)
         return ctrl
