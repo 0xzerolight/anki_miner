@@ -145,37 +145,37 @@
     <name>AnkiConnectPage</name>
     <message>
         <source>Connect to Anki</source>
-        <translation type="unfinished" />
+        <translation>Anki に接続</translation>
     </message>
     <message>
         <source>Anki Miner talks to Anki through the AnkiConnect add-on.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner は AnkiConnect アドオンを介して Anki と通信します。</translation>
     </message>
     <message>
         <source>AnkiConnect is a free Anki add-on. In Anki: Tools → Add-ons → Get Add-ons…, paste the code &lt;b&gt;%1&lt;/b&gt;, then restart Anki.</source>
-        <translation type="unfinished" />
+        <translation>AnkiConnect は無料の Anki アドオンです。Anki で「ツール → アドオン → アドオンを取得…」を開き、コード &lt;b&gt;%1&lt;/b&gt; を貼り付けてから Anki を再起動してください。</translation>
     </message>
     <message>
         <source>Open the AnkiConnect add-on page</source>
-        <translation type="unfinished" />
+        <translation>AnkiConnect アドオンのページを開く</translation>
     </message>
     <message>
         <source>AnkiConnect URL:</source>
-        <translation type="unfinished" />
+        <translation>AnkiConnect URL:</translation>
     </message>
     <message>
         <source>Recheck</source>
-        <translation type="unfinished" />
+        <translation>再確認</translation>
     </message>
     <message>
         <source>Checking connection...</source>
-        <translation type="unfinished">接続を確認中...</translation>
+        <translation>接続を確認中...</translation>
     </message>
 </context><context>
     <name>AnkiProbeController</name>
     <message>
         <source>Card styling will sync once Anki is reachable.</source>
-        <translation type="unfinished" />
+        <translation>Anki に接続できると、カードのスタイルが同期されます。</translation>
     </message>
     <message>
         <source>Cannot build AnkiService: %1</source>
@@ -183,35 +183,35 @@
     </message>
     <message>
         <source>Enter a note type name before styling can sync.</source>
-        <translation type="unfinished" />
+        <translation>スタイルを同期するには、ノートタイプ名を入力してください。</translation>
     </message>
     <message>
         <source>Syncing card styling…</source>
-        <translation type="unfinished" />
+        <translation>カードのスタイルを同期中…</translation>
     </message>
     <message>
         <source>Couldn't reach Anki — card styling will sync when it's back. (%1)</source>
-        <translation type="unfinished" />
+        <translation>Anki に接続できませんでした — 接続が回復するとカードのスタイルが同期されます。(%1)</translation>
     </message>
     <message>
         <source>Anki offline — card styling state will sync when reachable.</source>
-        <translation type="unfinished" />
+        <translation>Anki がオフラインです — 接続が回復するとカードのスタイル状態が同期されます。</translation>
     </message>
     <message>
         <source>Off — Anki Miner isn't styling this note type.</source>
-        <translation type="unfinished" />
+        <translation>オフ — Anki Miner はこのノートタイプにスタイルを適用していません。</translation>
     </message>
     <message>
         <source>Live in Anki: %1</source>
-        <translation type="unfinished" />
+        <translation>Anki での適用状況: %1</translation>
     </message>
     <message>
         <source>Anki offline — styling will be removed when reachable.</source>
-        <translation type="unfinished" />
+        <translation>Anki がオフラインです — 接続が回復するとスタイルが削除されます。</translation>
     </message>
     <message>
         <source>Anki offline — “%1” will apply when reachable.</source>
-        <translation type="unfinished" />
+        <translation>Anki がオフラインです — 接続が回復すると「%1」が適用されます。</translation>
     </message>
     <message>
         <source>Add Deck</source>
@@ -281,11 +281,11 @@
     </message>
     <message>
         <source>Auto-Map Fields from Note Type</source>
-        <translation type="unfinished" />
+        <translation>ノートタイプからフィールドを自動マッピング</translation>
     </message>
     <message>
         <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
-        <translation type="unfinished" />
+        <translation>このノートタイプのフィールドを AnkiConnect に問い合わせ、下のマッピングを自動的に入力します。</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -445,7 +445,7 @@
     </message>
     <message>
         <source>Choose how mined cards look, then click Save Settings — Anki Miner writes a managed CSS block into the note type via AnkiConnect (your own CSS is never touched). “Off” removes it; “Custom CSS only” applies just your CSS below.</source>
-        <translation type="unfinished" />
+        <translation>マイニングしたカードの見た目を選び、「設定を保存」をクリックしてください。Anki Miner は AnkiConnect 経由でノートタイプに管理対象の CSS ブロックを書き込みます（ご自身の CSS には一切手を加えません）。「オフ」にすると削除され、「カスタム CSS のみ」では下のご自身の CSS だけが適用されます。</translation>
     </message>
     <message>
         <source>Card style preset:</source>
@@ -453,7 +453,7 @@
     </message>
     <message>
         <source>Applied to the note type on Save. Your custom CSS below is appended after the preset.</source>
-        <translation type="unfinished" />
+        <translation>保存時にノートタイプへ適用されます。下のカスタム CSS はプリセットの後に追加されます。</translation>
     </message>
     <message>
         <source>Custom CSS:</source>
@@ -521,7 +521,7 @@
     </message>
     <message>
         <source>Not applied yet — Save Settings to sync to Anki.</source>
-        <translation type="unfinished" />
+        <translation>まだ適用されていません — 「設定を保存」で Anki に同期してください。</translation>
     </message>
     <message>
         <source>Working...</source>
@@ -539,45 +539,45 @@
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
-        <translation type="unfinished" />
+        <translation>%1 をダウンロード中…</translation>
     </message>
     <message>
         <source>%1 downloaded successfully.</source>
-        <translation type="unfinished" />
+        <translation>%1 のダウンロードが完了しました。</translation>
     </message>
 </context><context>
     <name>AsrSettingsPanel</name>
     <message>
         <source>ASR Settings</source>
-        <translation type="unfinished" />
+        <translation>ASR 設定</translation>
     </message>
     <message>
         <source>ASR model</source>
-        <translation type="unfinished" />
+        <translation>ASR モデル</translation>
     </message>
     <message>
         <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
-        <translation type="unfinished" />
+        <translation>字幕生成に使用する Whisper モデルを選択します。「large-v3」は最も精度が高く、「small」は高速ですが精度は劣ります。</translation>
     </message>
     <message>
         <source>Download model</source>
-        <translation type="unfinished" />
+        <translation>モデルをダウンロード</translation>
     </message>
     <message>
         <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
-        <translation type="unfinished" />
+        <translation>選択した Whisper モデルの重みを Anki Miner の ASR モデルフォルダにダウンロードします。字幕生成を実行する前に必要です。</translation>
     </message>
     <message>
         <source>Model download</source>
-        <translation type="unfinished" />
+        <translation>モデルのダウンロード</translation>
     </message>
     <message>
         <source>Downloaded</source>
-        <translation type="unfinished" />
+        <translation>ダウンロード済み</translation>
     </message>
     <message>
         <source>Not downloaded</source>
-        <translation type="unfinished" />
+        <translation>未ダウンロード</translation>
     </message>
 </context><context>
     <name>AudioPackImportFlow</name>
@@ -1233,23 +1233,23 @@ Unchecked: mine every word — good for building a complete or shareable deck.</
     <name>DeckPage</name>
     <message>
         <source>Choose a Deck</source>
-        <translation type="unfinished" />
+        <translation>デッキを選択</translation>
     </message>
     <message>
         <source>Mined cards go into this deck.</source>
-        <translation type="unfinished" />
+        <translation>マイニングしたカードはこのデッキに追加されます。</translation>
     </message>
     <message>
         <source>Refresh</source>
-        <translation type="unfinished">更新</translation>
+        <translation>更新</translation>
     </message>
     <message>
         <source>Enter a deck name.</source>
-        <translation type="unfinished" />
+        <translation>デッキ名を入力してください。</translation>
     </message>
     <message>
         <source>Deck not found — it will be created automatically when mining starts.</source>
-        <translation type="unfinished" />
+        <translation>デッキが見つかりません — マイニング開始時に自動的に作成されます。</translation>
     </message>
 </context><context>
     <name>DictionaryImportFlow</name>
@@ -1567,39 +1567,39 @@ The dictionary was not removed.</source>
     <name>DonePage</name>
     <message>
         <source>All Set</source>
-        <translation type="unfinished" />
+        <translation>完了</translation>
     </message>
     <message>
         <source>Review your setup. You can change anything later in Settings.</source>
-        <translation type="unfinished" />
+        <translation>設定内容を確認してください。後から設定でいつでも変更できます。</translation>
     </message>
     <message>
         <source>Yes</source>
-        <translation type="unfinished" />
+        <translation>はい</translation>
     </message>
     <message>
         <source>No</source>
-        <translation type="unfinished" />
+        <translation>いいえ</translation>
     </message>
     <message>
         <source>AnkiConnect reachable: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation type="unfinished" />
+        <translation>AnkiConnect への接続: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
         <source>Deck: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation type="unfinished" />
+        <translation>デッキ: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
         <source>Note type: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation type="unfinished" />
+        <translation>ノートタイプ: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
         <source>Mapped fields: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation type="unfinished" />
+        <translation>マッピングされたフィールド: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
         <source>Resources downloaded: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation type="unfinished" />
+        <translation>ダウンロードしたリソース: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -1689,7 +1689,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
-        <translation type="unfinished" />
+        <translation>重複表現の単語 %1 件を統合しました</translation>
     </message>
     <message>
         <source>Step 3/5 — Extracting media from video</source>
@@ -2299,7 +2299,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Subtitle Creation</source>
-        <translation type="unfinished" />
+        <translation>字幕作成</translation>
     </message>
     <message>
         <source>Settings</source>
@@ -2327,7 +2327,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Setup Wizard...</source>
-        <translation type="unfinished" />
+        <translation>セットアップウィザード...</translation>
     </message>
     <message>
         <source>&amp;Help</source>
@@ -2567,36 +2567,37 @@ The dictionary was not removed.</source>
     <name>NoteTypePage</name>
     <message>
         <source>Choose a Note Type</source>
-        <translation type="unfinished" />
+        <translation>ノートタイプを選択</translation>
     </message>
     <message>
         <source>Pick the Anki note type whose fields will hold mined data.</source>
-        <translation type="unfinished" />
+        <translation>マイニングしたデータを格納する Anki のノートタイプを選んでください。</translation>
     </message>
     <message>
         <source>Refresh</source>
-        <translation type="unfinished">更新</translation>
+        <translation>更新</translation>
     </message>
     <message>
         <source>Auto-Map Fields from Note Type</source>
-        <translation type="unfinished" />
+        <translation>ノートタイプからフィールドを自動マッピング</translation>
     </message>
     <message>
         <source>No fields found. Make sure Anki is running and the note type name is spelled exactly as in Anki.</source>
-        <translation type="unfinished" />
+        <translation>フィールドが見つかりません。Anki が起動しているか、ノートタイプ名が Anki と完全に一致しているか確認してください。</translation>
     </message>
     <message>
         <source>This note type does not look set up for Japanese mining (no obvious word/sentence fields). Import a recommended mining note type in Anki, then &lt;a href="%1"&gt;recheck&lt;/a&gt;. See: &lt;a href="%1"&gt;recommended note type&lt;/a&gt;.</source>
-        <translation type="unfinished" />
+        <translation>このノートタイプは日本語マイニング向けに設定されていないようです（単語／文のフィールドが見当たりません）。Anki で推奨のマイニング用ノートタイプをインポートしてから&lt;a href="%1"&gt;再確認&lt;/a&gt;してください。参照: &lt;a href="%1"&gt;推奨ノートタイプ&lt;/a&gt;。</translation>
     </message>
     <message>
         <source>Mapped: %1
 You can fine-tune these later in Settings → Anki.</source>
-        <translation type="unfinished" />
+        <translation>マッピング済み: %1
+これらは後から「設定 → Anki」で微調整できます。</translation>
     </message>
     <message>
         <source>No fields could be auto-mapped.</source>
-        <translation type="unfinished" />
+        <translation>自動マッピングできるフィールドがありませんでした。</translation>
     </message>
 </context><context>
     <name>PairPreviewDialog</name>
@@ -2928,23 +2929,23 @@ You can fine-tune these later in Settings → Anki.</source>
     <name>ResourcesPage</name>
     <message>
         <source>Recommended Resources</source>
-        <translation type="unfinished" />
+        <translation>推奨リソース</translation>
     </message>
     <message>
         <source>Frequency, pitch accent, and a dictionary (optional).</source>
-        <translation type="unfinished" />
+        <translation>頻度、ピッチアクセント、辞書（任意）。</translation>
     </message>
     <message>
         <source>What are these resources?</source>
-        <translation type="unfinished">これらのリソースとは？</translation>
+        <translation>これらのリソースとは？</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
-        <translation type="unfinished">推奨リソースをダウンロード</translation>
+        <translation>推奨リソースをダウンロード</translation>
     </message>
     <message>
         <source>Resources updated.</source>
-        <translation type="unfinished" />
+        <translation>リソースを更新しました。</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>
@@ -3052,7 +3053,7 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>ASR</source>
-        <translation type="unfinished" />
+        <translation>ASR</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -3088,19 +3089,19 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Updating yt-dlp…</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp を更新中…</translation>
     </message>
     <message>
         <source>Downloading…</source>
-        <translation type="unfinished" />
+        <translation>ダウンロード中…</translation>
     </message>
     <message>
         <source>yt-dlp update</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp の更新</translation>
     </message>
     <message>
         <source>Could not update yt-dlp. Check your connection and retry.</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp を更新できませんでした。接続を確認して再試行してください。</translation>
     </message>
     <message>
         <source>Invalid dictionary folder</source>
@@ -3230,15 +3231,15 @@ Details: %2</source>
     <name>SetupWizard</name>
     <message>
         <source>Anki Miner works best with a frequency list, pitch accent data, and a dictionary. Download the recommended set now?</source>
-        <translation type="unfinished">Anki Miner は頻度リスト、ピッチアクセントデータ、辞書があると最も効果的に動作します。推奨セットを今すぐダウンロードしますか？</translation>
+        <translation>Anki Miner は頻度リスト、ピッチアクセントデータ、辞書があると最も効果的に動作します。推奨セットを今すぐダウンロードしますか？</translation>
     </message>
     <message>
         <source>Anki Miner Setup</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner セットアップ</translation>
     </message>
     <message>
         <source>Skip Setup</source>
-        <translation type="unfinished" />
+        <translation>セットアップをスキップ</translation>
     </message>
 </context><context>
     <name>SingleEpisodeTab</name>
@@ -3434,190 +3435,191 @@ Details: %2</source>
     <name>SubtitleCreationTab</name>
     <message>
         <source>Input</source>
-        <translation type="unfinished">入力</translation>
+        <translation>入力</translation>
     </message>
     <message>
         <source>Language:</source>
-        <translation type="unfinished" />
+        <translation>言語:</translation>
     </message>
     <message>
         <source>Japanese</source>
-        <translation type="unfinished" />
+        <translation>日本語</translation>
     </message>
     <message>
         <source>ASR engine not available. Install the [asr] extra (faster-whisper + ctranslate2) and download a model in Settings → ASR to enable subtitle generation.</source>
-        <translation type="unfinished" />
+        <translation>ASR エンジンが利用できません。[asr] エクストラ（faster-whisper + ctranslate2）をインストールし、「設定 → ASR」でモデルをダウンロードすると字幕生成を有効にできます。</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation type="unfinished" />
+        <translation>モード:</translation>
     </message>
     <message>
         <source>Single File</source>
-        <translation type="unfinished" />
+        <translation>単一ファイル</translation>
     </message>
     <message>
         <source>Folder</source>
-        <translation type="unfinished" />
+        <translation>フォルダ</translation>
     </message>
     <message>
         <source>Video File:</source>
-        <translation type="unfinished">動画ファイル:</translation>
+        <translation>動画ファイル:</translation>
     </message>
     <message>
         <source>Video Folder:</source>
-        <translation type="unfinished">動画フォルダ:</translation>
+        <translation>動画フォルダ:</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished" />
+        <translation>出力</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished" />
+        <translation>出力:</translation>
     </message>
     <message>
         <source>Next to source video</source>
-        <translation type="unfinished" />
+        <translation>元の動画と同じ場所</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished" />
+        <translation>フォルダを選択…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished" />
+        <translation>リセット</translation>
     </message>
     <message>
         <source>Overwrite existing SRT files</source>
-        <translation type="unfinished" />
+        <translation>既存の SRT ファイルを上書きする</translation>
     </message>
     <message>
         <source>Actions</source>
-        <translation type="unfinished">操作</translation>
+        <translation>操作</translation>
     </message>
     <message>
         <source>Generate Subtitles</source>
-        <translation type="unfinished" />
+        <translation>字幕を生成</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">キャンセル</translation>
+        <translation>キャンセル</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">進捗</translation>
+        <translation>進捗</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished" />
+        <translation>出力フォルダを選択</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
-        <translation type="unfinished" />
+        <translation>出力ディレクトリに書き込めません: </translation>
     </message>
     <message>
         <source>Model Not Downloaded</source>
-        <translation type="unfinished" />
+        <translation>モデルが未ダウンロードです</translation>
     </message>
     <message>
         <source>The selected ASR model (%1) has not been downloaded yet.
 Go to Settings → ASR to download it before generating subtitles.</source>
-        <translation type="unfinished" />
+        <translation>選択した ASR モデル（%1）はまだダウンロードされていません。
+字幕を生成する前に「設定 → ASR」でダウンロードしてください。</translation>
     </message>
     <message>
         <source>No File Selected</source>
-        <translation type="unfinished" />
+        <translation>ファイルが選択されていません</translation>
     </message>
     <message>
         <source>Select a video file before generating subtitles.</source>
-        <translation type="unfinished" />
+        <translation>字幕を生成する前に動画ファイルを選択してください。</translation>
     </message>
     <message>
         <source>File Not Found</source>
-        <translation type="unfinished">ファイルが見つかりません</translation>
+        <translation>ファイルが見つかりません</translation>
     </message>
     <message>
         <source>Video file not found: </source>
-        <translation type="unfinished" />
+        <translation>動画ファイルが見つかりません: </translation>
     </message>
     <message>
         <source>No Folder Selected</source>
-        <translation type="unfinished" />
+        <translation>フォルダが選択されていません</translation>
     </message>
     <message>
         <source>Select a folder before generating subtitles.</source>
-        <translation type="unfinished" />
+        <translation>字幕を生成する前にフォルダを選択してください。</translation>
     </message>
     <message>
         <source>Folder Not Found</source>
-        <translation type="unfinished" />
+        <translation>フォルダが見つかりません</translation>
     </message>
     <message>
         <source>Folder not found: </source>
-        <translation type="unfinished" />
+        <translation>フォルダが見つかりません: </translation>
     </message>
     <message>
         <source>No Video Files</source>
-        <translation type="unfinished" />
+        <translation>動画ファイルがありません</translation>
     </message>
     <message>
         <source>No video files found in the selected folder.</source>
-        <translation type="unfinished" />
+        <translation>選択したフォルダに動画ファイルが見つかりません。</translation>
     </message>
     <message>
         <source>Transcribing file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>ファイルを文字起こし中 %1 / %2</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished" />
+        <translation>完了: </translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完了</translation>
+        <translation>完了</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished" />
+        <translation>キャンセルされました</translation>
     </message>
     <message>
         <source>Finished</source>
-        <translation type="unfinished" />
+        <translation>終了</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">キャンセル中…</translation>
+        <translation>キャンセル中…</translation>
     </message>
 </context><context>
     <name>SubtitleGenWorker</name>
     <message>
         <source>Skipped, exists</source>
-        <translation type="unfinished" />
+        <translation>スキップしました（既に存在）</translation>
     </message>
     <message>
         <source>Extracting audio: %1</source>
-        <translation type="unfinished" />
+        <translation>音声を抽出中: %1</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished" />
+        <translation>キャンセルされました</translation>
     </message>
     <message>
         <source>Audio extraction failed for %1</source>
-        <translation type="unfinished" />
+        <translation>%1 の音声抽出に失敗しました</translation>
     </message>
     <message>
         <source>Transcribing: %1%</source>
-        <translation type="unfinished" />
+        <translation>文字起こし中: %1%</translation>
     </message>
     <message>
         <source>No speech detected in %1</source>
-        <translation type="unfinished" />
+        <translation>%1 で音声が検出されませんでした</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完了</translation>
+        <translation>完了</translation>
     </message>
 </context><context>
     <name>SubtitlePlayerWidget</name>
@@ -3819,17 +3821,19 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Sentences</source>
-        <translation type="unfinished" />
+        <translation>文</translation>
     </message>
     <message>
         <source>Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.</source>
-        <translation type="unfinished" />
+        <translation>この単語をマイニングする文（およびシーン）を選びます。単語が繰り返し出現する場合のみ表示されます。</translation>
     </message>
     <message>
         <source>%1
 
 (%2 sentences available — focus the row, then pick one under “Sentences”)</source>
-        <translation type="unfinished" />
+        <translation>%1
+
+（利用可能な文が %2 件あります — 行を選択してから「文」で 1 つ選んでください）</translation>
     </message>
     <message>
         <source>Copy lemma</source>
@@ -4055,15 +4059,15 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Update yt-dlp now</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp を今すぐ更新</translation>
     </message>
     <message>
         <source>Download the latest yt-dlp into Anki Miner's own folder. Keeping yt-dlp current is what fixes most 'YouTube broke' errors.</source>
-        <translation type="unfinished" />
+        <translation>最新の yt-dlp を Anki Miner 専用のフォルダにダウンロードします。yt-dlp を最新に保つことが「YouTube が壊れた」系のエラーの多くを解決します。</translation>
     </message>
     <message>
         <source>yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp</translation>
     </message>
 </context><context>
     <name>YouTubeTab</name>

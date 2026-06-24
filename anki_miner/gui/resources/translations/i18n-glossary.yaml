@@ -1,0 +1,25 @@
+# Project glossary for UI translation consistency.
+# Seeded from existing anki_miner_ja.ts; review/extend before relying on it.
+terms:
+  deck:            { ja: "デッキ" }
+  card:            { ja: "カード" }
+  note type:       { ja: "ノートタイプ" }
+  field:           { ja: "フィールド" }
+  mining:          { ja: "マイニング" }
+  mine:            { ja: "マイニング" }
+  known words:     { ja: "既知単語" }
+  known word DB:   { ja: "既知単語DB" }
+  word list:       { ja: "単語リスト" }
+  subtitle:        { ja: "字幕" }
+  frequency:       { ja: "頻度" }
+  pitch accent:    { ja: "ピッチアクセント" }
+  lemma:           { ja: "見出し語" }
+  dictionary:      { ja: "辞書" }
+  definition:      { ja: "語義" }
+  screenshot:      { ja: "スクリーンショット" }
+  filter:          { ja: "フィルター" }
+  connection:      { ja: "接続" }
+  episode:         { ja: "エピソード" }
+  playlist:        { ja: "プレイリスト" }
+  setup wizard:    { ja: "セットアップウィザード" }
+do_not_translate: [Anki, AnkiConnect, GitHub, YouTube, JPod101, Google, ffmpeg, MeCab, Yomitan, Jisho]
