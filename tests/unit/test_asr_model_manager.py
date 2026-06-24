@@ -69,7 +69,7 @@ def test_is_downloaded_true_when_model_bin_present(tmp_path):
 
 def test_is_downloaded_true_model_bin_directly_in_subdir(tmp_path):
     """Returns True even with a flat layout (model.bin one level under models_root)."""
-    subdir = tmp_path / "some-whisper-model"
+    subdir = tmp_path / "faster-whisper-large-v3"
     subdir.mkdir()
     (subdir / "model.bin").write_bytes(b"\x00")
     assert is_downloaded("large-v3", tmp_path) is True
@@ -79,6 +79,17 @@ def test_is_downloaded_false_when_only_model_bin_in_root(tmp_path):
     """Returns False when model.bin is at models_root level (not in a subdir)."""
     (tmp_path / "model.bin").write_bytes(b"\x00")
     assert is_downloaded("small", tmp_path) is False
+
+
+def test_is_downloaded_name_aware_cross_model(tmp_path):
+    """With only small's model.bin present, large-v3 is False and small is True."""
+    # HF-cache layout: models--Systran--faster-whisper-small/snapshots/abc/model.bin
+    small_snapshot = tmp_path / "models--Systran--faster-whisper-small" / "snapshots" / "abc123"
+    small_snapshot.mkdir(parents=True)
+    (small_snapshot / "model.bin").write_bytes(b"\x00")
+
+    assert is_downloaded("small", tmp_path) is True
+    assert is_downloaded("large-v3", tmp_path) is False
 
 
 # ---------------------------------------------------------------------------

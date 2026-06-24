@@ -318,8 +318,43 @@ def test_transcribe_cancel_stops_early(monkeypatch, tmp_path):
         cancel_event=cancel,
     )
 
-    # Should have collected "first" but stopped before "second" and "third"
-    assert len(result) <= 1
+    # "first" is appended before cancel is checked; "second" and "third" must not appear
+    assert result == [(0.0, 1.0, "first")]
+
+
+def test_transcribe_cancel_midloop_emits_final_progress(monkeypatch, tmp_path):
+    """progress_cb must receive 1.0 even when cancel fires mid-loop."""
+    import numpy as np
+
+    cancel = threading.Event()
+
+    def generating_segments():
+        yield make_segment(0.0, 1.0, "first")
+        cancel.set()  # set cancel after yielding first segment
+        yield make_segment(1.0, 2.0, "second")
+
+    class CancellingModel:
+        def __init__(self, *a, **kw):
+            pass
+
+        def transcribe(self, audio, *, language, vad_filter):
+            return generating_segments(), SimpleNamespace(language="ja")
+
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: CancellingModel)
+
+    progress_values: list[float] = []
+    audio = np.zeros(48000, dtype=np.float32)
+    transcriber.transcribe(
+        audio,
+        model_name="small",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=2.0,
+        cancel_event=cancel,
+        progress_cb=progress_values.append,
+    )
+
+    assert progress_values[-1] == pytest.approx(1.0)
 
 
 def test_transcribe_cancel_preset_returns_empty(monkeypatch, tmp_path):
