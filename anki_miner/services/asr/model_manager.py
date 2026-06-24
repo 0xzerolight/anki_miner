@@ -15,28 +15,56 @@ Worker signal contracts (Task 4 / Task 5 — Wave B implements these):
 
 ``AsrModelDownloadWorker(CancellableWorker)`` (Task 5):
     - ``status(str)``                             — informational status message
-    - ``finished(bool, str)``                     — (ok, message)
+    - ``result_ready(bool, str)``                 — (ok, message)
     HF download progress is indeterminate; no fake percentage is emitted.
 """
 
+import logging
+import os
+import shutil
+import tempfile
 from pathlib import Path
 
 from anki_miner.services.asr import _engine
 
+logger = logging.getLogger(__name__)
+
 KNOWN_MODELS: frozenset[str] = frozenset({"large-v3", "small"})
 DEFAULT_MODEL: str = "large-v3"
 
+#: Files faster-whisper / ctranslate2 require alongside ``model.bin`` for a
+#: model to actually load. We require at least ``config.json`` so a download
+#: interrupted before the metadata landed is not mistaken for a complete model.
+_REQUIRED_SIBLING = "config.json"
+
+
+def _name_matches(part: str, name: str) -> bool:
+    """Return True if directory-name *part* corresponds to model *name*.
+
+    Anchored to the faster-whisper HF-cache convention
+    ``models--<org>--faster-whisper-<name>`` (so ``large`` does not match a
+    ``large-v3`` directory), while still accepting a flat
+    ``faster-whisper-<name>`` or bare ``<name>`` layout.
+    """
+    return part == name or part.endswith(f"faster-whisper-{name}")
+
 
 def is_downloaded(name: str, models_root: Path) -> bool:
-    """Return True if the model *name* is present in *models_root*.
+    """Return True if the model *name* is present **and complete** in *models_root*.
 
-    Checks recursively for a ``model.bin`` file whose containing path includes
-    *name* in at least one ancestor directory name (relative to *models_root*).
-    faster-whisper uses an HF-cache layout
-    ``models--<org>--faster-whisper-<name>/snapshots/<rev>/model.bin``; matching
-    on *name* in the path is robust to org-prefix changes while still being
-    model-specific (so ``is_downloaded("large-v3", root)`` is False when only
-    ``small`` is present, and vice-versa).
+    Presence of ``model.bin`` alone is not sufficient: an interrupted download
+    can leave a truncated ``model.bin`` (or one without its metadata) that would
+    then fail at load time with an opaque ctranslate2 error. We therefore require:
+
+    1. a ``model.bin`` whose containing path has an ancestor directory matching
+       *name* (see :func:`_name_matches`, anchored to the faster-whisper layout);
+    2. a non-empty ``model.bin`` (resolving symlinks — HF stores the real bytes
+       in a ``blobs/`` blob the snapshot links to);
+    3. the required ``config.json`` sibling in the same directory.
+
+    Note that :func:`download` promotes models into *models_root* atomically, so
+    in normal operation *models_root* never contains a partial model; this check
+    is defense-in-depth against externally corrupted or pre-existing caches.
 
     Args:
         name: Model identifier (must be in ``KNOWN_MODELS``).
@@ -44,36 +72,67 @@ def is_downloaded(name: str, models_root: Path) -> bool:
             typically ``config.asr_models_root``.
 
     Returns:
-        ``True`` if the model files are already present, ``False`` otherwise.
+        ``True`` if a complete model is present, ``False`` otherwise.
     """
     if not models_root.exists():
         return False
-    # Walk all subdirectories looking for model.bin whose path corresponds to
-    # the requested model name.  faster-whisper uses an HF-cache layout:
-    #   models--<org>--faster-whisper-<name>/snapshots/<rev>/model.bin
-    # so we accept a model.bin only when *name* appears in at least one of its
-    # ancestor directory names (relative to models_root).  This is deliberately
-    # kept robust: we never hardcode the org prefix.
     for candidate in models_root.rglob("model.bin"):
         if candidate.parent == models_root:
             # model.bin sitting directly in models_root itself — not a valid layout
             continue
         rel_parts = candidate.relative_to(models_root).parts
-        if any(name in part for part in rel_parts):
-            return True
+        if not any(_name_matches(part, name) for part in rel_parts):
+            continue
+        # Integrity: non-empty payload + required metadata sibling present.
+        try:
+            if candidate.stat().st_size == 0:
+                continue
+        except OSError:
+            # Dangling symlink (incomplete download) — treat as not present.
+            continue
+        if not (candidate.parent / _REQUIRED_SIBLING).is_file():
+            continue
+        return True
     return False
 
 
 def download(name: str, models_root: Path, cancel_event=None) -> None:
-    """Download model *name* into *models_root*.
+    """Download model *name* into *models_root* atomically.
+
+    The model is fetched into a private staging directory *inside* ``models_root``
+    (same filesystem, so promotion is atomic) and only moved into place on
+    success. A failure, exception, or a ``cancel_event`` set mid-download leaves
+    ``models_root`` untouched — no partial model is ever visible to
+    :func:`is_downloaded`.
 
     Args:
         name: Model identifier (must be in ``KNOWN_MODELS``).
         models_root: Target directory; created if it does not exist.
-        cancel_event: Optional ``threading.Event``; the download is aborted
-            cooperatively when the event is set.
+        cancel_event: Optional ``threading.Event``. Checked before the download
+            starts and after it returns; the underlying HF download itself is a
+            single blocking call and cannot be interrupted mid-transfer, so a
+            mid-download cancel takes effect once the transfer finishes — at
+            which point nothing is promoted.
     """
     if cancel_event is not None and cancel_event.is_set():
         return
     models_root.mkdir(parents=True, exist_ok=True)
-    _engine.get_download_fn()(name, download_root=models_root)
+
+    staging = Path(tempfile.mkdtemp(prefix=f".staging-{name}-", dir=models_root))
+    try:
+        _engine.get_download_fn()(name, download_root=staging)
+
+        if cancel_event is not None and cancel_event.is_set():
+            # Cancelled after the transfer completed; discard the staged copy.
+            return
+
+        # Promote each top-level staged entry into models_root atomically.
+        for entry in staging.iterdir():
+            dest = models_root / entry.name
+            if dest.is_dir():
+                shutil.rmtree(dest)
+            elif dest.exists():
+                dest.unlink()
+            os.replace(entry, dest)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
