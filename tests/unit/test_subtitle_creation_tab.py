@@ -212,7 +212,7 @@ def test_unwritable_output_dir_logs_error(qtbot, tmp_path):
         tab.generate_button.click()
 
     log_text = tab.log_widget.text_edit.toPlainText()
-    assert log_text.strip()  # Something was logged
+    assert "not writable" in log_text or str(video.parent) in log_text
 
 
 # ---------------------------------------------------------------------------
@@ -311,8 +311,7 @@ def test_file_progress_updates_progress_widget(qtbot, tmp_path):
         slot(0, 50, "Transcribing: 50%")
 
     status_text = tab.progress_widget.status_label.text()
-    # Either "50" is in the text or the widget was updated at all
-    assert status_text  # progress widget is not blank
+    assert "Transcribing" in status_text or "50" in status_text
 
 
 def test_file_finished_success_appends_log(qtbot, tmp_path):
@@ -349,7 +348,7 @@ def test_file_finished_success_appends_log(qtbot, tmp_path):
         slot(0, out_srt, None)
 
     log_text = tab.log_widget.text_edit.toPlainText()
-    assert log_text.strip()
+    assert "episode.srt" in log_text or "Done" in log_text
 
 
 def test_file_finished_error_appends_error_log(qtbot, tmp_path):

@@ -46,6 +46,7 @@ from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
 from anki_miner.services.asr import _engine, model_manager
 from anki_miner.utils.file_pairing import FilePairMatcher
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -329,10 +330,13 @@ class SubtitleCreationTab(QWidget):
             QMessageBox.warning(
                 self,
                 self.tr("Model Not Downloaded"),
-                self.tr(
-                    "The selected ASR model (%1) has not been downloaded yet.\n"
-                    "Go to Settings → ASR to download it before generating subtitles."
-                ).replace("%1", self.config.asr_model),
+                tr_format(
+                    self.tr(
+                        "The selected ASR model (%1) has not been downloaded yet.\n"
+                        "Go to Settings → ASR to download it before generating subtitles."
+                    ),
+                    self.config.asr_model,
+                ),
             )
             return
 
