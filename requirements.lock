@@ -19,57 +19,65 @@
 #   uv pip compile --universal --generate-hashes pyproject.toml -o requirements.lock
 # then replace this file and switch release.yml to --require-hashes.
 #
-# Generated from: /home/light/Projects/anki_miner/.venv (Linux/Python 3.13)
-# Pinned: 2026-06-17
+# Generated from: a venv with `pip install -e ".[asr]"` (Linux/Python 3.13)
+# Pinned: 2026-06-24
 #
-# [asr] EXTRA — REGENERATION REQUIRED
+# [asr] EXTRA — PINNED
 # ─────────────────────────────────────
-# The release.yml build install was changed to `pip install ".[asr]"
-# -c requirements.lock` (Windows/macOS/AppImage).  The [asr] extra pulls in
-# faster-whisper and its transitive closure (~100 MB: ctranslate2, tokenizers,
-# huggingface_hub, sympy, etc.).  These packages are NOT pinned below because
-# faster-whisper was not installable in the environment where this file was
-# last regenerated (binary wheel requires the real ctranslate2 native build).
+# faster-whisper and its transitive closure (ctranslate2, tokenizers,
+# huggingface_hub, av, onnxruntime, numpy, etc.) are pinned below. release.yml
+# installs `pip install ".[asr]" -c requirements.lock` for the Windows/macOS/
+# AppImage bundles, so those versions are now reproducible.
 #
-# A maintainer must regenerate from an environment with [asr] installed:
-#
+# To regenerate after a dependency bump, REPLACE the pin block below — do NOT
+# append (appending a fresh freeze onto the old pins creates conflicting
+# duplicate versions that pip rejects as constraints):
 #   python -m venv /tmp/lock-env
 #   /tmp/lock-env/bin/pip install -e ".[asr]"
-#   /tmp/lock-env/bin/pip freeze | grep -v "^anki.miner" >> requirements.lock
-#   # Or with uv for a universal cross-platform lock:
-#   uv pip compile --universal pyproject.toml --extra asr -o requirements.lock
+#   /tmp/lock-env/bin/pip freeze | grep -ivE '^-e |^anki[-_]miner==' > /tmp/pins
+#   # then replace everything under "Direct runtime dependencies" with /tmp/pins
 #
-# Transitive packages that must be pinned once [asr] can be installed:
-#   faster-whisper         (direct [asr] dep)
-#   ctranslate2            (faster-whisper dep; ships OS-specific native libs)
-#   tokenizers             (faster-whisper dep; HuggingFace tokeniser Rust wheel)
-#   huggingface_hub        (faster-whisper dep; model download/caching)
-#   filelock               (huggingface_hub dep)
-#   fsspec                 (huggingface_hub dep)
-#   tqdm                   (huggingface_hub dep)
-#   sympy                  (ctranslate2 dep)
-#   mpmath                 (sympy dep)
-#   av                     (faster-whisper optional; EXCLUDED from bundle via spec)
-#   onnxruntime            (ctranslate2 optional; EXCLUDED from bundle via spec)
-#
-# Until regenerated, these packages float to their latest compatible versions
-# on each release run — the constraints-only lock is non-breaking for unlisted
-# packages.  Regenerate before the first [asr]-enabled release.
-
 # Direct runtime dependencies
-certifi==2026.1.4
-charset-normalizer==3.4.4
+annotated-doc==0.0.4
+anyio==4.14.0
+av==17.1.0
+certifi==2026.6.17
+charset-normalizer==3.4.7
 click==8.1.8
+ctranslate2==4.8.0
+faster-whisper==1.2.1
+filelock==3.29.4
+flatbuffers==25.12.19
+fsspec==2026.6.0
 fugashi==1.5.2
 gTTS==2.5.4
-idna==3.11
-packaging==26.0
+h11==0.16.0
+hf-xet==1.5.1
+httpcore==1.0.9
+httpx==0.28.1
+huggingface_hub==1.16.1
+idna==3.18
+markdown-it-py==4.2.0
+mdurl==0.1.2
+numpy==2.5.0
+onnxruntime==1.27.0
+packaging==26.2
+protobuf==7.35.1
 psutil==7.2.2
-PyQt6==6.10.2
-PyQt6-Qt6==6.10.2
-PyQt6-sip==13.11.0
-pysubs2==1.8.0
+Pygments==2.20.0
+PyQt6-Qt6==6.11.1
+PyQt6==6.11.0
+PyQt6_sip==13.11.1
+pysubs2==1.8.1
+PyYAML==6.0.3
 requests==2.34.2
+rich==15.0.0
+setuptools==82.0.1
+shellingham==1.5.4
+tokenizers==0.23.1
+tqdm==4.68.3
+typer==0.26.7
+typing_extensions==4.15.0
 unidic-lite==1.0.8
-urllib3==2.6.3
-yt-dlp==2026.3.17
+urllib3==2.7.0
+yt-dlp==2026.6.9
