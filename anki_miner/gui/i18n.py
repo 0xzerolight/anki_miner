@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 _LANGUAGES: dict[str, str] = {
     "en": "English",
     "ja": "日本語",
+    "ru": "Русский",
 }
 
 
