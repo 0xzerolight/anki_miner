@@ -3027,6 +3027,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Themes</source>
         <translation type="unfinished" />
     </message>
@@ -3540,6 +3544,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Skipped: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation type="unfinished" />
     </message>
@@ -3778,6 +3790,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Skipped: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation type="unfinished" />
     </message>
@@ -3827,6 +3847,24 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>SubtitlesSettingsPanel</name>
+    <message>
+        <source>Subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: path to the alass executable</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>alass binary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a bundled alass or one found on your PATH.</source>
         <translation type="unfinished" />
     </message>
 </context><context>

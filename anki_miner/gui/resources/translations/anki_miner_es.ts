@@ -3073,6 +3073,10 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <translation>ASR</translation>
     </message>
     <message>
+        <source>Subtitles</source>
+        <translation>Subtítulos</translation>
+    </message>
+    <message>
         <source>Themes</source>
         <translation>Temas</translation>
     </message>
@@ -3598,6 +3602,14 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>Hecho</translation>
     </message>
     <message>
+        <source>Skipped: </source>
+        <translation>Omitido: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Omitido</translation>
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation>Cancelado</translation>
     </message>
@@ -3836,6 +3848,14 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>Listo</translation>
     </message>
     <message>
+        <source>Skipped: </source>
+        <translation>Omitido: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Omitido</translation>
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation>Cancelado</translation>
     </message>
@@ -3886,6 +3906,24 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
     <message>
         <source>Cancel</source>
         <translation>Cancelar</translation>
+    </message>
+</context><context>
+    <name>SubtitlesSettingsPanel</name>
+    <message>
+        <source>Subtitles</source>
+        <translation>Subtítulos</translation>
+    </message>
+    <message>
+        <source>Optional: path to the alass executable</source>
+        <translation>Opcional: ruta al ejecutable de alass</translation>
+    </message>
+    <message>
+        <source>alass binary</source>
+        <translation>Binario de alass</translation>
+    </message>
+    <message>
+        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a bundled alass or one found on your PATH.</source>
+        <translation>Opcional: ruta al ejecutable de alass utilizado para reajustar el tiempo de los subtítulos. Dejar en blanco para usar un alass incluido o uno disponible en su PATH.</translation>
     </message>
 </context><context>
     <name>ThemesPanel</name>
