@@ -61,6 +61,7 @@ class _FakeWorker:
         self.file_started = MagicMock()
         self.file_progress = MagicMock()
         self.file_finished = MagicMock()
+        self.file_skipped = MagicMock()
         self.queue_finished = MagicMock()
         self.finished = MagicMock()  # native QThread.finished (lifecycle release)
         self.deleteLater = MagicMock()
@@ -719,3 +720,121 @@ def test_asr_smoke_handler_returns_nonzero_on_import_error(capsys):
     assert rc != 0
     captured = capsys.readouterr()
     assert "BUNDLED_SMOKE_FAIL" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# file_skipped slot: logs "Skipped:", advances progress once
+# ---------------------------------------------------------------------------
+
+
+def _capture_skipped_slots(signal_mock):
+    """Capture slots connected to a _FakeWorker MagicMock signal; returns the list."""
+    slots: list = []
+    original_connect = signal_mock.connect
+
+    def _capture(slot):
+        slots.append(slot)
+        return original_connect(slot)
+
+    signal_mock.connect = _capture
+    return slots
+
+
+def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
+    """file_skipped(idx, out_path) logs 'Skipped: <name>', not 'Done:' (T1)."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "episode.mp4"
+    video.write_bytes(b"fake")
+    out_srt = tmp_path / "episode.srt"
+
+    fake_worker = _FakeWorker()
+    skipped_slots = _capture_skipped_slots(fake_worker.file_skipped)
+
+    tab = _make_tab(config, qtbot)
+    tab.file_selector.set_path(str(video))
+
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_IS_DOWNLOADED, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.generate_button.click()
+
+    for slot in skipped_slots:
+        slot(0, out_srt)
+
+    log_text = tab.log_widget.text_edit.toPlainText()
+    assert "Skipped" in log_text
+    assert "episode.srt" in log_text
+    assert "Done" not in log_text
+
+
+def test_file_skipped_advances_progress(qtbot, tmp_path):
+    """file_skipped(idx, out_path) advances the progress bar exactly once (T2)."""
+    config = _make_config(tmp_path)
+    video1 = tmp_path / "ep01.mp4"
+    video2 = tmp_path / "ep02.mp4"
+    video1.write_bytes(b"fake")
+    video2.write_bytes(b"fake")
+
+    fake_worker = _FakeWorker()
+    skipped_slots = _capture_skipped_slots(fake_worker.file_skipped)
+
+    tab = _make_tab(config, qtbot)
+    tab.folder_mode_button.click()
+    tab.folder_selector.set_path(str(tmp_path))
+
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_IS_DOWNLOADED, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.generate_button.click()
+
+    assert tab.progress_widget.progress_bar.value() == 0
+
+    for slot in skipped_slots:
+        slot(0, tmp_path / "ep01.srt")
+    assert tab.progress_widget.progress_bar.value() == 50
+
+    for slot in skipped_slots:
+        slot(1, tmp_path / "ep02.srt")
+    assert tab.progress_widget.progress_bar.value() == 100
+
+
+def test_file_finished_still_logs_done_for_success(qtbot, tmp_path):
+    """file_finished(idx, out_path, None) still logs 'Done: <name>' (success path unchanged)."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "episode.mp4"
+    video.write_bytes(b"fake")
+    out_srt = tmp_path / "episode.srt"
+
+    fake_worker = _FakeWorker()
+    finished_slots = []
+    original_connect = fake_worker.file_finished.connect
+
+    def _capture(slot):
+        finished_slots.append(slot)
+        return original_connect(slot)
+
+    fake_worker.file_finished.connect = _capture
+
+    tab = _make_tab(config, qtbot)
+    tab.file_selector.set_path(str(video))
+
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_IS_DOWNLOADED, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.generate_button.click()
+
+    for slot in finished_slots:
+        slot(0, out_srt, None)
+
+    log_text = tab.log_widget.text_edit.toPlainText()
+    assert "Done" in log_text
+    assert "episode.srt" in log_text

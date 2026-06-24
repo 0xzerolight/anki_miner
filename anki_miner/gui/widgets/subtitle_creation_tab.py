@@ -381,6 +381,7 @@ class SubtitleCreationTab(QWidget):
         worker.file_started.connect(self._on_file_started)
         worker.file_progress.connect(self._on_file_progress)
         worker.file_finished.connect(self._on_file_finished)
+        worker.file_skipped.connect(self._on_file_skipped)
         worker.queue_finished.connect(self._on_queue_finished)
         # Lifecycle: free the QThread on real thread exit (not on queue_finished,
         # which fires just before the thread ends). Clears the handle so the
@@ -461,6 +462,12 @@ class SubtitleCreationTab(QWidget):
         else:
             path_label = str(out_path) if out_path else ""
             self.log_widget.append_success(self.tr("Done: ") + Path(path_label).name if path_label else self.tr("Done"))
+
+    def _on_file_skipped(self, idx: int, out_path: object) -> None:
+        # Advance the progress bar just like a finished file.
+        self.progress_widget.set_progress(idx + 1, self._total_files)
+        path_label = str(out_path) if out_path else ""
+        self.log_widget.append_info(self.tr("Skipped: ") + Path(path_label).name if path_label else self.tr("Skipped"))
 
     def _on_queue_finished(self) -> None:
         self.generate_button.setEnabled(True)

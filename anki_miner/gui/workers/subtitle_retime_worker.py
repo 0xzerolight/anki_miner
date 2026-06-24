@@ -4,6 +4,7 @@ Signal contract (frozen — mirrors SubtitleGenWorker):
     ``file_started(int)``                      — emitted at the start of each pair (idx)
     ``file_progress(int, int, str)``           — (idx, pct 0-100, message) during retiming
     ``file_finished(int, object, object)``     — (idx, out_path|None, error_str|None)
+    ``file_skipped(int, object)``              — (idx, out_path) when output exists and overwrite is False
     ``queue_finished()``                       — emitted once after the last pair
 """
 
@@ -63,6 +64,8 @@ class SubtitleRetimeWorker(CancellableWorker):
     file_progress = pyqtSignal(int, int, str)
     #: (idx, out_path|None, error_str|None) — outcome for each pair.
     file_finished = pyqtSignal(int, object, object)
+    #: (idx, out_path) — emitted when the output already exists and overwrite is False.
+    file_skipped = pyqtSignal(int, object)
     #: Emitted once after all pairs have been processed (or skipped / errored).
     queue_finished = pyqtSignal()
 
@@ -117,7 +120,7 @@ class SubtitleRetimeWorker(CancellableWorker):
             if out_sub.exists() and not self._overwrite:
                 logger.debug("subtitle_retime_worker: skipped %s (exists)", out_sub)
                 self.file_progress.emit(idx, 100, self.tr("Skipped, exists"))
-                self.file_finished.emit(idx, out_sub, None)
+                self.file_skipped.emit(idx, out_sub)
                 continue
 
             # Ensure output directory exists before writing.

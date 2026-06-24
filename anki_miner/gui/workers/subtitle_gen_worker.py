@@ -1,9 +1,10 @@
 """Worker that transcribes video files to SRT subtitles using the ASR engine.
 
-Signal contract (frozen — defined in Wave A spec):
+Signal contract (frozen — mirrors SubtitleRetimeWorker):
     ``file_started(int)``                      — emitted at the start of each file (idx)
     ``file_progress(int, int, str)``           — (idx, pct 0-100, message) during transcription
     ``file_finished(int, object, object)``     — (idx, out_path|None, error_str|None)
+    ``file_skipped(int, object)``              — (idx, out_path) when output exists and overwrite is False
     ``queue_finished()``                       — emitted once after the last file
 """
 
@@ -56,6 +57,8 @@ class SubtitleGenWorker(CancellableWorker):
     file_progress = pyqtSignal(int, int, str)
     #: (idx, out_path|None, error_str|None) — outcome for each file.
     file_finished = pyqtSignal(int, object, object)
+    #: (idx, out_path) — emitted when the output already exists and overwrite is False.
+    file_skipped = pyqtSignal(int, object)
     #: Emitted once after all files have been processed (or skipped / errored).
     queue_finished = pyqtSignal()
 
@@ -107,7 +110,7 @@ class SubtitleGenWorker(CancellableWorker):
             if out_srt.exists() and not self._overwrite:
                 logger.debug("subtitle_gen_worker: skipped %s (exists)", out_srt)
                 self.file_progress.emit(idx, 100, self.tr("Skipped, exists"))
-                self.file_finished.emit(idx, out_srt, None)
+                self.file_skipped.emit(idx, out_srt)
                 continue
 
             self._process_file(idx, video_path, out_srt)
