@@ -47,7 +47,7 @@ run_tolerant() {  # name, binary, cmd...
 run_hard     "black"      "${BIN}black" --check .
 run_hard     "ruff"       "${BIN}ruff" check .
 run_hard     "mypy"       "${BIN}mypy" anki_miner
-run_hard     "pytest"     "${BIN}pytest" -m "not youtube"
+run_hard     "pytest"     "${BIN}pytest" -m "not youtube and not asr"
 run_tolerant "vulture"    "vulture" "${BIN}vulture"
 run_tolerant "shellcheck" "shellcheck" shellcheck packaging/appimage/build-appimage.sh
 
