@@ -2265,7 +2265,7 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Subtitle Creation</source>
+        <source>Subtitles</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2388,6 +2388,14 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>JMdict ready (%1 entries)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retime</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3589,6 +3597,214 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Video error: %1</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>SubtitleRetimeTab</name>
+    <message>
+        <source>Input</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overwrite existing subtitle files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Split penalty:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lower = more cut points for ad breaks; 1–20 is the useful range; default 7</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retime Subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output directory is not writable: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Video File Selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a video file before retiming subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Subtitle File Selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a subtitle file before retiming subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File Not Found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video file not found: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle file not found: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Video Folder Selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a video folder before retiming subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Subtitle Folder Selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a subtitle folder before retiming subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder Not Found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video folder not found: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle folder not found: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Matched %1 of %2 video files.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Warning: %1 video file(s) could not be matched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Pairs Matched</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitle files could be matched to the video files in the selected folders.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retiming file %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finished</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>SubtitleRetimeWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retiming failed for %1</source>
         <translation type="unfinished" />
     </message>
 </context><context>

@@ -2316,8 +2316,8 @@ The dictionary was not removed.</source>
         <translation>Аналитика</translation>
     </message>
     <message>
-        <source>Subtitle Creation</source>
-        <translation>Создание субтитров</translation>
+        <source>Subtitles</source>
+        <translation>Субтитры</translation>
     </message>
     <message>
         <source>Settings</source>
@@ -2442,6 +2442,14 @@ The dictionary was not removed.</source>
     <message>
         <source>JMdict ready (%1 entries)</source>
         <translation>JMdict готов (записей: %1)</translation>
+    </message>
+    <message>
+        <source>Generate</source>
+        <translation>Создать</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>Пересинхронизация</translation>
     </message>
 </context><context>
     <name>MediaSettingsPanel</name>
@@ -3658,6 +3666,214 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Video error: %1</source>
         <translation>Ошибка видео: %1</translation>
+    </message>
+</context><context>
+    <name>SubtitleRetimeTab</name>
+    <message>
+        <source>Input</source>
+        <translation>Ввод</translation>
+    </message>
+    <message>
+        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
+        <translation>alass не найден; установите его или укажите путь в настройках для включения пересинхронизации тайминга.</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation>Режим:</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation>Один файл</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>Папка</translation>
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation>Видеофайл:</translation>
+    </message>
+    <message>
+        <source>Subtitle File:</source>
+        <translation>Файл субтитров:</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Папка с видео:</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>Папка с субтитрами:</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>Вывод</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>Вывод:</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>Рядом с исходным видео</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>Выбрать папку…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Сбросить</translation>
+    </message>
+    <message>
+        <source>Overwrite existing subtitle files</source>
+        <translation>Перезаписывать существующие файлы субтитров</translation>
+    </message>
+    <message>
+        <source>Split penalty:</source>
+        <translation>Штраф за разбивку:</translation>
+    </message>
+    <message>
+        <source>Lower = more cut points for ad breaks; 1–20 is the useful range; default 7</source>
+        <translation>Меньше = больше точек разбивки для рекламных пауз; полезный диапазон 1–20; по умолчанию 7</translation>
+    </message>
+    <message>
+        <source>Actions</source>
+        <translation>Действия</translation>
+    </message>
+    <message>
+        <source>Retime Subtitles</source>
+        <translation>Пересинхронизировать субтитры</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Прогресс</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Выбрать папку для вывода</translation>
+    </message>
+    <message>
+        <source>Output directory is not writable: </source>
+        <translation>Папка вывода недоступна для записи: </translation>
+    </message>
+    <message>
+        <source>No Video File Selected</source>
+        <translation>Видеофайл не выбран</translation>
+    </message>
+    <message>
+        <source>Select a video file before retiming subtitles.</source>
+        <translation>Выберите видеофайл перед пересинхронизацией субтитров.</translation>
+    </message>
+    <message>
+        <source>No Subtitle File Selected</source>
+        <translation>Файл субтитров не выбран</translation>
+    </message>
+    <message>
+        <source>Select a subtitle file before retiming subtitles.</source>
+        <translation>Выберите файл субтитров перед пересинхронизацией субтитров.</translation>
+    </message>
+    <message>
+        <source>File Not Found</source>
+        <translation>Файл не найден</translation>
+    </message>
+    <message>
+        <source>Video file not found: </source>
+        <translation>Видеофайл не найден: </translation>
+    </message>
+    <message>
+        <source>Subtitle file not found: </source>
+        <translation>Файл субтитров не найден: </translation>
+    </message>
+    <message>
+        <source>No Video Folder Selected</source>
+        <translation>Папка с видео не выбрана</translation>
+    </message>
+    <message>
+        <source>Select a video folder before retiming subtitles.</source>
+        <translation>Выберите папку с видео перед пересинхронизацией субтитров.</translation>
+    </message>
+    <message>
+        <source>No Subtitle Folder Selected</source>
+        <translation>Папка с субтитрами не выбрана</translation>
+    </message>
+    <message>
+        <source>Select a subtitle folder before retiming subtitles.</source>
+        <translation>Выберите папку с субтитрами перед пересинхронизацией субтитров.</translation>
+    </message>
+    <message>
+        <source>Folder Not Found</source>
+        <translation>Папка не найдена</translation>
+    </message>
+    <message>
+        <source>Video folder not found: </source>
+        <translation>Папка с видео не найдена: </translation>
+    </message>
+    <message>
+        <source>Subtitle folder not found: </source>
+        <translation>Папка с субтитрами не найдена: </translation>
+    </message>
+    <message>
+        <source>Matched %1 of %2 video files.</source>
+        <translation>Сопоставлено %1 из %2 видеофайлов.</translation>
+    </message>
+    <message>
+        <source>Warning: %1 video file(s) could not be matched.</source>
+        <translation>Предупреждение: %1 видеофайл(ов) не удалось сопоставить.</translation>
+    </message>
+    <message>
+        <source>No Pairs Matched</source>
+        <translation>Пары не найдены</translation>
+    </message>
+    <message>
+        <source>No subtitle files could be matched to the video files in the selected folders.</source>
+        <translation>Не удалось сопоставить файлы субтитров с видеофайлами в выбранных папках.</translation>
+    </message>
+    <message>
+        <source>Retiming file %1 of %2</source>
+        <translation>Пересинхронизация файла %1 из %2</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Готово: </translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Готово</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Finished</source>
+        <translation>Завершено</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+</context><context>
+    <name>SubtitleRetimeWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation>Пропущено, уже существует</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Готово</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Retiming failed for %1</source>
+        <translation>Ошибка пересинхронизации для %1</translation>
     </message>
 </context><context>
     <name>SubtitleViewer</name>
