@@ -511,9 +511,22 @@ class MediaExtractorService:
         # cleanly without holding the registry open indefinitely.
         if done_event is not None:
             done_event.set()
-        if not success:
+        if not success or not out_wav.exists():
             return False
-        return out_wav.exists()
+
+        # Guard against a zero-frame WAV: when the source has no decodable audio
+        # for the mapped stream, ffmpeg can still exit 0 and write a valid but
+        # empty WAV. Without this check that empty audio would transcribe to an
+        # empty SRT reported to the user as a clean "Done".
+        try:
+            with wave.open(str(out_wav), "rb") as wf:
+                if wf.getnframes() == 0:
+                    logger.warning("extract_full_audio: %s has no audio frames (no audio stream?)", out_wav.name)
+                    return False
+        except (wave.Error, OSError) as exc:
+            logger.warning("extract_full_audio: could not verify %s: %s", out_wav.name, exc)
+            return False
+        return True
 
     def _extract_screenshot(
         self,

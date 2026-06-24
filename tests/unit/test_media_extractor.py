@@ -1904,12 +1904,29 @@ def _write_f32_wav(path: Path, num_samples: int, sample_rate: int = 16000) -> No
         wf.writeframes(raw)
 
 
+def _write_min_wav(path) -> None:
+    """Write a 1-frame 16 kHz mono WAV so the zero-frame guard accepts it.
+
+    extract_full_audio rejects a frameless WAV (no decodable audio); arg/flow
+    tests that mock ffmpeg must therefore leave a non-empty file on disk.
+    """
+    import struct
+    import wave as _wave
+
+    with _wave.open(str(path), "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(4)  # pcm_f32le is 4 bytes/sample
+        wf.setframerate(16000)
+        wf.writeframes(struct.pack("<f", 0.0))
+
+
 class TestExtractFullAudio:
     """Tests for MediaExtractorService.extract_full_audio."""
 
     def test_correct_ffmpeg_args_jp_track(self, service, video_file, tmp_path):
         """When JP track detected, command must use -map 0:N and pcm_f32le, -ar 16000, -ac 1."""
         out_wav = tmp_path / "full.wav"
+        _write_min_wav(out_wav)
         mock_proc = _popen_mock()
 
         with (
@@ -1938,6 +1955,7 @@ class TestExtractFullAudio:
     def test_falls_back_to_0a0_when_no_jp_track(self, service, video_file, tmp_path):
         """When no JP track detected and no override, command must use -map 0:a:0."""
         out_wav = tmp_path / "full.wav"
+        _write_min_wav(out_wav)
         mock_proc = _popen_mock()
 
         with (
@@ -1960,6 +1978,7 @@ class TestExtractFullAudio:
         The resolved global index (5 in this stub) is what ends up in -map.
         """
         out_wav = tmp_path / "full.wav"
+        _write_min_wav(out_wav)
         mock_proc = _popen_mock()
 
         with (
@@ -2020,6 +2039,27 @@ class TestExtractFullAudio:
 
         assert result is False
 
+    def test_returns_false_on_zero_frame_wav(self, service, video_file, tmp_path):
+        """ffmpeg exit 0 but a frameless WAV (no decodable audio) → False (C5)."""
+        import wave as _wave
+
+        out_wav = tmp_path / "full.wav"
+        with _wave.open(str(out_wav), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(4)
+            wf.setframerate(16000)
+            # no writeframes → 0 frames
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc),
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+            patch.object(Path, "exists", return_value=True),
+        ):
+            result = service.extract_full_audio(video_file, out_wav)
+
+        assert result is False
+
     def test_cancel_event_aborts_before_ffmpeg(self, service, video_file, tmp_path):
         """A pre-set cancel_event must abort without spawning ffmpeg."""
         import threading
@@ -2049,6 +2089,7 @@ class TestExtractFullAudio:
         import threading
 
         out_wav = tmp_path / "full.wav"
+        _write_min_wav(out_wav)
         cancel = threading.Event()  # never set — normal run
         mock_proc = _popen_mock()
 
