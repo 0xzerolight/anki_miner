@@ -88,7 +88,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Batch Mining**: batch mine a folder of episode/subtitle pairs for sequential processing. Files are paired by episode number, so each folder / queue item should hold a single show (use Multi-Series Queue for mining multiple series at a time).
 - **Deck Builder**: point at a folder of episode/subtitle pairs and mine the full series into one named deck. Ranked by frequency; pick how many to include (all, top N, or a coverage target) and preview before cards are created.
 - **YouTube**: paste one or more URLs, then mine the queue.
-- **Audiobook**: queue local audiobook/subtitle pairs and mine them audio-only; embedded cover art stands in for screenshots.
+- **Audio**: queue local audio + subtitle/transcript pairs (audiobooks, podcasts, radio, songs, lectures) and mine them audio-only; embedded cover art stands in for screenshots.
 - **Analytics**: history, series difficulty rankings, milestones, undo.
 - **Settings**: Anki, Media, Dictionaries, Audio, Filtering, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
 
