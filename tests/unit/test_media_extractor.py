@@ -1952,21 +1952,32 @@ class TestExtractFullAudio:
         assert cmd[cmd.index("-map") + 1] == "0:a:0"
 
     def test_track_override_respected(self, service, video_file, tmp_path):
-        """track_override=2 must produce -map 0:2 without probing for JP."""
+        """track_override is an audio-index resolved via _resolve_audio_track_global_index.
+
+        Mirrors _extract_audio semantics: the integer is an audio-stream index,
+        not a raw ffprobe global stream index.  Resolution must happen through the
+        shared helper so callers get identical behaviour from both methods.
+        The resolved global index (5 in this stub) is what ends up in -map.
+        """
         out_wav = tmp_path / "full.wav"
         mock_proc = _popen_mock()
 
         with (
             patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(service, "_resolve_audio_track_global_index", return_value=5) as mock_resolve,
             patch.object(service, "_get_japanese_audio_stream") as mock_jp,
             patch.object(Path, "exists", return_value=True),
         ):
             result = service.extract_full_audio(video_file, out_wav, track_override=2)
 
         assert result is True
-        cmd = mock_popen.call_args[0][0]
-        assert cmd[cmd.index("-map") + 1] == "0:2"
+        # Resolution must go through the shared helper, not directly to global index.
+        mock_resolve.assert_called_once_with(video_file, 2)
+        # _get_japanese_audio_stream must not be called directly (the helper handles it).
         mock_jp.assert_not_called()
+        cmd = mock_popen.call_args[0][0]
+        # The resolved global index (5) must appear in -map, not the raw audio index (2).
+        assert cmd[cmd.index("-map") + 1] == "0:5"
 
     def test_no_encoder_probe(self, service, video_file, tmp_path):
         """extract_full_audio must NOT call _check_encoder_available (pcm_f32le is built-in)."""
@@ -2025,6 +2036,37 @@ class TestExtractFullAudio:
 
         assert result is False
         mock_popen.assert_not_called()
+
+    def test_kill_all_not_called_on_success(self, service, video_file, tmp_path):
+        """On the normal success path kill_all must NOT be called.
+
+        The cancel-watcher thread wakes on done_event and checks that cancel
+        was not set — it must not kill the registry when ffmpeg already finished
+        cleanly.  This guards against the original thread-leak where the watcher
+        blocked forever on cancel_event.wait(), and against a regression where
+        done_event is set but the watcher unconditionally calls kill_all.
+        """
+        import threading
+
+        out_wav = tmp_path / "full.wav"
+        cancel = threading.Event()  # never set — normal run
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc),
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+            patch.object(Path, "exists", return_value=True),
+            patch(f"{MODULE}._FfmpegProcRegistry.kill_all") as mock_kill,
+        ):
+            result = service.extract_full_audio(video_file, out_wav, cancel_event=cancel)
+            # Give the watcher thread a moment to finish so we capture any
+            # spurious kill_all that fires after _run_ffmpeg returns.
+            import time
+
+            time.sleep(0.2)
+
+        assert result is True
+        mock_kill.assert_not_called()
 
     def test_uses_duration_scaled_timeout(self, service, video_file, tmp_path):
         """Duration-scaled timeout must be used (not the 30-60s word-clip timeout)."""
