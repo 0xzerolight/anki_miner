@@ -4,8 +4,13 @@ HF model downloads are indeterminate (shard sizes unknown up front), so
 this worker emits plain status text rather than progress percentages.
 
 Signal contract (mirrors the spec in ``model_manager`` module docstring):
-    ``status(str)``       — informational status during the download
-    ``finished(bool, str)``  — (ok, message) when the download completes or fails
+    ``status(str)``           — informational status during the download
+    ``result_ready(bool, str)``  — (ok, message) when the download completes or fails
+
+The result is carried on ``result_ready`` rather than ``finished`` so the
+inherited ``QThread.finished`` (0-arg, fires on real thread exit including the
+cancel path) stays intact for lifecycle release — matching ValidationWorkerThread,
+UpdateWorkerThread, and YtdlpUpdateWorker.
 """
 
 from __future__ import annotations
@@ -35,8 +40,9 @@ class AsrModelDownloadWorker(CancellableWorker):
     #: Informational status message emitted during the download.
     status = pyqtSignal(str)
     #: Emitted when the download completes (ok=True) or fails (ok=False).
-    #: The second argument is a human-readable message.
-    finished = pyqtSignal(bool, str)
+    #: The second argument is a human-readable message. Distinct from the
+    #: inherited ``QThread.finished`` so the latter stays free for release.
+    result_ready = pyqtSignal(bool, str)
 
     def __init__(self, name: str, models_root: Path, parent=None) -> None:
         """Initialise the download worker."""
@@ -49,7 +55,7 @@ class AsrModelDownloadWorker(CancellableWorker):
 
         Emits ``status`` before starting, then calls
         ``model_manager.download``.  Any exception is caught and forwarded
-        as ``finished(False, error_text)``.  HF progress is indeterminate —
+        as ``result_ready(False, error_text)``.  HF progress is indeterminate —
         no fake percentage is emitted.
         """
         if self.check_cancelled():
@@ -66,8 +72,8 @@ class AsrModelDownloadWorker(CancellableWorker):
         except Exception as exc:  # noqa: BLE001 — surface every failure to GUI
             logger.exception("ASR model download failed: %s", self._name)
             if not self.check_cancelled():
-                self.finished.emit(False, str(exc))
+                self.result_ready.emit(False, str(exc))
             return
 
         if not self.check_cancelled():
-            self.finished.emit(True, tr_format(self.tr("%1 downloaded successfully."), self._name))
+            self.result_ready.emit(True, tr_format(self.tr("%1 downloaded successfully."), self._name))
