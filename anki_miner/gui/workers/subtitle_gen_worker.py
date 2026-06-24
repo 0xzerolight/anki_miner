@@ -29,7 +29,7 @@ class SubtitleGenWorker(CancellableWorker):
     Per file:
     1. Emits ``file_started(idx)``.
     2. If ``<stem>.srt`` already exists and *overwrite* is False — emits
-       ``file_finished(idx, existing_path, None)`` and continues.
+       ``file_skipped(idx, existing_path)`` and continues.
     3. Extracts full audio to a temp WAV → converts to float32 → transcribes
        → writes SRT.  The temp WAV is deleted in a ``finally`` block.
     4. Emits ``file_finished(idx, out_path, None)`` on success, or
