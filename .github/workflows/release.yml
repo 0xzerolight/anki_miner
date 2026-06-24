@@ -247,7 +247,7 @@ jobs:
           chmod +x vendor/alass/alass
           rm -f alass-dl
           mkdir -p licenses/alass
-          curl -fL "https://raw.githubusercontent.com/kaegi/alass/master/LICENSE" \
+          curl -fL "https://raw.githubusercontent.com/kaegi/alass/v2.0.0/LICENSE" \
             -o licenses/alass/LICENSE
           echo "Bundled alass landed in vendor/alass/:"
           ls -la vendor/alass/
@@ -274,7 +274,7 @@ jobs:
           $exe = Get-ChildItem -Path alass-extracted -Recurse -Filter "alass-cli.exe" | Select-Object -First 1
           Copy-Item $exe.FullName vendor\alass\alass.exe -Force
           New-Item -ItemType Directory -Force -Path licenses\alass | Out-Null
-          curl.exe -fL "https://raw.githubusercontent.com/kaegi/alass/master/LICENSE" `
+          curl.exe -fL "https://raw.githubusercontent.com/kaegi/alass/v2.0.0/LICENSE" `
             -o licenses\alass\LICENSE
           Remove-Item -Recurse -Force alass-extracted, alass-dl.zip
           Write-Host "Bundled alass landed in vendor/alass/:"
