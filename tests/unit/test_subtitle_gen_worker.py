@@ -9,7 +9,6 @@ import pytest
 pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.workers import subtitle_gen_worker as sgw_module
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
 
 # ---------------------------------------------------------------------------
@@ -96,13 +95,7 @@ def _patch_wav_to_float32(monkeypatch, *, audio=None, sample_rate=16000, duratio
 
     samples = audio if audio is not None else np.zeros(32000, dtype="float32")
 
-    monkeypatch.setattr(
-        sgw_module,
-        "wav_to_float32",  # will be used via module attribute after import
-        lambda path: (samples, sample_rate, duration_s),
-        raising=False,
-    )
-    # Also patch at its canonical location so the worker's import picks it up.
+    # Patch at the canonical location; the worker imports it from there at call time.
     import anki_miner.services.media_extractor as me
 
     monkeypatch.setattr(me, "wav_to_float32", lambda path: (samples, sample_rate, duration_s))
@@ -327,7 +320,8 @@ def test_per_file_error_isolation(qapp, tmp_path, monkeypatch):
     call_count = [0]
 
     class _SelectiveFakeExtractor:
-        calls: list[dict] = []
+        def __init__(self) -> None:
+            self.calls: list[dict] = []
 
         def extract_full_audio(self, video_file, out_wav, *, track_override=None, cancel_event=None):
             call_count[0] += 1
@@ -439,6 +433,11 @@ def test_cancel_between_files(qapp, tmp_path, monkeypatch):
     assert 0 in cap["started"]
     # Second file must NOT have started (cancel set mid-first-file).
     assert 1 not in cap["started"]
+    # File 0 must have finished with a Cancelled error (no out_path).
+    finished_map = {item[0]: item for item in cap["finished"]}
+    assert 0 in finished_map, "file_finished was not emitted for file 0"
+    assert finished_map[0][1] is None  # no out_path on cancel
+    assert "Cancelled" in (finished_map[0][2] or "")
     # queue_finished still emitted.
     assert cap["queue_finished"] == [True]
 

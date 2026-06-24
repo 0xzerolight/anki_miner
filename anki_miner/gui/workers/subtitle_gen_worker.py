@@ -10,6 +10,7 @@ Signal contract (frozen — defined in Wave A spec):
 from __future__ import annotations
 
 import logging
+import os
 import tempfile
 from pathlib import Path
 
@@ -121,8 +122,6 @@ class SubtitleGenWorker(CancellableWorker):
         temp_dir.mkdir(parents=True, exist_ok=True)
 
         # Build a deterministic-enough temp WAV name; mkstemp gives a unique fd.
-        import os
-
         fd, tmp_wav_str = tempfile.mkstemp(
             prefix="asr_",
             suffix=".wav",
