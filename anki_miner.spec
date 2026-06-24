@@ -45,6 +45,18 @@ if os.path.isdir(vendor_ffmpeg):
         if os.path.isfile(_full):
             ffmpeg_binaries.append((_full, "bin"))
 
+# Bundle vendored alass binary. CI populates vendor/alass/ with a static build
+# before invoking PyInstaller; local dev builds leave it absent (empty list →
+# unchanged behavior). The "bin" dest matches the runtime resolver's lookup at
+# sys._MEIPASS/bin/ (see anki_miner/utils/alass_resolver.py).
+alass_binaries = []
+vendor_alass = os.path.join(project_root, "vendor", "alass")
+if os.path.isdir(vendor_alass):
+    for _fn in sorted(os.listdir(vendor_alass)):
+        _full = os.path.join(vendor_alass, _fn)
+        if os.path.isfile(_full):
+            alass_binaries.append((_full, "bin"))
+
 # Bundle the ffmpeg GPL license text if present (populated by a sibling CI task).
 # Conditional so local builds don't hard-fail before the license dir exists. Lands at
 # sys._MEIPASS/licenses/ffmpeg/ in the bundle.
@@ -123,7 +135,7 @@ if platform.system() == "Windows":
 a = Analysis(
     [os.path.join(project_root, "anki_miner", "gui", "app.py")],
     pathex=[project_root],
-    binaries=ffmpeg_binaries,
+    binaries=ffmpeg_binaries + alass_binaries,
     datas=[
         # GUI resources (stylesheets and icons)
         (
