@@ -47,6 +47,11 @@ dev = [
     "pytest-cov>=6.0.0",
     "pytest-qt>=4.4.0",
     "pytest-xdist>=3.6.0",
+    # Backstop for the deadlock-prone worker tests: under parallel xdist a test
+    # parked in event.wait()/QThread.wait() can hang the whole job until the
+    # 20-min CI kill, with zero diagnostics. A per-test timeout fails fast and
+    # names the offender (timeout_method below).
+    "pytest-timeout>=2.3.0",
     "black>=26.3.1",
     "mypy>=1.15.0",
     "ruff>=0.9.0",
@@ -108,6 +113,14 @@ python_functions = ["test_*"]
 # (CI + local) to avoid paying for an ungated metric. Run it explicitly when
 # needed: pytest --cov=anki_miner
 addopts = "-n auto --dist loadfile -m \"not e2e\""
+# A hung test (worker parked on event.wait()/QThread.wait() under parallel xdist)
+# otherwise blocks the whole job until the 20-min CI kill with no per-test info.
+# 120s is vast headroom for sub-second unit tests; only a true deadlock trips it.
+# `thread` (not `signal`) interrupts C-level blocking — Qt event loop, subprocess,
+# QThread.wait() — and dumps every thread's stack on trip, naming the deadlock.
+# e2e/soak tests that legitimately run longer override with @pytest.mark.timeout(0).
+timeout = 120
+timeout_method = "thread"
 # The app is PyQt6-only. A stray PySide6 install (e.g. the i18n build dep)
 # must not flip pytest-qt's binding auto-detection to PySide6, which would
 # make qtbot reject every PyQt6 widget. Pin it.
