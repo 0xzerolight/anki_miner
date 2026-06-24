@@ -39,6 +39,7 @@ from anki_miner.gui.widgets.panels import (
     ThemesPanel,
     YouTubeSettingsPanel,
 )
+from anki_miner.gui.widgets.panels.asr_settings_panel import AsrSettingsPanel
 from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
 from anki_miner.services.frequency import import_yomitan_freq_zip
 from anki_miner.services.known_word_db import KnownWordDB
@@ -71,11 +72,14 @@ class SettingsTab(QWidget):
         config_changed: Emitted when configuration is saved (passes new config)
         ytdlp_update_requested: Emitted when the YouTube panel's "Update yt-dlp
             now" button is clicked (manual, forced).
+        asr_download_requested: Emitted when the ASR panel's "Download model"
+            button is clicked. Carries the selected model name.
     """
 
     validation_requested = pyqtSignal()
     config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
     ytdlp_update_requested = pyqtSignal()
+    asr_download_requested = pyqtSignal(str)  # Emits model name
 
     # Fields written OUTSIDE the Settings Save path (theme selector, update
     # banner, first-run flags).  An update_config call that touches ONLY these
@@ -153,6 +157,7 @@ class SettingsTab(QWidget):
             self.media_panel,
             self.filtering_panel,
             self.youtube_panel,
+            self.asr_panel,
         ]
         self._connect_signals()
         self._load_config()
@@ -174,6 +179,7 @@ class SettingsTab(QWidget):
         self.audio_panel = AudioPackSettingsPanel(self.config.audio_packs_root)
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
+        self.asr_panel = AsrSettingsPanel()
         self.themes_panel = ThemesPanel(self.config.themes_root)
         self.language_panel = LanguagePanel(self.config.ui_language)
 
@@ -184,6 +190,7 @@ class SettingsTab(QWidget):
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.audio_panel), self.tr("Audio"))
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), self.tr("Filtering"))
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), self.tr("YouTube"))
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.asr_panel), self.tr("ASR"))
         # Themes tab — sub-tab index captured so MainWindow / shortcuts can
         # jump straight to it via :meth:`open_themes_subtab`.
         self._themes_subtab_index = self.tab_widget.addTab(
@@ -292,6 +299,9 @@ class SettingsTab(QWidget):
         # (app.py routes it to background_tasks.start_ytdlp_update(force=True)).
         self.youtube_panel.update_ytdlp_requested.connect(self._on_ytdlp_update_clicked)
 
+        # ASR panel: "Download model" → re-emit to MainWindow (or caller).
+        self.asr_panel.asr_download_requested.connect(self._on_asr_download_clicked)
+
     def _on_ytdlp_update_clicked(self) -> None:
         """Mark the next yt-dlp result as user-initiated, then request the update.
 
@@ -302,6 +312,21 @@ class SettingsTab(QWidget):
         self._ytdlp_manual_pending = True
         self.youtube_panel.set_ytdlp_status(self.tr("Updating yt-dlp…"))
         self.ytdlp_update_requested.emit()
+
+    def _on_asr_download_clicked(self, model_name: str) -> None:
+        """Set a pending status and re-emit so the caller can start the download.
+
+        The wiring (SettingsTab → caller → AsrModelDownloadWorker) mirrors the
+        ytdlp_update_requested pattern: the tab updates its own status label and
+        re-emits; the download itself is owned by the caller (MainWindow /
+        background_tasks).
+        """
+        self.asr_panel.set_model_status(self.tr("Downloading…"))
+        self.asr_download_requested.emit(model_name)
+
+    def set_asr_model_status(self, text: str) -> None:
+        """Forward an ASR model download status line to the ASR panel."""
+        self.asr_panel.set_model_status(text)
 
     def set_ytdlp_status(self, text: str) -> None:
         """Forward a yt-dlp updater status line to the YouTube panel."""
