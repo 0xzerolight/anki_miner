@@ -13,6 +13,9 @@ import pytest
 
 from anki_miner.services.asr import _engine, transcriber
 
+# Requires numpy (transitive asr dep via faster-whisper); gated to the asr CI job.
+pytestmark = pytest.mark.asr
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

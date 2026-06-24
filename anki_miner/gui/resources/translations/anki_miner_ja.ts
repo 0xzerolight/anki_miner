@@ -536,6 +536,50 @@
         <translation>失敗</translation>
     </message>
 </context><context>
+    <name>AsrModelDownloadWorker</name>
+    <message>
+        <source>Downloading %1…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 downloaded successfully.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>AsrSettingsPanel</name>
+    <message>
+        <source>ASR Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>ASR model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Model download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloaded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not downloaded</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AudioPackImportFlow</name>
     <message>
         <source>Choose audio pack folder</source>
@@ -2254,6 +2298,10 @@ The dictionary was not removed.</source>
         <translation>分析</translation>
     </message>
     <message>
+        <source>Subtitle Creation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Settings</source>
         <translation>設定</translation>
     </message>
@@ -3003,6 +3051,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>YouTube</translation>
     </message>
     <message>
+        <source>ASR</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Themes</source>
         <translation>テーマ</translation>
     </message>
@@ -3036,6 +3088,10 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Updating yt-dlp…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading…</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3373,6 +3429,187 @@ Details: %2</source>
     <message>
         <source>ffmpeg is not available</source>
         <translation>ffmpegが利用できません</translation>
+    </message>
+</context><context>
+    <name>SubtitleCreationTab</name>
+    <message>
+        <source>Input</source>
+        <translation type="unfinished">入力</translation>
+    </message>
+    <message>
+        <source>Language:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Japanese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>ASR engine not available. Install the [asr] extra (faster-whisper + ctranslate2) and download a model in Settings → ASR to enable subtitle generation.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation type="unfinished">動画ファイル:</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation type="unfinished">動画フォルダ:</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overwrite existing SRT files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Actions</source>
+        <translation type="unfinished">操作</translation>
+    </message>
+    <message>
+        <source>Generate Subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">キャンセル</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">進捗</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output directory is not writable: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Model Not Downloaded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The selected ASR model (%1) has not been downloaded yet.
+Go to Settings → ASR to download it before generating subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No File Selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a video file before generating subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File Not Found</source>
+        <translation type="unfinished">ファイルが見つかりません</translation>
+    </message>
+    <message>
+        <source>Video file not found: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Folder Selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a folder before generating subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder Not Found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder not found: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Video Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No video files found in the selected folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcribing file %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">完了</translation>
+    </message>
+    <message>
+        <source>Finished</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">キャンセル中…</translation>
+    </message>
+</context><context>
+    <name>SubtitleGenWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Extracting audio: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio extraction failed for %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcribing: %1%</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">完了</translation>
     </message>
 </context><context>
     <name>SubtitlePlayerWidget</name>

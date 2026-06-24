@@ -11,6 +11,9 @@ pytest.importorskip("PyQt6.QtCore")
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
 
+# Requires numpy (transitive asr dep via faster-whisper); gated to the asr CI job.
+pytestmark = pytest.mark.asr
+
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
