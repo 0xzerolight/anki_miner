@@ -359,7 +359,11 @@ def main():
     analytics_tab = AnalyticsTab(stats_service)
     window.tabs.addTab(analytics_tab, QCoreApplication.translate("MainWindow", "Analytics"))
 
-    # Subtitle Creation tab (non-mining: no presenter, no update_config wiring)
+    # Subtitle Creation tab (non-mining: no presenter). It DOES need config
+    # updates so an ASR model switch in Settings reaches the model-downloaded
+    # guard and the worker: config_changed is auto-wired by the loop below
+    # (it has update_config); config_refreshed is wired explicitly near the
+    # SettingsTab refresh connection.
     subtitle_creation_tab = SubtitleCreationTab(window.get_config())
     window.tabs.addTab(subtitle_creation_tab, QCoreApplication.translate("MainWindow", "Subtitle Creation"))
 
@@ -424,6 +428,9 @@ def main():
     # Mining tabs are already wired via register_mining_tab's config_refreshed
     # connection.
     window.config_refreshed.connect(settings_tab.update_config)
+    # The Subtitle Creation tab is non-mining (not registered via
+    # register_mining_tab), so its config_refreshed connection is wired here too.
+    window.config_refreshed.connect(subtitle_creation_tab.update_config)
 
     # All tabs are now registered — create the count-driven Ctrl+N shortcuts.
     # This must come AFTER all addTab calls so self.tabs.count() is final.

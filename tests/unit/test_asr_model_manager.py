@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import threading
 
+import pytest
+
 from anki_miner.services.asr import model_manager
 from anki_miner.services.asr.model_manager import DEFAULT_MODEL, KNOWN_MODELS, download, is_downloaded
 
@@ -59,20 +61,48 @@ def test_is_downloaded_false_when_model_bin_missing(tmp_path):
     assert is_downloaded("small", tmp_path) is False
 
 
+def _write_model(subdir, *, payload=b"\x00", with_config=True):
+    """Write a (by default complete) model layout under *subdir*."""
+    subdir.mkdir(parents=True, exist_ok=True)
+    (subdir / "model.bin").write_bytes(payload)
+    if with_config:
+        (subdir / "config.json").write_text("{}")
+
+
 def test_is_downloaded_true_when_model_bin_present(tmp_path):
-    """Returns True when any subdirectory under models_root contains model.bin."""
+    """Returns True when a complete model (model.bin + config.json) is present."""
     subdir = tmp_path / "models--Systran--faster-whisper-small" / "snapshots" / "abc123"
-    subdir.mkdir(parents=True)
-    (subdir / "model.bin").write_bytes(b"\x00")
+    _write_model(subdir)
     assert is_downloaded("small", tmp_path) is True
 
 
 def test_is_downloaded_true_model_bin_directly_in_subdir(tmp_path):
     """Returns True even with a flat layout (model.bin one level under models_root)."""
     subdir = tmp_path / "faster-whisper-large-v3"
-    subdir.mkdir()
-    (subdir / "model.bin").write_bytes(b"\x00")
+    _write_model(subdir)
     assert is_downloaded("large-v3", tmp_path) is True
+
+
+def test_is_downloaded_false_when_config_sibling_missing(tmp_path):
+    """A model.bin without its config.json sibling is an incomplete download."""
+    subdir = tmp_path / "models--Systran--faster-whisper-small" / "snapshots" / "abc123"
+    _write_model(subdir, with_config=False)
+    assert is_downloaded("small", tmp_path) is False
+
+
+def test_is_downloaded_false_when_model_bin_empty(tmp_path):
+    """A zero-byte model.bin (truncated transfer) is not a complete model."""
+    subdir = tmp_path / "models--Systran--faster-whisper-small" / "snapshots" / "abc123"
+    _write_model(subdir, payload=b"")
+    assert is_downloaded("small", tmp_path) is False
+
+
+def test_is_downloaded_name_anchored_no_substring_false_positive(tmp_path):
+    """'large' must not match a 'large-v3' directory (anchored name match, M5)."""
+    subdir = tmp_path / "models--Systran--faster-whisper-large-v3" / "snapshots" / "abc"
+    _write_model(subdir)
+    assert is_downloaded("large-v3", tmp_path) is True
+    assert is_downloaded("large", tmp_path) is False
 
 
 def test_is_downloaded_false_when_only_model_bin_in_root(tmp_path):
@@ -85,8 +115,7 @@ def test_is_downloaded_name_aware_cross_model(tmp_path):
     """With only small's model.bin present, large-v3 is False and small is True."""
     # HF-cache layout: models--Systran--faster-whisper-small/snapshots/abc/model.bin
     small_snapshot = tmp_path / "models--Systran--faster-whisper-small" / "snapshots" / "abc123"
-    small_snapshot.mkdir(parents=True)
-    (small_snapshot / "model.bin").write_bytes(b"\x00")
+    _write_model(small_snapshot)
 
     assert is_downloaded("small", tmp_path) is True
     assert is_downloaded("large-v3", tmp_path) is False
@@ -97,8 +126,8 @@ def test_is_downloaded_name_aware_cross_model(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_download_calls_download_fn_with_correct_args(monkeypatch, tmp_path):
-    """download() must call get_download_fn()(name, download_root=models_root)."""
+def test_download_calls_download_fn_into_staging_under_models_root(monkeypatch, tmp_path):
+    """download() fetches into a staging dir inside models_root, not models_root itself."""
     calls = []
 
     def fake_download_fn(name, *, download_root):
@@ -110,7 +139,67 @@ def test_download_calls_download_fn_with_correct_args(monkeypatch, tmp_path):
 
     assert len(calls) == 1
     assert calls[0]["name"] == "small"
-    assert calls[0]["download_root"] == tmp_path
+    staging = calls[0]["download_root"]
+    # Staging lives under models_root (atomic same-filesystem promotion) and is
+    # cleaned up afterwards.
+    assert staging.parent == tmp_path
+    assert staging.name.startswith(".staging-small-")
+    assert not staging.exists()
+
+
+def test_download_promotes_staged_model_into_models_root(monkeypatch, tmp_path):
+    """A successful download moves the staged model tree into models_root."""
+
+    def fake_download_fn(name, *, download_root):
+        snap = download_root / f"models--Systran--faster-whisper-{name}" / "snapshots" / "rev"
+        snap.mkdir(parents=True)
+        (snap / "model.bin").write_bytes(b"\x00\x01")
+        (snap / "config.json").write_text("{}")
+
+    monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
+
+    download("small", tmp_path)
+
+    assert is_downloaded("small", tmp_path) is True
+    assert not any(p.name.startswith(".staging-") for p in tmp_path.iterdir())
+
+
+def test_download_leaves_models_root_clean_on_failure(monkeypatch, tmp_path):
+    """A download that raises mid-transfer must not leave a partial model behind."""
+
+    def fake_download_fn(name, *, download_root):
+        # Simulate a partial transfer then a failure.
+        snap = download_root / f"models--Systran--faster-whisper-{name}" / "snapshots" / "rev"
+        snap.mkdir(parents=True)
+        (snap / "model.bin").write_bytes(b"\x00")  # truncated, no config.json
+        raise RuntimeError("network drop")
+
+    monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
+
+    with pytest.raises(RuntimeError):
+        download("small", tmp_path)
+
+    assert is_downloaded("small", tmp_path) is False
+    assert list(tmp_path.iterdir()) == []  # staging cleaned, nothing promoted
+
+
+def test_download_cancel_mid_transfer_promotes_nothing(monkeypatch, tmp_path):
+    """A cancel set during the transfer discards the staged copy."""
+    cancel = threading.Event()
+
+    def fake_download_fn(name, *, download_root):
+        snap = download_root / f"models--Systran--faster-whisper-{name}" / "snapshots" / "rev"
+        snap.mkdir(parents=True)
+        (snap / "model.bin").write_bytes(b"\x00\x01")
+        (snap / "config.json").write_text("{}")
+        cancel.set()  # user cancels just as the transfer completes
+
+    monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
+
+    download("small", tmp_path, cancel_event=cancel)
+
+    assert is_downloaded("small", tmp_path) is False
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_download_creates_models_root_if_missing(monkeypatch, tmp_path):

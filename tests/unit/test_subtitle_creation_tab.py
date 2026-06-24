@@ -62,6 +62,8 @@ class _FakeWorker:
         self.file_progress = MagicMock()
         self.file_finished = MagicMock()
         self.queue_finished = MagicMock()
+        self.finished = MagicMock()  # native QThread.finished (lifecycle release)
+        self.deleteLater = MagicMock()
         self._started = False
         self._cancelled = False
 
@@ -100,6 +102,20 @@ def test_construction(qtbot, tmp_path):
 def test_generate_button_exists(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     assert tab.generate_button is not None
+
+
+def test_update_config_adopts_new_asr_model(qtbot, tmp_path):
+    """update_config swaps the config so a model switch in Settings is honored (C1)."""
+    import dataclasses
+
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+    assert tab.config.asr_model != "small"  # default is large-v3
+
+    new_config = dataclasses.replace(config, asr_model="small")
+    tab.update_config(new_config)
+
+    assert tab.config.asr_model == "small"
 
 
 def test_language_label_shows_japanese(qtbot, tmp_path):
@@ -184,7 +200,6 @@ def test_unwritable_output_dir_aborts_and_no_worker(qtbot, tmp_path):
     with (
         patch(_ENGINE_AVAILABLE, return_value=True),
         patch(_OS_ACCESS, return_value=False),
-        patch(_IS_DOWNLOADED, return_value=True),
         patch(
             _WORKER_CLS,
             side_effect=AssertionError("Worker must not be created when output not writable"),
@@ -192,6 +207,27 @@ def test_unwritable_output_dir_aborts_and_no_worker(qtbot, tmp_path):
     ):
         tab.generate_button.click()
 
+    assert tab.worker_thread is None
+
+
+def test_writable_check_precedes_model_check(qtbot, tmp_path):
+    """An unwritable output aborts before the model-downloaded guard runs (T2)."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "test.mp4"
+    video.write_bytes(b"fake")
+
+    tab = _make_tab(config, qtbot)
+    tab.file_selector.set_path(str(video))
+
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=False),
+        patch(_IS_DOWNLOADED) as is_downloaded,
+    ):
+        tab.generate_button.click()
+
+    # Writable check returns first, so the model guard is never consulted.
+    is_downloaded.assert_not_called()
     assert tab.worker_thread is None
 
 
@@ -276,6 +312,101 @@ def test_queue_finished_re_enables_generate(qtbot, tmp_path):
         slot()
 
     assert tab.generate_button.isEnabled()
+
+
+def _capture_signal_slots(signal_mock):
+    """Capture slots connected to a _FakeWorker MagicMock signal; returns the list."""
+    slots: list = []
+    original_connect = signal_mock.connect
+
+    def _capture(slot):
+        slots.append(slot)
+        return original_connect(slot)
+
+    signal_mock.connect = _capture
+    return slots
+
+
+def test_cancelled_run_shows_cancelled_status(qtbot, tmp_path):
+    """After cancel, queue_finished reports 'Cancelled', not 'Finished' (M1)."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "episode.mp4"
+    video.write_bytes(b"fake")
+
+    fake_worker = _FakeWorker()
+    queue_slots = _capture_signal_slots(fake_worker.queue_finished)
+
+    tab = _make_tab(config, qtbot)
+    tab.file_selector.set_path(str(video))
+
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_IS_DOWNLOADED, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.generate_button.click()
+
+    tab._on_cancel()
+    tab.progress_widget.set_status = MagicMock()
+    for slot in queue_slots:
+        slot()
+
+    tab.progress_widget.set_status.assert_called_once()
+    assert "Cancel" in tab.progress_widget.set_status.call_args[0][0]
+
+
+def test_worker_released_on_thread_finished(qtbot, tmp_path):
+    """Native QThread.finished clears the handle and schedules deleteLater (M9)."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "episode.mp4"
+    video.write_bytes(b"fake")
+
+    fake_worker = _FakeWorker()
+    finished_slots = _capture_signal_slots(fake_worker.finished)
+
+    tab = _make_tab(config, qtbot)
+    tab.file_selector.set_path(str(video))
+
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_IS_DOWNLOADED, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.generate_button.click()
+
+    assert tab.worker_thread is fake_worker
+    for slot in finished_slots:
+        slot()
+
+    assert tab.worker_thread is None
+    fake_worker.deleteLater.assert_called_once()
+
+
+def test_second_generate_refused_while_running(qtbot, tmp_path):
+    """A second Generate while the worker is running must not start a new one (M8)."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "episode.mp4"
+    video.write_bytes(b"fake")
+
+    fake_worker = _FakeWorker()
+    tab = _make_tab(config, qtbot)
+    tab.file_selector.set_path(str(video))
+
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_IS_DOWNLOADED, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker) as worker_cls,
+    ):
+        tab.generate_button.click()  # starts worker (isRunning → True)
+        # Re-enable the button to simulate a premature queue_finished, then click again.
+        tab.generate_button.setEnabled(True)
+        tab.generate_button.click()
+
+    assert worker_cls.call_count == 1
+    assert tab.worker_thread is fake_worker
 
 
 def test_file_progress_updates_progress_widget(qtbot, tmp_path):

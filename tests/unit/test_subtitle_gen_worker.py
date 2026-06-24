@@ -181,6 +181,94 @@ def test_happy_path_two_files_signal_sequence(qapp, tmp_path, monkeypatch):
     assert len(srt_calls) == 2
 
 
+def test_no_speech_reports_warning_and_writes_no_srt(qapp, tmp_path, monkeypatch):
+    """Empty transcription surfaces a 'no speech' outcome, not a clean Done (C5)."""
+    config = _make_config(tmp_path)
+    config.media_temp_folder.mkdir(parents=True, exist_ok=True)
+
+    v = tmp_path / "silent.mkv"
+    v.write_bytes(b"")
+
+    extractor = _FakeExtractor(tmp_path=tmp_path)
+    srt_calls: list = []
+
+    _patch_wav_to_float32(monkeypatch)
+    _patch_transcribe(monkeypatch, segments=[])
+    _patch_srt_writer(monkeypatch, calls=srt_calls)
+
+    worker = _make_worker([v], config, extractor=extractor)
+    cap = _capture(worker)
+    worker.run()
+
+    assert len(cap["finished"]) == 1
+    _idx, out_path, err = cap["finished"][0]
+    assert out_path is None
+    assert err is not None and "No speech" in err
+    assert srt_calls == []  # blank SRT must not be written
+
+
+def test_cancel_during_transcribe_emits_cancelled(qapp, tmp_path, monkeypatch):
+    """Cancel landing during transcription is caught post-transcribe, no SRT (T4)."""
+    config = _make_config(tmp_path)
+    config.media_temp_folder.mkdir(parents=True, exist_ok=True)
+
+    v = tmp_path / "ep.mkv"
+    v.write_bytes(b"")
+
+    extractor = _FakeExtractor(tmp_path=tmp_path)
+    _patch_wav_to_float32(monkeypatch)
+    srt_calls = _patch_srt_writer(monkeypatch)
+
+    import anki_miner.services.asr.transcriber as t
+
+    def _cancelling_transcribe(
+        audio, *, model_name, models_root, sample_rate, duration_s, cancel_event=None, progress_cb=None
+    ):
+        if cancel_event is not None:
+            cancel_event.set()  # user cancels mid-transcription
+        return [(0.0, 1.0, "x")]
+
+    monkeypatch.setattr(t, "transcribe", _cancelling_transcribe)
+
+    worker = _make_worker([v], config, extractor=extractor)
+    cap = _capture(worker)
+    worker.run()
+
+    _idx, out_path, err = cap["finished"][0]
+    assert out_path is None
+    assert err == "Cancelled"
+    assert srt_calls == []  # no SRT written after cancel
+
+
+def test_srt_write_failure_reports_error_and_cleans_temp(qapp, tmp_path, monkeypatch):
+    """A failure writing the SRT is forwarded as an error and the temp WAV removed (T4)."""
+    config = _make_config(tmp_path)
+    config.media_temp_folder.mkdir(parents=True, exist_ok=True)
+
+    v = tmp_path / "ep.mkv"
+    v.write_bytes(b"")
+
+    extractor = _FakeExtractor(tmp_path=tmp_path)
+    _patch_wav_to_float32(monkeypatch)
+    _patch_transcribe(monkeypatch)  # non-empty segments
+
+    import anki_miner.services.asr.srt_writer as sw
+
+    def _failing_write(segments, out_path):
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr(sw, "segments_to_srt", _failing_write)
+
+    worker = _make_worker([v], config, extractor=extractor)
+    cap = _capture(worker)
+    worker.run()
+
+    _idx, out_path, err = cap["finished"][0]
+    assert out_path is None
+    assert "disk full" in err
+    assert list(config.media_temp_folder.glob("asr_*.wav")) == []  # temp WAV cleaned
+
+
 def test_happy_path_srt_written_next_to_source(qapp, tmp_path, monkeypatch):
     """Default output: SRT goes next to the source video."""
     config = _make_config(tmp_path)

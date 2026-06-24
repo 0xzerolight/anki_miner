@@ -58,6 +58,27 @@ def test_srt_timing_millisecond_precision(tmp_path):
     assert subs[0].end == round(4.9876 * 1000)
 
 
+def test_srt_timing_pinned_literals(tmp_path):
+    """Pin rounded ms to literals so a wrong rounding mode is actually caught (T1)."""
+    out = tmp_path / "pinned.srt"
+    segments_to_srt([(1.2345, 4.9876, "text")], out)
+
+    subs = pysubs2.load(str(out), format_="srt")
+    assert subs[0].start == 1234  # 1.2345 s → 1234 ms
+    assert subs[0].end == 4988  # 4.9876 s → 4988 ms
+
+
+def test_srt_hour_scale_timestamp(tmp_path):
+    """Hour-scale timestamps (>= 3600 s) round-trip correctly (T1)."""
+    out = tmp_path / "hour.srt"
+    segments_to_srt([(3661.5, 3663.0, "late line")], out)
+
+    subs = pysubs2.load(str(out), format_="srt")
+    assert subs[0].start == 3661500  # 01:01:01,500
+    assert subs[0].end == 3663000
+    assert subs[0].text == "late line"
+
+
 def test_srt_text_stripped(tmp_path):
     """Text must be stripped of leading/trailing whitespace in the SRT."""
     out = tmp_path / "stripped.srt"

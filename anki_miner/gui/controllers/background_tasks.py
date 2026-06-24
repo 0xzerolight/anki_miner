@@ -192,8 +192,9 @@ class BackgroundTaskController(QObject):
         """Start an ASR model download worker unless one is already running.
 
         Mirrors :meth:`start_ytdlp_update`: guards against a concurrent run,
-        lazy-imports the worker, connects ``status`` and ``finished`` to the
-        provided callbacks, and releases the handle on ``finished``.
+        lazy-imports the worker, connects ``status`` and ``result_ready`` to the
+        provided callbacks, and releases the handle on the native
+        ``QThread.finished``.
 
         Args:
             model_name: Whisper model identifier (e.g. ``"large-v3"``).
@@ -201,7 +202,7 @@ class BackgroundTaskController(QObject):
                 typically ``config.asr_models_root``.
             on_status: Slot for ``status(str)`` — typically
                 ``SettingsTab.set_asr_model_status``.
-            on_finished: Slot for ``finished(bool, str)`` — called with
+            on_finished: Slot for ``result_ready(bool, str)`` — called with
                 ``(ok, message)`` when the download completes or fails.
         """
         if self.asr_model_download_worker is not None and self.asr_model_download_worker.isRunning():
@@ -212,8 +213,11 @@ class BackgroundTaskController(QObject):
         worker = AsrModelDownloadWorker(model_name, models_root, parent=self)
         self.asr_model_download_worker = worker
         worker.status.connect(on_status)
-        worker.finished.connect(on_finished)
-        worker.finished.connect(lambda _ok, _msg, w=worker: self._release_worker("asr_model_download_worker", w))
+        worker.result_ready.connect(on_finished)
+        # Release on the native QThread.finished (0-arg) so the handle is freed
+        # on real thread exit — including the cancel path, where result_ready
+        # never fires. Mirrors validation/update/ytdlp workers.
+        worker.finished.connect(lambda w=worker: self._release_worker("asr_model_download_worker", w))
         worker.start()
 
     def maybe_migrate_jmdict(self, config: AnkiMinerConfig) -> bool:

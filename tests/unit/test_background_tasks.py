@@ -282,10 +282,16 @@ class TestStartYtdlpUpdate:
 
 
 class _FakeAsrDownloadWorker(QObject):
-    """Fake AsrModelDownloadWorker with real connectable status/finished signals."""
+    """Fake AsrModelDownloadWorker.
+
+    Mirrors the real worker's split: ``result_ready(bool, str)`` carries the
+    outcome payload, while the native 0-arg ``finished`` fires on thread exit
+    and drives handle release.
+    """
 
     status = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)
+    result_ready = pyqtSignal(bool, str)
+    finished = pyqtSignal()
 
     def __init__(self, name: str, models_root, parent=None) -> None:
         super().__init__(parent)
@@ -300,9 +306,13 @@ class _FakeAsrDownloadWorker(QObject):
     def start(self) -> None:
         self._running = True
 
-    def emit_finished(self, ok: bool = True, message: str = "Done") -> None:
+    def emit_result(self, ok: bool = True, message: str = "Done") -> None:
+        self.result_ready.emit(ok, message)
+
+    def emit_finished(self) -> None:
+        """Simulate thread exit (native QThread.finished, 0-arg)."""
         self._running = False
-        self.finished.emit(ok, message)
+        self.finished.emit()
 
 
 class TestStartAsrModelDownload:
@@ -335,8 +345,8 @@ class TestStartAsrModelDownload:
         worker.status.emit("Downloading large-v3…")
         assert status_received == ["Downloading large-v3…"]
 
-    def test_routes_finished(self, controller, qtbot, monkeypatch, tmp_path):
-        """finished(ok, msg) is forwarded to the on_finished callback."""
+    def test_routes_result(self, controller, qtbot, monkeypatch, tmp_path):
+        """result_ready(ok, msg) is forwarded to the on_finished callback."""
         worker = _FakeAsrDownloadWorker("small", tmp_path)
         self._patch(monkeypatch, worker)
 
@@ -345,7 +355,7 @@ class TestStartAsrModelDownload:
             "small", tmp_path, lambda msg: None, lambda ok, msg: finished_calls.append((ok, msg))
         )
 
-        worker.emit_finished(True, "small downloaded successfully.")
+        worker.emit_result(True, "small downloaded successfully.")
         assert finished_calls == [(True, "small downloaded successfully.")]
 
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
@@ -362,12 +372,24 @@ class TestStartAsrModelDownload:
         assert controller.asr_model_download_worker is worker_a
 
     def test_handle_nulled_after_finished(self, controller, qtbot, monkeypatch, tmp_path):
-        """Emitting finished must null the handle and schedule deleteLater."""
+        """Native thread-exit must null the handle and schedule deleteLater."""
         worker = _FakeAsrDownloadWorker("large-v3", tmp_path)
         self._patch(monkeypatch, worker)
         controller.start_asr_model_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
 
-        worker.emit_finished(True, "Done")
+        worker.emit_finished()
+
+        assert controller.asr_model_download_worker is None
+        worker.deleteLater.assert_called_once()
+
+    def test_handle_released_on_cancel_without_result(self, controller, qtbot, monkeypatch, tmp_path):
+        """Cancel path: thread exits without result_ready, yet the handle is freed (H1)."""
+        worker = _FakeAsrDownloadWorker("large-v3", tmp_path)
+        self._patch(monkeypatch, worker)
+        controller.start_asr_model_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
+
+        # No emit_result() — simulates a cancelled download that never reports a payload.
+        worker.emit_finished()
 
         assert controller.asr_model_download_worker is None
         worker.deleteLater.assert_called_once()
