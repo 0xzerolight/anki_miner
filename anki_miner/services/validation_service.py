@@ -11,6 +11,7 @@ from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.models import ValidationIssue, ValidationResult
 from anki_miner.services._ankiconnect import post_action
 from anki_miner.utils import ensure_directory
+from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 
@@ -87,6 +88,17 @@ class ValidationService:
                     component="ffprobe",
                     severity="ERROR",
                     message=ffprobe_msg,
+                )
+            )
+
+        # Check alass (optional — subtitle retiming only; absent is non-fatal)
+        alass_ok, alass_msg = self._check_alass()
+        if not alass_ok:
+            issues.append(
+                ValidationIssue(
+                    component="alass",
+                    severity="WARNING",
+                    message=alass_msg,
                 )
             )
 
@@ -301,6 +313,44 @@ class ValidationService:
             Tuple of (success, message)
         """
         return self._check_tool("ffprobe", resolve_ffprobe(self.config))
+
+    def _check_alass(self) -> tuple[bool, str]:
+        """Check if alass is installed and accessible (optional/non-fatal).
+
+        alass is used for subtitle retiming, an opt-in feature.  A missing
+        binary must not block startup; callers treat ``ok=False`` as a
+        non-fatal warning, not an error.
+
+        Returns:
+            Tuple of (success, message).  ``ok=False`` means alass is absent
+            or misbehaving; callers should surface this as a WARNING.
+        """
+        resolved = resolve_alass(self.config)
+        try:
+            result = subprocess.run(
+                [resolved, "--version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                **no_window_kwargs(),
+            )
+
+            if result.returncode != 0:
+                return False, "alass returned non-zero exit code"
+
+            version_line = result.stdout.split("\n")[0] if result.stdout else "unknown"
+            return True, f"{version_line} {_classify_resolved('alass', resolved)}"
+
+        except FileNotFoundError:
+            return (
+                False,
+                "alass not found — subtitle retiming will be unavailable; " "install alass or set its path in Settings",
+            )
+        except subprocess.TimeoutExpired:
+            return False, "alass check timed out"
+        except Exception as e:
+            logger.exception("Unexpected error checking alass")
+            return False, f"Unexpected error: {e}"
 
     def _check_deck_exists(self) -> tuple[bool, str]:
         """Check if the target deck exists in Anki.
