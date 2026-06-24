@@ -26,6 +26,7 @@ _LANGUAGES: dict[str, str] = {
     "ja": "日本語",
     "ru": "Русский",
     "fr": "Français",
+    "es": "Español",
 }
 
 
