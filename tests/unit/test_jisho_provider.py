@@ -123,7 +123,10 @@ class TestJishoProvider:
         assert result is None
 
     def test_lookup_returns_yomitan_envelope(self):
-        """Test that lookup wraps results in a Yomitan-compatible HTML envelope."""
+        """Jisho output must mirror the offline IndexedDictProvider markup so the
+        card-style presets style Jisho-fallback cards identically: a `<i>` chip,
+        a `gloss-list` with one `gloss-item`/`gloss-content` per sense, and no
+        hand-written "1." prefix (the preset numbers senses via the list)."""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -145,11 +148,32 @@ class TestJishoProvider:
             result = provider.lookup("食べる")
 
         assert result is not None
-        assert result.startswith('<div class="yomitan-glossary">')
+        assert result.startswith('<div class="yomitan-glossary"><ol data-count="1">')
         assert '<li data-dictionary="Jisho API">' in result
-        assert "1. to eat" in result
-        assert "2. to live on; subsist on" in result
-        assert result.endswith("</div>")
+        assert "<i>(Jisho API)</i>" in result
+        assert '<ul class="gloss-list" data-count="2">' in result
+        assert '<li class="gloss-item"><div class="gloss-content">to eat</div></li>' in result
+        assert '<li class="gloss-item"><div class="gloss-content">to live on; subsist on</div></li>' in result
+        # No hand-written ordinal — numbering is the preset's job now.
+        assert "1. to eat" not in result
+        assert result.endswith("</li></ol></div>")
+
+    def test_lookup_single_sense_has_count_one(self):
+        """A single sense yields data-count="1" so the preset drops the ordinal,
+        matching the offline single-sense behavior."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": [{"senses": [{"english_definitions": ["to eat"]}]}]}
+
+        provider = JishoProvider(delay=0)
+        with patch(
+            "anki_miner.services.dictionary.providers.jisho_provider.requests.get",
+            return_value=mock_response,
+        ):
+            result = provider.lookup("食べる")
+
+        assert result is not None
+        assert '<ul class="gloss-list" data-count="1">' in result
 
     def test_lookup_escapes_html_in_definitions(self):
         """T-36: API-sourced definition strings must be HTML-escaped before
