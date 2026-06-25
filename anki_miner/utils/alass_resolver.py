@@ -6,7 +6,10 @@ Resolution order (first hit wins):
    actually exists.
 2. **Bundled** — inside a PyInstaller frozen bundle, ``sys._MEIPASS/bin/alass``
    (``alass.exe`` on Windows, otherwise ``alass``).
-3. **PATH fallback** — the bare literal ``"alass"``.
+3. **Managed** — an in-app-downloaded binary at ``config.bin_root/alass``
+   (``alass.exe`` on Windows). Installed by ``services.alass_installer`` for
+   source/pip users who lack a bundled copy.
+4. **PATH fallback** — the bare literal ``"alass"``.
 
 The frozen-detection idiom mirrors ``anki_miner.gui.resources.get_resource_dir``.
 
@@ -22,8 +25,9 @@ from typing import Any
 
 __all__ = ["resolve_alass"]
 
-# Cache keyed by (name, override-as-str, frozen-state, meipass) so that a changed
-# override or a change in frozen state is never masked by a stale entry.
+# Cache keyed by (name, override-as-str, bin-root-as-str, frozen-state, meipass)
+# so that a changed override, bin_root, or frozen state is never masked by a
+# stale entry.
 _CACHE: dict[tuple, str] = {}
 
 
@@ -44,20 +48,31 @@ def _bundled_name(base: str) -> str:
     return f"{base}.exe" if sys.platform == "win32" else base
 
 
-def _resolve(base: str, override: Any) -> str:
+def _resolve(base: str, override: Any, bin_root: Any) -> str:
     override_key = str(override) if override else None
+    bin_root_key = str(bin_root) if bin_root else None
     frozen, meipass = _frozen_state()
-    cache_key = (base, override_key, frozen, meipass)
+    cache_key = (base, override_key, bin_root_key, frozen, meipass)
     cached = _CACHE.get(cache_key)
     if cached is not None:
         return cached
 
-    resolved = _compute(base, override, frozen, meipass)
+    resolved = _compute(base, override, bin_root, frozen, meipass)
     _CACHE[cache_key] = resolved
     return resolved
 
 
-def _compute(base: str, override: Any, frozen: bool, meipass: str | None) -> str:
+def _executable_file(path: Path) -> bool:
+    """Return True if *path* is a file and (on POSIX) executable.
+
+    X_OK is meaningless on Windows, so the executable check is skipped there. A
+    present-but-non-executable file returns False so callers fall through rather
+    than returning a path that fails later at subprocess time.
+    """
+    return path.is_file() and (sys.platform == "win32" or os.access(path, os.X_OK))
+
+
+def _compute(base: str, override: Any, bin_root: Any, frozen: bool, meipass: str | None) -> str:
     # 1. Config override.
     if override:
         override_path = Path(override)
@@ -65,18 +80,27 @@ def _compute(base: str, override: Any, frozen: bool, meipass: str | None) -> str
             return str(override_path)
 
     # 2. Bundled binary inside the frozen distributable. Require the executable
-    #    bit (POSIX) so a present-but-non-exec bundle falls through to PATH
-    #    instead of being returned and failing later at subprocess time. X_OK is
-    #    meaningless on Windows, so skip the check there.
+    #    bit (POSIX) so a present-but-non-exec bundle falls through instead of
+    #    being returned and failing later at subprocess time.
     if frozen and meipass is not None:
         bundled = Path(meipass) / "bin" / _bundled_name(base)
-        if bundled.is_file() and (sys.platform == "win32" or os.access(bundled, os.X_OK)):
+        if _executable_file(bundled):
             return str(bundled)
 
-    # 3. PATH fallback — bare literal.
+    # 3. Managed in-app-downloaded binary under bin_root.
+    if bin_root:
+        managed = Path(bin_root) / _bundled_name(base)
+        if _executable_file(managed):
+            return str(managed)
+
+    # 4. PATH fallback — bare literal.
     return base
 
 
 def resolve_alass(config) -> str:
     """Resolve the alass executable path/literal for the given config."""
-    return _resolve("alass", getattr(config, "alass_location", None))
+    return _resolve(
+        "alass",
+        getattr(config, "alass_location", None),
+        getattr(config, "bin_root", None),
+    )

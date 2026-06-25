@@ -126,6 +126,30 @@ def test_language_label_shows_japanese(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Control explanations / styling
+# ---------------------------------------------------------------------------
+
+
+def test_output_location_label_objectname_not_helper_text(qtbot, tmp_path):
+    """Output-location label uses a non-italic objectName, not 'helper-text'."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab.output_location_label.objectName() == "output-location-value"
+
+
+def test_mode_buttons_have_tooltips(qtbot, tmp_path):
+    """Single-file / folder mode buttons carry explanatory tooltips."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab.file_mode_button.toolTip().strip()
+    assert tab.folder_mode_button.toolTip().strip()
+
+
+def test_overwrite_checkbox_has_tooltip(qtbot, tmp_path):
+    """Overwrite checkbox explains skip-vs-overwrite via tooltip."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab.overwrite_checkbox.toolTip().strip()
+
+
+# ---------------------------------------------------------------------------
 # Mode toggle
 # ---------------------------------------------------------------------------
 
