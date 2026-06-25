@@ -221,7 +221,7 @@ class AnkiMinerConfig:
     # whenever Settings are saved (no separate Apply/Remove buttons). The dropdown
     # is the *desired* state; a status line reports what's actually live in Anki.
     # `card_style_preset` is a preset id (one of the `card_style_presets.PRESETS`
-    # ids — off / default / yomitan-classic / minimal / none); `"off"` strips the
+    # ids — off / default / minimal / none); `"off"` strips the
     # managed block, `"none"` writes a block with only `custom_card_css`. Default
     # is `"off"` so a fresh install never touches a note type without an explicit
     # choice. `custom_card_css` (Yomitan/Jitendex snippets work verbatim) is

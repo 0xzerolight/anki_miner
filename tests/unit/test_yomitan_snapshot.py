@@ -61,7 +61,7 @@ def test_import_lookup_roundtrip_matches_snapshot(tmp_path: Path) -> None:
                     100,  # score
                     [
                         # Sense 1: plain string. Renderer wraps in
-                        # <li class="gloss-item"><span class="gloss-content">…</span></li>.
+                        # <li class="gloss-item"><div class="gloss-content">…</div></li>.
                         "to do",
                         # Sense 2: structured-content tree carrying a table + bundled image.
                         {

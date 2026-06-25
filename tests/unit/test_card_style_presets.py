@@ -4,14 +4,16 @@ import re
 
 from anki_miner.services.dictionary.card_style_presets import (
     DEFAULT_PRESET_ID,
+    LEGACY_PRESET_ALIASES,
     OFF_PRESET_ID,
     PRESETS,
     load_preset_css,
+    resolve_preset_alias,
 )
 from anki_miner.services.dictionary.card_styling import load_default_card_css
 
-EXPECTED_ORDER = ["off", "default", "yomitan-classic", "minimal", "none"]
-NON_EMPTY_IDS = ["default", "yomitan-classic", "minimal"]
+EXPECTED_ORDER = ["off", "default", "minimal", "none"]
+NON_EMPTY_IDS = ["default", "minimal"]
 
 
 class TestPresetsRegistry:
@@ -75,9 +77,66 @@ class TestPresetScoping:
             assert not re.search(r"(^|\})\s*\*\s*\{", css)
 
 
-def _iter_rules(css: str):
-    """Yield (selector_group, declarations) for each top-level rule."""
+class TestLegacyPresetAliases:
+    """Retired ids must remap onto a surviving preset, not silently drop to Off."""
+
+    def test_yomitan_classic_resolves_to_default(self):
+        assert LEGACY_PRESET_ALIASES["yomitan-classic"] == "default"
+        assert resolve_preset_alias("yomitan-classic") == "default"
+
+    def test_alias_targets_are_real_presets(self):
+        valid = {p.id for p in PRESETS}
+        for target in LEGACY_PRESET_ALIASES.values():
+            assert target in valid
+
+    def test_current_id_unchanged(self):
+        assert resolve_preset_alias("minimal") == "minimal"
+
+    def test_unknown_and_empty_pass_through(self):
+        # Coercion of unknown/empty ids is the caller's job, not the resolver's.
+        assert resolve_preset_alias("does-not-exist") == "does-not-exist"
+        assert resolve_preset_alias("") == ""
+
+
+def _strip_supports(css: str) -> str:
+    """Drop `@supports … { … }` blocks (one nesting level) and comments."""
     flat = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+    return re.sub(r"@supports[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}", "", flat, flags=re.DOTALL)
+
+
+class TestColorMixFallback:
+    """`color-mix()` is unsupported on older Anki WebViews; an unguarded value
+    invalidates the whole custom property and strips the color. Every preset must
+    keep its `color-mix()` uses inside an `@supports` block and ship a plain
+    fallback for the same tunables outside it."""
+
+    def test_no_color_mix_outside_supports(self):
+        for preset_id in NON_EMPTY_IDS:
+            css = load_preset_css(preset_id)
+            assert "color-mix(" in css, f"{preset_id} should use color-mix in an @supports block"
+            assert "color-mix(" not in _strip_supports(css), (
+                f"{preset_id}: color-mix() used outside an @supports guard — "
+                "older WebViews would lose the color entirely"
+            )
+
+    def test_tunables_have_plain_fallback(self):
+        # The base (un-guarded) block must set the muted/faint tunables to a plain
+        # color so unsupported engines still get a visible value.
+        for preset_id in NON_EMPTY_IDS:
+            base = _strip_supports(load_preset_css(preset_id))
+            assert "--am-muted:" in base
+            assert "--am-faint:" in base
+
+
+def _iter_rules(css: str):
+    """Yield (selector_group, declarations) for each top-level rule.
+
+    `@supports` wrappers are unwrapped (opener removed, dangling close skipped) so
+    the rules inside are checked as if top-level — the guard invariant must hold
+    for them too.
+    """
+    flat = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+    flat = re.sub(r"@supports[^{]*\{", "", flat)
     for block in flat.split("}"):
         if "{" not in block:
             continue

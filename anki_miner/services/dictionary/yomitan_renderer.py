@@ -630,8 +630,12 @@ def render_glossary_entry(
     """Render a Yomitan term-bank glossary array to `<li class="gloss-item">` items.
 
     Pure SC-tree → HTML translator. Each glossary item becomes one
-    `<li class="gloss-item"><span class="gloss-content">…</span></li>`.
-    Plain strings are HTML-escaped and dropped into the inner span as text;
+    `<li class="gloss-item"><div class="gloss-content">…</div></li>`. The wrapper
+    is a block-level `<div>` (not a `<span>`): structured-content items routinely
+    contain block nodes (`div`/`table`/`ul`) and an inline `<span>` parent makes
+    the HTML parser auto-close the span before the block, orphaning the content
+    from `.gloss-content` styling. A short string sense still renders on one line.
+    Plain strings are HTML-escaped and dropped into the inner div as text;
     structured-content nodes go through `structured_content_to_html`. The
     caller is responsible for wrapping the result in `<ul>`/`<ol>` or any
     dictionary-level chrome — this function emits items only.
@@ -654,5 +658,5 @@ def render_glossary_entry(
             inner = escape(normalized).replace("\n", "<br>")
         else:
             inner = structured_content_to_html(item, dict_id=dict_id, media_collector=media_collector)
-        parts.append(f'<li class="gloss-item"><span class="gloss-content">{inner}</span></li>')
+        parts.append(f'<li class="gloss-item"><div class="gloss-content">{inner}</div></li>')
     return "".join(parts)
