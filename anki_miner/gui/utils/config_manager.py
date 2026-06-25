@@ -364,7 +364,9 @@ class GUIConfigManager:
         1. Pre-preset boolean ``use_default_card_stylesheet`` → preset id
            (``True`` → ``"default"``, ``False`` → ``"none"``). The legacy key is
            left in place; the valid-keys filter in ``load_config`` drops it.
-        2. Any ``card_style_preset`` value that is not a known preset id is
+        2. A retired preset id is remapped onto its surviving replacement
+           (``yomitan-classic`` → ``default``) so existing users keep their look.
+        3. Any ``card_style_preset`` value that is still not a known preset id is
            coerced to ``"off"`` so an unrecognised/corrupt value can never write
            styling. Known ids come from ``card_style_presets.PRESETS``.
 
@@ -373,15 +375,19 @@ class GUIConfigManager:
         one-time reseed runs on the next AnkiConnect-reachable launch (see
         ``AnkiProbeController.reconcile_styling``).
         """
-        from anki_miner.services.dictionary.card_style_presets import OFF_PRESET_ID, PRESETS
+        from anki_miner.services.dictionary.card_style_presets import (
+            OFF_PRESET_ID,
+            PRESETS,
+            resolve_preset_alias,
+        )
 
         if "card_style_preset" not in data and "use_default_card_stylesheet" in data:
             data["card_style_preset"] = "default" if data["use_default_card_stylesheet"] else "none"
 
         if "card_style_preset" in data:
+            resolved = resolve_preset_alias(data["card_style_preset"])
             valid_ids = {p.id for p in PRESETS}
-            if data["card_style_preset"] not in valid_ids:
-                data["card_style_preset"] = OFF_PRESET_ID
+            data["card_style_preset"] = resolved if resolved in valid_ids else OFF_PRESET_ID
         return data
 
     @staticmethod

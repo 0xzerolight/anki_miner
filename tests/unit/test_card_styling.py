@@ -70,9 +70,16 @@ class TestDetectAppliedPreset:
         assert detect_applied_preset(block) == "minimal"
 
     def test_recorded_id_survives_surrounding_css(self):
-        block = build_managed_block(preset="yomitan-classic", custom_css=".x{}")
+        block = build_managed_block(preset="default", custom_css=".x{}")
         existing = apply_managed_block(".before{}\n\n.after{}", block)
-        assert detect_applied_preset(existing) == "yomitan-classic"
+        assert detect_applied_preset(existing) == "default"
+
+    def test_retired_id_detected_verbatim_for_caller_to_resolve(self):
+        # A live block written by an old version records a retired id; detection
+        # returns it verbatim and the consumer (controller) maps it via
+        # resolve_preset_alias — see TestStylingMigrationAdopt.
+        block = build_managed_block(preset="yomitan-classic", custom_css="")
+        assert detect_applied_preset(block) == "yomitan-classic"
 
     def test_legacy_block_detected_as_empty_string(self):
         legacy = f"{LEGACY_BEGIN}\n.x{{}}\n{END_MARKER}"

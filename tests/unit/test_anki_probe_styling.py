@@ -87,10 +87,20 @@ def test_reseed_present_block_uses_detected_preset():
 
 def test_reseed_legacy_block_keeps_saved_preset():
     # Legacy block (preset_id="") → fall back to the saved preference.
-    ctrl, panel, persist = _make(migrated=False, touched=False, preset="yomitan-classic")
+    ctrl, panel, persist = _make(migrated=False, touched=False, preset="minimal")
     ctrl._on_styling_probe_result(present=True, preset_id="")
-    panel.set_card_style_preset.assert_called_once_with("yomitan-classic")
-    persist.assert_called_once_with("yomitan-classic", True)
+    panel.set_card_style_preset.assert_called_once_with("minimal")
+    persist.assert_called_once_with("minimal", True)
+
+
+def test_reseed_retired_live_id_adopts_replacement():
+    # A live block written by an old version records the retired ``yomitan-classic``
+    # id; the reseed must adopt its surviving replacement (``default``) so the
+    # dropdown re-selects a real entry instead of falling through to Off.
+    ctrl, panel, persist = _make(migrated=False, touched=False, preset="off")
+    ctrl._on_styling_probe_result(present=True, preset_id="yomitan-classic")
+    panel.set_card_style_preset.assert_called_once_with("default")
+    persist.assert_called_once_with("default", True)
 
 
 def test_reseed_respects_in_session_user_choice():
@@ -148,6 +158,8 @@ def test_normalize_applied():
     assert norm(True, "", "minimal") == "minimal"
     # …unless desired is Off, which is a real "strip it" divergence.
     assert norm(True, "", "off") == ""
+    # A retired live id is mapped onto its replacement before comparison.
+    assert norm(True, "yomitan-classic", "default") == "default"
 
 
 def test_live_status_text_distinguishes_off():
