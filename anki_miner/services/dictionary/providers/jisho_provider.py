@@ -70,8 +70,8 @@ class JishoProvider:
                 return None
 
             first = results[0]
-            definitions = []
-            for i, sense in enumerate(first.get("senses", [])[:5], 1):
+            senses = []
+            for sense in first.get("senses", [])[:5]:
                 eng = sense.get("english_definitions", [])
                 if eng:
                     # HTML-escape each API-sourced leaf string before it lands
@@ -80,17 +80,24 @@ class JishoProvider:
                     # from Jisho would be stored XSS (the offline path sanitizes
                     # via yomitan_renderer; mirror that leaf-text escaping here).
                     joined = "; ".join(escape(str(d)) for d in eng)
-                    definitions.append(f"{i}. {joined}")
+                    senses.append(joined)
 
-            if not definitions:
+            if not senses:
                 return None
 
-            inner = "<br>".join(definitions)
+            # Emit the same markup shape as the offline IndexedDictProvider so the
+            # card-style presets style Jisho-fallback cards identically: a muted
+            # `<i>` chip line plus a numbered `gloss-list`/`gloss-item` structure.
+            # Sense numbering is left to the preset's `list-style-type: decimal` —
+            # no hand-written "1." prefix — so single-sense entries drop the ordinal
+            # via the `gloss-list[data-count="1"]` rule, matching the offline path.
+            items = "".join(f'<li class="gloss-item"><div class="gloss-content">{sense}</div></li>' for sense in senses)
             return (
                 '<div class="yomitan-glossary">'
                 '<ol data-count="1">'
-                f'<li data-dictionary="{self.name}">'
-                f"{inner}"
+                f'<li data-dictionary="{escape(self.name)}">'
+                f"<i>({escape(self.name)})</i>"
+                f'<ul class="gloss-list" data-count="{len(senses)}">{items}</ul>'
                 "</li>"
                 "</ol>"
                 "</div>"

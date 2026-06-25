@@ -215,10 +215,19 @@ class TestCardStylingRoundTrip:
         """An unrecognised/corrupt preset id is coerced to "off" (never writes styling)."""
         assert GUIConfigManager._migrate_card_style_preset({"card_style_preset": "bogus"})["card_style_preset"] == "off"
         # Known ids — including "off" itself — pass through unchanged.
-        for valid in ("off", "default", "yomitan-classic", "minimal", "none"):
+        for valid in ("off", "default", "minimal", "none"):
             assert (
                 GUIConfigManager._migrate_card_style_preset({"card_style_preset": valid})["card_style_preset"] == valid
             )
+
+    def test_migrate_card_style_preset_remaps_retired_id(self):
+        """The retired ``yomitan-classic`` id is remapped onto ``default`` (the
+        rebuilt Rich preset) so existing users keep styling instead of dropping
+        to Off."""
+        assert (
+            GUIConfigManager._migrate_card_style_preset({"card_style_preset": "yomitan-classic"})["card_style_preset"]
+            == "default"
+        )
 
     def test_save_and_load_preserves_migrated_flag(self, tmp_path, monkeypatch):
         """card_style_migrated must round-trip so the reseed only runs once."""

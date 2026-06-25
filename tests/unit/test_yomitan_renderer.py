@@ -334,27 +334,28 @@ class TestLangAttribute:
 
 class TestRenderGlossaryEntry:
     """The renderer returns only `<li class="gloss-item">` items wrapping a
-    `<span class="gloss-content">`. No `<ul>`/`<ol>`, no `<div class="tag-list">`,
+    `<div class="gloss-content">`. No `<ul>`/`<ol>`, no `<div class="tag-list">`,
     no inline `style` on items — all wrapper composition lives in the provider."""
 
     def test_plain_string_glossary_wraps_each_in_li(self):
         html = render_glossary_entry(["to eat", "to consume"])
         assert html == (
-            '<li class="gloss-item"><span class="gloss-content">to eat</span></li>'
-            '<li class="gloss-item"><span class="gloss-content">to consume</span></li>'
+            '<li class="gloss-item"><div class="gloss-content">to eat</div></li>'
+            '<li class="gloss-item"><div class="gloss-content">to consume</div></li>'
         )
 
     def test_plain_string_html_escaped_inside_li(self):
         html = render_glossary_entry(["<x>"])
-        assert html == ('<li class="gloss-item"><span class="gloss-content">&lt;x&gt;</span></li>')
+        assert html == ('<li class="gloss-item"><div class="gloss-content">&lt;x&gt;</div></li>')
 
     def test_no_outer_wrapper(self):
         html = render_glossary_entry(["x", "y"])
-        # No <ul>, no <ol>, no tag-list — the renderer emits items only.
+        # No <ul>, no <ol>, no tag-list — the renderer emits items only. Plain
+        # strings carry no structured-content div (only the gloss-content wrapper).
         assert not html.startswith("<ul")
         assert not html.startswith("<ol")
         assert "tag-list" not in html
-        assert "<div" not in html
+        assert '<div class="gloss-sc-' not in html
 
     def test_no_inline_style_on_items(self):
         html = render_glossary_entry(["x"])
@@ -369,8 +370,8 @@ class TestRenderGlossaryEntry:
                 {"tag": "div", "content": [{"tag": "b", "content": "bold"}, " then plain"]},
             ]
         )
-        assert html.startswith('<li class="gloss-item"><span class="gloss-content">')
-        assert html.endswith("</span></li>")
+        assert html.startswith('<li class="gloss-item"><div class="gloss-content">')
+        assert html.endswith("</div></li>")
         assert '<div class="gloss-sc-div">' in html
         assert '<b class="gloss-sc-b">bold</b>' in html
 
@@ -382,21 +383,21 @@ class TestRenderGlossaryEntry:
             ]
         )
         assert html.count('<li class="gloss-item">') == 2
-        assert ('<li class="gloss-item"><span class="gloss-content">plain text</span></li>') in html
+        assert ('<li class="gloss-item"><div class="gloss-content">plain text</div></li>') in html
         assert (
-            '<li class="gloss-item"><span class="gloss-content">' '<div class="gloss-sc-div">x</div></span></li>'
+            '<li class="gloss-item"><div class="gloss-content">' '<div class="gloss-sc-div">x</div></div></li>'
         ) in html
 
     def test_plain_string_newlines_become_br(self):
         # Issue #28: plain-text monolingual dicts use \n between sub-senses.
         # Anki collapses literal newlines; <br> is needed for visual line breaks.
         html = render_glossary_entry(["① a\n② b\n③ c"])
-        assert html == ('<li class="gloss-item"><span class="gloss-content">' "① a<br>② b<br>③ c" "</span></li>")
+        assert html == ('<li class="gloss-item"><div class="gloss-content">' "① a<br>② b<br>③ c" "</div></li>")
 
     def test_plain_string_crlf_normalized(self):
         # Windows-authored dictionaries may use CRLF or bare CR; render same as LF.
         html = render_glossary_entry(["a\r\nb\rc"])
-        assert html == ('<li class="gloss-item"><span class="gloss-content">' "a<br>b<br>c" "</span></li>")
+        assert html == ('<li class="gloss-item"><div class="gloss-content">' "a<br>b<br>c" "</div></li>")
 
 
 class TestSecurityHardening:
@@ -764,7 +765,7 @@ class TestDictMediaImgRewrite:
         assert 'src="d__x.svg"' in out
         assert collected == {"x.svg"}
         # Image lands inside the gloss-item / gloss-content envelope.
-        assert out.startswith('<li class="gloss-item"><span class="gloss-content">')
+        assert out.startswith('<li class="gloss-item"><div class="gloss-content">')
 
 
 class TestDictMediaHelpers:

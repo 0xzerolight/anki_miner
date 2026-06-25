@@ -24,7 +24,11 @@ from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
 from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
 from anki_miner.gui.workers.styling_worker import StylingProbeWorker, StylingWorker
 from anki_miner.services.anki_service import AnkiService
-from anki_miner.services.dictionary.card_style_presets import OFF_PRESET_ID, PRESETS
+from anki_miner.services.dictionary.card_style_presets import (
+    OFF_PRESET_ID,
+    PRESETS,
+    resolve_preset_alias,
+)
 from anki_miner.utils.i18n import tr_format
 
 
@@ -314,7 +318,9 @@ class AnkiProbeController:
         if not present:
             detected = OFF_PRESET_ID
         elif preset_id:
-            detected = preset_id
+            # A live block may record a retired id (e.g. yomitan-classic) — adopt
+            # its surviving replacement so the dropdown re-selects a real entry.
+            detected = resolve_preset_alias(preset_id)
         else:
             # Legacy block with no recorded preset — keep the saved preference.
             saved = self._get_config().card_style_preset
@@ -349,7 +355,7 @@ class AnkiProbeController:
         if not present:
             return OFF_PRESET_ID
         if preset_id:
-            return preset_id
+            return resolve_preset_alias(preset_id)
         return desired if desired != OFF_PRESET_ID else ""
 
     @staticmethod
