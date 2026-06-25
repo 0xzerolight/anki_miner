@@ -390,15 +390,15 @@ def main():
     )
     window.background_tasks.ytdlp_update_result.connect(settings_tab.set_ytdlp_status_from_result)
 
-    # ASR model download: the ASR panel's "Download model" button → background
-    # download worker. Status flows back to the panel's status label; on finish
-    # refresh the downloaded-state label via _refresh_status so it reflects the
-    # new on-disk state.
+    # ASR model download: the Subtitles panel's "Download model" button →
+    # background download worker. Status flows back to the panel's status label;
+    # on finish refresh the downloaded-state label via _refresh_status so it
+    # reflects the new on-disk state.
     def _on_asr_download_requested(model_name: str) -> None:
         def _on_asr_finished(ok: bool, message: str) -> None:
             settings_tab.set_asr_model_status(message)
             # Refresh the panel's downloaded-state label regardless of success/failure.
-            settings_tab.asr_panel._refresh_status(model_name, window.get_config().asr_models_root)
+            settings_tab.subtitles_panel._refresh_status(model_name, window.get_config().asr_models_root)
 
         window.background_tasks.start_asr_model_download(
             model_name,
@@ -408,6 +408,22 @@ def main():
         )
 
     settings_tab.asr_download_requested.connect(_on_asr_download_requested)
+
+    # alass download: the Subtitles panel's "Download alass" button → background
+    # install worker. Status flows back to the panel; on finish refresh the
+    # installed-state label so it reflects the new on-disk binary.
+    def _on_alass_download_requested() -> None:
+        def _on_alass_finished(ok: bool, message: str) -> None:
+            settings_tab.set_alass_status(message)
+            settings_tab.subtitles_panel._refresh_alass_status()
+
+        window.background_tasks.start_alass_download(
+            window.get_config().bin_root,
+            settings_tab.set_alass_status,
+            _on_alass_finished,
+        )
+
+    settings_tab.alass_download_requested.connect(_on_alass_download_requested)
     # Wire the Dictionary Settings panel's pre-remove hook so deleting a
     # dictionary closes cached sqlite handles across every tab first — Win11
     # rejects the rmtree otherwise (Issue #30).
