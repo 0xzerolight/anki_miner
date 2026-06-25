@@ -7,10 +7,11 @@ from anki_miner.utils.alass_resolver import resolve_alass
 
 
 class _Cfg:
-    """Minimal config stub with an alass_location attribute."""
+    """Minimal config stub with alass_location and bin_root attributes."""
 
-    def __init__(self, alass_location=None):
+    def __init__(self, alass_location=None, bin_root=None):
         self.alass_location = alass_location
+        self.bin_root = bin_root
 
 
 @pytest.fixture(autouse=True)
@@ -111,6 +112,85 @@ class TestResolveAlass:
             pass
 
         assert resolve_alass(_BareConfig()) == "alass"
+
+
+class TestManagedBinRoot:
+    def test_managed_binary_used_when_present(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        bin_root = tmp_path / "bin"
+        bin_root.mkdir()
+        managed = bin_root / "alass"
+        managed.write_text("#!/bin/sh\n")
+        managed.chmod(0o755)
+
+        assert resolve_alass(_Cfg(bin_root=bin_root)) == str(managed)
+
+    def test_managed_absent_falls_through_to_path(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        bin_root = tmp_path / "bin"
+        bin_root.mkdir()
+
+        assert resolve_alass(_Cfg(bin_root=bin_root)) == "alass"
+
+    def test_managed_non_executable_falls_through(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        bin_root = tmp_path / "bin"
+        bin_root.mkdir()
+        managed = bin_root / "alass"
+        managed.write_text("#!/bin/sh\n")
+        managed.chmod(0o644)
+
+        assert resolve_alass(_Cfg(bin_root=bin_root)) == "alass"
+
+    def test_managed_windows_exe_name(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "win32")
+        bin_root = tmp_path / "bin"
+        bin_root.mkdir()
+        managed = bin_root / "alass.exe"
+        managed.write_text("binary")
+
+        assert resolve_alass(_Cfg(bin_root=bin_root)) == str(managed)
+
+    def test_override_beats_managed(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        override = tmp_path / "override-alass"
+        override.write_text("#!/bin/sh\n")
+        bin_root = tmp_path / "bin"
+        bin_root.mkdir()
+        managed = bin_root / "alass"
+        managed.write_text("#!/bin/sh\n")
+        managed.chmod(0o755)
+
+        assert resolve_alass(_Cfg(alass_location=override, bin_root=bin_root)) == str(override)
+
+    def test_no_bin_root_attr_uses_path_fallback(self, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+
+        class _BareConfig:
+            pass
+
+        assert resolve_alass(_BareConfig()) == "alass"
+
+    def test_cache_does_not_mask_changed_bin_root(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+
+        empty_root = tmp_path / "empty"
+        empty_root.mkdir()
+        assert resolve_alass(_Cfg(bin_root=empty_root)) == "alass"
+
+        populated_root = tmp_path / "populated"
+        populated_root.mkdir()
+        managed = populated_root / "alass"
+        managed.write_text("#!/bin/sh\n")
+        managed.chmod(0o755)
+        # A different bin_root must NOT return the stale PATH fallback.
+        assert resolve_alass(_Cfg(bin_root=populated_root)) == str(managed)
 
 
 class TestCaching:

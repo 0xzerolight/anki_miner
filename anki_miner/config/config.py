@@ -317,6 +317,11 @@ class AnkiMinerConfig:
     asr_model: str = "large-v3"
     asr_models_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "asr_models")
 
+    # Managed directory for in-app-downloaded executables (e.g. the alass
+    # subtitle-alignment binary); derived from ANKI_MINER_HOME, never
+    # user-configurable directly.
+    bin_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "bin")
+
     # Theme settings (UI state — persisted via gui_config.json).
     # `theme_favorites` is the curated list that drives the top-right combo;
     # the active `theme` does not need to be in favorites.
