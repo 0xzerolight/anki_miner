@@ -1,31 +1,42 @@
 /*
- * Anki Miner — "Minimal / Clean" card-style preset.
+ * Anki Miner — "Minimal" card-style preset (id: minimal).
  *
- * Stripped-back and airy: no rails, no borders around dictionary blocks, no
- * chip — just a plain numbered sense list with generous whitespace. Every
- * rule is guarded by `ol[data-count]` — markup only Anki Miner's providers
- * produce — so the preset never restyles Yomitan-exported glossary HTML
- * living in the same note type (Yomitan bakes its own indentation into card
- * HTML; matching it would double-indent). The guard also bumps selector
- * specificity: custom CSS overriding preset rules needs the same guard (or
- * more), though the `--am-*` tunables below stay overridable from a plain
- * `.yomitan-glossary` rule. Colors inherit from the card via `currentColor`,
- * so it reads well on both light and dark note types without hard-coding a
- * background. Original work — Yomitan/Lapis-flavored, not copied from any
- * Yomitan source.
+ * Stripped-back and airy: no rails, no chip background, no table borders — just a
+ * plain numbered sense list with generous whitespace. The deliberate opposite of
+ * "Rich" (id: default), so the two presets read as genuinely different choices.
+ *
+ * Every rule is guarded by `ol[data-count]` — markup only Anki Miner's providers
+ * produce — so the preset never restyles Yomitan-exported glossary HTML living in
+ * the same note type (Yomitan bakes its own indentation in; matching it would
+ * double-indent). The guard also bumps specificity: custom CSS overriding a preset
+ * rule needs the same guard (or more); the `--am-*` tunables below stay overridable
+ * from a plain `.yomitan-glossary` rule. Colors inherit from the card via
+ * `currentColor`, so it reads on light and dark note types without a hard-coded
+ * background. Original work — Yomitan/Lapis-flavored, not copied from any source.
  */
 
 .yomitan-glossary {
-  /* Tunables — override these in your custom CSS to re-skin without forking.
-   * Custom properties only in this rule: they are inert on Yomitan-made
-   * cards, so it is the one selector allowed without the data-count guard. */
-  --am-muted: color-mix(in srgb, currentColor 55%, transparent);
-  --am-faint: color-mix(in srgb, currentColor 18%, transparent);
+  /* Tunables — override in custom CSS to re-skin without forking. The base values
+   * are neutral semi-transparent grays so the preset stays legible on engines
+   * WITHOUT `color-mix()` support (older AnkiDroid/AnkiMobile WebViews, Anki
+   * Desktop on Chromium < 111): there, the @supports block below is skipped and
+   * these solid grays apply. On modern engines the @supports block upgrades them
+   * to `currentColor`-derived values that track the card's own text color. Never
+   * reference a bare `color-mix()` value outside that guard. */
+  --am-muted: rgba(128, 128, 128, 0.95);
+  --am-faint: rgba(128, 128, 128, 0.35);
   --am-accent: #4f7cff;
 }
 
+@supports (color: color-mix(in srgb, red 50%, blue 50%)) {
+  .yomitan-glossary {
+    --am-muted: color-mix(in srgb, currentColor 55%, transparent);
+    --am-faint: color-mix(in srgb, currentColor 18%, transparent);
+  }
+}
+
 /* Outer dictionary list (miner-only markup): typography for the whole block,
- * and drop the default ordinal/indent chrome. */
+ * drop the default ordinal/indent chrome, and override Anki's centered `.card`. */
 .yomitan-glossary > ol[data-count] {
   margin: 0;
   padding: 0;
@@ -36,15 +47,14 @@
   word-wrap: break-word;
 }
 
-/* Stack multiple dictionaries with a light separator — a small margin and an
- * optional hairline, no heavy chrome. */
+/* Stack multiple dictionaries with a light hairline separator — no heavy chrome. */
 .yomitan-glossary + .yomitan-glossary > ol[data-count] {
   margin-top: 1em;
   padding-top: 0.7em;
   border-top: 1px solid var(--am-faint);
 }
 
-/* Per-dictionary block — no rail, no indent, just a little breathing room. */
+/* Per-dictionary block — no rail, no indent, just breathing room. */
 .yomitan-glossary ol[data-count] li[data-dictionary] {
   margin: 0.5em 0 0;
   padding-left: 0;
@@ -55,7 +65,7 @@
   margin-top: 0;
 }
 
-/* The "(part-of-speech…, Dictionary Name)" line — plain, small, muted. */
+/* The "(part-of-speech…, Dictionary Name)" line — plain, small, muted, no chip. */
 .yomitan-glossary ol[data-count] li[data-dictionary] > i {
   display: inline-block;
   margin-bottom: 0.3em;
@@ -70,9 +80,10 @@
   margin: 0.2em 0 0;
   padding-left: 1.3em;
   list-style-type: decimal;
-  line-height: 1.7;
 }
 
+/* A single sense (or an empty list) drops the ordinal — no "1." for one item. */
+.yomitan-glossary ol[data-count] ul.gloss-list[data-count="0"],
 .yomitan-glossary ol[data-count] ul.gloss-list[data-count="1"] {
   list-style-type: none;
   padding-left: 0;
@@ -82,27 +93,56 @@
   margin: 0.35em 0;
 }
 
+/* Progressive enhancement: muted ordinals where ::marker color is honored. */
 .yomitan-glossary ol[data-count] li.gloss-item::marker {
   color: var(--am-muted);
 }
 
+/* Block wrapper around each sense (a <div>, so block-level structured content
+ * nests legally inside it). */
 .yomitan-glossary ol[data-count] .gloss-content {
   font-weight: normal;
 }
 
-/* Generic structured-content baseline. */
-.yomitan-glossary ol[data-count] [class^="gloss-sc-"],
-.yomitan-glossary ol[data-count] [class*=" gloss-sc-"] {
-  margin: 0;
-}
-
-.yomitan-glossary ol[data-count] [class^="gloss-sc-"] ul,
-.yomitan-glossary ol[data-count] [class^="gloss-sc-"] ol {
+/* Structured-content lists (from dictionaries): one controlled indent per level.
+ * Nested ordered lists switch marker style so they don't read as the outer
+ * decimal sense numbering. */
+.yomitan-glossary ol[data-count] .gloss-sc-ul,
+.yomitan-glossary ol[data-count] .gloss-sc-ol {
   margin: 0.2em 0;
   padding-left: 1.2em;
 }
 
-/* Example sentences and supplementary notes — muted, lightly indented, no rail. */
+.yomitan-glossary ol[data-count] .gloss-sc-ol .gloss-sc-ol {
+  list-style-type: lower-alpha;
+}
+
+/* Headings inside structured content — clamp browser defaults (2em + huge
+ * margins) so they don't blow out the compact glossary. */
+.yomitan-glossary ol[data-count] .gloss-sc-h1,
+.yomitan-glossary ol[data-count] .gloss-sc-h2,
+.yomitan-glossary ol[data-count] .gloss-sc-h3,
+.yomitan-glossary ol[data-count] .gloss-sc-h4,
+.yomitan-glossary ol[data-count] .gloss-sc-h5,
+.yomitan-glossary ol[data-count] .gloss-sc-h6 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0.3em 0;
+}
+
+/* Ruby/furigana — tighten line-height and shrink the annotation so the reading
+ * sits snug above the base instead of inheriting the block's 1.7 line-height. */
+.yomitan-glossary ol[data-count] .gloss-sc-ruby {
+  line-height: 1;
+}
+
+.yomitan-glossary ol[data-count] .gloss-sc-rt {
+  font-size: 0.5em;
+}
+
+/* Example sentences and supplementary notes — muted, lightly indented, no rail.
+ * (Paste `[data-sc-content|="example-sentence"]{display:none}` into your custom
+ * CSS to hide them entirely — see the Jitendex "Custom Styles" wiki.) */
 .yomitan-glossary ol[data-count] [data-sc-content|="example-sentence"] {
   display: block;
   margin: 0.3em 0;
@@ -117,12 +157,13 @@
   color: var(--am-muted);
 }
 
-/* Dictionary-bundled images — cap so they never blow out the card. */
+/* Dictionary-bundled images (e.g. pitch-accent SVGs) — cap so they never blow
+ * out the card; vertical-align lives on the inline-block container, not the img
+ * (the container is what participates in line layout). */
 .yomitan-glossary ol[data-count] .gloss-image {
   max-width: 100%;
   max-height: 6em;
   height: auto;
-  vertical-align: middle;
 }
 
 .yomitan-glossary ol[data-count] .gloss-image-link {
@@ -131,14 +172,16 @@
 
 .yomitan-glossary ol[data-count] .gloss-image-container {
   display: inline-block;
+  vertical-align: middle;
 }
 
-/* Collapsible notes / conjugation tables. */
+/* Collapsible notes / conjugation tables. Scope the accent summary to glossary
+ * content so it never clashes with the muted dictionary label above. */
 .yomitan-glossary ol[data-count] details {
   margin: 0.3em 0;
 }
 
-.yomitan-glossary ol[data-count] summary {
+.yomitan-glossary ol[data-count] .gloss-content summary {
   cursor: pointer;
   color: var(--am-accent);
 }
@@ -147,10 +190,15 @@
   margin-bottom: 0.25em;
 }
 
-/* Tables — minimal: just a hairline under the header, no heavy borders. */
+/* Tables — minimal: a hairline under the header only, no heavy borders, and
+ * scroll instead of overflowing the card on a narrow screen. */
 .yomitan-glossary ol[data-count] table {
   border-collapse: collapse;
   margin: 0.3em 0;
+  max-width: 100%;
+  display: block;
+  overflow-x: auto;
+  font-size: 0.9em;
 }
 
 .yomitan-glossary ol[data-count] th,

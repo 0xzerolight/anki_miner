@@ -61,7 +61,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "source": "Source",
         },
         anki_word_field="Word",
-        card_style_preset="yomitan-classic",
+        card_style_preset="minimal",
         custom_card_css=".custom { color: red; }",
         pitch_category_format="romaji",
         # --- MediaSettingsPanel ---

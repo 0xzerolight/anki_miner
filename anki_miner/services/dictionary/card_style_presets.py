@@ -51,15 +51,33 @@ class CardStylePreset(NamedTuple):
 
 #: Ordered, immutable registry of presets. Order is the GUI presentation order;
 #: "Off" leads so the dropdown's first entry is the un-styled / opt-out state.
+#: Two real "looks": ``default`` (Rich — full chrome) and ``minimal`` (no chrome).
 PRESETS: tuple[CardStylePreset, ...] = (
     CardStylePreset(OFF_PRESET_ID, "Off", None),
-    CardStylePreset("default", "Default", "default.css"),
-    CardStylePreset("yomitan-classic", "Yomitan / Lapis Classic", "yomitan-classic.css"),
-    CardStylePreset("minimal", "Minimal / Clean", "minimal.css"),
+    CardStylePreset("default", "Rich", "default.css"),
+    CardStylePreset("minimal", "Minimal", "minimal.css"),
     CardStylePreset("none", "Custom CSS only", None),
 )
 
 _BY_ID: dict[str, CardStylePreset] = {p.id: p for p in PRESETS}
+
+#: Retired preset ids mapped onto their closest surviving look. ``yomitan-classic``
+#: was folded into the rebuilt ``default`` (Rich). Applied to both saved-config ids
+#: and the ``preset=<id>`` recorded in a note type's live managed block, so existing
+#: users keep their styling instead of silently dropping to "Off".
+LEGACY_PRESET_ALIASES: dict[str, str] = {
+    "yomitan-classic": "default",
+}
+
+
+def resolve_preset_alias(preset_id: str) -> str:
+    """Map a retired preset id onto its surviving replacement.
+
+    Returns ``preset_id`` unchanged when it is not a retired alias (including the
+    empty string used for legacy markers and any unknown id — coercion of those is
+    the caller's concern, not this function's).
+    """
+    return LEGACY_PRESET_ALIASES.get(preset_id, preset_id)
 
 
 def load_preset_css(preset_id: str) -> str:
