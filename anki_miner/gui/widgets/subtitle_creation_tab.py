@@ -152,12 +152,14 @@ class SubtitleCreationTab(QWidget):
         self.file_mode_button = ModernButton(self.tr("Single File"), variant="primary")
         self.file_mode_button.setCheckable(True)
         self.file_mode_button.setChecked(True)
+        self.file_mode_button.setToolTip(self.tr("Transcribe one selected video file."))
         self.file_mode_button.clicked.connect(self._on_file_mode)
         mode_row.addWidget(self.file_mode_button)
 
         self.folder_mode_button = ModernButton(self.tr("Folder"), variant="secondary")
         self.folder_mode_button.setCheckable(True)
         self.folder_mode_button.setChecked(False)
+        self.folder_mode_button.setToolTip(self.tr("Transcribe every video file in a selected folder."))
         self.folder_mode_button.clicked.connect(self._on_folder_mode)
         mode_row.addWidget(self.folder_mode_button)
 
@@ -192,6 +194,14 @@ class SubtitleCreationTab(QWidget):
 
         layout.addWidget(SectionHeader(self.tr("Output")))
 
+        # Output description
+        out_desc = QLabel(
+            self.tr("Generated .srt files are saved next to each source video unless you choose a folder.")
+        )
+        out_desc.setObjectName("helper-text")
+        out_desc.setWordWrap(True)
+        layout.addWidget(out_desc)
+
         # Output location row
         out_row = QHBoxLayout()
         out_row.setSpacing(SPACING.xs)
@@ -199,7 +209,7 @@ class SubtitleCreationTab(QWidget):
         out_row.addWidget(out_label)
 
         self.output_location_label = QLabel(self.tr("Next to source video"))
-        self.output_location_label.setObjectName("helper-text")
+        self.output_location_label.setObjectName("output-location-value")
         out_row.addWidget(self.output_location_label, 1)
 
         self.choose_output_button = ModernButton(self.tr("Choose Folder…"), variant="secondary")
@@ -215,6 +225,9 @@ class SubtitleCreationTab(QWidget):
 
         # Overwrite checkbox
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing SRT files"))
+        self.overwrite_checkbox.setToolTip(
+            self.tr("When unchecked, videos that already have an .srt file are skipped, not overwritten.")
+        )
         layout.addWidget(self.overwrite_checkbox)
 
         group.setLayout(layout)
