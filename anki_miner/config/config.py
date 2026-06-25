@@ -412,6 +412,8 @@ class AnkiMinerConfig:
             object.__setattr__(self, "themes_root", Path(self.themes_root))
         if isinstance(self.asr_models_root, str):
             object.__setattr__(self, "asr_models_root", Path(self.asr_models_root))
+        if isinstance(self.bin_root, str):
+            object.__setattr__(self, "bin_root", Path(self.bin_root))
         # JSON round-trip yields a list for theme_favorites; coerce to tuple
         # so the frozen dataclass stays internally immutable.
         if isinstance(self.theme_favorites, list):
