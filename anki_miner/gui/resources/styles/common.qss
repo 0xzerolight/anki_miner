@@ -621,6 +621,11 @@ QLabel#output-location-value {
     margin-top: ${spacing-xxs}px;
 }
 
+/* Read-only command display (copyable shell command in setup guidance) */
+QLineEdit#command-text {
+    font-family: monospace;
+}
+
 /* Settings tabs */
 QTabWidget#settings-tabs::pane {
     border: none;
