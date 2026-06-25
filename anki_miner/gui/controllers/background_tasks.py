@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.main_window import MainWindow
+    from anki_miner.gui.workers.alass_install_worker import AlassInstallWorker
     from anki_miner.gui.workers.asr_model_download_worker import AsrModelDownloadWorker
     from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
     from anki_miner.gui.workers.update_worker import UpdateWorkerThread
@@ -108,6 +109,7 @@ class BackgroundTaskController(QObject):
         self.ytdlp_update_worker: YtdlpUpdateWorker | None = None
         self.jmdict_migration_worker: DictionaryImportWorker | None = None
         self.asr_model_download_worker: AsrModelDownloadWorker | None = None
+        self.alass_install_worker: AlassInstallWorker | None = None
         # Best-effort cache prewarm worker, scheduled by ``app.main()`` after
         # the first paint and adopted via set_prewarm(); cleared once it
         # finishes.
@@ -220,6 +222,39 @@ class BackgroundTaskController(QObject):
         worker.finished.connect(lambda w=worker: self._release_worker("asr_model_download_worker", w))
         worker.start()
 
+    def start_alass_download(
+        self,
+        bin_root: Path,
+        on_status: Callable[[str], None],
+        on_finished: Callable[[bool, str], None],
+    ) -> None:
+        """Start an alass install worker unless one is already running.
+
+        Mirrors :meth:`start_asr_model_download`: guards against a concurrent
+        run, lazy-imports the worker, connects ``status`` and ``result_ready`` to
+        the provided callbacks, and releases the handle on the native
+        ``QThread.finished``.
+
+        Args:
+            bin_root: Directory where the alass binary will be placed; typically
+                ``config.bin_root``.
+            on_status: Slot for ``status(str)`` — typically
+                ``SettingsTab.set_alass_status``.
+            on_finished: Slot for ``result_ready(bool, str)`` — called with
+                ``(ok, message)`` when the install completes or fails.
+        """
+        if self.alass_install_worker is not None and self.alass_install_worker.isRunning():
+            return
+
+        from anki_miner.gui.workers.alass_install_worker import AlassInstallWorker
+
+        worker = AlassInstallWorker(bin_root, parent=self)
+        self.alass_install_worker = worker
+        worker.status.connect(on_status)
+        worker.result_ready.connect(on_finished)
+        worker.finished.connect(lambda w=worker: self._release_worker("alass_install_worker", w))
+        worker.start()
+
     def maybe_migrate_jmdict(self, config: AnkiMinerConfig) -> bool:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background.
 
@@ -289,12 +324,13 @@ class BackgroundTaskController(QObject):
                 laggards.append(worker)
 
         # Controller-owned workers: validation, update check, yt-dlp update,
-        # JMdict migration, ASR model download.
+        # JMdict migration, ASR model download, alass install.
         join(self.validation_worker)
         join(self.update_worker)
         join(self.ytdlp_update_worker)
         join(self.jmdict_migration_worker)
         join(self.asr_model_download_worker)
+        join(self.alass_install_worker)
 
         # The best-effort prewarm worker has no cancel hook (it's a short,
         # uninterruptible cache warm), so join it without timeout instead of
