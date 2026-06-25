@@ -138,6 +138,14 @@ class SubtitleRetimeTab(QWidget):
         self.engine_notice_label.hide()
         layout.addWidget(self.engine_notice_label)
 
+        # Input description
+        input_desc = QLabel(
+            self.tr("Resync a subtitle file to its video by matching audio. Pick a video and the subtitle to align.")
+        )
+        input_desc.setObjectName("helper-text")
+        input_desc.setWordWrap(True)
+        layout.addWidget(input_desc)
+
         # Mode toggle
         mode_row = QHBoxLayout()
         mode_row.setSpacing(SPACING.xs)
@@ -147,12 +155,14 @@ class SubtitleRetimeTab(QWidget):
         self.file_mode_button = ModernButton(self.tr("Single File"), variant="primary")
         self.file_mode_button.setCheckable(True)
         self.file_mode_button.setChecked(True)
+        self.file_mode_button.setToolTip(self.tr("Retime one subtitle file against one video."))
         self.file_mode_button.clicked.connect(self._on_file_mode)
         mode_row.addWidget(self.file_mode_button)
 
         self.folder_mode_button = ModernButton(self.tr("Folder"), variant="secondary")
         self.folder_mode_button.setCheckable(True)
         self.folder_mode_button.setChecked(False)
+        self.folder_mode_button.setToolTip(self.tr("Retime a folder of subtitles, paired to videos by episode number."))
         self.folder_mode_button.clicked.connect(self._on_folder_mode)
         mode_row.addWidget(self.folder_mode_button)
 
@@ -208,7 +218,7 @@ class SubtitleRetimeTab(QWidget):
         out_row.addWidget(out_label)
 
         self.output_location_label = QLabel(self.tr("Next to source video"))
-        self.output_location_label.setObjectName("helper-text")
+        self.output_location_label.setObjectName("output-location-value")
         out_row.addWidget(self.output_location_label, 1)
 
         self.choose_output_button = ModernButton(self.tr("Choose Folder…"), variant="secondary")
@@ -224,6 +234,9 @@ class SubtitleRetimeTab(QWidget):
 
         # Overwrite checkbox
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing subtitle files"))
+        self.overwrite_checkbox.setToolTip(
+            self.tr("When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.")
+        )
         layout.addWidget(self.overwrite_checkbox)
 
         # Split penalty row
@@ -242,6 +255,14 @@ class SubtitleRetimeTab(QWidget):
         penalty_row.addWidget(self.split_penalty_spinbox)
         penalty_row.addStretch()
         layout.addLayout(penalty_row)
+
+        # Split penalty inline explanation
+        self.split_penalty_helper = QLabel(
+            self.tr("Lower values create more cut points for ad breaks. Useful range 1–20; default 7.")
+        )
+        self.split_penalty_helper.setObjectName("helper-text")
+        self.split_penalty_helper.setWordWrap(True)
+        layout.addWidget(self.split_penalty_helper)
 
         group.setLayout(layout)
         return group

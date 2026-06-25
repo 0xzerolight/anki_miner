@@ -424,6 +424,37 @@ def test_split_penalty_default_is_seven(qtbot, tmp_path):
     assert tab.split_penalty_spinbox.value() == 7.0
 
 
+def test_split_penalty_has_visible_helper(qtbot, tmp_path):
+    """An inline helper label explains the split-penalty control (not tooltip-only)."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab.split_penalty_helper.text().strip()
+    assert tab.split_penalty_helper.objectName() == "helper-text"
+
+
+# ---------------------------------------------------------------------------
+# Control explanations / styling
+# ---------------------------------------------------------------------------
+
+
+def test_output_location_label_objectname_not_helper_text(qtbot, tmp_path):
+    """Output-location label uses a non-italic objectName, not 'helper-text'."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab.output_location_label.objectName() == "output-location-value"
+
+
+def test_mode_buttons_have_tooltips(qtbot, tmp_path):
+    """Single-file / folder mode buttons carry explanatory tooltips."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab.file_mode_button.toolTip().strip()
+    assert tab.folder_mode_button.toolTip().strip()
+
+
+def test_overwrite_checkbox_has_tooltip(qtbot, tmp_path):
+    """Overwrite checkbox explains skip-vs-overwrite via tooltip."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab.overwrite_checkbox.toolTip().strip()
+
+
 def test_split_penalty_passed_to_worker(qtbot, tmp_path):
     """The spinbox value is forwarded to the worker as split_penalty."""
     config = _make_config(tmp_path)
