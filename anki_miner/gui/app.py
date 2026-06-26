@@ -157,6 +157,20 @@ def _configure_logging(log_path: Path) -> None:
     logging.getLogger("anki_miner").setLevel(logging.DEBUG)
 
 
+def _apply_ui_zoom(config: AnkiMinerConfig) -> None:
+    """Inject the whole-UI zoom factor as ``QT_SCALE_FACTOR``.
+
+    Qt reads ``QT_SCALE_FACTOR`` only once, when the first ``QApplication`` is
+    constructed, which is why this must run before that and why the setting is
+    restart-to-apply. An explicit user-set env override wins (we never clobber
+    it), and the no-op 1.0 case is left unset so the env stays clean.
+    """
+    if "QT_SCALE_FACTOR" in os.environ:
+        return
+    if config.ui_zoom != 1.0:
+        os.environ["QT_SCALE_FACTOR"] = repr(float(config.ui_zoom))
+
+
 @runtime_checkable
 class _HasUpdateConfig(Protocol):
     """Structural type for tab widgets that accept config updates."""
@@ -248,6 +262,10 @@ def main():
     # so no duplicate sink). No-op in the common case where it equals the default.
     if _log_path != _default_log_path:
         _configure_logging(_log_path)
+
+    # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
+    # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
+    _apply_ui_zoom(_early_config)
 
     # Enable high DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
