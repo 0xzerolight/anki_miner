@@ -14,7 +14,7 @@ This list is generated automatically — see [.github/workflows/contributors.yml
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/cc2badao2cc-lgtm"><img src="https://avatars.githubusercontent.com/u/291092965?s=80&v=4" width="80" height="80" alt="@cc2badao2cc-lgtm"/><br/><sub><b>cc2badao2cc-lgtm</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/chicorykvass"><img src="https://avatars.githubusercontent.com/u/110312532?s=80&v=4" width="80" height="80" alt="@chicorykvass"/><br/><sub><b>chicorykvass</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/cskings14"><img src="https://avatars.githubusercontent.com/u/80647209?s=80&u=a146e7f5082f78a3dd08038df6f878323c3665c0&v=4" width="80" height="80" alt="@cskings14"/><br/><sub><b>cskings14</b></sub></a></td>
-    <td align="center" valign="top" width="12.50%"><a href="https://github.com/Expri-commits"><img src="https://avatars.githubusercontent.com/u/184641533?s=80&v=4" width="80" height="80" alt="@Expri-commits"/><br/><sub><b>Expri-commits</b></sub></a></td>
+    <td align="center" valign="top" width="12.50%"><a href="https://github.com/Expri-commits"><img src="https://avatars.githubusercontent.com/u/184641533?s=80&u=f42564ed68ef9633de009517daaa03a030d4cb42&v=4" width="80" height="80" alt="@Expri-commits"/><br/><sub><b>Expri-commits</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/Geniusssmit"><img src="https://avatars.githubusercontent.com/u/24941285?s=80&v=4" width="80" height="80" alt="@Geniusssmit"/><br/><sub><b>Geniusssmit</b></sub></a></td>
   </tr>
   <tr>
