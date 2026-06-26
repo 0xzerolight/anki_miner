@@ -4,6 +4,7 @@ import fnmatch
 import json
 import logging
 import os
+import platform
 import sys
 import urllib.parse
 import urllib.request
@@ -36,8 +37,9 @@ class UpdateInfo:
 def _detect_target() -> str:
     """Detect the current install target.
 
-    Returns one of: ``"appimage"``, ``"windows-frozen"``, ``"macos-frozen"``,
-    ``"linux-frozen"``, ``"pip"``.
+    Returns one of: ``"appimage"``, ``"windows-frozen"``,
+    ``"macos-frozen-arm64"``, ``"macos-frozen-x86_64"``, ``"linux-frozen"``,
+    ``"pip"``.
     """
     # AppImage runtime sets the APPIMAGE env var before Python starts. sys.frozen
     # is also True on AppImage (PyInstaller-built), so the APPIMAGE check MUST
@@ -49,7 +51,11 @@ def _detect_target() -> str:
         if sys.platform == "win32":
             return "windows-frozen"
         if sys.platform == "darwin":
-            return "macos-frozen"
+            # Distinguish the arm64 and Intel bundles so each Mac is offered the
+            # asset it can actually run. platform.machine() reports the running
+            # *process* arch — an Intel build under Rosetta reports "x86_64", which
+            # is correct: it should update to the x86_64 asset, not the arm64 one.
+            return "macos-frozen-arm64" if platform.machine() == "arm64" else "macos-frozen-x86_64"
         return "linux-frozen"
     return "pip"
 
@@ -62,7 +68,8 @@ _TARGET_PATTERNS: dict[str, tuple[str, ...]] = {
     "windows-frozen": ("*-Windows-x86_64-Setup.exe",),
     "linux-frozen": ("anki-miner_*_amd64.deb",),
     "appimage": ("*-x86_64.AppImage",),
-    "macos-frozen": ("AnkiMiner-macOS-arm64.tar.gz",),
+    "macos-frozen-arm64": ("AnkiMiner-macOS-arm64.tar.gz",),
+    "macos-frozen-x86_64": ("AnkiMiner-macOS-x86_64.tar.gz",),
 }
 
 
