@@ -29,6 +29,12 @@ from typing import NamedTuple
 
 _PRESET_PACKAGE = "anki_miner.services.dictionary.resources.presets"
 
+#: Generic structured-content fallback appended to every file-backed preset
+#: (Issue #87). Styles the common Yomitan ``data-sc-*`` hooks so dictionaries
+#: that ship no ``styles.css`` still render; the leading underscore keeps it out
+#: of the user-selectable :data:`PRESETS` registry.
+_SHARED_PARTIAL_FILENAME = "_structured_content.css"
+
 #: Id of the bundled "Default" stylesheet preset.
 DEFAULT_PRESET_ID = "default"
 
@@ -83,10 +89,18 @@ def resolve_preset_alias(preset_id: str) -> str:
 def load_preset_css(preset_id: str) -> str:
     """Return the bundled CSS text for ``preset_id``.
 
+    The preset's own chrome stylesheet is followed by the shared generic
+    structured-content fallback (:data:`_SHARED_PARTIAL_FILENAME`), so both the
+    "Rich" and "Minimal" looks style dictionary content (tag pills, note boxes,
+    inflection tables) even for dicts that ship no ``styles.css`` (Issue #87).
+
     Returns ``""`` for the ``"off"`` / ``"none"`` presets and for any unknown id
     (no exception), so callers can treat a missing preset as "no managed CSS".
     """
     preset = _BY_ID.get(preset_id)
     if preset is None or preset.filename is None:
         return ""
-    return files(_PRESET_PACKAGE).joinpath(preset.filename).read_text(encoding="utf-8")
+    package = files(_PRESET_PACKAGE)
+    chrome = package.joinpath(preset.filename).read_text(encoding="utf-8")
+    fallback = package.joinpath(_SHARED_PARTIAL_FILENAME).read_text(encoding="utf-8")
+    return f"{chrome}\n{fallback}"

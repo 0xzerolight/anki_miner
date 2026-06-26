@@ -198,3 +198,19 @@ class TestPresetYomitanLeak:
 class TestLoadDefaultCardCssAlias:
     def test_matches_default_preset(self):
         assert load_default_card_css() == load_preset_css("default")
+
+
+class TestStructuredContentFallback:
+    """Issue #87: the generic structured-content fallback ships in every
+    file-backed preset so dicts without a styles.css still render."""
+
+    def test_fallback_present_in_real_presets(self):
+        for preset_id in NON_EMPTY_IDS:
+            css = load_preset_css(preset_id)
+            # Hooks only the shared partial styles — proves it was appended.
+            assert 'span[data-sc-class="tag"]' in css
+            assert '[data-sc-content="forms"] td' in css
+
+    def test_fallback_absent_from_sentinels(self):
+        assert load_preset_css("none") == ""
+        assert load_preset_css(OFF_PRESET_ID) == ""
