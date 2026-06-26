@@ -298,8 +298,13 @@ class EpisodeProcessor:
         service re-opens the chain lazily on the next lookup, so calling
         this on an idle processor is always safe; callers are responsible
         for not invoking it mid-run.
+
+        The per-run frequency sources hold their own ``index.sqlite`` handles,
+        so they are released here too (idempotent; safe when absent).
         """
         self.definition_service.close()
+        if self.frequency_service is not None:
+            self.frequency_service.close()
 
     def close(self) -> None:
         """Release ALL per-run resources held by this processor.
@@ -320,6 +325,8 @@ class EpisodeProcessor:
         # subsequent processor build) is where a back-to-back mine blocks.
         logger.debug("closing processor resources")
         self.definition_service.close()
+        if self.frequency_service is not None:
+            self.frequency_service.close()
         if self.expression_audio_fetcher is not None:
             close = getattr(self.expression_audio_fetcher, "close", None)
             if callable(close):

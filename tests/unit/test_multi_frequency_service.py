@@ -12,6 +12,7 @@ class _FakeProvider:
         self._name = name
         self._ranks = ranks
         self._available = available
+        self.close_calls = 0
 
     @property
     def name(self) -> str:
@@ -22,6 +23,9 @@ class _FakeProvider:
 
     def lookup(self, term: str) -> int | None:
         return self._ranks.get(term)
+
+    def close(self) -> None:
+        self.close_calls += 1
 
 
 def test_is_available_zero_providers():
@@ -92,3 +96,51 @@ def test_lookup_min_none_when_no_hits():
 
 def test_lookup_min_none_no_providers():
     assert MultiFrequencyService([]).lookup_min("猫") is None
+
+
+def test_close_closes_each_provider_once():
+    a = _FakeProvider("A", {})
+    b = _FakeProvider("B", {})
+    MultiFrequencyService([a, b]).close()
+    assert a.close_calls == 1
+    assert b.close_calls == 1
+
+
+def test_close_is_idempotent():
+    a = _FakeProvider("A", {})
+    svc = MultiFrequencyService([a])
+    svc.close()
+    svc.close()
+    # Each call delegates to the provider, which is itself idempotent;
+    # the service must tolerate being closed twice without raising.
+    assert a.close_calls == 2
+
+
+def test_close_no_providers_is_safe():
+    MultiFrequencyService([]).close()  # must not raise
+
+
+def test_close_tolerates_provider_without_close():
+    class _NoClose:
+        @property
+        def name(self) -> str:
+            return "N"
+
+        def is_available(self) -> bool:
+            return True
+
+        def lookup(self, term: str) -> int | None:
+            return None
+
+    MultiFrequencyService([_NoClose()]).close()  # must not raise
+
+
+def test_close_suppresses_provider_close_exception():
+    class _Boom(_FakeProvider):
+        def close(self) -> None:
+            raise RuntimeError("boom")
+
+    good = _FakeProvider("good", {})
+    # A raising provider must not stop the others from closing.
+    MultiFrequencyService([_Boom("boom", {}), good]).close()
+    assert good.close_calls == 1

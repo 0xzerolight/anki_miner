@@ -3026,6 +3026,26 @@ class TestDictionaryResourceFacade:
         processor.release_dictionary_resources()
         assert processor.definition_service.close.call_count == 2
 
+    def test_release_dictionary_resources_closes_frequency_service(self, test_config):
+        freq = MagicMock()
+        proc = EpisodeProcessor(
+            config=test_config,
+            subtitle_parser=MagicMock(),
+            word_filter=MagicMock(),
+            media_extractor=MagicMock(),
+            definition_service=MagicMock(),
+            anki_service=MagicMock(),
+            presenter=NullPresenter(),
+            frequency_service=freq,
+        )
+        proc.release_dictionary_resources()
+        freq.close.assert_called_once_with()
+
+    def test_release_dictionary_resources_no_frequency_service_is_safe(self, processor):
+        # frequency_service defaults to None; releasing must not raise.
+        processor.release_dictionary_resources()
+        processor.definition_service.close.assert_called_once_with()
+
     def test_offline_lookup_fn_is_definition_service_offline_lookup(self, processor):
         assert processor.offline_lookup_fn is processor.definition_service.lookup_all_offline
 
@@ -3033,7 +3053,7 @@ class TestDictionaryResourceFacade:
 class TestProcessorClose:
     """close() releases all per-run resources (Windows back-to-back-mining freeze)."""
 
-    def _make(self, test_config, audio_fetcher=None):
+    def _make(self, test_config, audio_fetcher=None, frequency_service=None):
         return EpisodeProcessor(
             config=test_config,
             subtitle_parser=MagicMock(),
@@ -3043,11 +3063,23 @@ class TestProcessorClose:
             anki_service=MagicMock(),
             presenter=NullPresenter(),
             expression_audio_fetcher=audio_fetcher,
+            frequency_service=frequency_service,
         )
 
     def test_close_closes_definition_service(self, test_config):
         proc = self._make(test_config)
         proc.close()
+        proc.definition_service.close.assert_called_once_with()
+
+    def test_close_closes_frequency_service(self, test_config):
+        freq = MagicMock()
+        proc = self._make(test_config, frequency_service=freq)
+        proc.close()
+        freq.close.assert_called_once_with()
+
+    def test_close_with_no_frequency_service_is_safe(self, test_config):
+        proc = self._make(test_config, frequency_service=None)
+        proc.close()  # must not raise
         proc.definition_service.close.assert_called_once_with()
 
     def test_close_closes_audio_fetcher(self, test_config):
