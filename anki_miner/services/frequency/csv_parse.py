@@ -1,8 +1,8 @@
 """Shared CSV/TSV frequency-row parsing + Yomitan rank normalization.
 
 Single source of truth for the row-shape helpers that the per-source frequency
-importer relies on. Originally extracted from the legacy single-CSV loader and
-``yomitan_freq_importer`` so there is exactly one implementation of each.
+importer relies on. Originally extracted from the legacy single-CSV loader so
+there is exactly one implementation of each.
 
 Two concerns live here:
 
