@@ -65,7 +65,10 @@ def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
         n_frames = wf.getnframes()
         raw = wf.readframes(n_frames)
 
-    samples = np.frombuffer(raw, dtype=np.float32)
+    # .copy() because np.frombuffer over an immutable bytes object returns a
+    # read-only array sharing that buffer; faster-whisper/ctranslate2 may require
+    # a writable, owned array, and no test exercises the real numpy→engine handoff.
+    samples = np.frombuffer(raw, dtype=np.float32).copy()
     duration = n_frames / sample_rate
     return samples, sample_rate, duration
 
