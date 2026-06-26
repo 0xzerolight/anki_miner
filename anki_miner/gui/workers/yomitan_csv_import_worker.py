@@ -1,10 +1,10 @@
 """QThread worker that wraps a Yomitan meta-bank → CSV importer with progress + cancel.
 
-Runs an importer (``import_yomitan_pitch_zip`` or ``import_yomitan_freq_zip`` —
-both share the ``(zip_path, dest_csv, *, progress, cancel_check)`` signature)
-off the GUI thread and surfaces progress, completion, and failure as Qt signals.
-Replaces the verbatim-duplicate ``PitchImportWorker`` / ``FrequencyImportWorker``;
-the importer to run is injected so the two flows share one worker.
+Runs an importer with the ``(zip_path, dest_csv, *, progress, cancel_check)``
+signature off the GUI thread and surfaces progress, completion, and failure as
+Qt signals. The importer is injected, so the worker stays format-agnostic; in
+production it drives ``import_yomitan_pitch_zip`` (frequency moved to its own
+multi-source flow).
 """
 
 from __future__ import annotations
@@ -26,16 +26,16 @@ ImportFn = Callable[..., Any]
 class YomitanCsvImportWorker(CancellableWorker):
     """Imports a Yomitan-format meta-bank zip into a CSV in the background.
 
-    The specific importer (pitch or frequency) is passed in, so callers wire
-    ``import_yomitan_pitch_zip`` or ``import_yomitan_freq_zip``.
+    The importer is passed in (production wires ``import_yomitan_pitch_zip``),
+    so the worker is not tied to a single format.
 
     Signals:
         progress(int, int, str): ``(current, total, message)`` — emitted per
             ``term_meta_bank_*.json`` file processed.
         import_finished(object): emitted once on success with the importer's
-            result dataclass (``YomitanPitchImportResult`` /
-            ``YomitanFreqImportResult``). Typed as ``object`` to dodge Qt's
-            signal-type registration limitations for arbitrary dataclasses.
+            result dataclass (e.g. ``YomitanPitchImportResult``). Typed as
+            ``object`` to dodge Qt's signal-type registration limitations for
+            arbitrary dataclasses.
         failed(str): error message. Cancellation surfaces here with a message
             containing the word "cancelled" so callers can suppress the
             user-facing error dialog.

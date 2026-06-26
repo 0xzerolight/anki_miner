@@ -29,6 +29,7 @@ from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.services.stats_service import StatsService
+from anki_miner.utils import alass_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -231,6 +232,36 @@ def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) 
     settings_tab.validation_requested.connect(window._run_validation)
 
 
+def _connect_alass_download(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Wire the Subtitles panel's "Download alass" button to the install worker.
+
+    Status flows back to the panel; on a successful install the resolver's
+    cached PATH-miss is dropped and config is re-propagated via
+    ``config_refreshed`` so the (non-Settings) Retime tab re-runs its
+    availability guard and enables. Without that, the download→retime happy
+    path stays disabled until a Settings save or app restart.
+
+    Extracted from ``main()`` so the post-install refresh is unit-testable
+    without standing up the whole app.
+    """
+
+    def _on_alass_download_requested() -> None:
+        def _on_alass_finished(ok: bool, message: str) -> None:
+            settings_tab.set_alass_status(message)
+            settings_tab.subtitles_panel._refresh_alass_status()
+            if ok:
+                alass_resolver._clear_cache()
+                window.config_refreshed.emit(window.get_config())
+
+        window.background_tasks.start_alass_download(
+            window.get_config().bin_root,
+            settings_tab.set_alass_status,
+            _on_alass_finished,
+        )
+
+    settings_tab.alass_download_requested.connect(_on_alass_download_requested)
+
+
 def main():
     """Launch the Anki Miner GUI application."""
     _scrub_pyinstaller_env()
@@ -427,21 +458,7 @@ def main():
 
     settings_tab.asr_download_requested.connect(_on_asr_download_requested)
 
-    # alass download: the Subtitles panel's "Download alass" button → background
-    # install worker. Status flows back to the panel; on finish refresh the
-    # installed-state label so it reflects the new on-disk binary.
-    def _on_alass_download_requested() -> None:
-        def _on_alass_finished(ok: bool, message: str) -> None:
-            settings_tab.set_alass_status(message)
-            settings_tab.subtitles_panel._refresh_alass_status()
-
-        window.background_tasks.start_alass_download(
-            window.get_config().bin_root,
-            settings_tab.set_alass_status,
-            _on_alass_finished,
-        )
-
-    settings_tab.alass_download_requested.connect(_on_alass_download_requested)
+    _connect_alass_download(window, settings_tab)
     # Wire the Dictionary Settings panel's pre-remove hook so deleting a
     # dictionary closes cached sqlite handles across every tab first — Win11
     # rejects the rmtree otherwise (Issue #30).
