@@ -52,6 +52,16 @@
         <translation>キーボードショートカット</translation>
     </message>
 </context><context>
+    <name>AlassInstallWorker</name>
+    <message>
+        <source>Downloading alass…</source>
+        <translation>alass をダウンロードしています…</translation>
+    </message>
+    <message>
+        <source>alass installed successfully.</source>
+        <translation>alass のインストールが完了しました。</translation>
+    </message>
+</context><context>
     <name>AnalyticsTab</name>
     <message>
         <source>Refresh</source>
@@ -440,6 +450,62 @@
         <translation>単語の出典となったシリーズ/エピソードとタイムスタンプを保存します。空欄でスキップします。</translation>
     </message>
     <message>
+        <source>Card Type</source>
+        <translation>カードタイプ</translation>
+    </message>
+    <message>
+        <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
+        <translation>JP Mining Note 系のノートタイプ向け：マーカーフィールドに「x」を打刻し、マイニングした各カードを選択したタイプとして表示します。該当するフィールドがないノートタイプの場合は「なし」のままにしてください。</translation>
+    </message>
+    <message>
+        <source>None (disabled)</source>
+        <translation>なし（無効）</translation>
+    </message>
+    <message>
+        <source>Word + Sentence</source>
+        <translation>単語 + 例文</translation>
+    </message>
+    <message>
+        <source>Click</source>
+        <translation>クリック</translation>
+    </message>
+    <message>
+        <source>Sentence</source>
+        <translation>例文</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>音声</translation>
+    </message>
+    <message>
+        <source>Default Card Type</source>
+        <translation>デフォルトのカードタイプ</translation>
+    </message>
+    <message>
+        <source>Which marker field gets the “x”. None leaves cards untouched.</source>
+        <translation>どのマーカーフィールドに「x」を打刻するか。「なし」の場合、カードは変更されません。</translation>
+    </message>
+    <message>
+        <source>Customize marker field names</source>
+        <translation>マーカーフィールド名をカスタマイズ</translation>
+    </message>
+    <message>
+        <source>Word + Sentence:</source>
+        <translation>単語 + 例文：</translation>
+    </message>
+    <message>
+        <source>Click:</source>
+        <translation>クリック：</translation>
+    </message>
+    <message>
+        <source>Sentence:</source>
+        <translation>例文：</translation>
+    </message>
+    <message>
+        <source>Audio:</source>
+        <translation>音声：</translation>
+    </message>
+    <message>
         <source>Card Styling</source>
         <translation>カードのスタイル</translation>
     </message>
@@ -544,40 +610,6 @@
     <message>
         <source>%1 downloaded successfully.</source>
         <translation>%1 のダウンロードが完了しました。</translation>
-    </message>
-</context><context>
-    <name>AsrSettingsPanel</name>
-    <message>
-        <source>ASR Settings</source>
-        <translation>ASR 設定</translation>
-    </message>
-    <message>
-        <source>ASR model</source>
-        <translation>ASR モデル</translation>
-    </message>
-    <message>
-        <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
-        <translation>字幕生成に使用する Whisper モデルを選択します。「large-v3」は最も精度が高く、「small」は高速ですが精度は劣ります。</translation>
-    </message>
-    <message>
-        <source>Download model</source>
-        <translation>モデルをダウンロード</translation>
-    </message>
-    <message>
-        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
-        <translation>選択した Whisper モデルの重みを Anki Miner の ASR モデルフォルダにダウンロードします。字幕生成を実行する前に必要です。</translation>
-    </message>
-    <message>
-        <source>Model download</source>
-        <translation>モデルのダウンロード</translation>
-    </message>
-    <message>
-        <source>Downloaded</source>
-        <translation>ダウンロード済み</translation>
-    </message>
-    <message>
-        <source>Not downloaded</source>
-        <translation>未ダウンロード</translation>
     </message>
 </context><context>
     <name>AudioPackImportFlow</name>
@@ -1486,42 +1518,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>ピッチパターンを検索し、マッピングされたフィールドに書き込みます。</translation>
     </message>
     <message>
-        <source>Frequency List</source>
-        <translation>頻度リスト</translation>
-    </message>
-    <message>
-        <source>Select frequency list CSV/TSV or Yomitan zip...</source>
-        <translation>頻度リストの CSV/TSV または Yomitan zip を選択...</translation>
-    </message>
-    <message>
-        <source>Frequency List File</source>
-        <translation>頻度リストファイル</translation>
-    </message>
-    <message>
-        <source>CSV/TSV with columns (word, rank), or a Yomitan-format frequency zip (e.g. JPDB, BCCWJ). Yomitan zips are imported into ~/.anki_miner/frequency.csv on Save.</source>
-        <translation>列が（単語、ランク）の CSV/TSV、または Yomitan 形式の頻度 zip（JPDB、BCCWJ など）です。Yomitan zip は保存時に ~/.anki_miner/frequency.csv にインポートされます。</translation>
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation>頻度データを有効化</translation>
-    </message>
-    <message>
-        <source>Enable to display word frequency rank on cards</source>
-        <translation>カードに単語の頻度ランクを表示します。</translation>
-    </message>
-    <message>
-        <source>%1 (Yomitan zip — will import on Save)</source>
-        <translation>%1（Yomitan zip — 保存時にインポートされます）</translation>
-    </message>
-    <message>
-        <source>%1 (%2 entries)</source>
-        <translation>%1（%2 件）</translation>
-    </message>
-    <message>
-        <source>Could not parse file: %1</source>
-        <translation>ファイルを解析できませんでした：%1</translation>
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation>辞書を削除</translation>
     </message>
@@ -2156,6 +2152,126 @@ The dictionary was not removed.</source>
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>既知単語の検出から除外するデッキ:</translation>
+    </message>
+</context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation>頻度ソースを選択</translation>
+    </message>
+    <message>
+        <source>Frequency source (*.zip *.csv *.tsv);;All Files (*)</source>
+        <translation>頻度ソース (*.zip *.csv *.tsv);;すべてのファイル (*)</translation>
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation>頻度ソースをインポートしています…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>頻度ソースを追加しました</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>'%2' から %1 件のエントリをインポートしました。</translation>
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation>インポート失敗</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>再インポートする頻度ソースを選択</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>頻度ソースを再インポートしています…</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>頻度ソースを再インポートしました</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 を再インポートしました。</translation>
+    </message>
+    <message>
+        <source>Re-import Failed</source>
+        <translation>再インポートに失敗しました</translation>
+    </message>
+</context><context>
+    <name>FrequencySettingsPanel</name>
+    <message>
+        <source>Active Frequency Sources</source>
+        <translation>有効な頻度ソース</translation>
+    </message>
+    <message>
+        <source>Sources are layered additively — the best (lowest) rank across all enabled sources wins. Top entry breaks ties first.</source>
+        <translation>ソースは加算的に重ねられます。有効なすべてのソースの中で最も良い（最も低い）ランクが優先されます。同順位の場合は最上位のエントリが優先されます。</translation>
+    </message>
+    <message>
+        <source>+ Add Source…</source>
+        <translation>+ ソースを追加…</translation>
+    </message>
+    <message>
+        <source>Move up (breaks rank ties first)</source>
+        <translation>上へ移動（同順位を優先）</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation>下へ移動</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>削除</translation>
+    </message>
+    <message>
+        <source>Enable Frequency Data</source>
+        <translation>頻度データを有効化</translation>
+    </message>
+    <message>
+        <source>Enable to display word frequency rank on cards.</source>
+        <translation>有効にすると、カードに単語の頻度ランクを表示します。</translation>
+    </message>
+    <message>
+        <source>Remove frequency source</source>
+        <translation>頻度ソースを削除</translation>
+    </message>
+    <message>
+        <source>Remove '%1' from the frequency chain?
+
+Only the index files are deleted.
+This cannot be undone. You would need to re-import to use this source again.</source>
+        <translation>頻度チェーンから '%1' を削除しますか？
+
+インデックスファイルのみが削除されます。
+この操作は取り消せません。このソースを再び使用するには再インポートが必要です。</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>削除に失敗しました</translation>
+    </message>
+    <message>
+        <source>A mining run is in progress. Stop it before removing frequency sources.</source>
+        <translation>マイニングの実行中です。頻度ソースを削除する前に停止してください。</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The frequency source was not removed.</source>
+        <translation>%1 を削除できませんでした：
+%2
+
+頻度ソースは削除されませんでした。</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>再インポート…</translation>
     </message>
 </context><context>
     <name>HeaderWidget</name>
@@ -3052,16 +3168,16 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>音声</translation>
     </message>
     <message>
+        <source>Frequency</source>
+        <translation>頻度</translation>
+    </message>
+    <message>
         <source>Filtering</source>
         <translation>フィルタリング</translation>
     </message>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
-    </message>
-    <message>
-        <source>ASR</source>
-        <translation>ASR</translation>
     </message>
     <message>
         <source>Subtitles</source>
@@ -3186,22 +3302,6 @@ Details: %2</source>
     <message>
         <source>Pitch accent dictionary imported</source>
         <translation>ピッチアクセント辞書をインポートしました</translation>
-    </message>
-    <message>
-        <source>Importing frequency dictionary…</source>
-        <translation>頻度辞書をインポート中…</translation>
-    </message>
-    <message>
-        <source>Overwrite Frequency List?</source>
-        <translation>頻度リストを上書きしますか？</translation>
-    </message>
-    <message>
-        <source>Frequency Import Failed</source>
-        <translation>頻度辞書のインポートに失敗しました</translation>
-    </message>
-    <message>
-        <source>Frequency dictionary imported</source>
-        <translation>頻度辞書をインポートしました</translation>
     </message>
     <message>
         <source>Reset Settings</source>
@@ -3470,8 +3570,16 @@ Details: %2</source>
         <translation>単一ファイル</translation>
     </message>
     <message>
+        <source>Transcribe one selected video file.</source>
+        <translation>選択した動画ファイル 1 つを文字起こしします。</translation>
+    </message>
+    <message>
         <source>Folder</source>
         <translation>フォルダ</translation>
+    </message>
+    <message>
+        <source>Transcribe every video file in a selected folder.</source>
+        <translation>選択したフォルダ内のすべての動画ファイルを文字起こしします。</translation>
     </message>
     <message>
         <source>Video File:</source>
@@ -3484,6 +3592,10 @@ Details: %2</source>
     <message>
         <source>Output</source>
         <translation>出力</translation>
+    </message>
+    <message>
+        <source>Generated .srt files are saved next to each source video unless you choose a folder.</source>
+        <translation>生成された .srt ファイルは、フォルダを選択しない限り各ソース動画の隣に保存されます。</translation>
     </message>
     <message>
         <source>Output:</source>
@@ -3504,6 +3616,10 @@ Details: %2</source>
     <message>
         <source>Overwrite existing SRT files</source>
         <translation>既存の SRT ファイルを上書きする</translation>
+    </message>
+    <message>
+        <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
+        <translation>チェックを外すと、既に .srt ファイルがある動画はスキップされ、上書きされません。</translation>
     </message>
     <message>
         <source>Actions</source>
@@ -3670,6 +3786,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>alass が見つかりません。リタイミングを有効にするには、インストールするか設定でパスを指定してください。</translation>
     </message>
     <message>
+        <source>Resync a subtitle file to its video by matching audio. Pick a video and the subtitle to align.</source>
+        <translation>音声をマッチングして字幕ファイルを動画に再同期します。動画と整列する字幕を選択してください。</translation>
+    </message>
+    <message>
         <source>Mode:</source>
         <translation>モード:</translation>
     </message>
@@ -3678,8 +3798,16 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>単一ファイル</translation>
     </message>
     <message>
+        <source>Retime one subtitle file against one video.</source>
+        <translation>1 つの字幕ファイルを 1 つの動画に対してリタイミングします。</translation>
+    </message>
+    <message>
         <source>Folder</source>
         <translation>フォルダ</translation>
+    </message>
+    <message>
+        <source>Retime a folder of subtitles, paired to videos by episode number.</source>
+        <translation>エピソード番号で動画とペアにして、字幕フォルダをリタイミングします。</translation>
     </message>
     <message>
         <source>Video File:</source>
@@ -3722,12 +3850,20 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>既存の字幕ファイルを上書きする</translation>
     </message>
     <message>
+        <source>When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.</source>
+        <translation>チェックを外すと、出力字幕が既に存在するペアはスキップされ、上書きされません。</translation>
+    </message>
+    <message>
         <source>Split penalty:</source>
         <translation>分割ペナルティ:</translation>
     </message>
     <message>
         <source>Lower = more cut points for ad breaks; 1–20 is the useful range; default 7</source>
         <translation>値が小さいほど CM 区切りでの分割点が増えます。有効範囲は 1〜20、デフォルトは 7</translation>
+    </message>
+    <message>
+        <source>Lower values create more cut points for ad breaks. Useful range 1–20; default 7.</source>
+        <translation>値を小さくすると、CM の区切りに対する分割点が増えます。有効な範囲は 1〜20、デフォルトは 7 です。</translation>
     </message>
     <message>
         <source>Actions</source>
@@ -3904,6 +4040,34 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>字幕</translation>
     </message>
     <message>
+        <source>Speech-to-text</source>
+        <translation>音声認識（Speech-to-text）</translation>
+    </message>
+    <message>
+        <source>ASR model</source>
+        <translation>ASR モデル</translation>
+    </message>
+    <message>
+        <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
+        <translation>字幕生成に使用する Whisper モデルを選択します。「large-v3」は最も精度が高く、「small」は高速ですが精度は劣ります。</translation>
+    </message>
+    <message>
+        <source>Download model</source>
+        <translation>モデルをダウンロード</translation>
+    </message>
+    <message>
+        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
+        <translation>選択した Whisper モデルの重みを Anki Miner の ASR モデルフォルダにダウンロードします。字幕生成を実行する前に必要です。</translation>
+    </message>
+    <message>
+        <source>Model download</source>
+        <translation>モデルのダウンロード</translation>
+    </message>
+    <message>
+        <source>Alignment</source>
+        <translation>整列</translation>
+    </message>
+    <message>
         <source>Optional: path to the alass executable</source>
         <translation>省略可能: alass 実行ファイルのパス</translation>
     </message>
@@ -3912,8 +4076,40 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>alass バイナリ</translation>
     </message>
     <message>
-        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a bundled alass or one found on your PATH.</source>
-        <translation>字幕のリタイミングに使用する alass 実行ファイルのパス（省略可能）。空白のままにすると、バンドルされた alass または PATH 上の alass が使用されます。</translation>
+        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a downloaded, bundled, or PATH alass.</source>
+        <translation>任意：字幕のリタイミングに使用する alass 実行ファイルのパス。空欄のままにすると、ダウンロード済み・同梱・PATH 上の alass が使用されます。</translation>
+    </message>
+    <message>
+        <source>Download alass</source>
+        <translation>alass をダウンロード</translation>
+    </message>
+    <message>
+        <source>Download the alass subtitle-alignment binary into Anki Miner's bin folder. Required for subtitle retiming unless alass is already on your PATH.</source>
+        <translation>alass 字幕整列バイナリを Anki Miner の bin フォルダにダウンロードします。alass が既に PATH 上にある場合を除き、字幕のリタイミングに必要です。</translation>
+    </message>
+    <message>
+        <source>alass download</source>
+        <translation>alass のダウンロード</translation>
+    </message>
+    <message>
+        <source>No alass binary is published for macOS. Install it with Homebrew:</source>
+        <translation>macOS 向けの alass バイナリは公開されていません。Homebrew でインストールしてください：</translation>
+    </message>
+    <message>
+        <source>ASR engine not installed. Subtitle generation needs the faster-whisper engine. Install it with:</source>
+        <translation>ASR エンジンがインストールされていません。字幕生成には faster-whisper エンジンが必要です。次のコマンドでインストールしてください：</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>コピー</translation>
+    </message>
+    <message>
+        <source>Downloaded</source>
+        <translation>ダウンロード済み</translation>
+    </message>
+    <message>
+        <source>Not downloaded</source>
+        <translation>未ダウンロード</translation>
     </message>
 </context><context>
     <name>ThemesPanel</name>
@@ -3932,6 +4128,18 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>%1%</source>
         <translation>%1%</translation>
+    </message>
+    <message>
+        <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
+        <translation>テキスト・間隔・コントロールを含むインターフェース全体を拡大縮小します。再起動後に適用されます。</translation>
+    </message>
+    <message>
+        <source>Zoom</source>
+        <translation>ズーム</translation>
+    </message>
+    <message>
+        <source>Restart Anki Miner to apply the new zoom.</source>
+        <translation>新しいズームを適用するには Anki Miner を再起動してください。</translation>
     </message>
     <message>
         <source>Name</source>
@@ -4448,6 +4656,16 @@ Continue with import?</source>
     <message>
         <source>Re-import</source>
         <translation>再インポート</translation>
+    </message>
+</context><context>
+    <name>_FreqRow</name>
+    <message>
+        <source>%1 entries</source>
+        <translation>%1 件のエントリ</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation>⚠ 見つかりません — 再インポート</translation>
     </message>
 </context><context>
     <name>_PackRow</name>

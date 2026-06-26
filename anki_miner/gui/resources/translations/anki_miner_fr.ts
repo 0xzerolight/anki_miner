@@ -52,6 +52,16 @@
         <translation>Raccourcis clavier</translation>
     </message>
 </context><context>
+    <name>AlassInstallWorker</name>
+    <message>
+        <source>Downloading alass…</source>
+        <translation>Téléchargement d'alass…</translation>
+    </message>
+    <message>
+        <source>alass installed successfully.</source>
+        <translation>alass installé avec succès.</translation>
+    </message>
+</context><context>
     <name>AnalyticsTab</name>
     <message>
         <source>Refresh</source>
@@ -440,6 +450,62 @@
         <translation>Stocke l'émission/l'épisode et l'horodatage d'où provient le mot. Vide = ignorer.</translation>
     </message>
     <message>
+        <source>Card Type</source>
+        <translation>Type de carte</translation>
+    </message>
+    <message>
+        <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
+        <translation>Pour les types de note de style JP Mining Note : inscrire un « x » dans un champ marqueur afin que chaque carte extraite s'affiche selon le type choisi. Laissez « Aucun » si votre type de note ne possède pas de tels champs.</translation>
+    </message>
+    <message>
+        <source>None (disabled)</source>
+        <translation>Aucun (désactivé)</translation>
+    </message>
+    <message>
+        <source>Word + Sentence</source>
+        <translation>Mot + Phrase</translation>
+    </message>
+    <message>
+        <source>Click</source>
+        <translation>Clic</translation>
+    </message>
+    <message>
+        <source>Sentence</source>
+        <translation>Phrase</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>Audio</translation>
+    </message>
+    <message>
+        <source>Default Card Type</source>
+        <translation>Type de carte par défaut</translation>
+    </message>
+    <message>
+        <source>Which marker field gets the “x”. None leaves cards untouched.</source>
+        <translation>Quel champ marqueur reçoit le « x ». Aucun laisse les cartes inchangées.</translation>
+    </message>
+    <message>
+        <source>Customize marker field names</source>
+        <translation>Personnaliser les noms des champs marqueurs</translation>
+    </message>
+    <message>
+        <source>Word + Sentence:</source>
+        <translation>Mot + Phrase :</translation>
+    </message>
+    <message>
+        <source>Click:</source>
+        <translation>Clic :</translation>
+    </message>
+    <message>
+        <source>Sentence:</source>
+        <translation>Phrase :</translation>
+    </message>
+    <message>
+        <source>Audio:</source>
+        <translation>Audio :</translation>
+    </message>
+    <message>
         <source>Card Styling</source>
         <translation>Style des cartes</translation>
     </message>
@@ -544,40 +610,6 @@
     <message>
         <source>%1 downloaded successfully.</source>
         <translation>%1 téléchargé avec succès.</translation>
-    </message>
-</context><context>
-    <name>AsrSettingsPanel</name>
-    <message>
-        <source>ASR Settings</source>
-        <translation>Paramètres ASR</translation>
-    </message>
-    <message>
-        <source>ASR model</source>
-        <translation>Modèle ASR</translation>
-    </message>
-    <message>
-        <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
-        <translation>Sélectionnez le modèle Whisper à utiliser pour la génération de sous-titres. « large-v3 » offre la meilleure précision ; « small » est plus rapide mais moins précis.</translation>
-    </message>
-    <message>
-        <source>Download model</source>
-        <translation>Télécharger le modèle</translation>
-    </message>
-    <message>
-        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
-        <translation>Téléchargez les poids du modèle Whisper sélectionné dans le dossier des modèles ASR d'Anki Miner. Requis avant que la génération de sous-titres puisse s'exécuter.</translation>
-    </message>
-    <message>
-        <source>Model download</source>
-        <translation>Téléchargement du modèle</translation>
-    </message>
-    <message>
-        <source>Downloaded</source>
-        <translation>Téléchargé</translation>
-    </message>
-    <message>
-        <source>Not downloaded</source>
-        <translation>Non téléchargé</translation>
     </message>
 </context><context>
     <name>AudioPackImportFlow</name>
@@ -1486,42 +1518,6 @@ Ignorés (aucune source enregistrée — clic droit sur une ligne de dictionnair
         <translation>Recherche et écrit les motifs d'accent dans les champs mappés.</translation>
     </message>
     <message>
-        <source>Frequency List</source>
-        <translation>Liste de fréquence</translation>
-    </message>
-    <message>
-        <source>Select frequency list CSV/TSV or Yomitan zip...</source>
-        <translation>Sélectionner un CSV/TSV de liste de fréquence ou un zip Yomitan...</translation>
-    </message>
-    <message>
-        <source>Frequency List File</source>
-        <translation>Fichier de liste de fréquence</translation>
-    </message>
-    <message>
-        <source>CSV/TSV with columns (word, rank), or a Yomitan-format frequency zip (e.g. JPDB, BCCWJ). Yomitan zips are imported into ~/.anki_miner/frequency.csv on Save.</source>
-        <translation>CSV/TSV avec les colonnes (mot, rang), ou un zip de fréquence au format Yomitan (par ex. JPDB, BCCWJ). Les zips Yomitan sont importés dans ~/.anki_miner/frequency.csv à l'enregistrement.</translation>
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation>Activer les données de fréquence</translation>
-    </message>
-    <message>
-        <source>Enable to display word frequency rank on cards</source>
-        <translation>Activer pour afficher le rang de fréquence des mots sur les cartes</translation>
-    </message>
-    <message>
-        <source>%1 (Yomitan zip — will import on Save)</source>
-        <translation>%1 (zip Yomitan — sera importé à l'enregistrement)</translation>
-    </message>
-    <message>
-        <source>%1 (%2 entries)</source>
-        <translation>%1 (%2 entrées)</translation>
-    </message>
-    <message>
-        <source>Could not parse file: %1</source>
-        <translation>Impossible d'analyser le fichier : %1</translation>
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation>Supprimer le dictionnaire</translation>
     </message>
@@ -2165,6 +2161,126 @@ Le dictionnaire n'a pas été supprimé.</translation>
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Paquet à exclure de la détection des mots connus :</translation>
+    </message>
+</context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation>Choisir une source de fréquence</translation>
+    </message>
+    <message>
+        <source>Frequency source (*.zip *.csv *.tsv);;All Files (*)</source>
+        <translation>Source de fréquence (*.zip *.csv *.tsv);;Tous les fichiers (*)</translation>
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation>Importation de la source de fréquence…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Annuler</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>Source de fréquence ajoutée</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>%1 entrées importées depuis « %2 ».</translation>
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation>Échec de l'importation</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>Choisir la source de fréquence à réimporter</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Réimportation de la source de fréquence…</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>Source de fréquence réimportée</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 réimporté avec succès.</translation>
+    </message>
+    <message>
+        <source>Re-import Failed</source>
+        <translation>Échec de la réimportation</translation>
+    </message>
+</context><context>
+    <name>FrequencySettingsPanel</name>
+    <message>
+        <source>Active Frequency Sources</source>
+        <translation>Sources de fréquence actives</translation>
+    </message>
+    <message>
+        <source>Sources are layered additively — the best (lowest) rank across all enabled sources wins. Top entry breaks ties first.</source>
+        <translation>Les sources sont superposées de manière additive — le meilleur rang (le plus bas) parmi toutes les sources activées l'emporte. L'entrée du haut départage les égalités en premier.</translation>
+    </message>
+    <message>
+        <source>+ Add Source…</source>
+        <translation>+ Ajouter une source…</translation>
+    </message>
+    <message>
+        <source>Move up (breaks rank ties first)</source>
+        <translation>Monter (départage les égalités de rang en premier)</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation>Descendre</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Supprimer</translation>
+    </message>
+    <message>
+        <source>Enable Frequency Data</source>
+        <translation>Activer les données de fréquence</translation>
+    </message>
+    <message>
+        <source>Enable to display word frequency rank on cards.</source>
+        <translation>Activez pour afficher le rang de fréquence du mot sur les cartes.</translation>
+    </message>
+    <message>
+        <source>Remove frequency source</source>
+        <translation>Supprimer la source de fréquence</translation>
+    </message>
+    <message>
+        <source>Remove '%1' from the frequency chain?
+
+Only the index files are deleted.
+This cannot be undone. You would need to re-import to use this source again.</source>
+        <translation>Supprimer « %1 » de la chaîne de fréquence ?
+
+Seuls les fichiers d'index sont supprimés.
+Cette action est irréversible. Vous devrez réimporter pour réutiliser cette source.</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>Échec de la suppression</translation>
+    </message>
+    <message>
+        <source>A mining run is in progress. Stop it before removing frequency sources.</source>
+        <translation>Une extraction est en cours. Arrêtez-la avant de supprimer des sources de fréquence.</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The frequency source was not removed.</source>
+        <translation>Impossible de supprimer %1 :
+%2
+
+La source de fréquence n'a pas été supprimée.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>Réimporter…</translation>
     </message>
 </context><context>
     <name>HeaderWidget</name>
@@ -3061,16 +3177,16 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation>Audio</translation>
     </message>
     <message>
+        <source>Frequency</source>
+        <translation>Fréquence</translation>
+    </message>
+    <message>
         <source>Filtering</source>
         <translation>Filtrage</translation>
     </message>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
-    </message>
-    <message>
-        <source>ASR</source>
-        <translation>ASR</translation>
     </message>
     <message>
         <source>Subtitles</source>
@@ -3195,22 +3311,6 @@ Détails : %2</translation>
     <message>
         <source>Pitch accent dictionary imported</source>
         <translation>Dictionnaire d'accent de hauteur importé</translation>
-    </message>
-    <message>
-        <source>Importing frequency dictionary…</source>
-        <translation>Importation du dictionnaire de fréquence…</translation>
-    </message>
-    <message>
-        <source>Overwrite Frequency List?</source>
-        <translation>Écraser la liste de fréquence ?</translation>
-    </message>
-    <message>
-        <source>Frequency Import Failed</source>
-        <translation>Échec de l'importation de la fréquence</translation>
-    </message>
-    <message>
-        <source>Frequency dictionary imported</source>
-        <translation>Dictionnaire de fréquence importé</translation>
     </message>
     <message>
         <source>Reset Settings</source>
@@ -3480,8 +3580,16 @@ Détails : %2</translation>
         <translation>Fichier unique</translation>
     </message>
     <message>
+        <source>Transcribe one selected video file.</source>
+        <translation>Transcrire un fichier vidéo sélectionné.</translation>
+    </message>
+    <message>
         <source>Folder</source>
         <translation>Dossier</translation>
+    </message>
+    <message>
+        <source>Transcribe every video file in a selected folder.</source>
+        <translation>Transcrire tous les fichiers vidéo d'un dossier sélectionné.</translation>
     </message>
     <message>
         <source>Video File:</source>
@@ -3494,6 +3602,10 @@ Détails : %2</translation>
     <message>
         <source>Output</source>
         <translation>Sortie</translation>
+    </message>
+    <message>
+        <source>Generated .srt files are saved next to each source video unless you choose a folder.</source>
+        <translation>Les fichiers .srt générés sont enregistrés à côté de chaque vidéo source, sauf si vous choisissez un dossier.</translation>
     </message>
     <message>
         <source>Output:</source>
@@ -3514,6 +3626,10 @@ Détails : %2</translation>
     <message>
         <source>Overwrite existing SRT files</source>
         <translation>Écraser les fichiers SRT existants</translation>
+    </message>
+    <message>
+        <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
+        <translation>Lorsque cette case est décochée, les vidéos qui possèdent déjà un fichier .srt sont ignorées, et non écrasées.</translation>
     </message>
     <message>
         <source>Actions</source>
@@ -3680,6 +3796,10 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>alass introuvable ; installez-le ou définissez son chemin dans les Paramètres pour activer la re-synchronisation.</translation>
     </message>
     <message>
+        <source>Resync a subtitle file to its video by matching audio. Pick a video and the subtitle to align.</source>
+        <translation>Resynchroniser un fichier de sous-titres avec sa vidéo par correspondance audio. Choisissez une vidéo et le sous-titre à aligner.</translation>
+    </message>
+    <message>
         <source>Mode:</source>
         <translation>Mode :</translation>
     </message>
@@ -3688,8 +3808,16 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Fichier unique</translation>
     </message>
     <message>
+        <source>Retime one subtitle file against one video.</source>
+        <translation>Resynchroniser un fichier de sous-titres avec une vidéo.</translation>
+    </message>
+    <message>
         <source>Folder</source>
         <translation>Dossier</translation>
+    </message>
+    <message>
+        <source>Retime a folder of subtitles, paired to videos by episode number.</source>
+        <translation>Resynchroniser un dossier de sous-titres, appariés aux vidéos par numéro d'épisode.</translation>
     </message>
     <message>
         <source>Video File:</source>
@@ -3732,12 +3860,20 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Écraser les fichiers de sous-titres existants</translation>
     </message>
     <message>
+        <source>When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.</source>
+        <translation>Lorsque cette case est décochée, les paires dont le sous-titre de sortie existe déjà sont ignorées, et non écrasées.</translation>
+    </message>
+    <message>
         <source>Split penalty:</source>
         <translation>Pénalité de découpe :</translation>
     </message>
     <message>
         <source>Lower = more cut points for ad breaks; 1–20 is the useful range; default 7</source>
         <translation>Valeur faible = plus de points de coupe pour les pauses publicitaires ; la plage utile est 1–20 ; valeur par défaut 7</translation>
+    </message>
+    <message>
+        <source>Lower values create more cut points for ad breaks. Useful range 1–20; default 7.</source>
+        <translation>Des valeurs plus basses créent davantage de points de coupe pour les pauses publicitaires. Plage utile 1–20 ; valeur par défaut 7.</translation>
     </message>
     <message>
         <source>Actions</source>
@@ -3914,6 +4050,34 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Sous-titres</translation>
     </message>
     <message>
+        <source>Speech-to-text</source>
+        <translation>Reconnaissance vocale</translation>
+    </message>
+    <message>
+        <source>ASR model</source>
+        <translation>Modèle ASR</translation>
+    </message>
+    <message>
+        <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
+        <translation>Sélectionnez le modèle Whisper à utiliser pour la génération de sous-titres. « large-v3 » offre la meilleure précision ; « small » est plus rapide mais moins précis.</translation>
+    </message>
+    <message>
+        <source>Download model</source>
+        <translation>Télécharger le modèle</translation>
+    </message>
+    <message>
+        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
+        <translation>Téléchargez les poids du modèle Whisper sélectionné dans le dossier des modèles ASR d'Anki Miner. Requis avant que la génération de sous-titres puisse s'exécuter.</translation>
+    </message>
+    <message>
+        <source>Model download</source>
+        <translation>Téléchargement du modèle</translation>
+    </message>
+    <message>
+        <source>Alignment</source>
+        <translation>Alignement</translation>
+    </message>
+    <message>
         <source>Optional: path to the alass executable</source>
         <translation>Facultatif : chemin vers l'exécutable alass</translation>
     </message>
@@ -3922,8 +4086,40 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Binaire alass</translation>
     </message>
     <message>
-        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a bundled alass or one found on your PATH.</source>
-        <translation>Facultatif : chemin vers l'exécutable alass utilisé pour la resynchronisation des sous-titres. Laissez vide pour utiliser un alass intégré ou celui trouvé dans votre PATH.</translation>
+        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a downloaded, bundled, or PATH alass.</source>
+        <translation>Facultatif : chemin vers l'exécutable alass utilisé pour la resynchronisation des sous-titres. Laissez vide pour utiliser un alass téléchargé, intégré ou présent dans le PATH.</translation>
+    </message>
+    <message>
+        <source>Download alass</source>
+        <translation>Télécharger alass</translation>
+    </message>
+    <message>
+        <source>Download the alass subtitle-alignment binary into Anki Miner's bin folder. Required for subtitle retiming unless alass is already on your PATH.</source>
+        <translation>Téléchargez le binaire d'alignement de sous-titres alass dans le dossier bin d'Anki Miner. Requis pour la resynchronisation des sous-titres, sauf si alass est déjà présent dans votre PATH.</translation>
+    </message>
+    <message>
+        <source>alass download</source>
+        <translation>Téléchargement d'alass</translation>
+    </message>
+    <message>
+        <source>No alass binary is published for macOS. Install it with Homebrew:</source>
+        <translation>Aucun binaire alass n'est publié pour macOS. Installez-le avec Homebrew :</translation>
+    </message>
+    <message>
+        <source>ASR engine not installed. Subtitle generation needs the faster-whisper engine. Install it with:</source>
+        <translation>Moteur ASR non installé. La génération de sous-titres nécessite le moteur faster-whisper. Installez-le avec :</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>Copier</translation>
+    </message>
+    <message>
+        <source>Downloaded</source>
+        <translation>Téléchargé</translation>
+    </message>
+    <message>
+        <source>Not downloaded</source>
+        <translation>Non téléchargé</translation>
     </message>
 </context><context>
     <name>ThemesPanel</name>
@@ -3942,6 +4138,18 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
     <message>
         <source>%1%</source>
         <translation>%1 %</translation>
+    </message>
+    <message>
+        <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
+        <translation>Mettre à l'échelle toute l'interface — texte, espacement et contrôles. S'applique après redémarrage.</translation>
+    </message>
+    <message>
+        <source>Zoom</source>
+        <translation>Zoom</translation>
+    </message>
+    <message>
+        <source>Restart Anki Miner to apply the new zoom.</source>
+        <translation>Redémarrez Anki Miner pour appliquer le nouveau zoom.</translation>
     </message>
     <message>
         <source>Name</source>
@@ -4458,6 +4666,16 @@ Continuer l'import ?</translation>
     <message>
         <source>Re-import</source>
         <translation>Réimporter</translation>
+    </message>
+</context><context>
+    <name>_FreqRow</name>
+    <message>
+        <source>%1 entries</source>
+        <translation>%1 entrées</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation>⚠ manquant — réimporter</translation>
     </message>
 </context><context>
     <name>_PackRow</name>
