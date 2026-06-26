@@ -69,6 +69,14 @@ _FAMILY_STAR_PARTIAL_OPACITY = 0.45
 # (Issue #63).
 FONT_SCALE_PRESETS = (50, 75, 100, 125, 150, 175, 200)
 
+# Discrete whole-UI zoom presets (whole percents) offered in the Zoom dropdown.
+# All values sit inside the [0.5, 2.0] clamp range. Unlike Text size, zoom is
+# restart-to-apply (injected as QT_SCALE_FACTOR before QApplication is built),
+# so there is no live preview — only a restart note. 50% is omitted because a
+# half-size whole UI is cramped to the point of unusable; the font-only Text
+# size still goes down to 50% for users who only need smaller text.
+ZOOM_PRESETS = (75, 100, 125, 150, 175, 200)
+
 
 class ThemesPanel(QWidget):
     """Settings panel for managing themes and the favorites rotation.
@@ -84,22 +92,27 @@ class ThemesPanel(QWidget):
     state_changed = pyqtSignal(str, tuple)
     favorites_changed = pyqtSignal()
     font_scale_changed = pyqtSignal(float)
+    zoom_changed = pyqtSignal(float)
 
     # Column indices for clarity.
     COL_NAME = 0  # tree expander + name
     COL_STATUS = 1  # "Active" marker
     COL_STAR = 2  # favorite toggle
 
-    def __init__(self, themes_root: Path, parent: QWidget | None = None) -> None:
+    def __init__(self, themes_root: Path, ui_zoom: float = 1.0, parent: QWidget | None = None) -> None:
         """Initialize the panel.
 
         Args:
             themes_root: The user themes directory. Used by the "Open themes
                 folder" action; created on demand if missing.
+            ui_zoom: The persisted whole-UI zoom factor, used to seed the Zoom
+                dropdown. Zoom is restart-to-apply (QT_SCALE_FACTOR), so there
+                is no live Theme state to read it from — it is passed in.
             parent: Optional parent widget.
         """
         super().__init__(parent)
         self._themes_root = themes_root
+        self._ui_zoom = ui_zoom
         self._preview_baseline: str | None = None
         # Star button registry — populated by _populate so favorite toggles
         # can update one row in place instead of rebuilding the entire tree.
@@ -111,6 +124,7 @@ class ThemesPanel(QWidget):
         self._setup_ui()
         self._populate()
         self._sync_font_scale_combo()
+        self._sync_zoom_combo()
 
     # ---- UI construction -------------------------------------------------
 
@@ -154,6 +168,38 @@ class ThemesPanel(QWidget):
         font_row.addStretch(1)
 
         layout.addLayout(font_row)
+
+        # Zoom (whole-UI scale) row. Unlike Text size this is restart-to-apply
+        # (injected as QT_SCALE_FACTOR at startup), so picking a value only
+        # persists + reveals the restart note below — no live restyle.
+        zoom_row = QHBoxLayout()
+        zoom_row.setSpacing(SPACING.sm)
+
+        zoom_tip = self.tr("Scale the entire interface — text, spacing, and controls. Applies after restart.")
+        zoom_label = QLabel(self.tr("Zoom"))
+        zoom_label.setToolTip(zoom_tip)
+        zoom_row.addWidget(zoom_label)
+
+        self.zoom_combo = QComboBox()
+        self.zoom_combo.setObjectName("zoomCombo")
+        self.zoom_combo.setToolTip(zoom_tip)
+        for p in ZOOM_PRESETS:
+            self.zoom_combo.addItem(tr_format(self.tr("%1%"), p), p)
+        # `activated` (user-only) so the programmatic setCurrentIndex in
+        # _sync_zoom_combo doesn't emit and falsely reveal the restart note.
+        self.zoom_combo.activated.connect(self._on_zoom_selected)
+        zoom_row.addWidget(self.zoom_combo)
+
+        zoom_row.addStretch(1)
+
+        layout.addLayout(zoom_row)
+
+        # Hidden until the user changes zoom; mirrors the language picker's
+        # restart-to-apply hint (language_panel.py).
+        self.zoom_restart_note = QLabel(self.tr("Restart Anki Miner to apply the new zoom."))
+        self.zoom_restart_note.setWordWrap(True)
+        self.zoom_restart_note.setVisible(False)
+        layout.addWidget(self.zoom_restart_note)
 
         self.tree = QTreeWidget(self)
         # objectName lets common.qss scope styling overrides to just this tree
@@ -553,8 +599,37 @@ class ThemesPanel(QWidget):
             self.font_scale_combo.blockSignals(False)
 
     def _nearest_preset_index(self, value: int) -> int:
-        """Return the index of the preset closest to ``value`` percent."""
+        """Return the index of the font-scale preset closest to ``value`` percent."""
         return min(range(len(FONT_SCALE_PRESETS)), key=lambda i: abs(FONT_SCALE_PRESETS[i] - value))
+
+    def _sync_zoom_combo(self) -> None:
+        """Select the combo entry matching the persisted ``ui_zoom``.
+
+        Signals are blocked so syncing from config state never emits and falsely
+        reveals the restart note (belt-and-suspenders given ``activated`` is
+        user-only). A value that is not one of ``ZOOM_PRESETS`` snaps to the
+        nearest preset.
+        """
+        value = round(self._ui_zoom * 100)
+        idx = min(range(len(ZOOM_PRESETS)), key=lambda i: abs(ZOOM_PRESETS[i] - value))
+        self.zoom_combo.blockSignals(True)
+        try:
+            self.zoom_combo.setCurrentIndex(idx)
+        finally:
+            self.zoom_combo.blockSignals(False)
+
+    def _on_zoom_selected(self, index: int) -> None:
+        """Persist the zoom preset the user picked and reveal the restart note.
+
+        No live restyle: zoom is injected as QT_SCALE_FACTOR before QApplication
+        is built, so it only takes effect on the next launch.
+        """
+        percent = self.zoom_combo.itemData(index)
+        if percent is None:
+            return
+        self._ui_zoom = int(percent) / 100.0
+        self.zoom_restart_note.setVisible(True)
+        self.zoom_changed.emit(self._ui_zoom)
 
     def _on_font_scale_selected(self, index: int) -> None:
         """Apply the preset the user picked from the dropdown."""
