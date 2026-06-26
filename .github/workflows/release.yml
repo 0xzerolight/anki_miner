@@ -73,6 +73,8 @@ jobs:
             artifact_name: AnkiMiner-Windows-x86_64
           - os: macos-latest
             artifact_name: AnkiMiner-macOS-arm64
+          - os: macos-13
+            artifact_name: AnkiMiner-macOS-x86_64
 
     runs-on: ${{ matrix.os }}
 
@@ -171,18 +173,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # osxexperts.net arm64-native static builds (BtbN ships no macOS asset;
-          # evermeet.cx is Intel-only). ffmpeg/ffprobe are SEPARATE downloads.
-          # WARNING: these URLs are NOT version-pinned (ffmpeg81arm.zip is
-          # overwritten when a new ffmpeg minor ships), so the hard-coded SHA256
-          # below will hard-fail this step the day osxexperts updates the asset.
-          # That is intentional fail-closed behavior: a checksum mismatch must
-          # block the release until a maintainer re-pins the hash (and, ideally,
-          # mirrors the asset to a release we control). Do not relax to soft-verify.
-          FFMPEG_URL="https://www.osxexperts.net/ffmpeg81arm.zip"
-          FFMPEG_SHA256="ebb82529562b71170807bbc6b0e7eb4f0b13af8cbb0e085bb9e8f6fe709598ad"
-          FFPROBE_URL="https://www.osxexperts.net/ffprobe81arm.zip"
-          FFPROBE_SHA256="a6640a77d38a6f0527c5b597e599cb36a3427a6931444ed80bc62542421950a1"
+          # Two arch-native static ffmpeg/ffprobe sources, selected by runner.arch:
+          #
+          #   ARM64 (macos-latest) -> osxexperts.net arm64 builds. NOT version-pinned
+          #     (ffmpeg81arm.zip is overwritten when a new ffmpeg minor ships), so the
+          #     hard-coded SHA256 will hard-fail this step the day osxexperts updates
+          #     the asset. That is intentional fail-closed behavior.
+          #
+          #   X64 (macos-13) -> evermeet.cx Intel builds. These URLs ARE version-pinned
+          #     (ffmpeg-8.1.2.zip is immutable; new versions get new filenames), so the
+          #     hash only changes when we deliberately bump the version.
+          #
+          # In both cases ffmpeg/ffprobe are SEPARATE downloads, each a zip with a
+          # single top-level binary. A checksum mismatch must block the release until a
+          # maintainer re-pins the hash. Do not relax to soft-verify.
+          if [ "${RUNNER_ARCH}" = "ARM64" ]; then
+            FFMPEG_URL="https://www.osxexperts.net/ffmpeg81arm.zip"
+            FFMPEG_SHA256="ebb82529562b71170807bbc6b0e7eb4f0b13af8cbb0e085bb9e8f6fe709598ad"
+            FFPROBE_URL="https://www.osxexperts.net/ffprobe81arm.zip"
+            FFPROBE_SHA256="a6640a77d38a6f0527c5b597e599cb36a3427a6931444ed80bc62542421950a1"
+          else
+            FFMPEG_URL="https://evermeet.cx/ffmpeg/ffmpeg-8.1.2.zip"
+            FFMPEG_SHA256="e91df72a1ee7c26606f90dd2dd4dcccc6a75140ff9ea6fdd50faae828b82ba69"
+            FFPROBE_URL="https://evermeet.cx/ffmpeg/ffprobe-8.1.2.zip"
+            FFPROBE_SHA256="399b93f0b9862f69767afa343e90c2f48d7e7958cadbb6deb76a012d0e3b7ce3"
+          fi
           mkdir -p vendor/ffmpeg
           curl -fL "$FFMPEG_URL" -o ffmpeg.zip
           curl -fL "$FFPROBE_URL" -o ffprobe.zip

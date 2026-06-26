@@ -47,9 +47,12 @@ Grab the download for your platform from the [latest release](https://github.com
 | Platform | Download |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon) | `AnkiMiner-macOS-arm64.tar.gz` |
+| macOS (Apple Silicon / M1–M4) | `AnkiMiner-macOS-arm64.tar.gz` |
+| macOS (Intel) | `AnkiMiner-macOS-x86_64.tar.gz` |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
+
+Not sure which Mac you have? **Apple menu →  About This Mac**: a "Chip" line starting with **Apple** (e.g. "Apple M2") means Apple Silicon; a "Processor" line naming **Intel** means Intel.
 
 **macOS first-run (unsigned binary):** macOS Gatekeeper will block the app because it is not notarised. Extract the archive first, then clear the quarantine flag on the extracted folder (clearing it on the `.tar.gz` does not carry over to the extracted files):
 ```bash
