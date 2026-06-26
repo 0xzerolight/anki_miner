@@ -6,9 +6,8 @@ and the deferred-promotion closure; the tab keeps its thin per-flow wrapper
 (selector + labels + decline fallback) and the save-time commit ordering.
 
 Frequency previously shared this engine but now has its own multi-source
-import flow (:mod:`anki_miner.gui.controllers.frequency_import_flow`); only
-``YomitanFreqImportResult`` is still referenced here, in the result isinstance
-guard, since ``YomitanCsvImportWorker`` is format-agnostic.
+import flow (:mod:`anki_miner.gui.controllers.frequency_import_flow`), so this
+flow only ever drives the pitch importer.
 """
 
 import os
@@ -22,7 +21,6 @@ from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
-from anki_miner.services.frequency import YomitanFreqImportResult
 from anki_miner.services.pitch_accent import YomitanPitchImportResult
 from anki_miner.utils.i18n import tr_format
 
@@ -189,9 +187,9 @@ class ZipImportFlow:
             return None
 
         result = result_holder["ok"]
-        # Both YomitanPitchImportResult and YomitanFreqImportResult expose the
+        # Only the pitch importer drives this flow now; it exposes the
         # entry_count / source_name / skipped_display_only attributes used below.
-        assert isinstance(result, (YomitanPitchImportResult, YomitanFreqImportResult))
+        assert isinstance(result, YomitanPitchImportResult)
 
         def _commit() -> None:
             os.replace(pending_csv, dest_csv)
