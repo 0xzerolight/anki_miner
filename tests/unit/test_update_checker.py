@@ -94,12 +94,21 @@ class TestDetectTarget:
         monkeypatch.setattr("anki_miner.services.update_checker.sys.platform", "win32")
         assert _detect_target() == "windows-frozen"
 
-    def test_macos_frozen(self, monkeypatch):
-        """sys.frozen + darwin → macos-frozen."""
+    def test_macos_frozen_arm64(self, monkeypatch):
+        """sys.frozen + darwin + arm64 machine → macos-frozen-arm64."""
         monkeypatch.delenv("APPIMAGE", raising=False)
         monkeypatch.setattr("anki_miner.services.update_checker.sys.frozen", True, raising=False)
         monkeypatch.setattr("anki_miner.services.update_checker.sys.platform", "darwin")
-        assert _detect_target() == "macos-frozen"
+        monkeypatch.setattr("anki_miner.services.update_checker.platform.machine", lambda: "arm64")
+        assert _detect_target() == "macos-frozen-arm64"
+
+    def test_macos_frozen_x86_64(self, monkeypatch):
+        """sys.frozen + darwin + x86_64 machine (Intel or Rosetta) → macos-frozen-x86_64."""
+        monkeypatch.delenv("APPIMAGE", raising=False)
+        monkeypatch.setattr("anki_miner.services.update_checker.sys.frozen", True, raising=False)
+        monkeypatch.setattr("anki_miner.services.update_checker.sys.platform", "darwin")
+        monkeypatch.setattr("anki_miner.services.update_checker.platform.machine", lambda: "x86_64")
+        assert _detect_target() == "macos-frozen-x86_64"
 
     def test_linux_frozen(self, monkeypatch):
         """sys.frozen + linux + no APPIMAGE → linux-frozen."""
@@ -154,6 +163,10 @@ def _make_assets() -> list[dict]:
             "name": "AnkiMiner-macOS-arm64.tar.gz",
             "browser_download_url": f"{base}AnkiMiner-macOS-arm64.tar.gz",
         },
+        {
+            "name": "AnkiMiner-macOS-x86_64.tar.gz",
+            "browser_download_url": f"{base}AnkiMiner-macOS-x86_64.tar.gz",
+        },
     ]
 
 
@@ -181,10 +194,15 @@ class TestPickAsset:
         assert url is not None
         assert url.endswith(".AppImage")
 
-    def test_macos_frozen_picks_arm64_tar_gz(self):
-        url = _pick_asset(_make_assets(), "macos-frozen")
+    def test_macos_frozen_arm64_picks_arm64_tar_gz(self):
+        url = _pick_asset(_make_assets(), "macos-frozen-arm64")
         assert url is not None
         assert url.endswith("AnkiMiner-macOS-arm64.tar.gz")
+
+    def test_macos_frozen_x86_64_picks_x86_64_tar_gz(self):
+        url = _pick_asset(_make_assets(), "macos-frozen-x86_64")
+        assert url is not None
+        assert url.endswith("AnkiMiner-macOS-x86_64.tar.gz")
 
     def test_pip_target_returns_none(self):
         assert _pick_asset(_make_assets(), "pip") is None
