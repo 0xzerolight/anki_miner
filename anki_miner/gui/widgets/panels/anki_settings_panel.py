@@ -8,10 +8,13 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QComboBox,
+    QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -41,6 +44,17 @@ _FIELD_KEYWORDS: dict[str, list[str]] = {
     "pitch_category": ["pitchcategory", "accenttype", "accentcategory"],
     "frequency": ["frequency", "freq", "rank", "frequencyrank"],
     "source": ["source", "origin"],
+}
+
+# JP Mining Note card-type marker ids → default field names. Mirrors the
+# AnkiMinerConfig.card_type_marker_fields default factory; duplicated here (like
+# set_card_fields' "Expression"/"Sentence" literals) to prefill the inputs
+# without importing the config factory at widget-construction time.
+_CARD_TYPE_MARKER_DEFAULTS: dict[str, str] = {
+    "word_and_sentence": "IsWordAndSentenceCard",
+    "click": "IsClickCard",
+    "sentence": "IsSentenceCard",
+    "audio": "IsAudioCard",
 }
 
 
@@ -342,6 +356,65 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Stores the show/episode and timestamp the word came from. Blank = skip."),
         )
 
+        # Card Type section. JP Mining Note-style note types render a card
+        # differently depending on which marker field holds an "x". The dropdown
+        # is the only visible control by default; the editable field names hide
+        # in a collapsible group for the rare fork that renames them.
+        self.add_section(self.tr("Card Type"))
+
+        card_type_helper = QLabel(
+            self.tr(
+                "For JP Mining Note-style note types: stamp an “x” into a marker field so every mined "
+                "card renders as the chosen type. Leave “None” if your note type has no such fields."
+            )
+        )
+        card_type_helper.setObjectName("helper-text")
+        card_type_helper.setWordWrap(True)
+        self.add_widget(card_type_helper)
+
+        self.card_type_combo = QComboBox()
+        self.card_type_combo.addItem(self.tr("None (disabled)"), "")
+        self.card_type_combo.addItem(self.tr("Word + Sentence"), "word_and_sentence")
+        self.card_type_combo.addItem(self.tr("Click"), "click")
+        self.card_type_combo.addItem(self.tr("Sentence"), "sentence")
+        self.card_type_combo.addItem(self.tr("Audio"), "audio")
+        self.add_field(
+            self.tr("Default Card Type"),
+            self.card_type_combo,
+            helper=self.tr("Which marker field gets the “x”. None leaves cards untouched."),
+        )
+
+        # Collapsible marker-field-name editors. The QGroupBox checkbox toggles
+        # the inner body's visibility (Qt's checkable group only disables, not
+        # hides), so the four rows stay hidden until a power user expands them.
+        self.card_type_names_group = QGroupBox(self.tr("Customize marker field names"))
+        self.card_type_names_group.setCheckable(True)
+        self.card_type_names_group.setChecked(False)
+        group_layout = QVBoxLayout(self.card_type_names_group)
+        self._card_type_names_body = QWidget()
+        body_form = QFormLayout(self._card_type_names_body)
+        body_form.setContentsMargins(0, 0, 0, 0)
+
+        self.card_type_word_and_sentence_input = QLineEdit(_CARD_TYPE_MARKER_DEFAULTS["word_and_sentence"])
+        self.card_type_click_input = QLineEdit(_CARD_TYPE_MARKER_DEFAULTS["click"])
+        self.card_type_sentence_input = QLineEdit(_CARD_TYPE_MARKER_DEFAULTS["sentence"])
+        self.card_type_audio_input = QLineEdit(_CARD_TYPE_MARKER_DEFAULTS["audio"])
+        self._card_type_inputs: dict[str, QLineEdit] = {
+            "word_and_sentence": self.card_type_word_and_sentence_input,
+            "click": self.card_type_click_input,
+            "sentence": self.card_type_sentence_input,
+            "audio": self.card_type_audio_input,
+        }
+        body_form.addRow(self.tr("Word + Sentence:"), self.card_type_word_and_sentence_input)
+        body_form.addRow(self.tr("Click:"), self.card_type_click_input)
+        body_form.addRow(self.tr("Sentence:"), self.card_type_sentence_input)
+        body_form.addRow(self.tr("Audio:"), self.card_type_audio_input)
+
+        group_layout.addWidget(self._card_type_names_body)
+        self._card_type_names_body.setVisible(False)
+        self.card_type_names_group.toggled.connect(self._card_type_names_body.setVisible)
+        self.add_widget(self.card_type_names_group)
+
         # Card Styling section (Issue #44). The dropdown is the *desired* state;
         # styling auto-syncs into the note type on Save (no Apply/Remove buttons).
         # The status line below reports what's actually live in Anki.
@@ -636,6 +709,29 @@ class AnkiSettingsPanel(FormPanel):
         if index >= 0:
             self.pitch_category_format_combo.setCurrentIndex(index)
 
+    # === Card Type marker (JP Mining Note) ===
+    def get_card_type(self) -> str:
+        """Return the selected card-type id ("" when disabled)."""
+        value = self.card_type_combo.currentData()
+        return value if isinstance(value, str) else ""
+
+    def set_card_type(self, value: str) -> None:
+        """Select the card-type dropdown by id, falling back to "" (disabled)."""
+        index = self.card_type_combo.findData(value)
+        if index < 0:
+            index = self.card_type_combo.findData("")
+        if index >= 0:
+            self.card_type_combo.setCurrentIndex(index)
+
+    def get_card_type_marker_fields(self) -> dict[str, str]:
+        """Return the four marker field names keyed by card-type id."""
+        return {key: widget.text().strip() for key, widget in self._card_type_inputs.items()}
+
+    def set_card_type_marker_fields(self, mapping: Mapping[str, str]) -> None:
+        """Populate the four marker-name inputs, defaulting any missing key."""
+        for key, widget in self._card_type_inputs.items():
+            widget.setText(mapping.get(key, _CARD_TYPE_MARKER_DEFAULTS[key]))
+
     # === Card Styling (Issue #44 / auto-sync) ===
     def _on_styling_choice_changed(self) -> None:
         """React to a user edit of the preset / custom CSS.
@@ -768,6 +864,8 @@ class AnkiSettingsPanel(FormPanel):
         # A fresh load reflects persisted state, not a user edit.
         self.reset_styling_user_touched()
         self.set_pitch_category_format(config.pitch_category_format)
+        self.set_card_type(config.card_type)
+        self.set_card_type_marker_fields(config.card_type_marker_fields)
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.
@@ -789,4 +887,9 @@ class AnkiSettingsPanel(FormPanel):
             card_style_preset=self.get_card_style_preset(),
             custom_card_css=self.get_custom_css(),
             pitch_category_format=self.get_pitch_category_format(),
+            card_type=cast(
+                Literal["", "word_and_sentence", "click", "sentence", "audio"],
+                self.get_card_type(),
+            ),
+            card_type_marker_fields=self.get_card_type_marker_fields(),
         )

@@ -255,6 +255,26 @@ class TestRoundTripImmutabilityAndPaths:
         assert loaded.anki_fields["word"] == "CustomExpr"
         assert loaded.anki_fields["sentence"] == "CustomSent"
 
+    def test_card_type_marker_round_trips_correctly(self, tmp_config: Path):
+        """card_type + card_type_marker_fields survive save→load (proxy + values)."""
+        custom_markers = {**create_default_config().card_type_marker_fields, "click": "MyClick"}
+        cfg = AnkiMinerConfig(card_type="click", card_type_marker_fields=custom_markers)
+
+        GUIConfigManager.save_config(cfg)
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.card_type == "click"
+        assert isinstance(loaded.card_type_marker_fields, types.MappingProxyType)
+        assert loaded.card_type_marker_fields["click"] == "MyClick"
+        assert loaded.card_type_marker_fields["audio"] == "IsAudioCard"
+
+    def test_card_type_defaults_round_trip(self, tmp_config: Path):
+        """A default config round-trips with card_type disabled and JPMN marker names."""
+        GUIConfigManager.save_config(create_default_config())
+        loaded = GUIConfigManager.load_config()
+        assert loaded.card_type == ""
+        assert loaded.card_type_marker_fields["word_and_sentence"] == "IsWordAndSentenceCard"
+
     def test_allowed_pos_round_trips_as_tuple(self, tmp_config: Path):
         """allowed_pos must come back as a tuple after save→load."""
         cfg = AnkiMinerConfig(allowed_pos=("名詞", "動詞"))
