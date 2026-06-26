@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry, FreqEntry
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 
 
@@ -312,3 +312,103 @@ def test_migrate_expression_audio_chain_absent_key_is_noop():
     data: dict = {"anki_deck_name": "Test"}
     result = GUIConfigManager._migrate_expression_audio_chain(data)
     assert "expression_audio_chain" not in result
+
+
+# ---------------------------------------------------------------------------
+# frequency_chain migration tests
+# ---------------------------------------------------------------------------
+
+
+def test_save_then_load_preserves_frequency_chain(tmp_config: Path):
+    """A non-empty frequency_chain survives a save/load round-trip as FreqEntry."""
+    chain = (
+        FreqEntry(source_id="jpdb", enabled=True),
+        FreqEntry(source_id="bccwj", enabled=False),
+        FreqEntry(source_id="legacy-frequency", enabled=True),
+    )
+    config = replace(AnkiMinerConfig(), frequency_chain=chain)
+    GUIConfigManager.save_config(config)
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.frequency_chain == chain
+    assert all(isinstance(e, FreqEntry) for e in loaded.frequency_chain)
+
+
+def test_migrate_frequency_chain_rebuilds_from_dicts():
+    """_migrate_frequency_chain converts list[dict] to tuple[FreqEntry]."""
+    data = {
+        "frequency_chain": [
+            {"source_id": "jpdb", "enabled": True},
+            {"source_id": "bccwj", "enabled": False},
+        ]
+    }
+    result = GUIConfigManager._migrate_frequency_chain(data)
+    chain = result["frequency_chain"]
+    assert chain == (
+        FreqEntry(source_id="jpdb", enabled=True),
+        FreqEntry(source_id="bccwj", enabled=False),
+    )
+    assert all(isinstance(e, FreqEntry) for e in chain)
+
+
+def test_migrate_frequency_chain_defaults_enabled_true():
+    """A dict lacking 'enabled' defaults to True."""
+    data = {"frequency_chain": [{"source_id": "jpdb"}]}
+    result = GUIConfigManager._migrate_frequency_chain(data)
+    assert result["frequency_chain"] == (FreqEntry(source_id="jpdb", enabled=True),)
+
+
+def test_migrate_frequency_chain_tolerates_existing_freqentry():
+    """Items that are already FreqEntry instances pass through unchanged."""
+    data = {"frequency_chain": [FreqEntry(source_id="jpdb", enabled=False)]}
+    result = GUIConfigManager._migrate_frequency_chain(data)
+    assert result["frequency_chain"] == (FreqEntry(source_id="jpdb", enabled=False),)
+
+
+def test_migrate_frequency_chain_drops_malformed_entries():
+    """Entries with missing/empty source_id (or wrong type) are dropped."""
+    data = {
+        "frequency_chain": [
+            {"source_id": "jpdb"},
+            {"source_id": ""},
+            {"enabled": True},
+            {"source_id": None},
+            "not-a-dict",
+            42,
+        ]
+    }
+    result = GUIConfigManager._migrate_frequency_chain(data)
+    assert result["frequency_chain"] == (FreqEntry(source_id="jpdb", enabled=True),)
+
+
+def test_migrate_frequency_chain_absent_key_is_noop():
+    """When frequency_chain is absent the dict is returned unchanged."""
+    data: dict = {"anki_deck_name": "Test"}
+    result = GUIConfigManager._migrate_frequency_chain(data)
+    assert "frequency_chain" not in result
+
+
+def test_old_config_without_frequency_chain_defaults_empty(tmp_config: Path):
+    """A saved config predating frequency_chain loads as the empty-tuple default."""
+    tmp_config.write_text(json.dumps({"anki_deck_name": "Test"}))
+    loaded = GUIConfigManager.load_config()
+    assert loaded.frequency_chain == ()
+
+
+def test_handwritten_json_frequency_chain_loads_as_freqentries(tmp_config: Path):
+    """A hand-written gui_config.json frequency_chain of dicts loads into FreqEntry."""
+    tmp_config.write_text(
+        json.dumps(
+            {
+                "frequency_chain": [
+                    {"source_id": "jpdb", "enabled": True},
+                    {"source_id": "bccwj", "enabled": False},
+                ]
+            }
+        )
+    )
+    loaded = GUIConfigManager.load_config()
+    assert loaded.frequency_chain == (
+        FreqEntry(source_id="jpdb", enabled=True),
+        FreqEntry(source_id="bccwj", enabled=False),
+    )

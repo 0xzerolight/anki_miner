@@ -115,6 +115,9 @@ class GUIConfigManager:
         # Migrate expression_audio_chain JSON dicts → AudioSourceEntry
         config_dict = cls._migrate_expression_audio_chain(config_dict)
 
+        # Migrate frequency_chain JSON dicts → FreqEntry
+        config_dict = cls._migrate_frequency_chain(config_dict)
+
         # Migrate theme key out of QSettings (only when the key is absent
         # from the loaded dict — i.e. first launch after v2.5 upgrade).
         config_dict = cls._migrate_theme_from_qsettings(config_dict)
@@ -268,6 +271,37 @@ class GUIConfigManager:
         if not any(entry.kind == "googletts" for entry in chain):
             chain.append(AudioSourceEntry(kind="googletts", enabled=False))
         data["expression_audio_chain"] = tuple(chain)
+        return data
+
+    @staticmethod
+    def _migrate_frequency_chain(data: dict[str, Any]) -> dict[str, Any]:
+        """Rebuild FreqEntry instances when an existing frequency_chain is
+        loaded as list[dict] from JSON. A missing chain falls through to the
+        dataclass default (empty tuple — no frequency sources).
+
+        Malformed entries (non-dict items, missing/empty source_id) are dropped;
+        items already constructed as FreqEntry pass through unchanged.
+        """
+        from anki_miner.config import FreqEntry
+
+        raw_chain = data.get("frequency_chain")
+        if raw_chain is None:
+            return data
+
+        chain: list[FreqEntry] = []
+        for item in raw_chain:
+            if isinstance(item, FreqEntry):
+                chain.append(item)
+            elif isinstance(item, dict):
+                source_id = item.get("source_id")
+                if isinstance(source_id, str) and source_id:
+                    chain.append(
+                        FreqEntry(
+                            source_id=source_id,
+                            enabled=bool(item.get("enabled", True)),
+                        )
+                    )
+        data["frequency_chain"] = tuple(chain)
         return data
 
     @staticmethod
