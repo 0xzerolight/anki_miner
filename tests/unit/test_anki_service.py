@@ -3251,6 +3251,95 @@ class TestVerifyCardTarget:
         ):
             service.verify_card_target()
 
+    def test_active_card_type_marker_validated_pass(self, test_config):
+        """When a card type is active, its marker field must exist on the note type."""
+        from dataclasses import replace
+
+        config = replace(test_config, card_type="click")  # default marker → IsClickCard
+        service = AnkiService(config)
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[self._MODELS, [*self._FIELDS, "IsClickCard"], 1234],
+        ):
+            service.verify_card_target()  # must not raise
+
+    def test_active_card_type_marker_missing_raises(self, test_config):
+        """A configured card type whose marker field is absent must raise SetupError."""
+        from dataclasses import replace
+
+        config = replace(test_config, card_type="click")
+        service = AnkiService(config)
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[self._MODELS, self._FIELDS],  # no IsClickCard
+            ),
+            pytest.raises(SetupError, match="IsClickCard"),
+        ):
+            service.verify_card_target()
+
+    def test_inactive_card_type_markers_ignored(self, test_config):
+        """Only the active marker is required; the other three are never validated."""
+        from dataclasses import replace
+
+        config = replace(test_config, card_type="word_and_sentence")
+        service = AnkiService(config)
+        # Note type has the active marker but NOT the three inactive ones.
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[self._MODELS, [*self._FIELDS, "IsWordAndSentenceCard"], 1234],
+        ):
+            service.verify_card_target()  # must not raise
+
+
+class TestCardTypeMarker:
+    """build_note stamps an 'x' into exactly the active card-type marker field."""
+
+    def test_active_marker_stamped(self, test_config, make_tokenized_word):
+        """An active card type writes 'x' into its marker field and no other."""
+        from dataclasses import replace
+
+        from anki_miner.services.anki_note_builder import build_note
+
+        config = replace(test_config, card_type="word_and_sentence")
+        item = CardPayload(word=make_tokenized_word(), media=MediaData(), definition="def")
+
+        fields = build_note(item, config, stored_files=set()).note["fields"]
+
+        assert fields["IsWordAndSentenceCard"] == "x"
+        for inactive in ("IsClickCard", "IsSentenceCard", "IsAudioCard"):
+            assert inactive not in fields
+
+    def test_no_marker_when_disabled(self, test_config, make_tokenized_word):
+        """The default (card_type='') writes none of the four marker fields."""
+        from anki_miner.services.anki_note_builder import build_note
+
+        assert test_config.card_type == ""
+        item = CardPayload(word=make_tokenized_word(), media=MediaData(), definition="def")
+
+        fields = build_note(item, test_config, stored_files=set()).note["fields"]
+
+        for name in ("IsWordAndSentenceCard", "IsClickCard", "IsSentenceCard", "IsAudioCard"):
+            assert name not in fields
+
+    def test_renamed_marker_field_honored(self, test_config, make_tokenized_word):
+        """A fork that renames the marker field still gets the 'x' in its name."""
+        from dataclasses import replace
+
+        from anki_miner.services.anki_note_builder import build_note
+
+        config = replace(
+            test_config,
+            card_type="click",
+            card_type_marker_fields={**test_config.card_type_marker_fields, "click": "MyClickMarker"},
+        )
+        item = CardPayload(word=make_tokenized_word(), media=MediaData(), definition="def")
+
+        fields = build_note(item, config, stored_files=set()).note["fields"]
+
+        assert fields["MyClickMarker"] == "x"
+        assert "IsClickCard" not in fields
+
 
 # ---------------------------------------------------------------------------
 # TestNullSlotSkipCount (OVH-040)

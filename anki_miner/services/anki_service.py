@@ -242,7 +242,15 @@ class AnkiService:
             )
             or []
         )
-        missing = {v for v in self.config.anki_fields.values() if v} - actual
+        required = {v for v in self.config.anki_fields.values() if v}
+        # Validate only the active card-type marker (build_note writes just that
+        # one). Inactive markers stay unvalidated so a non-JPMN note type without
+        # them still passes pre-flight.
+        if self.config.card_type:
+            marker = self.config.card_type_marker_fields.get(self.config.card_type, "")
+            if marker:
+                required.add(marker)
+        missing = required - actual
         if missing:
             _sorted_actual = sorted(actual)
             _available = ", ".join(_sorted_actual[:5])

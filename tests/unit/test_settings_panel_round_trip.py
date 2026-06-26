@@ -64,6 +64,13 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         card_style_preset="minimal",
         custom_card_css=".custom { color: red; }",
         pitch_category_format="romaji",
+        card_type="click",
+        card_type_marker_fields={
+            "word_and_sentence": "WS",
+            "click": "CK",
+            "sentence": "SN",
+            "audio": "AU",
+        },
         # --- MediaSettingsPanel ---
         audio_format="opus",
         audio_bitrate=96,
@@ -119,6 +126,8 @@ _SAVE_PATH_FIELDS = frozenset(
         "card_style_preset",
         "custom_card_css",
         "pitch_category_format",
+        "card_type",
+        "card_type_marker_fields",
         # MediaSettingsPanel
         "audio_format",
         "audio_bitrate",
@@ -229,6 +238,8 @@ class TestSavePathRoundTrip:
             "card_style_preset",
             "custom_card_css",
             "pitch_category_format",
+            "card_type",
+            "card_type_marker_fields",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name
 

@@ -358,3 +358,52 @@ def test_auto_map_fields_does_not_hijack_sentence_audio_for_expression_audio():
     result = auto_map_fields(["SentenceAudio", "ExpressionAudio"])
     assert result["audio"] == "SentenceAudio"
     assert result["expression_audio"] == "ExpressionAudio"
+
+
+def test_card_type_get_set_roundtrip(qtbot):
+    """The card-type dropdown round-trips its id; an unknown id falls back to ''."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.set_card_type("audio")
+    assert panel.get_card_type() == "audio"
+
+    panel.set_card_type("nonsense")
+    assert panel.get_card_type() == ""
+
+
+def test_card_type_marker_fields_default_and_collapsed(qtbot):
+    """Marker names prefill to JPMN defaults; the editor group starts collapsed."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    assert panel.get_card_type_marker_fields() == {
+        "word_and_sentence": "IsWordAndSentenceCard",
+        "click": "IsClickCard",
+        "sentence": "IsSentenceCard",
+        "audio": "IsAudioCard",
+    }
+    assert panel.card_type_names_group.isCheckable()
+    assert not panel.card_type_names_group.isChecked()
+    assert not panel._card_type_names_body.isVisible()
+
+
+def test_card_type_marker_group_toggle_reveals_body(qtbot):
+    """Checking the group reveals the marker-name editors."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.show()
+
+    panel.card_type_names_group.setChecked(True)
+    assert panel._card_type_names_body.isVisible()
+
+
+def test_card_type_marker_fields_setter_defaults_missing_keys(qtbot):
+    """A partial mapping fills only the given keys; the rest keep JPMN defaults."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.set_card_type_marker_fields({"click": "Custom"})
+    out = panel.get_card_type_marker_fields()
+    assert out["click"] == "Custom"
+    assert out["audio"] == "IsAudioCard"

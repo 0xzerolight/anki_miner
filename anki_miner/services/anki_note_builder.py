@@ -186,6 +186,15 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
             if key in OPTIONAL_FIELD_KEYS and anki_field_name and value:
                 fields[anki_field_name] = html.escape(str(value))
 
+    # JP Mining Note-style card-type marker: stamp a constant "x" into the one
+    # marker field matching the active card_type so the note type renders the
+    # card as that type. card_type="" (default) writes nothing. Only the active
+    # marker is touched; the other three are left for Anki's empty default.
+    if config.card_type:
+        marker_field = config.card_type_marker_fields.get(config.card_type, "")
+        if marker_field:
+            fields[marker_field] = "x"
+
     note: dict = {
         "deckName": config.anki_deck_name,
         "modelName": config.anki_note_type,
