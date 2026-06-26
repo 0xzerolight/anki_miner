@@ -44,8 +44,14 @@ Maintainer-facing release SOP. Contributors should not need to run any of these 
    - `anki-miner_*_amd64.deb`
    - `AnkiMiner-*-Setup.exe`
    - `AnkiMiner-macOS-arm64.tar.gz`
+   - `AnkiMiner-macOS-x86_64.tar.gz`
 
    And that PyPI lists the new version: <https://pypi.org/project/anki-miner/>.
+
+   > **Intel macOS runner risk.** The `AnkiMiner-macOS-x86_64.tar.gz` build runs on
+   > GitHub's `macos-13` (Intel) runner. GitHub is gradually retiring Intel macOS
+   > runners; when `macos-13` is removed, the Intel job will fail and must switch to a
+   > self-hosted Intel runner or a Universal2 cross-build. Until then no action needed.
 
 8. **Smoke-test one installer.** Run the installer for at least one OS (typically the AppImage on Linux for speed). Confirm the GUI launches and a sample mine completes end-to-end.
 
