@@ -17,7 +17,7 @@ Two input shapes are supported, dispatched by suffix:
   a header row is skipped, and rows are parsed with the shared
   :func:`~anki_miner.services.frequency.csv_parse._extract_word_rank`. A third
   column (``term, reading, rank``) is captured as the reading. First occurrence
-  wins per ``(term, reading)`` (matching ``FrequencyService`` load semantics).
+  wins per ``(term, reading)`` (matching the legacy CSV loader's semantics).
 """
 
 from __future__ import annotations
@@ -202,8 +202,8 @@ def _import_csv(
     stem = csv_path.stem
     resolved_id = source_id or _derive_source_id(stem)
 
-    # key = (term, reading) -> rank; first occurrence wins (matches
-    # FrequencyService load semantics, which keeps the first rank per word).
+    # key = (term, reading) -> rank; first occurrence wins (matches the legacy
+    # CSV loader's semantics, which kept the first rank per word).
     ranks: dict[tuple[str, str | None], int] = {}
     try:
         with open(csv_path, encoding="utf-8") as f:

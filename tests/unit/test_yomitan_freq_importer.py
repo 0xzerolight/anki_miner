@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import zipfile
 from pathlib import Path
@@ -9,12 +10,42 @@ from pathlib import Path
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services.frequency.csv_parse import _extract_word_rank, _is_word_first_header
 from anki_miner.services.frequency.yomitan_freq_importer import (
     YomitanFreqImportResult,
     import_yomitan_freq_zip,
 )
-from anki_miner.services.frequency_service import FrequencyService
+from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
 from tests.fixtures.frequency.build_yomitan_freq_fixture import build_yomitan_freq_zip
+
+
+def _load_freq_csv(path: Path) -> dict[str, int]:
+    """Read a frequency CSV the way a downstream loader does (first-wins).
+
+    Mirrors the legacy single-CSV load loop (delimiter detect + header skip +
+    first-occurrence-wins) so these importer round-trip assertions survive the
+    removal of FrequencyService. The row-shape logic is the same shared
+    ``csv_parse`` helpers the importer itself uses.
+    """
+    data: dict[str, int] = {}
+    with open(path, encoding="utf-8") as f:
+        sample = f.read(4096)
+        f.seek(0)
+        reader = csv.reader(f, delimiter=detect_delimiter(sample))
+        first_row = True
+        word_first = False
+        for row in reader:
+            if len(row) < 2:
+                continue
+            if first_row:
+                first_row = False
+                if is_header_row(row):
+                    word_first = _is_word_first_header(row)
+                    continue
+            word, rank = _extract_word_rank(row, word_first=word_first)
+            if word and rank is not None and word not in data:
+                data[word] = rank
+    return data
 
 
 class TestNormalization:
@@ -59,9 +90,7 @@ class TestNormalization:
         else:
             result = import_yomitan_freq_zip(zip_path, dest)
             assert result.entry_count == 1
-            service = FrequencyService(dest)
-            service.load()
-            assert service.lookup("猫") == expected_rank
+            assert _load_freq_csv(dest).get("猫") == expected_rank
 
 
 class TestInvalidRank:
@@ -138,11 +167,10 @@ class TestMultipleMetaBanks:
         result = import_yomitan_freq_zip(zip_path, dest)
         assert result.entry_count == 3
 
-        service = FrequencyService(dest)
-        service.load()
-        assert service.lookup("猫") == 100
-        assert service.lookup("犬") == 200
-        assert service.lookup("鳥") == 300
+        loaded = _load_freq_csv(dest)
+        assert loaded.get("猫") == 100
+        assert loaded.get("犬") == 200
+        assert loaded.get("鳥") == 300
 
 
 class TestReadingCollision:
@@ -162,9 +190,7 @@ class TestReadingCollision:
         result = import_yomitan_freq_zip(zip_path, dest)
         assert result.entry_count == 1
 
-        service = FrequencyService(dest)
-        service.load()
-        assert service.lookup("開く") == 250  # min rank wins
+        assert _load_freq_csv(dest).get("開く") == 250  # min rank wins
 
 
 class TestFormatVersion:
@@ -306,11 +332,10 @@ class TestOutputFormat:
         assert "猫,100" in lines
         assert "犬,200" in lines
 
-        # End-to-end: FrequencyService must accept the output without changes.
-        service = FrequencyService(dest)
-        service.load()
-        assert service.entry_count == 2
-        assert service.lookup("猫") == 100
+        # End-to-end: the written CSV round-trips through the shared loader.
+        loaded = _load_freq_csv(dest)
+        assert len(loaded) == 2
+        assert loaded.get("猫") == 100
 
     def test_atomic_write_preserves_existing_on_failure(self, tmp_path: Path) -> None:
         # Pre-seed an existing CSV the user already had.

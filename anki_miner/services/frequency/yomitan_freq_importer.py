@@ -5,8 +5,8 @@ zip containing ``index.json`` plus one or more ``term_meta_bank_*.json`` files.
 Each meta-bank is a flat JSON array of ``[term, mode, data]`` triples where
 ``mode`` is one of ``"freq"``, ``"pitch"``, or ``"ipa"``; this importer extracts
 only ``mode == "freq"`` rows, normalizes the five spec-defined ``data`` shapes
-to ``(term, int_rank)`` pairs, and writes the result to a CSV that the existing
-:class:`FrequencyService` reads unchanged.
+to ``(term, int_rank)`` pairs, and writes the result to a ``frequency.csv`` that
+the Task-4 startup migration folds into the additive frequency chain.
 
 Per the v1 design decisions:
 - Single-source: the output CSV overwrites the configured frequency path.

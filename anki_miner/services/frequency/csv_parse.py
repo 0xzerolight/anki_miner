@@ -1,9 +1,8 @@
 """Shared CSV/TSV frequency-row parsing + Yomitan rank normalization.
 
-Single source of truth for the row-shape helpers that both the legacy
-:class:`~anki_miner.services.frequency_service.FrequencyService` loader and the
-per-source frequency importer rely on. Moved here (out of ``frequency_service``
-and ``yomitan_freq_importer``) so there is exactly one implementation of each.
+Single source of truth for the row-shape helpers that the per-source frequency
+importer relies on. Originally extracted from the legacy single-CSV loader and
+``yomitan_freq_importer`` so there is exactly one implementation of each.
 
 Two concerns live here:
 
@@ -33,8 +32,8 @@ def _is_word_first_header(row: list[str]) -> bool:
     """Return True when the header's first column names the word column.
 
     Detects the column-order contract written by the Yomitan freq importer
-    (``['term', 'rank']``) so that FrequencyService can skip the ambiguous
-    int-first auto-detect for those files.
+    (``['term', 'rank']``) so the CSV loader can skip the ambiguous int-first
+    auto-detect for those files.
     """
     return bool(row) and row[0].strip().lower() in _WORD_FIRST_HEADER_COLS
 
