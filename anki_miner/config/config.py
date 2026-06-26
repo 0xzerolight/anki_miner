@@ -189,6 +189,10 @@ class AnkiMinerConfig:
     pitch_category_format: Literal["jp", "romaji"] = "jp"
 
     # Frequency settings
+    # DEPRECATED: the UI no longer writes this (superseded by frequency_chain).
+    # Kept only as the read source for the one-time legacy_migration that folds
+    # an existing frequency.csv into the chain; it still round-trips so old
+    # configs migrate cleanly. Do not wire new writers to it.
     frequency_list_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "frequency.csv")
     use_frequency_data: bool = False
     max_frequency_rank: int = 0  # 0 = no filtering; e.g. 10000 = only top 10k words

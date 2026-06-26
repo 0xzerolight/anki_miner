@@ -88,6 +88,13 @@ def _css_string_escape(title: str) -> str:
     are stripped so a hostile title can neither break out of the ``<style>``
     element nor smuggle in markup; a real title (e.g. ``Jitendex.org
     [2026-06-06]``) is unaffected.
+
+    Note: this CSS-string escaping intentionally differs from the HTML-attribute
+    escaping the renderer applies to the same title (``html.escape``). For an
+    exotic title containing ``<``/``>``/``&``/``"`` the scoped selector and the
+    rendered ``data-dictionary`` attribute can therefore diverge, so the
+    ``<style>`` block simply fails to match its own markup — fail-safe (no style
+    applied, no bleed, no injection). Real titles never trip this.
     """
     escaped = title.replace("\\", "\\\\").replace('"', '\\"')
     return "".join(ch for ch in escaped if ch not in "<>" and ord(ch) >= 0x20)

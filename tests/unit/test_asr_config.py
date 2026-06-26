@@ -68,3 +68,31 @@ def test_old_config_without_asr_model_defaults_to_large_v3():
     cfg_path.write_text(json.dumps({"theme": "dark"}), encoding="utf-8")
     loaded = GUIConfigManager.load_config()
     assert loaded.asr_model == "large-v3"
+
+
+# ---------------------------------------------------------------------------
+# Drift guard: config validation duplicates the model set (kept import-free)
+# and must stay in sync with model_manager's authoritative KNOWN_MODELS.
+# Importing model_manager is light (no faster_whisper/numpy at module level),
+# so this runs in the default job, not just test-asr.
+# ---------------------------------------------------------------------------
+
+
+def test_config_accepts_every_known_model():
+    """Every model_manager.KNOWN_MODELS entry must survive config validation.
+
+    If the manager adds a model the config's hardcoded set forgot, this catches
+    it — otherwise a hand-edited config requesting the new model would silently
+    reset to the default.
+    """
+    from anki_miner.services.asr import model_manager
+
+    for name in model_manager.KNOWN_MODELS:
+        cfg = replace(create_default_config(), asr_model=name)
+        assert cfg.asr_model == name
+
+
+def test_config_default_matches_manager_default():
+    from anki_miner.services.asr import model_manager
+
+    assert create_default_config().asr_model == model_manager.DEFAULT_MODEL
