@@ -30,6 +30,7 @@ OPTIONAL_FIELD_KEYS = {
     "pitch_position",
     "pitch_category",
     "frequency",
+    "frequency_sort",
     "source",
     "expression_audio",
 }
@@ -104,6 +105,18 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         if not extra_fields:
             extra_fields = None
 
+    # Pull frequency out of extra_fields BEFORE the OPTIONAL pass for the same
+    # reason as glossary: the frequency field is now a pre-rendered bullet list
+    # (<ul><li>Source: rank</li>…</ul>), not a bare number. Escaping it would
+    # turn the tags into literal text. frequency_sort (a bare number) stays in
+    # the normal escaped OPTIONAL pass — escaping a number is a no-op.
+    frequency_html = ""
+    if extra_fields and "frequency" in extra_fields:
+        frequency_html = extra_fields["frequency"] or ""
+        extra_fields = {k: v for k, v in extra_fields.items() if k != "frequency"}
+        if not extra_fields:
+            extra_fields = None
+
     # Build field values (only reference successfully stored media)
     picture_html = ""
     if media.screenshot_filename and media.screenshot_filename in stored_files:
@@ -144,6 +157,7 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         "sentence": sentence_field,
         "definition": definition or "",
         "glossary": glossary_html,
+        "frequency": frequency_html,
         "picture": picture_html,
         "audio": audio_ref,
         "expression_audio": expression_audio_ref,
@@ -155,8 +169,15 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
     fields = {}
     for key, value in field_data.items():
         anki_field_name = config.anki_fields.get(key, "")
-        if anki_field_name:
-            fields[anki_field_name] = value
+        if not anki_field_name:
+            continue
+        # frequency carries pre-rendered bullet-list HTML and is inserted raw
+        # (like glossary). Unlike the always-emitted fields above it follows the
+        # optional gating contract: omit entirely when the value is empty so an
+        # unranked word leaves the field untouched rather than blanking it.
+        if key == "frequency" and not value:
+            continue
+        fields[anki_field_name] = value
 
     # Add optional fields if configured and data available
     if extra_fields:
