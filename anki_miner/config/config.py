@@ -84,6 +84,22 @@ class AnkiMinerConfig:
             "expression_audio": "",
         }
     )
+    # JP Mining Note-style card-type marker. When card_type is non-empty, an "x"
+    # is written into the matching field from card_type_marker_fields so the note
+    # type renders the card as that type. "" = feature off (default; identical to
+    # pre-feature behaviour). Kept OUT of anki_fields on purpose: verify_card_target
+    # validates every non-empty anki_fields value, so storing all four marker names
+    # there would force-validate fields a non-JPMN note type (e.g. Lapis) lacks.
+    # Only the active marker is validated/written.
+    card_type: Literal["", "word_and_sentence", "click", "sentence", "audio"] = ""
+    card_type_marker_fields: Mapping[str, str] = field(
+        default_factory=lambda: {
+            "word_and_sentence": "IsWordAndSentenceCard",
+            "click": "IsClickCard",
+            "sentence": "IsSentenceCard",
+            "audio": "IsAudioCard",
+        }
+    )
     ankiconnect_url: str = "http://127.0.0.1:8765"
     anki_tags: str = "auto-mined"  # Whitespace-separated tags applied to every mined card; empty string means no tags
     # Deck names excluded from known-words detection (Issue #38). Notes in these
@@ -464,6 +480,11 @@ class AnkiMinerConfig:
         # applied to the other collection fields above).
         if not isinstance(self.anki_fields, types.MappingProxyType):
             object.__setattr__(self, "anki_fields", types.MappingProxyType(dict(self.anki_fields)))
+        # Same immutability wrap for the card-type marker name map.
+        if not isinstance(self.card_type_marker_fields, types.MappingProxyType):
+            object.__setattr__(
+                self, "card_type_marker_fields", types.MappingProxyType(dict(self.card_type_marker_fields))
+            )
 
         # Clamp ui_font_scale to [0.5, 2.0]
         object.__setattr__(self, "ui_font_scale", max(0.5, min(2.0, float(self.ui_font_scale))))
