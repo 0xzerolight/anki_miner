@@ -1,7 +1,7 @@
 """One-time migration of a legacy single ``frequency.csv`` into the chain.
 
 Pre-multi-source builds stored a single rank list at ``config.frequency_list_path``
-(default ``~/.anki_miner/frequency.csv``) loaded by ``FrequencyService``. The new
+(default ``~/.anki_miner/frequency.csv``) loaded by a single-CSV service. The new
 model layers multiple per-source SQLite indexes under ``config.freqs_root`` referenced
 by ``config.frequency_chain``. This module folds the old single file into a
 ``legacy-frequency`` source on first launch so existing users keep their ranks without
