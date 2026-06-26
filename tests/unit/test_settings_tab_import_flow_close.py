@@ -98,21 +98,12 @@ class TestZipImportFlowIterCloseWorkers:
         # qapp is the global fixture — QWidget must be constructed after it
         return ZipImportFlow(parent)
 
-    def test_idle_flow_returns_two_none_entries(self, qapp, qtbot):
+    def test_idle_flow_returns_one_none_entry(self, qapp, qtbot):
         parent = QWidget()
         qtbot.addWidget(parent)
         flow = ZipImportFlow(parent)
         workers = flow.iter_close_workers()
-        assert workers == (None, None)
-
-    def test_live_freq_worker_returned(self, qapp, qtbot):
-        parent = QWidget()
-        qtbot.addWidget(parent)
-        flow = ZipImportFlow(parent)
-        w = _fake_worker()
-        flow._active_freq_worker = w
-        workers = flow.iter_close_workers()
-        assert w in workers
+        assert workers == (None,)
 
     def test_live_pitch_worker_returned(self, qapp, qtbot):
         parent = QWidget()
@@ -122,19 +113,7 @@ class TestZipImportFlowIterCloseWorkers:
         flow._active_pitch_worker = w
         workers = flow.iter_close_workers()
         assert w in workers
-
-    def test_both_workers_returned(self, qapp, qtbot):
-        parent = QWidget()
-        qtbot.addWidget(parent)
-        flow = ZipImportFlow(parent)
-        wf = _fake_worker()
-        wp = _fake_worker()
-        flow._active_freq_worker = wf
-        flow._active_pitch_worker = wp
-        workers = flow.iter_close_workers()
-        assert wf in workers
-        assert wp in workers
-        assert len(workers) == 2
+        assert len(workers) == 1
 
     def test_returns_tuple(self, qapp, qtbot):
         parent = QWidget()
@@ -151,9 +130,9 @@ class TestZipImportFlowIterCloseWorkers:
 class _FakeSettingsTabWithImportFlows:
     """Minimal stand-in for SettingsTab that drives iter_close_workers logic directly.
 
-    Mirrors the four attribute names the real SettingsTab uses, and replicates
-    the updated iter_close_workers body so the test is stable against future
-    refactors of the heavy SettingsTab.__init__.
+    Mirrors the five flow attribute names the real SettingsTab uses, and
+    replicates the updated iter_close_workers body so the test is stable
+    against future refactors of the heavy SettingsTab.__init__.
     """
 
     def __init__(
@@ -161,7 +140,7 @@ class _FakeSettingsTabWithImportFlows:
         anki_probe_worker=None,
         dict_import_worker=None,
         audio_pack_import_worker=None,
-        zip_freq_worker=None,
+        frequency_import_worker=None,
         zip_pitch_worker=None,
     ) -> None:
         self._anki_probe = MagicMock()
@@ -170,20 +149,23 @@ class _FakeSettingsTabWithImportFlows:
         self._dict_import_flow.iter_close_workers.return_value = (dict_import_worker,)
         self._audio_pack_import_flow = MagicMock()
         self._audio_pack_import_flow.iter_close_workers.return_value = (audio_pack_import_worker,)
+        self._frequency_import_flow = MagicMock()
+        self._frequency_import_flow.iter_close_workers.return_value = (frequency_import_worker,)
         self._zip_import_flow = MagicMock()
-        self._zip_import_flow.iter_close_workers.return_value = (zip_freq_worker, zip_pitch_worker)
+        self._zip_import_flow.iter_close_workers.return_value = (zip_pitch_worker,)
 
     def iter_close_workers(self) -> tuple:
         return (
             *self._anki_probe.iter_close_workers(),
             *self._dict_import_flow.iter_close_workers(),
             *self._audio_pack_import_flow.iter_close_workers(),
+            *self._frequency_import_flow.iter_close_workers(),
             *self._zip_import_flow.iter_close_workers(),
         )
 
 
 class TestSettingsTabIterCloseWorkersChaining:
-    """iter_close_workers chains all four flow handles into a single flat tuple."""
+    """iter_close_workers chains all five flow handles into a single flat tuple."""
 
     def test_all_idle_returns_five_nones(self):
         tab = _FakeSettingsTabWithImportFlows()
@@ -202,9 +184,9 @@ class TestSettingsTabIterCloseWorkersChaining:
         workers = tab.iter_close_workers()
         assert w in workers
 
-    def test_zip_freq_worker_included(self):
+    def test_frequency_import_worker_included(self):
         w = _fake_worker()
-        tab = _FakeSettingsTabWithImportFlows(zip_freq_worker=w)
+        tab = _FakeSettingsTabWithImportFlows(frequency_import_worker=w)
         workers = tab.iter_close_workers()
         assert w in workers
 
@@ -230,7 +212,7 @@ class TestSettingsTabIterCloseWorkersChaining:
             anki_probe_worker=w1,
             dict_import_worker=w2,
             audio_pack_import_worker=w3,
-            zip_freq_worker=w4,
+            frequency_import_worker=w4,
             zip_pitch_worker=w5,
         )
         workers = tab.iter_close_workers()
@@ -253,6 +235,7 @@ class _FakeRealSettingsTab:
         from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
         from anki_miner.gui.controllers.audio_pack_import_flow import AudioPackImportFlow
         from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
+        from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
         from anki_miner.gui.controllers.zip_import_flow import ZipImportFlow
         from anki_miner.gui.widgets.settings_tab import SettingsTab
 
@@ -280,19 +263,25 @@ class _FakeRealSettingsTab:
             get_config=MagicMock(),
             persist_chain=MagicMock(),
         )
+        self._frequency_import_flow = FrequencyImportFlow(
+            parent=parent,
+            panel=MagicMock(),
+            get_config=MagicMock(),
+            persist_chain=MagicMock(),
+        )
         parent_widget = MagicMock(spec=QWidget)
         self._zip_import_flow = ZipImportFlow(parent_widget)
 
 
 class TestRealSettingsTabIterCloseWorkers:
-    """The real SettingsTab.iter_close_workers method chains all four flows."""
+    """The real SettingsTab.iter_close_workers method chains all five flows."""
 
     def test_idle_tab_returns_all_nones(self):
         tab = _FakeRealSettingsTab()
         workers = tab.iter_close_workers()
         # 4 from AnkiProbeController (fetch fields, fetch decks, styling write,
         # styling probe) + 1 DictionaryImportFlow + 1 AudioPackImportFlow
-        # + 2 ZipImportFlow = 8 entries, all None when idle
+        # + 1 FrequencyImportFlow + 1 ZipImportFlow = 8 entries, all None idle.
         assert len(workers) == 8
         assert all(w is None for w in workers)
 
@@ -310,10 +299,10 @@ class TestRealSettingsTabIterCloseWorkers:
         workers = tab.iter_close_workers()
         assert w in workers
 
-    def test_zip_freq_worker_surfaces(self):
+    def test_frequency_import_worker_surfaces(self):
         tab = _FakeRealSettingsTab()
         w = _fake_worker()
-        tab._zip_import_flow._active_freq_worker = w
+        tab._frequency_import_flow._active_import_worker = w
         workers = tab.iter_close_workers()
         assert w in workers
 
