@@ -120,6 +120,11 @@ class MainWindow(QMainWindow):
         if self.config.check_for_updates:
             self._check_for_updates()
 
+        # One-time legacy frequency.csv → freqs/legacy-frequency migration.
+        # Synchronous (CSV→sqlite is fast and one-time, unlike JMdict XML) and
+        # must run before any frequency-consuming service is built.
+        self._maybe_migrate_legacy_frequency()
+
         # One-time JMdict XML → SQLite migration (background)
         self._maybe_migrate_jmdict()
 
@@ -800,6 +805,21 @@ class MainWindow(QMainWindow):
         self.status_bar.set_operation(tr_format(self.tr("Validation error: %1"), error_message), "error")
         if not silent:
             QMessageBox.critical(self, self.tr("Validation Error"), error_message)
+
+    def _maybe_migrate_legacy_frequency(self) -> None:
+        """One-time: fold a legacy single frequency.csv into the multi-source chain.
+
+        Synchronous (CSV→sqlite is fast and one-time, unlike JMdict XML, so no
+        background worker). No-ops once migrated; persists the updated config so
+        the chain reference survives the next launch.
+        """
+        from anki_miner.services.frequency.legacy_migration import migrate_legacy_frequency_csv
+
+        migrated = migrate_legacy_frequency_csv(self.config)
+        if migrated is not None:
+            self.config = migrated
+            GUIConfigManager.save_config(self.config)
+            logger.info("Migrated legacy frequency.csv into freqs/legacy-frequency")
 
     def _maybe_migrate_jmdict(self) -> None:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background."""
