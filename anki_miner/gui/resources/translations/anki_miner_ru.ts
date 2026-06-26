@@ -52,6 +52,16 @@
         <translation>Сочетания клавиш</translation>
     </message>
 </context><context>
+    <name>AlassInstallWorker</name>
+    <message>
+        <source>Downloading alass…</source>
+        <translation>Загрузка alass…</translation>
+    </message>
+    <message>
+        <source>alass installed successfully.</source>
+        <translation>alass успешно установлен.</translation>
+    </message>
+</context><context>
     <name>AnalyticsTab</name>
     <message>
         <source>Refresh</source>
@@ -440,6 +450,62 @@
         <translation>Хранит шоу/эпизод и метку времени, откуда взято слово. Пусто = пропустить.</translation>
     </message>
     <message>
+        <source>Card Type</source>
+        <translation>Тип карточки</translation>
+    </message>
+    <message>
+        <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
+        <translation>Для типов заметок в стиле JP Mining Note: ставит «x» в поле-маркер, чтобы каждая намайненная карточка отображалась как выбранный тип. Оставьте «Нет», если в вашем типе заметки нет таких полей.</translation>
+    </message>
+    <message>
+        <source>None (disabled)</source>
+        <translation>Нет (отключено)</translation>
+    </message>
+    <message>
+        <source>Word + Sentence</source>
+        <translation>Слово + Предложение</translation>
+    </message>
+    <message>
+        <source>Click</source>
+        <translation>Клик</translation>
+    </message>
+    <message>
+        <source>Sentence</source>
+        <translation>Предложение</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>Аудио</translation>
+    </message>
+    <message>
+        <source>Default Card Type</source>
+        <translation>Тип карточки по умолчанию</translation>
+    </message>
+    <message>
+        <source>Which marker field gets the “x”. None leaves cards untouched.</source>
+        <translation>В какое поле-маркер ставится «x». «Нет» оставляет карточки без изменений.</translation>
+    </message>
+    <message>
+        <source>Customize marker field names</source>
+        <translation>Настроить имена полей-маркеров</translation>
+    </message>
+    <message>
+        <source>Word + Sentence:</source>
+        <translation>Слово + Предложение:</translation>
+    </message>
+    <message>
+        <source>Click:</source>
+        <translation>Клик:</translation>
+    </message>
+    <message>
+        <source>Sentence:</source>
+        <translation>Предложение:</translation>
+    </message>
+    <message>
+        <source>Audio:</source>
+        <translation>Аудио:</translation>
+    </message>
+    <message>
         <source>Card Styling</source>
         <translation>Стили карточек</translation>
     </message>
@@ -544,40 +610,6 @@
     <message>
         <source>%1 downloaded successfully.</source>
         <translation>%1 успешно загружено.</translation>
-    </message>
-</context><context>
-    <name>AsrSettingsPanel</name>
-    <message>
-        <source>ASR Settings</source>
-        <translation>Настройки ASR</translation>
-    </message>
-    <message>
-        <source>ASR model</source>
-        <translation>Модель ASR</translation>
-    </message>
-    <message>
-        <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
-        <translation>Выберите модель Whisper для генерации субтитров. «large-v3» даёт наилучшую точность; «small» быстрее, но менее точна.</translation>
-    </message>
-    <message>
-        <source>Download model</source>
-        <translation>Загрузить модель</translation>
-    </message>
-    <message>
-        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
-        <translation>Загрузить веса выбранной модели Whisper в папку моделей ASR приложения Anki Miner. Требуется перед запуском генерации субтитров.</translation>
-    </message>
-    <message>
-        <source>Model download</source>
-        <translation>Загрузка модели</translation>
-    </message>
-    <message>
-        <source>Downloaded</source>
-        <translation>Загружено</translation>
-    </message>
-    <message>
-        <source>Not downloaded</source>
-        <translation>Не загружено</translation>
     </message>
 </context><context>
     <name>AudioPackImportFlow</name>
@@ -1486,42 +1518,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>Ищет и записывает шаблоны тонального ударения в сопоставленные поля.</translation>
     </message>
     <message>
-        <source>Frequency List</source>
-        <translation>Список частотности</translation>
-    </message>
-    <message>
-        <source>Select frequency list CSV/TSV or Yomitan zip...</source>
-        <translation>Выберите CSV/TSV списка частотности или zip-архив Yomitan...</translation>
-    </message>
-    <message>
-        <source>Frequency List File</source>
-        <translation>Файл списка частотности</translation>
-    </message>
-    <message>
-        <source>CSV/TSV with columns (word, rank), or a Yomitan-format frequency zip (e.g. JPDB, BCCWJ). Yomitan zips are imported into ~/.anki_miner/frequency.csv on Save.</source>
-        <translation>CSV/TSV со столбцами (слово, ранг) или zip-архив частотности в формате Yomitan (например, JPDB, BCCWJ). Zip-архивы Yomitan импортируются в ~/.anki_miner/frequency.csv при сохранении.</translation>
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation>Включить данные частотности</translation>
-    </message>
-    <message>
-        <source>Enable to display word frequency rank on cards</source>
-        <translation>Включите, чтобы отображать ранг частотности слова на карточках</translation>
-    </message>
-    <message>
-        <source>%1 (Yomitan zip — will import on Save)</source>
-        <translation>%1 (zip-архив Yomitan — будет импортирован при сохранении)</translation>
-    </message>
-    <message>
-        <source>%1 (%2 entries)</source>
-        <translation>%1 (записей: %2)</translation>
-    </message>
-    <message>
-        <source>Could not parse file: %1</source>
-        <translation>Не удалось разобрать файл: %1</translation>
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation>Удалить словарь</translation>
     </message>
@@ -2174,6 +2170,126 @@ The dictionary was not removed.</source>
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Колода, исключаемая из определения известных слов:</translation>
+    </message>
+</context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation>Выберите источник частотности</translation>
+    </message>
+    <message>
+        <source>Frequency source (*.zip *.csv *.tsv);;All Files (*)</source>
+        <translation>Источник частотности (*.zip *.csv *.tsv);;Все файлы (*)</translation>
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation>Импорт источника частотности…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>Источник частотности добавлен</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>Импортировано записей: %1 из «%2».</translation>
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation>Сбой импорта</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>Выберите источник частотности для повторного импорта</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Повторный импорт источника частотности…</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>Источник частотности импортирован повторно</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 успешно импортирован повторно.</translation>
+    </message>
+    <message>
+        <source>Re-import Failed</source>
+        <translation>Ошибка повторного импорта</translation>
+    </message>
+</context><context>
+    <name>FrequencySettingsPanel</name>
+    <message>
+        <source>Active Frequency Sources</source>
+        <translation>Активные источники частотности</translation>
+    </message>
+    <message>
+        <source>Sources are layered additively — the best (lowest) rank across all enabled sources wins. Top entry breaks ties first.</source>
+        <translation>Источники накладываются аддитивно — побеждает лучший (наименьший) ранг среди всех включённых источников. Верхняя запись разрешает совпадения рангов первой.</translation>
+    </message>
+    <message>
+        <source>+ Add Source…</source>
+        <translation>+ Добавить источник…</translation>
+    </message>
+    <message>
+        <source>Move up (breaks rank ties first)</source>
+        <translation>Вверх (разрешает совпадения рангов первым)</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation>Вниз</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Удалить</translation>
+    </message>
+    <message>
+        <source>Enable Frequency Data</source>
+        <translation>Включить данные частотности</translation>
+    </message>
+    <message>
+        <source>Enable to display word frequency rank on cards.</source>
+        <translation>Включите, чтобы показывать ранг частотности слова на карточках.</translation>
+    </message>
+    <message>
+        <source>Remove frequency source</source>
+        <translation>Удалить источник частотности</translation>
+    </message>
+    <message>
+        <source>Remove '%1' from the frequency chain?
+
+Only the index files are deleted.
+This cannot be undone. You would need to re-import to use this source again.</source>
+        <translation>Удалить «%1» из цепочки частотности?
+
+Удаляются только индексные файлы.
+Это действие необратимо. Чтобы снова использовать этот источник, понадобится повторный импорт.</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>Не удалось удалить</translation>
+    </message>
+    <message>
+        <source>A mining run is in progress. Stop it before removing frequency sources.</source>
+        <translation>Выполняется сеанс майнинга. Остановите его перед удалением источников частотности.</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The frequency source was not removed.</source>
+        <translation>Не удалось удалить %1:
+%2
+
+Источник частотности не был удалён.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>Повторный импорт…</translation>
     </message>
 </context><context>
     <name>HeaderWidget</name>
@@ -3070,16 +3186,16 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Аудио</translation>
     </message>
     <message>
+        <source>Frequency</source>
+        <translation>Частотность</translation>
+    </message>
+    <message>
         <source>Filtering</source>
         <translation>Фильтрация</translation>
     </message>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
-    </message>
-    <message>
-        <source>ASR</source>
-        <translation>ASR</translation>
     </message>
     <message>
         <source>Subtitles</source>
@@ -3204,22 +3320,6 @@ Details: %2</source>
     <message>
         <source>Pitch accent dictionary imported</source>
         <translation>Словарь тонального ударения импортирован</translation>
-    </message>
-    <message>
-        <source>Importing frequency dictionary…</source>
-        <translation>Импорт частотного словаря…</translation>
-    </message>
-    <message>
-        <source>Overwrite Frequency List?</source>
-        <translation>Перезаписать список частотности?</translation>
-    </message>
-    <message>
-        <source>Frequency Import Failed</source>
-        <translation>Не удалось импортировать частотность</translation>
-    </message>
-    <message>
-        <source>Frequency dictionary imported</source>
-        <translation>Частотный словарь импортирован</translation>
     </message>
     <message>
         <source>Reset Settings</source>
@@ -3490,8 +3590,16 @@ Details: %2</source>
         <translation>Один файл</translation>
     </message>
     <message>
+        <source>Transcribe one selected video file.</source>
+        <translation>Транскрибировать один выбранный видеофайл.</translation>
+    </message>
+    <message>
         <source>Folder</source>
         <translation>Папка</translation>
+    </message>
+    <message>
+        <source>Transcribe every video file in a selected folder.</source>
+        <translation>Транскрибировать каждый видеофайл в выбранной папке.</translation>
     </message>
     <message>
         <source>Video File:</source>
@@ -3504,6 +3612,10 @@ Details: %2</source>
     <message>
         <source>Output</source>
         <translation>Вывод</translation>
+    </message>
+    <message>
+        <source>Generated .srt files are saved next to each source video unless you choose a folder.</source>
+        <translation>Сгенерированные файлы .srt сохраняются рядом с каждым исходным видео, если вы не выберете папку.</translation>
     </message>
     <message>
         <source>Output:</source>
@@ -3524,6 +3636,10 @@ Details: %2</source>
     <message>
         <source>Overwrite existing SRT files</source>
         <translation>Перезаписывать существующие файлы SRT</translation>
+    </message>
+    <message>
+        <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
+        <translation>Если флажок снят, видео, для которых уже есть файл .srt, пропускаются, а не перезаписываются.</translation>
     </message>
     <message>
         <source>Actions</source>
@@ -3690,6 +3806,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>alass не найден; установите его или укажите путь в настройках для включения пересинхронизации тайминга.</translation>
     </message>
     <message>
+        <source>Resync a subtitle file to its video by matching audio. Pick a video and the subtitle to align.</source>
+        <translation>Пересинхронизировать файл субтитров с видео по совпадению аудио. Выберите видео и субтитры для выравнивания.</translation>
+    </message>
+    <message>
         <source>Mode:</source>
         <translation>Режим:</translation>
     </message>
@@ -3698,8 +3818,16 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Один файл</translation>
     </message>
     <message>
+        <source>Retime one subtitle file against one video.</source>
+        <translation>Переназначить тайминг одного файла субтитров по одному видео.</translation>
+    </message>
+    <message>
         <source>Folder</source>
         <translation>Папка</translation>
+    </message>
+    <message>
+        <source>Retime a folder of subtitles, paired to videos by episode number.</source>
+        <translation>Переназначить тайминг папки субтитров, сопоставленных с видео по номеру эпизода.</translation>
     </message>
     <message>
         <source>Video File:</source>
@@ -3742,12 +3870,20 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Перезаписывать существующие файлы субтитров</translation>
     </message>
     <message>
+        <source>When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.</source>
+        <translation>Если флажок снят, пары, у которых выходные субтитры уже существуют, пропускаются, а не перезаписываются.</translation>
+    </message>
+    <message>
         <source>Split penalty:</source>
         <translation>Штраф за разбивку:</translation>
     </message>
     <message>
         <source>Lower = more cut points for ad breaks; 1–20 is the useful range; default 7</source>
         <translation>Меньше = больше точек разбивки для рекламных пауз; полезный диапазон 1–20; по умолчанию 7</translation>
+    </message>
+    <message>
+        <source>Lower values create more cut points for ad breaks. Useful range 1–20; default 7.</source>
+        <translation>Меньшие значения создают больше точек разреза для рекламных пауз. Полезный диапазон 1–20; по умолчанию 7.</translation>
     </message>
     <message>
         <source>Actions</source>
@@ -3924,6 +4060,34 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Субтитры</translation>
     </message>
     <message>
+        <source>Speech-to-text</source>
+        <translation>Речь в текст</translation>
+    </message>
+    <message>
+        <source>ASR model</source>
+        <translation>Модель ASR</translation>
+    </message>
+    <message>
+        <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
+        <translation>Выберите модель Whisper для генерации субтитров. «large-v3» даёт наилучшую точность; «small» быстрее, но менее точна.</translation>
+    </message>
+    <message>
+        <source>Download model</source>
+        <translation>Загрузить модель</translation>
+    </message>
+    <message>
+        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
+        <translation>Загрузить веса выбранной модели Whisper в папку моделей ASR приложения Anki Miner. Требуется перед запуском генерации субтитров.</translation>
+    </message>
+    <message>
+        <source>Model download</source>
+        <translation>Загрузка модели</translation>
+    </message>
+    <message>
+        <source>Alignment</source>
+        <translation>Выравнивание</translation>
+    </message>
+    <message>
         <source>Optional: path to the alass executable</source>
         <translation>Необязательно: путь к исполняемому файлу alass</translation>
     </message>
@@ -3932,8 +4096,40 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Бинарный файл alass</translation>
     </message>
     <message>
-        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a bundled alass or one found on your PATH.</source>
-        <translation>Необязательно: путь к исполняемому файлу alass для пересинхронизации субтитров. Оставьте поле пустым, чтобы использовать встроенный alass или тот, что найден в PATH.</translation>
+        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a downloaded, bundled, or PATH alass.</source>
+        <translation>Необязательно: путь к исполняемому файлу alass для переназначения тайминга субтитров. Оставьте пустым, чтобы использовать загруженный, встроенный alass или alass из PATH.</translation>
+    </message>
+    <message>
+        <source>Download alass</source>
+        <translation>Загрузить alass</translation>
+    </message>
+    <message>
+        <source>Download the alass subtitle-alignment binary into Anki Miner's bin folder. Required for subtitle retiming unless alass is already on your PATH.</source>
+        <translation>Загрузить бинарный файл выравнивания субтитров alass в папку bin приложения Anki Miner. Требуется для переназначения тайминга субтитров, если alass ещё не в вашем PATH.</translation>
+    </message>
+    <message>
+        <source>alass download</source>
+        <translation>Загрузка alass</translation>
+    </message>
+    <message>
+        <source>No alass binary is published for macOS. Install it with Homebrew:</source>
+        <translation>Бинарный файл alass для macOS не публикуется. Установите его через Homebrew:</translation>
+    </message>
+    <message>
+        <source>ASR engine not installed. Subtitle generation needs the faster-whisper engine. Install it with:</source>
+        <translation>Движок ASR не установлен. Для генерации субтитров нужен движок faster-whisper. Установите его командой:</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>Копировать</translation>
+    </message>
+    <message>
+        <source>Downloaded</source>
+        <translation>Загружено</translation>
+    </message>
+    <message>
+        <source>Not downloaded</source>
+        <translation>Не загружено</translation>
     </message>
 </context><context>
     <name>ThemesPanel</name>
@@ -3952,6 +4148,18 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>%1%</source>
         <translation>%1%</translation>
+    </message>
+    <message>
+        <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
+        <translation>Масштабировать весь интерфейс — текст, отступы и элементы управления. Применяется после перезапуска.</translation>
+    </message>
+    <message>
+        <source>Zoom</source>
+        <translation>Масштаб</translation>
+    </message>
+    <message>
+        <source>Restart Anki Miner to apply the new zoom.</source>
+        <translation>Перезапустите Anki Miner, чтобы применить новый масштаб.</translation>
     </message>
     <message>
         <source>Name</source>
@@ -4468,6 +4676,16 @@ Continue with import?</source>
     <message>
         <source>Re-import</source>
         <translation>Переимпортировать</translation>
+    </message>
+</context><context>
+    <name>_FreqRow</name>
+    <message>
+        <source>%1 entries</source>
+        <translation>%1 записей</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation>⚠ отсутствует — повторный импорт</translation>
     </message>
 </context><context>
     <name>_PackRow</name>

@@ -52,6 +52,16 @@
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>AlassInstallWorker</name>
+    <message>
+        <source>Downloading alass…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>alass installed successfully.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AnalyticsTab</name>
     <message>
         <source>Refresh</source>
@@ -440,6 +450,62 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Card Type</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None (disabled)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word + Sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Click</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Default Card Type</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Which marker field gets the “x”. None leaves cards untouched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Customize marker field names</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word + Sentence:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Click:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Styling</source>
         <translation type="unfinished" />
     </message>
@@ -543,40 +609,6 @@
     </message>
     <message>
         <source>%1 downloaded successfully.</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
-    <name>AsrSettingsPanel</name>
-    <message>
-        <source>ASR Settings</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>ASR model</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Download model</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Model download</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Downloaded</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Not downloaded</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -1461,42 +1493,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Frequency List</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Select frequency list CSV/TSV or Yomitan zip...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency List File</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>CSV/TSV with columns (word, rank), or a Yomitan-format frequency zip (e.g. JPDB, BCCWJ). Yomitan zips are imported into ~/.anki_miner/frequency.csv on Save.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable to display word frequency rank on cards</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 (Yomitan zip — will import on Save)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 (%2 entries)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Could not parse file: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation type="unfinished" />
     </message>
@@ -2123,6 +2119,120 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Deck to exclude from known-words detection:</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source (*.zip *.csv *.tsv);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Failed</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>FrequencySettingsPanel</name>
+    <message>
+        <source>Active Frequency Sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sources are layered additively — the best (lowest) rank across all enabled sources wins. Top entry breaks ties first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>+ Add Source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Move up (breaks rank ties first)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable Frequency Data</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable to display word frequency rank on cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove frequency source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove '%1' from the frequency chain?
+
+Only the index files are deleted.
+This cannot be undone. You would need to re-import to use this source again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A mining run is in progress. Stop it before removing frequency sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The frequency source was not removed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import…</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3015,15 +3125,15 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Frequency</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Filtering</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>YouTube</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>ASR</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3138,22 +3248,6 @@ Details: %2</source>
     </message>
     <message>
         <source>Pitch accent dictionary imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Importing frequency dictionary…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Overwrite Frequency List?</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency Import Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency dictionary imported</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3423,7 +3517,15 @@ Details: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Transcribe one selected video file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcribe every video file in a selected folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3436,6 +3538,10 @@ Details: %2</source>
     </message>
     <message>
         <source>Output</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generated .srt files are saved next to each source video unless you choose a folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3456,6 +3562,10 @@ Details: %2</source>
     </message>
     <message>
         <source>Overwrite existing SRT files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3622,6 +3732,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Resync a subtitle file to its video by matching audio. Pick a video and the subtitle to align.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mode:</source>
         <translation type="unfinished" />
     </message>
@@ -3630,7 +3744,15 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Retime one subtitle file against one video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retime a folder of subtitles, paired to videos by episode number.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3674,11 +3796,19 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Split penalty:</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Lower = more cut points for ad breaks; 1–20 is the useful range; default 7</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lower values create more cut points for ad breaks. Useful range 1–20; default 7.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3856,6 +3986,34 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Speech-to-text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>ASR model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Model download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Alignment</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Optional: path to the alass executable</source>
         <translation type="unfinished" />
     </message>
@@ -3864,7 +4022,39 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a bundled alass or one found on your PATH.</source>
+        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a downloaded, bundled, or PATH alass.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download alass</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the alass subtitle-alignment binary into Anki Miner's bin folder. Required for subtitle retiming unless alass is already on your PATH.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>alass download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No alass binary is published for macOS. Install it with Homebrew:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>ASR engine not installed. Subtitle generation needs the faster-whisper engine. Install it with:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloaded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not downloaded</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3883,6 +4073,18 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>%1%</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Zoom</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restart Anki Miner to apply the new zoom.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4395,6 +4597,16 @@ Continue with import?</source>
     </message>
     <message>
         <source>Re-import</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>_FreqRow</name>
+    <message>
+        <source>%1 entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
         <translation type="unfinished" />
     </message>
 </context><context>
