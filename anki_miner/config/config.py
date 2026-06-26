@@ -79,6 +79,7 @@ class AnkiMinerConfig:
             "pitch_position": "",
             "pitch_category": "",
             "frequency": "",
+            "frequency_sort": "",
             "source": "",
             "expression_audio": "",
         }
