@@ -17,8 +17,9 @@ Per the v1 design decisions:
 
 Shared zip extraction, index validation, the strict ``format == 3`` gate, the
 per-file progress/cancel loop, and the atomic CSV write live in
-:mod:`anki_miner.services.yomitan_meta_bank`; only the frequency-specific
-``frequencyMode`` check and rank normalization remain here.
+:mod:`anki_miner.services.yomitan_meta_bank`; rank normalization lives in
+:mod:`anki_miner.services.frequency.csv_parse`. Only the frequency-specific
+``frequencyMode`` check remains here.
 """
 
 from __future__ import annotations
@@ -26,9 +27,10 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services.frequency.csv_parse import normalize_freq_rank as _normalize_freq_rank
 from anki_miner.services.yomitan_meta_bank import (
     ProgressFn,
     atomic_write_csv,
@@ -128,67 +130,3 @@ def import_yomitan_freq_zip(
         entry_count=len(ranks),
         skipped_display_only=skipped_display_only,
     )
-
-
-def _normalize_freq_rank(data: Any) -> int | None:
-    """Extract an integer rank from any of Yomitan's five ``freq`` data shapes.
-
-    Returns ``None`` for display-only entries (e.g. ``"①"``) and for ranks
-    outside the valid range (rank must be >= 1; a "0th most common word" is
-    nonsense). Invalid-rank entries are lumped into the caller's display-only
-    count by design — they're equally unusable downstream.
-    """
-    rank = _normalize_freq_rank_raw(data)
-    if rank is None or rank < 1:
-        return None
-    return rank
-
-
-def _normalize_freq_rank_raw(data: Any) -> int | None:
-    """Raw shape-dispatch for the five spec-defined ``freq`` data shapes.
-
-    Validity gating (rank >= 1) is applied by :func:`_normalize_freq_rank`.
-    """
-    if isinstance(data, bool):
-        # bool is a subclass of int; reject before the int branch below.
-        return None
-
-    if isinstance(data, int):
-        return data
-
-    if isinstance(data, str):
-        return _try_int(data)
-
-    if isinstance(data, dict):
-        # Outer envelope with `reading` + `frequency` (BCCWJ-style entries).
-        # Per single-source / term-only-key decision, the reading itself is
-        # discarded — we recurse into `frequency` and keep min(rank) on
-        # collision.
-        if "frequency" in data:
-            return _normalize_freq_rank_raw(data["frequency"])
-        # Inner `GenericFrequencyData`: `{value, displayValue?}`.
-        if "value" in data:
-            value = data["value"]
-            if isinstance(value, bool):
-                return None
-            if isinstance(value, int):
-                return value
-            if isinstance(value, str):
-                return _try_int(value)
-
-    return None
-
-
-def _try_int(s: str) -> int | None:
-    """Best-effort string→int conversion that tolerates surrounding whitespace.
-
-    Returns ``None`` for display-only markers like ``"①"`` or ``"高"`` that
-    have no integer interpretation.
-    """
-    s = s.strip()
-    if not s:
-        return None
-    try:
-        return int(s)
-    except ValueError:
-        return None
