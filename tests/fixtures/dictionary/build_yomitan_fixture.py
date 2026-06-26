@@ -17,12 +17,16 @@ def build_yomitan_zip(
     tag_banks: list[list[Any]] | None = None,
     format_version: int = 3,
     media_files: dict[str, bytes] | None = None,
+    styles_css: str | None = None,
 ) -> Path:
     """Create a minimal Yomitan zip at zip_path. Returns zip_path.
 
     `media_files` maps zip-relative paths (e.g. ``svg-accent/x.svg``) to their
     raw bytes. Useful for testing the asset-extraction path used by
     monolingual dictionaries with bundled images.
+
+    `styles_css`, when given, writes a root ``styles.css`` — the per-dictionary
+    stylesheet Yomitan dicts ship (Issue #87).
     """
     if term_banks is None:
         term_banks = [
@@ -56,4 +60,6 @@ def build_yomitan_zip(
         if media_files:
             for rel_path, data in media_files.items():
                 zf.writestr(rel_path, data)
+        if styles_css is not None:
+            zf.writestr("styles.css", styles_css)
     return zip_path
