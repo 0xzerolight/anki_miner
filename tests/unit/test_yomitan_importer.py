@@ -464,3 +464,30 @@ class TestDeriveDictIdFromZip:
 
         with patch.object(zipfile.ZipExtFile, "read", guard), pytest.raises(SetupError, match="(?i)index.json"):
             derive_dict_id_from_zip(bad)
+
+
+class TestStylesCssCapture:
+    """Issue #87: a dictionary's root styles.css is captured into meta."""
+
+    def test_styles_css_stored_in_meta(self, tmp_path: Path):
+        css = 'span[data-sc-class="tag"] { color: red }'
+        zip_path = build_yomitan_zip(tmp_path / "src" / "styled.zip", styles_css=css)
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        meta = read_meta(dest_root / result.dict_id / "index.sqlite")
+        assert meta["styles_css"] == css
+
+    def test_no_styles_css_means_no_meta_key(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(tmp_path / "src" / "plain.zip")
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        meta = read_meta(dest_root / result.dict_id / "index.sqlite")
+        assert "styles_css" not in meta
+
+    def test_oversized_styles_css_skipped(self, tmp_path: Path):
+        big = "a{color:red}\n" * 60000  # > 512 KiB
+        zip_path = build_yomitan_zip(tmp_path / "src" / "big.zip", styles_css=big)
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        meta = read_meta(dest_root / result.dict_id / "index.sqlite")
+        assert "styles_css" not in meta
