@@ -2,14 +2,18 @@
 
 Given a list of :class:`ResourceSpec`, downloads each artifact to a temp file
 then routes it to the right importer based on ``kind`` (``dict`` → Yomitan
-dictionary importer, ``freq`` → Yomitan frequency importer, ``pitch`` → raw
+dictionary importer, ``freq`` → per-source frequency importer, ``pitch`` → raw
 drop-in TSV write). Each item is wrapped in its own ``try/except`` so one
 failure never aborts the batch; the per-item outcomes are collected into a
 :class:`ResourceDownloadSummary` emitted at the end.
 
+The ``freq`` route is chain-native: it imports into ``freqs_root/<source_id>/``
+exactly as the ``dict`` route imports into ``dicts_root/<dict_id>/``, and the
+result carries ``source_id`` so the config step can prepend a ``FreqEntry``.
+
 This worker NEVER mutates config. The summary is its sole output — a later
-task reads ``summary.succeeded`` (plus each result's ``kind`` / ``dict_id``)
-to build the config mutations.
+task reads ``summary.succeeded`` (plus each result's ``kind`` / ``dict_id`` /
+``source_id``) to build the config mutations.
 
 Imports the three routing callables as bare module-level names so tests can
 ``monkeypatch.setattr`` them.
@@ -29,7 +33,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
-from anki_miner.services.frequency.yomitan_freq_importer import import_yomitan_freq_zip
+from anki_miner.services.frequency.source_importer import import_frequency_source
 from anki_miner.services.resource_downloader import download_to_temp
 
 if TYPE_CHECKING:
@@ -38,6 +42,31 @@ if TYPE_CHECKING:
     from anki_miner.services.resource_catalog import ResourceSpec
 
 logger = logging.getLogger(__name__)
+
+# Suffixes import_frequency_source dispatches on; anything else falls back to .zip
+# (the recommended freq resources are Yomitan zips).
+_FREQ_SUFFIXES = {".zip", ".csv", ".tsv", ".txt"}
+
+
+def _retype_for_suffix(temp: Path, url: str) -> Path:
+    """Rename ``temp`` to carry the URL's recognised suffix; return the new path.
+
+    ``download_to_temp`` always stages a ``.part`` file, but the frequency
+    importer dispatches on suffix. Pick the suffix from the catalog URL (default
+    ``.zip``) and rename in place; if the rename fails, fall back to the original
+    path unchanged.
+    """
+    suffix = Path(url).suffix.lower()
+    if suffix not in _FREQ_SUFFIXES:
+        suffix = ".zip"
+    retyped = temp.with_name(temp.stem + suffix)
+    if retyped == temp:
+        return temp
+    try:
+        temp.rename(retyped)
+    except OSError:
+        return temp
+    return retyped
 
 
 @dataclass
@@ -51,6 +80,7 @@ class ResourceDownloadResult:
     ok: bool
     detail: str
     dict_id: str | None = None
+    source_id: str | None = None
 
 
 @dataclass
@@ -86,7 +116,7 @@ class ResourceDownloadWorker(CancellableWorker):
         specs: Sequence[ResourceSpec],
         *,
         dicts_root: Path,
-        frequency_csv: Path,
+        freqs_root: Path,
         pitch_csv: Path,
         download_dir: Path,
         parent=None,
@@ -94,7 +124,7 @@ class ResourceDownloadWorker(CancellableWorker):
         super().__init__(parent)
         self._specs = list(specs)
         self._dicts_root = dicts_root
-        self._frequency_csv = frequency_csv
+        self._freqs_root = freqs_root
         self._pitch_csv = pitch_csv
         self._download_dir = download_dir
 
@@ -124,6 +154,7 @@ class ResourceDownloadWorker(CancellableWorker):
                 )
 
                 dict_id: str | None = None
+                source_id: str | None = None
                 if spec.kind == "dict":
                     result = import_yomitan_zip(
                         temp,
@@ -135,12 +166,19 @@ class ResourceDownloadWorker(CancellableWorker):
                     dict_id = result.dict_id
                     detail = f"{result.entry_count} entries"
                 elif spec.kind == "freq":
-                    freq_result = import_yomitan_freq_zip(
+                    # import_frequency_source dispatches on file suffix (.zip vs
+                    # .csv/.tsv/.txt), but download_to_temp always stages a
+                    # ``.part`` file. Re-suffix the temp from the catalog URL so
+                    # the importer routes correctly (and copies a sensibly-named
+                    # source.<ext> alongside the index).
+                    temp = _retype_for_suffix(temp, spec.url)
+                    freq_result = import_frequency_source(
                         temp,
-                        self._frequency_csv,
+                        self._freqs_root,
                         cancel_check=lambda: self.is_cancelled,
                         progress=self._progress_for(spec.id),
                     )
+                    source_id = freq_result.source_id
                     detail = f"{freq_result.entry_count} entries"
                 elif spec.kind == "pitch":
                     self._pitch_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -162,6 +200,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         ok=True,
                         detail=detail,
                         dict_id=dict_id,
+                        source_id=source_id,
                     )
                 )
                 self.item_done.emit(spec.id, True, detail)

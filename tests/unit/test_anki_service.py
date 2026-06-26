@@ -2805,6 +2805,113 @@ class TestExistingVocabCache:
 
 
 # ---------------------------------------------------------------------------
+# TestFrequencyFieldRouting (Multiple Additive Frequency Sources)
+# ---------------------------------------------------------------------------
+
+
+class TestFrequencyFieldRouting:
+    """Tests for the multi-source frequency fields on the built note.
+
+    ``frequency`` is now a pre-rendered bullet list (``<ul><li>…``) and must be
+    inserted UNESCAPED (like glossary); ``frequency_sort`` is a bare number that
+    rides the normal escaped optional pass. Both follow the optional gating
+    contract: written only when their ``anki_fields`` mapping is non-empty AND
+    the value is non-empty.
+    """
+
+    _FREQ_HTML = "<ul><li>BCCWJ: 2496</li></ul>"
+
+    def _config(self, test_config, *, frequency="Frequency", frequency_sort="FrequencySort"):
+        from dataclasses import replace
+
+        return replace(
+            test_config,
+            anki_fields={
+                **test_config.anki_fields,
+                "frequency": frequency,
+                "frequency_sort": frequency_sort,
+            },
+        )
+
+    def test_frequency_inserted_unescaped(self, test_config, make_tokenized_word):
+        """The rendered bullet HTML reaches the mapped field with literal tags."""
+        from anki_miner.services.anki_note_builder import build_note
+
+        config = self._config(test_config)
+        item = CardPayload(
+            word=make_tokenized_word(),
+            media=MediaData(),
+            definition="def",
+            extra_fields={"frequency": self._FREQ_HTML, "frequency_sort": "2496"},
+        )
+
+        built = build_note(item, config, stored_files=set())
+
+        assert built.note["fields"]["Frequency"] == self._FREQ_HTML
+        assert "<ul>" in built.note["fields"]["Frequency"]
+        assert "&lt;" not in built.note["fields"]["Frequency"]
+
+    def test_frequency_sort_inserted_as_number(self, test_config, make_tokenized_word):
+        """frequency_sort lands as the bare number in its mapped field."""
+        from anki_miner.services.anki_note_builder import build_note
+
+        config = self._config(test_config)
+        item = CardPayload(
+            word=make_tokenized_word(),
+            media=MediaData(),
+            definition="def",
+            extra_fields={"frequency": self._FREQ_HTML, "frequency_sort": "2496"},
+        )
+
+        built = build_note(item, config, stored_files=set())
+
+        assert built.note["fields"]["FrequencySort"] == "2496"
+
+    def test_fields_omitted_when_mapping_empty(self, test_config, make_tokenized_word):
+        """Blank mappings → neither field appears on the note."""
+        from anki_miner.services.anki_note_builder import build_note
+
+        config = self._config(test_config, frequency="", frequency_sort="")
+        item = CardPayload(
+            word=make_tokenized_word(),
+            media=MediaData(),
+            definition="def",
+            extra_fields={"frequency": self._FREQ_HTML, "frequency_sort": "2496"},
+        )
+
+        built = build_note(item, config, stored_files=set())
+
+        assert "Frequency" not in built.note["fields"]
+        assert "FrequencySort" not in built.note["fields"]
+        # The raw HTML must not leak into any other field either.
+        assert self._FREQ_HTML not in built.note["fields"].values()
+
+    def test_fields_omitted_when_value_empty(self, test_config, make_tokenized_word):
+        """Mapped but empty values → fields stay off the note (gating contract)."""
+        from anki_miner.services.anki_note_builder import build_note
+
+        config = self._config(test_config)
+        item = CardPayload(
+            word=make_tokenized_word(),
+            media=MediaData(),
+            definition="def",
+            extra_fields={"frequency": "", "frequency_sort": ""},
+        )
+
+        built = build_note(item, config, stored_files=set())
+
+        assert "Frequency" not in built.note["fields"]
+        assert "FrequencySort" not in built.note["fields"]
+
+    def test_frequency_sort_in_optional_field_keys(self):
+        """frequency_sort must be a recognized optional field key (escaped pass)."""
+        from anki_miner.services.anki_note_builder import OPTIONAL_FIELD_KEYS, REQUIRED_FIELD_KEYS
+
+        assert "frequency_sort" in OPTIONAL_FIELD_KEYS
+        assert "frequency_sort" not in REQUIRED_FIELD_KEYS
+
+
+# ---------------------------------------------------------------------------
 # TestExcludedDecks (Issue #38)
 # ---------------------------------------------------------------------------
 

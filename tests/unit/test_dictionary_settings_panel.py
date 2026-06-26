@@ -69,15 +69,16 @@ def test_pitch_checkbox_tooltip_is_helper_text(qapp, qtbot, tmp_path):
     assert panel.use_pitch_accent_checkbox.toolTip() == "Looks up and writes pitch patterns to mapped fields."
 
 
-def test_frequency_widgets_live_on_dictionary_panel(qapp, qtbot, tmp_path):
-    # The frequency file selector + enable toggle were moved here from the
-    # Filtering panel (Dictionaries-tab reorg); the max-rank threshold stays
-    # in Filtering.
+def test_frequency_widgets_removed_pitch_kept(qapp, qtbot, tmp_path):
+    # Frequency moved to its own multi-source Settings → Frequency panel; the
+    # old single-file picker + enable toggle no longer live on the dictionary
+    # panel. Pitch accent stays here (single-file flow unchanged).
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
-    assert hasattr(panel, "frequency_selector")
-    assert hasattr(panel, "use_frequency_checkbox")
-    assert panel.use_frequency_checkbox.text() == "Enable Frequency Data"
+    assert not hasattr(panel, "frequency_selector")
+    assert not hasattr(panel, "use_frequency_checkbox")
+    assert hasattr(panel, "pitch_accent_selector")
+    assert hasattr(panel, "use_pitch_accent_checkbox")
 
 
 def test_reorder_moves_entry_up(qapp, qtbot, monkeypatch, tmp_path):

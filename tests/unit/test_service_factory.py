@@ -181,3 +181,95 @@ class TestRegistryOSErrorInServiceFactory:
             services = service_factory.create_services(cfg)
 
         assert isinstance(services.definition_service, DefinitionService)
+
+
+# ---------------------------------------------------------------------------
+# Multi-source frequency wiring (Multiple Additive Frequency Sources)
+# ---------------------------------------------------------------------------
+
+
+class TestFrequencyServiceWiring:
+    """create_services builds a MultiFrequencyService from the freqs_root chain."""
+
+    def _import_source(self, freqs_root: Path, tmp_path: Path) -> str:
+        """Build one real on-disk frequency source via the importer; return its id."""
+        from anki_miner.services.frequency.source_importer import import_frequency_source
+
+        csv = tmp_path / "ranks.csv"
+        csv.write_text("rank,word\n1,猫\n2,犬\n3,食べる\n", encoding="utf-8")
+        result = import_frequency_source(csv, freqs_root, source_id="testfreq")
+        return result.source_id
+
+    def _config(self, tmp_path: Path, *, chain, use_frequency_data=True) -> AnkiMinerConfig:
+        from anki_miner.config import FreqEntry
+
+        return dataclasses.replace(
+            AnkiMinerConfig(),
+            dicts_root=tmp_path / "dicts",
+            known_words_db_path=tmp_path / "known_words.db",
+            history_db_path=tmp_path / "history.db",
+            stats_db_path=tmp_path / "stats.db",
+            freqs_root=tmp_path / "freqs",
+            use_frequency_data=use_frequency_data,
+            frequency_chain=tuple(FreqEntry(source_id=sid) for sid in chain),
+        )
+
+    def test_returns_multi_service_resolving_known_term(self, tmp_path: Path):
+        """An enabled chain entry pointing at a real source → a working service."""
+        from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
+
+        freqs_root = tmp_path / "freqs"
+        source_id = self._import_source(freqs_root, tmp_path)
+        cfg = self._config(tmp_path, chain=[source_id])
+
+        services = service_factory.create_services(cfg)
+
+        assert isinstance(services.frequency_service, MultiFrequencyService)
+        assert services.frequency_service.is_available()
+        assert services.frequency_service.lookup_min("食べる") == 3
+        # lookup_all reports (display name, rank); the CSV stem is the source name.
+        assert services.frequency_service.lookup_all("猫") == [("ranks", 1)]
+        # Human-readable info line mentions source count + total entries.
+        joined = " ".join(services.load_result.info)
+        assert "Frequency data loaded" in joined
+        assert "3" in joined  # 3 entries
+
+    def test_empty_chain_yields_none(self, tmp_path: Path):
+        """use_frequency_data on but no chain entries → no service."""
+        # Import a source on disk but reference none of it in the chain.
+        freqs_root = tmp_path / "freqs"
+        self._import_source(freqs_root, tmp_path)
+        cfg = self._config(tmp_path, chain=[])
+
+        services = service_factory.create_services(cfg)
+
+        assert services.frequency_service is None
+
+    def test_use_frequency_data_off_yields_none(self, tmp_path: Path):
+        """Toggle off → no service even with a populated chain."""
+        freqs_root = tmp_path / "freqs"
+        source_id = self._import_source(freqs_root, tmp_path)
+        cfg = self._config(tmp_path, chain=[source_id], use_frequency_data=False)
+
+        services = service_factory.create_services(cfg)
+
+        assert services.frequency_service is None
+
+    def test_missing_source_yields_none_without_crash(self, tmp_path: Path):
+        """A chain entry whose source is absent on disk → None, no exception."""
+        cfg = self._config(tmp_path, chain=["does-not-exist"])
+
+        services = service_factory.create_services(cfg)
+
+        assert services.frequency_service is None
+
+    def test_load_failure_does_not_crash(self, tmp_path: Path):
+        """A registry scan that raises is swallowed into a warning, not a crash."""
+        source_id = self._import_source(tmp_path / "freqs", tmp_path)
+        cfg = self._config(tmp_path, chain=[source_id])
+
+        with patch.object(Path, "iterdir", side_effect=OSError("boom")):
+            services = service_factory.create_services(cfg)
+
+        # registry.load() swallows OSError internally → no sources → None.
+        assert services.frequency_service is None

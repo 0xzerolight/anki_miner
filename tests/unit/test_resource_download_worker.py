@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import sqlite3
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,8 +27,10 @@ class _FakeYomitanResult:
 
 @dataclass
 class _FakeFreqResult:
+    source_id: str = "jpdb"
     source_name: str = "JPDB"
     source_revision: str = "rev"
+    format: str = "yomitan-freq"
     entry_count: int = 6789
     skipped_display_only: int = 0
 
@@ -57,7 +62,7 @@ def _make_worker(specs, tmp_path: Path) -> ResourceDownloadWorker:
     return ResourceDownloadWorker(
         specs,
         dicts_root=tmp_path / "dicts",
-        frequency_csv=tmp_path / "frequency.csv",
+        freqs_root=tmp_path / "freqs",
         pitch_csv=tmp_path / "pitch_accent.csv",
         download_dir=tmp_path / "downloads",
     )
@@ -93,13 +98,13 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
         dict_calls.append({"zip_path": zip_path, "dest_root": dest_root, "overwrite": overwrite})
         return _FakeYomitanResult()
 
-    def fake_freq(zip_path, dest_csv, *, progress=None, cancel_check=None):
-        freq_calls.append({"zip_path": zip_path, "dest_csv": dest_csv})
+    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None):
+        freq_calls.append({"input_path": input_path, "dest_root": dest_root})
         return _FakeFreqResult()
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
     monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", fake_dict)
-    monkeypatch.setattr(resource_download_worker, "import_yomitan_freq_zip", fake_freq)
+    monkeypatch.setattr(resource_download_worker, "import_frequency_source", fake_freq)
 
     worker = _make_worker([DICT_SPEC, FREQ_SPEC, PITCH_SPEC], tmp_path)
     done, _progress, summaries = _connect_capture(worker)
@@ -118,8 +123,13 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
     assert dict_result.dict_id == "jitendex-english"
     assert "12345" in dict_result.detail
 
-    # freq routed to the configured frequency csv.
-    assert freq_calls[0]["dest_csv"] == tmp_path / "frequency.csv"
+    # freq routed to the configured freqs_root; result carries source_id.
+    assert freq_calls[0]["dest_root"] == tmp_path / "freqs"
+    # The .part temp was re-suffixed to .zip (matches the catalog URL) before import.
+    assert freq_calls[0]["input_path"].suffix == ".zip"
+    freq_result = next(r for r in summary.results if r.spec_id == "jpdb-freq")
+    assert freq_result.source_id == "jpdb"
+    assert "6789" in freq_result.detail
 
     # item_done emitted per item.
     assert [d[0] for d in done] == ["jitendex", "jpdb-freq", "kanjium-pitch"]
@@ -138,12 +148,12 @@ def test_per_item_failure_isolation(tmp_path, monkeypatch):
     def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None):
         return _FakeYomitanResult()
 
-    def fake_freq(zip_path, dest_csv, *, progress=None, cancel_check=None):
+    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None):
         raise RuntimeError("freq boom")
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
     monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", fake_dict)
-    monkeypatch.setattr(resource_download_worker, "import_yomitan_freq_zip", fake_freq)
+    monkeypatch.setattr(resource_download_worker, "import_frequency_source", fake_freq)
 
     worker = _make_worker([DICT_SPEC, FREQ_SPEC, PITCH_SPEC], tmp_path)
     done, _progress, summaries = _connect_capture(worker)
@@ -183,7 +193,7 @@ def test_pitch_routing_moves_temp_to_dest(tmp_path, monkeypatch):
     worker = ResourceDownloadWorker(
         [PITCH_SPEC],
         dicts_root=tmp_path / "dicts",
-        frequency_csv=tmp_path / "frequency.csv",
+        freqs_root=tmp_path / "freqs",
         pitch_csv=pitch_csv,
         download_dir=download_dir,
     )
@@ -250,6 +260,44 @@ def test_leftover_temp_cleanup_when_importer_fails(tmp_path, monkeypatch):
     assert summaries[0].failed[0].spec_id == "jitendex"
     # The downloaded temp must be cleaned up since the importer consumed nothing.
     assert created_temps and not created_temps[0].exists()
+
+
+def test_freq_route_imports_real_source_into_freqs_root(tmp_path, monkeypatch):
+    # Exercise the REAL frequency importer (not monkeypatched) to prove the freq
+    # route builds freqs/<source_id>/index.sqlite and threads source_id back.
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
+        # download_to_temp always stages a ``.part`` file; the worker re-suffixes
+        # it to .zip from the catalog URL before handing it to the importer.
+        temp = Path(dest_dir) / "freq-download.part"
+        index = {"title": "JPDB v2.2", "format": 3, "revision": "rev1"}
+        with zipfile.ZipFile(temp, "w") as zf:
+            zf.writestr("index.json", json.dumps(index))
+            zf.writestr("term_meta_bank_1.json", json.dumps([["猫", "freq", 5]]))
+        return temp
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+
+    worker = _make_worker([FREQ_SPEC], tmp_path)
+    _done, _progress, summaries = _connect_capture(worker)
+    worker.run()
+
+    summary = summaries[0]
+    assert len(summary.succeeded) == 1
+    result = summary.succeeded[0]
+    assert result.source_id == "jpdb-v2-2"  # slug of the zip title
+    assert "1 entries" in result.detail
+
+    db = tmp_path / "freqs" / "jpdb-v2-2" / "index.sqlite"
+    assert db.exists()
+    conn = sqlite3.connect(db)
+    try:
+        rows = conn.execute("SELECT term, rank FROM entries").fetchall()
+    finally:
+        conn.close()
+    assert rows == [("猫", 5)]
 
 
 def test_summary_properties_filter_results():

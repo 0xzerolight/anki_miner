@@ -1,11 +1,24 @@
-"""Service for loading and looking up word frequency data."""
+"""Shared CSV/TSV frequency-row parsing + Yomitan rank normalization.
 
-import csv
+Single source of truth for the row-shape helpers that the per-source frequency
+importer relies on. Originally extracted from the legacy single-CSV loader and
+``yomitan_freq_importer`` so there is exactly one implementation of each.
+
+Two concerns live here:
+
+* **CSV column extraction** — ``_extract_word_rank`` / ``_is_word_first_header``
+  / ``_WORD_FIRST_HEADER_COLS``: figure out which column is the word and which
+  is the rank from a delimiter-split row, honouring an importer-written
+  word-first header when present.
+* **Yomitan ``freq`` rank normalization** — ``normalize_freq_rank`` and its
+  helpers: collapse Yomitan's five spec-defined ``freq`` data shapes to an
+  ``int`` rank (or ``None`` for display-only / invalid entries).
+"""
+
+from __future__ import annotations
+
 import logging
-from pathlib import Path
-
-from anki_miner.exceptions import SetupError
-from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +32,8 @@ def _is_word_first_header(row: list[str]) -> bool:
     """Return True when the header's first column names the word column.
 
     Detects the column-order contract written by the Yomitan freq importer
-    (``['term', 'rank']``) so that FrequencyService can skip the ambiguous
-    int-first auto-detect for those files.
+    (``['term', 'rank']``) so the CSV loader can skip the ambiguous int-first
+    auto-detect for those files.
     """
     return bool(row) and row[0].strip().lower() in _WORD_FIRST_HEADER_COLS
 
@@ -112,93 +125,80 @@ def _extract_word_rank(row: list[str], *, word_first: bool = False) -> tuple[str
     return "", None
 
 
-class FrequencyService:
-    """Load and look up word frequency rankings from CSV/TSV.
+def normalize_freq_rank(data: Any) -> int | None:
+    """Extract an integer rank from any of Yomitan's five ``freq`` data shapes.
 
-    Supports two column formats (auto-detected):
-    - rank, word (first column is numeric)
-    - word, rank (first column is non-numeric)
-
-    Supports both comma-separated and tab-separated files.
-    Header rows are automatically skipped.
+    Returns ``None`` for display-only entries (e.g. ``"①"``) and for ranks
+    outside the valid range (rank must be >= 1; a "0th most common word" is
+    nonsense). Invalid-rank entries are lumped into the caller's display-only
+    count by design — they're equally unusable downstream.
     """
+    rank = _normalize_freq_rank_raw(data)
+    if rank is None or rank < 1:
+        return None
+    return rank
 
-    def __init__(self, frequency_list_path: Path):
-        """Initialize with path to frequency list file.
 
-        Args:
-            frequency_list_path: Path to the frequency list file.
-        """
-        self._path = frequency_list_path
-        self._data: dict[str, int] | None = None
-        self._entry_count: int = 0
+def _normalize_freq_rank_raw(data: Any) -> int | None:
+    """Raw shape-dispatch for the five spec-defined ``freq`` data shapes.
 
-    @property
-    def entry_count(self) -> int:
-        """Number of entries loaded."""
-        return self._entry_count
+    Validity gating (rank >= 1) is applied by :func:`normalize_freq_rank`.
+    """
+    if isinstance(data, bool):
+        # bool is a subclass of int; reject before the int branch below.
+        return None
 
-    def load(self) -> bool:
-        """Load frequency data from file.
+    if isinstance(data, int):
+        return data
 
-        Returns:
-            True if loaded successfully.
+    if isinstance(data, str):
+        return _try_int(data)
 
-        Raises:
-            SetupError: If file missing or unparseable.
-        """
-        if not self._path.exists():
-            raise SetupError(
-                f"Frequency list not found at: {self._path}. "
-                f"Download a Japanese frequency list and place it in ~/.anki_miner/"
-            )
+    if isinstance(data, dict):
+        # Outer envelope with `reading` + `frequency` (BCCWJ-style entries).
+        # The reading itself is handled by the caller (it inspects the envelope
+        # separately); here we recurse into `frequency` for the rank only.
+        if "frequency" in data:
+            return _normalize_freq_rank_raw(data["frequency"])
+        # Inner `GenericFrequencyData`: `{value, displayValue?}`.
+        if "value" in data:
+            value = data["value"]
+            if isinstance(value, bool):
+                return None
+            if isinstance(value, int):
+                return value
+            if isinstance(value, str):
+                return _try_int(value)
 
-        data: dict[str, int] = {}
-        try:
-            with open(self._path, encoding="utf-8") as f:
-                sample = f.read(4096)
-                f.seek(0)
-                delimiter = detect_delimiter(sample)
+    return None
 
-                reader = csv.reader(f, delimiter=delimiter)
-                first_row = True
-                word_first = False
-                for row in reader:
-                    if len(row) < 2:
-                        continue
-                    if first_row:
-                        first_row = False
-                        if is_header_row(row):
-                            # Detect importer-written headers that declare the word
-                            # column unambiguously so we can skip int-first auto-detect.
-                            word_first = _is_word_first_header(row)
-                            continue
 
-                    word, rank = _extract_word_rank(row, word_first=word_first)
-                    if word and rank is not None and word not in data:
-                        data[word] = rank
+def extract_envelope_reading(data: Any) -> str | None:
+    """Return the BCCWJ-style envelope ``reading`` when present, else ``None``.
 
-            self._data = data
-            self._entry_count = len(data)
-            logger.info(f"Loaded {len(data)} frequency entries from {self._path.name}")
-            return True
+    Yomitan ``freq`` data may be an outer envelope dict carrying both a
+    ``reading`` and a ``frequency``. The per-source importer keeps that reading
+    (stored in its own column), unlike the legacy single-source CSV which
+    discarded it. Only a non-empty string reading is returned.
+    """
+    if isinstance(data, dict):
+        reading = data.get("reading")
+        if isinstance(reading, str):
+            reading = reading.strip()
+            return reading or None
+    return None
 
-        except Exception as e:
-            raise SetupError(f"Error loading frequency data: {e}") from e
 
-    def is_available(self) -> bool:
-        """Check if frequency data has been loaded."""
-        return self._data is not None
+def _try_int(s: str) -> int | None:
+    """Best-effort string→int conversion that tolerates surrounding whitespace.
 
-    def lookup(self, word: str) -> int | None:
-        """Look up frequency rank for a word.
-
-        Args:
-            word: Word to look up.
-
-        Returns:
-            Frequency rank (1 = most common), or None if not found.
-        """
-        if not self._data:
-            return None
-        return self._data.get(word)
+    Returns ``None`` for display-only markers like ``"①"`` or ``"高"`` that
+    have no integer interpretation.
+    """
+    s = s.strip()
+    if not s:
+        return None
+    try:
+        return int(s)
+    except ValueError:
+        return None
