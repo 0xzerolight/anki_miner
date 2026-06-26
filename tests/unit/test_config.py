@@ -527,3 +527,19 @@ class TestFrozenConfigImmutability:
         cfg = AnkiMinerConfig(anki_fields=fields_dict)
         assert isinstance(cfg.anki_fields, types.MappingProxyType)
         assert cfg.anki_fields["word"] == "VocabExpr"
+
+
+class TestFrequencySortField:
+    """The frequency_sort optional anki_fields key (Multiple Additive Frequency Sources)."""
+
+    def test_default_anki_fields_contains_frequency_sort(self):
+        """The default anki_fields mapping carries an unmapped frequency_sort key."""
+        cfg = AnkiMinerConfig()
+        assert "frequency_sort" in cfg.anki_fields
+        assert cfg.anki_fields["frequency_sort"] == ""
+
+    def test_frequency_sort_not_required(self):
+        """frequency_sort is optional — it must not be a required field key."""
+        from anki_miner.services.anki_note_builder import REQUIRED_FIELD_KEYS
+
+        assert "frequency_sort" not in REQUIRED_FIELD_KEYS
