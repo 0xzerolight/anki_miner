@@ -14,7 +14,8 @@ from anki_miner.services.audio_packs.registry import AudioPackRegistry
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher, JPod101AudioFetcher
-from anki_miner.services.frequency_service import FrequencyService
+from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
+from anki_miner.services.frequency.registry import FrequencySourceRegistry
 from anki_miner.services.google_translate_audio_fetcher import GoogleTranslateAudioFetcher
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.media_extractor import MediaExtractorService
@@ -52,7 +53,7 @@ class Services:
     definition_service: DefinitionService
     anki_service: AnkiService
     pitch_accent_service: PitchAccentService | None
-    frequency_service: FrequencyService | None
+    frequency_service: MultiFrequencyService | None
     known_word_db: KnownWordDB | None
     word_list_service: WordListService | None
     wordset_service: WordsetService | None
@@ -272,19 +273,25 @@ def create_services(
             load_result.warnings.append(f"Could not load pitch accent data: {e}")
             pitch_accent_service = None
 
-    frequency_service = None
+    frequency_service: MultiFrequencyService | None = None
     if config.use_frequency_data:
         try:
-            frequency_service = FrequencyService(config.frequency_list_path)
-            frequency_service.load()
-            count = frequency_service.entry_count
-            if count > 0:
-                load_result.info.append(f"Frequency data loaded: {count:,} entries")
-            else:
-                load_result.warnings.append(
-                    "Frequency file loaded but contained 0 valid entries. "
-                    "Expected CSV/TSV format: rank, word OR word, rank (2 columns)."
+            registry = FrequencySourceRegistry(config.freqs_root)
+            registry.load()
+            providers = [p for p in registry.build_sources(config) if p.load()]
+            if providers:
+                frequency_service = MultiFrequencyService(providers)
+                # Sum entry counts from the registry meta for the enabled chain
+                # entries that actually produced a loaded provider. The provider
+                # exposes .name (display) and .source_id, not the count — counts
+                # live on FreqSourceMeta — so resolve each via registry.get().
+                total_entries = sum(
+                    meta.entry_count for p in providers if (meta := registry.get(p.source_id)) is not None
                 )
+                load_result.info.append(f"Frequency data loaded: {len(providers)} source(s), {total_entries:,} entries")
+            else:
+                # Nothing enabled / on-disk: no providers loaded. Not an error —
+                # a user can have use_frequency_data on with an empty chain.
                 frequency_service = None
         except Exception as e:
             logger.warning(f"Could not load frequency data: {e}")
