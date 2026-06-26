@@ -57,14 +57,17 @@ _CONDITIONAL_GROUP_AT_RULES = frozenset({"@media", "@supports", "@container", "@
 # A match drops the whole rule (coarse but safe: a single tainted declaration
 # forfeits its rule block, including any nested rules — legitimate dictionaries
 # never trip this).
+#
+# ReDoS note: the image-function branches match an optional single vendor prefix
+# (``-webkit-``/``-moz-``) anchored by a token-boundary lookbehind, NOT an
+# unbounded ``[a-z-]*`` greedy prefix. A greedy prefix makes ``.search`` O(n²)
+# on a long single-token prelude/body (it re-consumes the run from every start
+# position) — a hostile under-cap styles.css would hang dictionary load. The
+# anchored form fails in O(1) per position, so the whole scan stays O(n).
 _FORBIDDEN_RE = re.compile(
     r"""(?ix)
     url\s*\( |
-    [a-z-]*image-set\s*\( |
-    [a-z-]*image-rect\s*\( |
-    [a-z-]*cross-fade\s*\( |
-    (?<![a-z-])image\s*\( |
-    [a-z-]*element\s*\( |
+    (?<![a-z-])(?:-[a-z]+-)?(?:image-set|image-rect|cross-fade|element|image)\s*\( |
     paint\s*\( |
     src\s*\( |
     expression\s*\( |
