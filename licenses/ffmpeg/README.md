@@ -27,6 +27,8 @@ The bundled binaries are pre-built static builds taken from:
   `n8.1.1-9-g58d4114d36` (the `gpl-8.1` variant).
 - **macOS (arm64)** — [osxexperts.net](https://www.osxexperts.net) static
   FFmpeg 8.1 arm64 build.
+- **macOS (Intel / x86_64)** — [evermeet.cx](https://evermeet.cx/ffmpeg/) static
+  FFmpeg 8.1.2 Intel build.
 
 ## Written offer of source
 
