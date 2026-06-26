@@ -355,66 +355,11 @@ class DictionarySettingsPanel(FormPanel):
             helper=self.tr("Looks up and writes pitch patterns to mapped fields."),
         )
 
-        # Frequency List section. Mirrors the Pitch Accent section above: the
-        # file selector + enable toggle live here (users think of the frequency
-        # list as a dictionary). The max-rank threshold — a filter — stays in
-        # the Filtering tab. The selector accepts CSV/TSV directly, or a
-        # Yomitan-format frequency zip converted to CSV on Save (see
-        # SettingsTab._on_save_clicked).
-        self.add_section(self.tr("Frequency List"))
-        self.frequency_selector = FileSelector(
-            label="",
-            file_mode=True,
-            file_filter="Frequency list (*.csv *.tsv *.txt *.zip);;All Files (*)",
-            placeholder=self.tr("Select frequency list CSV/TSV or Yomitan zip..."),
-            default_dir=ANKI_MINER_HOME,
-        )
-        self.add_field(
-            self.tr("Frequency List File"),
-            self.frequency_selector,
-            helper=self.tr(
-                "CSV/TSV with columns (word, rank), or a Yomitan-format "
-                "frequency zip (e.g. JPDB, BCCWJ). Yomitan zips are imported "
-                "into ~/.anki_miner/frequency.csv on Save."
-            ),
-        )
-        self.use_frequency_checkbox = QCheckBox(self.tr("Enable Frequency Data"))
-        self.add_field(
-            "",
-            self.use_frequency_checkbox,
-            helper=self.tr("Enable to display word frequency rank on cards"),
-        )
-        self.frequency_selector.path_validated.connect(self._validate_frequency_file)
+        # Frequency sources now live in their own Settings → Frequency tab
+        # (multi-source additive chain). The old single-file picker that used
+        # to sit here was removed.
 
         self.add_stretch()
-
-    def _validate_frequency_file(self, is_valid: bool, path_str: str) -> None:
-        """Validate frequency file and show entry count.
-
-        For ``.zip`` paths we don't parse — the actual Yomitan import runs on
-        Save (where progress + error dialogs are wired). Showing a "will import"
-        hint here keeps the slow extract off the validation hot path.
-        """
-        if not is_valid or not path_str:
-            return
-
-        if path_str.lower().endswith(".zip"):
-            self.frequency_selector.status_label.setText(
-                tr_format(self.tr("%1 (Yomitan zip — will import on Save)"), Path(path_str).name)
-            )
-            return
-
-        try:
-            from anki_miner.services.frequency_service import FrequencyService
-
-            service = FrequencyService(Path(path_str))
-            service.load()
-            count = service.entry_count
-            self.frequency_selector.status_label.setText(
-                tr_format(self.tr("%1 (%2 entries)"), Path(path_str).name, f"{count:,}")
-            )
-        except Exception as e:
-            self.frequency_selector.status_label.setText(tr_format(self.tr("Could not parse file: %1"), e))
 
     def set_chain(self, chain: tuple[ChainEntry, ...]) -> None:
         self._chain = list(chain)

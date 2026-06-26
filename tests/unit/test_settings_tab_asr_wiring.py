@@ -95,7 +95,6 @@ class TestSettingsTabAsrWiring:
 
         # Trigger save path (monkeypatch the validation-heavy side-effects)
         monkeypatch.setattr(tab, "_resolve_pitch_accent_path", lambda: tab.config.pitch_accent_path)
-        monkeypatch.setattr(tab, "_resolve_frequency_path", lambda: tab.config.frequency_list_path)
         monkeypatch.setattr(tab, "_commit_pending_csv_imports", lambda: None)
 
         tab._on_save_clicked()
