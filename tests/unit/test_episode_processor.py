@@ -498,11 +498,12 @@ class TestOptionalServices:
         }
 
     def test_frequency_service_attaches_ranks(self, test_config, mock_services, tmp_path):
-        """Frequency service should attach ranks to words after parsing."""
+        """Frequency service should attach the min rank + per-source breakdown."""
         word = _make_word("食べる")
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup.return_value = 500
+        mock_frequency.lookup_all.return_value = [("BCCWJ", 500)]
+        mock_frequency.lookup_min.return_value = 500
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -520,10 +521,13 @@ class TestOptionalServices:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        # Verify frequency lookup was called for the word
-        mock_frequency.lookup.assert_called_with(word.lemma)
-        # Verify the word now has a frequency rank
+        # Verify both lookups were called for the word's lemma.
+        mock_frequency.lookup_all.assert_called_with(word.lemma)
+        mock_frequency.lookup_min.assert_called_with(word.lemma)
+        # Verify the word now has both the min rank (drives filtering) and the
+        # per-source breakdown (drives the card display).
         assert word.frequency_rank == 500
+        assert word.frequency_sources == [("BCCWJ", 500)]
 
     def test_frequency_filter_removes_words(self, test_config, mock_services, tmp_path):
         """Frequency filter should remove words outside the threshold."""
@@ -536,7 +540,8 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup.side_effect = [500, 5000]
+        mock_frequency.lookup_all.side_effect = [[("BCCWJ", 500)], [("BCCWJ", 5000)]]
+        mock_frequency.lookup_min.side_effect = [500, 5000]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -566,7 +571,8 @@ class TestOptionalServices:
         word1 = _make_word("食べる")
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup.return_value = 500
+        mock_frequency.lookup_all.return_value = [("BCCWJ", 500)]
+        mock_frequency.lookup_min.return_value = 500
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -630,7 +636,8 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup.return_value = 500
+        mock_frequency.lookup_all.return_value = [("BCCWJ", 500), ("JPDB", 612)]
+        mock_frequency.lookup_min.return_value = 500
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -655,7 +662,45 @@ class TestOptionalServices:
         assert extra_fields is not None
         assert extra_fields["pitch_position"] == "0"
         assert extra_fields["pitch_category"] == "平板"
-        assert extra_fields["frequency"] == "500"
+        # frequency is now the rendered per-source bullet list; frequency_sort
+        # carries the bare min rank for Anki's numeric sort column.
+        assert extra_fields["frequency"] == "<ul><li>BCCWJ: 500</li><li>JPDB: 612</li></ul>"
+        assert extra_fields["frequency_sort"] == "500"
+
+    def test_word_absent_from_all_sources_gets_no_frequency_fields(self, test_config, mock_services, tmp_path):
+        """A word no source ranks gets neither frequency nor frequency_sort."""
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        # No source ranks this word.
+        mock_frequency.lookup_all.return_value = []
+        mock_frequency.lookup_min.return_value = None
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # frequency_rank stays None so frequency filtering still works.
+        assert word.frequency_rank is None
+        assert word.frequency_sources == []
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        extra_fields = card_data[0].extra_fields or {}
+        assert "frequency" not in extra_fields
+        assert "frequency_sort" not in extra_fields
 
 
 class TestPitchLemmaReading:
