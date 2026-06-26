@@ -3,20 +3,6 @@
 Stateless functions that take ``models_root`` explicitly so they have no
 coupling to the global config. Callers are responsible for passing
 ``config.asr_models_root``.
-
-Worker signal contracts (Task 4 / Task 5 — Wave B implements these):
-
-``SubtitleGenWorker(CancellableWorker)`` (Task 4):
-    - ``file_started(int)``                       — index of the file being processed
-    - ``file_progress(int, int, str)``            — (idx, pct 0-100, message)
-    - ``file_finished(int, object, object)``      — (idx, out_path|None, error_str|None)
-    - ``queue_finished()``                        — emitted once when the whole queue is done
-    The tab stores the worker on ``self.worker_thread``.
-
-``AsrModelDownloadWorker(CancellableWorker)`` (Task 5):
-    - ``status(str)``                             — informational status message
-    - ``result_ready(bool, str)``                 — (ok, message)
-    HF download progress is indeterminate; no fake percentage is emitted.
 """
 
 import logging
