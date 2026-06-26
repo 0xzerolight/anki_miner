@@ -14,6 +14,7 @@ service only reads them.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 
 from anki_miner.services.frequency.providers.indexed_freq_provider import (
@@ -50,3 +51,22 @@ class MultiFrequencyService:
         """Minimum rank across all providers, or None if none rank ``term``."""
         ranks = [rank for _name, rank in self.lookup_all(term)]
         return min(ranks) if ranks else None
+
+    def close(self) -> None:
+        """Close every wrapped provider's sqlite handle.
+
+        A fresh service + providers are built per mining run, so the persistent
+        ``index.sqlite`` connections each :class:`IndexedFreqProvider` holds must
+        be released on processor teardown — otherwise handles leak until GC and,
+        on Windows, a "mine then Settings → Remove source" sequence file-locks
+        ``freqs_root/<id>/index.sqlite`` (the dictionary-side Issue #30 class).
+
+        Idempotent and never raises: ``IndexedFreqProvider.close()`` is itself
+        safe to call twice, a provider lacking ``close`` is skipped, and a
+        raising provider does not stop the others from closing.
+        """
+        for provider in self._providers:
+            close = getattr(provider, "close", None)
+            if callable(close):
+                with contextlib.suppress(Exception):
+                    close()
