@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
 
 TITLE = "Jitendex.org [2026-06-06]"
@@ -102,6 +104,26 @@ def test_expression_dropped():
 def test_oversized_input_skipped():
     big = "a { color: red }\n" * 50000
     assert scope_dict_css(big, TITLE) == ""
+
+
+def test_image_funcs_dropped_with_and_without_vendor_prefix():
+    # The forbidden-pattern rewrite must still drop remote-fetch image funcs,
+    # bare and vendor-prefixed.
+    for fn in ("image-set", "-webkit-image-set", "image-rect", "cross-fade", "-moz-element"):
+        css = f"a {{ color: red }} b {{ background: {fn}(x) }}"
+        out = scope_dict_css(css, TITLE)
+        assert f"{SCOPE} a {{color: red}}" in out
+        assert fn not in out
+
+
+def test_pathological_under_cap_input_is_bounded_time():
+    # Regression for the ReDoS in _FORBIDDEN_RE: a long single-token prelude
+    # under the 512 KB cap must not trigger O(n^2) backtracking. Pre-fix this
+    # ran for ~100 s; the O(n) form returns in milliseconds.
+    css = ("x" * 100_000) + " { a: 1 }"
+    start = time.perf_counter()
+    scope_dict_css(css, TITLE)
+    assert time.perf_counter() - start < 1.0
 
 
 def test_comment_between_rules_ignored():

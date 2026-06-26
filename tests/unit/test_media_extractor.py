@@ -2156,6 +2156,9 @@ class TestWavToFloat32:
         assert samples.shape == (num_samples,)
         assert sr == sample_rate
         assert abs(duration - 2.0) < 1e-6
+        # Must be a writable, owned array — np.frombuffer alone returns a
+        # read-only view that faster-whisper/ctranslate2 can reject.
+        assert samples.flags.writeable
 
     def test_samples_in_valid_range(self, tmp_path):
         """Samples from a silent WAV must be zero (or in [-1, 1])."""
