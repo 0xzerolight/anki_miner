@@ -16,13 +16,21 @@
  */
 
 .yomitan-glossary {
-  /* Tunables — override in custom CSS to re-skin without forking. The base values
-   * are neutral semi-transparent grays so the preset stays legible on engines
-   * WITHOUT `color-mix()` support (older AnkiDroid/AnkiMobile WebViews, Anki
-   * Desktop on Chromium < 111): there, the @supports block below is skipped and
-   * these solid grays apply. On modern engines the @supports block upgrades them
-   * to `currentColor`-derived values that track the card's own text color. Never
-   * reference a bare `color-mix()` value outside that guard. */
+  /* Tunables — override in custom CSS to re-skin without forking. Neutral grays
+   * so the preset reads on both light and dark note types without a hard-coded
+   * background.
+   *
+   * `--am-muted` is the body-text tint and is deliberately a SOLID gray, never a
+   * `color-mix(currentColor …)` value: it is applied as `color:` to elements
+   * dictionaries nest (extra-info wrapping example-sentence), and a
+   * `currentColor`-derived value re-evaluates at each level, so opacity would
+   * compound (55% → 30% → 16%) until the inner text is unreadable (Issue #87).
+   * `--am-faint` only paints borders/hairlines — which do NOT inherit, so it
+   * can't cascade — and is upgraded to a `currentColor`-derived value on engines
+   * that support `color-mix()` (the @supports block below); on engines without
+   * it (older AnkiDroid/AnkiMobile WebViews, Anki Desktop on Chromium < 111) the
+   * solid-gray base applies. Never reference a bare `color-mix()` value outside
+   * that guard. */
   --am-muted: rgba(128, 128, 128, 0.95);
   --am-faint: rgba(128, 128, 128, 0.35);
   --am-accent: #4f7cff;
@@ -30,7 +38,6 @@
 
 @supports (color: color-mix(in srgb, red 50%, blue 50%)) {
   .yomitan-glossary {
-    --am-muted: color-mix(in srgb, currentColor 55%, transparent);
     --am-faint: color-mix(in srgb, currentColor 18%, transparent);
   }
 }

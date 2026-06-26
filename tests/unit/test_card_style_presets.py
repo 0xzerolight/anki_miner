@@ -127,6 +127,20 @@ class TestColorMixFallback:
             assert "--am-muted:" in base
             assert "--am-faint:" in base
 
+    def test_muted_text_never_color_mix_derived(self):
+        # Issue #87 Bug 2: `--am-muted` is body-text color applied to nested
+        # elements; a `color-mix(currentColor …)` value re-evaluates per level and
+        # compounds to unreadable. It must be a solid color everywhere — never
+        # redefined inside the @supports (color-mix) upgrade.
+        for preset_id in NON_EMPTY_IDS:
+            css = re.sub(r"/\*.*?\*/", "", load_preset_css(preset_id), flags=re.DOTALL)
+            supports_blocks = re.findall(r"@supports[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}", css, flags=re.DOTALL)
+            for block in supports_blocks:
+                assert "--am-muted" not in block, (
+                    f"{preset_id}: --am-muted redefined inside @supports — "
+                    "would reintroduce the currentColor opacity cascade"
+                )
+
 
 def _iter_rules(css: str):
     """Yield (selector_group, declarations) for each top-level rule.
@@ -184,3 +198,19 @@ class TestPresetYomitanLeak:
 class TestLoadDefaultCardCssAlias:
     def test_matches_default_preset(self):
         assert load_default_card_css() == load_preset_css("default")
+
+
+class TestStructuredContentFallback:
+    """Issue #87: the generic structured-content fallback ships in every
+    file-backed preset so dicts without a styles.css still render."""
+
+    def test_fallback_present_in_real_presets(self):
+        for preset_id in NON_EMPTY_IDS:
+            css = load_preset_css(preset_id)
+            # Hooks only the shared partial styles — proves it was appended.
+            assert 'span[data-sc-class="tag"]' in css
+            assert '[data-sc-content="forms"] td' in css
+
+    def test_fallback_absent_from_sentinels(self):
+        assert load_preset_css("none") == ""
+        assert load_preset_css(OFF_PRESET_ID) == ""

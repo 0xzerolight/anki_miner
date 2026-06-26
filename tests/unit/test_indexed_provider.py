@@ -644,3 +644,49 @@ class TestIndexedDictProviderDatabaseErrorGuard:
 
         assert "test-dict" in caplog.text
         assert str(tmp_path / "test.sqlite") in caplog.text
+
+
+class TestStylesCssPassthrough:
+    """Per-dictionary styles.css emission as a scoped <style> block (Issue #87)."""
+
+    def _seed(self, db_path: Path, *, styles_css: str | None) -> None:
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [DictRow(term="食べる", reading="たべる", content='<li class="gloss-item">eat</li>', sequence=1)],
+        )
+        meta = {"schema_version": str(SCHEMA_VERSION), "source_name": "Jitendex.org [2026-06-06]"}
+        if styles_css is not None:
+            meta["styles_css"] = styles_css
+        write_meta(db_path, meta)
+
+    def test_styles_css_emitted_scoped_inside_glossary_div(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db, styles_css='span[data-sc-class="tag"] { color: red }')
+        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
+        assert provider.load() is True
+        out = provider.lookup("食べる")
+        assert out is not None
+        assert (
+            '<style>.yomitan-glossary [data-dictionary="Jitendex.org [2026-06-06]"] '
+            'span[data-sc-class="tag"] {color: red}</style></div>' in out
+        )
+
+    def test_no_styles_css_emits_no_style_block(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db, styles_css=None)
+        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
+        assert provider.load() is True
+        out = provider.lookup("食べる")
+        assert out is not None
+        assert "<style>" not in out
+
+    def test_unsafe_styles_css_scopes_to_nothing_emits_no_block(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db, styles_css="a { background: url(http://evil/x.png) }")
+        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
+        assert provider.load() is True
+        out = provider.lookup("食べる")
+        assert out is not None
+        assert "<style>" not in out
+        assert "evil" not in out

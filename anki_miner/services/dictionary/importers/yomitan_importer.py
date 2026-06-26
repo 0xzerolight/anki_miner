@@ -168,17 +168,23 @@ def import_yomitan_zip(
 
         _copy_dict_media(tmp_path, staging / "media", media_paths)
 
-        write_meta(
-            db_path,
-            {
-                "schema_version": str(SCHEMA_VERSION),
-                "format": "yomitan",
-                "source_name": title,
-                "source_revision": revision,
-                "import_date": datetime.now(UTC).isoformat(),
-                "entry_count": str(total_entries),
-            },
-        )
+        meta = {
+            "schema_version": str(SCHEMA_VERSION),
+            "format": "yomitan",
+            "source_name": title,
+            "source_revision": revision,
+            "import_date": datetime.now(UTC).isoformat(),
+            "entry_count": str(total_entries),
+        }
+        # Yomitan dictionaries ship a root `styles.css` that styles their
+        # structured-content DOM (tag pills, example boxes, forms tables — Issue
+        # #87). Capture it so the provider can emit it scoped per card, matching
+        # Yomitan/asbplayer rendering. Only stored when present and sanely sized.
+        styles_css = _read_styles_css(tmp_path)
+        if styles_css:
+            meta["styles_css"] = styles_css
+
+        write_meta(db_path, meta)
 
         # Persist the source zip alongside index.sqlite so "Reimport All" can
         # rebuild without the user re-picking the file. Lives in staging so
@@ -219,6 +225,24 @@ def import_yomitan_zip(
             source_revision=revision,
             entry_count=total_entries,
         )
+
+
+# A dictionary `styles.css` is a few KB in practice (Jitendex's is ~6 KB). Cap
+# what we ingest so a hostile zip carrying a giant stylesheet cannot bloat the
+# index/sidecar; the scoper applies the same cap when rendering.
+_MAX_STYLES_CSS_BYTES = 512 * 1024
+
+
+def _read_styles_css(zip_root: Path) -> str:
+    """Return the dictionary's root ``styles.css`` text, or ``""`` if absent,
+    oversized, or unreadable."""
+    styles_file = zip_root / "styles.css"
+    try:
+        if not styles_file.is_file() or styles_file.stat().st_size > _MAX_STYLES_CSS_BYTES:
+            return ""
+        return styles_file.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
 
 
 def _copy_dict_media(zip_root: Path, dest: Path, rel_paths: set[str]) -> None:
