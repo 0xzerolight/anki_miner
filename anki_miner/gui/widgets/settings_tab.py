@@ -22,10 +22,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry, FreqEntry
 from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
 from anki_miner.gui.controllers.audio_pack_import_flow import AudioPackImportFlow
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
+from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
 from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.enhanced import ModernButton
@@ -34,6 +35,7 @@ from anki_miner.gui.widgets.panels import (
     AudioPackSettingsPanel,
     DictionarySettingsPanel,
     FilteringSettingsPanel,
+    FrequencySettingsPanel,
     LanguagePanel,
     MediaSettingsPanel,
     ThemesPanel,
@@ -41,7 +43,6 @@ from anki_miner.gui.widgets.panels import (
 )
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
-from anki_miner.services.frequency import import_yomitan_freq_zip
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent import import_yomitan_pitch_zip
 from anki_miner.utils.i18n import tr_format
@@ -142,6 +143,13 @@ class SettingsTab(QWidget):
             get_config=lambda: self.config,
             persist_chain=self._persist_audio_chain_change,
         )
+        # Frequency source add/reimport orchestration.
+        self._frequency_import_flow = FrequencyImportFlow(
+            parent=self,
+            panel=self.frequency_panel,
+            get_config=lambda: self.config,
+            persist_chain=self._persist_frequency_chain_change,
+        )
         # AnkiConnect probe workers (fetch fields / fetch decks / styling);
         # their live handles surface through iter_close_workers (T-12).
         self._anki_probe = AnkiProbeController(
@@ -180,6 +188,7 @@ class SettingsTab(QWidget):
         self.media_panel = MediaSettingsPanel()
         self.dictionary_panel = DictionarySettingsPanel(self.config.dicts_root)
         self.audio_panel = AudioPackSettingsPanel(self.config.audio_packs_root)
+        self.frequency_panel = FrequencySettingsPanel(self.config.freqs_root)
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
         self.subtitles_panel = SubtitlesSettingsPanel()
@@ -191,6 +200,7 @@ class SettingsTab(QWidget):
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.media_panel), self.tr("Media"))
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.dictionary_panel), self.tr("Dictionaries"))
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.audio_panel), self.tr("Audio"))
+        self.tab_widget.addTab(self._wrap_in_scroll_area(self.frequency_panel), self.tr("Frequency"))
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), self.tr("Filtering"))
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), self.tr("YouTube"))
         self.tab_widget.addTab(self._wrap_in_scroll_area(self.subtitles_panel), self.tr("Subtitles"))
@@ -286,6 +296,18 @@ class SettingsTab(QWidget):
         # the same chain twice. pack_removed stays unconnected until a
         # consumer needs the removal-specific notification.
         self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
+
+        # Frequency panel signals — wire Add/Reimport to the import flow.
+        self.frequency_panel.add_source_requested.connect(self._frequency_import_flow.add_source)
+        self.frequency_panel.reimport_source_requested.connect(self._frequency_import_flow.reimport_source)
+        # Persist chain immediately after reorder/toggle or destructive remove.
+        # Removal also emits chain_changed (after source deletion succeeds), so
+        # this single wiring covers it; wiring source_removed too would persist
+        # the same chain twice. source_removed stays unconnected until a
+        # consumer needs the removal-specific notification.
+        self.frequency_panel.chain_changed.connect(
+            lambda: self._persist_frequency_chain_change(self.frequency_panel.get_chain())
+        )
 
         # Filtering panel: excluded-decks picker + known-words cache rebuild (Issue #38).
         self.filtering_panel.fetch_decks_requested.connect(self._anki_probe.fetch_decks)
@@ -417,15 +439,15 @@ class SettingsTab(QWidget):
         # Audio source chain (same — immediate persist via its own signal).
         self.audio_panel.set_chain(self.config.expression_audio_chain)
 
+        # Frequency source chain + global enable toggle live in the Frequency
+        # tab; the chain persists immediately via its own signal. The max-rank
+        # threshold is owned by filtering_panel and already loaded above.
+        self.frequency_panel.set_chain(self.config.frequency_chain)
+        self.frequency_panel.use_frequency_checkbox.setChecked(self.config.use_frequency_data)
+
         # Pitch accent settings — file selector lives in the Dictionaries tab.
         self.dictionary_panel.pitch_accent_selector.set_path(str(self.config.pitch_accent_path))
         self.dictionary_panel.use_pitch_accent_checkbox.setChecked(self.config.use_pitch_accent)
-
-        # Frequency settings — file selector + enable toggle live in the
-        # Dictionaries tab; the max-rank threshold is owned by filtering_panel
-        # and already loaded via its load_from_config above.
-        self.dictionary_panel.frequency_selector.set_path(str(self.config.frequency_list_path))
-        self.dictionary_panel.use_frequency_checkbox.setChecked(self.config.use_frequency_data)
 
         # Update settings — standalone checkbox outside all panels.
         self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
@@ -542,26 +564,24 @@ class SettingsTab(QWidget):
                 return
 
         # Build the candidate config from all Save-path panels FIRST, then run
-        # the pitch-zip and frequency-zip imports LAST so any current or future
-        # pre-import validation step has a chance to abort before we touch
-        # ~/.anki_miner/pitch_accent.csv or ~/.anki_miner/frequency.csv on
-        # disk. The imports stage to ``.pending`` siblings and only promote
-        # over the real CSVs once BOTH have passed (see
-        # _commit_pending_csv_imports), so a frequency failure can't leave a
-        # half-written pitch_accent.csv (T-10). See review of commit 63ffcd9
-        # finding #2.
+        # the pitch-zip import LAST so any current or future pre-import
+        # validation step has a chance to abort before we touch
+        # ~/.anki_miner/pitch_accent.csv on disk. The import stages to a
+        # ``.pending`` sibling and only promotes over the real CSV once it has
+        # passed (see _commit_pending_csv_imports).
         #
         # Fold: each panel's contribute() returns a new frozen config with its
         # own fields applied.  Panels outside the Save round-trip (dictionary /
-        # audio chain, themes) are handled separately below.
+        # audio / frequency chain, themes) are handled separately below.
         new_config = self.config
         for panel in self._save_panels:
             new_config = panel.contribute(new_config)
 
         # Non-panel fields that live in _on_save_clicked scope:
         # - dicts_root validated and resolved above
-        # - pitch_accent_path / frequency_list_path deferred to zip-import resolver
-        # - dictionary/audio chain — persisted immediately via their own signals
+        # - pitch_accent_path deferred to the zip-import resolver
+        # - dictionary/audio/frequency chain — persisted immediately via their
+        #   own signals, but also folded in here so a full Save stays in sync
         # - update-settings handled per the was/now_enabled logic above
         new_config = replace(
             new_config,
@@ -571,13 +591,13 @@ class SettingsTab(QWidget):
             # current value passes through unchanged.
             dicts_root=new_dicts_root,
             # Pitch accent settings — pitch_accent_path is overwritten below
-            # with the resolver's result once both staged imports commit.
+            # with the resolver's result once the staged import commits.
             pitch_accent_path=self.config.pitch_accent_path,
             use_pitch_accent=self.dictionary_panel.use_pitch_accent_checkbox.isChecked(),
-            # Frequency settings — frequency_list_path is overwritten below
-            # with the resolver's result once both staged imports commit.
-            frequency_list_path=self.config.frequency_list_path,
-            use_frequency_data=self.dictionary_panel.use_frequency_checkbox.isChecked(),
+            # Frequency source chain + global enable — persisted immediately via
+            # the frequency panel's signals, but also included here for sync.
+            frequency_chain=self.frequency_panel.get_chain(),
+            use_frequency_data=self.frequency_panel.use_frequency_checkbox.isChecked(),
             # Audio source chain — persisted immediately via chain_changed, but
             # also included in the full Save so it is always in sync.
             expression_audio_chain=self.audio_panel.get_chain(),
@@ -586,35 +606,24 @@ class SettingsTab(QWidget):
             skipped_update_version=skipped_update_version,
         )
 
-        # Last steps before commit: import the Yomitan pitch-accent zip and
-        # frequency zip if the user picked either. Any pre-import validation
-        # belongs ABOVE these calls. None here means an import failed OR was
-        # cancelled — abort the whole save (the user already saw the error
-        # dialog, if any). Each resolver only STAGES its CSV to a sibling
-        # ``.pending`` file and defers the destructive promotion (os.replace +
-        # selector update + success dialog) into a commit closure; nothing on
-        # disk is clobbered until _commit_pending_csv_imports() runs below,
-        # which only happens once BOTH imports have passed. A frequency failure
-        # after a successful pitch import therefore leaves the user's existing
-        # pitch_accent.csv untouched.
+        # Last step before commit: import the Yomitan pitch-accent zip if the
+        # user picked one. Any pre-import validation belongs ABOVE this call.
+        # None here means the import failed OR was cancelled — abort the whole
+        # save (the user already saw the error dialog, if any). The resolver
+        # only STAGES its CSV to a sibling ``.pending`` file and defers the
+        # destructive promotion (os.replace + selector update + success dialog)
+        # into a commit closure; nothing on disk is clobbered until
+        # _commit_pending_csv_imports() runs below.
         resolved_pitch_path = self._resolve_pitch_accent_path()
         if resolved_pitch_path is None:
             return
 
-        resolved_freq_path = self._resolve_frequency_path()
-        if resolved_freq_path is None:
-            # Pitch may have staged a .pending file; drop it so a failed save
-            # never leaves stray staging files behind.
-            self._discard_pending_csv_imports()
-            return
-
-        # Both imports validated — promote both staged CSVs to disk and run
-        # their UI feedback now, after which the paths are safe to persist.
+        # Pitch import validated — promote the staged CSV to disk and run its
+        # UI feedback now, after which the path is safe to persist.
         self._commit_pending_csv_imports()
         new_config = replace(
             new_config,
             pitch_accent_path=resolved_pitch_path,
-            frequency_list_path=resolved_freq_path,
         )
 
         # Sync the dictionary panel to the committed root (T-07). Done here —
@@ -668,35 +677,9 @@ class SettingsTab(QWidget):
             ),
         )
 
-    def _resolve_frequency_path(self) -> Path | None:
-        """Resolve the frequency selector for persistence (see the engine).
-
-        Thin wrapper over :meth:`ZipImportFlow.run_modal_zip_import`; see it
-        for the full staging/deferred-promotion contract and the meaning of
-        each return.
-        """
-        return self._zip_import_flow.run_modal_zip_import(
-            selector=self.dictionary_panel.frequency_selector,
-            dest_name="frequency.csv",
-            worker_factory=partial(YomitanCsvImportWorker, import_yomitan_freq_zip),
-            worker_slot_attr="_active_freq_worker",
-            commit_slot_attr="_pending_freq_commit",
-            decline_fallback=self.config.frequency_list_path,
-            labels=YomitanCsvLabels(
-                progress=self.tr("Importing frequency dictionary…"),
-                overwrite_title=self.tr("Overwrite Frequency List?"),
-                failure_title=self.tr("Frequency Import Failed"),
-                success_title=self.tr("Frequency dictionary imported"),
-            ),
-        )
-
     def _commit_pending_csv_imports(self) -> None:
-        """Promote any staged pitch/frequency CSV imports (delegates to the flow)."""
+        """Promote any staged pitch CSV import (delegates to the flow)."""
         self._zip_import_flow.commit_pending_csv_imports()
-
-    def _discard_pending_csv_imports(self) -> None:
-        """Drop staged pitch/frequency promotions (delegates to the flow)."""
-        self._zip_import_flow.discard_pending_csv_imports()
 
     def _on_reset_clicked(self) -> None:
         """Handle reset button click."""
@@ -754,6 +737,7 @@ class SettingsTab(QWidget):
             *self._anki_probe.iter_close_workers(),
             *self._dict_import_flow.iter_close_workers(),
             *self._audio_pack_import_flow.iter_close_workers(),
+            *self._frequency_import_flow.iter_close_workers(),
             *self._zip_import_flow.iter_close_workers(),
         )
 
@@ -842,6 +826,17 @@ class SettingsTab(QWidget):
         requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, expression_audio_chain=new_chain)
+        self.config = new_config
+        self.config_changed.emit(new_config)
+
+    def _persist_frequency_chain_change(self, new_chain: tuple[FreqEntry, ...]) -> None:
+        """Save a frequency chain mutation to disk and notify listeners.
+
+        Called after a successful frequency-source import or a destructive
+        remove so the freshly-imported source is reachable on the very next
+        run without requiring the user to click Save in Settings.
+        """
+        new_config = replace(self.config, frequency_chain=new_chain)
         self.config = new_config
         self.config_changed.emit(new_config)
 

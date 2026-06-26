@@ -295,6 +295,64 @@ def test_dictionary_chain_replace():
     assert len(config.dictionary_chain) == 2
 
 
+def test_frequency_chain_default_empty():
+    """frequency_chain defaults to an empty tuple (migration populates later)."""
+    from anki_miner.config import AnkiMinerConfig
+
+    config = AnkiMinerConfig()
+    assert isinstance(config.frequency_chain, tuple)
+    assert config.frequency_chain == ()
+
+
+def test_freqs_root_default():
+    """freqs_root defaults to ANKI_MINER_HOME / 'freqs'."""
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.config.paths import ANKI_MINER_HOME
+
+    config = AnkiMinerConfig()
+    assert config.freqs_root == ANKI_MINER_HOME / "freqs"
+    assert isinstance(config.freqs_root, Path)
+
+
+def test_freqs_root_str_coercion():
+    """A str freqs_root is coerced to Path in __post_init__."""
+    from anki_miner.config import AnkiMinerConfig
+
+    config = AnkiMinerConfig(freqs_root="/tmp/some/freqs")  # type: ignore[arg-type]
+    assert isinstance(config.freqs_root, Path)
+    assert config.freqs_root == Path("/tmp/some/freqs")
+
+
+def test_freq_entry_is_frozen():
+    from dataclasses import FrozenInstanceError
+
+    from anki_miner.config import FreqEntry
+
+    entry = FreqEntry(source_id="jpdb")
+    with pytest.raises(FrozenInstanceError):
+        entry.source_id = "other"  # type: ignore[misc]
+
+
+def test_freq_entry_enabled_defaults_true():
+    from anki_miner.config import FreqEntry
+
+    entry = FreqEntry(source_id="jpdb")
+    assert entry.enabled is True
+
+
+def test_frequency_chain_replace():
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig, FreqEntry
+
+    config = AnkiMinerConfig()
+    new_chain = (FreqEntry(source_id="jpdb"), FreqEntry(source_id="bccwj", enabled=False))
+    updated = replace(config, frequency_chain=new_chain)
+    assert updated.frequency_chain == new_chain
+    # Original is unchanged.
+    assert config.frequency_chain == ()
+
+
 def test_sentence_length_filter_defaults():
     """Sentence-length filter fields default to disabled / 0 (Issue #33)."""
     from anki_miner.config import AnkiMinerConfig
@@ -469,3 +527,19 @@ class TestFrozenConfigImmutability:
         cfg = AnkiMinerConfig(anki_fields=fields_dict)
         assert isinstance(cfg.anki_fields, types.MappingProxyType)
         assert cfg.anki_fields["word"] == "VocabExpr"
+
+
+class TestFrequencySortField:
+    """The frequency_sort optional anki_fields key (Multiple Additive Frequency Sources)."""
+
+    def test_default_anki_fields_contains_frequency_sort(self):
+        """The default anki_fields mapping carries an unmapped frequency_sort key."""
+        cfg = AnkiMinerConfig()
+        assert "frequency_sort" in cfg.anki_fields
+        assert cfg.anki_fields["frequency_sort"] == ""
+
+    def test_frequency_sort_not_required(self):
+        """frequency_sort is optional — it must not be a required field key."""
+        from anki_miner.services.anki_note_builder import REQUIRED_FIELD_KEYS
+
+        assert "frequency_sort" not in REQUIRED_FIELD_KEYS

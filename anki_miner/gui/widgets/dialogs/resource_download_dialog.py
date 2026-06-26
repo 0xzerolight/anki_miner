@@ -72,7 +72,7 @@ def _run_download_modal(parent: QWidget, config: AnkiMinerConfig, download_dir: 
     worker = ResourceDownloadWorker(
         RECOMMENDED_DEFAULT_SET,
         dicts_root=config.dicts_root,
-        frequency_csv=config.frequency_list_path,
+        freqs_root=config.freqs_root,
         pitch_csv=config.pitch_accent_path,
         download_dir=download_dir,
     )

@@ -32,6 +32,7 @@ from anki_miner.services import (
     SubtitleParserService,
     WordFilterService,
 )
+from anki_miner.services.frequency.render import render_frequency_html
 from anki_miner.utils import ensure_directory, has_katakana, hiragana_to_katakana
 from anki_miner.utils.i18n import tr_format
 
@@ -41,7 +42,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
     from anki_miner.models import LineLemmas
-    from anki_miner.services.frequency_service import FrequencyService
+    from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
     from anki_miner.services.known_word_db import KnownWordDB
     from anki_miner.services.pitch_accent_service import PitchAccentService
     from anki_miner.services.stats_service import StatsService
@@ -180,7 +181,7 @@ class EpisodeProcessor:
         anki_service: AnkiService,
         presenter: PresenterProtocol,
         pitch_accent_service: PitchAccentService | None = None,
-        frequency_service: FrequencyService | None = None,
+        frequency_service: MultiFrequencyService | None = None,
         known_word_db: KnownWordDB | None = None,
         word_list_service: WordListService | None = None,
         wordset_service: WordsetService | None = None,
@@ -297,8 +298,13 @@ class EpisodeProcessor:
         service re-opens the chain lazily on the next lookup, so calling
         this on an idle processor is always safe; callers are responsible
         for not invoking it mid-run.
+
+        The per-run frequency sources hold their own ``index.sqlite`` handles,
+        so they are released here too (idempotent; safe when absent).
         """
         self.definition_service.close()
+        if self.frequency_service is not None:
+            self.frequency_service.close()
 
     def close(self) -> None:
         """Release ALL per-run resources held by this processor.
@@ -319,6 +325,8 @@ class EpisodeProcessor:
         # subsequent processor build) is where a back-to-back mine blocks.
         logger.debug("closing processor resources")
         self.definition_service.close()
+        if self.frequency_service is not None:
+            self.frequency_service.close()
         if self.expression_audio_fetcher is not None:
             close = getattr(self.expression_audio_fetcher, "close", None)
             if callable(close):
@@ -411,10 +419,13 @@ class EpisodeProcessor:
         Mutates ``ctx.new_words_found`` and ``ctx.comprehension_percentage``.
         Records difficulty stats if a stats service is available.
         """
-        # Attach frequency data if available (mutates words in-place).
+        # Attach frequency data if available (mutates words in-place). Each word
+        # gets the per-source breakdown (frequency_sources) for the card display
+        # plus the min rank (frequency_rank) that drives filtering/sort.
         if self.frequency_service and self.frequency_service.is_available():
             for word in all_words:
-                word.frequency_rank = self.frequency_service.lookup(word.lemma)
+                word.frequency_sources = self.frequency_service.lookup_all(word.lemma)
+                word.frequency_rank = self.frequency_service.lookup_min(word.lemma)
             ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
             self.presenter.show_info(
                 tr_format(
@@ -928,8 +939,10 @@ class EpisodeProcessor:
                 extra_fields["pitch_position"] = pitch_position
             if pitch_category:
                 extra_fields["pitch_category"] = pitch_category
+            if word.frequency_sources:
+                extra_fields["frequency"] = render_frequency_html(word.frequency_sources)
             if word.frequency_rank is not None:
-                extra_fields["frequency"] = str(word.frequency_rank)
+                extra_fields["frequency_sort"] = str(word.frequency_rank)
             if glossary:
                 extra_fields["glossary"] = glossary
             # Stamp the source unconditionally; AnkiService gates the write on a

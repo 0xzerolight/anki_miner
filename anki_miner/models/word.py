@@ -23,7 +23,11 @@ class TokenizedWord:
     lemma_reading: str = ""  # Plain kana reading of the lemma, for audio retry
     sentence_furigana: str = ""  # Furigana for sentence, e.g. "日本語[にほんご]を食べる[たべる]。"
     sentence_reading: str = ""  # Plain kana reading of sentence, e.g. "にほんごをたべる。"
-    frequency_rank: int | None = None  # Word frequency rank (1 = most common)
+    frequency_rank: int | None = None  # Word frequency rank (1 = most common); = min across sources
+    # Per-source frequency breakdown shown on the card: (source name, rank) in
+    # chain order, only sources that rank this word. ``frequency_rank`` stays the
+    # min of these (drives filtering/sort); this is the display detail.
+    frequency_sources: list[tuple[str, int]] = field(default_factory=list)
     pos: str | None = None  # MeCab pos1 (動詞/形容詞/名詞/...) — used for kifuku/odaka distinction
     # Character offsets of the target morpheme within ``sentence`` (post-filter).
     # -1 sentinel means "not tracked" — card builder falls back to plain escape.

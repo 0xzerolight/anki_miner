@@ -1,10 +1,14 @@
-"""Modal Yomitan zip → CSV import flow (pitch accent + frequency).
+"""Modal Yomitan zip → CSV import flow (pitch accent).
 
 Extracted from ``SettingsTab`` (T-66). Owns the worker lifecycle, the modal
-``QProgressDialog`` + ``QEventLoop`` scaffold, the ``.pending`` staging files,
-and the deferred-promotion closures; the tab keeps its thin per-flow wrappers
-(selector + labels + decline fallback) and the save-time commit/discard
-ordering decisions.
+``QProgressDialog`` + ``QEventLoop`` scaffold, the ``.pending`` staging file,
+and the deferred-promotion closure; the tab keeps its thin per-flow wrapper
+(selector + labels + decline fallback) and the save-time commit ordering.
+
+Frequency previously shared this engine but now has its own multi-source
+import flow (:mod:`anki_miner.gui.controllers.frequency_import_flow`); only
+``YomitanFreqImportResult`` is still referenced here, in the result isinstance
+guard, since ``YomitanCsvImportWorker`` is format-agnostic.
 """
 
 import os
@@ -24,11 +28,11 @@ from anki_miner.utils.i18n import tr_format
 
 
 class YomitanCsvLabels(NamedTuple):
-    """User-facing strings that distinguish the pitch vs frequency import flow.
+    """User-facing strings for the pitch-accent zip import flow.
 
     Everything else in :meth:`ZipImportFlow.run_modal_zip_import` (the
     QProgressDialog + QEventLoop scaffold, the overwrite guard, the staged
-    ``.pending`` write, cancel suppression) is identical between the two.
+    ``.pending`` write, cancel suppression) is label-agnostic.
     """
 
     progress: str  # QProgressDialog label, e.g. "Importing pitch accent dictionary…"
@@ -47,31 +51,25 @@ class ZipImportFlow:
 
     def __init__(self, parent: QWidget) -> None:
         self._parent = parent
-        # Long-lived worker reference; YomitanCsvImportWorker is a QThread and
-        # would be destroyed mid-run if the worker fell out of scope before
-        # joining. The frequency flow stores the active worker here.
-        self._active_freq_worker: YomitanCsvImportWorker | None = None
-        # Same GC-safety rationale as the freq worker above; the pitch worker
-        # is a QThread and would be destroyed mid-run if it fell out of scope
-        # before joining. The pitch flow stores it here.
+        # Long-lived worker reference; the pitch worker is a QThread and would
+        # be destroyed mid-run if it fell out of scope before joining. The
+        # pitch flow stores it here.
         self._active_pitch_worker: YomitanCsvImportWorker | None = None
-        # Deferred CSV-promotion closures (T-10). A pitch/freq zip import stages
-        # its CSV to a sibling ``.pending`` file; the promotion (os.replace into
+        # Deferred CSV-promotion closure (T-10). A pitch zip import stages its
+        # CSV to a sibling ``.pending`` file; the promotion (os.replace into
         # place + selector update + success dialog) is held here and run by
-        # commit_pending_csv_imports() only AFTER *both* imports have passed,
-        # so a frequency failure can never leave pitch_accent.csv half-written.
+        # commit_pending_csv_imports() once the import has passed.
         self._pending_pitch_commit: Callable[[], None] | None = None
-        self._pending_freq_commit: Callable[[], None] | None = None
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
 
-        Returns both CSV import workers so ``SettingsTab.iter_close_workers``
-        can chain them into the single ``BackgroundTaskController._join_worker_for_close``
-        policy (cancel + bounded grace join + laggard deferral).  ``None``
-        entries (idle flows) are filtered by ``_join_worker_for_close``.
+        Returns the CSV import worker so ``SettingsTab.iter_close_workers`` can
+        chain it into the single ``BackgroundTaskController._join_worker_for_close``
+        policy (cancel + bounded grace join + laggard deferral). A ``None``
+        entry (idle flow) is filtered by ``_join_worker_for_close``.
         """
-        return (self._active_freq_worker, self._active_pitch_worker)
+        return (self._active_pitch_worker,)
 
     def run_modal_zip_import(
         self,
@@ -84,14 +82,14 @@ class ZipImportFlow:
         decline_fallback: Path,
         labels: YomitanCsvLabels,
     ) -> Path | None:
-        """Resolve a Yomitan pitch/frequency selector path for persistence.
+        """Resolve a Yomitan pitch-accent selector path for persistence.
 
-        Shared engine behind ``SettingsTab._resolve_pitch_accent_path`` and
-        ``SettingsTab._resolve_frequency_path`` — the two flows are
-        byte-identical except for the user-facing ``labels``, the importer fn
-        bound into the ``YomitanCsvImportWorker``, and which ``self`` slots
-        hold the live-worker GC reference (``worker_slot_attr``) and the
-        deferred-promotion closure (``commit_slot_attr``).
+        Engine behind ``SettingsTab._resolve_pitch_accent_path``. Parametrized
+        by the user-facing ``labels``, the importer fn bound into the
+        ``YomitanCsvImportWorker``, and which ``self`` slots hold the
+        live-worker GC reference (``worker_slot_attr``) and the
+        deferred-promotion closure (``commit_slot_attr``). (Frequency now has
+        its own multi-source import flow and no longer uses this engine.)
 
         If ``selector`` points at a Yomitan zip, the importer runs in
         ``worker_factory`` (a background QThread driven by a modal
@@ -223,33 +221,13 @@ class ZipImportFlow:
         return dest_csv
 
     def commit_pending_csv_imports(self) -> None:
-        """Promote any staged pitch/frequency CSV imports and clear them.
+        """Promote any staged pitch CSV import and clear it.
 
-        Called once both resolvers have succeeded (T-10). Runs each deferred
-        commit closure — os.replace(``.pending`` → final), selector update,
-        success dialog — then resets the slots so a later save starts clean.
+        Called once the pitch resolver has succeeded. Runs the deferred commit
+        closure — os.replace(``.pending`` → final), selector update, success
+        dialog — then resets the slot so a later save starts clean.
         """
         pitch_commit = self._pending_pitch_commit
-        freq_commit = self._pending_freq_commit
         self._pending_pitch_commit = None
-        self._pending_freq_commit = None
         if pitch_commit is not None:
             pitch_commit()
-        if freq_commit is not None:
-            freq_commit()
-
-    def discard_pending_csv_imports(self) -> None:
-        """Drop staged pitch/frequency promotions without touching disk targets.
-
-        Called when the save aborts after a successful pitch import but a failed
-        frequency import (T-10). The frequency resolver already removed its own
-        ``.pending`` file on failure, so here we only clean up a pitch staging
-        file (if pitch succeeded) and clear both deferred commit slots so the
-        next save starts clean. No final CSV is touched.
-        """
-        if self._pending_pitch_commit is not None:
-            dest_csv = ANKI_MINER_HOME / "pitch_accent.csv"
-            pending_csv = dest_csv.with_suffix(dest_csv.suffix + ".pending")
-            pending_csv.unlink(missing_ok=True)
-        self._pending_pitch_commit = None
-        self._pending_freq_commit = None

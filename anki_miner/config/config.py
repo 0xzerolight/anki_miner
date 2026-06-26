@@ -23,6 +23,20 @@ class ChainEntry:
 
 
 @dataclass(frozen=True)
+class FreqEntry:
+    """One enabled/ordered frequency source in the additive chain.
+
+    References a folder under ~/.anki_miner/freqs/<source_id>/ holding an
+    index.sqlite built by the frequency source importer. Sources are layered
+    additively at lookup time (min rank wins for filtering/sorting; all hits
+    are shown in the card breakdown).
+    """
+
+    source_id: str
+    enabled: bool = True
+
+
+@dataclass(frozen=True)
 class AudioSourceEntry:
     """One entry in the expression audio source chain.
 
@@ -65,6 +79,7 @@ class AnkiMinerConfig:
             "pitch_position": "",
             "pitch_category": "",
             "frequency": "",
+            "frequency_sort": "",
             "source": "",
             "expression_audio": "",
         }
@@ -161,6 +176,12 @@ class AnkiMinerConfig:
     frequency_list_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "frequency.csv")
     use_frequency_data: bool = False
     max_frequency_rank: int = 0  # 0 = no filtering; e.g. 10000 = only top 10k words
+
+    # Additive multi-source frequency chain. Each enabled FreqEntry references a
+    # per-source index under ~/.anki_miner/freqs/<source_id>/. Empty by default;
+    # a later migration populates it from the legacy single-list config.
+    frequency_chain: tuple["FreqEntry", ...] = field(default_factory=tuple)
+    freqs_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "freqs")
 
     # Known word database
     known_words_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "known_words.db")
@@ -360,6 +381,8 @@ class AnkiMinerConfig:
             object.__setattr__(self, "pitch_accent_path", Path(self.pitch_accent_path))
         if isinstance(self.frequency_list_path, str):
             object.__setattr__(self, "frequency_list_path", Path(self.frequency_list_path))
+        if isinstance(self.freqs_root, str):
+            object.__setattr__(self, "freqs_root", Path(self.freqs_root))
         if isinstance(self.known_words_db_path, str):
             object.__setattr__(self, "known_words_db_path", Path(self.known_words_db_path))
         if isinstance(self.blacklist_path, str):
