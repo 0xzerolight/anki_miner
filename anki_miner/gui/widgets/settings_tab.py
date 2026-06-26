@@ -192,7 +192,7 @@ class SettingsTab(QWidget):
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
         self.subtitles_panel = SubtitlesSettingsPanel()
-        self.themes_panel = ThemesPanel(self.config.themes_root)
+        self.themes_panel = ThemesPanel(self.config.themes_root, self.config.ui_zoom)
         self.language_panel = LanguagePanel(self.config.ui_language)
 
         # Add tabs with scroll areas for each panel
@@ -317,6 +317,7 @@ class SettingsTab(QWidget):
         # Themes panel persists immediately on any change (live-preview model).
         self.themes_panel.state_changed.connect(self._on_theme_state_changed)
         self.themes_panel.font_scale_changed.connect(self._on_font_scale_changed)
+        self.themes_panel.zoom_changed.connect(self._on_zoom_changed)
 
         self.language_panel.language_changed.connect(self._on_language_changed)
 
@@ -488,6 +489,16 @@ class SettingsTab(QWidget):
         ``ui_font_scale`` to ``gui_config.json``.
         """
         self.config = replace(self.config, ui_font_scale=scale)
+        self.config_changed.emit(self.config)
+
+    def _on_zoom_changed(self, zoom: float) -> None:
+        """Persist a whole-UI zoom change immediately (applies on next launch).
+
+        Zoom is injected as QT_SCALE_FACTOR before QApplication is built, so
+        unlike font scale there is no live restyle — the Themes panel reveals a
+        restart note and this slot only folds ``ui_zoom`` into the config.
+        """
+        self.config = replace(self.config, ui_zoom=zoom)
         self.config_changed.emit(self.config)
 
     def _on_language_changed(self, language: str) -> None:

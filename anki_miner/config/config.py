@@ -352,6 +352,12 @@ class AnkiMinerConfig:
     # Global UI font scale factor. Applied to all QSS ${font-size-*} variables.
     # Clamped to [0.5, 2.0] in __post_init__; values outside the range are silently clamped.
     ui_font_scale: float = 1.0
+    # Whole-UI zoom factor. Injected as QT_SCALE_FACTOR before QApplication is
+    # constructed (gui/app.py), so it scales everything uniformly — fonts,
+    # spacing, fixed-size widgets, pixmaps — unlike the font-only ui_font_scale.
+    # Restart-to-apply (Qt reads QT_SCALE_FACTOR once at startup). Clamped to
+    # [0.5, 2.0] in __post_init__.
+    ui_zoom: float = 1.0
     # UI language code (BCP-47-ish short code, e.g. "en", "fr", "ru"). "en" is
     # the source language: no translator is installed for it. Persisted via
     # gui_config.json; applied at startup (restart-to-apply). Discussion #76.
@@ -461,6 +467,9 @@ class AnkiMinerConfig:
 
         # Clamp ui_font_scale to [0.5, 2.0]
         object.__setattr__(self, "ui_font_scale", max(0.5, min(2.0, float(self.ui_font_scale))))
+
+        # Clamp ui_zoom to [0.5, 2.0]
+        object.__setattr__(self, "ui_zoom", max(0.5, min(2.0, float(self.ui_zoom))))
 
         # Normalize ui_language: lower-case, strip, empty → "en". Lenient (no
         # whitelist) so a contributor's freshly-added language code is accepted

@@ -477,6 +477,31 @@ class TestUiFontScale:
         assert cfg.ui_font_scale == 2.0
 
 
+class TestUiZoom:
+    """Tests for the ui_zoom config field (whole-UI zoom / QT_SCALE_FACTOR)."""
+
+    def test_default_is_1_0(self):
+        """ui_zoom must default to 1.0 (absent key in old configs → 1.0)."""
+        cfg = AnkiMinerConfig()
+        assert cfg.ui_zoom == 1.0
+
+    def test_below_min_clamps_to_0_5(self):
+        cfg = AnkiMinerConfig(ui_zoom=0.1)
+        assert cfg.ui_zoom == 0.5
+
+    def test_above_max_clamps_to_2_0(self):
+        cfg = AnkiMinerConfig(ui_zoom=5.0)
+        assert cfg.ui_zoom == 2.0
+
+    def test_in_range_value_unchanged(self):
+        cfg = AnkiMinerConfig(ui_zoom=1.5)
+        assert cfg.ui_zoom == 1.5
+
+    def test_boundaries_unchanged(self):
+        assert AnkiMinerConfig(ui_zoom=0.5).ui_zoom == 0.5
+        assert AnkiMinerConfig(ui_zoom=2.0).ui_zoom == 2.0
+
+
 class TestFrozenConfigImmutability:
     """OVH-018: verify the three previously-mutable fields are now immutable."""
 
