@@ -7,11 +7,13 @@ import time
 
 import pytest
 from PyQt6.QtCore import QObject
+from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.utils.stall_watchdog import (
     StallWatchdog,
     get_global_stall_count,
     install_stall_watchdog,
+    paused_stall_detection,
     reset_global_stall_count,
 )
 
@@ -120,6 +122,107 @@ def test_start_is_idempotent(qtbot):
         assert wd._monitor_thread is first
     finally:
         wd.stop()
+
+
+def test_pause_suppresses_stall(qtbot, caplog):
+    wd = StallWatchdog(threshold_ms=100, poll_ms=20)
+    wd.start()
+    try:
+        _pump(qtbot, 100)
+        with caplog.at_level(logging.WARNING), paused_stall_detection():
+            # Block the GUI thread well past the threshold; inside the
+            # pause this must NOT be recorded as a stall.
+            time.sleep(100 * 4 / 1000)
+            # Give the monitor several poll cycles to (not) fire.
+            deadline = time.monotonic() + 0.2
+            while time.monotonic() < deadline:
+                time.sleep(0.02)
+
+        assert wd.stall_count == 0
+        assert get_global_stall_count() == 0
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert not any("stall" in r.getMessage().lower() for r in warnings)
+    finally:
+        wd.stop()
+
+
+def test_pause_exit_refreshes_heartbeat_no_late_stall(qtbot):
+    """The paused span itself must not register as a stall after resume."""
+    wd = StallWatchdog(threshold_ms=100, poll_ms=20)
+    wd.start()
+    try:
+        _pump(qtbot, 100)
+        with paused_stall_detection():
+            # Long block, longer than threshold, with no heartbeat ticks.
+            time.sleep(100 * 4 / 1000)
+        # On exit the heartbeat is refreshed. Pump the GUI loop so the monitor
+        # gets several poll cycles with a fresh tick: the just-elapsed paused
+        # span must not be reported as a stall now that detection resumed.
+        _pump(qtbot, 150)
+        assert wd.stall_count == 0
+        assert get_global_stall_count() == 0
+    finally:
+        wd.stop()
+
+
+def test_detection_resumes_after_pause(qtbot):
+    wd = StallWatchdog(threshold_ms=100, poll_ms=20)
+    wd.start()
+    try:
+        _pump(qtbot, 100)
+        with paused_stall_detection():
+            time.sleep(100 * 3 / 1000)
+        # Pump so the heartbeat resumes and reporting re-arms.
+        _pump(qtbot, 100)
+        # Now a real (unpaused) block must be detected.
+        time.sleep(100 * 3 / 1000)
+        qtbot.waitUntil(lambda: wd.stall_count >= 1, timeout=3000)
+        assert wd.stall_count >= 1
+    finally:
+        wd.stop()
+
+
+def test_nested_pause(qtbot):
+    """Inner pause exit must not re-enable detection while the outer is active."""
+    wd = StallWatchdog(threshold_ms=100, poll_ms=20)
+    wd.start()
+    try:
+        _pump(qtbot, 100)
+        with paused_stall_detection():
+            with paused_stall_detection():
+                time.sleep(100 * 2 / 1000)
+            # Outer still active: block more, still suppressed.
+            time.sleep(100 * 2 / 1000)
+            deadline = time.monotonic() + 0.15
+            while time.monotonic() < deadline:
+                time.sleep(0.02)
+        assert wd.stall_count == 0
+        assert get_global_stall_count() == 0
+    finally:
+        wd.stop()
+
+
+def test_apply_to_app_runs_within_pause(qtbot, monkeypatch):
+    """Theme.apply_to_app must wrap the repolish in paused_stall_detection()."""
+    import anki_miner.gui.utils.stall_watchdog as sw
+    from anki_miner.gui.resources.styles.theme import Theme
+
+    paused_during_setstylesheet: list[bool] = []
+
+    app = QApplication.instance()
+    assert app is not None
+
+    orig_set = app.setStyleSheet
+
+    def _spy_set(sheet):
+        paused_during_setstylesheet.append(sw._stall_detection_paused())
+        orig_set(sheet)
+
+    monkeypatch.setattr(app, "setStyleSheet", _spy_set)
+
+    Theme.apply_to_app(app)
+
+    assert paused_during_setstylesheet == [True]
 
 
 def test_install_helper(qtbot):

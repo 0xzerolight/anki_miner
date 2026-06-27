@@ -503,7 +503,20 @@ class Theme:
 
         # One setStyleSheet call. The previous setStyleSheet("") clear forced
         # Qt to unpolish + re-polish the entire widget tree twice per apply.
-        app.setStyleSheet(cls.get_stylesheet(mode))
+        #
+        # This repolish is a deliberately-synchronous GUI-thread block that
+        # CANNOT be moved off-thread (Qt styling is main-thread only) and can be
+        # a multi-second freeze on large widget trees / font-scale changes. Wrap
+        # it in the stall-watchdog pause so the unavoidable heartbeat gap is not
+        # reported as a (false-positive) stall. This is the single chokepoint
+        # for every theme/font-scale apply, so wrapping here covers all callers.
+        #
+        # Imported lazily: a module-level import would form a cycle
+        # (theme -> gui.utils package __init__ -> fonts -> theme).
+        from anki_miner.gui.utils.stall_watchdog import paused_stall_detection
+
+        with paused_stall_detection():
+            app.setStyleSheet(cls.get_stylesheet(mode))
 
     @classmethod
     def cycle_theme(cls) -> str:

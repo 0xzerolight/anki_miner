@@ -23,12 +23,14 @@ How it works:
 
 from __future__ import annotations
 
+import contextlib
 import faulthandler
 import logging
 import sys
 import threading
 import time
 import traceback
+from collections.abc import Iterator
 
 from PyQt6.QtCore import QObject, QTimer
 
@@ -38,6 +40,62 @@ logger = logging.getLogger(__name__)
 # without holding a handle to whichever StallWatchdog instance is live.
 _global_stall_count = 0
 _global_lock = threading.Lock()
+
+# Module-global pause depth. Call sites that perform a deliberately-synchronous
+# GUI-thread block which CANNOT be moved off-thread (e.g. an unavoidable Qt
+# stylesheet repolish on a theme/font-scale change) wrap it in
+# ``paused_stall_detection()`` so the resulting heartbeat gap is not reported as
+# a stall. A depth counter (not a bool) keeps nested pauses correct. Every live
+# StallWatchdog consults this so call sites need no handle to the watchdog. The
+# lock guards the depth across the GUI thread (which mutates it) and the monitor
+# thread (which reads it).
+_pause_depth = 0
+_pause_lock = threading.Lock()
+
+# Watchdogs register themselves here while started so a pause exit can refresh
+# every live instance's heartbeat (so the paused span is not counted as a stall
+# after resume). Guarded by its own lock; entries are added in start() and
+# removed in stop().
+_live_watchdogs: set[StallWatchdog] = set()
+_watchdogs_lock = threading.Lock()
+
+
+def _stall_detection_paused() -> bool:
+    """Return True while inside one or more ``paused_stall_detection()`` blocks."""
+    with _pause_lock:
+        return _pause_depth > 0
+
+
+@contextlib.contextmanager
+def paused_stall_detection() -> Iterator[None]:
+    """Suppress stall reporting around a deliberately-synchronous GUI-thread block.
+
+    Use ONLY for work that genuinely cannot be moved off the GUI thread — the
+    canonical case is the unavoidable Qt stylesheet repolish triggered by a
+    theme or font-scale change (a multi-second freeze the app documents and
+    cannot avoid). Keep the wrapped span as tight as possible so real stalls
+    elsewhere are still detected.
+
+    While the block is active, every live :class:`StallWatchdog` skips recording
+    and logging stalls. On exit, every live watchdog's heartbeat timestamp is
+    refreshed to "now" so the just-elapsed paused span is not itself reported as
+    a stall on the next monitor poll.
+    """
+    global _pause_depth
+    with _pause_lock:
+        _pause_depth += 1
+    try:
+        yield
+    finally:
+        # Refresh every live watchdog's heartbeat BEFORE clearing the pause, so
+        # the monitor thread never observes the (stale) paused span as a stall
+        # in the window between decrementing the depth and refreshing.
+        with _watchdogs_lock:
+            watchdogs = list(_live_watchdogs)
+        for wd in watchdogs:
+            wd._refresh_heartbeat()
+        with _pause_lock:
+            _pause_depth -= 1
 
 
 def get_global_stall_count() -> int:
@@ -138,12 +196,18 @@ class StallWatchdog:
         )
         self._monitor_thread.start()
 
+        with _watchdogs_lock:
+            _live_watchdogs.add(self)
+
     def stop(self) -> None:
         """Stop the heartbeat timer, signal the monitor to exit, and join it.
 
         Safe to call if never started or more than once.
         """
         self._stop_event.set()
+
+        with _watchdogs_lock:
+            _live_watchdogs.discard(self)
 
         if self._timer is not None:
             self._timer.stop()
@@ -164,11 +228,26 @@ class StallWatchdog:
         # A fresh tick means the GUI thread is alive again; re-arm reporting.
         self._reported_current_stall = False
 
+    def _refresh_heartbeat(self) -> None:
+        """Stamp the heartbeat to ``now`` and re-arm reporting.
+
+        Called by :func:`paused_stall_detection` on exit (from the GUI thread)
+        so the paused span — during which the GUI thread legitimately stopped
+        ticking — is not counted as a stall on the next monitor poll.
+        """
+        with self._tick_lock:
+            self._last_tick = time.monotonic()
+        self._reported_current_stall = False
+
     def _monitor_loop(self) -> None:
         """Monitor-thread loop: detect heartbeat gaps over the threshold."""
         threshold_s = self._threshold_ms / 1000
         poll_s = self._poll_ms / 1000
         while not self._stop_event.wait(poll_s):
+            # Skip while a deliberately-synchronous block is in progress; the
+            # gap it produces is expected and must not be reported.
+            if _stall_detection_paused():
+                continue
             with self._tick_lock:
                 last_tick = self._last_tick
             gap_s = time.monotonic() - last_tick
