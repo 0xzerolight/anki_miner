@@ -13,8 +13,10 @@ from __future__ import annotations
 import threading
 import time
 
+import pytest
 from PyQt6.QtCore import QObject
 
+from anki_miner.gui.utils import run_off_thread as rot
 from anki_miner.gui.utils.run_off_thread import (
     join_all_off_thread_workers,
     join_tracked_workers,
@@ -22,6 +24,24 @@ from anki_miner.gui.utils.run_off_thread import (
     run_off_thread,
 )
 from anki_miner.gui.workers.base_worker import CancellableWorker
+
+
+@pytest.fixture(autouse=True)
+def _isolate_live_worker_registry():
+    """Snapshot + restore the process-global live-worker set around each test.
+
+    The tests mutate ``_LIVE_OFF_THREAD_WORKERS`` directly, and not every path
+    cleans up; a leaked entry makes the empty-registry assertions order-
+    dependent (the repo has documented pytest-qt order sensitivity). Snapshot
+    before, restore after, so each test sees a pristine global set.
+    """
+    snapshot = set(rot._LIVE_OFF_THREAD_WORKERS)
+    rot._LIVE_OFF_THREAD_WORKERS.clear()
+    try:
+        yield
+    finally:
+        rot._LIVE_OFF_THREAD_WORKERS.clear()
+        rot._LIVE_OFF_THREAD_WORKERS.update(snapshot)
 
 
 class _Sink(QObject):
