@@ -20,14 +20,17 @@ _BASE_OVERLAY_FONT_PX = 18
 
 # AV1 decode-watchdog timeout (ms). The first hardware-AV1 decode in the process
 # can stall on GPU pipeline cold-init (D3D11VA device + decoder session), which
-# can exceed a couple of seconds even when steady-state decode is fast, so the
-# deadline must clear cold-init rather than just decode time (Issue #82).
-_AV1_WATCHDOG_MS = 5000
+# can exceed several seconds even when steady-state decode is fast, so the deadline
+# must clear cold-init rather than just decode time. Generous so a real (but slow)
+# cold decode isn't cut off and mistaken for "can't decode" (Issue #82).
+_AV1_WATCHDOG_MS = 10000
 
-# Position (ms) the AV1 decode nudge seeks to. Non-zero so a setPosition at the
-# start isn't optimized to a no-op; the backend still issues a real seek that
-# forces the first frame to decode. Effectively frame 0 (Issue #82).
-_AV1_NUDGE_POSITION_MS = 1
+# Fallback position (ms) the AV1 decode nudge seeks to when no subtitle timestamp is
+# available. A few hundred ms (not ~0) so the seek lands on a different keyframe than
+# frame 0 and the backend issues a genuine demux+decode rather than a no-op; a 1 ms
+# seek coalesces to frame 0 and decodes nothing (Issue #82). When subtitle entries
+# exist the nudge seeks to the first one instead.
+_AV1_NUDGE_FALLBACK_MS = 500
 
 # Resolved at import time so they remain correct even when QMediaPlayer is
 # patched in unit tests (which replaces the module-level name with a MagicMock).
@@ -509,20 +512,44 @@ class SubtitlePlayerWidget(QWidget):
     def _nudge_first_frame(self) -> None:
         """Force the AV1 decoder to present its first frame.
 
-        ``set_source`` only calls ``setSource``, which leaves the player stopped at
-        position 0. Qt's FFmpeg backend does not present a frame on the hardware-AV1
-        path until a decode is *requested*, so on a fresh open nothing decodes until
-        the user interacts — and the watchdog fires on a frame nobody asked for, a
-        false 'can't decode' notice (Issue #82). Seeking forces a decode-and-present
-        of the target frame (the same mechanism the word-click path already relies
-        on), so the watchdog then measures real decode capability: a decodable source
-        produces a frame and disarms it; an undecodable one never does and the
-        watchdog correctly reveals the fallback.
+        ``set_source`` only calls ``setSource``, which leaves the player in
+        StoppedState at position 0. Qt's FFmpeg backend does not present a frame on
+        the hardware-AV1 path until a decode is *requested*, so on a fresh open
+        nothing decodes until the user interacts — and the watchdog then fires on a
+        frame nobody asked for, a false 'can't decode' notice (Issue #82).
 
-        No audio: this is a paused/stopped seek, not ``play()``.
+        This mirrors the proven word-click path (``WordCurationDialog._preview_scene``
+        = ``seek_seconds`` then ``pause``), which decodes-and-presents reliably on the
+        same machines that false-fire on open:
+
+        - ``setPosition`` to a *real* timestamp (the first subtitle entry, else a
+          few-hundred-ms fallback) — a 1 ms seek coalesces to frame 0 and decodes
+          nothing.
+        - ``pause()`` transitions StoppedState → PausedState, which drives the decode
+          pipeline to present the frame. A bare seek on a never-played stopped player
+          may not.
+
+        The watchdog then measures a real decode attempt: a decodable source produces
+        a frame and disarms it; an undecodable one never does and the watchdog
+        correctly reveals the fallback.
+
+        No audio: ``pause()`` only enters PausedState (audio flows in PlayingState),
+        so the player stays silent until the user presses Play.
         """
         if self.player is not None and self._is_av1 and not self._got_video_frame:
-            self.player.setPosition(_AV1_NUDGE_POSITION_MS)
+            self.player.setPosition(self._nudge_position_ms())
+            self.player.pause()
+
+    def _nudge_position_ms(self) -> int:
+        """Position (ms) for the AV1 first-frame nudge.
+
+        Seeks to the first subtitle entry's start so the seek lands on a real
+        keyframe (a genuine demux+decode), not the coalesced no-op a near-zero seek
+        produces. Falls back to ``_AV1_NUDGE_FALLBACK_MS`` when there are no entries.
+        """
+        if self.subtitle_entries:
+            return max(_AV1_NUDGE_FALLBACK_MS, int(self.subtitle_entries[0][0] * 1000))
+        return _AV1_NUDGE_FALLBACK_MS
 
     def _arm_av1_decode_check(self) -> None:
         """Nudge a first-frame decode and start the watchdog deadline.

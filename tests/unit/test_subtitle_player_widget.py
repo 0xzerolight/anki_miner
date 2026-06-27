@@ -10,7 +10,7 @@ from PyQt6.QtCore import QLocale
 from PyQt6.QtMultimedia import QMediaPlayer
 
 from anki_miner.gui.widgets.subtitle_player_widget import (
-    _AV1_NUDGE_POSITION_MS,
+    _AV1_NUDGE_FALLBACK_MS,
     _AV1_WATCHDOG_MS,
     SubtitlePlayerWidget,
 )
@@ -1111,11 +1111,41 @@ class TestAv1WatchdogFallback:
         widget = self._make_widget_av1(qtbot, fake_media_classes, show=True)
         player = fake_media_classes["player"]
         player.setPosition.reset_mock()
+        player.pause.reset_mock()
 
         widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
 
-        player.setPosition.assert_called_once_with(_AV1_NUDGE_POSITION_MS)
+        # No subtitle entries in the helper, so the nudge uses the fallback position.
+        player.setPosition.assert_called_once_with(_AV1_NUDGE_FALLBACK_MS)
+        # pause() is load-bearing: it transitions StoppedState -> PausedState, which
+        # drives the decode-and-present a bare seek on a never-played player may not.
+        player.pause.assert_called_once()
         assert widget._av1_watchdog.isActive(), "watchdog armed alongside the nudge"
+
+    def test_nudge_seeks_to_first_subtitle_timestamp(self, qtbot, fake_media_classes):
+        """With subtitle entries the nudge seeks to the first entry's start (Issue #82).
+
+        A real (non-zero) keyframe seek forces a genuine demux+decode; a near-zero
+        seek coalesces to frame 0 and decodes nothing.
+        """
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value="av1"),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.show()
+            qtbot.waitUntil(widget.isVisible)
+            # First subtitle starts at 12.5s -> nudge target 12500 ms.
+            _set_source_sync(qtbot, widget, Path("/tmp/av1.mkv"), [(12.5, 15.0, "x")], 0.0)
+        player = fake_media_classes["player"]
+        player.setPosition.reset_mock()
+        player.pause.reset_mock()
+
+        widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
+
+        player.setPosition.assert_called_once_with(12500)
+        player.pause.assert_called_once()
 
     def test_show_event_nudges_deferred_decode(self, qtbot, fake_media_classes):
         """A nudge deferred while hidden fires on showEvent, not before.
@@ -1126,14 +1156,17 @@ class TestAv1WatchdogFallback:
         widget = self._make_widget_av1(qtbot, fake_media_classes, show=False)
         player = fake_media_classes["player"]
         player.setPosition.reset_mock()
+        player.pause.reset_mock()
 
         widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
         player.setPosition.assert_not_called()  # hidden: no seek into an off-screen sink
+        player.pause.assert_not_called()
 
         widget.show()
         qtbot.waitUntil(widget.isVisible)
 
-        player.setPosition.assert_called_once_with(_AV1_NUDGE_POSITION_MS)
+        player.setPosition.assert_called_once_with(_AV1_NUDGE_FALLBACK_MS)
+        player.pause.assert_called_once()
         assert widget._av1_watchdog.isActive()
 
     def test_non_av1_does_not_nudge(self, qtbot, fake_media_classes):
@@ -1149,10 +1182,12 @@ class TestAv1WatchdogFallback:
             _set_source_sync(qtbot, widget, Path("/tmp/h264.mkv"), [], 0.0)
         player = fake_media_classes["player"]
         player.setPosition.reset_mock()
+        player.pause.reset_mock()
 
         widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
 
         player.setPosition.assert_not_called()
+        player.pause.assert_not_called()
         assert not widget._av1_watchdog.isActive()
 
     def test_nudge_skipped_once_frame_decoded(self, qtbot, fake_media_classes):
@@ -1161,10 +1196,12 @@ class TestAv1WatchdogFallback:
         player = fake_media_classes["player"]
         widget._got_video_frame = True
         player.setPosition.reset_mock()
+        player.pause.reset_mock()
 
         widget._nudge_first_frame()
 
         player.setPosition.assert_not_called()
+        player.pause.assert_not_called()
 
     def test_watchdog_uses_configured_timeout(self, qtbot, fake_media_classes):
         """The armed watchdog uses the cold-init-tolerant timeout constant (Issue #82)."""
@@ -1190,7 +1227,7 @@ class TestAv1WatchdogFallback:
         widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
         widget._on_media_status_changed(QMediaPlayer.MediaStatus.BufferedMedia)
 
-        player.setPosition.assert_called_once_with(_AV1_NUDGE_POSITION_MS)
+        player.setPosition.assert_called_once_with(_AV1_NUDGE_FALLBACK_MS)
         assert widget._av1_watchdog.isActive()
 
     def test_resource_to_new_av1_renudges(self, qtbot, fake_media_classes):
@@ -1209,7 +1246,7 @@ class TestAv1WatchdogFallback:
 
         widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
 
-        player.setPosition.assert_called_once_with(_AV1_NUDGE_POSITION_MS)
+        player.setPosition.assert_called_once_with(_AV1_NUDGE_FALLBACK_MS)
         assert widget._av1_watchdog.isActive(), "second AV1 source must re-arm the watchdog"
 
 
