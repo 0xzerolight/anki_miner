@@ -1140,3 +1140,77 @@ class TestOffThreadDiskWork:
         # Re-enabled once the off-thread delete completes.
         qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
         assert not dict_dir.exists()
+
+
+# ---------------------------------------------------------------------------
+# Dropped post-import rescan race — a refresh_registry() requested while a scan
+# is in flight must re-dispatch a fresh scan so the latest disk state renders.
+# ---------------------------------------------------------------------------
+
+
+class TestRescanWhileInFlight:
+    def test_refresh_during_in_flight_scan_renders_latest_disk_state(self, qapp, qtbot, tmp_path, monkeypatch):
+        """A refresh_registry() requested while scan A (pre-import disk state) is
+        in flight must trigger a SECOND scan that renders the post-import dict,
+        not the stale first one."""
+        import threading
+
+        from anki_miner.services.dictionary.registry import DictionaryRegistry
+
+        gate = threading.Event()
+        load_calls: list[int] = []
+        real_load = DictionaryRegistry.load
+
+        def _spy_load(self):
+            n = len(load_calls)
+            load_calls.append(n)
+            if n == 0:
+                # First (pre-import) scan: block until the test has requested a
+                # refresh and dropped a new dict on disk.
+                gate.wait(timeout=5.0)
+            return real_load(self)
+
+        monkeypatch.setattr(DictionaryRegistry, "load", _spy_load)
+
+        panel = DictionarySettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(
+            (
+                ChainEntry(kind="indexed", dict_id="latedict", enabled=True),
+                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            )
+        )
+
+        # First-show scan A starts and blocks in _spy_load (disk has no dict yet).
+        panel.show()
+        qtbot.waitUntil(lambda: len(load_calls) == 1, timeout=3000)
+        assert panel._scan_in_flight is True
+
+        # Import finishes: dict now on disk + refresh requested while A is busy.
+        _make_dict_on_disk(
+            tmp_path,
+            "latedict",
+            fmt="yomitan",
+            schema_version=SCHEMA_VERSION,
+            source_name="Late Dict",
+        )
+        panel.refresh_registry()
+        # Request was deferred, not dropped.
+        assert panel._rescan_pending is True
+
+        # Release scan A; the pending rescan must re-dispatch (load called twice).
+        gate.set()
+        qtbot.waitUntil(lambda: len(load_calls) == 2, timeout=3000)
+        _wait_scan(panel, qtbot)
+        assert panel._rescan_pending is False
+
+        # The panel must render the post-import dict (latest state), not stale.
+        from PyQt6.QtWidgets import QLabel
+
+        row = panel._row_widget(0)
+        assert row is not None
+        texts = [lbl.text() for lbl in row.findChildren(QLabel)]
+        assert any("Late Dict" in t for t in texts), texts
+        assert panel._registry is not None
+        meta = panel._registry.get("latedict")
+        assert meta is not None and meta.source_name == "Late Dict"

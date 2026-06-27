@@ -172,6 +172,13 @@ class FrequencySettingsPanel(FormPanel):
         # Set while an off-thread registry scan is running so overlapping
         # scans / removes don't stack (OVH disk-scan-off-thread).
         self._scan_in_flight: bool = False
+        # Set when a rescan is requested while one is already in flight. The
+        # in-flight worker captured the pre-request disk state, so dropping the
+        # request would leave the panel showing stale data after an import. On
+        # scan completion we re-dispatch a single fresh scan instead. A boolean
+        # (not a counter) — one trailing scan reads the latest disk state, so
+        # collapsing N pending requests into one re-dispatch cannot loop.
+        self._rescan_pending: bool = False
         # Optional callback invoked before destructive remove to ask the rest
         # of the app to close cached sqlite handles. Returns True on success.
         # Defaults to no-op (frequency providers are rebuilt per run, not held
@@ -212,6 +219,10 @@ class FrequencySettingsPanel(FormPanel):
             self._rebuild_list()
             return
         if self._scan_in_flight:
+            # A scan is already running against the pre-request disk state.
+            # Mark a rescan so the done/error callback re-dispatches once the
+            # current scan finishes (otherwise an import's refresh is lost).
+            self._rescan_pending = True
             return
         self._scan_in_flight = True
         self._show_loading_placeholder()
@@ -229,11 +240,26 @@ class FrequencySettingsPanel(FormPanel):
         self._scan_in_flight = False
         self._view = cast("_RegistryView", view)
         self._rebuild_list()
+        self._redispatch_pending_scan()
 
     def _on_scan_error(self, msg: str) -> None:
         self._scan_in_flight = False
         logger.warning("Frequency registry scan failed: %s", msg)
         self._rebuild_list()
+        self._redispatch_pending_scan()
+
+    def _redispatch_pending_scan(self) -> None:
+        """Re-run one scan if a rescan was requested while one was in flight.
+
+        Drops the now-stale cached view so the trailing scan reads the latest
+        disk state. Single-shot: the flag is cleared before dispatch, so only
+        rescans requested *during* this dispatch can queue another.
+        """
+        if not self._rescan_pending:
+            return
+        self._rescan_pending = False
+        self._view = None
+        self._scan_and_render_async()
 
     def _show_loading_placeholder(self) -> None:
         """Render a single disabled 'Loading…' row while a scan is in flight."""

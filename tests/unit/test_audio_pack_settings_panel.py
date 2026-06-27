@@ -1009,3 +1009,52 @@ class TestOffThreadDiskWork:
         assert panel._remove_btn.isEnabled() is False
         qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
         assert not pack_dir.exists()
+
+
+class TestRescanWhileInFlight:
+    """A refresh_registry() requested while a scan is in flight must re-dispatch
+    a fresh scan so the latest disk state renders, not the stale first one."""
+
+    def test_refresh_during_in_flight_scan_renders_latest_disk_state(self, qapp, qtbot, tmp_path, monkeypatch):
+        import threading
+
+        gate = threading.Event()
+        load_calls: list[int] = []
+        real_load = asp_mod.AudioPackRegistry.load
+
+        def _spy_load(self):
+            n = len(load_calls)
+            load_calls.append(n)
+            if n == 0:
+                gate.wait(timeout=5.0)
+            return real_load(self)
+
+        monkeypatch.setattr(asp_mod.AudioPackRegistry, "load", _spy_load)
+
+        panel = AudioPackSettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain((AudioSourceEntry(kind="pack", pack_id="latepack", enabled=True),))
+
+        # First-show scan A starts and blocks (disk has no pack yet).
+        panel.show()
+        qtbot.waitUntil(lambda: len(load_calls) == 1, timeout=3000)
+        assert panel._scan_in_flight is True
+
+        # Import finishes: pack now on disk + refresh requested while A is busy.
+        _make_pack_on_disk(tmp_path, "latepack", fmt="ajt", source="Late Pack", entry_count=777)
+        panel.refresh_registry()
+        assert panel._rescan_pending is True
+
+        # Release scan A; the pending rescan must re-dispatch.
+        gate.set()
+        qtbot.waitUntil(lambda: len(load_calls) == 2, timeout=3000)
+        qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+        assert panel._rescan_pending is False
+
+        row = panel._row_widget(0)
+        assert row is not None
+        texts = [lbl.text() for lbl in row.findChildren(QLabel)]
+        assert any("Late Pack" in t for t in texts), texts
+        assert panel._view is not None
+        meta = panel._view.get("latepack")
+        assert meta is not None and meta.source == "Late Pack"
