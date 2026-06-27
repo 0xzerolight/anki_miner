@@ -566,8 +566,11 @@ class TestDictsRootRoundTrip:
             assert widget.dictionary_panel._dicts_root == new_root
             assert widget.dictionary_panel.get_dicts_root() == new_root
             # A subsequent registry rescan targets the new root, not the old one.
+            # The scan runs off the GUI thread, so wait for the worker to
+            # construct the registry.
             widget.dictionary_panel.refresh_registry()
-            assert scanned_roots, "registry should have been rescanned"
+            qtbot.waitUntil(lambda: bool(scanned_roots), timeout=3000)
+            qtbot.waitUntil(lambda: not widget.dictionary_panel._scan_in_flight, timeout=3000)
             assert scanned_roots[-1] == new_root
             assert starting not in scanned_roots
         finally:

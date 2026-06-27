@@ -42,6 +42,15 @@ def _make_dict_on_disk(
     return dict_dir
 
 
+def _wait_scan(panel, qtbot):
+    """Wait for the panel's off-thread registry scan to populate _registry.
+
+    The disk scan now runs on a worker thread (OVH disk-scan-off-thread); row
+    metadata is only available once it lands back on the GUI thread.
+    """
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+
 @pytest.fixture
 def confirm_remove(monkeypatch):
     """Auto-accept the 'Remove dictionary' QMessageBox confirmation."""
@@ -239,7 +248,8 @@ def test_remove_deletes_dict_folder_on_disk(qapp, qtbot, monkeypatch, tmp_path, 
 
     panel.remove(0)
 
-    assert not dict_dir.exists(), "remove() must rmtree the dict folder"
+    # rmtree now runs off the GUI thread; wait for it to land.
+    qtbot.waitUntil(lambda: not dict_dir.exists(), timeout=3000)
     chain = panel.get_chain()
     assert [e.kind for e in chain] == ["jisho"]
 
@@ -315,6 +325,7 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, qtbot, tmp_pa
     # Registry scan is deferred to first showEvent (OVH-053); trigger it now so
     # the row metadata is populated before inspecting row content.
     panel.show()
+    _wait_scan(panel, qtbot)
 
     row = panel._row_widget(0)
     assert row is not None
@@ -360,6 +371,7 @@ def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, qtbot, tmp_path):
     )
     # Registry scan is deferred to first showEvent (OVH-053).
     panel.show()
+    _wait_scan(panel, qtbot)
 
     row = panel._row_widget(0)
     assert row is not None
@@ -396,6 +408,7 @@ def test_current_schema_row_has_no_stale_ui(qapp, qtbot, tmp_path):
     )
     # Registry scan is deferred to first showEvent (OVH-053).
     panel.show()
+    _wait_scan(panel, qtbot)
 
     row = panel._row_widget(0)
     assert row is not None
@@ -481,6 +494,7 @@ def test_right_click_non_stale_yomitan_row_emits_reimport_dict_requested(qapp, q
     # Registry scan is deferred to first showEvent (OVH-053); trigger it so
     # _on_row_context_menu can resolve meta from the registry.
     panel.show()
+    _wait_scan(panel, qtbot)
 
     constructed = _patch_menu_exec(monkeypatch, "Re-import…")
 
@@ -518,6 +532,7 @@ def test_right_click_jmdict_row_emits_reimport_jmdict_requested(qapp, qtbot, mon
     )
     # Registry scan is deferred to first showEvent (OVH-053).
     panel.show()
+    _wait_scan(panel, qtbot)
 
     _patch_menu_exec(monkeypatch, "Re-import…")
 
@@ -554,7 +569,7 @@ def test_remove_emits_dictionary_removed_signal(qapp, qtbot, tmp_path, confirm_r
     panel.dictionary_removed.connect(lambda: removed.append(None))
 
     panel.remove(0)
-    assert removed == [None]
+    qtbot.waitUntil(lambda: removed == [None], timeout=3000)
 
 
 def test_remove_cancelled_does_not_emit_dictionary_removed(qapp, qtbot, monkeypatch, tmp_path):
@@ -617,6 +632,9 @@ def test_remove_failed_rmtree_does_not_emit_dictionary_removed(qapp, qtbot, monk
     panel.dictionary_removed.connect(lambda: removed.append(None))
 
     panel.remove(0)
+    # The off-thread rmtree fails; wait for the error handler to re-enable the
+    # Remove button (proof the error callback ran on the GUI thread).
+    qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
     assert removed == []
     chain = panel.get_chain()
     assert [e.dict_id for e in chain[:1]] == ["a"], "failed remove must leave chain intact"
@@ -661,10 +679,11 @@ def test_remove_retries_transient_oserror(qapp, qtbot, monkeypatch, tmp_path, co
 
     panel.remove(0)
 
+    # rmtree (with its retry loop) now runs off the GUI thread.
+    qtbot.waitUntil(lambda: removed == [None], timeout=3000)
     assert calls["n"] >= 2, "retry loop should have triggered at least once"
     assert not dict_dir.exists(), "second attempt must complete the rmtree"
     assert warned == [], "successful retry must not show an error dialog"
-    assert removed == [None]
 
 
 def test_on_rmtree_error_clears_readonly_then_retries(tmp_path):
@@ -765,8 +784,10 @@ def test_release_callback_runs_before_rmtree(qapp, qtbot, monkeypatch, tmp_path,
 
     panel.remove(0)
 
+    # release fires synchronously on the GUI thread before the off-thread
+    # rmtree is dispatched; wait for the delete to land.
+    qtbot.waitUntil(lambda: not dict_dir.exists(), timeout=3000)
     assert events == ["release", "rmtree"], events
-    assert not dict_dir.exists()
 
 
 def test_remove_without_release_callback_still_works(qapp, qtbot, tmp_path, confirm_remove):
@@ -788,7 +809,7 @@ def test_remove_without_release_callback_still_works(qapp, qtbot, tmp_path, conf
 
     panel.remove(0)
 
-    assert not dict_dir.exists()
+    qtbot.waitUntil(lambda: not dict_dir.exists(), timeout=3000)
     assert [e.kind for e in panel.get_chain()] == ["jisho"]
 
 
@@ -976,6 +997,9 @@ class TestShowEventDeferral:
 
         assert load_calls == []
         panel.show()
+        # Scan now runs off the GUI thread.
+        qtbot.waitUntil(lambda: len(load_calls) == 1, timeout=3000)
+        _wait_scan(panel, qtbot)
         assert len(load_calls) == 1, "First showEvent must trigger exactly one registry scan"
 
     def test_second_show_event_does_not_rescan(self, qapp, qtbot, tmp_path, monkeypatch):
@@ -996,8 +1020,94 @@ class TestShowEventDeferral:
         panel.set_chain(AnkiMinerConfig().dictionary_chain)
 
         panel.show()
-        assert len(load_calls) == 1
+        qtbot.waitUntil(lambda: len(load_calls) == 1, timeout=3000)
+        _wait_scan(panel, qtbot)
 
         panel.hide()
         panel.show()
         assert len(load_calls) == 1, "Second showEvent must not re-scan"
+
+
+# ---------------------------------------------------------------------------
+# OVH disk-scan-off-thread — registry scan + remove rmtree run off the GUI thread
+# ---------------------------------------------------------------------------
+
+
+class TestOffThreadDiskWork:
+    """The first-show registry scan and the Remove rmtree must not block the
+    GUI thread; both run on a worker and render/finish back on the GUI thread."""
+
+    def test_first_show_scan_runs_off_gui_thread(self, qapp, qtbot, tmp_path, monkeypatch):
+        import threading
+
+        from anki_miner.services.dictionary.registry import DictionaryRegistry
+
+        main_id = threading.get_ident()
+        scan_threads: list[int] = []
+        real_load = DictionaryRegistry.load
+
+        def _spy_load(self):
+            scan_threads.append(threading.get_ident())
+            return real_load(self)
+
+        monkeypatch.setattr(DictionaryRegistry, "load", _spy_load)
+
+        panel = DictionarySettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(AnkiMinerConfig().dictionary_chain)
+        panel.show()
+
+        qtbot.waitUntil(lambda: bool(scan_threads), timeout=3000)
+        _wait_scan(panel, qtbot)
+        assert scan_threads and all(t != main_id for t in scan_threads), scan_threads
+
+    def test_remove_rmtree_runs_off_gui_thread(self, qapp, qtbot, tmp_path, monkeypatch, confirm_remove):
+        import threading
+
+        main_id = threading.get_ident()
+        rmtree_threads: list[int] = []
+        real_rmtree = dsp_mod.shutil.rmtree
+
+        def _spy_rmtree(path, *a, **kw):
+            rmtree_threads.append(threading.get_ident())
+            return real_rmtree(path, *a, **kw)
+
+        monkeypatch.setattr(dsp_mod.shutil, "rmtree", _spy_rmtree)
+
+        dict_dir = tmp_path / "a"
+        dict_dir.mkdir()
+        (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+
+        panel = DictionarySettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(
+            (
+                ChainEntry(kind="indexed", dict_id="a", enabled=True),
+                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            )
+        )
+
+        panel.remove(0)
+        qtbot.waitUntil(lambda: not dict_dir.exists(), timeout=3000)
+        assert rmtree_threads and all(t != main_id for t in rmtree_threads), rmtree_threads
+
+    def test_remove_disables_then_reenables_button(self, qapp, qtbot, tmp_path, confirm_remove):
+        dict_dir = tmp_path / "a"
+        dict_dir.mkdir()
+        (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+
+        panel = DictionarySettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(
+            (
+                ChainEntry(kind="indexed", dict_id="a", enabled=True),
+                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            )
+        )
+
+        panel.remove(0)
+        # Disabled immediately on dispatch (still in flight).
+        assert panel._remove_btn.isEnabled() is False
+        # Re-enabled once the off-thread delete completes.
+        qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
+        assert not dict_dir.exists()

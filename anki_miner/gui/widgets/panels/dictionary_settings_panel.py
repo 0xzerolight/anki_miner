@@ -9,6 +9,7 @@ import stat
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
 from PyQt6.QtGui import QShowEvent
@@ -27,6 +28,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import ChainEntry
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
@@ -156,6 +158,9 @@ class DictionarySettingsPanel(FormPanel):
         # Guard: registry scan deferred to first showEvent so it does not run
         # on the GUI thread before the window paints (OVH-053).
         self._scanned: bool = False
+        # Set while an off-thread registry scan is running so overlapping
+        # scans / removes don't stack (OVH disk-scan-off-thread).
+        self._scan_in_flight: bool = False
         self._setup_fields()
 
     def showEvent(self, event: QShowEvent) -> None:  # type: ignore[override]
@@ -169,7 +174,7 @@ class DictionarySettingsPanel(FormPanel):
         super().showEvent(event)
         if not self._scanned:
             self._scanned = True
-            self._rebuild_list()
+            self._scan_and_render_async()
 
     def set_release_callback(self, cb: Callable[[], bool] | None) -> None:
         """Wire the pre-remove resource-release hook.
@@ -202,7 +207,9 @@ class DictionarySettingsPanel(FormPanel):
         # __init__'s call chain may invoke this method indirectly.
         if hasattr(self, "dicts_root_selector"):
             self.dicts_root_selector.set_path(str(dicts_root))
-        self._rebuild_list()
+        # Root changed → cached scan is stale; rescan off-thread (no-op before
+        # first show, where _scanned is still False).
+        self._scan_and_render_async()
 
     def get_dicts_root(self) -> Path:
         """Return the path currently displayed in the storage-folder selector.
@@ -223,10 +230,65 @@ class DictionarySettingsPanel(FormPanel):
         self.dicts_root_selector.set_path(str(ANKI_MINER_HOME / "dicts"))
 
     def refresh_registry(self) -> None:
-        """Force a registry rescan. Call after an import finishes."""
-        self._registry = DictionaryRegistry(self._dicts_root)
-        self._registry.load()
+        """Force a registry rescan. Call after an import finishes.
+
+        The disk scan runs off the GUI thread; the row list re-renders once it
+        completes (OVH disk-scan-off-thread).
+        """
+        self._registry = None
+        self._scanned = True
+        self._scan_and_render_async()
+
+    def _scan_and_render_async(self) -> None:
+        """Scan the registry off-thread (if not cached) then render the rows.
+
+        When the registry is already cached this is a synchronous render — no
+        worker is spawned — so callers that supplied meta directly (tests,
+        set_chain) keep their immediate behavior. Otherwise a ``Loading…``
+        placeholder shows while ``DictionaryRegistry.load()`` runs on a worker.
+        """
+        if self._registry is not None or not self._scanned:
+            # Either cached, or not yet allowed to scan (pre-first-show).
+            self._rebuild_list()
+            return
+        if self._scan_in_flight:
+            return
+        self._scan_in_flight = True
+        self._show_loading_placeholder()
+
+        dicts_root = self._dicts_root
+
+        def _scan() -> DictionaryRegistry:
+            registry = DictionaryRegistry(dicts_root)
+            registry.load()
+            return registry
+
+        run_off_thread(self, _scan, self._on_scan_done, self._on_scan_error)
+
+    def _on_scan_done(self, registry: object) -> None:
+        self._scan_in_flight = False
+        # The worker returns the loaded registry; run_off_thread carries the
+        # result as ``object``, so narrow it back to the registry type.
+        self._registry = cast("DictionaryRegistry", registry)
         self._rebuild_list()
+
+    def _on_scan_error(self, msg: str) -> None:
+        self._scan_in_flight = False
+        logger.warning("Dictionary registry scan failed: %s", msg)
+        # Render whatever we have (rows without metadata) so the panel isn't
+        # stuck on the Loading placeholder.
+        self._rebuild_list()
+
+    def _show_loading_placeholder(self) -> None:
+        """Render a single disabled 'Loading…' row while a scan is in flight."""
+        self._list.setUpdatesEnabled(False)
+        try:
+            self._list.clear()
+            placeholder = QListWidgetItem(self.tr("Loading…"))
+            placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
+            self._list.addItem(placeholder)
+        finally:
+            self._list.setUpdatesEnabled(True)
 
     def set_per_row_reimport_enabled(self, enabled: bool) -> None:
         """Toggle every stale-row Re-import button.
@@ -435,24 +497,57 @@ class DictionarySettingsPanel(FormPanel):
             )
             return
 
-        if dict_dir is not None and dict_dir.exists():
-            try:
-                _robust_rmtree(dict_dir)
-            except OSError as e:
-                logger.error("Failed to delete dictionary folder %s: %s", dict_dir, e)
-                QMessageBox.warning(
-                    self,
-                    self.tr("Remove failed"),
-                    tr_format(self.tr("Could not delete %1:\n%2\n\nThe dictionary was not removed."), dict_dir, e),
-                )
-                return
+        # Capture the post-remove chain on the GUI thread (reads row widgets)
+        # BEFORE dispatching the disk delete off-thread — the worker must touch
+        # no widgets.
+        new_chain = list(self.get_chain())
+        del new_chain[index]
 
-        self._chain = list(self.get_chain())
-        del self._chain[index]
-        # Disk state changed — drop cached scan so the next rebuild reflects
-        # the missing folder (and a re-add of the same id won't show stale meta).
+        if dict_dir is None or not dict_dir.exists():
+            # Nothing to delete on disk; finish synchronously.
+            self._finalize_remove(new_chain)
+            return
+
+        # The rmtree (with its sleep-backed retry loop) runs off the GUI thread.
+        # The Remove button + list are disabled while it runs and re-enabled in
+        # the done/error callbacks. The release callback already ran above (on
+        # the GUI thread) so sqlite handles are dropped before the delete.
+        self._remove_btn.setEnabled(False)
+        self._list.setEnabled(False)
+        target = dict_dir
+
+        def _delete() -> None:
+            _robust_rmtree(target)
+
+        run_off_thread(
+            self,
+            _delete,
+            lambda _r: self._on_remove_done(new_chain),
+            lambda msg: self._on_remove_error(target, msg),
+        )
+
+    def _on_remove_done(self, new_chain: list[ChainEntry]) -> None:
+        self._remove_btn.setEnabled(True)
+        self._list.setEnabled(True)
+        self._finalize_remove(new_chain)
+
+    def _on_remove_error(self, dict_dir: Path, msg: str) -> None:
+        self._remove_btn.setEnabled(True)
+        self._list.setEnabled(True)
+        logger.error("Failed to delete dictionary folder %s: %s", dict_dir, msg)
+        QMessageBox.warning(
+            self,
+            self.tr("Remove failed"),
+            tr_format(self.tr("Could not delete %1:\n%2\n\nThe dictionary was not removed."), dict_dir, msg),
+        )
+
+    def _finalize_remove(self, new_chain: list[ChainEntry]) -> None:
+        """Commit the chain mutation + rescan after a successful disk delete."""
+        self._chain = new_chain
+        # Disk state changed — drop cached scan so the next render reflects the
+        # missing folder (and a re-add of the same id won't show stale meta).
         self._registry = None
-        self._rebuild_list()
+        self._scan_and_render_async()
         self.chain_changed.emit()
         self.dictionary_removed.emit()
 
@@ -509,16 +604,13 @@ class DictionarySettingsPanel(FormPanel):
         self._list.setUpdatesEnabled(False)
         try:
             self._list.clear()
-            # Lazy-construct + cache. refresh_registry() invalidates after an
-            # import. Repeated reorder/toggle ticks reuse the same scan.
-            # OVH-053: defer the disk scan until the panel has been shown at
-            # least once (showEvent sets _scanned); before first paint the rows
-            # render without registry metadata — a safe no-content state since
-            # the list is never visible until the Settings tab is opened.
-            if self._registry is None and self._scanned:
-                self._registry = DictionaryRegistry(self._dicts_root)
-                self._registry.load()
-            registry = self._registry  # may be None before first show (OVH-053)
+            # Render-only: the disk scan is owned by _scan_and_render_async,
+            # which runs DictionaryRegistry.load() off the GUI thread and only
+            # then calls back here with self._registry populated. Before first
+            # show (OVH-053) self._registry is None and rows render without
+            # metadata — a safe no-content state since the list is never visible
+            # until the Settings tab is opened.
+            registry = self._registry  # may be None before first show / scan
             for entry in self._chain:
                 meta: DictMeta | None = None
                 if entry.kind == "indexed":
