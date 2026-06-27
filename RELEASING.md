@@ -68,9 +68,12 @@ Linux identically to Windows/macOS.
    And that PyPI lists the new version: <https://pypi.org/project/anki-miner/>.
 
    > **Intel macOS runner risk.** The `AnkiMiner-macOS-x86_64.tar.gz` build runs on
-   > GitHub's `macos-13` (Intel) runner. GitHub is gradually retiring Intel macOS
-   > runners; when `macos-13` is removed, the Intel job will fail and must switch to a
-   > self-hosted Intel runner or a Universal2 cross-build. Until then no action needed.
+   > GitHub's `macos-15-intel` (Intel x86_64) runner. The earlier `macos-13` runner was
+   > retired on 2025-12-04 — a retired label gets no machine and the job queues forever
+   > (this hung the v2.7.1/v2.7.2 releases until the switch to `macos-15-intel`).
+   > `macos-15-intel` is GitHub's last x86_64 Actions image and is served only through
+   > ~August 2027. Before then, drop the Intel matrix entry (ship macOS arm64-only) or
+   > move to a Universal2 cross-build. Do not use a `-large` runner variant.
 
 8. **Smoke-test one installer.** Run the installer for at least one OS (typically the AppImage on Linux for speed). Confirm the GUI launches and a sample mine completes end-to-end.
 

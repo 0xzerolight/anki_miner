@@ -73,7 +73,11 @@ jobs:
             artifact_name: AnkiMiner-Windows-x86_64
           - os: macos-latest
             artifact_name: AnkiMiner-macOS-arm64
-          - os: macos-13
+          # Intel x86_64 macOS. macos-13 was retired by GitHub (2025-12-04); a
+          # retired label never gets a runner and queues forever. macos-15-intel
+          # is GitHub's recommended standard Intel replacement (free on public
+          # repos, served through ~Aug 2027 — the last x86_64 Actions image).
+          - os: macos-15-intel
             artifact_name: AnkiMiner-macOS-x86_64
 
     runs-on: ${{ matrix.os }}
@@ -180,7 +184,7 @@ jobs:
           #     hard-coded SHA256 will hard-fail this step the day osxexperts updates
           #     the asset. That is intentional fail-closed behavior.
           #
-          #   X64 (macos-13) -> evermeet.cx Intel builds. These URLs ARE version-pinned
+          #   X64 (macos-15-intel) -> evermeet.cx Intel builds. These URLs ARE version-pinned
           #     (ffmpeg-8.1.2.zip is immutable; new versions get new filenames), so the
           #     hash only changes when we deliberately bump the version.
           #

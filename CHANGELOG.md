@@ -15,6 +15,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 
+## [2.7.3] - 2026-06-27
+
+### Fixed
+- **Intel macOS release build.** GitHub retired the `macos-13` runner, so the Intel (x86_64) macOS build queued forever and blocked the binary release. Switched to the `macos-15-intel` runner; Intel macOS binaries ship again. (The 2.7.2 binary release was blocked by this; pip installs were unaffected.)
+
+
 ## [2.7.2] - 2026-06-27
 
 ### Added
