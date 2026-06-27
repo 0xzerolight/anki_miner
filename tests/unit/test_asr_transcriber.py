@@ -661,6 +661,58 @@ def test_device_cuda_no_gpu_falls_back_to_cpu_with_warning(monkeypatch, tmp_path
     assert any(record.levelno == logging.WARNING for record in caplog.records)
 
 
+def test_device_cuda_deferred_inference_failure_falls_back_to_cpu(monkeypatch, tmp_path, caplog):
+    """CUDA build succeeds but the first decode raises (ctranslate2 validates the
+    compute-type/cuDNN kernels lazily) → rebuild on CPU, no exception escapes, and
+    the CPU segments are returned intact."""
+    import numpy as np
+
+    constructed: list[dict] = []
+
+    class DeferredFailModel:
+        def __init__(self, model_name, **kwargs):
+            kwargs["model_name"] = model_name
+            constructed.append(kwargs)
+            self._device = kwargs.get("device")
+
+        def transcribe(self, audio, **kwargs):
+            if self._device == "cuda":
+
+                def _boom():
+                    raise RuntimeError("cuDNN kernel launch failed")
+                    yield  # pragma: no cover  (makes _boom a generator)
+
+                return _boom(), SimpleNamespace(language="ja")
+            return iter([make_segment(0.0, 1.0, "ok")]), SimpleNamespace(language="ja")
+
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: DeferredFailModel)
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    monkeypatch.setattr(transcriber, "vad_available", lambda onnx_pack_root=None: False)
+    _fake_ctranslate2(monkeypatch, device_count=1)
+
+    audio = np.zeros(16000, dtype=np.float32)
+    with caplog.at_level(logging.WARNING, logger=transcriber.__name__):
+        result = transcriber.transcribe(
+            audio,
+            model_name="large-v3",
+            models_root=tmp_path,
+            sample_rate=16000,
+            duration_s=1.0,
+            device="auto",
+        )
+
+    # First built cuda (decode raises), then rebuilt cpu (succeeds).
+    assert [c["device"] for c in constructed] == ["cuda", "cpu"]
+    assert result == [(0.0, 1.0, "ok")]
+    assert any(record.levelno == logging.WARNING for record in caplog.records)
+
+
+def test_is_junk_segment_none_fields_do_not_crash():
+    """A segment with present-but-None confidence fields is kept, not crashed on."""
+    seg = SimpleNamespace(start=0.0, end=1.0, text="x", compression_ratio=None, avg_logprob=None)
+    assert transcriber._is_junk_segment(seg) is False
+
+
 def test_cuda_device_count_failure_treated_as_no_gpu(monkeypatch, tmp_path):
     """If get_cuda_device_count() raises, treat as 0 GPUs and build CPU (auto, no error)."""
     import sys
