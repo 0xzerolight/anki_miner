@@ -28,9 +28,11 @@ ENV/
 .venv-release/
 
 # Release preflight build inputs (scripts/release_preflight.sh) — fetched/built,
-# never committed; CI regenerates them per run.
+# never committed; CI regenerates them per run. licenses/ffmpeg/ stays tracked
+# (committed GPL text); licenses/alass/LICENSE is fetched at build time.
 vendor/
 .release-cache/
+licenses/alass/
 
 # Testing
 .pytest_cache/
