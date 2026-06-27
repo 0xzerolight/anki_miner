@@ -136,6 +136,50 @@ class TestMiningTabBaseShutdown:
 
         assert tab._curation_cancelled
 
+    def test_shutdown_reaps_finished_leaked_run(self, qapp, qtbot):
+        """shutdown() sweeps a finished leaked run, closing its processor (Fix 2)."""
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        proc = MagicMock(name="processor")
+        proc.close = MagicMock()
+        leaked = MagicMock(name="leaked_worker")
+        leaked.isRunning.return_value = False
+        leaked.wait.return_value = True
+        tab._leaked_runs = [(leaked, proc)]
+
+        tab.shutdown()
+
+        proc.close.assert_called_once()
+        assert (leaked, proc) not in tab._leaked_runs
+
+    def test_shutdown_bounded_joins_still_running_leaked_run(self, qapp, qtbot):
+        """A still-running leaked worker is bounded-joined then closed at shutdown."""
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        proc = MagicMock(name="processor")
+        proc.close = MagicMock()
+        leaked = MagicMock(name="leaked_worker")
+        leaked.isRunning.return_value = True
+        leaked.cancel = MagicMock()
+
+        # wait(0) (the reaper probe) reports still-running; the bounded join in
+        # shutdown's loop (wait(_LEAKED_RUN_CLOSE_JOIN_MS)) succeeds.
+        def _wait(timeout_ms):
+            return timeout_ms != 0
+
+        leaked.wait.side_effect = _wait
+        tab._leaked_runs = [(leaked, proc)]
+
+        tab.shutdown()
+
+        leaked.cancel.assert_called_once()
+        proc.close.assert_called_once()
+        assert (leaked, proc) not in tab._leaked_runs
+
 
 # ---------------------------------------------------------------------------
 # YouTube/Audiobook shutdown() still poisons the gate (regression guard)
