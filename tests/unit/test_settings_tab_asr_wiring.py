@@ -173,3 +173,37 @@ class TestSettingsTabAsrWiring:
 
         assert len(saved_configs) >= 1
         assert saved_configs[-1].asr_model == "small"
+
+
+class TestSettingsTabCudaPackWiring:
+    """Pin GPU-pack download wiring on the merged Subtitles panel in SettingsTab."""
+
+    @staticmethod
+    def _force_cuda_available(monkeypatch):
+        mod = "anki_miner.gui.widgets.panels.subtitles_settings_panel"
+        monkeypatch.setattr(f"{mod}.cuda_pack_installer.cuda_pack_supported", lambda: True)
+        monkeypatch.setattr(f"{mod}.cuda_pack_installer.is_installed", lambda root: False)
+        monkeypatch.setattr(f"{mod}._engine.cuda_device_count", lambda: 1)
+
+    def test_panel_emits_makes_tab_emit_and_sets_status(self, test_config: AnkiMinerConfig, qtbot, monkeypatch):
+        """Panel's cuda_pack_download_requested → tab re-emits + sets 'Downloading…'."""
+        self._force_cuda_available(monkeypatch)
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        tab.subtitles_panel._refresh_cuda_pack_status(test_config.cuda_libs_root)
+
+        received: list[None] = []
+        tab.cuda_pack_download_requested.connect(lambda: received.append(None))
+
+        tab.subtitles_panel.download_cuda_button.click()
+
+        assert len(received) == 1
+        assert tab.subtitles_panel.cuda_status_label.text() == "Downloading…"
+
+    def test_set_cuda_pack_status_forwards_to_panel(self, test_config: AnkiMinerConfig, qtbot):
+        """set_cuda_pack_status() forwards text to the Subtitles panel status label."""
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+
+        tab.set_cuda_pack_status("Installed")
+        assert tab.subtitles_panel.cuda_status_label.text() == "Installed"

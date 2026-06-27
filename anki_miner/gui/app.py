@@ -262,6 +262,31 @@ def _connect_alass_download(window: MainWindow, settings_tab: SettingsTab) -> No
     settings_tab.alass_download_requested.connect(_on_alass_download_requested)
 
 
+def _connect_cuda_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Wire the Subtitles panel's "Download GPU acceleration" button to the worker.
+
+    Status flows back to the panel; on finish the panel's in-flight guard is
+    cleared and its installed-state label refreshed via
+    ``notify_cuda_pack_download_finished``. Mirrors :func:`_connect_alass_download`.
+
+    Extracted from ``main()`` so the wiring is unit-testable without standing up
+    the whole app.
+    """
+
+    def _on_cuda_pack_download_requested() -> None:
+        def _on_cuda_finished(ok: bool, message: str) -> None:
+            settings_tab.set_cuda_pack_status(message)
+            settings_tab.subtitles_panel.notify_cuda_pack_download_finished(window.get_config().cuda_libs_root)
+
+        window.background_tasks.start_cuda_pack_download(
+            window.get_config().cuda_libs_root,
+            settings_tab.set_cuda_pack_status,
+            _on_cuda_finished,
+        )
+
+    settings_tab.cuda_pack_download_requested.connect(_on_cuda_pack_download_requested)
+
+
 def main():
     """Launch the Anki Miner GUI application."""
     _scrub_pyinstaller_env()
@@ -460,6 +485,7 @@ def main():
     settings_tab.asr_download_requested.connect(_on_asr_download_requested)
 
     _connect_alass_download(window, settings_tab)
+    _connect_cuda_pack_download(window, settings_tab)
     # Wire the Dictionary Settings panel's pre-remove hook so deleting a
     # dictionary closes cached sqlite handles across every tab first — Win11
     # rejects the rmtree otherwise (Issue #30).
