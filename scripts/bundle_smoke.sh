@@ -45,8 +45,13 @@ fi
 echo
 
 # --- 2. ASR smoke: faster-whisper + ctranslate2 + av resolve (no download) ----
+# Skipped on builds without the [asr] extra (Intel macOS: onnxruntime has no
+# x86_64-mac wheel). BUNDLE_SMOKE_SKIP_ASR=1 -> skip; the bundle ships no
+# faster-whisper, so the smoke would (correctly) fail.
 echo "=== smoke: asr ==="
-if ANKI_MINER_SMOKE=asr HF_HUB_OFFLINE=1 QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_asr.log \
+if [ "${BUNDLE_SMOKE_SKIP_ASR:-}" = "1" ]; then
+  echo "SKIP asr (BUNDLE_SMOKE_SKIP_ASR=1 — build has no [asr] extra)"
+elif ANKI_MINER_SMOKE=asr HF_HUB_OFFLINE=1 QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_asr.log \
   && grep -q "BUNDLED_SMOKE_PASS" smoke_asr.log; then
   echo "PASS asr"
 else

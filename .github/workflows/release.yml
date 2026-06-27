@@ -66,19 +66,36 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # install_target / skip_asr_smoke drive the per-OS ASR handling. Every
+        # platform bundles local Whisper ASR via the [asr] extra EXCEPT Intel
+        # macOS: faster-whisper hard-requires onnxruntime, and onnxruntime
+        # dropped all macOS x86_64 wheels at 1.20 (the last Intel-mac builds
+        # need numpy<2, but the lock pins numpy 2.x), so [asr] is unresolvable
+        # there. The Intel build installs the base package only (skip_asr_smoke
+        # then skips the asr smoke, which would fail with no faster-whisper);
+        # the app degrades gracefully (ASR probes via find_spec → unavailable).
         include:
           - os: ubuntu-22.04
             artifact_name: AnkiMiner-Linux-x86_64
+            install_target: ".[asr]"
+            skip_asr_smoke: ""
           - os: windows-latest
             artifact_name: AnkiMiner-Windows-x86_64
+            install_target: ".[asr]"
+            skip_asr_smoke: ""
           - os: macos-latest
             artifact_name: AnkiMiner-macOS-arm64
+            install_target: ".[asr]"
+            skip_asr_smoke: ""
           # Intel x86_64 macOS. macos-13 was retired by GitHub (2025-12-04); a
           # retired label never gets a runner and queues forever. macos-15-intel
           # is GitHub's recommended standard Intel replacement (free on public
           # repos, served through ~Aug 2027 — the last x86_64 Actions image).
+          # No [asr]: onnxruntime has no Intel-mac wheel (see matrix note above).
           - os: macos-15-intel
             artifact_name: AnkiMiner-macOS-x86_64
+            install_target: "."
+            skip_asr_smoke: "1"
 
     runs-on: ${{ matrix.os }}
 
@@ -97,18 +114,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Install with the [asr] extra so faster-whisper and ctranslate2 land in
-          # the PyInstaller tree for Windows, macOS, and the AppImage (Linux).
-          # requirements.lock pins transitive deps to known-good versions.
-          # Version-constraint form (no --require-hashes): cross-platform safe
-          # because an incomplete lock never fails the build on unlisted packages.
-          # Upgrade to hash-pinning once a universal lock is generated with uv.
+          # matrix.install_target is ".[asr]" everywhere except Intel macOS,
+          # where it is "." (no [asr] — onnxruntime has no x86_64-mac wheel; see
+          # the matrix note). The [asr] extra lands faster-whisper + ctranslate2
+          # in the PyInstaller tree for Windows, macOS-arm64, and the AppImage
+          # (Linux). requirements.lock pins transitive deps to known-good
+          # versions. Version-constraint form (no --require-hashes): cross-
+          # platform safe because an incomplete lock never fails the build on
+          # unlisted packages, and a constraint never force-installs a package
+          # the target doesn't require (so "." won't pull onnxruntime on Intel).
           # NOTE: the .deb package is system-managed; it does NOT bundle
           # faster-whisper (users install the [asr] extra separately if desired).
-          # The deb-stage tree is built from dist/AnkiMiner which is a PyInstaller
-          # onedir — its Python deps are already embedded and the nfpm spec only
-          # declares system-level runtime deps (ffmpeg), not Python ones.
-          pip install ".[asr]" -c requirements.lock
+          pip install "${{ matrix.install_target }}" -c requirements.lock
 
       # PyInstaller bootloader handling. The prebuilt PyPI wheel ships a bootloader
       # binary whose hash AV vendors flag (malware reuses it), a major source of the
@@ -310,6 +327,8 @@ jobs:
       #               model download (HF_HUB_OFFLINE=1 set inside the script). A
       #               model download in CI is never acceptable (150 MB+, runtime-
       #               provided). This is the smoke that caught the v2.7.1 av miss.
+      #               SKIPPED on Intel macOS (BUNDLE_SMOKE_SKIP_ASR=1) — that
+      #               build ships no [asr] extra, so the smoke would fail.
       #   - ffmpeg  : bundled ffmpeg ships libmp3lame/libopus/libsvtav1/libwebp/
       #               libwebp_anim (anim asserted separately so a still-only webp
       #               build can't pass while animated screenshots fail at runtime).
@@ -317,6 +336,8 @@ jobs:
       # finds AnkiMiner(.exe) and ffmpeg(.exe) itself.
       - name: Bundled smokes (youtube + asr + ffmpeg encoders)
         shell: bash
+        env:
+          BUNDLE_SMOKE_SKIP_ASR: ${{ matrix.skip_asr_smoke }}
         run: scripts/bundle_smoke.sh dist/AnkiMiner
 
       - name: Build Windows installer
