@@ -1310,3 +1310,50 @@ class TestSetSourceAsyncProbe:
             widget.closeEvent(QCloseEvent())  # must not crash
 
         assert widget.player is None
+
+    def test_close_event_detaches_stuck_probe_laggard(self, qtbot, fake_media_classes):
+        """A probe stuck past the teardown join is detached from the dying widget.
+
+        ``SingleCallWorker.cancel()`` cannot interrupt a blocking ffprobe, so a
+        genuinely stuck probe stays running through the short join. closeEvent must
+        not crash and must ``setParent(None)`` the laggard so Qt never destroys a
+        running QThread (which would abort the process). The worker stays tracked
+        on the widget (keeping its Python wrapper alive) until it finishes. We
+        release the block and join at the end so the thread does not leak.
+        """
+        from PyQt6.QtGui import QCloseEvent
+
+        started = threading.Event()
+        release = threading.Event()
+
+        def stuck_codec(video_file, ffprobe_cmd="ffprobe"):
+            started.set()
+            release.wait(timeout=10)  # stays blocked across the teardown join
+            return "h264"
+
+        with (
+            patch(f"{MODULE}.get_primary_video_codec", side_effect=stuck_codec),
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            assert started.wait(timeout=5), "probe never started"
+
+            worker = widget._probe_worker
+            assert worker is not None
+
+            # Tear down WITHOUT releasing the block: the probe is genuinely stuck,
+            # so the short join times out and the worker is returned as a laggard.
+            widget.closeEvent(QCloseEvent())  # must not crash
+
+            # Laggard detached from the dying widget, but still tracked so its
+            # Python wrapper survives until it self-cleans on finished.
+            assert worker.parent() is None, "stuck probe was not detached from the widget"
+            assert worker.isRunning(), "the stuck probe should still be running after teardown"
+            assert worker in widget._off_thread_workers, "laggard must stay tracked until it finishes"
+            assert widget.player is None
+
+            # Release + join so the thread does not leak out of the test.
+            release.set()
+            assert worker.wait(5000), "detached probe never finished after release"

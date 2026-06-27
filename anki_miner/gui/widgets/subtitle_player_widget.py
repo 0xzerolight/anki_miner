@@ -60,10 +60,12 @@ class SubtitlePlayerWidget(QWidget):
         self.player: QMediaPlayer | None = None
         self.audio_output: QAudioOutput | None = None
 
-        # Re-entrancy guard for the async ffprobe in set_source. Each set_source
-        # bumps this; the probe's GUI-thread callback ignores results from a
-        # superseded generation (a newer set_source landed first) — and drops a
-        # probe finishing after closeEvent, which sets this to -1 (Issue F-async).
+        # Re-entrancy guard for the async ffprobe in set_source. The counter only
+        # ever increases: every set_source and every teardown bumps it, so any
+        # generation captured by an outstanding probe no longer matches once a
+        # newer set_source or a teardown has run. The probe's GUI-thread callback
+        # no-ops whenever its captured generation differs from the current one,
+        # which is exactly how a superseded or post-teardown probe is dropped.
         self._source_generation: int = 0
         self._probe_worker: object | None = None
 
@@ -269,11 +271,12 @@ class SubtitlePlayerWidget(QWidget):
         for deletion here too — otherwise one ``QAudioOutput`` accumulates under
         the widget per re-source until the widget itself is destroyed (F9).
 
-        Also cancels/joins any in-flight ffprobe worker first — its callback would
-        otherwise build a player into a half-torn-down widget, and an orphaned
-        QThread destroyed with the widget aborts the process. The join must
-        precede the ``self.player is None`` early-out, since that None is exactly
-        the in-flight-probe state (the player is not built until the callback).
+        Also cancels/short-joins any in-flight ffprobe worker first — its callback
+        would otherwise build a player into a half-torn-down widget. A probe stuck
+        past the join is detached from the widget (see ``_join_probe_worker``) so
+        a QThread is never destroyed while running. The join must precede the
+        ``self.player is None`` early-out, since that None is exactly the
+        in-flight-probe state (the player is not built until the callback).
         """
         self._join_probe_worker()
 
@@ -295,7 +298,7 @@ class SubtitlePlayerWidget(QWidget):
         self._av1_watchdog_pending = False
 
     def _join_probe_worker(self) -> None:
-        """Cancel and bounded-join any in-flight ffprobe worker.
+        """Cancel and short-bounded-join any in-flight ffprobe worker.
 
         Bumps the source generation first so the captured generation of any
         outstanding probe no longer matches: a result that was already emitted
@@ -304,9 +307,25 @@ class SubtitlePlayerWidget(QWidget):
         half-torn-down widget. ``set_source`` bumps again afterwards, so its own
         fresh probe still matches — the counter only ever increases, never
         colliding across calls.
+
+        ``SingleCallWorker.cancel()`` only sets an Event checked before/after the
+        ffprobe subprocess, so it cannot interrupt a probe blocked mid-call. A
+        genuinely stuck probe therefore stays running past the join and is
+        returned as a laggard. We DETACH each laggard from this (dying) widget
+        with ``setParent(None)`` so Qt does not destroy a running QThread when the
+        widget's C++ object is freed — destroying a running QThread aborts the
+        process, the exact failure this hardening guards against. The detached
+        worker stays in ``parent._off_thread_workers`` (keeping its Python wrapper
+        alive); it finishes its ffprobe eventually, emits ``finished``, and
+        self-cleans via the ``run_off_thread`` handler (registry discard +
+        deleteLater), which does not touch the widget's C++ object. The generation
+        guard already neutralised its late ``_configure``, so a short join is
+        enough — no long GUI-thread stall is needed.
         """
         self._source_generation += 1
-        join_tracked_workers(self, timeout_ms=2000)
+        laggards = join_tracked_workers(self, timeout_ms=200)
+        for worker in laggards:
+            worker.setParent(None)  # detach from the dying widget; self-cleans on finished
         self._probe_worker = None
 
     def closeEvent(self, event) -> None:
@@ -319,7 +338,8 @@ class SubtitlePlayerWidget(QWidget):
 
         ``_teardown_player`` also cancels/joins any in-flight ffprobe worker so a
         probe finishing after the widget is gone neither builds a player into a
-        dead C++ object nor leaves an orphaned thread to abort the process.
+        dead C++ object nor leaves a running QThread parented to the widget to be
+        destroyed (and abort the process); a stuck probe is detached instead.
         """
         self._teardown_player()
         super().closeEvent(event)
@@ -331,7 +351,8 @@ class SubtitlePlayerWidget(QWidget):
         / ``accept`` / ``reject`` / ``closeEvent``) instead of plain ``stop()``,
         because Qt does not propagate a parent dialog's close to child widgets —
         without this, a probe still running when the dialog closes outlives the
-        widget and its orphaned QThread aborts the process at C++ teardown.
+        widget; ``_teardown_player`` detaches a stuck probe so its QThread is not
+        destroyed while running (which would abort the process at C++ teardown).
         """
         self._teardown_player()
 
