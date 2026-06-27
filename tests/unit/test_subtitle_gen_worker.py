@@ -110,7 +110,16 @@ def _patch_transcribe(monkeypatch, *, segments=None, raise_exc=None):
     import anki_miner.services.asr.transcriber as t
 
     def _fake_transcribe(
-        audio, *, model_name, models_root, sample_rate, duration_s, cancel_event=None, progress_cb=None
+        audio,
+        *,
+        model_name,
+        models_root,
+        sample_rate,
+        duration_s,
+        cancel_event=None,
+        progress_cb=None,
+        device="auto",
+        cuda_libs_root=None,
     ):
         if raise_exc is not None:
             raise raise_exc
@@ -224,7 +233,16 @@ def test_cancel_during_transcribe_emits_cancelled(qapp, tmp_path, monkeypatch):
     import anki_miner.services.asr.transcriber as t
 
     def _cancelling_transcribe(
-        audio, *, model_name, models_root, sample_rate, duration_s, cancel_event=None, progress_cb=None
+        audio,
+        *,
+        model_name,
+        models_root,
+        sample_rate,
+        duration_s,
+        cancel_event=None,
+        progress_cb=None,
+        device="auto",
+        cuda_libs_root=None,
     ):
         if cancel_event is not None:
             cancel_event.set()  # user cancels mid-transcription
@@ -376,7 +394,16 @@ def test_overwrite_re_transcribes_existing(qapp, tmp_path, monkeypatch):
     transcribe_calls: list = []
 
     def _fake_transcribe(
-        audio, *, model_name, models_root, sample_rate, duration_s, cancel_event=None, progress_cb=None
+        audio,
+        *,
+        model_name,
+        models_root,
+        sample_rate,
+        duration_s,
+        cancel_event=None,
+        progress_cb=None,
+        device="auto",
+        cuda_libs_root=None,
     ):
         transcribe_calls.append(1)
         if progress_cb is not None:
@@ -674,7 +701,16 @@ def test_final_progress_is_100_on_success(qapp, tmp_path, monkeypatch):
     extractor = _FakeExtractor(tmp_path=tmp_path)
 
     def _partial_progress_transcribe(
-        audio, *, model_name, models_root, sample_rate, duration_s, cancel_event=None, progress_cb=None
+        audio,
+        *,
+        model_name,
+        models_root,
+        sample_rate,
+        duration_s,
+        cancel_event=None,
+        progress_cb=None,
+        device="auto",
+        cuda_libs_root=None,
     ):
         # Only emit 50%, not 100% — worker must force 100%.
         if progress_cb is not None:
@@ -695,6 +731,57 @@ def test_final_progress_is_100_on_success(qapp, tmp_path, monkeypatch):
     file_progresses = [p for p in cap["progress"] if p[0] == 0]
     final_pct = file_progresses[-1][1]
     assert final_pct == 100, f"Expected final progress 100, got {final_pct}"
+
+
+# ---------------------------------------------------------------------------
+# Device / cuda_libs_root forwarded from config to transcribe()
+# ---------------------------------------------------------------------------
+
+
+def test_transcribe_receives_device_and_cuda_libs_root_from_config(qapp, tmp_path, monkeypatch):
+    """The worker forwards config.asr_device and config.cuda_libs_root into transcribe()."""
+    config = AnkiMinerConfig(
+        asr_model="large-v3",
+        asr_models_root=tmp_path / "models",
+        media_temp_folder=tmp_path / "temp",
+        asr_device="cuda",
+    )
+    config.media_temp_folder.mkdir(parents=True, exist_ok=True)
+
+    v = tmp_path / "ep01.mkv"
+    v.write_bytes(b"")
+
+    extractor = _FakeExtractor(tmp_path=tmp_path)
+    captured: dict = {}
+
+    def _capturing_transcribe(
+        audio,
+        *,
+        model_name,
+        models_root,
+        sample_rate,
+        duration_s,
+        cancel_event=None,
+        progress_cb=None,
+        device="auto",
+        cuda_libs_root=None,
+    ):
+        captured["device"] = device
+        captured["cuda_libs_root"] = cuda_libs_root
+        return _FAKE_SEGMENTS
+
+    import anki_miner.services.asr.srt_writer as sw
+    import anki_miner.services.asr.transcriber as t
+
+    monkeypatch.setattr(t, "transcribe", _capturing_transcribe)
+    monkeypatch.setattr(sw, "segments_to_srt", lambda segs, p: p.write_text("SRT"))
+    _patch_wav_to_float32(monkeypatch)
+
+    worker = _make_worker([v], config, extractor=extractor)
+    worker.run()
+
+    assert captured["device"] == "cuda"
+    assert captured["cuda_libs_root"] == config.cuda_libs_root
 
 
 # ---------------------------------------------------------------------------
