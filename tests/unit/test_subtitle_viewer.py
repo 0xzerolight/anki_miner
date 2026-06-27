@@ -14,16 +14,28 @@ PLAYER_MODULE = "anki_miner.gui.widgets.subtitle_player_widget"
 
 @pytest.fixture
 def fake_media_classes():
-    """Patch QMediaPlayer + QAudioOutput in the player widget module."""
+    """Patch QMediaPlayer + QAudioOutput in the player widget module.
+
+    Also patches ``get_primary_video_codec`` so the player widget's async
+    ffprobe returns instantly off-thread (no real subprocess) — leaving a real
+    ffprobe in flight at teardown crashes the suite when the widget's C++ object
+    is freed under the running QThread.
+    """
     with (
         patch(f"{PLAYER_MODULE}.QMediaPlayer") as player_cls,
         patch(f"{PLAYER_MODULE}.QAudioOutput") as audio_cls,
+        patch(f"{PLAYER_MODULE}.get_primary_video_codec", return_value=None),
     ):
         player_instance = MagicMock()
         player_instance.audioTracks.return_value = []
         player_cls.return_value = player_instance
         audio_cls.return_value = MagicMock()
         yield {"player": player_instance, "player_cls": player_cls}
+
+
+def _wait_for_player(qtbot, viewer, timeout=2000):
+    """Block until the player widget's async probe has built its QMediaPlayer."""
+    qtbot.waitUntil(lambda: viewer.player_widget.player is not None, timeout=timeout)
 
 
 class TestSubtitleViewerEmbeds:
@@ -33,7 +45,8 @@ class TestSubtitleViewerEmbeds:
         """SubtitleViewer should expose a player_widget attribute."""
         with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        qtbot.addWidget(viewer)
+            qtbot.addWidget(viewer)
+            _wait_for_player(qtbot, viewer)
         assert isinstance(viewer.player_widget, SubtitlePlayerWidget)
 
     def test_viewer_calls_set_source_on_player_widget(self, qtbot, fake_media_classes):
@@ -41,7 +54,8 @@ class TestSubtitleViewerEmbeds:
         entries = [(1.0, 2.0, "test")]
         with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), entries, 0.5)
-        qtbot.addWidget(viewer)
+            qtbot.addWidget(viewer)
+            _wait_for_player(qtbot, viewer)
         # set_source stores the entries and offset on the player widget
         assert viewer.player_widget.subtitle_entries == entries
         assert viewer.player_widget._offset == 0.5
@@ -53,7 +67,9 @@ class TestSubtitleViewerEmbeds:
             side_effect=AssertionError("ffprobe should not be called"),
         ):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2)
-        qtbot.addWidget(viewer)
+            qtbot.addWidget(viewer)
+            # _jp_audio_index is set in the async probe callback (override path).
+            _wait_for_player(qtbot, viewer)
         assert viewer.player_widget._jp_audio_index == 2
 
     def test_viewer_delegates_all_args_to_set_source(self, qtbot):
@@ -94,14 +110,16 @@ class TestSubtitleViewerOffset:
         """get_offset() should return the initial offset passed to the constructor."""
         with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 1.5)
-        qtbot.addWidget(viewer)
+            qtbot.addWidget(viewer)
+            _wait_for_player(qtbot, viewer)
         assert viewer.get_offset() == 1.5
 
     def test_offset_change_updates_get_offset(self, qtbot, fake_media_classes):
         """Changing the spinbox should update get_offset()."""
         with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        qtbot.addWidget(viewer)
+            qtbot.addWidget(viewer)
+            _wait_for_player(qtbot, viewer)
         viewer.offset_spinbox.setValue(2.5)
         assert viewer.get_offset() == 2.5
 
@@ -109,7 +127,8 @@ class TestSubtitleViewerOffset:
         """Changing the spinbox should forward the new offset to player_widget."""
         with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        qtbot.addWidget(viewer)
+            qtbot.addWidget(viewer)
+            _wait_for_player(qtbot, viewer)
         viewer.offset_spinbox.setValue(1.0)
         assert viewer.player_widget._offset == 1.0
 
@@ -121,7 +140,8 @@ class TestSubtitleViewerStops:
         """accept() should stop the player."""
         with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        qtbot.addWidget(viewer)
+            qtbot.addWidget(viewer)
+            _wait_for_player(qtbot, viewer)
         viewer.accept()
         fake_media_classes["player"].stop.assert_called()
 
@@ -129,7 +149,8 @@ class TestSubtitleViewerStops:
         """reject() should stop the player."""
         with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        qtbot.addWidget(viewer)
+            qtbot.addWidget(viewer)
+            _wait_for_player(qtbot, viewer)
         viewer.reject()
         fake_media_classes["player"].stop.assert_called()
 
@@ -137,6 +158,7 @@ class TestSubtitleViewerStops:
         """closeEvent() should stop the player."""
         with patch(f"{PLAYER_MODULE}.find_japanese_audio_stream", return_value=None):
             viewer = SubtitleViewer(Path("/tmp/fake.mkv"), [], 0.0)
-        qtbot.addWidget(viewer)
+            qtbot.addWidget(viewer)
+            _wait_for_player(qtbot, viewer)
         viewer.close()
         fake_media_classes["player"].stop.assert_called()

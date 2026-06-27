@@ -9,6 +9,7 @@ from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.run_off_thread import join_tracked_workers, run_off_thread
 from anki_miner.utils import find_japanese_audio_stream, get_primary_video_codec
 from anki_miner.utils.i18n import tr_format
 
@@ -58,6 +59,13 @@ class SubtitlePlayerWidget(QWidget):
         # Player is None until set_source is called
         self.player: QMediaPlayer | None = None
         self.audio_output: QAudioOutput | None = None
+
+        # Re-entrancy guard for the async ffprobe in set_source. Each set_source
+        # bumps this; the probe's GUI-thread callback ignores results from a
+        # superseded generation (a newer set_source landed first) — and drops a
+        # probe finishing after closeEvent, which sets this to -1 (Issue F-async).
+        self._source_generation: int = 0
+        self._probe_worker: object | None = None
 
         # AV1 watchdog state — populated by set_source
         self._is_av1: bool = False
@@ -169,8 +177,13 @@ class SubtitlePlayerWidget(QWidget):
                 auto-detecting Japanese. None preserves auto-detect.
             ffprobe_cmd: ffprobe executable path/literal used for audio-track auto-detection.
                 Defaults to the bare ``"ffprobe"`` literal (PATH lookup).
+
+        The two ffprobe subprocesses (codec detection + Japanese-audio detection)
+        run on a worker thread so the GUI stays responsive while probing; the
+        QMediaPlayer is built in a GUI-thread callback once the probe returns
+        (a fraction of a second later). The public signature is unchanged.
         """
-        # Stop and fully tear down any existing player before re-initialising
+        # Stop and fully tear down any existing player before re-initialising.
         self._teardown_player()
 
         # Reset per-source watchdog state and restore normal video widget visibility.
@@ -180,18 +193,54 @@ class SubtitlePlayerWidget(QWidget):
         self._av1_notice_label.setVisible(False)
         self.video_widget.setVisible(True)
 
-        # Probe the video codec so we know whether to arm the watchdog on LoadedMedia.
-        self._is_av1 = get_primary_video_codec(video_path, ffprobe_cmd=ffprobe_cmd) == "av1"
-
         self.subtitle_entries = subtitle_entries
         self._offset = offset
         self._audio_track_override = audio_track_override
 
-        if audio_track_override is None:
-            jp_stream = find_japanese_audio_stream(video_path, ffprobe_cmd=ffprobe_cmd)
-            self._jp_audio_index = jp_stream.audio_index if jp_stream is not None else None
-        else:
-            self._jp_audio_index = audio_track_override
+        # Bump the generation and capture it for the closure: a later set_source
+        # supersedes this probe, so its callback must no-op when it finally lands.
+        self._source_generation += 1
+        generation = self._source_generation
+
+        def _probe() -> tuple[bool, int | None]:
+            """Run the blocking ffprobe calls on the worker thread."""
+            is_av1 = get_primary_video_codec(video_path, ffprobe_cmd=ffprobe_cmd) == "av1"
+            if audio_track_override is None:
+                jp_stream = find_japanese_audio_stream(video_path, ffprobe_cmd=ffprobe_cmd)
+                jp_audio_index = jp_stream.audio_index if jp_stream is not None else None
+            else:
+                jp_audio_index = audio_track_override
+            return is_av1, jp_audio_index
+
+        def _configure(result: object) -> None:
+            """Build the player on the GUI thread once the probe returns."""
+            self._configure_player(generation, video_path, result)  # type: ignore[arg-type]
+
+        self._probe_worker = run_off_thread(
+            self,
+            _probe,
+            _configure,
+            error_prefix="ffprobe failed: ",
+        )
+
+    def _configure_player(
+        self,
+        generation: int,
+        video_path: Path,
+        result: tuple[bool, int | None],
+    ) -> None:
+        """Build the QMediaPlayer from probe results (GUI thread).
+
+        A no-op if a newer ``set_source`` superseded this one (generation guard)
+        or the widget is being torn down, so a probe finishing after the video
+        widget's C++ object is gone can't touch it.
+        """
+        if generation != self._source_generation:
+            return
+
+        is_av1, jp_audio_index = result
+        self._is_av1 = is_av1
+        self._jp_audio_index = jp_audio_index
 
         self.audio_output = QAudioOutput(self)
         self.player = QMediaPlayer(self)
@@ -219,7 +268,15 @@ class SubtitlePlayerWidget(QWidget):
         fresh ``QAudioOutput`` on every re-source, so the old output is scheduled
         for deletion here too — otherwise one ``QAudioOutput`` accumulates under
         the widget per re-source until the widget itself is destroyed (F9).
+
+        Also cancels/joins any in-flight ffprobe worker first — its callback would
+        otherwise build a player into a half-torn-down widget, and an orphaned
+        QThread destroyed with the widget aborts the process. The join must
+        precede the ``self.player is None`` early-out, since that None is exactly
+        the in-flight-probe state (the player is not built until the callback).
         """
+        self._join_probe_worker()
+
         if self.player is None:
             return
         self.player.stop()
@@ -237,6 +294,21 @@ class SubtitlePlayerWidget(QWidget):
         self.audio_output = None
         self._av1_watchdog_pending = False
 
+    def _join_probe_worker(self) -> None:
+        """Cancel and bounded-join any in-flight ffprobe worker.
+
+        Bumps the source generation first so the captured generation of any
+        outstanding probe no longer matches: a result that was already emitted
+        and queued before ``cancel()`` took effect is then dropped by the guard
+        in :meth:`_configure_player` rather than building a player into a
+        half-torn-down widget. ``set_source`` bumps again afterwards, so its own
+        fresh probe still matches — the counter only ever increases, never
+        colliding across calls.
+        """
+        self._source_generation += 1
+        join_tracked_workers(self, timeout_ms=2000)
+        self._probe_worker = None
+
     def closeEvent(self, event) -> None:
         """Tear down the multimedia backend deterministically on widget close.
 
@@ -244,9 +316,24 @@ class SubtitlePlayerWidget(QWidget):
         parented to ``self`` — might be freed after the ``QVideoWidget`` C++
         object has already been destroyed, causing a use-after-free in the
         multimedia pipeline (OVH-057 / Issue #55).
+
+        ``_teardown_player`` also cancels/joins any in-flight ffprobe worker so a
+        probe finishing after the widget is gone neither builds a player into a
+        dead C++ object nor leaves an orphaned thread to abort the process.
         """
         self._teardown_player()
         super().closeEvent(event)
+
+    def release(self) -> None:
+        """Fully tear down the player and join any in-flight probe.
+
+        Dialogs embedding this widget call this on their exit path (``finished``
+        / ``accept`` / ``reject`` / ``closeEvent``) instead of plain ``stop()``,
+        because Qt does not propagate a parent dialog's close to child widgets —
+        without this, a probe still running when the dialog closes outlives the
+        widget and its orphaned QThread aborts the process at C++ teardown.
+        """
+        self._teardown_player()
 
     # ------------------------------------------------------------------
     # Public control API
