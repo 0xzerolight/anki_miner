@@ -79,6 +79,8 @@ class SettingsTab(QWidget):
             alass" button is clicked.
         cuda_pack_download_requested: Emitted when the Subtitles panel's
             "Download GPU acceleration" button is clicked.
+        vad_pack_download_requested: Emitted when the Subtitles panel's
+            "Download silence removal" button is clicked.
     """
 
     validation_requested = pyqtSignal()
@@ -87,6 +89,7 @@ class SettingsTab(QWidget):
     asr_download_requested = pyqtSignal(str)  # Emits model name
     alass_download_requested = pyqtSignal()
     cuda_pack_download_requested = pyqtSignal()
+    vad_pack_download_requested = pyqtSignal()
 
     # Fields written OUTSIDE the Settings Save path (theme selector, update
     # banner, first-run flags).  An update_config call that touches ONLY these
@@ -333,6 +336,7 @@ class SettingsTab(QWidget):
         self.subtitles_panel.asr_download_requested.connect(self._on_asr_download_clicked)
         self.subtitles_panel.alass_download_requested.connect(self._on_alass_download_clicked)
         self.subtitles_panel.cuda_pack_download_requested.connect(self._on_cuda_pack_download_clicked)
+        self.subtitles_panel.vad_pack_download_requested.connect(self._on_vad_pack_download_clicked)
 
     def _on_ytdlp_update_clicked(self) -> None:
         """Mark the next yt-dlp result as user-initiated, then request the update.
@@ -374,6 +378,15 @@ class SettingsTab(QWidget):
         self.subtitles_panel.set_cuda_pack_status(self.tr("Downloading…"))
         self.cuda_pack_download_requested.emit()
 
+    def _on_vad_pack_download_clicked(self) -> None:
+        """Set a pending status and re-emit so the caller can start the download.
+
+        Mirrors :meth:`_on_cuda_pack_download_clicked`: the download itself is
+        owned by the caller (MainWindow / background_tasks).
+        """
+        self.subtitles_panel.set_vad_pack_status(self.tr("Downloading…"))
+        self.vad_pack_download_requested.emit()
+
     def set_asr_model_status(self, text: str) -> None:
         """Forward an ASR model download status line to the Subtitles panel."""
         self.subtitles_panel.set_model_status(text)
@@ -385,6 +398,10 @@ class SettingsTab(QWidget):
     def set_cuda_pack_status(self, text: str) -> None:
         """Forward a GPU-pack download status line to the Subtitles panel."""
         self.subtitles_panel.set_cuda_pack_status(text)
+
+    def set_vad_pack_status(self, text: str) -> None:
+        """Forward a VAD-pack download status line to the Subtitles panel."""
+        self.subtitles_panel.set_vad_pack_status(text)
 
     def set_ytdlp_status(self, text: str) -> None:
         """Forward a yt-dlp updater status line to the YouTube panel."""
