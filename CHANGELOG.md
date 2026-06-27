@@ -15,10 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 
-## [2.7.4] - 2026-06-27
+## [2.7.5] - 2026-06-27
 
 ### Fixed
-- **Intel macOS release build.** GitHub retired the `macos-13` runner (job queued forever), and onnxruntime — a hard faster-whisper dependency — no longer ships macOS x86_64 wheels, so the Intel build couldn't bundle ASR. The Intel macOS binary now runs on `macos-15-intel` and ships without local Whisper ASR (every other feature works; ASR is available on Linux/Windows/macOS-arm64 and via `pip install anki-miner[asr]`). This unblocks the full binary release. pip installs were unaffected throughout.
+- **Intel macOS release build.** The Intel (x86_64) macOS binary was broken across the 2.7.x line by three platform-specific issues, now resolved: GitHub retired the `macos-13` runner (job queued forever) → moved to `macos-15-intel`; onnxruntime (a hard faster-whisper dependency) no longer ships macOS x86_64 wheels → the Intel build omits the `[asr]` extra; and the Intel ffmpeg build ships no SVT-AV1 encoder → the encoder smoke drops it on Intel. The Intel macOS binary ships again. On Intel macOS only, local Whisper ASR and AVIF animated screenshots are unavailable (WebP animated + static screenshots work; ASR remains available on Linux/Windows/macOS-arm64 and via `pip install anki-miner[asr]`). pip installs were unaffected throughout.
 
 
 ## [2.7.2] - 2026-06-27
