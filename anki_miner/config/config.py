@@ -474,6 +474,8 @@ class AnkiMinerConfig:
             object.__setattr__(self, "asr_models_root", Path(self.asr_models_root))
         if isinstance(self.cuda_libs_root, str):
             object.__setattr__(self, "cuda_libs_root", Path(self.cuda_libs_root))
+        if isinstance(self.onnx_pack_root, str):
+            object.__setattr__(self, "onnx_pack_root", Path(self.onnx_pack_root))
         if isinstance(self.bin_root, str):
             object.__setattr__(self, "bin_root", Path(self.bin_root))
         # JSON round-trip yields a list for theme_favorites; coerce to tuple
