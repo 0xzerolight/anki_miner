@@ -3,6 +3,8 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
 from anki_miner.models.processing import ProcessingResult
 
@@ -276,3 +278,85 @@ def test_failed_pair_counted_in_batch_summary(tmp_path, qapp):
 
     total_cards = sum(r.cards_created for r in all_results)
     assert total_cards == 2
+
+
+# ---------------------------------------------------------------------------
+# processor_factory path — construction deferred to the worker thread
+# ---------------------------------------------------------------------------
+
+
+def test_factory_path_builds_processor_inside_run(tmp_path, qapp):
+    """Given processor_factory and episode_processor=None, run() builds the
+    processor before mining, and curation_processor returns it."""
+    built = _ok_processor()
+    calls: list[int] = []
+
+    def factory():
+        calls.append(1)
+        return built
+
+    worker = ManualPairWorkerThread(None, [_pair(tmp_path, 1)], progress_callback=None, processor_factory=factory)
+    # Before run(), processor is None (not yet built).
+    assert worker.episode_processor is None
+    assert worker.curation_processor is None
+
+    worker.run()
+
+    assert calls == [1]
+    assert worker.episode_processor is built
+    assert worker.curation_processor is built
+    built.process_episode.assert_called_once()
+
+
+def test_factory_path_error_emits_error_signal(tmp_path, qapp):
+    """A factory that raises emits the error signal, not crashing the thread."""
+
+    def bad_factory():
+        raise RuntimeError("registry scan failed")
+
+    worker = ManualPairWorkerThread(None, [_pair(tmp_path, 1)], progress_callback=None, processor_factory=bad_factory)
+    errors: list[str] = []
+    results: list = []
+    worker.error.connect(errors.append)
+    worker.result_ready.connect(results.append)
+
+    worker.run()
+
+    assert results == []
+    assert len(errors) == 1
+    assert "registry scan failed" in errors[0]
+
+
+def test_factory_path_cancel_before_run_skips_factory_and_is_silent(tmp_path, qapp):
+    """A pre-run cancel must not invoke the factory and must not raise (the
+    processor is still None when cancel() runs)."""
+    called: list[bool] = []
+
+    def factory():
+        called.append(True)
+        return _ok_processor()
+
+    worker = ManualPairWorkerThread(None, [_pair(tmp_path, 1)], progress_callback=None, processor_factory=factory)
+    results: list = []
+    worker.result_ready.connect(results.append)
+
+    # cancel() while processor is None must be a no-op, not an AttributeError.
+    worker.cancel()
+    worker.run()
+
+    assert called == []
+    assert worker.episode_processor is None
+    assert results == []
+
+
+def test_both_processor_and_factory_raises(tmp_path, qapp):
+    """Supplying both episode_processor and processor_factory raises ValueError."""
+    proc = _ok_processor()
+    with pytest.raises(ValueError, match="not both"):
+        ManualPairWorkerThread(proc, [_pair(tmp_path, 1)], processor_factory=lambda: proc)
+
+
+def test_neither_processor_nor_factory_raises(tmp_path, qapp):
+    """Supplying neither episode_processor nor processor_factory raises ValueError."""
+    with pytest.raises(ValueError, match="Either episode_processor or processor_factory"):
+        ManualPairWorkerThread(None, [_pair(tmp_path, 1)])

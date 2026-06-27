@@ -332,18 +332,25 @@ class AudiobookTab(MiningTabBase):
         # Processor may be None for two reasons: (a) Settings → Remove dictionary
         # called release_dictionary_resources to drop sqlite handles, or (b)
         # app.py deferred the eager create_episode_processor call so the window
-        # could paint faster on startup. Either way, rebuild lazily so the user
-        # doesn't have to restart the app — and pass stats_service through so
-        # mining sessions still land in analytics.
-        if self._processor is None and self._presenter is not None:
-            self._processor = create_episode_processor(
-                self._config,
-                self._presenter,
-                stats_service=self._stats_service,  # type: ignore[arg-type]
-            )
+        # could paint faster on startup. Either way it is rebuilt lazily so the
+        # user doesn't have to restart the app. When it must be rebuilt we hand a
+        # factory to the worker so the slow registry/sqlite/CSV construction runs
+        # off the GUI thread; _on_worker_finished caches the built processor back
+        # into self._processor so subsequent runs reuse it (and Remove-dictionary
+        # can release it). When it is already cached we pass it directly (cheap).
+        processor_factory = None
         if self._processor is None:
-            self.log_widget.append_warning(self.tr("Mining unavailable — services not initialized."))
-            return
+            presenter = self._presenter
+            if presenter is None:
+                self.log_widget.append_warning(self.tr("Mining unavailable — services not initialized."))
+                return
+
+            def processor_factory() -> EpisodeProcessor:
+                return create_episode_processor(
+                    self._config,
+                    presenter,
+                    stats_service=self._stats_service,  # type: ignore[arg-type]
+                )
 
         # Snapshot BEFORE constructing the worker so all idx-based signal
         # handlers resolve against a frozen list that survives mid-run removals.
@@ -358,6 +365,7 @@ class AudiobookTab(MiningTabBase):
             items=ready_items,
             curation_callback=curation_cb,
             preview_mode=preview_mode,
+            processor_factory=processor_factory,
         )
         worker.item_started.connect(self._on_item_started)
         worker.item_progress.connect(self._on_item_progress)
@@ -473,6 +481,11 @@ class AudiobookTab(MiningTabBase):
         set, close + null the processor so the next _start_run rebuilds with
         the config that arrived mid-run.
         """
+        # Cache the processor the worker built (factory path) BEFORE nulling
+        # worker_thread, so subsequent runs reuse it and Remove-dictionary can
+        # release it. No-op when _processor was already set (prebuilt path).
+        if self._processor is None and self.worker_thread is not None:
+            self._processor = self.worker_thread.curation_processor
         self.worker_thread = None
         self._run_items = []
         self.stop_button.setText(self.tr("Stop All"))

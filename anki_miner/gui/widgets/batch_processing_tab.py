@@ -40,6 +40,7 @@ from anki_miner.utils.i18n import tr_format
 if TYPE_CHECKING:
     from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
     from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
+    from anki_miner.orchestration import EpisodeProcessor
 
 
 logger = logging.getLogger(__name__)
@@ -365,18 +366,22 @@ class BatchProcessingTab(MiningTabBase):
         # back-to-back-mining freeze).
         self._teardown_previous_run("batch")
 
-        # Create episode processor using service factory
-        episode_processor = create_episode_processor(self.config, self.presenter, self.stats_service)
-
         # Process each pair sequentially in worker thread
         from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
 
+        # Pass a factory so the processor is built on the worker thread. This
+        # keeps the GUI thread free during the slow registry scan, sqlite opens,
+        # and CSV parses that happen during construction.
+        def _processor_factory() -> EpisodeProcessor:
+            return create_episode_processor(self.config, self.presenter, self.stats_service)
+
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
         self.worker_thread = ManualPairWorkerThread(
-            episode_processor,
+            None,
             pairs,
             self.progress_callback,
             curation_callback=curation_cb,
+            processor_factory=_processor_factory,
         )
 
         self.worker_thread.result_ready.connect(self._on_processing_finished)

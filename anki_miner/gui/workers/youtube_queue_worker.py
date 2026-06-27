@@ -89,17 +89,20 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
 
     def __init__(
         self,
-        processor: EpisodeProcessor,
+        processor: EpisodeProcessor | None,
         config: AnkiMinerConfig,
         items: list[YouTubeQueueItem],
         curation_callback: Callable[[list], list | None] | None,
         preview_mode: bool,
         parent=None,
+        *,
+        processor_factory: Callable[[], EpisodeProcessor] | None = None,
     ) -> None:
         """Initialize the queue worker.
 
         Args:
-            processor: Episode processor instance.
+            processor: Episode processor instance, or None when
+                ``processor_factory`` is provided (built at run() start).
             config: Frozen app config; ``media_temp_folder`` is the workspace root.
             items: Queue items to process, in order. Each must already have
                 ``video_id`` and ``resolved_sub_mode`` populated (probe step
@@ -110,9 +113,18 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
                 Mine runs. Pass ``None`` to disable entirely.
             preview_mode: If True, mining produces previews instead of cards.
             parent: Optional parent QObject.
+            processor_factory: Zero-arg callable that returns an EpisodeProcessor.
+                Mutually exclusive with a non-None ``processor``.  When supplied,
+                the processor is constructed on the worker thread inside run(),
+                keeping the GUI thread free of the registry/sqlite/CSV work.
         """
+        if processor is not None and processor_factory is not None:
+            raise ValueError("Provide either processor or processor_factory, not both")
+        if processor is None and processor_factory is None:
+            raise ValueError("Either processor or processor_factory must be provided")
         super().__init__(parent)
         self._processor = processor
+        self._processor_factory = processor_factory
         self._config = config
         self._items = items
         self._curation_callback = curation_callback
@@ -134,7 +146,11 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
-        """The constructor-supplied processor, shared by every queue item."""
+        """The processor shared by every queue item.
+
+        None before run() has built it via a supplied ``processor_factory``;
+        the GUI caches it back after the run so subsequent runs reuse it.
+        """
         return self._processor
 
     def skip_item(self, item: YouTubeQueueItem) -> None:
@@ -156,6 +172,19 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
 
     def run(self) -> None:
         """Process the queue end-to-end with retry-once per fetch error."""
+        # Build the processor on the worker thread when a factory was supplied,
+        # keeping the GUI thread free of the slow registry/sqlite/CSV work during
+        # EpisodeProcessor construction. A factory failure ends the whole run:
+        # emit error, then queue_finished so the tab recovers like any exit path.
+        if self._processor is None:
+            assert self._processor_factory is not None  # validated in __init__
+            try:
+                self._processor = self._processor_factory()
+            except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
+                logger.exception("YouTubeQueueWorker processor build failed")
+                self.error.emit(f"{type(exc).__name__}: {exc}")
+                self.queue_finished.emit()
+                return
         for idx, item in enumerate(self._items):
             if self.is_cancelled:
                 break
@@ -234,6 +263,7 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
 
         mining_cb = _QueueMiningProgressAdapter(idx, self.item_progress.emit)
 
+        assert self._processor is not None  # built at run() start
         return self._processor.process_youtube_url(
             url=item.url,
             video_id=item.video_id,

@@ -352,3 +352,108 @@ def test_progress_callback_routes_to_item_progress_signal(make_worker, mock_proc
         (0, "Extracting media: word-05", 50),
         (0, "Extracting media", 100),
     ]
+
+
+# ---------------------------------------------------------------------------
+# processor_factory path — construction deferred to the worker thread
+# ---------------------------------------------------------------------------
+
+
+def test_factory_path_builds_processor_inside_run(qapp, test_config):
+    """Given processor_factory and processor=None, run() builds the processor
+    before mining, calls it, and curation_processor returns it."""
+    built = MagicMock(name="EpisodeProcessor")
+    built.process_episode = MagicMock(return_value=MagicMock(name="ProcessingResult"))
+    calls: list[int] = []
+
+    def factory():
+        calls.append(1)
+        return built
+
+    worker = AudiobookQueueWorker(
+        processor=None,
+        config=test_config,
+        items=[_make_item()],
+        curation_callback=None,
+        preview_mode=False,
+        processor_factory=factory,
+    )
+    # Before run(), processor is None (not yet built).
+    assert worker.curation_processor is None
+
+    caps = _connect_all(worker)
+    worker.run()
+
+    assert calls == [1]
+    assert worker.curation_processor is built
+    built.process_episode.assert_called_once()
+    assert len(caps["queue_finished"].calls) == 1
+
+
+def test_factory_path_error_emits_error_and_queue_finished(qapp, test_config):
+    """A factory that raises emits error + queue_finished and mines nothing."""
+
+    def bad_factory():
+        raise RuntimeError("registry scan failed")
+
+    worker = AudiobookQueueWorker(
+        processor=None,
+        config=test_config,
+        items=[_make_item()],
+        curation_callback=None,
+        preview_mode=False,
+        processor_factory=bad_factory,
+    )
+    errors: list[str] = []
+    worker.error.connect(errors.append)
+    caps = _connect_all(worker)
+
+    worker.run()
+
+    assert len(errors) == 1
+    assert "registry scan failed" in errors[0]
+    # No item ever started; queue_finished still fires so the tab recovers.
+    assert caps["started"].calls == []
+    assert len(caps["queue_finished"].calls) == 1
+
+
+def test_prebuilt_processor_path_does_not_use_factory(qapp, mock_processor, test_config):
+    """When a processor is supplied directly, no factory is invoked."""
+    factory = MagicMock(name="factory")
+    # Both supplied would raise; here only processor is supplied.
+    worker = AudiobookQueueWorker(
+        processor=mock_processor,
+        config=test_config,
+        items=[_make_item()],
+        curation_callback=None,
+        preview_mode=False,
+    )
+    worker.run()
+
+    factory.assert_not_called()
+    assert worker.curation_processor is mock_processor
+
+
+def test_both_processor_and_factory_raises(qapp, mock_processor, test_config):
+    """Supplying both processor and processor_factory raises ValueError."""
+    with pytest.raises(ValueError, match="not both"):
+        AudiobookQueueWorker(
+            processor=mock_processor,
+            config=test_config,
+            items=[_make_item()],
+            curation_callback=None,
+            preview_mode=False,
+            processor_factory=lambda: mock_processor,
+        )
+
+
+def test_neither_processor_nor_factory_raises(qapp, test_config):
+    """Supplying neither processor nor processor_factory raises ValueError."""
+    with pytest.raises(ValueError, match="Either processor or processor_factory"):
+        AudiobookQueueWorker(
+            processor=None,
+            config=test_config,
+            items=[_make_item()],
+            curation_callback=None,
+            preview_mode=False,
+        )

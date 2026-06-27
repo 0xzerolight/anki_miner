@@ -18,29 +18,49 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
     """Worker thread for processing pre-paired video/subtitle files.
 
     Inherits thread-safe cancellation from CancellableWorker.
+
+    Processor construction: either supply a pre-built ``episode_processor``
+    directly, or supply a ``processor_factory`` and leave
+    ``episode_processor=None``.  When a factory is given the processor is built
+    at the START of ``run()`` on the worker thread, so the GUI thread is never
+    blocked by the registry scan / sqlite opens / CSV parses that happen during
+    construction (mirrors :class:`EpisodeWorkerThread`).  A factory that raises
+    surfaces on the existing ``error`` signal.
     """
 
     result_ready = pyqtSignal(list)  # List[ProcessingResult]
 
     def __init__(
         self,
-        episode_processor: EpisodeProcessor,
+        episode_processor: EpisodeProcessor | None,
         pairs,  # List[FilePair]
         progress_callback: ProgressCallback | None = None,
         curation_callback: Callable[[list], list | None] | None = None,
         parent=None,
+        *,
+        processor_factory: Callable[[], EpisodeProcessor] | None = None,
     ):
         """Initialize the manual pair worker thread.
 
         Args:
-            episode_processor: Episode processor for handling each pair
+            episode_processor: Episode processor for handling each pair, or None
+                when ``processor_factory`` is provided (built at run() start).
             pairs: List of FilePair objects to process
             progress_callback: Optional progress callback
             curation_callback: Optional callback invoked per-pair for word curation
             parent: Optional parent QObject
+            processor_factory: Zero-arg callable that returns an EpisodeProcessor.
+                Mutually exclusive with a non-None ``episode_processor``.  When
+                supplied, the processor is constructed on the worker thread
+                inside run().
         """
+        if episode_processor is not None and processor_factory is not None:
+            raise ValueError("Provide either episode_processor or processor_factory, not both")
+        if episode_processor is None and processor_factory is None:
+            raise ValueError("Either episode_processor or processor_factory must be provided")
         super().__init__(parent)
         self.episode_processor = episode_processor
+        self._processor_factory = processor_factory
         self.pairs = pairs
         self.progress_callback = progress_callback
         self.curation_callback = curation_callback
@@ -51,19 +71,35 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
-        """The single constructor-supplied processor, reused for every pair."""
+        """The processor for this run (None before run() builds it via factory)."""
         return self.episode_processor
 
     def cancel(self) -> None:
-        """Cancel processing, propagating to the processor."""
+        """Cancel processing.
+
+        Sets the thread-safe cancel flag. The processor may not exist yet when
+        a factory build is still pending, so the ``episode_processor.cancel()``
+        propagation is guarded against None. Mirrors :class:`EpisodeWorkerThread`
+        in not poisoning a reused processor's sticky ``_cancelled`` flag once it
+        does exist — but this worker holds a single processor for the run, so
+        propagating cancel to it remains correct here.
+        """
         super().cancel()
-        self.episode_processor.cancel()
+        if self.episode_processor is not None:
+            self.episode_processor.cancel()
 
     def run(self):
         """Process all pairs sequentially in background thread."""
         try:
             if self.check_cancelled():
                 return
+
+            # Build the processor on the worker thread when a factory was
+            # supplied, keeping the GUI thread free of the slow
+            # registry/sqlite/CSV work during EpisodeProcessor construction.
+            if self.episode_processor is None:
+                assert self._processor_factory is not None  # validated in __init__
+                self.episode_processor = self._processor_factory()
 
             results = []
 

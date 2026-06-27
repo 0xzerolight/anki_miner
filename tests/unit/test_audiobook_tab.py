@@ -307,6 +307,9 @@ class TestDeferredProcessor:
                 widget.deleteLater()
 
     def test_lazy_rebuild_threads_stats_service(self, qtbot, test_config: AnkiMinerConfig, tmp_path):
+        """When no processor is cached, the build is deferred to the worker via a
+        factory (NOT called on the GUI thread) and the factory threads
+        stats_service through ``create_episode_processor``."""
         sentinel_stats = MagicMock(name="StatsService")
         with (
             patch("anki_miner.gui.widgets.audiobook_tab.AudiobookQueueWorker", autospec=False) as q_cls,
@@ -327,11 +330,79 @@ class TestDeferredProcessor:
                 _add_pair(widget, tmp_path)
                 widget._on_mine_clicked()
 
+                # GUI thread did NOT build the processor — a factory was passed.
+                assert mock_create.call_count == 0
+                assert q_cls.call_args.kwargs["processor"] is None
+                factory = q_cls.call_args.kwargs["processor_factory"]
+                assert factory is not None
+
+                # Invoking the factory (as run() would) builds via the service
+                # factory, threading stats_service through.
+                assert factory() is built_processor
                 assert mock_create.call_count == 1
                 assert mock_create.call_args.kwargs["stats_service"] is sentinel_stats
-                assert widget._processor is built_processor
             finally:
                 widget.deleteLater()
+
+
+class TestOffThreadProcessorBuild:
+    """No cached processor → factory passed to worker; built processor cached back."""
+
+    def test_no_cached_processor_passes_factory_not_prebuilt(self, qtbot, test_config, tmp_path):
+        with (
+            patch("anki_miner.gui.widgets.audiobook_tab.AudiobookQueueWorker", autospec=False) as q_cls,
+            patch("anki_miner.gui.widgets.audiobook_tab.create_episode_processor") as mock_create,
+        ):
+            q_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
+            widget = AudiobookTab(config=test_config, processor=None, presenter=MagicMock(name="Presenter"))
+            qtbot.addWidget(widget)
+            try:
+                _add_pair(widget, tmp_path)
+                widget._on_mine_clicked()
+
+                assert q_cls.call_args.kwargs["processor"] is None
+                assert q_cls.call_args.kwargs["processor_factory"] is not None
+                # The GUI thread never built the processor.
+                mock_create.assert_not_called()
+            finally:
+                widget.deleteLater()
+
+    def test_cached_processor_passes_prebuilt_no_factory(self, tab, tmp_path):
+        """When a processor is already cached, it is passed directly (no factory)."""
+        _add_pair(tab, tmp_path)
+        queue_cls = tab._queue_worker_cls
+        tab._on_mine_clicked()
+
+        assert queue_cls.call_args.kwargs["processor"] is tab._processor
+        assert queue_cls.call_args.kwargs["processor_factory"] is None
+
+    def test_worker_finished_caches_built_processor_back(self, qtbot, test_config, tmp_path):
+        """After a factory-built run, the built processor is cached into
+        self._processor so subsequent runs reuse it."""
+        with patch("anki_miner.gui.widgets.audiobook_tab.AudiobookQueueWorker", autospec=False) as q_cls:
+            q_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
+            widget = AudiobookTab(config=test_config, processor=None, presenter=MagicMock(name="Presenter"))
+            qtbot.addWidget(widget)
+            try:
+                _add_pair(widget, tmp_path)
+                widget._on_mine_clicked()
+                built = MagicMock(name="BuiltProcessor")
+                widget.worker_thread.curation_processor = built  # type: ignore[union-attr]
+
+                widget._on_worker_finished()
+
+                assert widget._processor is built
+                assert widget.worker_thread is None
+            finally:
+                widget.deleteLater()
+
+    def test_worker_finished_keeps_existing_cached_processor(self, tab):
+        """When a processor was already cached (prebuilt path), the cache-back
+        step is a no-op and does not overwrite it."""
+        original = tab._processor
+        # No active worker; the guard reads worker_thread is None and skips.
+        tab._on_worker_finished()
+        assert tab._processor is original
 
 
 class TestStopAll:
