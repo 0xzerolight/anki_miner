@@ -56,6 +56,9 @@ def test_event_set_even_if_dialog_construction_raises(qapp, qtbot):
     tab = _Bare()
     qtbot.addWidget(tab)
     tab._init_curation_bridge()
+    # Dialog construction now happens in the GUI-thread _show_curation_dialog
+    # callback (the context build is off-thread). The finally must still set the
+    # event even when construction raises, or the parked worker hangs forever.
     with (
         patch(
             "anki_miner.gui.widgets._mining_tab_base.WordCurationDialog",
@@ -63,7 +66,7 @@ def test_event_set_even_if_dialog_construction_raises(qapp, qtbot):
         ),
         contextlib.suppress(RuntimeError),
     ):
-        tab._on_curation_requested([])
+        tab._show_curation_dialog([], None, None)
     assert tab._curation_event.is_set()
 
 
@@ -256,6 +259,7 @@ def test_on_curation_requested_schedules_dialog_delete_later(qapp, qtbot):
 
     with patch(f"{MODULE}.WordCurationDialog", return_value=_FakeDialog()):
         tab._on_curation_requested(["w1"])
+        assert _drain_until(lambda: bool(delete_later_called)), "deleteLater() not called (off-thread)"
 
     assert delete_later_called, "deleteLater() was not called on the curation dialog"
 
@@ -282,5 +286,95 @@ def test_on_curation_requested_schedules_delete_later_on_reject(qapp, qtbot):
 
     with patch(f"{MODULE}.WordCurationDialog", return_value=_FakeDialog()):
         tab._on_curation_requested(["w1"])
+        assert _drain_until(lambda: bool(delete_later_called)), "deleteLater() not called (off-thread)"
 
     assert delete_later_called, "deleteLater() must be called on rejection too"
+
+
+# ---------------------------------------------------------------------------
+# GUI-freeze hardening — curation context build runs off the GUI thread
+# ---------------------------------------------------------------------------
+
+
+def test_build_curation_context_runs_off_gui_thread(qapp, qtbot):
+    """_on_curation_requested must build the context (subtitle parse) off-thread.
+
+    A large episode subtitle takes ~1s to parse; parsing it inline on the GUI
+    thread freezes the UI while the dialog is being prepared.
+    """
+    build_thread: dict = {}
+
+    class _RecordingTab(MiningTabBase):
+        config = None
+
+        def _mark_known(self, forms):
+            return 0
+
+        def _build_curation_context(self):
+            build_thread["id"] = threading.get_ident()
+            return (None, None)
+
+    tab = _RecordingTab()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+
+    dialog_thread: dict = {}
+
+    class _FakeDialog:
+        DialogCode = WordCurationDialog.DialogCode
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def exec(self):
+            dialog_thread["id"] = threading.get_ident()
+            return WordCurationDialog.DialogCode.Rejected
+
+        def get_selected_words(self):  # pragma: no cover
+            return []
+
+        def deleteLater(self):  # noqa: N802
+            pass
+
+    with patch(f"{MODULE}.WordCurationDialog", _FakeDialog):
+        tab._on_curation_requested(["w1"])
+        assert _drain_until(tab._curation_event.is_set), "event never set"
+
+    # Build ran off the GUI thread; the dialog ran ON the GUI thread.
+    assert build_thread["id"] != threading.get_ident()
+    assert dialog_thread["id"] == threading.get_ident()
+
+
+def test_cancel_during_off_thread_build_releases_worker_without_dialog(qapp, qtbot):
+    """A cancel landing while the context build is in flight must release the
+    worker (event set, result None) and NOT pop a dialog.
+
+    The build is held until cancel is signalled, simulating a cancel that
+    arrives during the off-thread parse window — the most subtle hang path.
+    """
+    release_build = threading.Event()
+
+    class _SlowTab(MiningTabBase):
+        config = None
+
+        def _mark_known(self, forms):
+            return 0
+
+        def _build_curation_context(self):
+            # Block until the test cancels, so the cancel lands mid-build.
+            release_build.wait(2.0)
+            return (None, None)
+
+    tab = _SlowTab()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+
+    with patch(f"{MODULE}.WordCurationDialog") as dialog_cls:
+        tab._on_curation_requested(["w1"])
+        # Cancel arrives while the off-thread build is still parked.
+        tab._cancel_active_curation_dialog()
+        release_build.set()
+        assert _drain_until(tab._curation_event.is_set), "worker not released after cancel"
+
+    dialog_cls.assert_not_called()  # no dialog popped for a cancelled run
+    assert tab._curation_result is None  # cancelled → None

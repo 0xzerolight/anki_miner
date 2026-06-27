@@ -14,13 +14,14 @@ import logging
 import threading
 from collections.abc import Callable
 from dataclasses import replace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
 from PyQt6.QtWidgets import QWidget
 
 from anki_miner.gui.presenters import GUIProgressCallback
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
@@ -351,10 +352,22 @@ class MiningTabBase(QWidget):
             return None
 
     def _on_curation_requested(self, words: list) -> None:
-        """GUI-thread slot: build context, exec the dialog, ALWAYS release the worker.
+        """GUI-thread slot: build context OFF-THREAD, then exec the dialog.
 
-        The ``finally`` guarantees ``_curation_event`` is set even if dialog
-        construction/exec raises — otherwise ``_curation_bridge`` hangs forever.
+        ``_build_curation_context`` parses the episode subtitle (up to ~1s for a
+        large file) and is pure (reads worker attrs + parses → returns plain
+        data), so the whole call runs on a worker thread; the dialog is then
+        shown from the GUI-thread :meth:`_show_curation_dialog` callback.
+
+        CRITICAL invariant: ``_curation_event`` MUST be set on EVERY path so the
+        parked ``_curation_bridge`` worker can never hang. The branches:
+
+        * cancel/poison before dispatch → set here, return;
+        * cancel/poison after the parse → set in :meth:`_show_curation_dialog`;
+        * build error → :meth:`_show_curation_dialog` is still called (table-only),
+          which sets it via its ``finally``;
+        * dialog construction/exec raising → the ``finally`` in
+          :meth:`_show_curation_dialog`.
         """
         if self._curation_cancelled or self._curation_gate_poisoned:
             # Cancel/shutdown landed before this slot ran; release the worker
@@ -363,7 +376,43 @@ class MiningTabBase(QWidget):
             self._curation_result = None
             self._curation_event.set()
             return
-        media_context, lookup_fn = self._build_curation_context()
+
+        def _on_built(result: object) -> None:
+            media_context, lookup_fn = cast(
+                "tuple[CurationMediaContext | None, Callable[[str], list[tuple[str, str]]] | None]",
+                result,
+            )
+            self._show_curation_dialog(words, media_context, lookup_fn)
+
+        def _on_build_error(msg: str) -> None:
+            # _make_curation_media_context already swallows parse errors and
+            # returns None; this only fires if _build_curation_context itself
+            # raises. Proceed table-only so the user can still curate — and so
+            # _curation_event is still set (via _show_curation_dialog's finally).
+            logger.warning("Failed to build curation context: %s; proceeding table-only", msg)
+            self._show_curation_dialog(words, None, None)
+
+        run_off_thread(self, self._build_curation_context, _on_built, _on_build_error)
+
+    def _show_curation_dialog(
+        self,
+        words: list,
+        media_context: CurationMediaContext | None,
+        lookup_fn: Callable[[str], list[tuple[str, str]]] | None,
+    ) -> None:
+        """GUI-thread: exec the curation dialog, ALWAYS release the worker.
+
+        Re-checks cancel/poison first because a cancel/shutdown may have landed
+        during the off-thread context build; in that case the worker is released
+        as cancelled (None) without popping a dialog. Otherwise the ``finally``
+        guarantees ``_curation_event`` is set even if dialog construction/exec
+        raises — otherwise ``_curation_bridge`` hangs forever.
+        """
+        if self._curation_cancelled or self._curation_gate_poisoned:
+            # Cancel/shutdown arrived during the off-thread parse window.
+            self._curation_result = None
+            self._curation_event.set()
+            return
         try:
             dialog = WordCurationDialog(
                 words,
