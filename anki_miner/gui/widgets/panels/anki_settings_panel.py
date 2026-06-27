@@ -43,6 +43,7 @@ _FIELD_KEYWORDS: dict[str, list[str]] = {
     "pitch_position": ["pitchposition", "pitchaccent", "pitch"],
     "pitch_category": ["pitchcategory", "accenttype", "accentcategory"],
     "frequency": ["frequency", "freq", "rank", "frequencyrank"],
+    "frequency_sort": ["freqsort", "frequencysort"],
     "source": ["source", "origin"],
 }
 
@@ -340,11 +341,22 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes."),
         )
 
-        # Frequency field
+        # Frequency field (per-source breakdown of every ranked source)
         self.frequency_field_input = QLineEdit()
         self.frequency_field_input.setPlaceholderText("Frequency")
         self.add_field(
-            self.tr("Frequency Field"), self.frequency_field_input, helper=self.tr("Stores the word frequency rank.")
+            self.tr("Frequency Field"),
+            self.frequency_field_input,
+            helper=self.tr("Stores the per-source frequency breakdown (all sources)."),
+        )
+
+        # Frequency Sort field (single min rank as a bare number, for sorting)
+        self.frequency_sort_field_input = QLineEdit()
+        self.frequency_sort_field_input.setPlaceholderText("FrequencySort")
+        self.add_field(
+            self.tr("Frequency Sort Field"),
+            self.frequency_sort_field_input,
+            helper=self.tr("Stores the single frequency rank used for sorting (one number)."),
         )
 
         # Source field
@@ -637,6 +649,7 @@ class AnkiSettingsPanel(FormPanel):
             "pitch_position": self.pitch_position_field_input,
             "pitch_category": self.pitch_category_field_input,
             "frequency": self.frequency_field_input,
+            "frequency_sort": self.frequency_sort_field_input,
             "source": self.source_field_input,
         }
 
@@ -670,6 +683,7 @@ class AnkiSettingsPanel(FormPanel):
             "pitch_position": self.pitch_position_field_input.text().strip(),
             "pitch_category": self.pitch_category_field_input.text().strip(),
             "frequency": self.frequency_field_input.text().strip(),
+            "frequency_sort": self.frequency_sort_field_input.text().strip(),
             "source": self.source_field_input.text().strip(),
         }
 
@@ -693,6 +707,7 @@ class AnkiSettingsPanel(FormPanel):
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.frequency_field_input.setText(fields.get("frequency", ""))
+        self.frequency_sort_field_input.setText(fields.get("frequency_sort", ""))
         self.source_field_input.setText(fields.get("source", ""))
 
     def get_pitch_category_format(self) -> Literal["jp", "romaji"]:
