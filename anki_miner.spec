@@ -186,10 +186,12 @@ a = Analysis(
         "PySide2",
         "PySide6",
         "PyQt5",
-        # Unused audio/video bindings — we decode audio via ffmpeg, VAD is off,
-        # so av and onnxruntime are never imported at runtime.  Excluding them
-        # shaves ~100 MB from the bundle.
-        "av",
+        # onnxruntime (Whisper VAD backend) ships as an on-demand downloadable
+        # pack (gui/workers/onnx_pack_download_worker.py), not in the bundle, to
+        # keep it lean — availability is probed at runtime via find_spec.  av,
+        # however, is a HARD import of faster_whisper (faster_whisper/audio.py
+        # does `import av` at package load), so it MUST be bundled or the offline
+        # ASR bundle smoke fails with ModuleNotFoundError: No module named 'av'.
         "onnxruntime",
     ],
     noarchive=False,
