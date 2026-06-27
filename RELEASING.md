@@ -8,6 +8,25 @@ Maintainer-facing release SOP. Contributors should not need to run any of these 
 - PyPI trusted publisher already configured for the project; releases publish via `publish.yml` on tag push.
 - No outstanding regressions in `## [Unreleased]` of `CHANGELOG.md`.
 
+## Preflight (run BEFORE tagging)
+
+The release workflow only runs on a `v*` tag push, so a build or smoke failure is
+discovered *after* the tag is public (this is how v2.7.1 shipped broken — a bundled
+`av` module the ASR smoke caught only in CI). Run the local preflight first:
+
+```bash
+scripts/release_preflight.sh                 # full Linux mirror: build + smokes + AppImage + .deb
+scripts/release_preflight.sh --skip-package  # fast ~2min path: build + smokes only
+```
+
+It mirrors the Linux release job (isolated `.[asr]` venv + pinned PyInstaller,
+SHA-verified ffmpeg/alass vendor fetch, PyInstaller build, then the three bundle
+smokes via `scripts/bundle_smoke.sh` — the same script CI runs) and must print
+`PREFLIGHT ALL GREEN` before you tag. It cannot reproduce the Windows (Inno Setup,
+from-source bootloader) or macOS arch-native ffmpeg steps; those stay CI-only. The
+three smokes are pure-Python import checks, so import/collection failures surface on
+Linux identically to Windows/macOS.
+
 ## Steps
 
 1. **Sync the version string.** Confirm `anki_miner/__init__.py:__version__` matches the tag you intend to push. The release workflow validates this and refuses to publish on mismatch (Issue #10).
@@ -34,7 +53,7 @@ Maintainer-facing release SOP. Contributors should not need to run any of these 
    - Windows: PyInstaller bundle, Inno Setup installer.
    - macOS (arm64): PyInstaller bundle.
 
-   Each Linux/Windows/macOS build runs a bundled YouTube smoke test (`ANKI_MINER_SMOKE=youtube`), expecting the string `BUNDLED_SMOKE_PASS` in output. Artifacts upload to the GitHub Release for the tag.
+   Each Linux/Windows/macOS build runs `scripts/bundle_smoke.sh` — three bundle smokes (youtube extractor registry, offline ASR native-lib resolution, ffmpeg encoder set), the same script the preflight runs. Artifacts upload to the GitHub Release for the tag.
 
 6. **PyPI publish runs.** `.github/workflows/publish.yml` builds and publishes the sdist + wheel to PyPI via trusted publishing on the same tag.
 
