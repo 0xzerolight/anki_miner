@@ -42,6 +42,11 @@ dependencies = [
 asr = [
     "faster-whisper>=1.1.0",
 ]
+asr-cuda = [
+    "faster-whisper>=1.1.0",
+    "nvidia-cudnn-cu12>=9.0.0,<10",
+    "nvidia-cublas-cu12",
+]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
