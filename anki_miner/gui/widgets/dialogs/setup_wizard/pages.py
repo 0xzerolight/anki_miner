@@ -11,6 +11,7 @@ explains, links, and re-checks.
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
@@ -25,6 +26,7 @@ from PyQt6.QtWidgets import (
     QWizardPage,
 )
 
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels.anki_settings_panel import _FIELD_KEYWORDS, auto_map_fields
@@ -253,6 +255,10 @@ class NoteTypePage(QWizardPage):
         self._wizard = wizard
         self._notetypes_worker: SingleCallWorker | None = None
         self._fields_worker: SingleCallWorker | None = None
+        self._warn_worker: SingleCallWorker | None = None
+        # Monotonic id of the latest field-name check; on_done/on_error ignore any
+        # result whose generation no longer matches (superseded by a newer check).
+        self._warn_generation = 0
         self._field_names: list[str] = []
 
         self.setTitle(self.tr("Choose a Note Type"))
@@ -432,9 +438,48 @@ class NoteTypePage(QWizardPage):
             self.mapping_summary.setText(self.tr("No fields could be auto-mapped."))
 
     def _warn_missing_fields(self) -> None:
-        """Non-blocking warning listing any required fields missing on the note type."""
-        ok, message = self._wizard.validation_service().check_field_names()
-        self.warning_label.setText("" if ok else message)
+        """Warn about required fields missing on the note type — checked off-thread.
+
+        ``check_field_names()`` makes a synchronous AnkiConnect HTTP call (10s
+        timeout), so it runs on a worker thread; the result updates
+        ``warning_label`` on the GUI thread. Overlapping checks are superseded by
+        a generation counter so only the latest result wins, and a failure
+        (Anki down) never raises into the GUI.
+        """
+        self._warn_generation += 1
+        generation = self._warn_generation
+        self.warning_label.setText(self.tr("Checking note type fields..."))
+
+        validation = self._wizard.validation_service()
+
+        def _set_warning(text: str) -> None:
+            # The page may have been torn down while the check was in flight, so
+            # the QLabel's C++ object can already be gone — suppress that, never
+            # raise into the GUI.
+            with contextlib.suppress(RuntimeError):
+                self.warning_label.setText(text)
+
+        def _on_done(result: object) -> None:
+            if generation != self._warn_generation:
+                return  # Superseded by a newer check.
+            ok, message = result if isinstance(result, tuple) else (False, str(result))
+            _set_warning("" if ok else message)
+
+        def _on_error(message: str) -> None:
+            if generation != self._warn_generation:
+                return
+            # Anki unreachable/slow: surface the failure but never raise.
+            _set_warning(message)
+
+        worker = run_off_thread(
+            self,
+            work=validation.check_field_names,
+            on_done=_on_done,
+            on_error=_on_error,
+            error_prefix=self.tr("Could not check note type fields: "),
+        )
+        self._warn_worker = worker
+        self._wizard.register_worker(worker)
 
 
 class ResourcesPage(QWizardPage):

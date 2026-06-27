@@ -336,3 +336,124 @@ def test_run_setup_wizard_returns_working_config_on_skip(qtbot, wiz_config, monk
     result = run_setup_wizard(None, wiz_config)
     assert isinstance(result, AnkiMinerConfig)
     assert result.anki_deck_name == "Touched"
+
+
+# ---------------------------------------------------------------------------
+# NoteTypePage: Auto-Map field-name check runs off the GUI thread
+# ---------------------------------------------------------------------------
+
+
+def test_warn_missing_fields_runs_off_gui_thread(qtbot, wiz_config):
+    """check_field_names() must execute on a worker thread, not the GUI thread."""
+    import threading
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+
+    gui_ident = threading.get_ident()
+    seen = {}
+
+    def fake_check():
+        seen["ident"] = threading.get_ident()
+        return (True, "")
+
+    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
+        return_value=MagicMock(check_field_names=fake_check)
+    )
+
+    page._warn_missing_fields()
+    qtbot.waitUntil(lambda: "ident" in seen, timeout=3000)
+    assert seen["ident"] != gui_ident
+
+
+def test_warn_missing_fields_updates_label_in_callback(qtbot, wiz_config):
+    """On a not-ok result, warning_label shows the message (set from the GUI-thread slot)."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+
+    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
+        return_value=MagicMock(check_field_names=lambda: (False, "Missing: word"))
+    )
+
+    page._warn_missing_fields()
+    qtbot.waitUntil(lambda: page.warning_label.text() == "Missing: word", timeout=3000)
+
+
+def test_warn_missing_fields_clears_label_when_ok(qtbot, wiz_config):
+    """An ok result clears the warning_label."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page.warning_label.setText("stale warning")
+
+    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
+        return_value=MagicMock(check_field_names=lambda: (True, ""))
+    )
+
+    page._warn_missing_fields()
+    qtbot.waitUntil(lambda: page.warning_label.text() == "", timeout=3000)
+
+
+def test_warn_missing_fields_raising_check_does_not_crash(qtbot, wiz_config):
+    """A raising/slow check must never raise into the GUI; the page stays alive."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+
+    def boom():
+        raise RuntimeError("anki down")
+
+    wiz.validation_service = MagicMock(return_value=MagicMock(check_field_names=boom))  # type: ignore[method-assign]
+
+    page._warn_missing_fields()
+    # Give the worker time to run + deliver its error signal without raising.
+    qtbot.wait(500)
+    assert page is not None  # no crash
+
+
+def test_warn_missing_fields_latest_check_wins(qtbot, wiz_config):
+    """Overlapping checks: the stale result is ignored, the latest wins."""
+    import threading
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+
+    release_first = threading.Event()
+
+    def slow_first():
+        release_first.wait(3.0)
+        return (False, "STALE")
+
+    def fast_second():
+        return (False, "LATEST")
+
+    # First (slow) dispatch.
+    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
+        return_value=MagicMock(check_field_names=slow_first)
+    )
+    page._warn_missing_fields()
+
+    # Second (fast) dispatch supersedes it.
+    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
+        return_value=MagicMock(check_field_names=fast_second)
+    )
+    page._warn_missing_fields()
+
+    qtbot.waitUntil(lambda: page.warning_label.text() == "LATEST", timeout=3000)
+    # Now let the stale worker finish; its result must NOT overwrite the latest.
+    release_first.set()
+    qtbot.wait(500)
+    assert page.warning_label.text() == "LATEST"
