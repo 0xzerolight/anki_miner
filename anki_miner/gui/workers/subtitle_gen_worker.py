@@ -178,6 +178,8 @@ class SubtitleGenWorker(CancellableWorker):
                 duration_s=duration_s,
                 cancel_event=self._cancel_event,
                 progress_cb=_progress_cb,
+                device=self._config.asr_device,
+                cuda_libs_root=self._config.cuda_libs_root,
             )
 
             if self.is_cancelled:

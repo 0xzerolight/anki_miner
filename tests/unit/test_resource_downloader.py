@@ -140,6 +140,39 @@ class TestDownloadToTemp:
             download_to_temp(URL, dest_dir=tmp_path)
         assert _part_files(tmp_path) == []
 
+    def test_size_cap_param_overrides_default(self, tmp_path):
+        # A response larger than a small passed max_bytes raises the size-cap
+        # error, even though it is well under MAX_DOWNLOAD_BYTES.
+        chunks = [b"x" * 100, b"x" * 100]
+        with (
+            patch.object(resource_downloader._session, "get", return_value=_response(chunks=chunks)),
+            pytest.raises(SetupError, match="size cap"),
+        ):
+            download_to_temp(URL, dest_dir=tmp_path, max_bytes=150)
+        assert _part_files(tmp_path) == []
+
+    def test_size_cap_param_default_is_max_download_bytes(self, tmp_path):
+        # With the default max_bytes, the cap is MAX_DOWNLOAD_BYTES: patching it
+        # small triggers the cap without passing max_bytes explicitly.
+        chunks = [b"x" * 100, b"x" * 100]
+        with (
+            patch.object(resource_downloader, "MAX_DOWNLOAD_BYTES", 150),
+            patch.object(resource_downloader._session, "get", return_value=_response(chunks=chunks)),
+            pytest.raises(SetupError, match="size cap"),
+        ):
+            download_to_temp(URL, dest_dir=tmp_path)
+        assert _part_files(tmp_path) == []
+
+    def test_larger_max_bytes_allows_download(self, tmp_path):
+        # A response that would exceed a small cap is allowed when a larger
+        # max_bytes is passed.
+        chunks = [b"x" * 100, b"x" * 100]
+        resp = _response(chunks=chunks, headers={"Content-Length": "200"})
+        with patch.object(resource_downloader._session, "get", return_value=resp):
+            result = download_to_temp(URL, dest_dir=tmp_path, max_bytes=10_000)
+        assert result.exists()
+        assert result.read_bytes() == b"x" * 200
+
     def test_content_length_mismatch_raises_and_cleans_up(self, tmp_path):
         # Server advertises 100 bytes but the body is short (5). Even if requests
         # didn't raise, the explicit byte-count check must reject the partial.

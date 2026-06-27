@@ -356,7 +356,13 @@ class AnkiMinerConfig:
     # `asr_models_root` is the directory where downloaded model weights are
     # stored; derived from ANKI_MINER_HOME (never user-configurable directly).
     asr_model: str = "large-v3"
+    # `asr_device` selects the transcription backend: "auto" = GPU (CUDA) if
+    # usable else CPU; "cuda"/"cpu" force GPU/CPU. Unknown values reset to "auto".
+    asr_device: str = "auto"
     asr_models_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "asr_models")
+    # Managed directory for downloaded cuDNN/cuBLAS shared libs (preloaded before
+    # a CUDA build); derived from ANKI_MINER_HOME, never user-configurable directly.
+    cuda_libs_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "cuda_libs")
 
     # Managed directory for in-app-downloaded executables (e.g. the alass
     # subtitle-alignment binary); derived from ANKI_MINER_HOME, never
@@ -461,6 +467,8 @@ class AnkiMinerConfig:
             object.__setattr__(self, "themes_root", Path(self.themes_root))
         if isinstance(self.asr_models_root, str):
             object.__setattr__(self, "asr_models_root", Path(self.asr_models_root))
+        if isinstance(self.cuda_libs_root, str):
+            object.__setattr__(self, "cuda_libs_root", Path(self.cuda_libs_root))
         if isinstance(self.bin_root, str):
             object.__setattr__(self, "bin_root", Path(self.bin_root))
         # JSON round-trip yields a list for theme_favorites; coerce to tuple
@@ -508,6 +516,11 @@ class AnkiMinerConfig:
         # duplicated here to keep config self-contained and import-free.
         if self.asr_model not in {"large-v3", "small"}:
             object.__setattr__(self, "asr_model", "large-v3")
+
+        # Validate asr_device the same way: a stale/hand-edited config must never
+        # pass an unsupported backend name through to the transcriber.
+        if self.asr_device not in {"auto", "cuda", "cpu"}:
+            object.__setattr__(self, "asr_device", "auto")
 
         # Keep anki_word_field in sync with anki_fields["word"]
         word_field_from_mapping = self.anki_fields.get("word", "")

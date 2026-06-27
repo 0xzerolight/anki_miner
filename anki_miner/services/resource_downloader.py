@@ -53,6 +53,7 @@ def download_to_temp(
     dest_dir: Path,
     progress: ProgressCallback | None = None,
     cancelled_check: CancelledCheck | None = None,
+    max_bytes: int | None = None,
 ) -> Path:
     """Download *url* to a ``.part`` temp file in *dest_dir* and return it.
 
@@ -67,6 +68,10 @@ def download_to_temp(
             partial temp file is removed and ``SetupError("Download
             cancelled")`` is raised. Checked before the request and during
             chunk iteration.
+        max_bytes: Hard size cap; the download is aborted with ``SetupError``
+            once this many bytes have been received. ``None`` (the default)
+            uses ``MAX_DOWNLOAD_BYTES`` (600 MB); callers fetching larger
+            assets (e.g. multi-hundred-MB CUDA wheels) pass a higher value.
 
     Returns:
         Path to the staged ``.part`` temp file.
@@ -75,6 +80,9 @@ def download_to_temp(
         SetupError: On cancellation, HTTP error, size-cap exceeded, or any
             network/OS failure. The partial temp file is always cleaned up.
     """
+    if max_bytes is None:
+        max_bytes = MAX_DOWNLOAD_BYTES
+
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     if cancelled_check is not None and cancelled_check():
@@ -100,8 +108,8 @@ def download_to_temp(
                     if not chunk:
                         continue
                     downloaded += len(chunk)
-                    if downloaded > MAX_DOWNLOAD_BYTES:
-                        raise SetupError(f"Download exceeded size cap of {MAX_DOWNLOAD_BYTES} bytes: {url}")
+                    if downloaded > max_bytes:
+                        raise SetupError(f"Download exceeded size cap of {max_bytes} bytes: {url}")
                     tmp_fd.write(chunk)
                     if progress is not None:
                         progress(downloaded, total, f"Downloading {url}")
