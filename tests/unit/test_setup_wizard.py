@@ -165,12 +165,27 @@ def test_ankiconnect_page_recheck_uses_check_ankiconnect(qtbot, wiz_config, monk
 # ---------------------------------------------------------------------------
 
 
-def test_deck_page_preselects_config_deck(qtbot, wiz_config):
+def _stub_anki_service(monkeypatch, wiz, *, decks=(), notetypes=()):
+    """Replace the wizard's shared AnkiService with a hermetic mock.
+
+    ``initializePage`` on the deck / note-type pages fires a worker that calls
+    ``AnkiService.get_deck_names`` / ``get_model_names`` against real
+    AnkiConnect; stubbing keeps these tests off the network.
+    """
+    fake = MagicMock()
+    fake.get_deck_names.return_value = list(decks)
+    fake.get_model_names.return_value = list(notetypes)
+    monkeypatch.setattr(wiz, "anki_service", lambda: fake)
+    return fake
+
+
+def test_deck_page_preselects_config_deck(qtbot, wiz_config, monkeypatch):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     cfg = replace(wiz_config, anki_deck_name="My Mining Deck")
     wiz = SetupWizard(cfg)
     qtbot.addWidget(wiz)
+    _stub_anki_service(monkeypatch, wiz, decks=["Default", "My Mining Deck"])
     page = wiz.deck_page
     page.initializePage()
     assert page.deck_combo.currentText() == "My Mining Deck"
@@ -216,12 +231,13 @@ def test_deck_page_unknown_deck_shows_autocreate_hint(qtbot, wiz_config):
 # ---------------------------------------------------------------------------
 
 
-def test_notetype_page_preselects_config_note_type(qtbot, wiz_config):
+def test_notetype_page_preselects_config_note_type(qtbot, wiz_config, monkeypatch):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     cfg = replace(wiz_config, anki_note_type="Lapis")
     wiz = SetupWizard(cfg)
     qtbot.addWidget(wiz)
+    _stub_anki_service(monkeypatch, wiz, notetypes=["Basic", "Lapis"])
     page = wiz.notetype_page
     page.initializePage()
     assert page.notetype_combo.currentText() == "Lapis"

@@ -36,6 +36,11 @@ _REGISTRY_ATTR = "_off_thread_workers"
 # shutdown so Qt never destroys a running QThread (which can abort the process).
 # Entries are added on dispatch and discarded in the finished -> _teardown
 # handler, exactly like the per-parent set.
+#
+# Invariant: every mutation of this set happens on the GUI thread — dispatch
+# (run_off_thread) is called from GUI code, and the finished -> _teardown
+# discard is a queued slot delivered on the GUI thread. That single-thread
+# access is why the bare set needs no lock.
 _LIVE_OFF_THREAD_WORKERS: set[QThread] = set()
 
 
@@ -183,9 +188,9 @@ def join_all_off_thread_workers(timeout_ms: int = 2000) -> list[QThread]:
     return laggards
 
 
-def _get_registry(parent: QObject) -> set:
+def _get_registry(parent: QObject) -> set[QThread]:
     """Return ``parent``'s lazily-created worker tracking set."""
-    registry = getattr(parent, _REGISTRY_ATTR, None)
+    registry: set[QThread] | None = getattr(parent, _REGISTRY_ATTR, None)
     if registry is None:
         registry = set()
         setattr(parent, _REGISTRY_ATTR, registry)
