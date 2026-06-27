@@ -10,6 +10,7 @@ dependency stays one-way: tab → controller → workers/services.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -18,11 +19,19 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.workers.audio_pack_import_worker import AudioPackImportWorker
 from anki_miner.services.audio_packs.formats import scan_importable_packs
 from anki_miner.services.audio_packs.importer import derive_pack_id
 from anki_miner.utils.i18n import tr_format
+
+logger = logging.getLogger(__name__)
+
+# Bounded join for the predecessor import worker before its reference is
+# dropped. A stuck worker must never freeze the GUI thread; on timeout we log
+# and proceed (mirrors ``MiningTabBase._teardown_previous_run``).
+_IMPORT_JOIN_TIMEOUT_MS = 5000
 
 # Upstream source priority for newly imported packs inserted into the chain.
 # Lower index = higher priority (queried first).  Keys are canonical pack_ids
@@ -241,8 +250,11 @@ class AudioPackImportFlow:
             # Join the predecessor before dropping its reference (same as
             # DictionaryImportFlow.reimport_all T-09 join rationale).
             prev = self._active_import_worker
-            if prev is not None and prev.isRunning():
-                prev.wait()
+            if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
+                logger.warning(
+                    "Lingering audio pack import worker did not stop within %d ms; replacing it anyway",
+                    _IMPORT_JOIN_TIMEOUT_MS,
+                )
             self._active_import_worker = worker
 
             def on_progress(msg: str) -> None:
@@ -307,8 +319,11 @@ class AudioPackImportFlow:
         # launch_next in add_pack — a still-running QThread must not be
         # garbage-collected mid-run).
         prev = self._active_import_worker
-        if prev is not None and prev.isRunning():
-            prev.wait()
+        if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
+            logger.warning(
+                "Lingering audio pack import worker did not stop within %d ms; replacing it anyway",
+                _IMPORT_JOIN_TIMEOUT_MS,
+            )
         self._active_import_worker = worker
         self._set_import_buttons_enabled(False)
 

@@ -10,6 +10,7 @@ import flow (:mod:`anki_miner.gui.controllers.frequency_import_flow`), so this
 flow only ever drives the pitch importer.
 """
 
+import logging
 import os
 from collections.abc import Callable
 from pathlib import Path
@@ -19,10 +20,19 @@ from PyQt6.QtCore import QCoreApplication, QEventLoop, Qt
 from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
 from anki_miner.services.pitch_accent import YomitanPitchImportResult
 from anki_miner.utils.i18n import tr_format
+
+logger = logging.getLogger(__name__)
+
+# Bounded join for the modal zip-import worker after its event loop exits. The
+# worker has already emitted done/failed by the time we get here, so the join
+# is normally instant; the timeout only guards a pathological hang from
+# freezing the GUI thread (on timeout we log and proceed).
+_IMPORT_JOIN_TIMEOUT_MS = 5000
 
 
 class YomitanCsvLabels(NamedTuple):
@@ -176,7 +186,14 @@ class ZipImportFlow:
         worker.start()
         loop.exec()
         dlg.close()
-        worker.wait()  # join thread before next save might construct a new worker
+        # Join thread before next save might construct a new worker. Bounded so
+        # a wedged worker can't freeze the GUI thread; it has already emitted by
+        # now, so this normally returns instantly.
+        if not join_worker(worker, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
+            logger.warning(
+                "Lingering pitch zip import worker did not stop within %d ms; proceeding anyway",
+                _IMPORT_JOIN_TIMEOUT_MS,
+            )
 
         if "err" in result_holder:
             err_msg = str(result_holder["err"])

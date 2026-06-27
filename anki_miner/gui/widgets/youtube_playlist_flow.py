@@ -28,6 +28,7 @@ class never touches a running :class:`YouTubeQueueWorker`.
 from __future__ import annotations
 
 import contextlib
+import logging
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -38,6 +39,7 @@ from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.workers.youtube_playlist_probe_worker import (
     YouTubePlaylistProbeWorker,
     YouTubePlaylistResolveWorker,
@@ -49,8 +51,15 @@ from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url
 
+logger = logging.getLogger(__name__)
+
 # Bare 11-char YouTube video id (same alphabet as the fetcher's _VIDEO_ID_RE).
 _BARE_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
+# Bounded join for yt-dlp probe/playlist workers at tab/app shutdown. Each is
+# already bounded by its subprocess timeout, so this is generous; it only
+# guards a pathological hang from freezing the GUI thread on close.
+_PROBE_JOIN_TIMEOUT_MS = 30000
 
 
 def _is_acceptable_add_input(url: str) -> bool:
@@ -269,24 +278,39 @@ class PlaylistAddController:
         """Tear down probe + playlist workers (tab shutdown).
 
         Single-video probes are bounded by their subprocess timeout, so
-        quit() + wait() returns within ~timeout_s. The playlist probe worker
+        quit() + join returns within ~timeout_s. The playlist probe worker
         checks cancellation between entries and each in-flight subprocess is
-        timeout-bounded, so wait() has the same guarantee (Issue #70).
+        timeout-bounded, so the join has the same guarantee (Issue #70). The
+        joins are nonetheless bounded by :func:`join_worker`: a wedged yt-dlp
+        subprocess must never freeze the GUI thread at shutdown — on timeout we
+        log and drop the handle anyway (mirrors
+        ``MiningTabBase._teardown_previous_run``).
         """
         for probe in list(self._probe_workers):
             probe.quit()
-            probe.wait()
+            if not join_worker(probe, timeout_ms=_PROBE_JOIN_TIMEOUT_MS):
+                logger.warning(
+                    "Lingering YouTube probe worker did not stop within %d ms; dropping it anyway",
+                    _PROBE_JOIN_TIMEOUT_MS,
+                )
         self._probe_workers.clear()
 
         if self._playlist_probe_worker is not None:
-            self._playlist_probe_worker.cancel()
             self._playlist_probe_worker.quit()
-            self._playlist_probe_worker.wait()
+            if not join_worker(self._playlist_probe_worker, timeout_ms=_PROBE_JOIN_TIMEOUT_MS):
+                logger.warning(
+                    "Lingering YouTube playlist probe worker did not stop within %d ms; dropping it anyway",
+                    _PROBE_JOIN_TIMEOUT_MS,
+                )
             self._playlist_probe_worker = None
         self._playlist_probe_items = []
         if self._playlist_resolve_worker is not None:
             self._playlist_resolve_worker.quit()
-            self._playlist_resolve_worker.wait()
+            if not join_worker(self._playlist_resolve_worker, timeout_ms=_PROBE_JOIN_TIMEOUT_MS):
+                logger.warning(
+                    "Lingering YouTube playlist resolve worker did not stop within %d ms; dropping it anyway",
+                    _PROBE_JOIN_TIMEOUT_MS,
+                )
             self._playlist_resolve_worker = None
 
     # ------------------------------------------------------------------

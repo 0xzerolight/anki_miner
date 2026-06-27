@@ -13,6 +13,7 @@ sources are purely additive, so a freshly imported source is simply *appended*
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -21,13 +22,21 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, FreqEntry
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
 from anki_miner.gui.workers.frequency_import_worker import FrequencyImportWorker
 from anki_miner.utils.i18n import tr_format
 
+logger = logging.getLogger(__name__)
+
 # Suffixes the per-source dir may hold for the persisted original input,
 # checked in order when locating the file to re-import from.
 _SOURCE_COPY_SUFFIXES = (".zip", ".csv", ".tsv", ".txt")
+
+# Bounded join for the predecessor import worker before its reference is
+# dropped. A stuck worker must never freeze the GUI thread; on timeout we log
+# and proceed (mirrors ``MiningTabBase._teardown_previous_run``).
+_IMPORT_JOIN_TIMEOUT_MS = 5000
 
 
 class FrequencyImportFlow:
@@ -108,8 +117,11 @@ class FrequencyImportFlow:
 
         worker = FrequencyImportWorker.for_source(Path(chosen), dest_root)
         prev = self._active_import_worker
-        if prev is not None and prev.isRunning():
-            prev.wait()
+        if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
+            logger.warning(
+                "Lingering frequency import worker did not stop within %d ms; replacing it anyway",
+                _IMPORT_JOIN_TIMEOUT_MS,
+            )
         self._active_import_worker = worker
         self._set_import_buttons_enabled(False)
 
@@ -187,8 +199,11 @@ class FrequencyImportFlow:
 
         worker = FrequencyImportWorker.for_source(source_file, dest_root, source_id=source_id)
         prev = self._active_import_worker
-        if prev is not None and prev.isRunning():
-            prev.wait()
+        if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
+            logger.warning(
+                "Lingering frequency import worker did not stop within %d ms; replacing it anyway",
+                _IMPORT_JOIN_TIMEOUT_MS,
+            )
         self._active_import_worker = worker
         self._set_import_buttons_enabled(False)
 
