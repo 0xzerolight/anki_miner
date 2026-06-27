@@ -20,6 +20,7 @@ from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
+from anki_miner.gui.utils.stall_watchdog import install_stall_watchdog
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
@@ -492,6 +493,13 @@ def main():
     # YouTube tab's episode processor is built even lazier — on first
     # Mine click — because the dictionary chain dominates startup cost.
     window.show()
+
+    # Install the main-thread stall watchdog: a heartbeat QTimer + daemon
+    # monitor that logs a WARNING with the GUI stack whenever the event loop
+    # blocks past the threshold. Stored on the window so it isn't GC'd; its
+    # stop() is hooked into MainWindow.closeEvent (daemon=True is the backstop).
+    install_stall_watchdog(window)
+
     QTimer.singleShot(0, stats_service.load)
 
     # Pre-warm the shared MeCab tagger (get_shared_tagger) AND the dictionary

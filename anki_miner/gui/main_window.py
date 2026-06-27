@@ -754,6 +754,15 @@ class MainWindow(QMainWindow):
         Args:
             event: Close event
         """
+        # Stop the main-thread stall watchdog first so its monitor thread and
+        # heartbeat timer don't outlive shutdown. The monitor is daemon=True as
+        # a backstop, but stopping it cleanly avoids a stray WARNING if a worker
+        # join briefly blocks the GUI thread during close. Guarded: it may be
+        # absent in tests/headless paths that never ran app.main()'s installer.
+        watchdog = getattr(self, "_stall_watchdog", None)
+        if watchdog is not None:
+            watchdog.stop()
+
         laggards = self.background_tasks.shutdown(self.tabs)
         if laggards:
             self.background_tasks.defer_close(event, laggards)
