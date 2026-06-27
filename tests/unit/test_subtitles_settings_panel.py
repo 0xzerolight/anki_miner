@@ -656,3 +656,129 @@ def test_inflight_reload_redispatches_latest(qtbot, tmp_path, monkeypatch):
 
     # The trailing (latest) config's models_root must have been probed.
     assert root_b in seen_models
+
+
+# ---------------------------------------------------------------------------
+# Silence-removal (VAD) pack download section
+# ---------------------------------------------------------------------------
+
+
+def _patch_vad(monkeypatch, *, ort_present: bool, supported: bool, installed: bool = False) -> None:
+    """Control onnxruntime importability + pack support/install for the panel."""
+    import importlib.util as iu
+
+    real_find_spec = iu.find_spec
+
+    def fake_find_spec(name, *a, **kw):
+        if name == "onnxruntime":
+            return object() if ort_present else None
+        return real_find_spec(name, *a, **kw)
+
+    monkeypatch.setattr(iu, "find_spec", fake_find_spec)
+    monkeypatch.setattr(f"{_PANEL_MOD}.onnx_pack_installer.onnx_pack_supported", lambda: supported)
+    monkeypatch.setattr(f"{_PANEL_MOD}.onnx_pack_installer.is_installed", lambda root: installed)
+
+
+def test_vad_button_hidden_when_onnxruntime_present(qtbot, tmp_path, monkeypatch):
+    _patch_vad(monkeypatch, ort_present=True, supported=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel.download_vad_button.isVisibleTo(panel)
+    assert panel._vad_guidance_label.isVisibleTo(panel)
+
+
+def test_vad_button_enabled_when_supported_not_installed(qtbot, tmp_path, monkeypatch):
+    _patch_vad(monkeypatch, ort_present=False, supported=True, installed=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert panel.download_vad_button.isEnabled()
+    assert "not installed" in panel.vad_status_label.text().lower()
+
+
+def test_vad_status_installed_when_present_on_disk(qtbot, tmp_path, monkeypatch):
+    _patch_vad(monkeypatch, ort_present=False, supported=True, installed=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert panel.download_vad_button.isEnabled()
+    assert "installed" in panel.vad_status_label.text().lower()
+
+
+def test_vad_button_hidden_when_unsupported(qtbot, tmp_path, monkeypatch):
+    _patch_vad(monkeypatch, ort_present=False, supported=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel.download_vad_button.isEnabled()
+    assert not panel.download_vad_button.isVisibleTo(panel)
+    assert panel._vad_guidance_label.isVisibleTo(panel)
+
+
+def test_vad_download_click_emits_when_supported(qtbot, tmp_path, monkeypatch):
+    _patch_vad(monkeypatch, ort_present=False, supported=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    received: list[None] = []
+    panel.vad_pack_download_requested.connect(lambda: received.append(None))
+    panel.download_vad_button.click()
+
+    assert len(received) == 1
+    assert not panel.download_vad_button.isEnabled()  # disabled in flight
+
+
+def test_vad_download_click_noop_when_unsupported(qtbot, tmp_path, monkeypatch):
+    _patch_vad(monkeypatch, ort_present=False, supported=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    received: list[None] = []
+    panel.vad_pack_download_requested.connect(lambda: received.append(None))
+    panel._on_vad_pack_download_clicked()
+    _wait_state_settled(qtbot, panel)
+
+    assert received == []
+
+
+def test_vad_in_flight_guard_lifecycle(qtbot, tmp_path, monkeypatch):
+    """Click disables + flags in flight; a refresh mid-flight keeps it disabled;
+    notify clears it."""
+    _patch_vad(monkeypatch, ort_present=False, supported=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    panel.download_vad_button.click()
+    assert panel._vad_pack_active
+    assert not panel.download_vad_button.isEnabled()
+
+    # A reload (config refresh) mid-download must keep it disabled.
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    assert not panel.download_vad_button.isEnabled()
+
+    panel.notify_vad_pack_download_finished(tmp_path)
+    _wait_state_settled(qtbot, panel)
+    assert not panel._vad_pack_active
+    assert panel.download_vad_button.isEnabled()
+
+
+def test_set_vad_pack_status_sets_label(qtbot):
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_vad_pack_status("Downloading…")
+    assert panel.vad_status_label.text() == "Downloading…"

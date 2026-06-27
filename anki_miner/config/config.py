@@ -363,6 +363,11 @@ class AnkiMinerConfig:
     # Managed directory for downloaded cuDNN/cuBLAS shared libs (preloaded before
     # a CUDA build); derived from ANKI_MINER_HOME, never user-configurable directly.
     cuda_libs_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "cuda_libs")
+    # Managed directory for the in-app-downloaded onnxruntime pack that enables
+    # Silero VAD (silence removal) in the bundle, where onnxruntime is stripped to
+    # stay slim. Extracted onnxruntime/ tree is added to sys.path on demand.
+    # Derived from ANKI_MINER_HOME, never user-configurable directly.
+    onnx_pack_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "onnx_pack")
 
     # Managed directory for in-app-downloaded executables (e.g. the alass
     # subtitle-alignment binary); derived from ANKI_MINER_HOME, never
