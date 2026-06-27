@@ -873,3 +873,99 @@ def test_allocate_workspace_tightens_preexisting_dir(make_worker, youtube_config
         import shutil
 
         shutil.rmtree(workspace, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# processor_factory path — construction deferred to the worker thread
+# ---------------------------------------------------------------------------
+
+
+def test_factory_path_builds_processor_inside_run(qapp, youtube_config):
+    """Given processor_factory and processor=None, run() builds the processor
+    before mining, calls it, and curation_processor returns it."""
+    built = MagicMock(name="EpisodeProcessor")
+    built.process_youtube_url = MagicMock(return_value=MagicMock(name="ProcessingResult"))
+    calls: list[int] = []
+
+    def factory():
+        calls.append(1)
+        return built
+
+    worker = YouTubeQueueWorker(
+        processor=None,
+        config=youtube_config,
+        items=[_make_item()],
+        curation_callback=None,
+        preview_mode=False,
+        processor_factory=factory,
+    )
+    assert worker.curation_processor is None
+
+    caps = _connect_all(worker)
+    worker.run()
+
+    assert calls == [1]
+    assert worker.curation_processor is built
+    built.process_youtube_url.assert_called_once()
+    assert len(caps["queue_finished"].calls) == 1
+
+
+def test_factory_path_error_emits_error_and_queue_finished(qapp, youtube_config):
+    """A factory that raises emits error + queue_finished and mines nothing."""
+
+    def bad_factory():
+        raise RuntimeError("registry scan failed")
+
+    worker = YouTubeQueueWorker(
+        processor=None,
+        config=youtube_config,
+        items=[_make_item()],
+        curation_callback=None,
+        preview_mode=False,
+        processor_factory=bad_factory,
+    )
+    errors: list[str] = []
+    worker.error.connect(errors.append)
+    caps = _connect_all(worker)
+
+    worker.run()
+
+    assert len(errors) == 1
+    assert "registry scan failed" in errors[0]
+    assert caps["started"].calls == []
+    assert len(caps["queue_finished"].calls) == 1
+
+
+def test_prebuilt_processor_path_unchanged(make_worker, mock_processor):
+    """When a processor is supplied directly, curation_processor returns it
+    and process_youtube_url is driven by that instance."""
+    worker = make_worker()
+    worker.run()
+
+    mock_processor.process_youtube_url.assert_called_once()
+    assert worker.curation_processor is mock_processor
+
+
+def test_both_processor_and_factory_raises(qapp, mock_processor, youtube_config):
+    """Supplying both processor and processor_factory raises ValueError."""
+    with pytest.raises(ValueError, match="not both"):
+        YouTubeQueueWorker(
+            processor=mock_processor,
+            config=youtube_config,
+            items=[_make_item()],
+            curation_callback=None,
+            preview_mode=False,
+            processor_factory=lambda: mock_processor,
+        )
+
+
+def test_neither_processor_nor_factory_raises(qapp, youtube_config):
+    """Supplying neither processor nor processor_factory raises ValueError."""
+    with pytest.raises(ValueError, match="Either processor or processor_factory"):
+        YouTubeQueueWorker(
+            processor=None,
+            config=youtube_config,
+            items=[_make_item()],
+            curation_callback=None,
+            preview_mode=False,
+        )

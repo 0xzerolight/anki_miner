@@ -441,17 +441,25 @@ class TestDeferredProcessor:
             qtbot.addWidget(widget)
             try:
                 # Drive _start_run via the public Mine path: add a ready item,
-                # click Mine, and assert the lazy rebuild happened with stats.
+                # click Mine, and assert the build is deferred to the worker via a
+                # factory rather than run on the GUI thread.
                 widget.url_edit.setText("https://youtu.be/abc")
                 widget._on_add_clicked()
                 item = widget._queue.all_items()[-1]
                 widget._add_flow._on_probe_done(item, _make_video_info())
                 widget._on_mine_clicked()
 
+                # GUI thread did NOT build the processor — a factory was passed.
+                assert mock_create.call_count == 0
+                assert q_cls.call_args.kwargs["processor"] is None
+                factory = q_cls.call_args.kwargs["processor_factory"]
+                assert factory is not None
+
+                # Invoking the factory (as run() would) builds via the service
+                # factory, threading stats_service through.
+                assert factory() is built_processor
                 assert mock_create.call_count == 1
-                kwargs = mock_create.call_args.kwargs
-                assert kwargs["stats_service"] is sentinel_stats
-                assert widget._processor is built_processor
+                assert mock_create.call_args.kwargs["stats_service"] is sentinel_stats
             finally:
                 widget.deleteLater()
 
@@ -489,13 +497,18 @@ class TestDeferredProcessor:
                 assert widget._processor is None
                 assert widget._stats_service is sentinel_stats
 
-                # The next _start_run rebuilds and threads stats_service through.
+                # The next _start_run defers the build to the worker via a
+                # factory that still threads stats_service through.
                 widget.url_edit.setText("https://youtu.be/abc")
                 widget._on_add_clicked()
                 item = widget._queue.all_items()[-1]
                 widget._add_flow._on_probe_done(item, _make_video_info())
                 widget._on_mine_clicked()
 
+                assert mock_create.call_count == 0
+                factory = q_cls.call_args.kwargs["processor_factory"]
+                assert factory is not None
+                factory()
                 assert mock_create.call_count == 1
                 assert mock_create.call_args.kwargs["stats_service"] is sentinel_stats
             finally:
@@ -556,6 +569,79 @@ class TestRunStartup:
         assert not tab.preview_button.isEnabled()
         assert not tab.mine_button.isEnabled()
         assert not tab.stop_button.isHidden()
+
+
+class TestOffThreadProcessorBuild:
+    """No cached processor → factory passed to worker; built processor cached back."""
+
+    def test_no_cached_processor_passes_factory_not_prebuilt(self, qtbot, test_config):
+        cfg = replace(test_config, youtube_max_duration_s=7200, youtube_cookies_from_browser=None)
+        with (
+            patch("anki_miner.gui.widgets.youtube_playlist_flow.YouTubeProbeWorker", autospec=False) as probe_cls,
+            patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker", autospec=False) as q_cls,
+            patch("anki_miner.gui.widgets.youtube_tab.create_episode_processor") as mock_create,
+        ):
+            probe_cls.side_effect = lambda *a, **kw: MagicMock(name="ProbeWorker")
+            q_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
+            widget = YouTubeTab(
+                config=cfg,
+                processor=None,
+                fetcher=MagicMock(name="Fetcher"),
+                presenter=MagicMock(name="Presenter"),
+            )
+            qtbot.addWidget(widget)
+            widget._probe_worker_cls = probe_cls  # type: ignore[attr-defined]
+            try:
+                _add_ready_item(widget)
+                widget._on_mine_clicked()
+
+                assert q_cls.call_args.kwargs["processor"] is None
+                assert q_cls.call_args.kwargs["processor_factory"] is not None
+                mock_create.assert_not_called()
+            finally:
+                widget.deleteLater()
+
+    def test_cached_processor_passes_prebuilt_no_factory(self, tab):
+        _add_ready_item(tab)
+        queue_cls = tab._queue_worker_cls
+        tab._on_mine_clicked()
+
+        assert queue_cls.call_args.kwargs["processor"] is tab._processor
+        assert queue_cls.call_args.kwargs["processor_factory"] is None
+
+    def test_worker_finished_caches_built_processor_back(self, qtbot, test_config):
+        cfg = replace(test_config, youtube_max_duration_s=7200, youtube_cookies_from_browser=None)
+        with (
+            patch("anki_miner.gui.widgets.youtube_playlist_flow.YouTubeProbeWorker", autospec=False) as probe_cls,
+            patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker", autospec=False) as q_cls,
+        ):
+            probe_cls.side_effect = lambda *a, **kw: MagicMock(name="ProbeWorker")
+            q_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
+            widget = YouTubeTab(
+                config=cfg,
+                processor=None,
+                fetcher=MagicMock(name="Fetcher"),
+                presenter=MagicMock(name="Presenter"),
+            )
+            qtbot.addWidget(widget)
+            widget._probe_worker_cls = probe_cls  # type: ignore[attr-defined]
+            try:
+                _add_ready_item(widget)
+                widget._on_mine_clicked()
+                built = MagicMock(name="BuiltProcessor")
+                widget.worker_thread.curation_processor = built  # type: ignore[union-attr]
+
+                widget._on_worker_finished()
+
+                assert widget._processor is built
+                assert widget.worker_thread is None
+            finally:
+                widget.deleteLater()
+
+    def test_worker_finished_keeps_existing_cached_processor(self, tab):
+        original = tab._processor
+        tab._on_worker_finished()
+        assert tab._processor is original
 
 
 class TestStopAll:
