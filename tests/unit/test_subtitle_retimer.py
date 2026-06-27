@@ -135,6 +135,23 @@ def cfg() -> MagicMock:
     return _make_config()
 
 
+@pytest.fixture(autouse=True)
+def stub_extractor():
+    """Stub MediaExtractorService so audio pre-extraction never spawns ffmpeg.
+
+    By default ``extract_full_audio`` returns False, so :func:`retime_subtitle`
+    falls back to the raw video as alass's reference — keeping the existing
+    argument/temp/env/cancel tests fast and binary-free. Tests that exercise the
+    WAV-reference path flip ``return_value`` to True via the yielded mock.
+
+    Patches the lazily-imported symbol on the media_extractor module so the
+    in-function ``from ... import MediaExtractorService`` picks up the mock.
+    """
+    with patch("anki_miner.services.media_extractor.MediaExtractorService") as mock_cls:
+        mock_cls.return_value.extract_full_audio.return_value = False
+        yield mock_cls
+
+
 # ---------------------------------------------------------------------------
 # Patch targets
 # ---------------------------------------------------------------------------
@@ -588,6 +605,102 @@ class TestCancellationPosix:
 # ---------------------------------------------------------------------------
 # Test: AlassNotFoundError
 # ---------------------------------------------------------------------------
+
+
+class TestAlassFlags:
+    """--disable-fps-guessing / --no-split flag wiring."""
+
+    def _capture(self, cfg: MagicMock, video: Path, in_sub: Path, out_sub: Path, **kwargs: Any) -> list[str]:
+        captured: list[list[str]] = []
+
+        def _factory(cmd: list[str], **_: Any) -> _FakePopen:
+            captured.append(cmd)
+            Path(cmd[-1]).touch()
+            return _FakePopen([], returncode=0)
+
+        with (
+            patch(_RESOLVE_ALASS, return_value="alass"),
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(_POPEN, side_effect=_factory),
+        ):
+            assert retime_subtitle(cfg, video, in_sub, out_sub, **kwargs) is True
+        return captured[0]
+
+    def test_fps_guessing_disabled_by_default(self, video: Path, in_sub: Path, out_sub: Path, cfg: MagicMock) -> None:
+        cmd = self._capture(cfg, video, in_sub, out_sub)
+        assert "--disable-fps-guessing" in cmd
+        assert "--no-split" not in cmd
+
+    def test_fps_guessing_flag_absent_when_enabled(
+        self, video: Path, in_sub: Path, out_sub: Path, cfg: MagicMock
+    ) -> None:
+        cmd = self._capture(cfg, video, in_sub, out_sub, disable_fps_guessing=False)
+        assert "--disable-fps-guessing" not in cmd
+
+    def test_no_split_flag_present_when_requested(
+        self, video: Path, in_sub: Path, out_sub: Path, cfg: MagicMock
+    ) -> None:
+        cmd = self._capture(cfg, video, in_sub, out_sub, no_split=True)
+        assert "--no-split" in cmd
+
+
+class TestAudioReference:
+    """Pre-extraction of the chosen audio track to a WAV alass reference."""
+
+    def test_wav_used_as_reference_and_cleaned_up(
+        self, video: Path, in_sub: Path, out_sub: Path, cfg: MagicMock, stub_extractor: MagicMock
+    ) -> None:
+        """When extraction succeeds, alass's reference is the temp WAV, removed after."""
+        stub_extractor.return_value.extract_full_audio.return_value = True
+        captured: list[list[str]] = []
+
+        def _factory(cmd: list[str], **_: Any) -> _FakePopen:
+            captured.append(cmd)
+            Path(cmd[-1]).touch()
+            return _FakePopen([], returncode=0)
+
+        with (
+            patch(_RESOLVE_ALASS, return_value="alass"),
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(_POPEN, side_effect=_factory),
+        ):
+            result = retime_subtitle(cfg, video, in_sub, out_sub, audio_track_override=2)
+
+        assert result is True
+        cmd = captured[0]
+        reference = cmd[-3]
+        assert reference != str(video)
+        assert reference.endswith(".retime-ref.wav")
+        # The temp WAV is removed after the run.
+        assert not Path(reference).exists()
+        # The chosen track index is forwarded to extraction.
+        _, kwargs = stub_extractor.return_value.extract_full_audio.call_args
+        assert kwargs["track_override"] == 2
+
+    def test_falls_back_to_video_when_extraction_fails(
+        self, video: Path, in_sub: Path, out_sub: Path, cfg: MagicMock, stub_extractor: MagicMock
+    ) -> None:
+        """Extraction returning False → alass aligns against the raw video."""
+        stub_extractor.return_value.extract_full_audio.return_value = False
+        captured: list[list[str]] = []
+
+        def _factory(cmd: list[str], **_: Any) -> _FakePopen:
+            captured.append(cmd)
+            Path(cmd[-1]).touch()
+            return _FakePopen([], returncode=0)
+
+        with (
+            patch(_RESOLVE_ALASS, return_value="alass"),
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(_POPEN, side_effect=_factory),
+        ):
+            result = retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert result is True
+        assert captured[0][-3] == str(video)
 
 
 class TestAlassNotFoundError:
