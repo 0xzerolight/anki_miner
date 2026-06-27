@@ -30,6 +30,8 @@ from anki_miner.utils.i18n import tr_format
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from PyQt6.QtCore import QThread
+
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
@@ -40,6 +42,11 @@ logger = logging.getLogger(__name__)
 # leak the old run's handles rather than close them under a live thread (see
 # _teardown_previous_run).
 _WORKER_JOIN_TIMEOUT_MS = 5000
+
+# Per-leaked-run bounded join at app close. A leaked run's worker is rare and
+# already orphaned; we give it one short, capped join before closing its
+# processor, never an unbounded wait that could hang shutdown.
+_LEAKED_RUN_CLOSE_JOIN_MS = 2000
 
 
 class MiningTabBase(QWidget):
@@ -169,6 +176,11 @@ class MiningTabBase(QWidget):
         Leaking one run's handles is strictly safer; the dropped
         ``self.worker_thread`` reference lets the orphaned worker self-finish.
         """
+        # Sweep any processors leaked by a prior timed-out teardown whose worker
+        # has since finished (see _reap_leaked_runs). Doing this at the top means
+        # each new run cleans up its predecessors' leaks, bounding accumulation
+        # over a long session of repeatedly-stuck workers.
+        self._reap_leaked_runs()
         if self.worker_thread is None:  # type: ignore[attr-defined]
             return
         # Defensively release any open curation dialog and poison the gate
@@ -195,12 +207,65 @@ class MiningTabBase(QWidget):
         if joined and old_processor is not None:
             with contextlib.suppress(Exception):
                 old_processor.close()
+        elif not joined and old_processor is not None:
+            # Timed out: the worker may still be mid-process_episode using the
+            # processor's sqlite/Session, so closing now can segfault on Windows.
+            # Record the (worker, processor) pair so _reap_leaked_runs can close
+            # it later, once the orphaned worker has actually finished — instead
+            # of leaking those handles for the rest of the session.
+            self._leaked_runs.append((self.worker_thread, old_processor))  # type: ignore[attr-defined]
         # Re-arm the gate for the upcoming run. The predecessor is now joined
         # (or timed-out + cancelled, so it bails before re-reaching curation)
         # and self.worker_thread is reassigned by the caller right after this
         # returns, so resetting here cannot resurrect the old worker's dialog.
         if hasattr(self, "_curation_event"):
             self._reset_curation_gate()
+
+    @property
+    def _leaked_runs(self) -> list[tuple[QThread, EpisodeProcessor]]:
+        """Lazily-created list of (worker, processor) pairs leaked at join timeout.
+
+        Each entry is an old run whose bounded join in
+        :meth:`_teardown_previous_run` timed out, so its processor's sqlite
+        handles + ``requests.Session`` could not be safely closed under the still-
+        live worker. :meth:`_reap_leaked_runs` closes them once the orphaned
+        worker has finished. A property (not an ``__init__`` attribute) so the
+        base works for subclasses and test fakes that bypass ``__init__``.
+        """
+        runs = getattr(self, "_leaked_runs_store", None)
+        if runs is None:
+            runs = []
+            self._leaked_runs_store = runs
+        return runs
+
+    @_leaked_runs.setter
+    def _leaked_runs(self, value: list) -> None:
+        self._leaked_runs_store = value
+
+    def _reap_leaked_runs(self) -> None:
+        """Close processors leaked by timed-out teardowns whose worker has finished.
+
+        Iterates :attr:`_leaked_runs`; for each ``(worker, processor)`` whose
+        worker is no longer running, closes the processor (suppressing any error)
+        and drops the entry. Workers still running are left for a later sweep —
+        closing a processor under a live worker is the exact concurrent-sqlite-
+        close hazard the leak deferral avoids. Called at the top of every
+        :meth:`_teardown_previous_run` and from :meth:`shutdown`.
+        """
+        survivors: list[tuple[QThread, EpisodeProcessor]] = []
+        for worker, processor in self._leaked_runs:
+            try:
+                still_running = worker.isRunning() and not worker.wait(0)
+            except RuntimeError:
+                # Underlying C++ object already deleted — the worker is gone, so
+                # the processor is safe to close.
+                still_running = False
+            if still_running:
+                survivors.append((worker, processor))
+                continue
+            with contextlib.suppress(Exception):
+                processor.close()
+        self._leaked_runs = survivors
 
     # ------------------------------------------------------------------
     # Known/ignore list (Issue #42)
@@ -458,10 +523,28 @@ class MiningTabBase(QWidget):
         precise (cancel → poison, in that order).  Subclasses that add no extra
         teardown may rely on this base implementation directly.
         """
-        if not hasattr(self, "_curation_event"):
-            return
-        self._cancel_active_curation_dialog()
-        self._poison_curation_gate()
+        if hasattr(self, "_curation_event"):
+            self._cancel_active_curation_dialog()
+            self._poison_curation_gate()
+        # App-close sweep of leaked runs from timed-out teardowns. First reap any
+        # whose worker has already finished, then give each STILL-running leaked
+        # worker a single bounded join (never an unbounded wait that could hang
+        # shutdown) and close its processor so its sqlite/Session handles are
+        # released rather than orphaned for process lifetime.
+        self._reap_leaked_runs()
+        for worker, processor in list(self._leaked_runs):
+            cancel = getattr(worker, "cancel", None)
+            if callable(cancel):
+                with contextlib.suppress(RuntimeError):
+                    cancel()
+            joined = False
+            with contextlib.suppress(RuntimeError):
+                joined = bool(worker.wait(_LEAKED_RUN_CLOSE_JOIN_MS))
+            if joined:
+                with contextlib.suppress(Exception):
+                    processor.close()
+                with contextlib.suppress(ValueError):
+                    self._leaked_runs.remove((worker, processor))
 
     def _cancel_active_curation_dialog(self) -> None:
         """Reject any open curation dialog so the worker doesn't hang on cancel.

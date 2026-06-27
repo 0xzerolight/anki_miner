@@ -244,3 +244,151 @@ class TestTeardownDoesNotDeadlockWithGateParkedWorker:
 
         # Must not raise
         tab._teardown_previous_run("test")
+
+
+# ---------------------------------------------------------------------------
+# Fix 2: handle-leak reaper for the join-timeout leak
+# ---------------------------------------------------------------------------
+
+
+class _LeakWorker(MagicMock):
+    """Fake worker whose join times out, then later reports finished.
+
+    ``wait(timeout)`` returns ``timeout_result`` (default False = still running);
+    flipping ``finished_flag`` makes ``isRunning()`` False and ``wait(0)`` True,
+    simulating the orphaned worker self-finishing.
+    """
+
+    def __init__(self, processor, *, timeout_result: bool = False) -> None:
+        super().__init__(name="leak_worker")
+        self.curation_processor = processor
+        self.cancel = MagicMock()
+        self.finished = MagicMock()
+        self._finished_flag = False
+        self.isRunning = lambda: not self._finished_flag
+
+        def _wait(timeout_ms: int = 0) -> bool:
+            if self._finished_flag:
+                return True
+            return timeout_result
+
+        self.wait = _wait
+
+    def mark_finished(self) -> None:
+        self._finished_flag = True
+
+
+def _processor_with_close_spy() -> MagicMock:
+    proc = MagicMock(name="processor")
+    proc.close = MagicMock()
+    return proc
+
+
+class TestLeakedRunReaper:
+    """Timed-out joins leak the processor; the reaper closes it once safe."""
+
+    def test_timeout_does_not_close_processor_and_records_leak(self, qapp, qtbot):
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        proc = _processor_with_close_spy()
+        worker = _LeakWorker(proc, timeout_result=False)
+        tab.worker_thread = worker
+
+        tab._teardown_previous_run("test")
+
+        # Join timed out → processor must NOT be closed.
+        proc.close.assert_not_called()
+        # The (worker, processor) pair is recorded for later reaping.
+        assert (worker, proc) in tab._leaked_runs
+
+    def test_reaper_closes_processor_once_worker_finished(self, qapp, qtbot):
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        proc = _processor_with_close_spy()
+        worker = _LeakWorker(proc, timeout_result=False)
+        tab.worker_thread = worker
+        tab._teardown_previous_run("test")
+        assert (worker, proc) in tab._leaked_runs
+
+        # Worker still running → reaper is a no-op.
+        tab._reap_leaked_runs()
+        proc.close.assert_not_called()
+        assert (worker, proc) in tab._leaked_runs
+
+        # Worker finishes → reaper closes the processor and drops the entry.
+        worker.mark_finished()
+        tab._reap_leaked_runs()
+        proc.close.assert_called_once()
+        assert (worker, proc) not in tab._leaked_runs
+
+    def test_reaper_runs_at_top_of_teardown(self, qapp, qtbot):
+        """A new run sweeps prior leaks via the reaper at the top of teardown."""
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        # Stage a finished leaked run from a prior teardown.
+        proc = _processor_with_close_spy()
+        leaked = _LeakWorker(proc, timeout_result=False)
+        leaked.mark_finished()
+        tab._leaked_runs = [(leaked, proc)]
+
+        # A fresh, already-finished worker for this teardown.
+        fresh = _fake_worker(running=False, wait_result=True)
+        tab.worker_thread = fresh
+        tab._teardown_previous_run("test")
+
+        # The prior leak was reaped at the top of teardown.
+        proc.close.assert_called_once()
+        assert (leaked, proc) not in tab._leaked_runs
+
+    def test_joined_path_closes_immediately_no_leak(self, qapp, qtbot):
+        """The normal joined path still closes the processor immediately, no leak."""
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        proc = _processor_with_close_spy()
+        worker = _LeakWorker(proc, timeout_result=True)  # wait() returns True = joined
+        tab.worker_thread = worker
+
+        tab._teardown_previous_run("test")
+
+        proc.close.assert_called_once()
+        # Nothing leaked.
+        assert tab._leaked_runs == []
+        # Reaper after the fact must not double-close.
+        tab._reap_leaked_runs()
+        proc.close.assert_called_once()
+
+    def test_reaper_suppresses_close_exception(self, qapp, qtbot):
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        proc = MagicMock(name="processor")
+        proc.close.side_effect = RuntimeError("boom")
+        worker = _LeakWorker(proc, timeout_result=False)
+        tab.worker_thread = worker
+        tab._teardown_previous_run("test")
+
+        worker.mark_finished()
+        # Must not raise; entry dropped despite the close raising.
+        tab._reap_leaked_runs()
+        assert (worker, proc) not in tab._leaked_runs
+
+    def test_none_processor_at_timeout_not_recorded(self, qapp, qtbot):
+        """A timed-out worker with no processor is not added to _leaked_runs."""
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        worker = _LeakWorker(None, timeout_result=False)
+        tab.worker_thread = worker
+        tab._teardown_previous_run("test")
+
+        assert tab._leaked_runs == []
