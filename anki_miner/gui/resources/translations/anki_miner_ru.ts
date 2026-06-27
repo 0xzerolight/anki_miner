@@ -694,6 +694,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
+        <source>Loading…</source>
+        <translation>Загрузка…</translation>
+    </message>
+    <message>
         <source>Active Audio Sources</source>
         <translation>Активные источники аудио</translation>
     </message>
@@ -1078,6 +1082,378 @@ Total cards created: %2</source>
         <translation>Пакетная обработка завершена</translation>
     </message>
 </context><context>
+    <name>Capabilities</name>
+    <message>
+        <source>Mining workflows</source>
+        <translation>Процессы майнинга</translation>
+    </message>
+    <message>
+        <source>Filtering: what gets mined</source>
+        <translation>Фильтрация: что майнится</translation>
+    </message>
+    <message>
+        <source>Dictionaries, frequency &amp; pitch</source>
+        <translation>Словари, частотность и тональное ударение</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>Аудио</translation>
+    </message>
+    <message>
+        <source>Media: clips &amp; screenshots</source>
+        <translation>Медиа: клипы и скриншоты</translation>
+    </message>
+    <message>
+        <source>Anki cards</source>
+        <translation>Карточки Anki</translation>
+    </message>
+    <message>
+        <source>Appearance &amp; language</source>
+        <translation>Внешний вид и язык</translation>
+    </message>
+    <message>
+        <source>Mine a single episode</source>
+        <translation>Майнинг одного эпизода</translation>
+    </message>
+    <message>
+        <source>Mine vocabulary from one video paired with its subtitle file.</source>
+        <translation>Майньте лексику из одного видео в паре с его файлом субтитров.</translation>
+    </message>
+    <message>
+        <source>Batch-mine a whole folder</source>
+        <translation>Пакетный майнинг целой папки</translation>
+    </message>
+    <message>
+        <source>Queue an entire folder of episodes and mine them in one run.</source>
+        <translation>Поставьте в очередь целую папку с эпизодами и намайньте их за один запуск.</translation>
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation>Собрать колоду по % покрытия</translation>
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.</source>
+        <translation>Соберите колоду, упорядоченную по частотности, которая покрывает выбранный процент всего корпуса.</translation>
+    </message>
+    <message>
+        <source>Build a complete deck (skip per-episode filters)</source>
+        <translation>Собрать полную колоду (пропустить поэпизодные фильтры)</translation>
+    </message>
+    <message>
+        <source>Deck Builder can bypass i+1/frequency/word-list filters and allow duplicates for full coverage.</source>
+        <translation>Конструктор колод может обходить фильтры i+1/частотности/списка слов и допускать дубликаты для полного покрытия.</translation>
+    </message>
+    <message>
+        <source>Mine from YouTube</source>
+        <translation>Майнинг из YouTube</translation>
+    </message>
+    <message>
+        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
+        <translation>Майньте напрямую из URL или плейлиста YouTube — локальные файлы не нужны.</translation>
+    </message>
+    <message>
+        <source>Mine from an audiobook</source>
+        <translation>Майнинг из аудиокниги</translation>
+    </message>
+    <message>
+        <source>Mine vocabulary from an audiobook or audio file using its transcript.</source>
+        <translation>Майньте лексику из аудиокниги или аудиофайла, используя его транскрипт.</translation>
+    </message>
+    <message>
+        <source>Generate or re-time subtitles</source>
+        <translation>Создать или пересинхронизировать субтитры</translation>
+    </message>
+    <message>
+        <source>Create subtitles from audio, or re-sync existing subtitles -- as a standalone tool.</source>
+        <translation>Создавайте субтитры из аудио или пересинхронизируйте существующие субтитры — как отдельный инструмент.</translation>
+    </message>
+    <message>
+        <source>View mining history &amp; stats</source>
+        <translation>Просмотр истории и статистики майнинга</translation>
+    </message>
+    <message>
+        <source>See what you've mined over time with history and statistics.</source>
+        <translation>Смотрите, что вы намайнили за всё время, с помощью истории и статистики.</translation>
+    </message>
+    <message>
+        <source>i+1 sentence mining</source>
+        <translation>Майнинг предложений i+1</translation>
+    </message>
+    <message>
+        <source>Mine only sentences that contain exactly one unknown word.</source>
+        <translation>Майньте только предложения, содержащие ровно одно неизвестное слово.</translation>
+    </message>
+    <message>
+        <source>Skip rare words (frequency cutoff)</source>
+        <translation>Пропускать редкие слова (порог частотности)</translation>
+    </message>
+    <message>
+        <source>Ignore words rarer than a chosen frequency rank so you learn common words first.</source>
+        <translation>Игнорируйте слова реже выбранного ранга частотности, чтобы сначала учить распространённые слова.</translation>
+    </message>
+    <message>
+        <source>Skip words you already know</source>
+        <translation>Пропускать уже известные вам слова</translation>
+    </message>
+    <message>
+        <source>Skip words already in your Anki collection or previously mined, via the known-words DB.</source>
+        <translation>Пропускайте слова, уже имеющиеся в вашей коллекции Anki или намайненные ранее, через БД известных слов.</translation>
+    </message>
+    <message>
+        <source>Exclude specific Anki decks from 'known'</source>
+        <translation>Исключить определённые колоды Anki из «известных»</translation>
+    </message>
+    <message>
+        <source>Stop chosen decks from counting as known so their words can still be mined.</source>
+        <translation>Не считайте выбранные колоды известными, чтобы их слова всё же можно было майнить.</translation>
+    </message>
+    <message>
+        <source>Mark words as known by hand</source>
+        <translation>Отметить слова как известные вручную</translation>
+    </message>
+    <message>
+        <source>Curate your own list of known words that is always applied and survives cache rebuilds.</source>
+        <translation>Составьте свой собственный список известных слов, который применяется всегда и сохраняется при перестроении кэша.</translation>
+    </message>
+    <message>
+        <source>Exclude kana-only words</source>
+        <translation>Исключить слова только из каны</translation>
+    </message>
+    <message>
+        <source>Drop words written only in hiragana or katakana -- useful for kanji-focused decks.</source>
+        <translation>Отбрасывайте слова, написанные только хираганой или катаканой — полезно для колод, ориентированных на кандзи.</translation>
+    </message>
+    <message>
+        <source>Blacklist / whitelist words</source>
+        <translation>Чёрный/белый список слов</translation>
+    </message>
+    <message>
+        <source>Force-skip or force-allow specific words with your own block/allow lists.</source>
+        <translation>Принудительно пропускайте или разрешайте определённые слова с помощью собственных списков блокировки/разрешения.</translation>
+    </message>
+    <message>
+        <source>Only words seen across N episodes</source>
+        <translation>Только слова, встреченные в N эпизодах</translation>
+    </message>
+    <message>
+        <source>In batch and deck builds, mine only words that appear in at least N episodes.</source>
+        <translation>В пакетных и колодных сборках майнить только слова, появляющиеся минимум в N эпизодах.</translation>
+    </message>
+    <message>
+        <source>Filter by part of speech</source>
+        <translation>Фильтр по части речи</translation>
+    </message>
+    <message>
+        <source>Choose which word types (nouns, verbs, particles, ...) are mined.</source>
+        <translation>Выберите, какие типы слов (существительные, глаголы, частицы, ...) майнятся.</translation>
+    </message>
+    <message>
+        <source>Limit sentence length</source>
+        <translation>Ограничить длину предложения</translation>
+    </message>
+    <message>
+        <source>Skip sentences that are too long or too short for a good card.</source>
+        <translation>Пропускайте предложения, слишком длинные или слишком короткие для хорошей карточки.</translation>
+    </message>
+    <message>
+        <source>Avoid duplicate cards</source>
+        <translation>Избегать дубликатов карточек</translation>
+    </message>
+    <message>
+        <source>Skip making a second card for a word you've already mined this run.</source>
+        <translation>Не создавать вторую карточку для слова, которое вы уже намайнили за этот запуск.</translation>
+    </message>
+    <message>
+        <source>Strip junk from subtitles (regex)</source>
+        <translation>Удалять мусор из субтитров (regex)</translation>
+    </message>
+    <message>
+        <source>Remove names, music notes, or bracketed text from subtitles before parsing.</source>
+        <translation>Удаляйте имена, музыкальные ноты или текст в скобках из субтитров перед разбором.</translation>
+    </message>
+    <message>
+        <source>Use &amp; order multiple dictionaries</source>
+        <translation>Использовать и упорядочивать несколько словарей</translation>
+    </message>
+    <message>
+        <source>Add, reorder, and enable/disable the dictionaries used for definitions.</source>
+        <translation>Добавляйте, переупорядочивайте и включайте/отключайте словари, используемые для определений.</translation>
+    </message>
+    <message>
+        <source>Import a Yomitan dictionary</source>
+        <translation>Импортировать словарь Yomitan</translation>
+    </message>
+    <message>
+        <source>Add your own Yomitan-format dictionary zip as a definition source.</source>
+        <translation>Добавьте свой собственный zip-словарь формата Yomitan как источник определений.</translation>
+    </message>
+    <message>
+        <source>Jisho.org online fallback</source>
+        <translation>Онлайн-резерв Jisho.org</translation>
+    </message>
+    <message>
+        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <translation>Используйте Jisho.org как резерв, когда в ваших офлайн-словарях нет записи.</translation>
+    </message>
+    <message>
+        <source>Add frequency lists</source>
+        <translation>Добавить списки частотности</translation>
+    </message>
+    <message>
+        <source>Add and order multiple frequency lists used for ranking and the frequency field.</source>
+        <translation>Добавляйте и упорядочивайте несколько списков частотности, используемых для ранжирования и поля частотности.</translation>
+    </message>
+    <message>
+        <source>Pitch accent on cards</source>
+        <translation>Тональное ударение на карточках</translation>
+    </message>
+    <message>
+        <source>Add pitch-accent information to your cards (numeric or romaji).</source>
+        <translation>Добавляйте информацию о тональном ударении на ваши карточки (числовое или ромадзи).</translation>
+    </message>
+    <message>
+        <source>Word pronunciation audio</source>
+        <translation>Аудио произношения слова</translation>
+    </message>
+    <message>
+        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
+        <translation>Прикрепляйте к карточкам аудио произношения слова носителем из аудиопакетов, JPod101 или синтеза речи.</translation>
+    </message>
+    <message>
+        <source>Import local audio packs</source>
+        <translation>Импортировать локальные аудиопакеты</translation>
+    </message>
+    <message>
+        <source>Use your own local-audio-yomichan packs as a word-pronunciation source.</source>
+        <translation>Используйте свои собственные пакеты local-audio-yomichan как источник произношения слов.</translation>
+    </message>
+    <message>
+        <source>Sentence audio from the video</source>
+        <translation>Аудио предложения из видео</translation>
+    </message>
+    <message>
+        <source>Extract the spoken sentence as an audio clip; tune its format and bitrate.</source>
+        <translation>Извлекайте произнесённое предложение как аудиоклип; настраивайте его формат и битрейт.</translation>
+    </message>
+    <message>
+        <source>Screenshots on cards</source>
+        <translation>Скриншоты на карточках</translation>
+    </message>
+    <message>
+        <source>Capture a still frame from the scene to put on the card.</source>
+        <translation>Захватывайте неподвижный кадр из сцены, чтобы поместить его на карточку.</translation>
+    </message>
+    <message>
+        <source>Animated clips (GIF/WebP)</source>
+        <translation>Анимированные клипы (GIF/WebP)</translation>
+    </message>
+    <message>
+        <source>Use a short animated clip instead of a still screenshot.</source>
+        <translation>Используйте короткий анимированный клип вместо неподвижного скриншота.</translation>
+    </message>
+    <message>
+        <source>Pad or shift audio/screenshot timing</source>
+        <translation>Добавление отступов или сдвиг тайминга аудио/скриншота</translation>
+    </message>
+    <message>
+        <source>Add padding or an offset so audio and screenshots line up with the dialogue.</source>
+        <translation>Добавляйте отступ или смещение, чтобы аудио и скриншоты совпадали с диалогом.</translation>
+    </message>
+    <message>
+        <source>Map data to your note fields</source>
+        <translation>Сопоставить данные с полями вашей заметки</translation>
+    </message>
+    <message>
+        <source>Choose which note-type field receives the word, sentence, definition, audio, etc.</source>
+        <translation>Выберите, какое поле типа заметки получает слово, предложение, определение, аудио и т. д.</translation>
+    </message>
+    <message>
+        <source>Choose target deck &amp; note type</source>
+        <translation>Выбрать целевую колоду и тип заметки</translation>
+    </message>
+    <message>
+        <source>Pick which Anki deck and note type new cards are created in.</source>
+        <translation>Выберите, в какой колоде Anki и типе заметки создаются новые карточки.</translation>
+    </message>
+    <message>
+        <source>Card styling / CSS</source>
+        <translation>Стилизация карточек / CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS, synced to Anki automatically.</source>
+        <translation>Применяйте встроенный стиль карточек или собственный CSS, автоматически синхронизируемый с Anki.</translation>
+    </message>
+    <message>
+        <source>Furigana / readings</source>
+        <translation>Фуригана / чтения</translation>
+    </message>
+    <message>
+        <source>Include the reading (furigana) for the word on your cards.</source>
+        <translation>Включайте чтение (фуригану) слова на ваших карточках.</translation>
+    </message>
+    <message>
+        <source>Auto-tag mined notes</source>
+        <translation>Автоматически тегировать намайненные заметки</translation>
+    </message>
+    <message>
+        <source>Add tags to every note Anki Miner creates.</source>
+        <translation>Добавляйте теги к каждой заметке, создаваемой Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Themes, dark mode, fonts &amp; zoom</source>
+        <translation>Темы, тёмный режим, шрифты и масштаб</translation>
+    </message>
+    <message>
+        <source>Switch light/dark themes and adjust font scale and UI zoom.</source>
+        <translation>Переключайте светлые/тёмные темы и регулируйте масштаб шрифта и масштаб интерфейса.</translation>
+    </message>
+    <message>
+        <source>Change the app language</source>
+        <translation>Сменить язык приложения</translation>
+    </message>
+    <message>
+        <source>Switch the interface to another language.</source>
+        <translation>Переключите интерфейс на другой язык.</translation>
+    </message>
+    <message>
+        <source>Speech-to-text (no subtitles needed)</source>
+        <translation>Распознавание речи (субтитры не нужны)</translation>
+    </message>
+    <message>
+        <source>Generate subtitles from audio with a local Whisper model when none exist.</source>
+        <translation>Создавайте субтитры из аудио с помощью локальной модели Whisper, когда их нет.</translation>
+    </message>
+    <message>
+        <source>YouTube cookies / bot bypass</source>
+        <translation>Cookie YouTube / обход проверки на ботов</translation>
+    </message>
+    <message>
+        <source>Use your browser cookies to get past YouTube sign-in and bot checks.</source>
+        <translation>Используйте cookie вашего браузера, чтобы пройти вход в YouTube и проверки на ботов.</translation>
+    </message>
+    <message>
+        <source>YouTube quality &amp; playlist limits</source>
+        <translation>Качество YouTube и лимиты плейлистов</translation>
+    </message>
+    <message>
+        <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
+        <translation>Ограничивайте качество видео, максимальную длительность и количество загружаемых видео из плейлиста.</translation>
+    </message>
+</context><context>
+    <name>CudaPackDownloadWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading GPU libraries…</source>
+        <translation>Загрузка библиотек GPU…</translation>
+    </message>
+    <message>
+        <source>GPU libraries installed successfully.</source>
+        <translation>Библиотеки GPU успешно установлены.</translation>
+    </message>
+</context><context>
     <name>DeckBuilderTab</name>
     <message>
         <source>Input</source>
@@ -1441,6 +1817,10 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
+    <message>
+        <source>Loading…</source>
+        <translation>Загрузка…</translation>
+    </message>
     <message>
         <source>Select dictionary storage folder...</source>
         <translation>Выберите папку для хранения словарей...</translation>
@@ -2224,6 +2604,10 @@ The dictionary was not removed.</source>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
+        <source>Loading…</source>
+        <translation>Загрузка…</translation>
+    </message>
+    <message>
         <source>Active Frequency Sources</source>
         <translation>Активные источники частотности</translation>
     </message>
@@ -2458,6 +2842,10 @@ The frequency source was not removed.</source>
     <message>
         <source>Download Recommended Resources...</source>
         <translation>Загрузить рекомендуемые ресурсы...</translation>
+    </message>
+    <message>
+        <source>Find a Feature...</source>
+        <translation>Найти функцию...</translation>
     </message>
     <message>
         <source>Setup Wizard...</source>
@@ -2740,6 +3128,28 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>No fields could be auto-mapped.</source>
         <translation>Не удалось автоматически сопоставить ни одно поле.</translation>
+    </message>
+    <message>
+        <source>Checking note type fields...</source>
+        <translation>Проверка полей типа заметки...</translation>
+    </message>
+    <message>
+        <source>Could not check note type fields: </source>
+        <translation>Не удалось проверить поля типа заметки: </translation>
+    </message>
+</context><context>
+    <name>OnnxPackDownloadWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading silence-removal library…</source>
+        <translation>Загрузка библиотеки удаления тишины…</translation>
+    </message>
+    <message>
+        <source>Silence-removal library installed successfully.</source>
+        <translation>Библиотека удаления тишины успешно установлена.</translation>
     </message>
 </context><context>
     <name>PairPreviewDialog</name>
@@ -3490,6 +3900,14 @@ Details: %2</source>
         <translation>Звуковые дорожки не обнаружены. Убедитесь, что ffprobe установлен и файл содержит звук.</translation>
     </message>
     <message>
+        <source>Probe Failed</source>
+        <translation>Сбой проверки</translation>
+    </message>
+    <message>
+        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <translation>Не удалось обнаружить аудиодорожки. Убедитесь, что ffprobe установлен.</translation>
+    </message>
+    <message>
         <source>Missing Files</source>
         <translation>Отсутствуют файлы</translation>
     </message>
@@ -3502,20 +3920,20 @@ Details: %2</source>
         <translation>Файл субтитров не найден: %1</translation>
     </message>
     <message>
-        <source>Parse Error</source>
-        <translation>Ошибка разбора</translation>
-    </message>
-    <message>
-        <source>Failed to parse subtitles. Check the file format.</source>
-        <translation>Не удалось разобрать субтитры. Проверьте формат файла.</translation>
-    </message>
-    <message>
         <source>No Subtitles</source>
         <translation>Нет субтитров</translation>
     </message>
     <message>
         <source>No subtitle entries found in the file.</source>
         <translation>В файле не найдено ни одной записи субтитров.</translation>
+    </message>
+    <message>
+        <source>Parse Error</source>
+        <translation>Ошибка разбора</translation>
+    </message>
+    <message>
+        <source>Failed to parse subtitles. Check the file format.</source>
+        <translation>Не удалось разобрать субтитры. Проверьте формат файла.</translation>
     </message>
     <message>
         <source>■ Cancel</source>
@@ -3838,6 +4256,22 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Файл субтитров:</translation>
     </message>
     <message>
+        <source>Audio track:</source>
+        <translation>Аудиодорожка:</translation>
+    </message>
+    <message>
+        <source>Japanese (auto-detect)</source>
+        <translation>Японский (автоопределение)</translation>
+    </message>
+    <message>
+        <source>Tracks…</source>
+        <translation>Дорожки…</translation>
+    </message>
+    <message>
+        <source>Choose which audio track to align the subtitle against.</source>
+        <translation>Выберите, по какой аудиодорожке выравнивать субтитры.</translation>
+    </message>
+    <message>
         <source>Video Folder:</source>
         <translation>Папка с видео:</translation>
     </message>
@@ -3874,6 +4308,22 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Если флажок снят, пары, у которых выходные субтитры уже существуют, пропускаются, а не перезаписываются.</translation>
     </message>
     <message>
+        <source>Correct frame-rate differences</source>
+        <translation>Исправлять различия частоты кадров</translation>
+    </message>
+    <message>
+        <source>Leave off when the subtitle already matches this video's framerate. Only enable for subs from a different release/framerate.</source>
+        <translation>Оставьте выключенным, если субтитры уже совпадают с частотой кадров этого видео. Включайте только для субтитров из другого релиза/частоты кадров.</translation>
+    </message>
+    <message>
+        <source>Single offset only (no split)</source>
+        <translation>Только одно смещение (без разбиения)</translation>
+    </message>
+    <message>
+        <source>Shift the entire subtitle by one offset; never cut it into separately-timed segments.</source>
+        <translation>Сдвигать все субтитры на одно смещение; никогда не разбивать их на сегменты с раздельным таймингом.</translation>
+    </message>
+    <message>
         <source>Split penalty:</source>
         <translation>Штраф за разбивку:</translation>
     </message>
@@ -3902,16 +4352,48 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Прогресс</translation>
     </message>
     <message>
+        <source>No Video File Selected</source>
+        <translation>Видеофайл не выбран</translation>
+    </message>
+    <message>
+        <source>Select a video file first.</source>
+        <translation>Сначала выберите видеофайл.</translation>
+    </message>
+    <message>
+        <source>File Not Found</source>
+        <translation>Файл не найден</translation>
+    </message>
+    <message>
+        <source>Video file not found: </source>
+        <translation>Видеофайл не найден: </translation>
+    </message>
+    <message>
+        <source>No Audio Tracks</source>
+        <translation>Нет звуковых дорожек</translation>
+    </message>
+    <message>
+        <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
+        <translation>Звуковые дорожки не обнаружены. Убедитесь, что ffprobe установлен и файл содержит звук.</translation>
+    </message>
+    <message>
+        <source>Track %1</source>
+        <translation>Дорожка %1</translation>
+    </message>
+    <message>
+        <source>Probe Failed</source>
+        <translation>Сбой проверки</translation>
+    </message>
+    <message>
+        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <translation>Не удалось обнаружить аудиодорожки. Убедитесь, что ffprobe установлен.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Выбрать папку для вывода</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
         <translation>Папка вывода недоступна для записи: </translation>
-    </message>
-    <message>
-        <source>No Video File Selected</source>
-        <translation>Видеофайл не выбран</translation>
     </message>
     <message>
         <source>Select a video file before retiming subtitles.</source>
@@ -3924,14 +4406,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Select a subtitle file before retiming subtitles.</source>
         <translation>Выберите файл субтитров перед пересинхронизацией субтитров.</translation>
-    </message>
-    <message>
-        <source>File Not Found</source>
-        <translation>Файл не найден</translation>
-    </message>
-    <message>
-        <source>Video file not found: </source>
-        <translation>Видеофайл не найден: </translation>
     </message>
     <message>
         <source>Subtitle file not found: </source>
@@ -4072,6 +4546,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Выберите модель Whisper для генерации субтитров. «large-v3» даёт наилучшую точность; «small» быстрее, но менее точна.</translation>
     </message>
     <message>
+        <source>ASR device</source>
+        <translation>Устройство ASR</translation>
+    </message>
+    <message>
+        <source>Auto uses the GPU when one is available and falls back to CPU. GPU needs an NVIDIA card plus the GPU acceleration pack (bundled installs) or the [asr-cuda] extra (source installs).</source>
+        <translation>Auto использует GPU, когда он доступен, и переключается на CPU. Для GPU нужна карта NVIDIA плюс пакет GPU-ускорения (для сборочных установок) или extra [asr-cuda] (для установок из исходного кода).</translation>
+    </message>
+    <message>
         <source>Download model</source>
         <translation>Загрузить модель</translation>
     </message>
@@ -4082,6 +4564,30 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Model download</source>
         <translation>Загрузка модели</translation>
+    </message>
+    <message>
+        <source>Download GPU acceleration</source>
+        <translation>Загрузить GPU-ускорение</translation>
+    </message>
+    <message>
+        <source>Download the cuDNN + cuBLAS GPU libraries into Anki Miner's folder. Required for GPU (CUDA) transcription on bundled installs.</source>
+        <translation>Загрузите библиотеки GPU cuDNN + cuBLAS в папку Anki Miner. Требуется для транскрипции на GPU (CUDA) в сборочных установках.</translation>
+    </message>
+    <message>
+        <source>GPU acceleration</source>
+        <translation>GPU-ускорение</translation>
+    </message>
+    <message>
+        <source>Download silence removal</source>
+        <translation>Загрузить удаление тишины</translation>
+    </message>
+    <message>
+        <source>Download the silence-removal (VAD) library into Anki Miner's folder. It prevents silence and music being transcribed as garbage text.</source>
+        <translation>Загрузите библиотеку удаления тишины (VAD) в папку Anki Miner. Она предотвращает транскрибирование тишины и музыки как мусорного текста.</translation>
+    </message>
+    <message>
+        <source>Silence removal</source>
+        <translation>Удаление тишины</translation>
     </message>
     <message>
         <source>Alignment</source>
@@ -4130,6 +4636,30 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Not downloaded</source>
         <translation>Не загружено</translation>
+    </message>
+    <message>
+        <source>GPU acceleration is not available on this platform.</source>
+        <translation>GPU-ускорение недоступно на этой платформе.</translation>
+    </message>
+    <message>
+        <source>No NVIDIA GPU detected. GPU acceleration needs an NVIDIA card.</source>
+        <translation>GPU NVIDIA не обнаружен. Для GPU-ускорения нужна карта NVIDIA.</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Установлено</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Не установлено</translation>
+    </message>
+    <message>
+        <source>Silence removal is available.</source>
+        <translation>Удаление тишины доступно.</translation>
+    </message>
+    <message>
+        <source>Silence removal is not available on this platform.</source>
+        <translation>Удаление тишины недоступно на этой платформе.</translation>
     </message>
 </context><context>
     <name>ThemesPanel</name>
@@ -4300,6 +4830,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Freq. Rank</source>
         <translation>Ранг частотности</translation>
+    </message>
+    <message>
+        <source>Occurrences</source>
+        <translation>Вхождения</translation>
     </message>
     <message>
         <source>Sentences</source>

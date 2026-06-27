@@ -694,6 +694,10 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
+        <source>Loading…</source>
+        <translation>Chargement…</translation>
+    </message>
+    <message>
         <source>Active Audio Sources</source>
         <translation>Sources audio actives</translation>
     </message>
@@ -1078,6 +1082,378 @@ Total de cartes créées : %2</translation>
         <translation>Traitement par lot terminé</translation>
     </message>
 </context><context>
+    <name>Capabilities</name>
+    <message>
+        <source>Mining workflows</source>
+        <translation>Flux d'extraction</translation>
+    </message>
+    <message>
+        <source>Filtering: what gets mined</source>
+        <translation>Filtrage : ce qui est extrait</translation>
+    </message>
+    <message>
+        <source>Dictionaries, frequency &amp; pitch</source>
+        <translation>Dictionnaires, fréquence et hauteur</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>Audio</translation>
+    </message>
+    <message>
+        <source>Media: clips &amp; screenshots</source>
+        <translation>Média : clips et captures d'écran</translation>
+    </message>
+    <message>
+        <source>Anki cards</source>
+        <translation>Cartes Anki</translation>
+    </message>
+    <message>
+        <source>Appearance &amp; language</source>
+        <translation>Apparence et langue</translation>
+    </message>
+    <message>
+        <source>Mine a single episode</source>
+        <translation>Extraire un seul épisode</translation>
+    </message>
+    <message>
+        <source>Mine vocabulary from one video paired with its subtitle file.</source>
+        <translation>Extrayez du vocabulaire depuis une vidéo associée à son fichier de sous-titres.</translation>
+    </message>
+    <message>
+        <source>Batch-mine a whole folder</source>
+        <translation>Extraire en lot un dossier entier</translation>
+    </message>
+    <message>
+        <source>Queue an entire folder of episodes and mine them in one run.</source>
+        <translation>Mettez en file un dossier entier d'épisodes et extrayez-les en une seule fois.</translation>
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation>Construire un paquet par % de couverture</translation>
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.</source>
+        <translation>Construisez un paquet ordonné par fréquence qui couvre un pourcentage choisi d'un corpus entier.</translation>
+    </message>
+    <message>
+        <source>Build a complete deck (skip per-episode filters)</source>
+        <translation>Construire un paquet complet (ignorer les filtres par épisode)</translation>
+    </message>
+    <message>
+        <source>Deck Builder can bypass i+1/frequency/word-list filters and allow duplicates for full coverage.</source>
+        <translation>Le Constructeur de paquet peut contourner les filtres i+1/fréquence/liste de mots et autoriser les doublons pour une couverture complète.</translation>
+    </message>
+    <message>
+        <source>Mine from YouTube</source>
+        <translation>Extraire depuis YouTube</translation>
+    </message>
+    <message>
+        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
+        <translation>Extrayez directement depuis une URL ou une liste de lecture YouTube — aucun fichier local nécessaire.</translation>
+    </message>
+    <message>
+        <source>Mine from an audiobook</source>
+        <translation>Extraire depuis un livre audio</translation>
+    </message>
+    <message>
+        <source>Mine vocabulary from an audiobook or audio file using its transcript.</source>
+        <translation>Extrayez du vocabulaire depuis un livre audio ou un fichier audio à l'aide de sa transcription.</translation>
+    </message>
+    <message>
+        <source>Generate or re-time subtitles</source>
+        <translation>Générer ou resynchroniser les sous-titres</translation>
+    </message>
+    <message>
+        <source>Create subtitles from audio, or re-sync existing subtitles -- as a standalone tool.</source>
+        <translation>Créez des sous-titres à partir de l'audio, ou resynchronisez des sous-titres existants — en tant qu'outil autonome.</translation>
+    </message>
+    <message>
+        <source>View mining history &amp; stats</source>
+        <translation>Voir l'historique et les statistiques d'extraction</translation>
+    </message>
+    <message>
+        <source>See what you've mined over time with history and statistics.</source>
+        <translation>Voyez ce que vous avez extrait au fil du temps grâce à l'historique et aux statistiques.</translation>
+    </message>
+    <message>
+        <source>i+1 sentence mining</source>
+        <translation>Extraction de phrases i+1</translation>
+    </message>
+    <message>
+        <source>Mine only sentences that contain exactly one unknown word.</source>
+        <translation>N'extrayez que les phrases contenant exactement un mot inconnu.</translation>
+    </message>
+    <message>
+        <source>Skip rare words (frequency cutoff)</source>
+        <translation>Ignorer les mots rares (seuil de fréquence)</translation>
+    </message>
+    <message>
+        <source>Ignore words rarer than a chosen frequency rank so you learn common words first.</source>
+        <translation>Ignorez les mots plus rares qu'un rang de fréquence choisi afin d'apprendre d'abord les mots courants.</translation>
+    </message>
+    <message>
+        <source>Skip words you already know</source>
+        <translation>Ignorer les mots que vous connaissez déjà</translation>
+    </message>
+    <message>
+        <source>Skip words already in your Anki collection or previously mined, via the known-words DB.</source>
+        <translation>Ignorez les mots déjà présents dans votre collection Anki ou déjà extraits, via la BD de mots connus.</translation>
+    </message>
+    <message>
+        <source>Exclude specific Anki decks from 'known'</source>
+        <translation>Exclure certains paquets Anki des « connus »</translation>
+    </message>
+    <message>
+        <source>Stop chosen decks from counting as known so their words can still be mined.</source>
+        <translation>Empêchez certains paquets de compter comme connus afin que leurs mots puissent encore être extraits.</translation>
+    </message>
+    <message>
+        <source>Mark words as known by hand</source>
+        <translation>Marquer manuellement des mots comme connus</translation>
+    </message>
+    <message>
+        <source>Curate your own list of known words that is always applied and survives cache rebuilds.</source>
+        <translation>Composez votre propre liste de mots connus, toujours appliquée et conservée lors des reconstructions du cache.</translation>
+    </message>
+    <message>
+        <source>Exclude kana-only words</source>
+        <translation>Exclure les mots en kana seul</translation>
+    </message>
+    <message>
+        <source>Drop words written only in hiragana or katakana -- useful for kanji-focused decks.</source>
+        <translation>Écartez les mots écrits uniquement en hiragana ou katakana — utile pour les paquets axés sur les kanji.</translation>
+    </message>
+    <message>
+        <source>Blacklist / whitelist words</source>
+        <translation>Liste noire / liste blanche de mots</translation>
+    </message>
+    <message>
+        <source>Force-skip or force-allow specific words with your own block/allow lists.</source>
+        <translation>Forcez l'exclusion ou l'autorisation de mots précis avec vos propres listes de blocage/autorisation.</translation>
+    </message>
+    <message>
+        <source>Only words seen across N episodes</source>
+        <translation>Uniquement les mots vus dans N épisodes</translation>
+    </message>
+    <message>
+        <source>In batch and deck builds, mine only words that appear in at least N episodes.</source>
+        <translation>Dans les constructions en lot et de paquet, n'extrayez que les mots apparaissant dans au moins N épisodes.</translation>
+    </message>
+    <message>
+        <source>Filter by part of speech</source>
+        <translation>Filtrer par catégorie grammaticale</translation>
+    </message>
+    <message>
+        <source>Choose which word types (nouns, verbs, particles, ...) are mined.</source>
+        <translation>Choisissez quels types de mots (noms, verbes, particules, ...) sont extraits.</translation>
+    </message>
+    <message>
+        <source>Limit sentence length</source>
+        <translation>Limiter la longueur des phrases</translation>
+    </message>
+    <message>
+        <source>Skip sentences that are too long or too short for a good card.</source>
+        <translation>Ignorez les phrases trop longues ou trop courtes pour une bonne carte.</translation>
+    </message>
+    <message>
+        <source>Avoid duplicate cards</source>
+        <translation>Éviter les cartes en double</translation>
+    </message>
+    <message>
+        <source>Skip making a second card for a word you've already mined this run.</source>
+        <translation>Ne créez pas de seconde carte pour un mot déjà extrait lors de cette session.</translation>
+    </message>
+    <message>
+        <source>Strip junk from subtitles (regex)</source>
+        <translation>Nettoyer les sous-titres (regex)</translation>
+    </message>
+    <message>
+        <source>Remove names, music notes, or bracketed text from subtitles before parsing.</source>
+        <translation>Supprimez les noms, notes de musique ou texte entre crochets des sous-titres avant l'analyse.</translation>
+    </message>
+    <message>
+        <source>Use &amp; order multiple dictionaries</source>
+        <translation>Utiliser et ordonner plusieurs dictionnaires</translation>
+    </message>
+    <message>
+        <source>Add, reorder, and enable/disable the dictionaries used for definitions.</source>
+        <translation>Ajoutez, réordonnez et activez/désactivez les dictionnaires utilisés pour les définitions.</translation>
+    </message>
+    <message>
+        <source>Import a Yomitan dictionary</source>
+        <translation>Importer un dictionnaire Yomitan</translation>
+    </message>
+    <message>
+        <source>Add your own Yomitan-format dictionary zip as a definition source.</source>
+        <translation>Ajoutez votre propre archive zip de dictionnaire au format Yomitan comme source de définitions.</translation>
+    </message>
+    <message>
+        <source>Jisho.org online fallback</source>
+        <translation>Recours en ligne à Jisho.org</translation>
+    </message>
+    <message>
+        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <translation>Recourez à Jisho.org lorsque vos dictionnaires hors ligne n'ont aucune entrée.</translation>
+    </message>
+    <message>
+        <source>Add frequency lists</source>
+        <translation>Ajouter des listes de fréquence</translation>
+    </message>
+    <message>
+        <source>Add and order multiple frequency lists used for ranking and the frequency field.</source>
+        <translation>Ajoutez et ordonnez plusieurs listes de fréquence utilisées pour le classement et le champ de fréquence.</translation>
+    </message>
+    <message>
+        <source>Pitch accent on cards</source>
+        <translation>Accent de hauteur sur les cartes</translation>
+    </message>
+    <message>
+        <source>Add pitch-accent information to your cards (numeric or romaji).</source>
+        <translation>Ajoutez l'information d'accent de hauteur à vos cartes (numérique ou romaji).</translation>
+    </message>
+    <message>
+        <source>Word pronunciation audio</source>
+        <translation>Audio de prononciation des mots</translation>
+    </message>
+    <message>
+        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
+        <translation>Attachez aux cartes l'audio natif des mots depuis des packs audio, JPod101 ou la synthèse vocale.</translation>
+    </message>
+    <message>
+        <source>Import local audio packs</source>
+        <translation>Importer des packs audio locaux</translation>
+    </message>
+    <message>
+        <source>Use your own local-audio-yomichan packs as a word-pronunciation source.</source>
+        <translation>Utilisez vos propres packs local-audio-yomichan comme source de prononciation des mots.</translation>
+    </message>
+    <message>
+        <source>Sentence audio from the video</source>
+        <translation>Audio de phrase depuis la vidéo</translation>
+    </message>
+    <message>
+        <source>Extract the spoken sentence as an audio clip; tune its format and bitrate.</source>
+        <translation>Extrayez la phrase prononcée sous forme de clip audio ; réglez son format et son débit.</translation>
+    </message>
+    <message>
+        <source>Screenshots on cards</source>
+        <translation>Captures d'écran sur les cartes</translation>
+    </message>
+    <message>
+        <source>Capture a still frame from the scene to put on the card.</source>
+        <translation>Capturez une image fixe de la scène à placer sur la carte.</translation>
+    </message>
+    <message>
+        <source>Animated clips (GIF/WebP)</source>
+        <translation>Clips animés (GIF/WebP)</translation>
+    </message>
+    <message>
+        <source>Use a short animated clip instead of a still screenshot.</source>
+        <translation>Utilisez un court clip animé au lieu d'une capture d'écran fixe.</translation>
+    </message>
+    <message>
+        <source>Pad or shift audio/screenshot timing</source>
+        <translation>Régler la marge ou le décalage de l'audio/des captures d'écran</translation>
+    </message>
+    <message>
+        <source>Add padding or an offset so audio and screenshots line up with the dialogue.</source>
+        <translation>Ajoutez une marge ou un décalage pour que l'audio et les captures d'écran s'alignent sur le dialogue.</translation>
+    </message>
+    <message>
+        <source>Map data to your note fields</source>
+        <translation>Associer les données à vos champs de note</translation>
+    </message>
+    <message>
+        <source>Choose which note-type field receives the word, sentence, definition, audio, etc.</source>
+        <translation>Choisissez quel champ du type de note reçoit le mot, la phrase, la définition, l'audio, etc.</translation>
+    </message>
+    <message>
+        <source>Choose target deck &amp; note type</source>
+        <translation>Choisir le paquet et le type de note cibles</translation>
+    </message>
+    <message>
+        <source>Pick which Anki deck and note type new cards are created in.</source>
+        <translation>Choisissez dans quel paquet Anki et quel type de note les nouvelles cartes sont créées.</translation>
+    </message>
+    <message>
+        <source>Card styling / CSS</source>
+        <translation>Style des cartes / CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS, synced to Anki automatically.</source>
+        <translation>Appliquez un style de carte intégré ou votre propre CSS, synchronisé automatiquement avec Anki.</translation>
+    </message>
+    <message>
+        <source>Furigana / readings</source>
+        <translation>Furigana / lectures</translation>
+    </message>
+    <message>
+        <source>Include the reading (furigana) for the word on your cards.</source>
+        <translation>Incluez la lecture (furigana) du mot sur vos cartes.</translation>
+    </message>
+    <message>
+        <source>Auto-tag mined notes</source>
+        <translation>Étiqueter automatiquement les notes extraites</translation>
+    </message>
+    <message>
+        <source>Add tags to every note Anki Miner creates.</source>
+        <translation>Ajoutez des étiquettes à chaque note créée par Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Themes, dark mode, fonts &amp; zoom</source>
+        <translation>Thèmes, mode sombre, polices et zoom</translation>
+    </message>
+    <message>
+        <source>Switch light/dark themes and adjust font scale and UI zoom.</source>
+        <translation>Basculez entre les thèmes clair/sombre et ajustez l'échelle des polices et le zoom de l'interface.</translation>
+    </message>
+    <message>
+        <source>Change the app language</source>
+        <translation>Changer la langue de l'application</translation>
+    </message>
+    <message>
+        <source>Switch the interface to another language.</source>
+        <translation>Basculez l'interface dans une autre langue.</translation>
+    </message>
+    <message>
+        <source>Speech-to-text (no subtitles needed)</source>
+        <translation>Reconnaissance vocale (aucun sous-titre nécessaire)</translation>
+    </message>
+    <message>
+        <source>Generate subtitles from audio with a local Whisper model when none exist.</source>
+        <translation>Générez des sous-titres à partir de l'audio avec un modèle Whisper local lorsqu'il n'en existe aucun.</translation>
+    </message>
+    <message>
+        <source>YouTube cookies / bot bypass</source>
+        <translation>Cookies YouTube / contournement anti-bot</translation>
+    </message>
+    <message>
+        <source>Use your browser cookies to get past YouTube sign-in and bot checks.</source>
+        <translation>Utilisez les cookies de votre navigateur pour passer la connexion et les vérifications anti-bot de YouTube.</translation>
+    </message>
+    <message>
+        <source>YouTube quality &amp; playlist limits</source>
+        <translation>Qualité YouTube et limites de liste de lecture</translation>
+    </message>
+    <message>
+        <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
+        <translation>Plafonnez la qualité vidéo, la durée maximale et le nombre de vidéos récupérées d'une liste de lecture.</translation>
+    </message>
+</context><context>
+    <name>CudaPackDownloadWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2 %)</translation>
+    </message>
+    <message>
+        <source>Downloading GPU libraries…</source>
+        <translation>Téléchargement des bibliothèques GPU…</translation>
+    </message>
+    <message>
+        <source>GPU libraries installed successfully.</source>
+        <translation>Bibliothèques GPU installées avec succès.</translation>
+    </message>
+</context><context>
     <name>DeckBuilderTab</name>
     <message>
         <source>Input</source>
@@ -1441,6 +1817,10 @@ Ignorés (aucune source enregistrée — clic droit sur une ligne de dictionnair
     </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
+    <message>
+        <source>Loading…</source>
+        <translation>Chargement…</translation>
+    </message>
     <message>
         <source>Select dictionary storage folder...</source>
         <translation>Sélectionner le dossier de stockage des dictionnaires...</translation>
@@ -2215,6 +2595,10 @@ Le dictionnaire n'a pas été supprimé.</translation>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
+        <source>Loading…</source>
+        <translation>Chargement…</translation>
+    </message>
+    <message>
         <source>Active Frequency Sources</source>
         <translation>Sources de fréquence actives</translation>
     </message>
@@ -2449,6 +2833,10 @@ La source de fréquence n'a pas été supprimée.</translation>
     <message>
         <source>Download Recommended Resources...</source>
         <translation>Télécharger les ressources recommandées...</translation>
+    </message>
+    <message>
+        <source>Find a Feature...</source>
+        <translation>Trouver une fonctionnalité...</translation>
     </message>
     <message>
         <source>Setup Wizard...</source>
@@ -2731,6 +3119,28 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
     <message>
         <source>No fields could be auto-mapped.</source>
         <translation>Aucun champ n'a pu être mappé automatiquement.</translation>
+    </message>
+    <message>
+        <source>Checking note type fields...</source>
+        <translation>Vérification des champs du type de note...</translation>
+    </message>
+    <message>
+        <source>Could not check note type fields: </source>
+        <translation>Impossible de vérifier les champs du type de note : </translation>
+    </message>
+</context><context>
+    <name>OnnxPackDownloadWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2 %)</translation>
+    </message>
+    <message>
+        <source>Downloading silence-removal library…</source>
+        <translation>Téléchargement de la bibliothèque de suppression des silences…</translation>
+    </message>
+    <message>
+        <source>Silence-removal library installed successfully.</source>
+        <translation>Bibliothèque de suppression des silences installée avec succès.</translation>
     </message>
 </context><context>
     <name>PairPreviewDialog</name>
@@ -3481,6 +3891,14 @@ Détails : %2</translation>
         <translation>Aucune piste audio détectée. Vérifiez que ffprobe est installé et que le fichier contient de l'audio.</translation>
     </message>
     <message>
+        <source>Probe Failed</source>
+        <translation>Échec de l'analyse</translation>
+    </message>
+    <message>
+        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <translation>Échec de la détection des pistes audio. Vérifiez que ffprobe est installé.</translation>
+    </message>
+    <message>
         <source>Missing Files</source>
         <translation>Fichiers manquants</translation>
     </message>
@@ -3493,20 +3911,20 @@ Détails : %2</translation>
         <translation>Fichier de sous-titres introuvable : %1</translation>
     </message>
     <message>
-        <source>Parse Error</source>
-        <translation>Erreur d'analyse</translation>
-    </message>
-    <message>
-        <source>Failed to parse subtitles. Check the file format.</source>
-        <translation>Échec de l'analyse des sous-titres. Vérifiez le format du fichier.</translation>
-    </message>
-    <message>
         <source>No Subtitles</source>
         <translation>Aucun sous-titre</translation>
     </message>
     <message>
         <source>No subtitle entries found in the file.</source>
         <translation>Aucune entrée de sous-titres trouvée dans le fichier.</translation>
+    </message>
+    <message>
+        <source>Parse Error</source>
+        <translation>Erreur d'analyse</translation>
+    </message>
+    <message>
+        <source>Failed to parse subtitles. Check the file format.</source>
+        <translation>Échec de l'analyse des sous-titres. Vérifiez le format du fichier.</translation>
     </message>
     <message>
         <source>■ Cancel</source>
@@ -3828,6 +4246,22 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Fichier de sous-titres :</translation>
     </message>
     <message>
+        <source>Audio track:</source>
+        <translation>Piste audio :</translation>
+    </message>
+    <message>
+        <source>Japanese (auto-detect)</source>
+        <translation>Japonais (détection automatique)</translation>
+    </message>
+    <message>
+        <source>Tracks…</source>
+        <translation>Pistes…</translation>
+    </message>
+    <message>
+        <source>Choose which audio track to align the subtitle against.</source>
+        <translation>Choisissez la piste audio sur laquelle aligner les sous-titres.</translation>
+    </message>
+    <message>
         <source>Video Folder:</source>
         <translation>Dossier vidéo :</translation>
     </message>
@@ -3864,6 +4298,22 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Lorsque cette case est décochée, les paires dont le sous-titre de sortie existe déjà sont ignorées, et non écrasées.</translation>
     </message>
     <message>
+        <source>Correct frame-rate differences</source>
+        <translation>Corriger les différences de fréquence d'images</translation>
+    </message>
+    <message>
+        <source>Leave off when the subtitle already matches this video's framerate. Only enable for subs from a different release/framerate.</source>
+        <translation>Laissez désactivé lorsque les sous-titres correspondent déjà à la fréquence d'images de cette vidéo. N'activez que pour des sous-titres provenant d'une autre version/fréquence d'images.</translation>
+    </message>
+    <message>
+        <source>Single offset only (no split)</source>
+        <translation>Décalage unique seulement (sans découpe)</translation>
+    </message>
+    <message>
+        <source>Shift the entire subtitle by one offset; never cut it into separately-timed segments.</source>
+        <translation>Décalez l'ensemble des sous-titres d'un seul décalage ; ne les découpez jamais en segments synchronisés séparément.</translation>
+    </message>
+    <message>
         <source>Split penalty:</source>
         <translation>Pénalité de découpe :</translation>
     </message>
@@ -3892,16 +4342,48 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Progression</translation>
     </message>
     <message>
+        <source>No Video File Selected</source>
+        <translation>Aucun fichier vidéo sélectionné</translation>
+    </message>
+    <message>
+        <source>Select a video file first.</source>
+        <translation>Sélectionnez d'abord un fichier vidéo.</translation>
+    </message>
+    <message>
+        <source>File Not Found</source>
+        <translation>Fichier introuvable</translation>
+    </message>
+    <message>
+        <source>Video file not found: </source>
+        <translation>Fichier vidéo introuvable : </translation>
+    </message>
+    <message>
+        <source>No Audio Tracks</source>
+        <translation>Aucune piste audio</translation>
+    </message>
+    <message>
+        <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
+        <translation>Aucune piste audio détectée. Vérifiez que ffprobe est installé et que le fichier contient de l'audio.</translation>
+    </message>
+    <message>
+        <source>Track %1</source>
+        <translation>Piste %1</translation>
+    </message>
+    <message>
+        <source>Probe Failed</source>
+        <translation>Échec de l'analyse</translation>
+    </message>
+    <message>
+        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <translation>Échec de la détection des pistes audio. Vérifiez que ffprobe est installé.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Sélectionner le dossier de sortie</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
         <translation>Le dossier de sortie n'est pas accessible en écriture : </translation>
-    </message>
-    <message>
-        <source>No Video File Selected</source>
-        <translation>Aucun fichier vidéo sélectionné</translation>
     </message>
     <message>
         <source>Select a video file before retiming subtitles.</source>
@@ -3914,14 +4396,6 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
     <message>
         <source>Select a subtitle file before retiming subtitles.</source>
         <translation>Sélectionnez un fichier de sous-titres avant de re-synchroniser les sous-titres.</translation>
-    </message>
-    <message>
-        <source>File Not Found</source>
-        <translation>Fichier introuvable</translation>
-    </message>
-    <message>
-        <source>Video file not found: </source>
-        <translation>Fichier vidéo introuvable : </translation>
     </message>
     <message>
         <source>Subtitle file not found: </source>
@@ -4062,6 +4536,14 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Sélectionnez le modèle Whisper à utiliser pour la génération de sous-titres. « large-v3 » offre la meilleure précision ; « small » est plus rapide mais moins précis.</translation>
     </message>
     <message>
+        <source>ASR device</source>
+        <translation>Périphérique ASR</translation>
+    </message>
+    <message>
+        <source>Auto uses the GPU when one is available and falls back to CPU. GPU needs an NVIDIA card plus the GPU acceleration pack (bundled installs) or the [asr-cuda] extra (source installs).</source>
+        <translation>Auto utilise le GPU lorsqu'il y en a un de disponible et se rabat sur le CPU. Le GPU nécessite une carte NVIDIA et le pack d'accélération GPU (installations groupées) ou l'extra [asr-cuda] (installations depuis les sources).</translation>
+    </message>
+    <message>
         <source>Download model</source>
         <translation>Télécharger le modèle</translation>
     </message>
@@ -4072,6 +4554,30 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
     <message>
         <source>Model download</source>
         <translation>Téléchargement du modèle</translation>
+    </message>
+    <message>
+        <source>Download GPU acceleration</source>
+        <translation>Télécharger l'accélération GPU</translation>
+    </message>
+    <message>
+        <source>Download the cuDNN + cuBLAS GPU libraries into Anki Miner's folder. Required for GPU (CUDA) transcription on bundled installs.</source>
+        <translation>Téléchargez les bibliothèques GPU cuDNN + cuBLAS dans le dossier d'Anki Miner. Requis pour la transcription GPU (CUDA) sur les installations groupées.</translation>
+    </message>
+    <message>
+        <source>GPU acceleration</source>
+        <translation>Accélération GPU</translation>
+    </message>
+    <message>
+        <source>Download silence removal</source>
+        <translation>Télécharger la suppression des silences</translation>
+    </message>
+    <message>
+        <source>Download the silence-removal (VAD) library into Anki Miner's folder. It prevents silence and music being transcribed as garbage text.</source>
+        <translation>Téléchargez la bibliothèque de suppression des silences (VAD) dans le dossier d'Anki Miner. Elle empêche que les silences et la musique soient transcrits en texte parasite.</translation>
+    </message>
+    <message>
+        <source>Silence removal</source>
+        <translation>Suppression des silences</translation>
     </message>
     <message>
         <source>Alignment</source>
@@ -4120,6 +4626,30 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
     <message>
         <source>Not downloaded</source>
         <translation>Non téléchargé</translation>
+    </message>
+    <message>
+        <source>GPU acceleration is not available on this platform.</source>
+        <translation>L'accélération GPU n'est pas disponible sur cette plateforme.</translation>
+    </message>
+    <message>
+        <source>No NVIDIA GPU detected. GPU acceleration needs an NVIDIA card.</source>
+        <translation>Aucun GPU NVIDIA détecté. L'accélération GPU nécessite une carte NVIDIA.</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Installé</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Non installé</translation>
+    </message>
+    <message>
+        <source>Silence removal is available.</source>
+        <translation>La suppression des silences est disponible.</translation>
+    </message>
+    <message>
+        <source>Silence removal is not available on this platform.</source>
+        <translation>La suppression des silences n'est pas disponible sur cette plateforme.</translation>
     </message>
 </context><context>
     <name>ThemesPanel</name>
@@ -4290,6 +4820,10 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
     <message>
         <source>Freq. Rank</source>
         <translation>Rang de fréq.</translation>
+    </message>
+    <message>
+        <source>Occurrences</source>
+        <translation>Occurrences</translation>
     </message>
     <message>
         <source>Sentences</source>

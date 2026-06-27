@@ -694,6 +694,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
+        <source>Loading…</source>
+        <translation>読み込み中…</translation>
+    </message>
+    <message>
         <source>Active Audio Sources</source>
         <translation>有効な音声ソース</translation>
     </message>
@@ -1078,6 +1082,378 @@ Total cards created: %2</source>
         <translation>一括処理が完了しました</translation>
     </message>
 </context><context>
+    <name>Capabilities</name>
+    <message>
+        <source>Mining workflows</source>
+        <translation>マイニングワークフロー</translation>
+    </message>
+    <message>
+        <source>Filtering: what gets mined</source>
+        <translation>フィルター：マイニング対象</translation>
+    </message>
+    <message>
+        <source>Dictionaries, frequency &amp; pitch</source>
+        <translation>辞書・頻度・ピッチ</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>音声</translation>
+    </message>
+    <message>
+        <source>Media: clips &amp; screenshots</source>
+        <translation>メディア：クリップとスクリーンショット</translation>
+    </message>
+    <message>
+        <source>Anki cards</source>
+        <translation>Anki カード</translation>
+    </message>
+    <message>
+        <source>Appearance &amp; language</source>
+        <translation>外観と言語</translation>
+    </message>
+    <message>
+        <source>Mine a single episode</source>
+        <translation>単一エピソードをマイニング</translation>
+    </message>
+    <message>
+        <source>Mine vocabulary from one video paired with its subtitle file.</source>
+        <translation>1本の動画と字幕ファイルを組み合わせて語彙をマイニングします。</translation>
+    </message>
+    <message>
+        <source>Batch-mine a whole folder</source>
+        <translation>フォルダー全体を一括マイニング</translation>
+    </message>
+    <message>
+        <source>Queue an entire folder of episodes and mine them in one run.</source>
+        <translation>エピソードが入ったフォルダー全体をキューに入れ、1回の実行でマイニングします。</translation>
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation>カバー率（%）でデッキを作成</translation>
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.</source>
+        <translation>コーパス全体の指定した割合をカバーする、頻度順のデッキを作成します。</translation>
+    </message>
+    <message>
+        <source>Build a complete deck (skip per-episode filters)</source>
+        <translation>完全なデッキを作成（エピソードごとのフィルターをスキップ）</translation>
+    </message>
+    <message>
+        <source>Deck Builder can bypass i+1/frequency/word-list filters and allow duplicates for full coverage.</source>
+        <translation>デッキビルダーは i+1／頻度／単語リストのフィルターをバイパスし、重複を許可して完全なカバー率を実現できます。</translation>
+    </message>
+    <message>
+        <source>Mine from YouTube</source>
+        <translation>YouTube からマイニング</translation>
+    </message>
+    <message>
+        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
+        <translation>YouTube の URL またはプレイリストから直接マイニングします — ローカルファイルは不要です。</translation>
+    </message>
+    <message>
+        <source>Mine from an audiobook</source>
+        <translation>オーディオブックからマイニング</translation>
+    </message>
+    <message>
+        <source>Mine vocabulary from an audiobook or audio file using its transcript.</source>
+        <translation>オーディオブックや音声ファイルからその文字起こしを使って語彙をマイニングします。</translation>
+    </message>
+    <message>
+        <source>Generate or re-time subtitles</source>
+        <translation>字幕の生成または再タイミング</translation>
+    </message>
+    <message>
+        <source>Create subtitles from audio, or re-sync existing subtitles -- as a standalone tool.</source>
+        <translation>音声から字幕を作成、または既存の字幕を再同期します — 単独のツールとして利用できます。</translation>
+    </message>
+    <message>
+        <source>View mining history &amp; stats</source>
+        <translation>マイニング履歴と統計を表示</translation>
+    </message>
+    <message>
+        <source>See what you've mined over time with history and statistics.</source>
+        <translation>履歴と統計で、これまでにマイニングした内容を確認できます。</translation>
+    </message>
+    <message>
+        <source>i+1 sentence mining</source>
+        <translation>i+1 文マイニング</translation>
+    </message>
+    <message>
+        <source>Mine only sentences that contain exactly one unknown word.</source>
+        <translation>未知の単語をちょうど1つだけ含む文のみをマイニングします。</translation>
+    </message>
+    <message>
+        <source>Skip rare words (frequency cutoff)</source>
+        <translation>まれな単語をスキップ（頻度カットオフ）</translation>
+    </message>
+    <message>
+        <source>Ignore words rarer than a chosen frequency rank so you learn common words first.</source>
+        <translation>指定した頻度順位よりまれな単語を無視し、よく使う単語から先に学習できます。</translation>
+    </message>
+    <message>
+        <source>Skip words you already know</source>
+        <translation>すでに知っている単語をスキップ</translation>
+    </message>
+    <message>
+        <source>Skip words already in your Anki collection or previously mined, via the known-words DB.</source>
+        <translation>既知単語DBを使って、Anki コレクションにある単語や以前マイニングした単語をスキップします。</translation>
+    </message>
+    <message>
+        <source>Exclude specific Anki decks from 'known'</source>
+        <translation>特定の Anki デッキを「既知」から除外</translation>
+    </message>
+    <message>
+        <source>Stop chosen decks from counting as known so their words can still be mined.</source>
+        <translation>選択したデッキを既知としてカウントしないようにし、その単語を引き続きマイニングできるようにします。</translation>
+    </message>
+    <message>
+        <source>Mark words as known by hand</source>
+        <translation>手動で単語を既知としてマーク</translation>
+    </message>
+    <message>
+        <source>Curate your own list of known words that is always applied and survives cache rebuilds.</source>
+        <translation>常に適用され、キャッシュの再構築後も残る、自分専用の既知単語リストを管理します。</translation>
+    </message>
+    <message>
+        <source>Exclude kana-only words</source>
+        <translation>かなのみの単語を除外</translation>
+    </message>
+    <message>
+        <source>Drop words written only in hiragana or katakana -- useful for kanji-focused decks.</source>
+        <translation>ひらがなまたはカタカナのみで書かれた単語を除外します — 漢字に重点を置いたデッキに便利です。</translation>
+    </message>
+    <message>
+        <source>Blacklist / whitelist words</source>
+        <translation>単語のブラックリスト／ホワイトリスト</translation>
+    </message>
+    <message>
+        <source>Force-skip or force-allow specific words with your own block/allow lists.</source>
+        <translation>自分専用のブロックリスト／許可リストで、特定の単語を強制的にスキップまたは許可します。</translation>
+    </message>
+    <message>
+        <source>Only words seen across N episodes</source>
+        <translation>N 個のエピソードにまたがって出現した単語のみ</translation>
+    </message>
+    <message>
+        <source>In batch and deck builds, mine only words that appear in at least N episodes.</source>
+        <translation>一括マイニングとデッキ作成で、少なくとも N 個のエピソードに出現する単語のみをマイニングします。</translation>
+    </message>
+    <message>
+        <source>Filter by part of speech</source>
+        <translation>品詞でフィルター</translation>
+    </message>
+    <message>
+        <source>Choose which word types (nouns, verbs, particles, ...) are mined.</source>
+        <translation>どの単語の種類（名詞、動詞、助詞、…）をマイニングするか選択します。</translation>
+    </message>
+    <message>
+        <source>Limit sentence length</source>
+        <translation>文の長さを制限</translation>
+    </message>
+    <message>
+        <source>Skip sentences that are too long or too short for a good card.</source>
+        <translation>良いカードには長すぎる、または短すぎる文をスキップします。</translation>
+    </message>
+    <message>
+        <source>Avoid duplicate cards</source>
+        <translation>重複カードを回避</translation>
+    </message>
+    <message>
+        <source>Skip making a second card for a word you've already mined this run.</source>
+        <translation>この実行ですでにマイニングした単語について、2枚目のカードを作成しないようにします。</translation>
+    </message>
+    <message>
+        <source>Strip junk from subtitles (regex)</source>
+        <translation>字幕から不要な文字を除去（正規表現）</translation>
+    </message>
+    <message>
+        <source>Remove names, music notes, or bracketed text from subtitles before parsing.</source>
+        <translation>解析前に、字幕から人名、音符、角括弧で囲まれたテキストを除去します。</translation>
+    </message>
+    <message>
+        <source>Use &amp; order multiple dictionaries</source>
+        <translation>複数の辞書を使用・並べ替え</translation>
+    </message>
+    <message>
+        <source>Add, reorder, and enable/disable the dictionaries used for definitions.</source>
+        <translation>語義に使用する辞書を追加、並べ替え、有効化／無効化します。</translation>
+    </message>
+    <message>
+        <source>Import a Yomitan dictionary</source>
+        <translation>Yomitan 辞書をインポート</translation>
+    </message>
+    <message>
+        <source>Add your own Yomitan-format dictionary zip as a definition source.</source>
+        <translation>Yomitan 形式の辞書 zip を語義の参照元として追加します。</translation>
+    </message>
+    <message>
+        <source>Jisho.org online fallback</source>
+        <translation>Jisho.org のオンラインフォールバック</translation>
+    </message>
+    <message>
+        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <translation>オフライン辞書に項目がない場合に Jisho.org にフォールバックします。</translation>
+    </message>
+    <message>
+        <source>Add frequency lists</source>
+        <translation>頻度リストを追加</translation>
+    </message>
+    <message>
+        <source>Add and order multiple frequency lists used for ranking and the frequency field.</source>
+        <translation>順位付けと頻度フィールドに使用する複数の頻度リストを追加・並べ替えます。</translation>
+    </message>
+    <message>
+        <source>Pitch accent on cards</source>
+        <translation>カードにピッチアクセント</translation>
+    </message>
+    <message>
+        <source>Add pitch-accent information to your cards (numeric or romaji).</source>
+        <translation>カードにピッチアクセント情報を追加します（数値またはローマ字）。</translation>
+    </message>
+    <message>
+        <source>Word pronunciation audio</source>
+        <translation>単語の発音音声</translation>
+    </message>
+    <message>
+        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
+        <translation>音声パック、JPod101、または音声合成から、ネイティブの単語音声をカードに添付します。</translation>
+    </message>
+    <message>
+        <source>Import local audio packs</source>
+        <translation>ローカル音声パックをインポート</translation>
+    </message>
+    <message>
+        <source>Use your own local-audio-yomichan packs as a word-pronunciation source.</source>
+        <translation>自分の local-audio-yomichan パックを単語発音の参照元として使用します。</translation>
+    </message>
+    <message>
+        <source>Sentence audio from the video</source>
+        <translation>動画から文の音声</translation>
+    </message>
+    <message>
+        <source>Extract the spoken sentence as an audio clip; tune its format and bitrate.</source>
+        <translation>話された文を音声クリップとして抽出します。形式とビットレートを調整できます。</translation>
+    </message>
+    <message>
+        <source>Screenshots on cards</source>
+        <translation>カードにスクリーンショット</translation>
+    </message>
+    <message>
+        <source>Capture a still frame from the scene to put on the card.</source>
+        <translation>シーンの静止フレームを撮影してカードに配置します。</translation>
+    </message>
+    <message>
+        <source>Animated clips (GIF/WebP)</source>
+        <translation>アニメーションクリップ（GIF／WebP）</translation>
+    </message>
+    <message>
+        <source>Use a short animated clip instead of a still screenshot.</source>
+        <translation>静止スクリーンショットの代わりに、短いアニメーションクリップを使用します。</translation>
+    </message>
+    <message>
+        <source>Pad or shift audio/screenshot timing</source>
+        <translation>音声／スクリーンショットのタイミングをパディングまたはシフト</translation>
+    </message>
+    <message>
+        <source>Add padding or an offset so audio and screenshots line up with the dialogue.</source>
+        <translation>音声とスクリーンショットがセリフに合うよう、パディングまたはオフセットを追加します。</translation>
+    </message>
+    <message>
+        <source>Map data to your note fields</source>
+        <translation>データをノートフィールドにマッピング</translation>
+    </message>
+    <message>
+        <source>Choose which note-type field receives the word, sentence, definition, audio, etc.</source>
+        <translation>単語、文、語義、音声などを、どのノートタイプのフィールドに入れるか選択します。</translation>
+    </message>
+    <message>
+        <source>Choose target deck &amp; note type</source>
+        <translation>対象のデッキとノートタイプを選択</translation>
+    </message>
+    <message>
+        <source>Pick which Anki deck and note type new cards are created in.</source>
+        <translation>新しいカードを作成する Anki デッキとノートタイプを選択します。</translation>
+    </message>
+    <message>
+        <source>Card styling / CSS</source>
+        <translation>カードのスタイル／CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS, synced to Anki automatically.</source>
+        <translation>組み込みのカードスタイルまたは独自の CSS を適用し、自動的に Anki に同期します。</translation>
+    </message>
+    <message>
+        <source>Furigana / readings</source>
+        <translation>ふりがな／読み</translation>
+    </message>
+    <message>
+        <source>Include the reading (furigana) for the word on your cards.</source>
+        <translation>カードに単語の読み（ふりがな）を含めます。</translation>
+    </message>
+    <message>
+        <source>Auto-tag mined notes</source>
+        <translation>マイニングしたノートに自動でタグ付け</translation>
+    </message>
+    <message>
+        <source>Add tags to every note Anki Miner creates.</source>
+        <translation>Anki Miner が作成するすべてのノートにタグを追加します。</translation>
+    </message>
+    <message>
+        <source>Themes, dark mode, fonts &amp; zoom</source>
+        <translation>テーマ、ダークモード、フォント、ズーム</translation>
+    </message>
+    <message>
+        <source>Switch light/dark themes and adjust font scale and UI zoom.</source>
+        <translation>ライト／ダークテーマを切り替え、フォントの拡大率と UI のズームを調整します。</translation>
+    </message>
+    <message>
+        <source>Change the app language</source>
+        <translation>アプリの言語を変更</translation>
+    </message>
+    <message>
+        <source>Switch the interface to another language.</source>
+        <translation>インターフェースを別の言語に切り替えます。</translation>
+    </message>
+    <message>
+        <source>Speech-to-text (no subtitles needed)</source>
+        <translation>音声認識（字幕不要）</translation>
+    </message>
+    <message>
+        <source>Generate subtitles from audio with a local Whisper model when none exist.</source>
+        <translation>字幕が存在しない場合に、ローカルの Whisper モデルで音声から字幕を生成します。</translation>
+    </message>
+    <message>
+        <source>YouTube cookies / bot bypass</source>
+        <translation>YouTube のクッキー／ボット検出回避</translation>
+    </message>
+    <message>
+        <source>Use your browser cookies to get past YouTube sign-in and bot checks.</source>
+        <translation>ブラウザのクッキーを使って、YouTube のサインインやボットチェックを回避します。</translation>
+    </message>
+    <message>
+        <source>YouTube quality &amp; playlist limits</source>
+        <translation>YouTube の画質とプレイリストの上限</translation>
+    </message>
+    <message>
+        <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
+        <translation>動画の画質、最大再生時間、取得するプレイリスト動画の数に上限を設定します。</translation>
+    </message>
+</context><context>
+    <name>CudaPackDownloadWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading GPU libraries…</source>
+        <translation>GPU ライブラリをダウンロード中…</translation>
+    </message>
+    <message>
+        <source>GPU libraries installed successfully.</source>
+        <translation>GPU ライブラリのインストールが完了しました。</translation>
+    </message>
+</context><context>
     <name>DeckBuilderTab</name>
     <message>
         <source>Input</source>
@@ -1441,6 +1817,10 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
+    <message>
+        <source>Loading…</source>
+        <translation>読み込み中…</translation>
+    </message>
     <message>
         <source>Select dictionary storage folder...</source>
         <translation>辞書の保存フォルダを選択...</translation>
@@ -2206,6 +2586,10 @@ The dictionary was not removed.</source>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
+        <source>Loading…</source>
+        <translation>読み込み中…</translation>
+    </message>
+    <message>
         <source>Active Frequency Sources</source>
         <translation>有効な頻度ソース</translation>
     </message>
@@ -2440,6 +2824,10 @@ The frequency source was not removed.</source>
     <message>
         <source>Download Recommended Resources...</source>
         <translation>推奨リソースをダウンロード...</translation>
+    </message>
+    <message>
+        <source>Find a Feature...</source>
+        <translation>機能を検索...</translation>
     </message>
     <message>
         <source>Setup Wizard...</source>
@@ -2722,6 +3110,28 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>No fields could be auto-mapped.</source>
         <translation>自動マッピングできるフィールドがありませんでした。</translation>
+    </message>
+    <message>
+        <source>Checking note type fields...</source>
+        <translation>ノートタイプのフィールドを確認中...</translation>
+    </message>
+    <message>
+        <source>Could not check note type fields: </source>
+        <translation>ノートタイプのフィールドを確認できませんでした: </translation>
+    </message>
+</context><context>
+    <name>OnnxPackDownloadWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading silence-removal library…</source>
+        <translation>無音除去ライブラリをダウンロード中…</translation>
+    </message>
+    <message>
+        <source>Silence-removal library installed successfully.</source>
+        <translation>無音除去ライブラリのインストールが完了しました。</translation>
     </message>
 </context><context>
     <name>PairPreviewDialog</name>
@@ -3472,6 +3882,14 @@ Details: %2</source>
         <translation>音声トラックが検出されませんでした。ffprobe がインストールされていること、ファイルに音声が含まれていることを確認してください。</translation>
     </message>
     <message>
+        <source>Probe Failed</source>
+        <translation>プローブに失敗しました</translation>
+    </message>
+    <message>
+        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <translation>音声トラックの検出に失敗しました。ffprobe がインストールされているか確認してください。</translation>
+    </message>
+    <message>
         <source>Missing Files</source>
         <translation>ファイルがありません</translation>
     </message>
@@ -3484,20 +3902,20 @@ Details: %2</source>
         <translation>字幕ファイルが見つかりません: %1</translation>
     </message>
     <message>
-        <source>Parse Error</source>
-        <translation>解析エラー</translation>
-    </message>
-    <message>
-        <source>Failed to parse subtitles. Check the file format.</source>
-        <translation>字幕の解析に失敗しました。ファイル形式を確認してください。</translation>
-    </message>
-    <message>
         <source>No Subtitles</source>
         <translation>字幕がありません</translation>
     </message>
     <message>
         <source>No subtitle entries found in the file.</source>
         <translation>ファイル内に字幕エントリが見つかりませんでした。</translation>
+    </message>
+    <message>
+        <source>Parse Error</source>
+        <translation>解析エラー</translation>
+    </message>
+    <message>
+        <source>Failed to parse subtitles. Check the file format.</source>
+        <translation>字幕の解析に失敗しました。ファイル形式を確認してください。</translation>
     </message>
     <message>
         <source>■ Cancel</source>
@@ -3818,6 +4236,22 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>字幕ファイル:</translation>
     </message>
     <message>
+        <source>Audio track:</source>
+        <translation>音声トラック:</translation>
+    </message>
+    <message>
+        <source>Japanese (auto-detect)</source>
+        <translation>日本語（自動検出）</translation>
+    </message>
+    <message>
+        <source>Tracks…</source>
+        <translation>トラック…</translation>
+    </message>
+    <message>
+        <source>Choose which audio track to align the subtitle against.</source>
+        <translation>字幕を合わせる対象の音声トラックを選択します。</translation>
+    </message>
+    <message>
         <source>Video Folder:</source>
         <translation>動画フォルダ:</translation>
     </message>
@@ -3854,6 +4288,22 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>チェックを外すと、出力字幕が既に存在するペアはスキップされ、上書きされません。</translation>
     </message>
     <message>
+        <source>Correct frame-rate differences</source>
+        <translation>フレームレートの違いを補正</translation>
+    </message>
+    <message>
+        <source>Leave off when the subtitle already matches this video's framerate. Only enable for subs from a different release/framerate.</source>
+        <translation>字幕がすでにこの動画のフレームレートに一致している場合はオフのままにしてください。別のリリース／フレームレートの字幕の場合のみ有効にします。</translation>
+    </message>
+    <message>
+        <source>Single offset only (no split)</source>
+        <translation>単一オフセットのみ（分割なし）</translation>
+    </message>
+    <message>
+        <source>Shift the entire subtitle by one offset; never cut it into separately-timed segments.</source>
+        <translation>字幕全体を1つのオフセットでシフトします。個別にタイミング調整されたセグメントには分割しません。</translation>
+    </message>
+    <message>
         <source>Split penalty:</source>
         <translation>分割ペナルティ:</translation>
     </message>
@@ -3882,16 +4332,48 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>進捗</translation>
     </message>
     <message>
+        <source>No Video File Selected</source>
+        <translation>動画ファイルが選択されていません</translation>
+    </message>
+    <message>
+        <source>Select a video file first.</source>
+        <translation>先に動画ファイルを選択してください。</translation>
+    </message>
+    <message>
+        <source>File Not Found</source>
+        <translation>ファイルが見つかりません</translation>
+    </message>
+    <message>
+        <source>Video file not found: </source>
+        <translation>動画ファイルが見つかりません: </translation>
+    </message>
+    <message>
+        <source>No Audio Tracks</source>
+        <translation>音声トラックがありません</translation>
+    </message>
+    <message>
+        <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
+        <translation>音声トラックが検出されませんでした。ffprobe がインストールされていること、ファイルに音声が含まれていることを確認してください。</translation>
+    </message>
+    <message>
+        <source>Track %1</source>
+        <translation>トラック %1</translation>
+    </message>
+    <message>
+        <source>Probe Failed</source>
+        <translation>プローブに失敗しました</translation>
+    </message>
+    <message>
+        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <translation>音声トラックの検出に失敗しました。ffprobe がインストールされているか確認してください。</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>出力フォルダを選択</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
         <translation>出力ディレクトリに書き込めません: </translation>
-    </message>
-    <message>
-        <source>No Video File Selected</source>
-        <translation>動画ファイルが選択されていません</translation>
     </message>
     <message>
         <source>Select a video file before retiming subtitles.</source>
@@ -3904,14 +4386,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Select a subtitle file before retiming subtitles.</source>
         <translation>字幕をリタイミングする前に字幕ファイルを選択してください。</translation>
-    </message>
-    <message>
-        <source>File Not Found</source>
-        <translation>ファイルが見つかりません</translation>
-    </message>
-    <message>
-        <source>Video file not found: </source>
-        <translation>動画ファイルが見つかりません: </translation>
     </message>
     <message>
         <source>Subtitle file not found: </source>
@@ -4052,6 +4526,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>字幕生成に使用する Whisper モデルを選択します。「large-v3」は最も精度が高く、「small」は高速ですが精度は劣ります。</translation>
     </message>
     <message>
+        <source>ASR device</source>
+        <translation>ASR デバイス</translation>
+    </message>
+    <message>
+        <source>Auto uses the GPU when one is available and falls back to CPU. GPU needs an NVIDIA card plus the GPU acceleration pack (bundled installs) or the [asr-cuda] extra (source installs).</source>
+        <translation>自動では、利用可能な場合に GPU を使用し、なければ CPU にフォールバックします。GPU には NVIDIA カードと、GPU アクセラレーションパック（バンドル版インストール）または [asr-cuda] エクストラ（ソース版インストール）が必要です。</translation>
+    </message>
+    <message>
         <source>Download model</source>
         <translation>モデルをダウンロード</translation>
     </message>
@@ -4062,6 +4544,30 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Model download</source>
         <translation>モデルのダウンロード</translation>
+    </message>
+    <message>
+        <source>Download GPU acceleration</source>
+        <translation>GPU アクセラレーションをダウンロード</translation>
+    </message>
+    <message>
+        <source>Download the cuDNN + cuBLAS GPU libraries into Anki Miner's folder. Required for GPU (CUDA) transcription on bundled installs.</source>
+        <translation>cuDNN + cuBLAS の GPU ライブラリを Anki Miner のフォルダーにダウンロードします。バンドル版インストールで GPU（CUDA）文字起こしを行うのに必要です。</translation>
+    </message>
+    <message>
+        <source>GPU acceleration</source>
+        <translation>GPU アクセラレーション</translation>
+    </message>
+    <message>
+        <source>Download silence removal</source>
+        <translation>無音除去をダウンロード</translation>
+    </message>
+    <message>
+        <source>Download the silence-removal (VAD) library into Anki Miner's folder. It prevents silence and music being transcribed as garbage text.</source>
+        <translation>無音除去（VAD）ライブラリを Anki Miner のフォルダーにダウンロードします。無音や音楽が無意味なテキストとして文字起こしされるのを防ぎます。</translation>
+    </message>
+    <message>
+        <source>Silence removal</source>
+        <translation>無音除去</translation>
     </message>
     <message>
         <source>Alignment</source>
@@ -4110,6 +4616,30 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Not downloaded</source>
         <translation>未ダウンロード</translation>
+    </message>
+    <message>
+        <source>GPU acceleration is not available on this platform.</source>
+        <translation>このプラットフォームでは GPU アクセラレーションを利用できません。</translation>
+    </message>
+    <message>
+        <source>No NVIDIA GPU detected. GPU acceleration needs an NVIDIA card.</source>
+        <translation>NVIDIA GPU が検出されませんでした。GPU アクセラレーションには NVIDIA カードが必要です。</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>インストール済み</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>未インストール</translation>
+    </message>
+    <message>
+        <source>Silence removal is available.</source>
+        <translation>無音除去を利用できます。</translation>
+    </message>
+    <message>
+        <source>Silence removal is not available on this platform.</source>
+        <translation>このプラットフォームでは無音除去を利用できません。</translation>
     </message>
 </context><context>
     <name>ThemesPanel</name>
@@ -4280,6 +4810,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Freq. Rank</source>
         <translation>頻度順位</translation>
+    </message>
+    <message>
+        <source>Occurrences</source>
+        <translation>出現回数</translation>
     </message>
     <message>
         <source>Sentences</source>
