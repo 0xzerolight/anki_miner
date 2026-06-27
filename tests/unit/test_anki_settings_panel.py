@@ -360,6 +360,47 @@ def test_auto_map_fields_does_not_hijack_sentence_audio_for_expression_audio():
     assert result["expression_audio"] == "ExpressionAudio"
 
 
+def test_frequency_sort_field_get_set_roundtrip(qtbot):
+    """Regression guard: frequency_sort must survive set -> get.
+
+    The bug this guards: get_card_fields() omitting the key drops it from
+    config.anki_fields on every Save, making the FreqSort field unreachable.
+    """
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_card_fields({"frequency_sort": "FrequencySort"})
+    out = panel.get_card_fields()
+    assert out["frequency_sort"] == "FrequencySort"
+
+
+def test_frequency_sort_field_default_blank(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_card_fields({})
+    assert panel.get_card_fields()["frequency_sort"] == ""
+
+
+def test_frequency_sort_independent_of_frequency(qtbot):
+    """The breakdown (frequency) and sort (frequency_sort) fields map separately."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_card_fields({"frequency": "Frequency", "frequency_sort": "FrequencySort"})
+    out = panel.get_card_fields()
+    assert out["frequency"] == "Frequency"
+    assert out["frequency_sort"] == "FrequencySort"
+
+
+def test_auto_map_fields_frequency_sort_no_collision():
+    """FrequencySort maps to frequency_sort and does NOT hijack the frequency key."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields  # noqa: PLC0415
+
+    result = auto_map_fields(["Frequency", "FrequencySort"])
+    assert result["frequency"] == "Frequency"
+    assert result["frequency_sort"] == "FrequencySort"
+    # FreqSort alias also matches.
+    assert auto_map_fields(["FreqSort"])["frequency_sort"] == "FreqSort"
+
+
 def test_card_type_get_set_roundtrip(qtbot):
     """The card-type dropdown round-trips its id; an unknown id falls back to ''."""
     panel = AnkiSettingsPanel()
