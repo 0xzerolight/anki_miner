@@ -38,9 +38,18 @@ _TIMEOUT = (10, 60)
 
 _CHUNK_SIZE = 8192
 
-# Reused across calls; requests.Session is safe for sequential use.
-_session = requests.Session()
-_session.headers.update({"User-Agent": _BROWSER_USER_AGENT})
+
+def _new_session() -> requests.Session:
+    """Build a freshly-configured ``requests.Session``.
+
+    A NEW session per ``download_to_temp`` call (not a shared module-global):
+    ``requests.Session`` is not safe for concurrent use, and two in-app pack
+    downloads (e.g. the CUDA libs and the ONNX/VAD pack) can run on separate
+    worker threads at the same time — each gating only its own button.
+    """
+    session = requests.Session()
+    session.headers.update({"User-Agent": _BROWSER_USER_AGENT})
+    return session
 
 
 ProgressCallback = Callable[[int, int, str], None]
@@ -90,37 +99,38 @@ def download_to_temp(
 
     tmp_path: Path | None = None
     try:
-        response = _session.get(url, timeout=_TIMEOUT, stream=True)
-        try:
-            response.raise_for_status()
+        with _new_session() as session:
+            response = session.get(url, timeout=_TIMEOUT, stream=True)
+            try:
+                response.raise_for_status()
 
-            total = int(response.headers.get("Content-Length") or 0)
+                total = int(response.headers.get("Content-Length") or 0)
 
-            with tempfile.NamedTemporaryFile(dir=dest_dir, suffix=".part", delete=False) as tmp_fd:
-                tmp_path = Path(tmp_fd.name)
-                downloaded = 0
-                if progress is not None:
-                    progress(0, total, f"Downloading {url}")
-
-                for chunk in response.iter_content(chunk_size=_CHUNK_SIZE):
-                    if cancelled_check is not None and cancelled_check():
-                        raise SetupError("Download cancelled")
-                    if not chunk:
-                        continue
-                    downloaded += len(chunk)
-                    if downloaded > max_bytes:
-                        raise SetupError(f"Download exceeded size cap of {max_bytes} bytes: {url}")
-                    tmp_fd.write(chunk)
+                with tempfile.NamedTemporaryFile(dir=dest_dir, suffix=".part", delete=False) as tmp_fd:
+                    tmp_path = Path(tmp_fd.name)
+                    downloaded = 0
                     if progress is not None:
-                        progress(downloaded, total, f"Downloading {url}")
+                        progress(0, total, f"Downloading {url}")
 
-                # Belt-and-suspenders: requests/urllib3 already raise on a
-                # truncated Content-Length read, but assert the byte count too so
-                # a short response can never be promoted to a partial final file.
-                if total and downloaded != total:
-                    raise SetupError(f"Download truncated: got {downloaded} of {total} bytes from {url}")
-        finally:
-            response.close()
+                    for chunk in response.iter_content(chunk_size=_CHUNK_SIZE):
+                        if cancelled_check is not None and cancelled_check():
+                            raise SetupError("Download cancelled")
+                        if not chunk:
+                            continue
+                        downloaded += len(chunk)
+                        if downloaded > max_bytes:
+                            raise SetupError(f"Download exceeded size cap of {max_bytes} bytes: {url}")
+                        tmp_fd.write(chunk)
+                        if progress is not None:
+                            progress(downloaded, total, f"Downloading {url}")
+
+                    # Belt-and-suspenders: requests/urllib3 already raise on a
+                    # truncated Content-Length read, but assert the byte count too so
+                    # a short response can never be promoted to a partial final file.
+                    if total and downloaded != total:
+                        raise SetupError(f"Download truncated: got {downloaded} of {total} bytes from {url}")
+            finally:
+                response.close()
     except SetupError:
         _cleanup(tmp_path)
         raise
