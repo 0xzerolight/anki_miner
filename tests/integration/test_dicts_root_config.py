@@ -63,9 +63,11 @@ def test_settings_tab_scans_custom_dicts_root(qtbot, tmp_path):
     panel = widget.dictionary_panel
     assert panel.get_dicts_root() == external
 
-    # Force the panel's registry cache to (re)scan the configured root.
-    panel.refresh_registry()
+    # Force the panel's registry cache to (re)scan the configured root. The
+    # scan runs off the GUI thread, so wait for it to land + re-render.
     panel.set_chain(config.dictionary_chain)
+    panel.refresh_registry()
+    qtbot.waitUntil(lambda: panel._registry is not None and not panel._scan_in_flight, timeout=3000)
 
     row = panel._row_widget(0)
     assert row is not None, "indexed row must render for the seeded dict"
