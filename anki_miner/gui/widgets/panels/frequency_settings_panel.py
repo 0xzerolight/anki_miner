@@ -20,6 +20,7 @@ import stat
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
 from PyQt6.QtGui import QShowEvent
@@ -37,6 +38,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import FreqEntry
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.services.frequency.registry import FreqSourceMeta, FrequencySourceRegistry
 from anki_miner.utils.i18n import tr_format
@@ -167,6 +169,9 @@ class FrequencySettingsPanel(FormPanel):
         # Guard: registry scan deferred to first showEvent so it does not run
         # on the GUI thread before the window paints (mirrors audio/dict).
         self._scanned: bool = False
+        # Set while an off-thread registry scan is running so overlapping
+        # scans / removes don't stack (OVH disk-scan-off-thread).
+        self._scan_in_flight: bool = False
         # Optional callback invoked before destructive remove to ask the rest
         # of the app to close cached sqlite handles. Returns True on success.
         # Defaults to no-op (frequency providers are rebuilt per run, not held
@@ -180,18 +185,66 @@ class FrequencySettingsPanel(FormPanel):
         super().showEvent(event)
         if not self._scanned:
             self._scanned = True
-            self._rebuild_list()
+            self._scan_and_render_async()
 
     def set_release_callback(self, cb: Callable[[], bool] | None) -> None:
         """Wire the pre-remove resource-release hook (see ``remove()``)."""
         self._release_callback = cb
 
     def refresh_registry(self) -> None:
-        """Force a registry rescan. Call after an import finishes."""
-        registry = FrequencySourceRegistry(self._freqs_root)
-        registry.load()
-        self._view = _RegistryView(registry)
+        """Force a registry rescan. Call after an import finishes.
+
+        The disk scan runs off the GUI thread (OVH disk-scan-off-thread).
+        """
+        self._view = None
+        self._scanned = True
+        self._scan_and_render_async()
+
+    def _scan_and_render_async(self) -> None:
+        """Scan the registry off-thread (if not cached) then render the rows.
+
+        When ``_view`` is already cached (e.g. ``set_chain(registry_meta=...)``)
+        this renders synchronously with no worker. Otherwise a ``Loading…``
+        placeholder shows while ``FrequencySourceRegistry.load()`` runs on a
+        worker thread.
+        """
+        if self._view is not None or not self._scanned:
+            self._rebuild_list()
+            return
+        if self._scan_in_flight:
+            return
+        self._scan_in_flight = True
+        self._show_loading_placeholder()
+
+        freqs_root = self._freqs_root
+
+        def _scan() -> _RegistryView:
+            registry = FrequencySourceRegistry(freqs_root)
+            registry.load()
+            return _RegistryView(registry)
+
+        run_off_thread(self, _scan, self._on_scan_done, self._on_scan_error)
+
+    def _on_scan_done(self, view: object) -> None:
+        self._scan_in_flight = False
+        self._view = cast("_RegistryView", view)
         self._rebuild_list()
+
+    def _on_scan_error(self, msg: str) -> None:
+        self._scan_in_flight = False
+        logger.warning("Frequency registry scan failed: %s", msg)
+        self._rebuild_list()
+
+    def _show_loading_placeholder(self) -> None:
+        """Render a single disabled 'Loading…' row while a scan is in flight."""
+        self._list.setUpdatesEnabled(False)
+        try:
+            self._list.clear()
+            placeholder = QListWidgetItem(self.tr("Loading…"))
+            placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
+            self._list.addItem(placeholder)
+        finally:
+            self._list.setUpdatesEnabled(True)
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Frequency Sources"))
@@ -323,25 +376,52 @@ class FrequencySettingsPanel(FormPanel):
             )
             return
 
-        if source_dir is not None and source_dir.exists():
-            try:
-                _robust_rmtree(source_dir)
-            except OSError as e:
-                logger.error("Failed to delete frequency source folder %s: %s", source_dir, e)
-                QMessageBox.warning(
-                    self,
-                    self.tr("Remove failed"),
-                    tr_format(
-                        self.tr("Could not delete %1:\n%2\n\nThe frequency source was not removed."), source_dir, e
-                    ),
-                )
-                return
+        # Capture the post-remove chain on the GUI thread (reads row widgets)
+        # BEFORE dispatching the disk delete off-thread.
+        new_chain = list(self.get_chain())
+        del new_chain[index]
 
-        self._chain = list(self.get_chain())
-        del self._chain[index]
-        # Disk state changed — drop cached view so next rebuild rescans.
+        if source_dir is None or not source_dir.exists():
+            self._finalize_remove(new_chain)
+            return
+
+        # The rmtree (sleep-backed retry loop) runs off the GUI thread; the
+        # Remove button + list are disabled while it runs.
+        self._remove_btn.setEnabled(False)
+        self._list.setEnabled(False)
+        target = source_dir
+
+        def _delete() -> None:
+            _robust_rmtree(target)
+
+        run_off_thread(
+            self,
+            _delete,
+            lambda _r: self._on_remove_done(new_chain),
+            lambda msg: self._on_remove_error(target, msg),
+        )
+
+    def _on_remove_done(self, new_chain: list[FreqEntry]) -> None:
+        self._remove_btn.setEnabled(True)
+        self._list.setEnabled(True)
+        self._finalize_remove(new_chain)
+
+    def _on_remove_error(self, source_dir: Path, msg: str) -> None:
+        self._remove_btn.setEnabled(True)
+        self._list.setEnabled(True)
+        logger.error("Failed to delete frequency source folder %s: %s", source_dir, msg)
+        QMessageBox.warning(
+            self,
+            self.tr("Remove failed"),
+            tr_format(self.tr("Could not delete %1:\n%2\n\nThe frequency source was not removed."), source_dir, msg),
+        )
+
+    def _finalize_remove(self, new_chain: list[FreqEntry]) -> None:
+        """Commit the chain mutation + rescan after a successful disk delete."""
+        self._chain = new_chain
+        # Disk state changed — drop cached view so next render rescans.
         self._view = None
-        self._rebuild_list()
+        self._scan_and_render_async()
         self.chain_changed.emit()
         self.source_removed.emit()
 
@@ -381,15 +461,13 @@ class FrequencySettingsPanel(FormPanel):
             # clear() destroys the previous row widgets (and their signal
             # connections), so there is no duplicate-handler risk.
             self._list.clear()
-            # Defer the disk scan until the panel has been shown at least once
-            # (showEvent sets _scanned); before first paint rows render without
-            # source metadata — a safe no-content state since the list is never
-            # visible until the Settings tab is opened.
-            if self._view is None and self._scanned:
-                registry = FrequencySourceRegistry(self._freqs_root)
-                self._view = _RegistryView(registry)
-                self._view.load()
-            view = self._view  # may be None before first show
+            # Render-only: the disk scan is owned by _scan_and_render_async,
+            # which runs FrequencySourceRegistry.load() off the GUI thread and
+            # only then calls back here with self._view populated. Before first
+            # show self._view is None and rows render without source metadata —
+            # a safe no-content state since the list is never visible until the
+            # Settings tab is opened.
+            view = self._view  # may be None before first show / scan
             for entry in self._chain:
                 meta = view.get(entry.source_id) if (view is not None and entry.source_id) else None
                 # A chain entry whose source folder is gone (or schema-mismatched
