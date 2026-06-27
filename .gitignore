@@ -25,6 +25,12 @@ venv/
 env/
 ENV/
 .venv
+.venv-release/
+
+# Release preflight build inputs (scripts/release_preflight.sh) — fetched/built,
+# never committed; CI regenerates them per run.
+vendor/
+.release-cache/
 
 # Testing
 .pytest_cache/

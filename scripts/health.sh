@@ -49,7 +49,7 @@ run_hard     "ruff"       "${BIN}ruff" check .
 run_hard     "mypy"       "${BIN}mypy" anki_miner
 run_hard     "pytest"     "${BIN}pytest" -m "not youtube and not asr"
 run_tolerant "vulture"    "vulture" "${BIN}vulture"
-run_tolerant "shellcheck" "shellcheck" shellcheck packaging/appimage/build-appimage.sh
+run_tolerant "shellcheck" "shellcheck" shellcheck packaging/appimage/build-appimage.sh scripts/bundle_smoke.sh scripts/release_preflight.sh
 
 echo "================ SUMMARY ================"
 [ ${#skipped[@]} -gt 0 ] && echo "skipped: ${skipped[*]}"
