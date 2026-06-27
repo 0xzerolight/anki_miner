@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import unicodedata
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.config import AnkiMinerConfig
@@ -434,6 +435,16 @@ class WordFilterService:
             if len(lines) < 2:
                 continue
             word.sentence_candidates = [self._swap_word_to_line(word, line) for line in lines[:max_candidates]]
+
+    def attach_occurrence_counts(self, words: list[TokenizedWord], counts: Mapping[str, int]) -> None:
+        """Set ``word.occurrence_count`` from in-episode lemma counts (Issue #88).
+
+        ``counts`` is a lemma→occurrences mapping (e.g. the Counter from
+        ``SubtitleParserService.count_lemmas``). Lemmas absent from the mapping
+        get 0. Mutates ``words`` in place; display/sort-only data for the curator.
+        """
+        for word in words:
+            word.occurrence_count = counts.get(word.lemma, 0)
 
     def filter_by_episode_count(
         self,

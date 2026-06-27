@@ -1174,6 +1174,12 @@ class EpisodeProcessor:
                     # offer a per-word sentence picker (no-op for words that
                     # appear on a single line).
                     self.word_filter.attach_sentence_candidates(unknown_words, line_index)
+                # Attach per-episode occurrence counts for the curator's
+                # "Occurrences" column/sort (Issue #88). count_lemmas reuses the
+                # phase-1 parse cache, so no second MeCab pass.
+                self.word_filter.attach_occurrence_counts(
+                    unknown_words, self.subtitle_parser.count_lemmas(subtitle_file)
+                )
                 curated = curation_callback(unknown_words)
                 if curated is None:
                     # The user cancelled/rejected the curation dialog.
