@@ -83,6 +83,78 @@ class TestSettingsTabAsrWiring:
         tab.set_alass_status("Download complete")
         assert tab.subtitles_panel.alass_status_label.text() == "Download complete"
 
+    @staticmethod
+    def _force_engine_available(monkeypatch):
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.subtitles_settings_panel._engine.available",
+            lambda: True,
+        )
+
+    def test_model_button_disabled_after_click(self, test_config: AnkiMinerConfig, qtbot, monkeypatch):
+        """Clicking Download model disables the button (no repeat clicks in flight)."""
+        self._force_engine_available(monkeypatch)
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        panel = tab.subtitles_panel
+        panel._refresh_status(panel.get_model(), test_config.asr_models_root)
+        assert panel.download_model_button.isEnabled()
+
+        panel.download_model_button.click()
+
+        assert not panel.download_model_button.isEnabled()
+
+    def test_model_button_stays_disabled_on_config_reload_during_download(
+        self, test_config: AnkiMinerConfig, qtbot, monkeypatch
+    ):
+        """A config reload mid-download must NOT re-enable the button or clobber status."""
+        self._force_engine_available(monkeypatch)
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        panel = tab.subtitles_panel
+        panel._refresh_status(panel.get_model(), test_config.asr_models_root)
+
+        panel.download_model_button.click()
+        assert panel.model_status_label.text() == "Downloading…"
+
+        # Simulate an external config change reloading the panel (theme refresh,
+        # update banner, JMdict-migration finish, etc.).
+        panel.load_from_config(test_config)
+
+        assert not panel.download_model_button.isEnabled()
+        assert panel.model_status_label.text() == "Downloading…"
+
+    def test_model_button_reenabled_after_finish(self, test_config: AnkiMinerConfig, qtbot, monkeypatch):
+        """notify_asr_download_finished clears the in-flight state and re-enables."""
+        self._force_engine_available(monkeypatch)
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        panel = tab.subtitles_panel
+        panel._refresh_status(panel.get_model(), test_config.asr_models_root)
+        panel.download_model_button.click()
+        assert not panel.download_model_button.isEnabled()
+
+        panel.notify_asr_download_finished(panel.get_model(), test_config.asr_models_root)
+
+        assert panel.download_model_button.isEnabled()
+
+    def test_alass_button_in_flight_lifecycle(self, test_config: AnkiMinerConfig, qtbot):
+        """alass Download button: disabled on click, re-enabled only on finish."""
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        panel = tab.subtitles_panel
+        if not panel._alass_supported:
+            pytest.skip("alass in-app download unsupported on this platform")
+
+        panel.download_alass_button.click()
+        assert not panel.download_alass_button.isEnabled()
+
+        # Reload mid-download must keep it disabled.
+        panel.load_from_config(test_config)
+        assert not panel.download_alass_button.isEnabled()
+
+        panel.notify_alass_download_finished()
+        assert panel.download_alass_button.isEnabled()
+
     def test_asr_model_round_trips_through_save(self, test_config: AnkiMinerConfig, qtbot, monkeypatch):
         """Selecting 'small' and saving results in config.asr_model == 'small'."""
         tab = SettingsTab(test_config)

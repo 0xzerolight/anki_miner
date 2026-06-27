@@ -61,6 +61,11 @@ class SubtitlesSettingsPanel(FormPanel):
         self._models_root = None
         self._bin_root: Path | None = None
         self._alass_supported = alass_installer.alass_install_supported()
+        # In-flight guards: a download disables its button until the worker
+        # finishes. Without these, any _refresh_*_status re-run (config reload
+        # mid-download) would re-enable the button and clobber the status label.
+        self._asr_download_active = False
+        self._alass_download_active = False
         self._setup_fields()
 
     # ------------------------------------------------------------------
@@ -215,7 +220,10 @@ class SubtitlesSettingsPanel(FormPanel):
             self._refresh_engine_state()
             return
         # Disable while in flight so a second click isn't silently swallowed by
-        # the controller's isRunning guard. Re-enabled by _refresh_status.
+        # the controller's isRunning guard. The flag keeps it disabled across any
+        # _refresh_status re-run (config reload); cleared by
+        # notify_asr_download_finished.
+        self._asr_download_active = True
         self.download_model_button.setEnabled(False)
         self.asr_download_requested.emit(self.model_combo.currentText())
 
@@ -242,6 +250,15 @@ class SubtitlesSettingsPanel(FormPanel):
         """Toggle the engine-missing guidance based on faster-whisper availability."""
         self._asr_engine_guidance.setVisible(not _engine.available())
 
+    def notify_asr_download_finished(self, name: str, models_root) -> None:
+        """Clear the in-flight guard and refresh the button/status after a download.
+
+        Wired to the download worker's finish callback (success or failure).
+        Must run before ``_refresh_status`` can re-enable the button.
+        """
+        self._asr_download_active = False
+        self._refresh_status(name, models_root)
+
     def _refresh_status(self, name: str, models_root) -> None:
         """Reflect download state and gate the button on engine availability.
 
@@ -249,6 +266,11 @@ class SubtitlesSettingsPanel(FormPanel):
         The button is enabled only when the engine is importable — without it a
         model download cannot run, so the click would be a no-op.
         """
+        if self._asr_download_active:
+            # A download is in flight: keep the button disabled and leave the
+            # "Downloading…" status untouched, regardless of config reloads.
+            self.download_model_button.setEnabled(False)
+            return
         available = _engine.available()
         self.download_model_button.setEnabled(available)
         if not available:
@@ -268,8 +290,14 @@ class SubtitlesSettingsPanel(FormPanel):
 
     def _on_alass_download_clicked(self) -> None:
         """Disable the button in flight and request the alass download."""
+        self._alass_download_active = True
         self.download_alass_button.setEnabled(False)
         self.alass_download_requested.emit()
+
+    def notify_alass_download_finished(self) -> None:
+        """Clear the in-flight guard and refresh the alass button after a download."""
+        self._alass_download_active = False
+        self._refresh_alass_status()
 
     def set_alass_status(self, text: str) -> None:
         """Set the alass status label text (no-op on unsupported platforms)."""
@@ -279,6 +307,10 @@ class SubtitlesSettingsPanel(FormPanel):
     def _refresh_alass_status(self) -> None:
         """Reflect whether the managed alass binary is present; re-enable the button."""
         if not self._alass_supported or self._bin_root is None:
+            return
+        if self._alass_download_active:
+            # Download in flight: keep disabled and leave "Downloading…" intact.
+            self.download_alass_button.setEnabled(False)
             return
         self.download_alass_button.setEnabled(True)
         try:
