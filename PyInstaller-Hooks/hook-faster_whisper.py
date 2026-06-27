@@ -11,6 +11,14 @@ sweeps datas / binaries / hiddenimports in one pass, including:
   - faster_whisper tokenizer resources (vocabulary/merges files)
   - huggingface_hub / tokenizers / sentencepiece transitive imports
 
+faster_whisper also imports ``av`` (PyAV) unconditionally at package load
+(faster_whisper/audio.py: ``import av``), so av must be collected too — it is a
+compiled package shipping its own libav* shared libs that static analysis won't
+follow.  collect_all here keeps the ASR collection self-contained rather than
+relying on pyinstaller-hooks-contrib's hook-av.py being present in the pinned
+PyInstaller.  (av is stripped from the lean .deb stage tree separately; see
+release.yml.)
+
 Do NOT trim these with --exclude-module: ctranslate2's extension loader
 has internal cross-dependencies and breaks when native modules are pruned.
 The hook itself adds ~80-120 MB per platform.
@@ -20,7 +28,8 @@ from PyInstaller.utils.hooks import collect_all
 
 datas, binaries, hiddenimports = collect_all("faster_whisper")
 _ct2_datas, _ct2_binaries, _ct2_hiddenimports = collect_all("ctranslate2")
+_av_datas, _av_binaries, _av_hiddenimports = collect_all("av")
 
-datas += _ct2_datas
-binaries += _ct2_binaries
-hiddenimports += _ct2_hiddenimports
+datas += _ct2_datas + _av_datas
+binaries += _ct2_binaries + _av_binaries
+hiddenimports += _ct2_hiddenimports + _av_hiddenimports
