@@ -28,6 +28,16 @@ logger = logging.getLogger(__name__)
 
 _REGISTRY_ATTR = "_off_thread_workers"
 
+# Process-global registry of every LIVE run_off_thread worker. Each worker is
+# also tracked on its parent's _off_thread_workers set (for premature-GC
+# protection), but a worker whose parent widget is being destroyed at app close
+# is no longer reachable through that per-parent set. join_all_off_thread_workers
+# uses this global set to cancel+join every short-lived background worker at
+# shutdown so Qt never destroys a running QThread (which can abort the process).
+# Entries are added on dispatch and discarded in the finished -> _teardown
+# handler, exactly like the per-parent set.
+_LIVE_OFF_THREAD_WORKERS: set[QThread] = set()
+
 
 def run_off_thread(
     parent: QObject,
@@ -63,9 +73,11 @@ def run_off_thread(
 
     registry = _get_registry(parent)
     registry.add(worker)
+    _LIVE_OFF_THREAD_WORKERS.add(worker)
 
     def _teardown() -> None:
         registry.discard(worker)
+        _LIVE_OFF_THREAD_WORKERS.discard(worker)
         # The worker's underlying C++ object may already be destroyed (e.g. the
         # parent widget was torn down while the work was still in flight, so Qt
         # deleted the child worker before this queued slot ran). Nothing left to
@@ -130,6 +142,43 @@ def join_tracked_workers(parent: QObject, timeout_ms: int = 2000) -> list[QThrea
         except RuntimeError:
             # Underlying C++ object already deleted — treat as gone.
             registry.discard(worker)
+
+    return laggards
+
+
+def join_all_off_thread_workers(timeout_ms: int = 2000) -> list[QThread]:
+    """Cancel + bounded-join every LIVE run_off_thread worker at app close.
+
+    Drains the process-global :data:`_LIVE_OFF_THREAD_WORKERS` set: each worker
+    is cancelled (if cooperative) and joined via :func:`join_worker`; those that
+    stop are dropped from the global set. Workers whose underlying C++ object has
+    already been deleted (raising ``RuntimeError``) are silently dropped, exactly
+    as :func:`join_tracked_workers` does.
+
+    This is the single place that reaps the short-lived background workers
+    dispatched by widgets across the app (analytics refresh, settings-panel
+    registry scans, ffprobe/ASR probes) that are otherwise destroyed mid-run
+    when their parent widget is torn down at close — Qt destroying a running
+    QThread can abort the process.
+
+    Args:
+        timeout_ms: Per-worker join timeout, in milliseconds.
+
+    Returns:
+        The workers that did NOT stop within the timeout, so the caller can fold
+        them into its deferred-close path.
+    """
+    laggards: list[QThread] = []
+
+    for worker in list(_LIVE_OFF_THREAD_WORKERS):
+        try:
+            if join_worker(worker, timeout_ms):
+                _LIVE_OFF_THREAD_WORKERS.discard(worker)
+            else:
+                laggards.append(worker)
+        except RuntimeError:
+            # Underlying C++ object already deleted — treat as gone.
+            _LIVE_OFF_THREAD_WORKERS.discard(worker)
 
     return laggards
 

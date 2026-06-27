@@ -19,6 +19,7 @@ from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers
 from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
 
 if TYPE_CHECKING:
@@ -405,6 +406,15 @@ class BackgroundTaskController(QObject):
             if callable(iter_workers):
                 for worker in iter_workers():
                     join(worker)
+
+        # Short-lived run_off_thread workers (analytics refresh, settings-panel
+        # registry scans, ffprobe/ASR probes) self-clean on finish but are
+        # destroyed mid-run with their parent widget at close — Qt destroying a
+        # running QThread can abort the process. Cancel + bounded-join every live
+        # one here, with the same grace, and fold any laggards into the deferred-
+        # close path so they're handled uniformly. Cancelled+joined within the
+        # grace is the common case (these are short and cooperative).
+        laggards.extend(join_all_off_thread_workers(timeout_ms=_CLOSE_JOIN_GRACE_MS))
 
         return laggards
 

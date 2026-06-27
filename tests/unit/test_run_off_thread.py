@@ -16,6 +16,7 @@ import time
 from PyQt6.QtCore import QObject
 
 from anki_miner.gui.utils.run_off_thread import (
+    join_all_off_thread_workers,
     join_tracked_workers,
     join_worker,
     run_off_thread,
@@ -216,3 +217,96 @@ def test_join_tracked_workers_suppresses_runtime_error(qtbot):
     # Must not raise; the dead worker is simply dropped.
     laggards = join_tracked_workers(parent, timeout_ms=50)
     assert laggards == []
+
+
+# ===========================================================================
+# join_all_off_thread_workers (global registry — app-close join)
+# ===========================================================================
+
+
+def test_join_all_off_thread_workers_empty_returns_empty():
+    """No live workers → empty laggard list, no error."""
+    assert join_all_off_thread_workers(timeout_ms=50) == []
+
+
+def test_join_all_off_thread_workers_joins_finished_worker_already_gone(qtbot):
+    """A finished worker self-discards from the global registry before close."""
+    parent = _Sink()
+    received: list = []
+
+    worker = run_off_thread(parent, lambda: 1, received.append)
+    qtbot.waitUntil(lambda: bool(received), timeout=3000)
+    # The finished -> _teardown handler discards from the global set too.
+    qtbot.waitUntil(lambda: worker not in parent._off_thread_workers, timeout=3000)
+
+    laggards = join_all_off_thread_workers(timeout_ms=50)
+    assert worker not in laggards
+
+
+def test_join_all_off_thread_workers_returns_laggard_for_stuck_worker(qtbot):
+    """A still-running, uncancellable worker is returned as a laggard."""
+    parent = _Sink()
+    laggard = _SleepWorker(5.0, respect_cancel=False, parent=parent)
+    # run_off_thread registers in the global set; emulate by going through it for
+    # a quick worker, then directly add the stuck one to both registries.
+    from anki_miner.gui.utils import run_off_thread as rot
+
+    rot._LIVE_OFF_THREAD_WORKERS.add(laggard)
+    parent._off_thread_workers = {laggard}
+    laggard.start()
+    qtbot.waitUntil(lambda: laggard.isRunning(), timeout=2000)
+
+    try:
+        laggards = join_all_off_thread_workers(timeout_ms=50)
+        assert laggard in laggards
+    finally:
+        # Clean up the leaked thread + global registry entry.
+        assert laggard.wait(7000)
+        rot._LIVE_OFF_THREAD_WORKERS.discard(laggard)
+
+
+def test_join_all_off_thread_workers_cancels_cooperative_worker(qtbot):
+    """A cooperative live worker is cancelled+joined, not returned as a laggard."""
+    parent = _Sink()
+    worker = _SleepWorker(5.0, respect_cancel=True, parent=parent)
+    from anki_miner.gui.utils import run_off_thread as rot
+
+    rot._LIVE_OFF_THREAD_WORKERS.add(worker)
+    worker.start()
+    qtbot.waitUntil(lambda: worker.isRunning(), timeout=2000)
+
+    laggards = join_all_off_thread_workers(timeout_ms=3000)
+    assert worker not in laggards
+    assert worker.isFinished()
+
+
+def test_join_all_off_thread_workers_suppresses_runtime_error():
+    """A deleted C++ object raising RuntimeError is treated as already gone."""
+    from anki_miner.gui.utils import run_off_thread as rot
+
+    class _Dead:
+        def isRunning(self):  # noqa: N802 — Qt API name
+            raise RuntimeError("wrapped C/C++ object has been deleted")
+
+    dead = _Dead()
+    rot._LIVE_OFF_THREAD_WORKERS.add(dead)
+    try:
+        laggards = join_all_off_thread_workers(timeout_ms=50)
+        assert laggards == []
+        assert dead not in rot._LIVE_OFF_THREAD_WORKERS
+    finally:
+        rot._LIVE_OFF_THREAD_WORKERS.discard(dead)
+
+
+def test_run_off_thread_registers_in_global_set(qtbot):
+    """A dispatched worker is tracked in the module-global live set while running."""
+    from anki_miner.gui.utils import run_off_thread as rot
+
+    parent = _Sink()
+    received: list = []
+
+    worker = run_off_thread(parent, lambda: 1, received.append)
+    assert worker in rot._LIVE_OFF_THREAD_WORKERS
+
+    qtbot.waitUntil(lambda: bool(received), timeout=3000)
+    qtbot.waitUntil(lambda: worker not in rot._LIVE_OFF_THREAD_WORKERS, timeout=3000)

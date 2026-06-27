@@ -195,6 +195,104 @@ class TestReleaseWorkerPreservesReplacedHandle:
         worker_a.deleteLater.assert_called_once()
 
 
+class TestShutdownJoinsOffThreadWorkers:
+    """shutdown() must reap LIVE run_off_thread workers via the global registry."""
+
+    @pytest.fixture
+    def shutdown_controller(self):
+        """A controller with the real shutdown() bound and all handles None."""
+        from PyQt6.QtWidgets import QTabWidget
+
+        from anki_miner.gui.controllers.background_tasks import BackgroundTaskController
+
+        ctrl = MagicMock(spec=BackgroundTaskController)
+        ctrl.shutdown = BackgroundTaskController.shutdown.__get__(ctrl)
+        for attr in (
+            "validation_worker",
+            "update_worker",
+            "ytdlp_update_worker",
+            "jmdict_migration_worker",
+            "asr_model_download_worker",
+            "alass_install_worker",
+            "cuda_pack_download_worker",
+            "prewarm_worker",
+        ):
+            setattr(ctrl, attr, None)
+        ctrl._join_worker_for_close = MagicMock(return_value=True)
+
+        tabs = MagicMock(spec=QTabWidget)
+        tabs.count.return_value = 0
+        return ctrl, tabs
+
+    def test_shutdown_cancels_and_joins_live_off_thread_worker(self, shutdown_controller, qtbot):
+        """A dispatched run_off_thread worker is cancelled+joined by shutdown()."""
+        import time
+
+        from PyQt6.QtCore import QObject
+
+        from anki_miner.gui.utils.run_off_thread import run_off_thread
+        from anki_miner.gui.workers.base_worker import CancellableWorker
+
+        class _Sink(QObject):
+            pass
+
+        class _SleepWorker(CancellableWorker):
+            def run(self) -> None:
+                deadline = time.monotonic() + 5.0
+                while time.monotonic() < deadline:
+                    if self.check_cancelled():
+                        return
+                    time.sleep(0.01)
+
+        ctrl, tabs = shutdown_controller
+        parent = _Sink()
+        worker = run_off_thread(parent, lambda: (_SleepWorker().run()), lambda _v: None)
+        # The above immediately runs run() on the worker thread; cooperative cancel
+        # is what shutdown relies on. Wait until it's actually running.
+        qtbot.waitUntil(lambda: worker.isRunning(), timeout=2000)
+
+        laggards = ctrl.shutdown(tabs)
+
+        # Cooperative worker honoured cancel → joined, not a laggard.
+        assert worker not in laggards
+        assert not worker.isRunning()
+
+    def test_shutdown_appends_stuck_off_thread_worker_to_laggards(self, shutdown_controller, qtbot, monkeypatch):
+        """A stuck live worker is folded into the returned laggard list."""
+        import time
+
+        from PyQt6.QtCore import QObject
+
+        from anki_miner.gui.utils import run_off_thread as rot
+        from anki_miner.gui.workers.base_worker import CancellableWorker
+
+        class _Sink(QObject):
+            pass
+
+        class _StuckWorker(CancellableWorker):
+            def run(self) -> None:
+                time.sleep(5.0)
+
+        ctrl, tabs = shutdown_controller
+        parent = _Sink()
+        worker = _StuckWorker(parent)
+        rot._LIVE_OFF_THREAD_WORKERS.add(worker)
+        worker.start()
+        qtbot.waitUntil(lambda: worker.isRunning(), timeout=2000)
+
+        # Force the off-thread join to time out fast.
+        monkeypatch.setattr(
+            "anki_miner.gui.controllers.background_tasks.join_all_off_thread_workers",
+            lambda timeout_ms=2000: rot.join_all_off_thread_workers(timeout_ms=50),
+        )
+        try:
+            laggards = ctrl.shutdown(tabs)
+            assert worker in laggards
+        finally:
+            assert worker.wait(7000)
+            rot._LIVE_OFF_THREAD_WORKERS.discard(worker)
+
+
 class _FakeYtdlpWorker(QObject):
     """Fake yt-dlp worker with real, connectable result_ready/error/finished signals."""
 
