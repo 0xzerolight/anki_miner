@@ -15,6 +15,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 
+## [2.7.0] - 2026-06-27
+
+### Added
+- **Subtitle generation from speech.** A new Subtitles → Generate tab transcribes a video or audio file into an SRT with a local Whisper model, so you can mine sources that ship without subtitles. The model downloads in-app; an optional GPU (CUDA) acceleration pack and a voice-activity-detection pack install the same way, and a device selector falls back to CPU when no GPU is available.
+- **Subtitle retiming.** Subtitles → Retime realigns an out-of-sync subtitle file to your video using alass, with the alass binary installed in-app.
+- **Multiple frequency sources.** Settings → Frequency now takes a chain of frequency lists instead of a single file, each stored in its own SQLite index, with a `frequency_sort` field for ordering. An existing `frequency.csv` is migrated into the chain once on first launch.
+- **Find a Feature browser.** Tools → Find a Feature opens a searchable list of the app's capabilities and jumps you straight to the relevant tab or setting.
+- **Spanish, French, and Russian UI.** Three new UI translations join the completed Japanese one, selectable in Settings (restart to apply). English stays the default; every catalog is drift-guarded in CI.
+- **Whole-UI Zoom.** A Zoom setting scales the entire interface via `QT_SCALE_FACTOR` for high-DPI or low-vision setups.
+- **JP Mining Note support.** Card-type marker fields let you map cards onto the JP Mining Note note type.
+- **Per-dictionary card styling** (#87). Imported dictionaries now render with their own `styles.css`, with a generic structured-content fallback for dictionaries that ship none.
+- **Intel macOS build.** Releases now include an `x86_64` macOS bundle for Intel Macs, and the update check points Intel users at the right asset.
+- **Word list sorted by occurrence** (#88). The curation dialog orders words by how often they appear in the source.
+
+### Changed
+- **ASR folded into the Subtitles panel.** Speech-recognition settings and the alass, model, and acceleration-pack installs all live under one Subtitles panel.
+- **Audiobook tab renamed Audio.** Audio mining has never been limited to audiobooks, and the wording now reflects that.
+- **Card-style presets reworked into Rich and Minimal.** The preset list is now two clear, bug-free options.
+- **Recommended frequency resources import into the chain** instead of a standalone file.
+
+### Fixed
+- **The GUI no longer freezes during long operations.** Blocking work — subtitle parsing, track and ffprobe probing, dictionary/frequency/audio registry scans, analytics, note-field checks, and processor construction — now runs off the GUI thread. A stall watchdog flags any remaining main-thread blocking, leaked mining processors are reaped after a stuck-worker timeout, and off-thread workers are joined at app close.
+- **Retiming no longer breaks well-timed subtitles.** alass is only allowed to shift subtitles that are actually out of sync.
+- **Subtitle generation is more reliable.** Whisper hallucinations are suppressed, audio is written as `pcm_s16le` so the standard library can read it back, model downloads are atomic and integrity-checked, the audio-decode path is hardened, the extraction timeout is raised for long sources, and blank transcripts are no longer reported as success.
+- **Dictionary styling fixes** (#87). The muted-text opacity no longer cascades across presets, and a ReDoS in the `styles.css` forbidden-pattern scan was removed.
+- **Sibling subtitles match case-insensitively** when auto-filling the subtitle selector from a picked video.
+
+### Removed
+- Dead internals: the legacy `FrequencyService`, the single-CSV frequency importer, and unused `_AsrState` fields.
+
+
 ## [2.6.7] - 2026-06-23
 
 ### Added
