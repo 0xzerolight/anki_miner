@@ -438,8 +438,16 @@
         <translation>Champ Fréquence</translation>
     </message>
     <message>
-        <source>Stores the word frequency rank.</source>
-        <translation>Stocke le rang de fréquence du mot.</translation>
+        <source>Stores the per-source frequency breakdown (all sources).</source>
+        <translation>Stocke la répartition de fréquence par source (toutes les sources).</translation>
+    </message>
+    <message>
+        <source>Frequency Sort Field</source>
+        <translation>Champ de tri de fréquence</translation>
+    </message>
+    <message>
+        <source>Stores the single frequency rank used for sorting (one number).</source>
+        <translation>Stocke le rang de fréquence unique utilisé pour le tri (un nombre).</translation>
     </message>
     <message>
         <source>Source Field</source>

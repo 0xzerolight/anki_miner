@@ -438,8 +438,16 @@
         <translation>頻度フィールド</translation>
     </message>
     <message>
-        <source>Stores the word frequency rank.</source>
-        <translation>単語の頻度ランクを保存します。</translation>
+        <source>Stores the per-source frequency breakdown (all sources).</source>
+        <translation>ソースごとの頻度内訳（全ソース）を保存します。</translation>
+    </message>
+    <message>
+        <source>Frequency Sort Field</source>
+        <translation>頻度ソートフィールド</translation>
+    </message>
+    <message>
+        <source>Stores the single frequency rank used for sorting (one number).</source>
+        <translation>並べ替えに使う単一の頻度順位を保存します（数値ひとつ）。</translation>
     </message>
     <message>
         <source>Source Field</source>
