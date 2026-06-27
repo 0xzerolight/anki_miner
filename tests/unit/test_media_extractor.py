@@ -2,6 +2,7 @@
 
 import dataclasses
 import json
+import shutil
 import subprocess
 import wave
 from pathlib import Path
@@ -1889,17 +1890,21 @@ class TestOVH044AudioFailedOnError:
 
 
 # ---------------------------------------------------------------------------
-# Helper: write a minimal valid 32-bit float PCM WAV to a path
+# Helper: write a minimal valid 16-bit PCM WAV to a path
 # ---------------------------------------------------------------------------
-def _write_f32_wav(path: Path, num_samples: int, sample_rate: int = 16000) -> None:
-    """Write a mono 32-bit float PCM WAV file with *num_samples* samples of silence."""
+def _write_s16_wav(path: Path, num_samples: int, sample_rate: int = 16000) -> None:
+    """Write a mono 16-bit PCM WAV file with *num_samples* samples of silence.
+
+    Matches the ``pcm_s16le`` (WAVE format tag 1) layout that
+    extract_full_audio actually writes — the only family stdlib ``wave`` reads.
+    """
     import struct
 
-    # Write silence as raw f32le bytes — no numpy required for the helper itself.
-    raw = struct.pack(f"<{num_samples}f", *([0.0] * num_samples))
+    # Write silence as raw s16le bytes — no numpy required for the helper itself.
+    raw = struct.pack(f"<{num_samples}h", *([0] * num_samples))
     with wave.open(str(path), "wb") as wf:
         wf.setnchannels(1)
-        wf.setsampwidth(4)  # 4 bytes = 32-bit float
+        wf.setsampwidth(2)  # 2 bytes = 16-bit int
         wf.setframerate(sample_rate)
         wf.writeframes(raw)
 
@@ -1915,16 +1920,16 @@ def _write_min_wav(path) -> None:
 
     with _wave.open(str(path), "wb") as wf:
         wf.setnchannels(1)
-        wf.setsampwidth(4)  # pcm_f32le is 4 bytes/sample
+        wf.setsampwidth(2)  # pcm_s16le is 2 bytes/sample
         wf.setframerate(16000)
-        wf.writeframes(struct.pack("<f", 0.0))
+        wf.writeframes(struct.pack("<h", 0))
 
 
 class TestExtractFullAudio:
     """Tests for MediaExtractorService.extract_full_audio."""
 
     def test_correct_ffmpeg_args_jp_track(self, service, video_file, tmp_path):
-        """When JP track detected, command must use -map 0:N and pcm_f32le, -ar 16000, -ac 1."""
+        """When JP track detected, command must use -map 0:N and pcm_s16le, -ar 16000, -ac 1."""
         out_wav = tmp_path / "full.wav"
         _write_min_wav(out_wav)
         mock_proc = _popen_mock()
@@ -1949,7 +1954,7 @@ class TestExtractFullAudio:
         assert "-ac" in cmd
         assert cmd[cmd.index("-ac") + 1] == "1"
         assert "-c:a" in cmd
-        assert cmd[cmd.index("-c:a") + 1] == "pcm_f32le"
+        assert cmd[cmd.index("-c:a") + 1] == "pcm_s16le"
         assert cmd[-1] == str(out_wav)
 
     def test_falls_back_to_0a0_when_no_jp_track(self, service, video_file, tmp_path):
@@ -1999,7 +2004,7 @@ class TestExtractFullAudio:
         assert cmd[cmd.index("-map") + 1] == "0:5"
 
     def test_no_encoder_probe(self, service, video_file, tmp_path):
-        """extract_full_audio must NOT call _check_encoder_available (pcm_f32le is built-in)."""
+        """extract_full_audio must NOT call _check_encoder_available (pcm_s16le is built-in)."""
         out_wav = tmp_path / "full.wav"
         mock_proc = _popen_mock()
 
@@ -2046,7 +2051,7 @@ class TestExtractFullAudio:
         out_wav = tmp_path / "full.wav"
         with _wave.open(str(out_wav), "wb") as wf:
             wf.setnchannels(1)
-            wf.setsampwidth(4)
+            wf.setsampwidth(2)
             wf.setframerate(16000)
             # no writeframes → 0 frames
         mock_proc = _popen_mock()
@@ -2139,7 +2144,7 @@ class TestWavToFloat32:
     """
 
     def test_returns_correct_shape_sr_duration(self, tmp_path):
-        """wav_to_float32 on a generated f32 WAV returns correct shape, sr, and duration."""
+        """wav_to_float32 on a generated s16 WAV returns correct shape, sr, and duration."""
         np = pytest.importorskip("numpy")
 
         from anki_miner.services.media_extractor import wav_to_float32
@@ -2147,7 +2152,7 @@ class TestWavToFloat32:
         sample_rate = 16000
         num_samples = 32000  # 2 seconds
         wav_path = tmp_path / "test.wav"
-        _write_f32_wav(wav_path, num_samples, sample_rate)
+        _write_s16_wav(wav_path, num_samples, sample_rate)
 
         samples, sr, duration = wav_to_float32(wav_path)
 
@@ -2156,8 +2161,8 @@ class TestWavToFloat32:
         assert samples.shape == (num_samples,)
         assert sr == sample_rate
         assert abs(duration - 2.0) < 1e-6
-        # Must be a writable, owned array — np.frombuffer alone returns a
-        # read-only view that faster-whisper/ctranslate2 can reject.
+        # Must be a writable, owned array — astype yields one (np.frombuffer
+        # alone returns a read-only view faster-whisper/ctranslate2 can reject).
         assert samples.flags.writeable
 
     def test_samples_in_valid_range(self, tmp_path):
@@ -2167,14 +2172,14 @@ class TestWavToFloat32:
         from anki_miner.services.media_extractor import wav_to_float32
 
         wav_path = tmp_path / "silent.wav"
-        _write_f32_wav(wav_path, 16000, 16000)
+        _write_s16_wav(wav_path, 16000, 16000)
 
         samples, sr, duration = wav_to_float32(wav_path)
 
         assert np.all(samples == 0.0)
 
     def test_non_silent_samples_preserved(self, tmp_path):
-        """Non-zero f32 PCM samples must survive the round-trip unchanged."""
+        """int16 PCM samples must survive the round-trip as int16/32768 floats."""
         import struct
 
         np = pytest.importorskip("numpy")
@@ -2183,20 +2188,108 @@ class TestWavToFloat32:
 
         sample_rate = 16000
         num_samples = 160
-        # Generate a linear ramp in [-1, 1] as raw f32le bytes.
-        step = 2.0 / (num_samples - 1)
-        original_list = [-1.0 + i * step for i in range(num_samples)]
-        raw = struct.pack(f"<{num_samples}f", *original_list)
-        original = np.frombuffer(raw, dtype=np.float32)
+        # Generate a linear ramp across the full int16 range as raw s16le bytes.
+        step = 65535 // (num_samples - 1)
+        original_int16 = [(-32768 + i * step) for i in range(num_samples)]
+        raw = struct.pack(f"<{num_samples}h", *original_int16)
+        expected = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
 
         with wave.open(str(tmp_path / "tone.wav"), "wb") as wf:
             wf.setnchannels(1)
-            wf.setsampwidth(4)
+            wf.setsampwidth(2)
             wf.setframerate(sample_rate)
             wf.writeframes(raw)
 
         samples, sr, duration = wav_to_float32(tmp_path / "tone.wav")
 
-        np.testing.assert_array_equal(samples, original)
+        np.testing.assert_array_equal(samples, expected)
         assert sr == sample_rate
         assert abs(duration - num_samples / sample_rate) < 1e-6
+
+
+# Codecs Python's stdlib ``wave`` module can actually read (WAVE format tag 1 /
+# integer PCM). pcm_f32le (tag 3, IEEE float) is NOT here — it raises
+# "unknown format: 3" at wave.open() time and silently broke every extraction.
+_WAVE_READABLE_CODECS = {"pcm_u8", "pcm_s16le", "pcm_s24le", "pcm_s32le"}
+
+
+class TestExtractFullAudioWaveReadable:
+    """Pin the invariant that broke the Subtitle → Generate tab: extract_full_audio
+    must write a WAV that Python's stdlib ``wave`` can read.
+
+    The original code wrote ``pcm_f32le`` (WAVE tag 3), which both the zero-frame
+    guard and ``wav_to_float32`` open with ``wave`` — and ``wave`` only reads
+    integer PCM, so every extraction failed with "unknown format: 3". Unit tests
+    missed it because they built their own WAVs via Python's ``wave`` writer
+    (always tag 1), never real ffmpeg float output. These tests close that gap.
+    """
+
+    def test_command_requests_wave_readable_codec(self, service, video_file, tmp_path):
+        """Cheap guard (no ffmpeg): the ``-c:a`` codec must be one ``wave`` can read."""
+        out_wav = tmp_path / "full.wav"
+        _write_min_wav(out_wav)
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+            patch.object(Path, "exists", return_value=True),
+        ):
+            service.extract_full_audio(video_file, out_wav)
+
+        cmd = mock_popen.call_args[0][0]
+        codec = cmd[cmd.index("-c:a") + 1]
+        assert codec != "pcm_f32le", "pcm_f32le (tag 3) is unreadable by stdlib wave"
+        assert codec in _WAVE_READABLE_CODECS
+
+    @pytest.mark.skipif(
+        shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None,
+        reason="needs real ffmpeg + ffprobe on PATH",
+    )
+    def test_real_ffmpeg_output_roundtrips_through_wave(self, service, tmp_path):
+        """End-to-end: real ffmpeg FLAC-in-MKV source → extract_full_audio → wav_to_float32.
+
+        Mirrors the user's report ([...] FLAC .mkv). Exercises the real output
+        format with NO mocks; the tag-3 bug fails this at wav_to_float32 with
+        "unknown format: 3". Would have caught the regression before shipping.
+        """
+        np = pytest.importorskip("numpy")
+
+        from anki_miner.services.media_extractor import wav_to_float32
+
+        # Build a 1-second mono FLAC-in-MKV source, like a [Beatrice-Raws] rip.
+        src = tmp_path / "src.mkv"
+        gen = subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=1",
+                "-ac",
+                "1",
+                "-c:a",
+                "flac",
+                str(src),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert gen.returncode == 0, f"ffmpeg source-gen failed: {gen.stderr}"
+
+        out_wav = tmp_path / "out.wav"
+        ok = service.extract_full_audio(src, out_wav)
+
+        assert ok is True, "extract_full_audio rejected real ffmpeg output"
+        assert out_wav.exists()
+
+        # The real assertion: stdlib wave (inside wav_to_float32) can read what
+        # ffmpeg wrote. This is exactly the path that raised "unknown format: 3".
+        samples, sr, duration = wav_to_float32(out_wav)
+        assert sr == 16000
+        assert samples.dtype == np.float32
+        assert samples.shape[0] > 0
+        assert duration == pytest.approx(1.0, abs=0.2)
+        # A 440 Hz tone is not silence — confirms real audio survived the pipeline.
+        assert float(np.max(np.abs(samples))) > 0.01
