@@ -438,7 +438,15 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Stores the word frequency rank.</source>
+        <source>Stores the per-source frequency breakdown (all sources).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Sort Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the single frequency rank used for sorting (one number).</source>
         <translation type="unfinished" />
     </message>
     <message>

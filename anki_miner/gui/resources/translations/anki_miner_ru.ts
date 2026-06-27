@@ -438,8 +438,16 @@
         <translation>Поле частотности</translation>
     </message>
     <message>
-        <source>Stores the word frequency rank.</source>
-        <translation>Хранит ранг частотности слова.</translation>
+        <source>Stores the per-source frequency breakdown (all sources).</source>
+        <translation>Хранит разбивку частотности по источникам (все источники).</translation>
+    </message>
+    <message>
+        <source>Frequency Sort Field</source>
+        <translation>Поле сортировки по частотности</translation>
+    </message>
+    <message>
+        <source>Stores the single frequency rank used for sorting (one number).</source>
+        <translation>Хранит единственный ранг частотности, используемый для сортировки (одно число).</translation>
     </message>
     <message>
         <source>Source Field</source>
