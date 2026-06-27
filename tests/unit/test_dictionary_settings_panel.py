@@ -1091,6 +1091,35 @@ class TestOffThreadDiskWork:
         qtbot.waitUntil(lambda: not dict_dir.exists(), timeout=3000)
         assert rmtree_threads and all(t != main_id for t in rmtree_threads), rmtree_threads
 
+    def test_refresh_registry_scans_off_gui_thread(self, qapp, qtbot, tmp_path, monkeypatch):
+        """The import-finished refresh path (refresh_registry) scans off-thread."""
+        import threading
+
+        from anki_miner.services.dictionary.registry import DictionaryRegistry
+
+        main_id = threading.get_ident()
+        scan_threads: list[int] = []
+        real_load = DictionaryRegistry.load
+
+        def _spy_load(self):
+            scan_threads.append(threading.get_ident())
+            return real_load(self)
+
+        monkeypatch.setattr(DictionaryRegistry, "load", _spy_load)
+
+        panel = DictionarySettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(AnkiMinerConfig().dictionary_chain)
+        panel.show()
+        _wait_scan(panel, qtbot)
+        scan_threads.clear()
+
+        # Simulate the import flow finishing → refresh_registry().
+        panel.refresh_registry()
+        qtbot.waitUntil(lambda: bool(scan_threads), timeout=3000)
+        _wait_scan(panel, qtbot)
+        assert scan_threads and all(t != main_id for t in scan_threads), scan_threads
+
     def test_remove_disables_then_reenables_button(self, qapp, qtbot, tmp_path, confirm_remove):
         dict_dir = tmp_path / "a"
         dict_dir.mkdir()
