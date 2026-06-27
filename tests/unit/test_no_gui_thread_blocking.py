@@ -157,11 +157,9 @@ ALLOWLIST: dict[str, set[str]] = {
         "widgets/_mining_tab_base.py",
         "widgets/single_episode_tab.py",
     },
-    # list_audio_streams — single_episode_tab calls it inside `_probe`
-    # (run_off_thread). subtitle_retime_tab calls it SYNCHRONOUSLY in
-    # _on_tracks_clicked — a PRE-EXISTING GUI-thread ffprobe (commit 2faff64,
-    # before this branch); flagged as a concern, allowlisted so the tripwire
-    # locks in the branch's fixes rather than blocking on prior debt.
+    # list_audio_streams — both call it inside their `_probe`/`_on_tracks_clicked`
+    # work callables dispatched via run_off_thread. Off-thread. The call text
+    # still appears in each file, so both stay allowlisted.
     r"list_audio_streams\(": {
         "widgets/single_episode_tab.py",
         "widgets/subtitle_retime_tab.py",
