@@ -147,6 +147,22 @@ class TestInstall:
         cuda_pack_installer.install_cuda_pack(tmp_path)
         assert list(tmp_path.glob("*.part")) == []
 
+    def test_install_sweeps_orphans_from_a_crashed_run(self, tmp_path, monkeypatch):
+        _force_linux(monkeypatch)
+        _patch_download(monkeypatch)
+        # Simulate orphans a SIGKILL'd prior install left in the root.
+        (tmp_path / "leftover.part").write_bytes(b"x" * 1024)
+        orphan_staging = tmp_path / ".staging-cudnn-abcd"
+        orphan_staging.mkdir()
+        (orphan_staging / "junk.so").write_bytes(b"junk")
+
+        cuda_pack_installer.install_cuda_pack(tmp_path)
+
+        assert list(tmp_path.glob("*.part")) == []
+        assert list(tmp_path.glob(".staging-*")) == []
+        # The real install still completed.
+        assert cuda_pack_installer.is_installed(tmp_path) is True
+
     def test_progress_forwarded(self, tmp_path, monkeypatch):
         _force_linux(monkeypatch)
         _patch_download(monkeypatch)
