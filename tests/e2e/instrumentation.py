@@ -90,6 +90,12 @@ import psutil  # type: ignore[import-untyped]
 if TYPE_CHECKING:  # avoid a hard import cycle / Anki dependency at import time
     from tests.e2e.anki_gateway import AnkiGateway
 
+# Imported at module scope (NOT inside capture_snapshot) so tests can
+# monkeypatch ``instrumentation.get_global_stall_count`` to inject a known count
+# without driving a real watchdog. anki_miner is always importable in the e2e
+# environment; this is a pure read of a module-global int.
+from anki_miner.gui.utils.stall_watchdog import get_global_stall_count
+
 # Import the media-temp basename so the defensive default in capture_snapshot
 # derives from the same single source of truth as build_app_config.
 from tests.e2e.app_config import MEDIA_TEMP_BASENAME as _MEDIA_TEMP_BASENAME
@@ -184,6 +190,15 @@ class StateSnapshot:
     #: Cards in the test deck, or ``None`` when no gateway was supplied / Anki was
     #: unreachable. OPTIONAL — Anki is never a hard dependency of capture.
     anki_test_deck_count: int | None = None
+    #: GUI main-thread stall episodes counted by ``StallWatchdog`` (read from the
+    #: module-global counter in ``anki_miner.gui.utils.stall_watchdog``). The soak
+    #: loop resets that counter at the START of each session, so the POST snapshot's
+    #: ``stall_count`` is the number of stalls observed DURING this session. A
+    #: nonzero value is a hard FAIL signal in :func:`detect_divergence` — a GUI
+    #: freeze is exactly the bug class this harness exists to catch. Defaults to
+    #: ``0`` so legacy child-handoff JSON (predating the field) rehydrates cleanly,
+    #: matching the ``sqlite_rows`` shared-default note.
+    stall_count: int = 0
     #: Optional free-text label for reporting (e.g. ``"post-session-3"``).
     label: str = ""
 
@@ -315,6 +330,10 @@ def capture_snapshot(
         sqlite_rows=sqlite_rows,
         temp_files=_count_temp_files(media_temp),
         anki_test_deck_count=_deck_count(gateway),
+        # In-process GUI-thread metric, same category as widget/thread counts.
+        # Reads the module attribute (not the bound import) so a test monkeypatch
+        # of ``instrumentation.get_global_stall_count`` is honoured.
+        stall_count=get_global_stall_count(),
         label=label,
     )
 
@@ -362,10 +381,12 @@ class DivergenceReport:
 
     Attributes:
         verdict: ``"PASS"`` (nothing flagged), ``"WARN"`` (soft signal — RSS slope
-            and/or cards→0 investigate), or ``"FAIL"`` (a suspect count leaked).
+            and/or cards→0 investigate), or ``"FAIL"`` (a suspect count leaked OR
+            the GUI thread stalled in any session).
         flags: Human-readable one-line strings, one per detected signal.
         suspect_deltas: End-to-end (last - first) delta for each
-            :data:`SUSPECT_METRICS` entry plus ``rss_bytes`` and the RSS slope.
+            :data:`SUSPECT_METRICS` entry plus ``rss_bytes``, the RSS slope, and
+            ``stall_count_max`` (the worst per-session GUI-thread stall count).
         expected_deltas: End-to-end delta for each :data:`EXPECTED_GROWERS` entry,
             reported for context (growth here is normal, never flagged).
     """
@@ -454,8 +475,10 @@ def detect_divergence(
 
     Returns:
         A :class:`DivergenceReport` whose ``verdict`` is the worst signal found:
-        a leaked SUSPECT count → ``FAIL``; only an RSS slope and/or cards→0 →
-        ``WARN``; nothing → ``PASS``.
+        a leaked SUSPECT count OR any session's GUI-thread stall → ``FAIL``; only
+        an RSS slope and/or cards→0 → ``WARN``; nothing → ``PASS``. The stall
+        check applies in BOTH modes (a GUI freeze is process-local but always real)
+        and is not gated on the trend heuristics.
     """
     report_flags: list[str] = []
     suspect_deltas: dict[str, int] = {}
@@ -504,6 +527,24 @@ def detect_divergence(
         report_flags.append(
             f"RSS climbing ~{slope / (1024 * 1024):.1f} MB/session "
             f"(threshold {RSS_SLOPE_BYTES_PER_SESSION / (1024 * 1024):.0f} MB) — possible memory leak"
+        )
+
+    # --- GUI main-thread stalls: any session that stalled => hard FAIL ----
+    # The stall watchdog counts GUI-thread freezes; the soak loop resets the
+    # counter per session, so each snapshot's stall_count is that session's own
+    # tally. This is NOT a trend metric (no monotonic-growth heuristic, no
+    # MONOTONIC_MIN_GAPS gate, applies in BOTH inprocess and crossprocess mode):
+    # a single observed freeze over the watchdog threshold is the regression this
+    # branch exists to prevent, so even one stall in any one session FAILs.
+    stall_vals = _series(snapshots, "stall_count")
+    stall_max = max(stall_vals)
+    suspect_deltas["stall_count_max"] = stall_max
+    if stall_max > 0:
+        fail = True
+        worst = max(range(len(stall_vals)), key=stall_vals.__getitem__)
+        report_flags.append(
+            f"GUI main thread stalled {stall_max} time(s) (watchdog) during session "
+            f"{snapshots[worst].index} — a GUI freeze over the watchdog threshold"
         )
 
     # --- cards -> 0 after positive: investigate (WARN, never FAIL) -------

@@ -434,6 +434,15 @@ def run_one_session(
     screenshot), never re-raised, so one bad session does not abort the soak.
     """
     test_home = Path(test_home)
+    # Reset the GUI-thread stall counter at the START of the session so this
+    # session's POST snapshot.stall_count reflects ONLY freezes observed during
+    # this session (it is module-global and otherwise cumulative across the
+    # reused in-process app). A nonzero post-count is a hard FAIL in
+    # detect_divergence — see StateSnapshot.stall_count.
+    from anki_miner.gui.utils.stall_watchdog import reset_global_stall_count
+
+    reset_global_stall_count()
+
     # Seed the offline dict if absent (idempotent across sessions / processes).
     dicts_root = test_home / "dicts"
     if not (dicts_root / "e2e-dict" / "index.sqlite").is_file():
