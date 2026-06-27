@@ -298,118 +298,22 @@ jobs:
       - name: Build with PyInstaller
         run: pyinstaller anki_miner.spec
 
-      - name: YouTube bundled smoke (Linux/macOS)
-        if: runner.os != 'Windows'
-        env:
-          ANKI_MINER_SMOKE: youtube
-          QT_QPA_PLATFORM: offscreen
-        run: |
-          set -o pipefail
-          ./dist/AnkiMiner/AnkiMiner 2>&1 | tee smoke.log
-          grep -q "BUNDLED_SMOKE_PASS" smoke.log
-
-      - name: YouTube bundled smoke (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        env:
-          ANKI_MINER_SMOKE: youtube
-          QT_QPA_PLATFORM: offscreen
-        run: |
-          .\dist\AnkiMiner\AnkiMiner.exe 2>&1 | Tee-Object -FilePath smoke.log
-          if (-not (Select-String -Path smoke.log -Pattern "BUNDLED_SMOKE_PASS" -Quiet)) {
-            Write-Error "BUNDLED_SMOKE_PASS not found"
-            exit 1
-          }
-
-      # Offline ASR bundled smoke: verify that faster-whisper + ctranslate2 native
-      # libs resolved correctly inside the bundle WITHOUT downloading any model.
-      # HF_HUB_OFFLINE=1 prevents any network access; the smoke only asserts that
-      # the ctranslate2 extension and its OpenMP runtime load (import + native-lib
-      # resolution).  A model download in CI is never acceptable: models are 150 MB+
-      # and must be user-provided at runtime.  Gated on ANKI_MINER_SMOKE=asr, same
-      # pattern as the YouTube smoke above.
-      - name: ASR bundled smoke (Linux/macOS)
-        if: runner.os != 'Windows'
-        env:
-          ANKI_MINER_SMOKE: asr
-          HF_HUB_OFFLINE: "1"
-          QT_QPA_PLATFORM: offscreen
-        run: |
-          set -o pipefail
-          ./dist/AnkiMiner/AnkiMiner 2>&1 | tee asr_smoke.log
-          grep -q "BUNDLED_SMOKE_PASS" asr_smoke.log
-
-      - name: ASR bundled smoke (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        env:
-          ANKI_MINER_SMOKE: asr
-          HF_HUB_OFFLINE: "1"
-          QT_QPA_PLATFORM: offscreen
-        run: |
-          .\dist\AnkiMiner\AnkiMiner.exe 2>&1 | Tee-Object -FilePath asr_smoke.log
-          if (-not (Select-String -Path asr_smoke.log -Pattern "BUNDLED_SMOKE_PASS" -Quiet)) {
-            Write-Error "BUNDLED_SMOKE_PASS not found in ASR smoke"
-            exit 1
-          }
-
-      # Assert the bundled ffmpeg actually landed in the dist tree AND has the
-      # encoders the app requires (libmp3lame/libopus/libsvtav1/libwebp/libwebp_anim).
-      # libwebp_anim is asserted separately because still-image libwebp builds
-      # would otherwise pass while animated-WebP screenshots fail at runtime. This
-      # is NOT continue-on-error: a wrong/minimal ffmpeg build must hard-fail
-      # the release here rather than ship a binary that silently can't encode.
-      # The binary lives under sys._MEIPASS/bin/ — for PyInstaller onedir that
-      # is dist/AnkiMiner/_internal/bin/ (recent PyInstaller) or
-      # dist/AnkiMiner/bin/ (older). Glob for it instead of hard-coding so a
-      # PyInstaller layout bump doesn't silently skip the check.
-      - name: Bundled ffmpeg encoder smoke (Linux/macOS)
-        if: runner.os != 'Windows'
+      # Bundle-validation smokes, all three in one shared script so the local
+      # preflight (scripts/release_preflight.sh) and CI assert identically and
+      # cannot drift. The script runs, fail-closed:
+      #   - youtube : yt-dlp extractor registry survived collect_all (no network)
+      #   - asr     : faster-whisper + ctranslate2 + av native libs resolve, no
+      #               model download (HF_HUB_OFFLINE=1 set inside the script). A
+      #               model download in CI is never acceptable (150 MB+, runtime-
+      #               provided). This is the smoke that caught the v2.7.1 av miss.
+      #   - ffmpeg  : bundled ffmpeg ships libmp3lame/libopus/libsvtav1/libwebp/
+      #               libwebp_anim (anim asserted separately so a still-only webp
+      #               build can't pass while animated screenshots fail at runtime).
+      # shell: bash on every OS — windows-latest has bash on PATH; the script
+      # finds AnkiMiner(.exe) and ffmpeg(.exe) itself.
+      - name: Bundled smokes (youtube + asr + ffmpeg encoders)
         shell: bash
-        run: |
-          set -euo pipefail
-          FF=$(find dist/AnkiMiner -type f -name ffmpeg | head -1)
-          if [ -z "$FF" ]; then
-            echo "::error::Bundled ffmpeg not found under dist/AnkiMiner — spec did not bundle vendor/ffmpeg/"
-            find dist/AnkiMiner -maxdepth 3 -name 'ffmpeg*' -o -maxdepth 3 -name 'bin' -type d || true
-            exit 1
-          fi
-          echo "Found bundled ffmpeg: $FF"
-          chmod +x "$FF" || true
-          ENC=$("$FF" -hide_banner -encoders 2>/dev/null)
-          MISSING=""
-          for e in libmp3lame libopus libsvtav1 libwebp libwebp_anim; do
-            if ! echo "$ENC" | grep -q "$e"; then
-              MISSING="$MISSING $e"
-            fi
-          done
-          if [ -n "$MISSING" ]; then
-            echo "::error::Bundled ffmpeg is missing required encoder(s):$MISSING"
-            exit 1
-          fi
-          echo "BUNDLED_FFMPEG_ENCODERS_PASS: libmp3lame libopus libsvtav1 libwebp libwebp_anim"
-
-      - name: Bundled ffmpeg encoder smoke (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $ff = Get-ChildItem -Path dist\AnkiMiner -Recurse -Filter ffmpeg.exe | Select-Object -First 1
-          if (-not $ff) {
-            Write-Error "Bundled ffmpeg.exe not found under dist\AnkiMiner — spec did not bundle vendor/ffmpeg/"
-            exit 1
-          }
-          Write-Host "Found bundled ffmpeg: $($ff.FullName)"
-          $enc = & $ff.FullName -hide_banner -encoders 2>$null | Out-String
-          $missing = @()
-          foreach ($e in @("libmp3lame", "libopus", "libsvtav1", "libwebp", "libwebp_anim")) {
-            if ($enc -notmatch [regex]::Escape($e)) { $missing += $e }
-          }
-          if ($missing.Count -gt 0) {
-            Write-Error "Bundled ffmpeg is missing required encoder(s): $($missing -join ' ')"
-            exit 1
-          }
-          Write-Host "BUNDLED_FFMPEG_ENCODERS_PASS: libmp3lame libopus libsvtav1 libwebp libwebp_anim"
+        run: scripts/bundle_smoke.sh dist/AnkiMiner
 
       - name: Build Windows installer
         if: runner.os == 'Windows'
