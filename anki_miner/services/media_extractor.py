@@ -29,17 +29,18 @@ logger = logging.getLogger(__name__)
 
 
 def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
-    """Read a mono 32-bit float PCM WAV and return (samples, sample_rate, duration_s).
+    """Read a mono 16-bit PCM WAV and return (samples, sample_rate, duration_s).
 
     The WAV produced by :meth:`MediaExtractorService.extract_full_audio` is
-    always 16 kHz mono ``pcm_f32le``, which maps directly to numpy float32
-    without any conversion.  The bytes are byte-for-byte identical to what
-    PyAV would yield at the same settings — no quality loss.
+    always 16 kHz mono ``pcm_s16le`` (WAVE format tag 1), the only family
+    Python's stdlib ``wave`` module can read. The int16 samples are scaled to
+    float32 in ``[-1.0, 1.0]`` — Whisper's expected input — by dividing by
+    32768.
 
-    Memory note: the whole track is loaded at once (~230 MB/hour at 16 kHz f32).
-    Fine for episodes; a multi-hour film loads ~1 GB. If that becomes a problem,
-    pass the WAV path straight to ``WhisperModel.transcribe`` (it decodes
-    internally) instead of materializing the float32 array here.
+    Memory note: the whole track is loaded at once (~115 MB/hour at 16 kHz
+    float32). Fine for episodes; a multi-hour film loads ~0.5 GB. If that
+    becomes a problem, pass the WAV path straight to ``WhisperModel.transcribe``
+    (it decodes internally) instead of materializing the float32 array here.
 
     Args:
         path: Path to the WAV file written by ``extract_full_audio``.
@@ -54,21 +55,21 @@ def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
 
     with wave.open(str(path), "rb") as wf:
         # Fail loudly on an unexpected layout rather than silently reinterpreting
-        # int16/stereo bytes as garbage float32. extract_full_audio always writes
-        # mono pcm_f32le; a mismatch means a stale or foreign WAV reached us.
-        if wf.getnchannels() != 1 or wf.getsampwidth() != 4 or wf.getcomptype() != "NONE":
+        # float/stereo bytes as garbage int16. extract_full_audio always writes
+        # mono pcm_s16le; a mismatch means a stale or foreign WAV reached us.
+        if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getcomptype() != "NONE":
             raise ValueError(
-                "wav_to_float32 expects mono pcm_f32le; got "
+                "wav_to_float32 expects mono pcm_s16le; got "
                 f"channels={wf.getnchannels()} sampwidth={wf.getsampwidth()} comptype={wf.getcomptype()}"
             )
         sample_rate = wf.getframerate()
         n_frames = wf.getnframes()
         raw = wf.readframes(n_frames)
 
-    # .copy() because np.frombuffer over an immutable bytes object returns a
-    # read-only array sharing that buffer; faster-whisper/ctranslate2 may require
-    # a writable, owned array, and no test exercises the real numpy→engine handoff.
-    samples = np.frombuffer(raw, dtype=np.float32).copy()
+    # int16 → float32 in [-1.0, 1.0]. astype already yields a writable, owned
+    # array (np.frombuffer over immutable bytes is read-only), which
+    # faster-whisper/ctranslate2 may require — no separate .copy() needed.
+    samples = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
     duration = n_frames / sample_rate
     return samples, sample_rate, duration
 
@@ -424,12 +425,15 @@ class MediaExtractorService:
         track_override: int | None = None,
         cancel_event: "threading.Event | None" = None,
     ) -> bool:
-        """Extract the full audio track from *video_file* as a 16 kHz mono float32 WAV.
+        """Extract the full audio track from *video_file* as a 16 kHz mono 16-bit WAV.
 
-        The output format is ``pcm_f32le`` — a lossless raw PCM encoding that is
-        byte-identical to PyAV's float32 decode path and Whisper's expected input.
-        No encoder-availability probe is performed: all ffmpeg builds include the
-        ``pcm_*`` family of codecs.
+        The output format is ``pcm_s16le`` — a raw integer PCM encoding (WAVE
+        format tag 1). Float (``pcm_f32le``, tag 3) is deliberately *not* used:
+        Python's stdlib ``wave`` module (which both the zero-frame guard below
+        and :func:`wav_to_float32` rely on) cannot read tag-3 float WAVs and
+        raises ``unknown format: 3``. 16-bit at 16 kHz is standard, ample
+        Whisper input. No encoder-availability probe is performed: all ffmpeg
+        builds include the ``pcm_*`` family of codecs.
 
         Audio stream resolution follows the same logic as :meth:`_extract_audio`:
 
@@ -506,7 +510,7 @@ class MediaExtractorService:
                 "-ac",
                 "1",
                 "-c:a",
-                "pcm_f32le",
+                "pcm_s16le",
                 str(out_wav),
             ]
         )
