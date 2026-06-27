@@ -7,6 +7,7 @@ monkeypatched so no real network calls or downloads occur.
 from __future__ import annotations
 
 import threading
+from pathlib import Path
 
 import pytest
 
@@ -126,12 +127,59 @@ def test_is_downloaded_name_aware_cross_model(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+def _real_sig_download_fn(recorder):
+    """A fake mirroring faster-whisper 1.2.1's ``download_model`` signature.
+
+    Passing a kwarg the real function does not accept (e.g. the long-broken
+    ``download_root``) raises ``TypeError`` here exactly as it would against the
+    installed library — so these mocked tests can no longer hide a kwarg drift.
+    """
+
+    def fake(size_or_id, output_dir=None, local_files_only=False, cache_dir=None, revision=None, use_auth_token=None):
+        recorder.append({"name": size_or_id, "cache_dir": cache_dir})
+        return cache_dir
+
+    return fake
+
+
+def test_download_passes_cache_dir_not_download_root(monkeypatch, tmp_path):
+    """Regression (faster-whisper 1.2.1): download() must call download_model with
+    ``cache_dir`` — its real param — not the nonexistent ``download_root``.
+
+    The fake uses the real signature, so the pre-fix ``download_root=`` call
+    raises TypeError, reproducing the dead "Download model" button.
+    """
+    calls = []
+    monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: _real_sig_download_fn(calls))
+
+    download("small", tmp_path)
+
+    assert len(calls) == 1
+    assert calls[0]["name"] == "small"
+    staging = Path(calls[0]["cache_dir"])
+    assert staging.parent == tmp_path
+    assert staging.name.startswith(".staging-small-")
+
+
+@pytest.mark.asr
+def test_real_download_model_accepts_our_kwargs():
+    """The installed faster-whisper ``download_model`` must accept the kwargs
+    model_manager passes. Guards against an upstream signature change that the
+    mocked tests above (by design) cannot observe.
+    """
+    import inspect
+
+    from anki_miner.services.asr import _engine
+
+    inspect.signature(_engine.get_download_fn()).bind("small", cache_dir="/tmp/x")
+
+
 def test_download_calls_download_fn_into_staging_under_models_root(monkeypatch, tmp_path):
     """download() fetches into a staging dir inside models_root, not models_root itself."""
     calls = []
 
-    def fake_download_fn(name, *, download_root):
-        calls.append({"name": name, "download_root": download_root})
+    def fake_download_fn(name, *, cache_dir):
+        calls.append({"name": name, "cache_dir": cache_dir})
 
     monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
 
@@ -139,7 +187,7 @@ def test_download_calls_download_fn_into_staging_under_models_root(monkeypatch, 
 
     assert len(calls) == 1
     assert calls[0]["name"] == "small"
-    staging = calls[0]["download_root"]
+    staging = Path(calls[0]["cache_dir"])
     # Staging lives under models_root (atomic same-filesystem promotion) and is
     # cleaned up afterwards.
     assert staging.parent == tmp_path
@@ -150,8 +198,8 @@ def test_download_calls_download_fn_into_staging_under_models_root(monkeypatch, 
 def test_download_promotes_staged_model_into_models_root(monkeypatch, tmp_path):
     """A successful download moves the staged model tree into models_root."""
 
-    def fake_download_fn(name, *, download_root):
-        snap = download_root / f"models--Systran--faster-whisper-{name}" / "snapshots" / "rev"
+    def fake_download_fn(name, *, cache_dir):
+        snap = Path(cache_dir) / f"models--Systran--faster-whisper-{name}" / "snapshots" / "rev"
         snap.mkdir(parents=True)
         (snap / "model.bin").write_bytes(b"\x00\x01")
         (snap / "config.json").write_text("{}")
@@ -167,9 +215,9 @@ def test_download_promotes_staged_model_into_models_root(monkeypatch, tmp_path):
 def test_download_leaves_models_root_clean_on_failure(monkeypatch, tmp_path):
     """A download that raises mid-transfer must not leave a partial model behind."""
 
-    def fake_download_fn(name, *, download_root):
+    def fake_download_fn(name, *, cache_dir):
         # Simulate a partial transfer then a failure.
-        snap = download_root / f"models--Systran--faster-whisper-{name}" / "snapshots" / "rev"
+        snap = Path(cache_dir) / f"models--Systran--faster-whisper-{name}" / "snapshots" / "rev"
         snap.mkdir(parents=True)
         (snap / "model.bin").write_bytes(b"\x00")  # truncated, no config.json
         raise RuntimeError("network drop")
@@ -187,8 +235,8 @@ def test_download_cancel_mid_transfer_promotes_nothing(monkeypatch, tmp_path):
     """A cancel set during the transfer discards the staged copy."""
     cancel = threading.Event()
 
-    def fake_download_fn(name, *, download_root):
-        snap = download_root / f"models--Systran--faster-whisper-{name}" / "snapshots" / "rev"
+    def fake_download_fn(name, *, cache_dir):
+        snap = Path(cache_dir) / f"models--Systran--faster-whisper-{name}" / "snapshots" / "rev"
         snap.mkdir(parents=True)
         (snap / "model.bin").write_bytes(b"\x00\x01")
         (snap / "config.json").write_text("{}")
@@ -207,8 +255,8 @@ def test_download_creates_models_root_if_missing(monkeypatch, tmp_path):
     new_root = tmp_path / "new_dir" / "deeper"
     calls = []
 
-    def fake_download_fn(name, *, download_root):
-        calls.append(download_root)
+    def fake_download_fn(name, *, cache_dir):
+        calls.append(cache_dir)
 
     monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
 
@@ -222,7 +270,7 @@ def test_download_passes_model_name_unchanged(monkeypatch, tmp_path):
     """The model name passed to the download fn must match the argument exactly."""
     received = {}
 
-    def fake_download_fn(name, *, download_root):
+    def fake_download_fn(name, *, cache_dir):
         received["name"] = name
 
     monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
@@ -235,7 +283,7 @@ def test_download_with_cancel_event_not_set(monkeypatch, tmp_path):
     cancel = threading.Event()
     called = []
 
-    def fake_download_fn(name, *, download_root):
+    def fake_download_fn(name, *, cache_dir):
         called.append(True)
 
     monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
@@ -249,7 +297,7 @@ def test_download_skips_if_cancel_event_already_set(monkeypatch, tmp_path):
     cancel.set()
     called = []
 
-    def fake_download_fn(name, *, download_root):
+    def fake_download_fn(name, *, cache_dir):
         called.append(True)
 
     monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
