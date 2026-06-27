@@ -6,6 +6,7 @@ _engine seam so no real model loading or network calls occur.
 
 from __future__ import annotations
 
+import logging
 import threading
 from types import SimpleNamespace
 
@@ -381,3 +382,226 @@ def test_transcribe_cancel_preset_returns_empty(monkeypatch, tmp_path):
     )
 
     assert result == []
+
+
+# ---------------------------------------------------------------------------
+# Device selection (CPU / CUDA / auto) with CPU fallback
+# ---------------------------------------------------------------------------
+
+
+def _recording_model_cls(constructed: list[dict], *, cuda_raises: bool = False):
+    """Fake WhisperModel that records every constructor kwarg dict.
+
+    Accepts arbitrary kwargs so both the CPU build (with cpu_threads) and the
+    CUDA build (without) are captured. When *cuda_raises* is set, constructing
+    with device='cuda' raises to exercise the CPU fallback path.
+    """
+
+    class RecordingModel:
+        def __init__(self, model_name, **kwargs):
+            kwargs["model_name"] = model_name
+            constructed.append(kwargs)
+            if cuda_raises and kwargs.get("device") == "cuda":
+                raise RuntimeError("cuDNN not found")
+
+        def transcribe(self, audio, *, language, vad_filter):
+            return iter([]), SimpleNamespace(language=language)
+
+    return RecordingModel
+
+
+def _fake_ctranslate2(monkeypatch, device_count: int):
+    """Install a fake ctranslate2 module reporting *device_count* GPUs."""
+    import sys
+
+    fake = SimpleNamespace(get_cuda_device_count=lambda: device_count)
+    monkeypatch.setitem(sys.modules, "ctranslate2", fake)
+
+
+def test_device_cpu_never_queries_cuda(monkeypatch, tmp_path):
+    """device='cpu' builds a CPU model and never imports/queries ctranslate2."""
+    import sys
+
+    import numpy as np
+
+    constructed: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(constructed))
+    # If cuda were queried, importing this poisoned module would blow up.
+    monkeypatch.setitem(
+        sys.modules,
+        "ctranslate2",
+        SimpleNamespace(get_cuda_device_count=lambda: (_ for _ in ()).throw(AssertionError("queried cuda"))),
+    )
+
+    audio = np.zeros(16000, dtype=np.float32)
+    transcriber.transcribe(
+        audio,
+        model_name="small",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=1.0,
+        device="cpu",
+    )
+
+    assert len(constructed) == 1
+    assert constructed[0]["device"] == "cpu"
+    assert constructed[0]["compute_type"] == "int8"
+
+
+def test_device_auto_with_gpu_builds_cuda(monkeypatch, tmp_path):
+    """device='auto' + GPU present + success → builds a CUDA float16 model."""
+    import numpy as np
+
+    constructed: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(constructed))
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    _fake_ctranslate2(monkeypatch, device_count=1)
+
+    audio = np.zeros(16000, dtype=np.float32)
+    transcriber.transcribe(
+        audio,
+        model_name="large-v3",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=1.0,
+        device="auto",
+    )
+
+    assert len(constructed) == 1
+    assert constructed[0]["device"] == "cuda"
+    assert constructed[0]["compute_type"] == "float16"
+
+
+def test_device_auto_cuda_failure_falls_back_to_cpu(monkeypatch, tmp_path):
+    """device='auto' + GPU present + CUDA construction raises → CPU fallback, no exception."""
+    import numpy as np
+
+    constructed: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(constructed, cuda_raises=True))
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    _fake_ctranslate2(monkeypatch, device_count=1)
+
+    audio = np.zeros(16000, dtype=np.float32)
+    result = transcriber.transcribe(
+        audio,
+        model_name="large-v3",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=1.0,
+        device="auto",
+    )
+
+    # First attempt cuda (raises), second attempt cpu (succeeds).
+    assert [c["device"] for c in constructed] == ["cuda", "cpu"]
+    assert constructed[-1]["compute_type"] == "int8"
+    assert result == []
+
+
+def test_device_cuda_no_gpu_falls_back_to_cpu_with_warning(monkeypatch, tmp_path, caplog):
+    """device='cuda' but no GPU → CPU build plus a warning."""
+    import numpy as np
+
+    constructed: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(constructed))
+    _fake_ctranslate2(monkeypatch, device_count=0)
+
+    audio = np.zeros(16000, dtype=np.float32)
+    with caplog.at_level(logging.WARNING, logger=transcriber.__name__):
+        transcriber.transcribe(
+            audio,
+            model_name="small",
+            models_root=tmp_path,
+            sample_rate=16000,
+            duration_s=1.0,
+            device="cuda",
+        )
+
+    assert len(constructed) == 1
+    assert constructed[0]["device"] == "cpu"
+    assert any(record.levelno == logging.WARNING for record in caplog.records)
+
+
+def test_cuda_device_count_failure_treated_as_no_gpu(monkeypatch, tmp_path):
+    """If get_cuda_device_count() raises, treat as 0 GPUs and build CPU (auto, no error)."""
+    import sys
+
+    import numpy as np
+
+    constructed: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(constructed))
+    monkeypatch.setitem(
+        sys.modules,
+        "ctranslate2",
+        SimpleNamespace(get_cuda_device_count=lambda: (_ for _ in ()).throw(RuntimeError("driver error"))),
+    )
+
+    audio = np.zeros(16000, dtype=np.float32)
+    transcriber.transcribe(
+        audio,
+        model_name="small",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=1.0,
+        device="auto",
+    )
+
+    assert len(constructed) == 1
+    assert constructed[0]["device"] == "cpu"
+
+
+# ---------------------------------------------------------------------------
+# _preload_cuda_libs — best-effort, never raises
+# ---------------------------------------------------------------------------
+
+
+def test_preload_cuda_libs_none_never_raises():
+    """_preload_cuda_libs(None) must be a no-op that never raises."""
+    transcriber._preload_cuda_libs(None)
+
+
+def test_preload_cuda_libs_empty_dir_never_raises(monkeypatch, tmp_path):
+    """_preload_cuda_libs with a libs dir that has no libs must never raise."""
+    import ctypes
+
+    # Guard: even if some path were found, CDLL is mocked so nothing is dlopened.
+    monkeypatch.setattr(ctypes, "CDLL", lambda *a, **kw: None)
+    transcriber._preload_cuda_libs(tmp_path)
+
+
+def test_preload_cuda_libs_loads_pack_libs(monkeypatch, tmp_path):
+    """_preload_cuda_libs CDLL-loads matching pack libs found under cuda_libs_root."""
+    import ctypes
+
+    cudnn_lib = tmp_path / "cudnn" / "lib" / "libcudnn.so.9"
+    cublas_lib = tmp_path / "cublas" / "lib" / "libcublas.so.12"
+    cudnn_lib.parent.mkdir(parents=True)
+    cublas_lib.parent.mkdir(parents=True)
+    cudnn_lib.write_bytes(b"")
+    cublas_lib.write_bytes(b"")
+
+    loaded: list[str] = []
+    monkeypatch.setattr(ctypes, "CDLL", lambda path, **kw: loaded.append(str(path)))
+    # Make pip-package fallback a guaranteed no-op so only pack libs count.
+    import sys
+
+    monkeypatch.setitem(sys.modules, "nvidia", SimpleNamespace())
+
+    transcriber._preload_cuda_libs(tmp_path)
+
+    assert str(cudnn_lib) in loaded
+    assert str(cublas_lib) in loaded
+
+
+def test_preload_cuda_libs_cdll_error_never_raises(monkeypatch, tmp_path):
+    """A CDLL failure on one lib must not propagate out of _preload_cuda_libs."""
+    import ctypes
+
+    lib = tmp_path / "cudnn" / "lib" / "libcudnn.so.9"
+    lib.parent.mkdir(parents=True)
+    lib.write_bytes(b"")
+
+    def _boom(*a, **kw):
+        raise OSError("cannot load")
+
+    monkeypatch.setattr(ctypes, "CDLL", _boom)
+    transcriber._preload_cuda_libs(tmp_path)
