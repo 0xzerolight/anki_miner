@@ -16,6 +16,7 @@ receiver's (GUI) thread.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from collections.abc import Callable
 
@@ -65,7 +66,12 @@ def run_off_thread(
 
     def _teardown() -> None:
         registry.discard(worker)
-        worker.deleteLater()
+        # The worker's underlying C++ object may already be destroyed (e.g. the
+        # parent widget was torn down while the work was still in flight, so Qt
+        # deleted the child worker before this queued slot ran). Nothing left to
+        # schedule for deletion in that case — suppress the RuntimeError.
+        with contextlib.suppress(RuntimeError):
+            worker.deleteLater()
 
     # finished fires after result_ready/error, so the result slots still run.
     worker.finished.connect(_teardown)
