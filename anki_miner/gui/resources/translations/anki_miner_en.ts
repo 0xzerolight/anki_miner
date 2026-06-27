@@ -691,6 +691,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
+        <source>Loading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Active Audio Sources</source>
         <translation type="unfinished" />
     </message>
@@ -1059,6 +1063,378 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>Capabilities</name>
+    <message>
+        <source>Mining workflows</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Filtering: what gets mined</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries, frequency &amp; pitch</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Media: clips &amp; screenshots</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Appearance &amp; language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine a single episode</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine vocabulary from one video paired with its subtitle file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Batch-mine a whole folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Queue an entire folder of episodes and mine them in one run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a complete deck (skip per-episode filters)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Builder can bypass i+1/frequency/word-list filters and allow duplicates for full coverage.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine from YouTube</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine from an audiobook</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine vocabulary from an audiobook or audio file using its transcript.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate or re-time subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create subtitles from audio, or re-sync existing subtitles -- as a standalone tool.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>View mining history &amp; stats</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>See what you've mined over time with history and statistics.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>i+1 sentence mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine only sentences that contain exactly one unknown word.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip rare words (frequency cutoff)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Ignore words rarer than a chosen frequency rank so you learn common words first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip words you already know</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip words already in your Anki collection or previously mined, via the known-words DB.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exclude specific Anki decks from 'known'</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stop chosen decks from counting as known so their words can still be mined.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mark words as known by hand</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Curate your own list of known words that is always applied and survives cache rebuilds.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exclude kana-only words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Drop words written only in hiragana or katakana -- useful for kanji-focused decks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Blacklist / whitelist words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Force-skip or force-allow specific words with your own block/allow lists.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only words seen across N episodes</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>In batch and deck builds, mine only words that appear in at least N episodes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Filter by part of speech</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which word types (nouns, verbs, particles, ...) are mined.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Limit sentence length</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip sentences that are too long or too short for a good card.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Avoid duplicate cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip making a second card for a word you've already mined this run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Strip junk from subtitles (regex)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove names, music notes, or bracketed text from subtitles before parsing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Use &amp; order multiple dictionaries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add, reorder, and enable/disable the dictionaries used for definitions.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import a Yomitan dictionary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add your own Yomitan-format dictionary zip as a definition source.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Jisho.org online fallback</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add frequency lists</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add and order multiple frequency lists used for ranking and the frequency field.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent on cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add pitch-accent information to your cards (numeric or romaji).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word pronunciation audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import local audio packs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Use your own local-audio-yomichan packs as a word-pronunciation source.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence audio from the video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Extract the spoken sentence as an audio clip; tune its format and bitrate.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Screenshots on cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Capture a still frame from the scene to put on the card.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Animated clips (GIF/WebP)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Use a short animated clip instead of a still screenshot.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pad or shift audio/screenshot timing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add padding or an offset so audio and screenshots line up with the dialogue.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Map data to your note fields</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which note-type field receives the word, sentence, definition, audio, etc.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose target deck &amp; note type</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick which Anki deck and note type new cards are created in.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card styling / CSS</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS, synced to Anki automatically.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Furigana / readings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Include the reading (furigana) for the word on your cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto-tag mined notes</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add tags to every note Anki Miner creates.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Themes, dark mode, fonts &amp; zoom</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch light/dark themes and adjust font scale and UI zoom.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Change the app language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch the interface to another language.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Speech-to-text (no subtitles needed)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate subtitles from audio with a local Whisper model when none exist.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>YouTube cookies / bot bypass</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Use your browser cookies to get past YouTube sign-in and bot checks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>YouTube quality &amp; playlist limits</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>CudaPackDownloadWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading GPU libraries…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>GPU libraries installed successfully.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>DeckBuilderTab</name>
     <message>
         <source>Input</source>
@@ -1416,6 +1792,10 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
+    <message>
+        <source>Loading…</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Select dictionary storage folder...</source>
         <translation type="unfinished" />
@@ -2174,6 +2554,10 @@ The dictionary was not removed.</source>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
+        <source>Loading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Active Frequency Sources</source>
         <translation type="unfinished" />
     </message>
@@ -2400,6 +2784,10 @@ The frequency source was not removed.</source>
     </message>
     <message>
         <source>Download Recommended Resources...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Find a Feature...</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2679,6 +3067,28 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>No fields could be auto-mapped.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checking note type fields...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check note type fields: </source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>OnnxPackDownloadWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading silence-removal library…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Silence-removal library installed successfully.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3419,6 +3829,14 @@ Details: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Probe Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Missing Files</source>
         <translation type="unfinished" />
     </message>
@@ -3431,19 +3849,19 @@ Details: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Parse Error</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed to parse subtitles. Check the file format.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>No Subtitles</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>No subtitle entries found in the file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Parse Error</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed to parse subtitles. Check the file format.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3764,6 +4182,22 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Audio track:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Japanese (auto-detect)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which audio track to align the subtitle against.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Video Folder:</source>
         <translation type="unfinished" />
     </message>
@@ -3800,6 +4234,22 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Correct frame-rate differences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Leave off when the subtitle already matches this video's framerate. Only enable for subs from a different release/framerate.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Single offset only (no split)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shift the entire subtitle by one offset; never cut it into separately-timed segments.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Split penalty:</source>
         <translation type="unfinished" />
     </message>
@@ -3828,15 +4278,47 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>No Video File Selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a video file first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File Not Found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video file not found: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Audio Tracks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Track %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Probe Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Output directory is not writable: </source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No Video File Selected</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3849,14 +4331,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Select a subtitle file before retiming subtitles.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>File Not Found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Video file not found: </source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3998,6 +4472,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>ASR device</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto uses the GPU when one is available and falls back to CPU. GPU needs an NVIDIA card plus the GPU acceleration pack (bundled installs) or the [asr-cuda] extra (source installs).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download model</source>
         <translation type="unfinished" />
     </message>
@@ -4007,6 +4489,30 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Model download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download GPU acceleration</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the cuDNN + cuBLAS GPU libraries into Anki Miner's folder. Required for GPU (CUDA) transcription on bundled installs.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>GPU acceleration</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download silence removal</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the silence-removal (VAD) library into Anki Miner's folder. It prevents silence and music being transcribed as garbage text.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Silence removal</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4055,6 +4561,30 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Not downloaded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>GPU acceleration is not available on this platform.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No NVIDIA GPU detected. GPU acceleration needs an NVIDIA card.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Silence removal is available.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Silence removal is not available on this platform.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4225,6 +4755,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Freq. Rank</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Occurrences</source>
         <translation type="unfinished" />
     </message>
     <message>
