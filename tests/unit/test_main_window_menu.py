@@ -120,6 +120,34 @@ def test_star_button_in_corner_container(main_window):
     assert star.autoRaise() is True
 
 
+def _tools_menu(window):
+    menu_bar = window.menuBar()
+    assert menu_bar is not None
+    for action in menu_bar.actions():
+        if action.text().replace("&", "") == "Tools":
+            menu = action.menu()
+            assert menu is not None
+            return menu
+    raise AssertionError("Tools menu not found on menu bar")
+
+
+def test_find_a_feature_action_present(main_window):
+    """Tools menu exposes the Find a Feature browser entry."""
+    assert _find_action(_tools_menu(main_window), "Find a Feature...") is not None
+
+
+def test_find_a_feature_opens_browser(main_window, monkeypatch):
+    """Triggering the action runs the capability browser, parented to the window."""
+    from anki_miner.gui.widgets.dialogs import capability_browser
+
+    calls: list[tuple] = []
+    monkeypatch.setattr(capability_browser, "run_capability_browser", lambda parent, mw: calls.append((parent, mw)))
+    action = _find_action(_tools_menu(main_window), "Find a Feature...")
+    assert action is not None
+    action.trigger()
+    assert calls == [(main_window, main_window)]
+
+
 def test_star_button_opens_repo_url(main_window, monkeypatch):
     """Clicking the star button opens the repo root via QDesktopServices."""
     captured: list[QUrl] = []
