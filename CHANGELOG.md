@@ -15,10 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 
-## [2.7.3] - 2026-06-27
+## [2.7.4] - 2026-06-27
 
 ### Fixed
-- **Intel macOS release build.** GitHub retired the `macos-13` runner, so the Intel (x86_64) macOS build queued forever and blocked the binary release. Switched to the `macos-15-intel` runner; Intel macOS binaries ship again. (The 2.7.2 binary release was blocked by this; pip installs were unaffected.)
+- **Intel macOS release build.** GitHub retired the `macos-13` runner (job queued forever), and onnxruntime — a hard faster-whisper dependency — no longer ships macOS x86_64 wheels, so the Intel build couldn't bundle ASR. The Intel macOS binary now runs on `macos-15-intel` and ships without local Whisper ASR (every other feature works; ASR is available on Linux/Windows/macOS-arm64 and via `pip install anki-miner[asr]`). This unblocks the full binary release. pip installs were unaffected throughout.
 
 
 ## [2.7.2] - 2026-06-27
