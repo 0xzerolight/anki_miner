@@ -49,6 +49,48 @@ def test_asr_models_root_is_path():
 
 
 # ---------------------------------------------------------------------------
+# asr_device field
+# ---------------------------------------------------------------------------
+
+
+def test_asr_device_default_auto():
+    """asr_device defaults to 'auto' (GPU if usable, else CPU)."""
+    assert AnkiMinerConfig().asr_device == "auto"
+
+
+def test_asr_device_valid_values_pass_through():
+    """Valid asr_device values are preserved unchanged."""
+    assert AnkiMinerConfig(asr_device="auto").asr_device == "auto"
+    assert AnkiMinerConfig(asr_device="cuda").asr_device == "cuda"
+    assert AnkiMinerConfig(asr_device="cpu").asr_device == "cpu"
+
+
+def test_asr_device_invalid_resets_to_auto():
+    """An unknown asr_device value resets to 'auto'."""
+    assert AnkiMinerConfig(asr_device="gpu").asr_device == "auto"
+    assert AnkiMinerConfig(asr_device="metal").asr_device == "auto"
+    assert AnkiMinerConfig(asr_device="").asr_device == "auto"
+
+
+# ---------------------------------------------------------------------------
+# cuda_libs_root field
+# ---------------------------------------------------------------------------
+
+
+def test_cuda_libs_root_resolves_under_anki_miner_home():
+    """cuda_libs_root must be derived from ANKI_MINER_HOME, defaulting to ANKI_MINER_HOME/cuda_libs."""
+    from anki_miner.config.paths import ANKI_MINER_HOME
+
+    cfg = AnkiMinerConfig()
+    assert cfg.cuda_libs_root == ANKI_MINER_HOME / "cuda_libs"
+
+
+def test_cuda_libs_root_is_path():
+    """cuda_libs_root must be a Path instance."""
+    assert isinstance(AnkiMinerConfig().cuda_libs_root, Path)
+
+
+# ---------------------------------------------------------------------------
 # Round-trip persistence (save → load via GUIConfigManager)
 # ---------------------------------------------------------------------------
 
