@@ -28,6 +28,9 @@ class TokenizedWord:
     # chain order, only sources that rank this word. ``frequency_rank`` stays the
     # min of these (drives filtering/sort); this is the display detail.
     frequency_sources: list[tuple[str, int]] = field(default_factory=list)
+    # Times this word's lemma occurs in the current episode. Display/sort-only,
+    # attached on the interactive curation path (Issue #88); 0 when not computed.
+    occurrence_count: int = 0
     pos: str | None = None  # MeCab pos1 (動詞/形容詞/名詞/...) — used for kifuku/odaka distinction
     # Character offsets of the target morpheme within ``sentence`` (post-filter).
     # -1 sentinel means "not tracked" — card builder falls back to plain escape.

@@ -268,7 +268,7 @@ class WordCurationDialog(QDialog):
 
         # Table
         self.table = QTableWidget()
-        self.table.setColumnCount(6)
+        self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels(
             [
                 "",
@@ -277,6 +277,7 @@ class WordCurationDialog(QDialog):
                 self.tr("Reading"),
                 self.tr("Sentence"),
                 self.tr("Freq. Rank"),
+                self.tr("Occurrences"),
             ]
         )
         self.table.setAlternatingRowColors(True)
@@ -293,6 +294,7 @@ class WordCurationDialog(QDialog):
             header_view.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
             header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
             header_view.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+            header_view.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
 
         self._apply_fixed_row_height()
 
@@ -508,6 +510,13 @@ class WordCurationDialog(QDialog):
                 rank_item = _NumericTableWidgetItem("-", float("inf"))
             rank_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             self.table.setItem(row, 5, rank_item)
+
+            # Occurrences — times the word appears in this episode; sort
+            # numerically so 15 ranks above 2 (Issue #88).
+            occ = word.occurrence_count
+            occ_item = _NumericTableWidgetItem(str(occ), float(occ))
+            occ_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self.table.setItem(row, 6, occ_item)
 
         self.table.blockSignals(False)
         self.table.setSortingEnabled(True)

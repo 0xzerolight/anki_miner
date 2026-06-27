@@ -953,3 +953,35 @@ class TestAttachSentenceCandidates:
         service.attach_sentence_candidates([word], [])
 
         assert word.sentence_candidates == []
+
+
+class TestAttachOccurrenceCounts:
+    """Tests for WordFilterService.attach_occurrence_counts (Issue #88)."""
+
+    def test_sets_counts_keyed_by_lemma(self, test_config):
+        service = WordFilterService(test_config)
+        # Noun: mined_form is surface, but the count keys on lemma.
+        words = [create_word("食べる"), create_word("猫", surface="ネコ", pos="名詞")]
+
+        service.attach_occurrence_counts(words, {"食べる": 15, "猫": 3})
+
+        assert words[0].occurrence_count == 15
+        assert words[1].occurrence_count == 3
+
+    def test_missing_lemma_defaults_to_zero(self, test_config):
+        service = WordFilterService(test_config)
+        word = create_word("走る")
+
+        service.attach_occurrence_counts([word], {"食べる": 2})
+
+        assert word.occurrence_count == 0
+
+    def test_accepts_counter(self, test_config):
+        import collections
+
+        service = WordFilterService(test_config)
+        word = create_word("食べる")
+
+        service.attach_occurrence_counts([word], collections.Counter(["食べる", "食べる"]))
+
+        assert word.occurrence_count == 2
