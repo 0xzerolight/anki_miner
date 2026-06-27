@@ -854,3 +854,152 @@ def test_on_retime_uses_cached_availability_without_reprobe(qtbot, tmp_path):
         with patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning"):
             tab._on_retime()
         assert which.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# Audio-track probing (Tracks button) — must run OFF the GUI thread
+# ---------------------------------------------------------------------------
+
+_LIST_STREAMS = "anki_miner.gui.widgets.subtitle_retime_tab.list_audio_streams"
+_TRACKS_DIALOG = "anki_miner.gui.widgets.subtitle_retime_tab.AudioTracksDialog"
+
+
+def _audio_stream():
+    from anki_miner.utils.audio_track_detector import AudioStream
+
+    return AudioStream(
+        global_index=1,
+        audio_index=0,
+        language_tag="jpn",
+        title_tag=None,
+        codec="aac",
+        channels=2,
+        is_default=True,
+    )
+
+
+def test_tracks_clicked_warns_when_no_video(qtbot, tmp_path):
+    """No video selected -> warning, ffprobe never runs."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.video_file_selector.set_path("")
+    with (
+        patch(_LIST_STREAMS) as mock_list,
+        patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning") as mock_warn,
+    ):
+        tab._on_tracks_clicked()
+    mock_warn.assert_called_once()
+    mock_list.assert_not_called()
+
+
+def test_tracks_clicked_warns_when_video_missing(qtbot, tmp_path):
+    """Selected video path that is not a file -> warning, ffprobe never runs."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.video_file_selector.set_path(str(tmp_path / "nope.mkv"))
+    with (
+        patch(_LIST_STREAMS) as mock_list,
+        patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning") as mock_warn,
+    ):
+        tab._on_tracks_clicked()
+    mock_warn.assert_called_once()
+    mock_list.assert_not_called()
+
+
+def test_tracks_probe_runs_off_gui_thread(qtbot, tmp_path):
+    """list_audio_streams must run on a worker thread, not the GUI thread."""
+    import threading
+
+    from PyQt6.QtWidgets import QDialog
+
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video = tmp_path / "ep01.mkv"
+    video.touch()
+    tab.video_file_selector.set_path(str(video))
+
+    probe_thread: dict = {}
+
+    def _record(*_a, **_k):
+        probe_thread["id"] = threading.get_ident()
+        return [_audio_stream()]
+
+    mock_dialog = MagicMock()
+    mock_dialog.exec.return_value = QDialog.DialogCode.Rejected
+    mock_class = MagicMock(return_value=mock_dialog)
+    mock_class.DialogCode = QDialog.DialogCode
+
+    with (
+        patch(_LIST_STREAMS, side_effect=_record),
+        patch(_TRACKS_DIALOG, mock_class),
+    ):
+        tab._on_tracks_clicked()
+        # Button disabled while the probe runs off-thread.
+        assert not tab.tracks_button.isEnabled()
+        qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
+
+    assert probe_thread["id"] != threading.get_ident()  # probed off the GUI thread
+    assert tab.tracks_button.isEnabled()  # re-enabled after success
+
+
+def test_tracks_probe_empty_shows_info(qtbot, tmp_path):
+    """No audio tracks detected -> info box, no dialog, button re-enabled."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video = tmp_path / "ep01.mkv"
+    video.touch()
+    tab.video_file_selector.set_path(str(video))
+
+    mock_class = MagicMock()
+    with (
+        patch(_LIST_STREAMS, return_value=[]),
+        patch(_TRACKS_DIALOG, mock_class),
+        patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.information") as mock_info,
+    ):
+        tab._on_tracks_clicked()
+        qtbot.waitUntil(lambda: mock_info.called, timeout=3000)
+
+    mock_class.assert_not_called()
+    assert tab.tracks_button.isEnabled()
+
+
+def test_tracks_probe_applies_override_on_accept(qtbot, tmp_path):
+    """Accepting the dialog applies the override and updates the label."""
+    from PyQt6.QtWidgets import QDialog
+
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video = tmp_path / "ep01.mkv"
+    video.touch()
+    tab.video_file_selector.set_path(str(video))
+
+    mock_dialog = MagicMock()
+    mock_dialog.exec.return_value = QDialog.DialogCode.Accepted
+    mock_dialog.selected_override.return_value = 2
+    mock_class = MagicMock(return_value=mock_dialog)
+    mock_class.DialogCode = QDialog.DialogCode
+
+    with (
+        patch(_LIST_STREAMS, return_value=[_audio_stream()]),
+        patch(_TRACKS_DIALOG, mock_class),
+    ):
+        tab._on_tracks_clicked()
+        qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
+
+    assert tab._audio_track_override == 2
+    assert "3" in tab.audio_track_label.text()  # Track index + 1
+    assert tab.tracks_button.isEnabled()
+
+
+def test_tracks_probe_error_is_handled(qtbot, tmp_path):
+    """A probe failure shows a warning and re-enables the button without crashing."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video = tmp_path / "ep01.mkv"
+    video.touch()
+    tab.video_file_selector.set_path(str(video))
+
+    with (
+        patch(_LIST_STREAMS, side_effect=RuntimeError("ffprobe boom")),
+        patch(_TRACKS_DIALOG) as mock_class,
+        patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning") as mock_warn,
+    ):
+        tab._on_tracks_clicked()
+        qtbot.waitUntil(lambda: mock_warn.called, timeout=3000)
+
+    mock_class.assert_not_called()
+    assert tab.tracks_button.isEnabled()

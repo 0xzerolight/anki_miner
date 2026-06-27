@@ -23,7 +23,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import Iterator
+from typing import TYPE_CHECKING, Iterator, cast
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -42,6 +42,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import SUBTITLE_FILE_FILTER, VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -53,6 +54,9 @@ from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.file_pairing import FilePairMatcher
 from anki_miner.utils.i18n import tr_format
+
+if TYPE_CHECKING:
+    from anki_miner.utils.audio_track_detector import AudioStream
 
 logger = logging.getLogger(__name__)
 
@@ -441,29 +445,52 @@ class SubtitleRetimeTab(QWidget):
             QMessageBox.warning(self, self.tr("File Not Found"), self.tr("Video file not found: ") + video_path)
             return
 
-        streams = list_audio_streams(video_file, ffprobe_cmd=resolve_ffprobe(self.config))
-        if not streams:
-            QMessageBox.information(
-                self,
-                self.tr("No Audio Tracks"),
-                self.tr("No audio tracks detected. Check that ffprobe is installed and the file has audio."),
+        ffprobe_cmd = resolve_ffprobe(self.config)
+
+        # Probe off the GUI thread — ffprobe on a large file can block long
+        # enough to freeze the UI. Disable the button so a second click can't
+        # spawn a parallel probe; re-enabled in both callbacks.
+        self.tracks_button.setEnabled(False)
+
+        def _probe() -> object:
+            return list_audio_streams(video_file, ffprobe_cmd=ffprobe_cmd)
+
+        def _on_streams(result: object) -> None:
+            self.tracks_button.setEnabled(True)
+            streams = cast("list[AudioStream]", result)
+            if not streams:
+                QMessageBox.information(
+                    self,
+                    self.tr("No Audio Tracks"),
+                    self.tr("No audio tracks detected. Check that ffprobe is installed and the file has audio."),
+                )
+                return
+
+            auto_stream = next((s for s in streams if s.language_tag in JAPANESE_LANGUAGE_CODES), None)
+
+            dialog = AudioTracksDialog(
+                streams=streams,
+                current_override=self._audio_track_override,
+                auto_detected=auto_stream,
+                parent=self,
             )
-            return
+            if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
+                self._audio_track_override = dialog.selected_override()
+                if self._audio_track_override is None:
+                    self.audio_track_label.setText(self.tr("Japanese (auto-detect)"))
+                else:
+                    self.audio_track_label.setText(tr_format(self.tr("Track %1"), str(self._audio_track_override + 1)))
 
-        auto_stream = next((s for s in streams if s.language_tag in JAPANESE_LANGUAGE_CODES), None)
+        def _on_probe_error(msg: str) -> None:
+            self.tracks_button.setEnabled(True)
+            logger.error("Failed to probe audio tracks: %s", msg)
+            QMessageBox.warning(
+                self,
+                self.tr("Probe Failed"),
+                self.tr("Failed to detect audio tracks. Check that ffprobe is installed."),
+            )
 
-        dialog = AudioTracksDialog(
-            streams=streams,
-            current_override=self._audio_track_override,
-            auto_detected=auto_stream,
-            parent=self,
-        )
-        if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
-            self._audio_track_override = dialog.selected_override()
-            if self._audio_track_override is None:
-                self.audio_track_label.setText(self.tr("Japanese (auto-detect)"))
-            else:
-                self.audio_track_label.setText(tr_format(self.tr("Track %1"), str(self._audio_track_override + 1)))
+        run_off_thread(self, _probe, _on_streams, _on_probe_error)
 
     # ------------------------------------------------------------------
     # Output location slots
