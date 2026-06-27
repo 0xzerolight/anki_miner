@@ -65,3 +65,49 @@ def test_skeleton_modules_importable():
     import anki_miner.services.asr.model_manager  # noqa: F401
     import anki_miner.services.asr.srt_writer  # noqa: F401
     import anki_miner.services.asr.transcriber  # noqa: F401
+
+
+# ---------------------------------------------------------------------------
+# cuda_device_count — GPU detection seam for the Settings GPU-pack gating
+# ---------------------------------------------------------------------------
+
+
+def test_cuda_device_count_returns_int():
+    """cuda_device_count() returns an int (0 when ctranslate2 is absent/unusable)."""
+    from anki_miner.services.asr._engine import cuda_device_count
+
+    result = cuda_device_count()
+    assert isinstance(result, int)
+    assert result >= 0
+
+
+@requires_faster_whisper_absent
+def test_cuda_device_count_zero_when_ctranslate2_absent():
+    """Without ctranslate2 installed the count is 0, never an exception."""
+    from anki_miner.services.asr._engine import cuda_device_count
+
+    assert cuda_device_count() == 0
+
+
+def test_cuda_device_count_swallows_any_error(monkeypatch):
+    """Any failure inside the count probe degrades to 0, never propagates."""
+    import builtins
+
+    from anki_miner.services.asr import _engine
+
+    real_import = builtins.__import__
+
+    def _boom(name, *args, **kwargs):
+        if name == "ctranslate2":
+            raise OSError("native CUDA runtime exploded")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _boom)
+    assert _engine.cuda_device_count() == 0
+
+
+def test_cuda_device_count_no_top_level_ctranslate2_import():
+    """ctranslate2 must not be importable from the module's globals."""
+    import anki_miner.services.asr._engine as engine_mod
+
+    assert "ctranslate2" not in dir(engine_mod)

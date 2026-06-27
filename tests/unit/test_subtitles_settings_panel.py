@@ -273,3 +273,160 @@ def test_unsupported_platform_has_no_alass_button(qtbot, monkeypatch):
     assert not hasattr(panel, "download_alass_button")
     # set_alass_status is a safe no-op when unsupported.
     panel.set_alass_status("anything")  # must not raise
+
+
+# ---------------------------------------------------------------------------
+# ASR device dropdown — round-trip + config marshalling
+# ---------------------------------------------------------------------------
+
+
+def test_panel_has_device_combo(qtbot):
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.device_combo is not None
+    assert panel.device_combo.count() == 3
+
+
+def test_device_default_is_auto(qtbot):
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.get_device() == "auto"
+
+
+def test_set_device_round_trips(qtbot):
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_device("cuda")
+    assert panel.get_device() == "cuda"
+    panel.set_device("cpu")
+    assert panel.get_device() == "cpu"
+    panel.set_device("auto")
+    assert panel.get_device() == "auto"
+
+
+def test_set_device_unknown_falls_back_to_auto(qtbot):
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_device("cpu")
+    panel.set_device("nonsense")
+    assert panel.get_device() == "auto"
+
+
+def test_load_from_config_sets_device(qtbot, tmp_path):
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_device="cuda", cuda_libs_root=tmp_path))
+    assert panel.get_device() == "cuda"
+
+
+def test_contribute_includes_device(qtbot):
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_device("cpu")
+    new_config = panel.contribute(AnkiMinerConfig())
+    assert new_config.asr_device == "cpu"
+
+
+# ---------------------------------------------------------------------------
+# GPU acceleration pack download — gating + in-flight guard
+# ---------------------------------------------------------------------------
+
+
+def _patch_cuda(monkeypatch, *, supported: bool, gpu_count: int, installed: bool = False) -> None:
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: supported)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.is_installed", lambda root: installed)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: gpu_count)
+
+
+def test_cuda_button_enabled_when_supported_and_gpu_present(qtbot, tmp_path, monkeypatch):
+    _patch_cuda(monkeypatch, supported=True, gpu_count=1, installed=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+
+    assert panel.download_cuda_button.isEnabled()
+    assert "not installed" in panel.cuda_status_label.text().lower()
+
+
+def test_cuda_status_reflects_installed(qtbot, tmp_path, monkeypatch):
+    _patch_cuda(monkeypatch, supported=True, gpu_count=2, installed=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+
+    assert panel.download_cuda_button.isEnabled()
+    assert "installed" in panel.cuda_status_label.text().lower()
+
+
+def test_cuda_button_disabled_when_no_gpu(qtbot, tmp_path, monkeypatch):
+    _patch_cuda(monkeypatch, supported=True, gpu_count=0)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+
+    assert not panel.download_cuda_button.isEnabled()
+
+
+def test_cuda_button_hidden_when_unsupported(qtbot, tmp_path, monkeypatch):
+    _patch_cuda(monkeypatch, supported=False, gpu_count=0)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+
+    assert not panel.download_cuda_button.isEnabled()
+    assert not panel.download_cuda_button.isVisibleTo(panel)
+
+
+def test_cuda_download_click_emits_when_available(qtbot, tmp_path, monkeypatch):
+    _patch_cuda(monkeypatch, supported=True, gpu_count=1)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+
+    received: list[None] = []
+    panel.cuda_pack_download_requested.connect(lambda: received.append(None))
+    panel.download_cuda_button.click()
+
+    assert len(received) == 1
+    assert not panel.download_cuda_button.isEnabled()  # disabled in flight
+
+
+def test_cuda_download_click_noop_when_unsupported(qtbot, tmp_path, monkeypatch):
+    _patch_cuda(monkeypatch, supported=False, gpu_count=0)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+
+    received: list[None] = []
+    panel.cuda_pack_download_requested.connect(lambda: received.append(None))
+    panel._on_cuda_pack_download_clicked()
+
+    assert received == []
+
+
+def test_cuda_in_flight_guard_lifecycle(qtbot, tmp_path, monkeypatch):
+    """Click disables + flags in flight; a refresh mid-flight keeps it disabled;
+    notify clears it."""
+    _patch_cuda(monkeypatch, supported=True, gpu_count=1)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+
+    panel.download_cuda_button.click()
+    assert panel._cuda_pack_active
+    assert not panel.download_cuda_button.isEnabled()
+
+    # A reload (config refresh) mid-download must keep it disabled.
+    panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    assert not panel.download_cuda_button.isEnabled()
+
+    panel.notify_cuda_pack_download_finished(tmp_path)
+    assert not panel._cuda_pack_active
+    assert panel.download_cuda_button.isEnabled()
+
+
+def test_set_cuda_pack_status_sets_label(qtbot):
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_cuda_pack_status("Downloading…")
+    assert panel.cuda_status_label.text() == "Downloading…"
