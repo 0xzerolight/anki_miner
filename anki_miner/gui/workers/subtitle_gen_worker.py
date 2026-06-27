@@ -180,6 +180,7 @@ class SubtitleGenWorker(CancellableWorker):
                 progress_cb=_progress_cb,
                 device=self._config.asr_device,
                 cuda_libs_root=self._config.cuda_libs_root,
+                onnx_pack_root=self._config.onnx_pack_root,
             )
 
             if self.is_cancelled:

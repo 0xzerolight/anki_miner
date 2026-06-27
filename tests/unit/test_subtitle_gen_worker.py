@@ -120,6 +120,7 @@ def _patch_transcribe(monkeypatch, *, segments=None, raise_exc=None):
         progress_cb=None,
         device="auto",
         cuda_libs_root=None,
+        onnx_pack_root=None,
     ):
         if raise_exc is not None:
             raise raise_exc
@@ -243,6 +244,7 @@ def test_cancel_during_transcribe_emits_cancelled(qapp, tmp_path, monkeypatch):
         progress_cb=None,
         device="auto",
         cuda_libs_root=None,
+        onnx_pack_root=None,
     ):
         if cancel_event is not None:
             cancel_event.set()  # user cancels mid-transcription
@@ -404,6 +406,7 @@ def test_overwrite_re_transcribes_existing(qapp, tmp_path, monkeypatch):
         progress_cb=None,
         device="auto",
         cuda_libs_root=None,
+        onnx_pack_root=None,
     ):
         transcribe_calls.append(1)
         if progress_cb is not None:
@@ -711,6 +714,7 @@ def test_final_progress_is_100_on_success(qapp, tmp_path, monkeypatch):
         progress_cb=None,
         device="auto",
         cuda_libs_root=None,
+        onnx_pack_root=None,
     ):
         # Only emit 50%, not 100% — worker must force 100%.
         if progress_cb is not None:
@@ -765,9 +769,11 @@ def test_transcribe_receives_device_and_cuda_libs_root_from_config(qapp, tmp_pat
         progress_cb=None,
         device="auto",
         cuda_libs_root=None,
+        onnx_pack_root=None,
     ):
         captured["device"] = device
         captured["cuda_libs_root"] = cuda_libs_root
+        captured["onnx_pack_root"] = onnx_pack_root
         return _FAKE_SEGMENTS
 
     import anki_miner.services.asr.srt_writer as sw
@@ -782,6 +788,7 @@ def test_transcribe_receives_device_and_cuda_libs_root_from_config(qapp, tmp_pat
 
     assert captured["device"] == "cuda"
     assert captured["cuda_libs_root"] == config.cuda_libs_root
+    assert captured["onnx_pack_root"] == config.onnx_pack_root
 
 
 # ---------------------------------------------------------------------------
