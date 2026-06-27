@@ -4206,6 +4206,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Воспроизвести</translation>
     </message>
     <message>
+        <source>Could not load video: %1</source>
+        <translation>Не удалось загрузить видео: %1</translation>
+    </message>
+    <message>
         <source>Pause</source>
         <translation>Пауза</translation>
     </message>

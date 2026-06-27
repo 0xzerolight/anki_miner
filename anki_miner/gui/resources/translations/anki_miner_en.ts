@@ -4132,6 +4132,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Could not load video: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Pause</source>
         <translation type="unfinished" />
     </message>

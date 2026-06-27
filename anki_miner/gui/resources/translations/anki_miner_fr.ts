@@ -4196,6 +4196,10 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Lire</translation>
     </message>
     <message>
+        <source>Could not load video: %1</source>
+        <translation>Impossible de charger la vidéo : %1</translation>
+    </message>
+    <message>
         <source>Pause</source>
         <translation>Pause</translation>
     </message>

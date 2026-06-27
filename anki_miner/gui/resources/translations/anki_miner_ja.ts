@@ -4186,6 +4186,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>再生</translation>
     </message>
     <message>
+        <source>Could not load video: %1</source>
+        <translation>動画を読み込めませんでした: %1</translation>
+    </message>
+    <message>
         <source>Pause</source>
         <translation>一時停止</translation>
     </message>
