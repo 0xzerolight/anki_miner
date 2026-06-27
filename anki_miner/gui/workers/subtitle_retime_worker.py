@@ -52,6 +52,11 @@ class SubtitleRetimeWorker(CancellableWorker):
             next to each source video.
         overwrite: When ``True``, existing output subtitles are regenerated.
         split_penalty: alass ``--split-penalty`` value (0–1000, default 7).
+        disable_fps_guessing: Pass ``--disable-fps-guessing`` to alass (default
+            True — stops bogus framerate stretching of an already-good sub).
+        no_split: Pass ``--no-split`` to alass (single global offset only).
+        audio_track_override: Audio-stream index to align against; None
+            auto-detects the Japanese track per video.
         retimer: Optional callable with the same signature as
             :func:`~anki_miner.services.subtitle_retimer.retime_subtitle`;
             defaults to that function.  Injected by tests.
@@ -77,6 +82,9 @@ class SubtitleRetimeWorker(CancellableWorker):
         output_dir: Path | None = None,
         overwrite: bool = False,
         split_penalty: float = 7,
+        disable_fps_guessing: bool = True,
+        no_split: bool = False,
+        audio_track_override: int | None = None,
         retimer=None,
         parent=None,
     ) -> None:
@@ -87,6 +95,9 @@ class SubtitleRetimeWorker(CancellableWorker):
         self._output_dir = output_dir
         self._overwrite = overwrite
         self._split_penalty = split_penalty
+        self._disable_fps_guessing = disable_fps_guessing
+        self._no_split = no_split
+        self._audio_track_override = audio_track_override
         # Set when alass is missing: stops the queue without poisoning
         # is_cancelled (a tool error, not a user cancel).
         self._stop_queue = False
@@ -143,6 +154,9 @@ class SubtitleRetimeWorker(CancellableWorker):
                 in_sub,
                 out_sub,
                 split_penalty=self._split_penalty,
+                disable_fps_guessing=self._disable_fps_guessing,
+                no_split=self._no_split,
+                audio_track_override=self._audio_track_override,
                 cancel_event=self._cancel_event,
                 log_cb=_log_cb,
             )

@@ -75,6 +75,60 @@ def _fake_retimer_failure(*args, cancel_event=None, log_cb=None, **kwargs):
 # ---------------------------------------------------------------------------
 
 
+def test_forwards_alass_options_to_retimer(qapp, tmp_path):
+    """Worker forwards disable_fps_guessing / no_split / audio_track_override."""
+    v = tmp_path / "ep01.mkv"
+    s = tmp_path / "ep01_orig.srt"
+    for p in (v, s):
+        p.write_bytes(b"")
+
+    captured: list[dict] = []
+
+    def _recording_retimer(*args, **kwargs):
+        captured.append(kwargs)
+        return True
+
+    worker = SubtitleRetimeWorker(
+        _make_config(),
+        [(v, s)],
+        split_penalty=12.0,
+        disable_fps_guessing=False,
+        no_split=True,
+        audio_track_override=3,
+        retimer=_recording_retimer,
+    )
+    worker.run()
+
+    assert len(captured) == 1
+    kw = captured[0]
+    assert kw["split_penalty"] == 12.0
+    assert kw["disable_fps_guessing"] is False
+    assert kw["no_split"] is True
+    assert kw["audio_track_override"] == 3
+
+
+def test_default_alass_options_forwarded(qapp, tmp_path):
+    """Defaults: fps-guessing disabled, no split, auto-detect track (None)."""
+    v = tmp_path / "ep01.mkv"
+    s = tmp_path / "ep01_orig.srt"
+    for p in (v, s):
+        p.write_bytes(b"")
+
+    captured: list[dict] = []
+
+    def _recording_retimer(*args, **kwargs):
+        captured.append(kwargs)
+        return True
+
+    worker = _make_worker([(v, s)], retimer=_recording_retimer)
+    worker.run()
+
+    kw = captured[0]
+    assert kw["disable_fps_guessing"] is True
+    assert kw["no_split"] is False
+    assert kw["audio_track_override"] is None
+
+
 def test_signal_contract_two_pairs(qapp, tmp_path):
     """2-pair run: correct started/finished per pair + one queue_finished."""
     v1 = tmp_path / "ep01.mkv"
