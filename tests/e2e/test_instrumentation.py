@@ -45,6 +45,7 @@ def _snap(
     sqlite_rows: dict[str, int] | None = None,
     temp_files: int = 0,
     anki_test_deck_count: int | None = None,
+    stall_count: int = 0,
     label: str = "",
 ) -> StateSnapshot:
     """Build a synthetic snapshot, defaulting every field to a stable baseline."""
@@ -57,6 +58,7 @@ def _snap(
         sqlite_rows=sqlite_rows if sqlite_rows is not None else {},
         temp_files=temp_files,
         anki_test_deck_count=anki_test_deck_count,
+        stall_count=stall_count,
         label=label,
     )
 
@@ -478,3 +480,85 @@ def test_crossprocess_widget_leak_plus_temp_files_leak_fails_on_temp():
     # temp_files drives the flag, NOT top_level_widgets.
     assert any("temp_files" in f for f in report.flags)
     assert all("top_level_widgets" not in f for f in report.flags)
+
+
+# --------------------------------------------------------------------------
+# GUI-thread stall watchdog: any nonzero stall in a session is a hard FAIL
+# --------------------------------------------------------------------------
+
+
+def test_capture_snapshot_records_stall_count(qapp, tmp_path, monkeypatch):
+    """capture_snapshot reads the module-global stall counter onto the snapshot."""
+    import tests.e2e.instrumentation as instr
+
+    # Force a known global stall count without driving a real watchdog.
+    monkeypatch.setattr(instr, "get_global_stall_count", lambda: 7)
+    snap = capture_snapshot(test_home=tmp_path, gateway=None)
+    assert snap.stall_count == 7
+
+
+def test_capture_snapshot_stall_count_defaults_zero(qapp, tmp_path):
+    """With no stalls observed the captured stall_count is 0 (the live default)."""
+    from anki_miner.gui.utils.stall_watchdog import reset_global_stall_count
+
+    reset_global_stall_count()
+    snap = capture_snapshot(test_home=tmp_path, gateway=None)
+    assert snap.stall_count == 0
+
+
+def test_zero_stall_count_is_pass():
+    """A series where no session stalled the GUI thread stays PASS."""
+    snaps = [_snap(index=i, stall_count=0) for i in range(4)]
+    report = detect_divergence(snaps)
+    assert report.verdict == "PASS"
+    assert all("stall" not in f.lower() for f in report.flags)
+
+
+def test_nonzero_stall_count_fails_inprocess():
+    """A single session that stalled the GUI thread FAILs the verdict (in-process)."""
+    snaps = [_snap(index=0, stall_count=0), _snap(index=1, stall_count=2), _snap(index=2, stall_count=0)]
+    report = detect_divergence(snaps)
+    assert report.verdict == "FAIL"
+    assert any("stall" in f.lower() for f in report.flags)
+    assert any("watchdog" in f.lower() for f in report.flags)
+
+
+def test_nonzero_stall_count_fails_crossprocess():
+    """Stalls are a real GUI-thread signal even cross-process (each child reports its own)."""
+    snaps = [_snap(index=i, stall_count=1) for i in range(3)]
+    report = detect_divergence(snaps, mode="crossprocess")
+    assert report.verdict == "FAIL"
+    assert any("stall" in f.lower() for f in report.flags)
+
+
+def test_stall_count_max_reported_in_suspect_deltas():
+    """The worst per-session stall count is surfaced in suspect_deltas for the reader."""
+    snaps = [_snap(index=0, stall_count=0), _snap(index=1, stall_count=3), _snap(index=2, stall_count=1)]
+    report = detect_divergence(snaps)
+    assert report.suspect_deltas["stall_count_max"] == 3
+
+
+def test_stall_count_fail_independent_of_session_count():
+    """Even a 2-session run (below MONOTONIC_MIN_GAPS) FAILs on a stall — it is not a trend metric."""
+    snaps = [_snap(index=0, stall_count=0), _snap(index=1, stall_count=1)]
+    report = detect_divergence(snaps)
+    assert report.verdict == "FAIL"
+    assert any("stall" in f.lower() for f in report.flags)
+
+
+def test_snapshot_stall_count_round_trips_through_dict():
+    """StateSnapshot.stall_count survives asdict -> filtered-kwargs rebuild (child handoff)."""
+    snap = _snap(index=2, stall_count=5)
+    d = dataclasses.asdict(snap)
+    assert d["stall_count"] == 5
+    field_names = {f.name for f in dataclasses.fields(StateSnapshot)}
+    rebuilt = StateSnapshot(**{k: v for k, v in d.items() if k in field_names})
+    assert rebuilt.stall_count == 5
+
+
+def test_snapshot_from_legacy_dict_without_stall_count_defaults_zero():
+    """A child JSON dict predating stall_count rehydrates with the default (defensive)."""
+    field_names = {f.name for f in dataclasses.fields(StateSnapshot)}
+    legacy = {"index": 1, "top_level_widgets": 1, "python_threads": 4}
+    rebuilt = StateSnapshot(**{k: v for k, v in legacy.items() if k in field_names})
+    assert rebuilt.stall_count == 0
