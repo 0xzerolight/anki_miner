@@ -4196,6 +4196,10 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>Reproducir</translation>
     </message>
     <message>
+        <source>Could not load video: %1</source>
+        <translation>No se pudo cargar el video: %1</translation>
+    </message>
+    <message>
         <source>Pause</source>
         <translation>Pausar</translation>
     </message>
