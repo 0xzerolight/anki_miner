@@ -248,7 +248,7 @@ def _connect_alass_download(window: MainWindow, settings_tab: SettingsTab) -> No
     def _on_alass_download_requested() -> None:
         def _on_alass_finished(ok: bool, message: str) -> None:
             settings_tab.set_alass_status(message)
-            settings_tab.subtitles_panel._refresh_alass_status()
+            settings_tab.subtitles_panel.notify_alass_download_finished()
             if ok:
                 alass_resolver._clear_cache()
                 window.config_refreshed.emit(window.get_config())
@@ -446,8 +446,9 @@ def main():
     def _on_asr_download_requested(model_name: str) -> None:
         def _on_asr_finished(ok: bool, message: str) -> None:
             settings_tab.set_asr_model_status(message)
-            # Refresh the panel's downloaded-state label regardless of success/failure.
-            settings_tab.subtitles_panel._refresh_status(model_name, window.get_config().asr_models_root)
+            # Clear the in-flight guard and refresh the downloaded-state label
+            # regardless of success/failure (re-enables the button).
+            settings_tab.subtitles_panel.notify_asr_download_finished(model_name, window.get_config().asr_models_root)
 
         window.background_tasks.start_asr_model_download(
             model_name,
