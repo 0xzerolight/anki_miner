@@ -14,7 +14,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from anki_miner.services.asr import _engine
 
@@ -174,7 +174,7 @@ def _resolve_model(
     model_name: str,
     models_root: Path,
     cpu_threads: int,
-) -> tuple[object, str]:
+) -> tuple[Any, str]:
     """Construct a WhisperModel honouring *requested_device* with a CPU fallback.
 
     ``cpu`` builds CPU directly. ``auto``/``cuda`` build on GPU when one is present
