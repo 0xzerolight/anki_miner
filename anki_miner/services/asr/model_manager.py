@@ -106,7 +106,12 @@ def download(name: str, models_root: Path, cancel_event=None) -> None:
 
     staging = Path(tempfile.mkdtemp(prefix=f".staging-{name}-", dir=models_root))
     try:
-        _engine.get_download_fn()(name, download_root=staging)
+        # cache_dir (NOT download_root): faster-whisper's download_model has no
+        # download_root param — that belongs to WhisperModel. cache_dir lays out
+        # the HF cache tree (models--Systran--faster-whisper-<name>/snapshots/…)
+        # that both is_downloaded and WhisperModel(download_root=…,
+        # local_files_only=True) expect. output_dir would flatten it and break both.
+        _engine.get_download_fn()(name, cache_dir=str(staging))
 
         if cancel_event is not None and cancel_event.is_set():
             # Cancelled after the transfer completed; discard the staged copy.
