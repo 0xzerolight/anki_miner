@@ -12,6 +12,7 @@ Subtitles main tab:
   macOS has no upstream binary, so it shows Homebrew guidance instead.
 """
 
+import importlib.util
 import logging
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -32,7 +33,7 @@ from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
 from anki_miner.services import alass_installer
-from anki_miner.services.asr import _engine, cuda_pack_installer, model_manager
+from anki_miner.services.asr import _engine, cuda_pack_installer, model_manager, onnx_pack_installer
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,8 @@ class _AsrState:
     model_downloaded: bool
     cuda_pack_installed: bool
     alass_installed: bool
+    onnxruntime_importable: bool
+    vad_pack_installed: bool
 
 
 class SubtitlesSettingsPanel(FormPanel):
@@ -94,6 +97,9 @@ class SubtitlesSettingsPanel(FormPanel):
     #: Emitted when the user clicks "Download GPU acceleration"; the managed
     #: install target (``config.cuda_libs_root``) is resolved by the wiring.
     cuda_pack_download_requested = pyqtSignal()
+    #: Emitted when the user clicks "Download silence removal"; the managed
+    #: install target (``config.onnx_pack_root``) is resolved by the wiring.
+    vad_pack_download_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialize the Subtitles settings panel."""
@@ -101,6 +107,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._models_root = None
         self._bin_root: Path | None = None
         self._cuda_libs_root: Path | None = None
+        self._onnx_pack_root: Path | None = None
         self._alass_supported = alass_installer.alass_install_supported()
         # In-flight guards: a download disables its button until the worker
         # finishes. Without these, any state refresh re-run (config reload
@@ -108,6 +115,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._asr_download_active = False
         self._alass_download_active = False
         self._cuda_pack_active = False
+        self._vad_pack_active = False
         # Off-thread state probe coordination. The heavy probes (ctranslate2
         # import + CUDA init, find_spec, model.bin disk walk) run on a worker;
         # _state_in_flight + _state_refresh_pending give the same single-shot
@@ -221,6 +229,37 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_guidance_label.setWordWrap(True)
         self._cuda_guidance_label.setVisible(False)
         self.add_field("", self._cuda_guidance_label)
+
+        # Silence removal (VAD) pack download. onnxruntime powers Whisper's VAD,
+        # which strips silence/music so it is not transcribed as hallucinated
+        # text. It ships with source ([asr]) installs; bundled installs download
+        # it here. Gated by _refresh_vad_pack_status on importability + platform.
+        self.download_vad_button = ModernButton(self.tr("Download silence removal"), variant="secondary")
+        self.download_vad_button.setToolTip(
+            self.tr(
+                "Download the silence-removal (VAD) library into Anki Miner's folder. "
+                "It prevents silence and music being transcribed as garbage text."
+            )
+        )
+        self.download_vad_button.clicked.connect(self._on_vad_pack_download_clicked)
+
+        self.vad_status_label = QLabel("")
+        self.vad_status_label.setObjectName("settings-save-status")
+
+        vad_container = QWidget()
+        vad_row = QHBoxLayout(vad_container)
+        vad_row.setContentsMargins(0, 0, 0, 0)
+        vad_row.addWidget(self.download_vad_button)
+        vad_row.addWidget(self.vad_status_label)
+        vad_row.addStretch()
+        self.add_field(self.tr("Silence removal"), vad_container)
+
+        # Guidance shown when VAD is already available (no download needed) or
+        # unavailable on this platform.
+        self._vad_guidance_label = QLabel("")
+        self._vad_guidance_label.setWordWrap(True)
+        self._vad_guidance_label.setVisible(False)
+        self.add_field("", self._vad_guidance_label)
 
     def _setup_alass_section(self) -> None:
         """alass path override plus in-app download (or Homebrew guidance)."""
@@ -371,6 +410,17 @@ class SubtitlesSettingsPanel(FormPanel):
         the engine state is known.
         """
         return bool(self._engine_available_cache)
+
+    def _onnxruntime_importable_now(self) -> bool:
+        """Best-effort onnxruntime importability for the probe-error fallback.
+
+        ``find_spec`` is light (a sys.path scan, no import); only used on the rare
+        probe-failure path, so a direct check here is fine on the GUI thread.
+        """
+        try:
+            return importlib.util.find_spec("onnxruntime") is not None
+        except Exception:  # noqa: BLE001 — degrade to "not importable"
+            return False
 
     def notify_asr_download_finished(self, name: str, models_root) -> None:
         """Clear the in-flight guard and refresh the button/status after a download.
@@ -533,6 +583,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._show_checking_status()
 
         bin_root = self._bin_root
+        onnx_pack_root = self._onnx_pack_root
         alass_supported = self._alass_supported
         # Reuse cached process-lifetime probes; re-probe install/download flags.
         engine_cache = self._engine_available_cache
@@ -578,6 +629,20 @@ class SubtitlesSettingsPanel(FormPanel):
                 except Exception:  # noqa: BLE001 — guard any installer probe failure
                     alass_installed = False
 
+            # onnxruntime importability (find_spec scans sys.path) is the heavy
+            # VAD probe; the install flag is a cheap dir check.
+            try:
+                onnxruntime_importable = importlib.util.find_spec("onnxruntime") is not None
+            except Exception:  # noqa: BLE001 — degrade to "not importable"
+                onnxruntime_importable = False
+
+            vad_pack_installed = False
+            if onnx_pack_root is not None:
+                try:
+                    vad_pack_installed = onnx_pack_installer.is_installed(onnx_pack_root)
+                except Exception:  # noqa: BLE001 — guard any installer probe failure
+                    vad_pack_installed = False
+
             return _AsrState(
                 cuda_libs_root=cuda_libs_root,
                 engine_available=engine_available,
@@ -585,6 +650,8 @@ class SubtitlesSettingsPanel(FormPanel):
                 model_downloaded=model_downloaded,
                 cuda_pack_installed=cuda_pack_installed,
                 alass_installed=alass_installed,
+                onnxruntime_importable=onnxruntime_importable,
+                vad_pack_installed=vad_pack_installed,
             )
 
         run_off_thread(self, _probe, self._on_state_ready, self._on_state_error)
@@ -595,6 +662,8 @@ class SubtitlesSettingsPanel(FormPanel):
             self.download_model_button.setEnabled(False)
         if not self._cuda_pack_active:
             self.download_cuda_button.setEnabled(False)
+        if not self._vad_pack_active:
+            self.download_vad_button.setEnabled(False)
         if self._alass_supported and not self._alass_download_active:
             self.download_alass_button.setEnabled(False)
 
@@ -611,6 +680,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._apply_engine_state(result.engine_available)
         self._apply_model_state(result.engine_available, result.model_downloaded)
         self._apply_cuda_pack_state(result.cuda_libs_root, result.cuda_device_count, result.cuda_pack_installed)
+        self._apply_vad_pack_state(result.onnxruntime_importable, result.vad_pack_installed)
         self._apply_alass_state(result.alass_installed)
 
         self._redispatch_pending_state()
@@ -624,6 +694,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._apply_engine_state(self._engine_available_now())
         self._apply_model_state(self._engine_available_now(), False)
         self._apply_cuda_pack_state(self._cuda_libs_root, self._cuda_device_count_cache or 0, False)
+        self._apply_vad_pack_state(self._onnxruntime_importable_now(), False)
         self._apply_alass_state(False)
         self._redispatch_pending_state()
 
@@ -665,6 +736,83 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_model_status(self.tr("Not downloaded"))
 
     # ------------------------------------------------------------------
+    # Silence-removal (VAD) pack download flow
+    # ------------------------------------------------------------------
+
+    def _on_vad_pack_download_clicked(self) -> None:
+        """Disable the button in flight and request the VAD pack download.
+
+        A click while the pack is unsupported is a no-op (the button is disabled
+        in that state, but guard so a stray click never starts a doomed worker).
+        ``onnx_pack_supported()`` is cheap (sys.platform/version), so no off-thread
+        probe is needed on the click path.
+        """
+        if not onnx_pack_installer.onnx_pack_supported():
+            self._refresh_state_async(self.get_model(), self._models_root, self._cuda_libs_root)
+            return
+        self._vad_pack_active = True
+        self.download_vad_button.setEnabled(False)
+        self.vad_pack_download_requested.emit()
+
+    def set_vad_pack_status(self, text: str) -> None:
+        """Set the VAD-pack status label text (shown next to the Download button)."""
+        self.vad_status_label.setText(text)
+
+    def notify_vad_pack_download_finished(self, onnx_pack_root) -> None:
+        """Clear the in-flight guard and refresh the VAD-pack button after a download.
+
+        Wired to the download worker's finish callback (success or failure).
+        Re-probes onnxruntime importability + the install flag (off-thread) so the
+        label/button reflect the new on-disk state.
+        """
+        self._vad_pack_active = False
+        self._onnx_pack_root = onnx_pack_root
+        self._refresh_state_async(self.get_model(), self._models_root, self._cuda_libs_root)
+
+    def _apply_vad_pack_state(self, onnxruntime_importable: bool, installed: bool) -> None:
+        """Gate the VAD-pack button on onnxruntime availability + platform support.
+
+        Applies pre-probed ``onnxruntime_importable`` / ``installed`` values
+        (gathered off-thread):
+
+        * a download in flight keeps the button disabled and the status intact;
+        * onnxruntime already importable (source [asr] install) → hide the button,
+          say silence removal is available;
+        * unsupported platform/Python → hide+disable the button, show guidance;
+        * supported → enable, reflect the installed state.
+        """
+        if self._vad_pack_active:
+            # A download is in flight: keep the button disabled and leave the
+            # "Downloading…" status untouched, regardless of config reloads.
+            self.download_vad_button.setEnabled(False)
+            return
+
+        if onnxruntime_importable:
+            self.download_vad_button.setEnabled(False)
+            self.download_vad_button.setVisible(False)
+            self.set_vad_pack_status("")
+            self._vad_guidance_label.setText(self.tr("Silence removal is available."))
+            self._vad_guidance_label.setVisible(True)
+            return
+
+        # onnx_pack_supported() is cheap (sys.platform/version) — fine on the GUI thread.
+        if not onnx_pack_installer.onnx_pack_supported():
+            self.download_vad_button.setEnabled(False)
+            self.download_vad_button.setVisible(False)
+            self.set_vad_pack_status("")
+            self._vad_guidance_label.setText(self.tr("Silence removal is not available on this platform."))
+            self._vad_guidance_label.setVisible(True)
+            return
+
+        self.download_vad_button.setVisible(True)
+        self._vad_guidance_label.setVisible(False)
+        self.download_vad_button.setEnabled(True)
+        if installed:
+            self.set_vad_pack_status(self.tr("Installed"))
+        else:
+            self.set_vad_pack_status(self.tr("Not installed"))
+
+    # ------------------------------------------------------------------
     # Config marshalling contract
     # ------------------------------------------------------------------
 
@@ -682,6 +830,7 @@ class SubtitlesSettingsPanel(FormPanel):
         # alass
         self.alass_selector.set_path(str(config.alass_location) if config.alass_location else "")
         self._bin_root = config.bin_root
+        self._onnx_pack_root = config.onnx_pack_root
         # One unified off-thread probe drives every status label + button state.
         self._refresh_state_async(config.asr_model, config.asr_models_root, config.cuda_libs_root)
 

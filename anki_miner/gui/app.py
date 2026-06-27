@@ -288,6 +288,31 @@ def _connect_cuda_pack_download(window: MainWindow, settings_tab: SettingsTab) -
     settings_tab.cuda_pack_download_requested.connect(_on_cuda_pack_download_requested)
 
 
+def _connect_vad_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Wire the Subtitles panel's "Download silence removal" button to the worker.
+
+    Status flows back to the panel; on finish the panel's in-flight guard is
+    cleared and its installed-state label refreshed via
+    ``notify_vad_pack_download_finished``. Mirrors :func:`_connect_cuda_pack_download`.
+
+    Extracted from ``main()`` so the wiring is unit-testable without standing up
+    the whole app.
+    """
+
+    def _on_vad_pack_download_requested() -> None:
+        def _on_vad_finished(ok: bool, message: str) -> None:
+            settings_tab.set_vad_pack_status(message)
+            settings_tab.subtitles_panel.notify_vad_pack_download_finished(window.get_config().onnx_pack_root)
+
+        window.background_tasks.start_vad_pack_download(
+            window.get_config().onnx_pack_root,
+            settings_tab.set_vad_pack_status,
+            _on_vad_finished,
+        )
+
+    settings_tab.vad_pack_download_requested.connect(_on_vad_pack_download_requested)
+
+
 def main():
     """Launch the Anki Miner GUI application."""
     _scrub_pyinstaller_env()
@@ -487,6 +512,7 @@ def main():
 
     _connect_alass_download(window, settings_tab)
     _connect_cuda_pack_download(window, settings_tab)
+    _connect_vad_pack_download(window, settings_tab)
     # Wire the Dictionary Settings panel's pre-remove hook so deleting a
     # dictionary closes cached sqlite handles across every tab first — Win11
     # rejects the rmtree otherwise (Issue #30).
