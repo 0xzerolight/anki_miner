@@ -738,9 +738,14 @@ class WordCurationDialog(QDialog):
         return None
 
     def _stop_player(self) -> None:
-        """Stop the embedded player when the dialog closes (any exit path)."""
+        """Release the embedded player when the dialog closes (any exit path).
+
+        ``release`` (not ``stop``) so an in-flight ffprobe probe is joined: Qt
+        does not forward the dialog's close to the child player widget, so a
+        still-running probe worker would otherwise outlive it.
+        """
         if self._show_player and hasattr(self, "player_widget"):
-            self.player_widget.stop()
+            self.player_widget.release()
 
     # ------------------------------------------------------------------
     # Right-click context menu (#43)

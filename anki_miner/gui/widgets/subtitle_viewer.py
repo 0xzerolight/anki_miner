@@ -125,16 +125,16 @@ class SubtitleViewer(QDialog):
         return self._offset
 
     def closeEvent(self, event) -> None:
-        """Stop media player on close."""
-        self.player_widget.stop()
+        """Release the media player on close (joins any in-flight probe)."""
+        self.player_widget.release()
         super().closeEvent(event)
 
     def reject(self) -> None:
-        """Stop media player on reject."""
-        self.player_widget.stop()
+        """Release the media player on reject (joins any in-flight probe)."""
+        self.player_widget.release()
         super().reject()
 
     def accept(self) -> None:
-        """Stop media player on accept."""
-        self.player_widget.stop()
+        """Release the media player on accept (joins any in-flight probe)."""
+        self.player_widget.release()
         super().accept()

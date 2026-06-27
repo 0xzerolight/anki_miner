@@ -446,22 +446,28 @@ class TestStopOnClose:
     """Closing/rejecting the dialog must stop the embedded player."""
 
     def test_stop_called_on_reject(self, qtbot, words, existing_video):
-        """player_widget.stop() is called when the dialog is rejected (Cancel path)."""
+        """player_widget.release() is called when the dialog is rejected (Cancel path).
+
+        ``release`` (not ``stop``) so an in-flight ffprobe probe is joined too.
+        """
         ctx = _make_media_context(video_file=existing_video)
         dlg, mock_player = _build_dialog_with_mock_player(qtbot, words, ctx)
 
         dlg.reject()
 
-        mock_player.stop.assert_called_once()
+        mock_player.release.assert_called_once()
 
     def test_stop_called_on_accept(self, qtbot, words, existing_video):
-        """player_widget.stop() is called when the dialog is accepted (Confirm path)."""
+        """player_widget.release() is called when the dialog is accepted (Confirm path).
+
+        ``release`` (not ``stop``) so an in-flight ffprobe probe is joined too.
+        """
         ctx = _make_media_context(video_file=existing_video)
         dlg, mock_player = _build_dialog_with_mock_player(qtbot, words, ctx)
 
         dlg.accept()
 
-        mock_player.stop.assert_called_once()
+        mock_player.release.assert_called_once()
 
     def test_stop_not_called_when_no_player(self, qtbot, words):
         """Without a player pane, reject() must not raise."""

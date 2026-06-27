@@ -1,6 +1,7 @@
 """Tests for SubtitlePlayerWidget."""
 
 import logging
+import threading
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -16,6 +17,18 @@ from anki_miner.gui.widgets.subtitle_player_widget import (
 from anki_miner.utils.audio_track_detector import JapaneseAudioStream
 
 MODULE = "anki_miner.gui.widgets.subtitle_player_widget"
+
+
+def _set_source_sync(qtbot, widget, *args, timeout=2000, **kwargs):
+    """Call set_source and block until its async ffprobe configures the player.
+
+    The probe now runs off the GUI thread; the QMediaPlayer is built in a
+    GUI-thread callback once it returns. Callers that patch the probe functions
+    must keep the patch active until the worker thread has run, so this waiter is
+    invoked *inside* the patch context.
+    """
+    widget.set_source(*args, **kwargs)
+    qtbot.waitUntil(lambda: widget.player is not None, timeout=timeout)
 
 
 @pytest.fixture
@@ -71,85 +84,115 @@ class TestSetSource:
 
     def test_set_source_creates_player(self, qtbot, fake_media_classes):
         """set_source should create QMediaPlayer and QAudioOutput."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
-        fake_media_classes["player_cls"].assert_called_once()
-        fake_media_classes["audio_cls"].assert_called_once()
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+            fake_media_classes["player_cls"].assert_called_once()
+            fake_media_classes["audio_cls"].assert_called_once()
 
     def test_set_source_stores_entries_and_offset(self, qtbot, fake_media_classes):
         """set_source should store subtitle_entries and offset."""
         entries = [(1.0, 2.0, "Hello"), (3.0, 4.0, "World")]
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
-            widget = SubtitlePlayerWidget()
-            qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), entries, 0.5)
-        assert widget.subtitle_entries == entries
-        assert widget._offset == 0.5
-
-    def test_set_source_records_audio_index_when_japanese_found(self, qtbot, fake_media_classes):
-        """set_source should store ffprobe's audio_index."""
-        with patch(
-            f"{MODULE}.find_japanese_audio_stream",
-            return_value=JapaneseAudioStream(global_index=2, audio_index=1, language_tag="jpn"),
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
-        assert widget._jp_audio_index == 1
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), entries, 0.5)
+            # Entries/offset are stored synchronously, before the probe completes.
+            assert widget.subtitle_entries == entries
+            assert widget._offset == 0.5
+
+    def test_set_source_records_audio_index_when_japanese_found(self, qtbot, fake_media_classes):
+        """set_source should store ffprobe's audio_index."""
+        with (
+            patch(
+                f"{MODULE}.find_japanese_audio_stream",
+                return_value=JapaneseAudioStream(global_index=2, audio_index=1, language_tag="jpn"),
+            ),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+            assert widget._jp_audio_index == 1
 
     def test_set_source_records_none_when_no_japanese_track(self, qtbot, fake_media_classes):
         """set_source should store None when ffprobe finds no Japanese track."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
-        assert widget._jp_audio_index is None
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+            assert widget._jp_audio_index is None
 
     def test_set_source_forwards_ffprobe_cmd(self, qtbot, fake_media_classes):
         """set_source should forward ffprobe_cmd to find_japanese_audio_stream."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None) as mock_find:
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None) as mock_find,
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0, ffprobe_cmd="/custom/ffprobe")
-        mock_find.assert_called_once_with(Path("/tmp/fake.mkv"), ffprobe_cmd="/custom/ffprobe")
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0, ffprobe_cmd="/custom/ffprobe")
+            mock_find.assert_called_once_with(Path("/tmp/fake.mkv"), ffprobe_cmd="/custom/ffprobe")
 
     def test_set_source_defaults_ffprobe_cmd_literal(self, qtbot, fake_media_classes):
         """set_source should default ffprobe_cmd to the bare 'ffprobe' literal."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None) as mock_find:
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None) as mock_find,
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
-        mock_find.assert_called_once_with(Path("/tmp/fake.mkv"), ffprobe_cmd="ffprobe")
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+            mock_find.assert_called_once_with(Path("/tmp/fake.mkv"), ffprobe_cmd="ffprobe")
 
     def test_set_source_override_skips_ffprobe(self, qtbot, fake_media_classes):
         """With an audio_track_override, ffprobe (and ffprobe_cmd) is never invoked."""
-        with patch(f"{MODULE}.find_japanese_audio_stream") as mock_find:
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream") as mock_find,
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2, ffprobe_cmd="/custom/ffprobe")
-        mock_find.assert_not_called()
-        assert widget._jp_audio_index == 2
+            _set_source_sync(
+                qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2, ffprobe_cmd="/custom/ffprobe"
+            )
+            mock_find.assert_not_called()
+            assert widget._jp_audio_index == 2
 
     def test_set_source_connects_tracks_changed(self, qtbot, fake_media_classes):
         """set_source should connect the tracksChanged signal."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
-        fake_media_classes["player"].tracksChanged.connect.assert_called()
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+            fake_media_classes["player"].tracksChanged.connect.assert_called()
 
     def test_set_source_twice_stops_previous_player(self, qtbot, fake_media_classes):
         """Calling set_source a second time should stop the previous player."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
             first_player = fake_media_classes["player"]
             # Reset mock to isolate second call
             first_player.reset_mock()
-            widget.set_source(Path("/tmp/other.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/other.mkv"), [], 0.0)
         first_player.stop.assert_called_once()
 
     def test_set_source_twice_fully_tears_down_first_player(self, qtbot):
@@ -170,7 +213,9 @@ class TestSetSource:
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
             widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            qtbot.waitUntil(lambda: widget.player is mock1)
             widget.set_source(Path("/tmp/other.mkv"), [], 0.0)
+            qtbot.waitUntil(lambda: widget.player is mock2)
 
         # The first player must be fully torn down
         mock1.stop.assert_called()
@@ -188,22 +233,28 @@ class TestSetSource:
 
     def test_set_source_with_audio_track_override(self, qtbot, fake_media_classes):
         """audio_track_override should skip ffprobe and use the given index."""
-        with patch(
-            f"{MODULE}.find_japanese_audio_stream",
-            side_effect=AssertionError("ffprobe should not be called"),
+        with (
+            patch(
+                f"{MODULE}.find_japanese_audio_stream",
+                side_effect=AssertionError("ffprobe should not be called"),
+            ),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2)
-        assert widget._jp_audio_index == 2
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2)
+            assert widget._jp_audio_index == 2
 
     def test_set_source_default_offset_zero(self, qtbot, fake_media_classes):
         """Default offset should be 0.0 when not specified."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [])
-        assert widget._offset == 0.0
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [])
+            assert widget._offset == 0.0
 
 
 class TestSeekSeconds:
@@ -211,28 +262,37 @@ class TestSeekSeconds:
 
     def test_seek_seconds_calls_set_position(self, qtbot, fake_media_classes):
         """seek_seconds should call player.setPosition with ms value."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
             widget.seek_seconds(5.0)
         fake_media_classes["player"].setPosition.assert_called_with(5000)
 
     def test_seek_seconds_clamps_negative_to_zero(self, qtbot, fake_media_classes):
         """Negative seek values should be clamped to 0."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
             widget.seek_seconds(-3.0)
         fake_media_classes["player"].setPosition.assert_called_with(0)
 
     def test_seek_seconds_fractional(self, qtbot, fake_media_classes):
         """Fractional seconds should be converted to int ms."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
             widget.seek_seconds(1.5)
         fake_media_classes["player"].setPosition.assert_called_with(1500)
 
@@ -260,28 +320,37 @@ class TestPlayPauseStop:
 
     def test_play_delegates_to_player(self, qtbot, fake_media_classes):
         """play() should call player.play()."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
             widget.play()
         fake_media_classes["player"].play.assert_called()
 
     def test_pause_delegates_to_player(self, qtbot, fake_media_classes):
         """pause() should call player.pause()."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
             widget.pause()
         fake_media_classes["player"].pause.assert_called()
 
     def test_stop_delegates_to_player(self, qtbot, fake_media_classes):
         """stop() should call player.stop()."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
             widget.stop()
         fake_media_classes["player"].stop.assert_called()
 
@@ -297,10 +366,13 @@ class TestTogglePlayPause:
 
     def test_toggle_pauses_when_playing(self, qtbot, fake_media_classes):
         """When playing, toggle should pause."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
         player = fake_media_classes["player"]
         player_cls = fake_media_classes["player_cls"]
         player.playbackState.return_value = player_cls.PlaybackState.PlayingState
@@ -312,10 +384,13 @@ class TestTogglePlayPause:
 
     def test_toggle_plays_when_not_playing(self, qtbot, fake_media_classes):
         """When paused/stopped, toggle should play."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
         player = fake_media_classes["player"]
         player_cls = fake_media_classes["player_cls"]
         player.playbackState.return_value = player_cls.PlaybackState.PausedState
@@ -373,13 +448,16 @@ class TestAudioTrackSelection:
     """Test that the Japanese audio track is selected in the player widget."""
 
     def test_on_tracks_changed_selects_japanese_track(self, qtbot, fake_media_classes):
-        with patch(
-            f"{MODULE}.find_japanese_audio_stream",
-            return_value=JapaneseAudioStream(global_index=2, audio_index=1, language_tag="jpn"),
+        with (
+            patch(
+                f"{MODULE}.find_japanese_audio_stream",
+                return_value=JapaneseAudioStream(global_index=2, audio_index=1, language_tag="jpn"),
+            ),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
         player = fake_media_classes["player"]
         player.audioTracks.return_value = [MagicMock(), MagicMock()]
 
@@ -388,10 +466,13 @@ class TestAudioTrackSelection:
         player.setActiveAudioTrack.assert_called_once_with(1)
 
     def test_on_tracks_changed_noop_when_no_japanese(self, qtbot, fake_media_classes):
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
         player = fake_media_classes["player"]
         player.audioTracks.return_value = [MagicMock(), MagicMock()]
 
@@ -400,13 +481,16 @@ class TestAudioTrackSelection:
         player.setActiveAudioTrack.assert_not_called()
 
     def test_on_tracks_changed_bounds_check_skips_out_of_range(self, qtbot, fake_media_classes):
-        with patch(
-            f"{MODULE}.find_japanese_audio_stream",
-            return_value=JapaneseAudioStream(global_index=5, audio_index=3, language_tag="jpn"),
+        with (
+            patch(
+                f"{MODULE}.find_japanese_audio_stream",
+                return_value=JapaneseAudioStream(global_index=5, audio_index=3, language_tag="jpn"),
+            ),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
         player = fake_media_classes["player"]
         player.audioTracks.return_value = [MagicMock()]
 
@@ -416,21 +500,27 @@ class TestAudioTrackSelection:
 
     def test_override_skips_ffprobe(self, qtbot, fake_media_classes):
         """When audio_track_override is set, ffprobe should not be called."""
-        with patch(
-            f"{MODULE}.find_japanese_audio_stream",
-            side_effect=AssertionError("ffprobe should not be called"),
+        with (
+            patch(
+                f"{MODULE}.find_japanese_audio_stream",
+                side_effect=AssertionError("ffprobe should not be called"),
+            ),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2)
-        assert widget._jp_audio_index == 2
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2)
+            assert widget._jp_audio_index == 2
 
     def test_override_used_in_on_tracks_changed(self, qtbot, fake_media_classes):
         """Override index should be passed to setActiveAudioTrack."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", side_effect=AssertionError("should not call ffprobe")):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", side_effect=AssertionError("should not call ffprobe")),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=2)
         player = fake_media_classes["player"]
         player.audioTracks.return_value = [MagicMock(), MagicMock(), MagicMock()]
 
@@ -440,10 +530,13 @@ class TestAudioTrackSelection:
 
     def test_qt_metadata_fallback_finds_japanese(self, qtbot, fake_media_classes):
         """When ffprobe returns None and no override, Qt metadata should find Japanese track."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
         player = fake_media_classes["player"]
 
         track_en = MagicMock()
@@ -458,13 +551,16 @@ class TestAudioTrackSelection:
 
     def test_qt_metadata_fallback_skipped_when_ffprobe_found_jp(self, qtbot, fake_media_classes):
         """When ffprobe found Japanese, Qt fallback should not run."""
-        with patch(
-            f"{MODULE}.find_japanese_audio_stream",
-            return_value=JapaneseAudioStream(global_index=0, audio_index=0, language_tag="jpn"),
+        with (
+            patch(
+                f"{MODULE}.find_japanese_audio_stream",
+                return_value=JapaneseAudioStream(global_index=0, audio_index=0, language_tag="jpn"),
+            ),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
         player = fake_media_classes["player"]
 
         track_en = MagicMock()
@@ -479,10 +575,13 @@ class TestAudioTrackSelection:
 
     def test_qt_metadata_fallback_no_japanese_leaves_default(self, qtbot, fake_media_classes):
         """When ffprobe and Qt metadata both fail, setActiveAudioTrack should not be called."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
         player = fake_media_classes["player"]
 
         track_en = MagicMock()
@@ -495,12 +594,15 @@ class TestAudioTrackSelection:
 
     def test_override_index_zero_selects_first_track(self, qtbot, fake_media_classes):
         """audio_track_override=0 is a valid first-track index."""
-        with patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp:
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream") as mock_find_jp,
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=0)
-        mock_find_jp.assert_not_called()
-        assert widget._jp_audio_index == 0
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=0)
+            mock_find_jp.assert_not_called()
+            assert widget._jp_audio_index == 0
 
         player = fake_media_classes["player"]
         player.audioTracks.return_value = [MagicMock(), MagicMock()]
@@ -520,10 +622,13 @@ class TestCloseEventTeardown:
 
     def test_close_event_stops_player_and_detaches_audio(self, qtbot, fake_media_classes):
         """closeEvent calls stop() and setAudioOutput(None) on the active player."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
 
         player = fake_media_classes["player"]
         player.reset_mock()
@@ -548,10 +653,13 @@ class TestCloseEventTeardown:
 
     def test_close_event_clears_player_reference(self, qtbot, fake_media_classes):
         """After closeEvent, widget.player must be None."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
 
         from PyQt6.QtGui import QCloseEvent
 
@@ -561,10 +669,13 @@ class TestCloseEventTeardown:
 
     def test_teardown_player_is_idempotent(self, qtbot, fake_media_classes):
         """Calling _teardown_player twice must not raise."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", return_value=None):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
 
         widget._teardown_player()
         widget._teardown_player()  # second call: player is None, must be no-op
@@ -591,7 +702,7 @@ class TestCloseEventTeardown:
 
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
 
             # Both must be constructed with the widget as their Qt parent.
             player_cls.assert_called_once_with(widget)
@@ -599,10 +710,13 @@ class TestCloseEventTeardown:
 
     def test_override_logs_in_first_branch_not_qt_branch(self, qtbot, fake_media_classes, caplog):
         """Override path should log 'Selected audio track', not 'Qt metadata'."""
-        with patch(f"{MODULE}.find_japanese_audio_stream", side_effect=AssertionError("should not call ffprobe")):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", side_effect=AssertionError("should not call ffprobe")),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=1)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0, audio_track_override=1)
         player = fake_media_classes["player"]
         player.audioTracks.return_value = [MagicMock(), MagicMock()]
 
@@ -658,9 +772,9 @@ class TestSetSourceCreatesPlayer:
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/av1.mkv"), [], 0.0)
-        fake_media_classes["player_cls"].assert_called_once()
-        assert widget.player is not None
+            _set_source_sync(qtbot, widget, Path("/tmp/av1.mkv"), [], 0.0)
+            fake_media_classes["player_cls"].assert_called_once()
+            assert widget.player is not None
 
     def test_supported_codec_creates_player(self, qtbot, fake_media_classes):
         with (
@@ -669,9 +783,9 @@ class TestSetSourceCreatesPlayer:
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
-        fake_media_classes["player_cls"].assert_called_once()
-        assert widget.player is not None
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+            fake_media_classes["player_cls"].assert_called_once()
+            assert widget.player is not None
 
 
 class TestAv1WatchdogFallback:
@@ -700,7 +814,7 @@ class TestAv1WatchdogFallback:
             if show:
                 widget.show()
                 qtbot.waitUntil(widget.isVisible)
-            widget.set_source(Path("/tmp/av1.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/av1.mkv"), [], 0.0)
         return widget
 
     # ------------------------------------------------------------------
@@ -828,7 +942,7 @@ class TestAv1WatchdogFallback:
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/h264.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/h264.mkv"), [], 0.0)
 
         widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
         assert not widget._av1_watchdog.isActive(), "Non-AV1 source must not arm the watchdog"
@@ -841,7 +955,7 @@ class TestAv1WatchdogFallback:
         ):
             widget = SubtitlePlayerWidget()
             qtbot.addWidget(widget)
-            widget.set_source(Path("/tmp/hevc.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/hevc.mkv"), [], 0.0)
 
         # Watchdog is never armed for non-AV1 sources.
         widget._on_media_status_changed(QMediaPlayer.MediaStatus.LoadedMedia)
@@ -871,7 +985,7 @@ class TestAv1WatchdogFallback:
             patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
             patch(f"{MODULE}.get_primary_video_codec", return_value="h264"),
         ):
-            widget.set_source(Path("/tmp/h264.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/h264.mkv"), [], 0.0)
 
         # Use isHidden() — the widget isn't show()n, so isVisible() requires parent to be shown.
         assert not widget.video_widget.isHidden(), "video_widget should be restored on new source"
@@ -944,7 +1058,7 @@ class TestAv1WatchdogFallback:
             patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
             patch(f"{MODULE}.get_primary_video_codec", return_value="h264"),
         ):
-            widget.set_source(Path("/tmp/h264.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/h264.mkv"), [], 0.0)
 
         assert not widget._av1_watchdog_pending, "set_source must reset the pending flag"
 
@@ -997,7 +1111,7 @@ class TestAv1WatchdogFallback:
             qtbot.addWidget(widget)
             widget.show()
             qtbot.waitUntil(widget.isVisible)
-            widget.set_source(Path("/tmp/h264.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/h264.mkv"), [], 0.0)
         player = fake_media_classes["player"]
         player.setPosition.reset_mock()
 
@@ -1054,7 +1168,7 @@ class TestAv1WatchdogFallback:
             patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
             patch(f"{MODULE}.get_primary_video_codec", return_value="av1"),
         ):
-            widget.set_source(Path("/tmp/av1_second.mkv"), [], 0.0)
+            _set_source_sync(qtbot, widget, Path("/tmp/av1_second.mkv"), [], 0.0)
         player = fake_media_classes["player"]
         player.setPosition.reset_mock()
 
@@ -1062,3 +1176,137 @@ class TestAv1WatchdogFallback:
 
         player.setPosition.assert_called_once_with(_AV1_NUDGE_POSITION_MS)
         assert widget._av1_watchdog.isActive(), "second AV1 source must re-arm the watchdog"
+
+
+class TestSetSourceAsyncProbe:
+    """The two ffprobe calls run off the GUI thread; the player is configured
+    in a GUI-thread callback once the probe returns (GUI-freeze hardening)."""
+
+    def test_probe_runs_off_gui_thread(self, qtbot, fake_media_classes):
+        """get_primary_video_codec / find_japanese_audio_stream must NOT run on the
+        GUI thread; the player is configured only after the probe completes."""
+        main_thread_id = threading.get_ident()
+        codec_thread: dict[str, int] = {}
+        audio_thread: dict[str, int] = {}
+
+        def fake_codec(video_file, ffprobe_cmd="ffprobe"):
+            codec_thread["id"] = threading.get_ident()
+            return "h264"
+
+        def fake_find(video_file, ffprobe_cmd="ffprobe"):
+            audio_thread["id"] = threading.get_ident()
+            return None
+
+        with (
+            patch(f"{MODULE}.get_primary_video_codec", side_effect=fake_codec),
+            patch(f"{MODULE}.find_japanese_audio_stream", side_effect=fake_find),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            # The probe has NOT run synchronously: no player yet on return.
+            assert widget.player is None
+            qtbot.waitUntil(lambda: widget.player is not None, timeout=2000)
+
+        assert codec_thread["id"] != main_thread_id, "codec probe ran on the GUI thread"
+        assert audio_thread["id"] != main_thread_id, "audio probe ran on the GUI thread"
+        assert codec_thread["id"] == audio_thread["id"], "both probes share one worker thread"
+
+    def test_player_configured_after_probe(self, qtbot, fake_media_classes):
+        """After the probe completes, _is_av1 / _jp_audio_index reflect its result."""
+        with (
+            patch(f"{MODULE}.get_primary_video_codec", return_value="av1"),
+            patch(
+                f"{MODULE}.find_japanese_audio_stream",
+                return_value=JapaneseAudioStream(global_index=3, audio_index=2, language_tag="jpn"),
+            ),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.set_source(Path("/tmp/av1.mkv"), [], 0.0)
+            qtbot.waitUntil(lambda: widget.player is not None, timeout=2000)
+            assert widget._is_av1 is True
+            assert widget._jp_audio_index == 2
+
+    def test_second_set_source_supersedes_first(self, qtbot, fake_media_classes):
+        """A second set_source before the first probe finishes: only the latest
+        source configures the player (generation guard); no crash."""
+        first_started = threading.Event()
+        release_first = threading.Event()
+
+        def slow_first_codec(video_file, ffprobe_cmd="ffprobe"):
+            # Only the first source's path blocks; the second returns immediately.
+            if str(video_file) == "/tmp/first.mkv":
+                first_started.set()
+                release_first.wait(timeout=5)
+                return "av1"
+            return "h264"
+
+        with (
+            patch(f"{MODULE}.get_primary_video_codec", side_effect=slow_first_codec),
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+
+            widget.set_source(Path("/tmp/first.mkv"), [], 0.0)
+            assert first_started.wait(timeout=5), "first probe never started"
+            first_gen = widget._source_generation
+
+            # Second set_source while the first probe is blocked. _teardown_player
+            # joins the first worker, so release it from another thread first.
+            import threading as _t
+
+            _t.Thread(target=release_first.set, daemon=True).start()
+            widget.set_source(Path("/tmp/second.mkv"), [], 0.0)
+
+            assert widget._source_generation > first_gen
+            qtbot.waitUntil(lambda: widget.player is not None, timeout=2000)
+
+        # The configured player reflects the SECOND source (h264, not av1).
+        assert widget._is_av1 is False, "the superseded first probe must not configure the player"
+
+    def test_probe_failure_leaves_player_none_and_logs(self, qtbot, fake_media_classes, caplog):
+        """A raising probe leaves the widget player-less and logs; no exception."""
+        with (
+            patch(f"{MODULE}.get_primary_video_codec", side_effect=RuntimeError("boom")),
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            with caplog.at_level(logging.WARNING):
+                widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+                # Give the worker time to fail and the error slot to run.
+                qtbot.wait(300)
+
+        assert widget.player is None, "a failed probe must not build a player"
+        assert any("ffprobe failed" in r.message or "off-thread work failed" in r.message for r in caplog.records)
+
+    def test_close_event_during_in_flight_probe_does_not_crash(self, qtbot, fake_media_classes):
+        """closeEvent with a probe still running cancels/joins it without crashing."""
+        from PyQt6.QtGui import QCloseEvent
+
+        started = threading.Event()
+        release = threading.Event()
+
+        def blocking_codec(video_file, ffprobe_cmd="ffprobe"):
+            started.set()
+            release.wait(timeout=5)
+            return "h264"
+
+        with (
+            patch(f"{MODULE}.get_primary_video_codec", side_effect=blocking_codec),
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            assert started.wait(timeout=5), "probe never started"
+
+            # Release from another thread so closeEvent's bounded join completes.
+            import threading as _t
+
+            _t.Thread(target=release.set, daemon=True).start()
+            widget.closeEvent(QCloseEvent())  # must not crash
+
+        assert widget.player is None
