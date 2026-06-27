@@ -70,6 +70,53 @@ def test_event_set_even_if_dialog_construction_raises(qapp, qtbot):
     assert tab._curation_event.is_set()
 
 
+def test_stale_build_callback_after_new_run_does_not_pop_dialog(qapp, qtbot):
+    """M3: a context-build callback from a torn-down run must NOT pop a dialog or
+    touch the live run's event once a new run is active."""
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+
+    # Run A becomes live (token 1), then is torn down (poison invalidates live).
+    tab._curation_token = 1
+    tab._curation_live_token = 1
+    stale_token = 1
+    tab._poison_curation_gate()  # teardown poison: live_token -> 0
+    tab._reset_curation_gate()  # re-arm for the next run (clears poison flag)
+
+    # Run B becomes live (token 2), parked waiting on its own (cleared) event.
+    tab._curation_event.clear()
+    tab._curation_result = None
+    tab._curation_cancelled = False
+    tab._curation_token = 2
+    tab._curation_live_token = 2
+
+    # Run A's stale build finishes and calls back with its now-superseded token.
+    with patch(f"{MODULE}.WordCurationDialog") as dlg:
+        tab._show_curation_dialog(["stale"], None, None, stale_token)
+
+    dlg.assert_not_called()  # no dialog popped for the dead run
+    assert not tab._curation_event.is_set()  # Run B's event left untouched
+    assert tab._curation_result is None
+
+
+def test_matching_token_build_callback_pops_dialog(qapp, qtbot):
+    """M3: a build callback whose token matches the live run pops the dialog and
+    releases the worker as usual."""
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+    tab._curation_token = 5
+    tab._curation_live_token = 5
+    tab._curation_event.clear()
+
+    with patch(f"{MODULE}.WordCurationDialog") as dlg:
+        tab._show_curation_dialog(["w"], None, None, 5)
+
+    dlg.assert_called_once()
+    assert tab._curation_event.is_set()
+
+
 def test_curation_bridge_delivers_dialog_on_gui_thread(qapp, qtbot):
     """A worker-thread _curation_bridge emit must run the dialog on the GUI thread.
 
