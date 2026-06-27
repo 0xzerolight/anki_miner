@@ -22,9 +22,28 @@ pytestmark = pytest.mark.asr
 # ---------------------------------------------------------------------------
 
 
-def make_segment(start: float, end: float, text: str) -> SimpleNamespace:
-    """Create a fake faster-whisper segment namespace."""
-    return SimpleNamespace(start=start, end=end, text=text)
+def make_segment(
+    start: float,
+    end: float,
+    text: str,
+    *,
+    avg_logprob: float = 0.0,
+    compression_ratio: float = 0.0,
+    no_speech_prob: float = 0.0,
+) -> SimpleNamespace:
+    """Create a fake faster-whisper segment namespace.
+
+    The confidence fields default to values that pass the junk filter (so
+    existing tests keep every segment); override them to exercise dropping.
+    """
+    return SimpleNamespace(
+        start=start,
+        end=end,
+        text=text,
+        avg_logprob=avg_logprob,
+        compression_ratio=compression_ratio,
+        no_speech_prob=no_speech_prob,
+    )
 
 
 def fake_model_cls_factory(segments):
@@ -39,8 +58,8 @@ def fake_model_cls_factory(segments):
             self.download_root = download_root
             self.local_files_only = local_files_only
 
-        def transcribe(self, audio, *, language, vad_filter):
-            return iter(segments), SimpleNamespace(language=language)
+        def transcribe(self, audio, **kwargs):
+            return iter(segments), SimpleNamespace(language=kwargs.get("language"))
 
     return FakeModel
 
@@ -132,7 +151,7 @@ def test_transcribe_builds_model_with_correct_params(monkeypatch, tmp_path):
                 local_files_only=local_files_only,
             )
 
-        def transcribe(self, audio, *, language, vad_filter):
+        def transcribe(self, audio, **kwargs):
             return iter([]), SimpleNamespace(language="ja")
 
     monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: CapturingModel)
@@ -159,7 +178,7 @@ def test_transcribe_builds_model_with_correct_params(monkeypatch, tmp_path):
 
 
 def test_transcribe_calls_model_transcribe_with_correct_params(monkeypatch, tmp_path):
-    """transcribe() must call model.transcribe(audio, language='ja', vad_filter=False)."""
+    """transcribe() must pass the anti-hallucination decode flags + conditional VAD."""
     import numpy as np
 
     call_kwargs: dict = {}
@@ -169,13 +188,15 @@ def test_transcribe_calls_model_transcribe_with_correct_params(monkeypatch, tmp_
         def __init__(self, *a, **kw):
             pass
 
-        def transcribe(self, received_audio, *, language, vad_filter):
-            call_kwargs["language"] = language
-            call_kwargs["vad_filter"] = vad_filter
+        def transcribe(self, received_audio, **kwargs):
+            call_kwargs.update(kwargs)
             call_kwargs["audio_is_same"] = received_audio is audio
             return iter([]), SimpleNamespace(language="ja")
 
     monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: CapturingModel)
+    # Pin VAD availability so the assertion is deterministic regardless of whether
+    # onnxruntime happens to be importable in the test environment.
+    monkeypatch.setattr(transcriber, "vad_available", lambda onnx_pack_root=None: True)
 
     transcriber.transcribe(
         audio,
@@ -186,8 +207,127 @@ def test_transcribe_calls_model_transcribe_with_correct_params(monkeypatch, tmp_
     )
 
     assert call_kwargs["language"] == "ja"
-    assert call_kwargs["vad_filter"] is False
+    assert call_kwargs["condition_on_previous_text"] is False
+    assert call_kwargs["word_timestamps"] is True
+    assert call_kwargs["hallucination_silence_threshold"] == 2.0
+    assert call_kwargs["vad_filter"] is True
     assert call_kwargs["audio_is_same"] is True
+
+
+def test_transcribe_vad_filter_reflects_availability(monkeypatch, tmp_path):
+    """vad_filter is False when onnxruntime/VAD is unavailable."""
+    import numpy as np
+
+    call_kwargs: dict = {}
+
+    class CapturingModel:
+        def __init__(self, *a, **kw):
+            pass
+
+        def transcribe(self, received_audio, **kwargs):
+            call_kwargs.update(kwargs)
+            return iter([]), SimpleNamespace(language="ja")
+
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: CapturingModel)
+    monkeypatch.setattr(transcriber, "vad_available", lambda onnx_pack_root=None: False)
+
+    audio = np.zeros(16000, dtype=np.float32)
+    transcriber.transcribe(
+        audio,
+        model_name="small",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=1.0,
+    )
+
+    assert call_kwargs["vad_filter"] is False
+
+
+# ---------------------------------------------------------------------------
+# Junk-segment post-filter
+# ---------------------------------------------------------------------------
+
+
+def test_transcribe_drops_junk_segments(monkeypatch, tmp_path):
+    """Segments with degenerate compression or very low confidence are dropped."""
+    import numpy as np
+
+    segs = [
+        make_segment(0.0, 1.0, "clean"),  # passes (defaults)
+        make_segment(1.0, 2.0, "あらあらあら", compression_ratio=3.5),  # repetition loop
+        make_segment(2.0, 3.0, "garbage", avg_logprob=-1.4),  # low-confidence salad
+        make_segment(3.0, 4.0, "keep"),  # passes
+    ]
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: fake_model_cls_factory(segs))
+
+    audio = np.zeros(64000, dtype=np.float32)
+    result = transcriber.transcribe(
+        audio,
+        model_name="small",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=4.0,
+    )
+
+    assert result == [(0.0, 1.0, "clean"), (3.0, 4.0, "keep")]
+
+
+def test_is_junk_segment_boundaries():
+    """_is_junk_segment uses Whisper's own thresholds (2.4 / -1.0)."""
+    # Exactly on the boundary is kept; just past it is dropped.
+    assert transcriber._is_junk_segment(make_segment(0, 1, "x", compression_ratio=2.4)) is False
+    assert transcriber._is_junk_segment(make_segment(0, 1, "x", compression_ratio=2.41)) is True
+    assert transcriber._is_junk_segment(make_segment(0, 1, "x", avg_logprob=-1.0)) is False
+    assert transcriber._is_junk_segment(make_segment(0, 1, "x", avg_logprob=-1.01)) is True
+    # A segment object lacking the fields is never treated as junk (test fakes).
+    assert transcriber._is_junk_segment(SimpleNamespace(start=0, end=1, text="x")) is False
+
+
+# ---------------------------------------------------------------------------
+# vad_available — onnxruntime detection + pack sys.path injection
+# ---------------------------------------------------------------------------
+
+
+def test_vad_available_true_when_onnxruntime_importable(monkeypatch):
+    """vad_available is True when onnxruntime resolves via find_spec."""
+    import importlib.util
+
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name: object() if name == "onnxruntime" else None)
+    assert transcriber.vad_available() is True
+
+
+def test_vad_available_false_when_missing_and_no_pack(monkeypatch):
+    """vad_available is False when onnxruntime is absent and no pack is provided."""
+    import importlib.util
+
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name: None)
+    assert transcriber.vad_available(None) is False
+
+
+def test_vad_available_injects_pack_then_imports(monkeypatch, tmp_path):
+    """A pack dir holding onnxruntime/ is added to sys.path and then resolves."""
+    import importlib.util
+    import sys
+
+    pack_root = tmp_path / "onnx_pack"
+    (pack_root / "onnxruntime").mkdir(parents=True)
+    (pack_root / "onnxruntime" / "__init__.py").write_text("")
+
+    # find_spec resolves onnxruntime only once the pack dir is on sys.path.
+    def fake_find_spec(name):
+        if name == "onnxruntime" and str(pack_root) in sys.path:
+            return object()
+        return None
+
+    monkeypatch.setattr(importlib.util, "find_spec", fake_find_spec)
+
+    inserted = str(pack_root) not in sys.path
+    try:
+        assert transcriber.vad_available(pack_root) is True
+        assert str(pack_root) in sys.path
+    finally:
+        if inserted and str(pack_root) in sys.path:
+            sys.path.remove(str(pack_root))
 
 
 # ---------------------------------------------------------------------------
@@ -307,7 +447,7 @@ def test_transcribe_cancel_stops_early(monkeypatch, tmp_path):
         def __init__(self, *a, **kw):
             pass
 
-        def transcribe(self, audio, *, language, vad_filter):
+        def transcribe(self, audio, **kwargs):
             return generating_segments(), SimpleNamespace(language="ja")
 
     monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: CancellingModel)
@@ -341,7 +481,7 @@ def test_transcribe_cancel_midloop_emits_final_progress(monkeypatch, tmp_path):
         def __init__(self, *a, **kw):
             pass
 
-        def transcribe(self, audio, *, language, vad_filter):
+        def transcribe(self, audio, **kwargs):
             return generating_segments(), SimpleNamespace(language="ja")
 
     monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: CancellingModel)
@@ -404,8 +544,8 @@ def _recording_model_cls(constructed: list[dict], *, cuda_raises: bool = False):
             if cuda_raises and kwargs.get("device") == "cuda":
                 raise RuntimeError("cuDNN not found")
 
-        def transcribe(self, audio, *, language, vad_filter):
-            return iter([]), SimpleNamespace(language=language)
+        def transcribe(self, audio, **kwargs):
+            return iter([]), SimpleNamespace(language=kwargs.get("language"))
 
     return RecordingModel
 
