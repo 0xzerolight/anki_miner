@@ -43,6 +43,11 @@ in a docstring or comment (e.g. the many ``_curation_event.wait()`` references)
 still counts as a hit for its file. Those files are allowlisted anyway — a
 mention in prose cannot block the GUI thread, and excluding comments would make
 the scanner brittle. The allowlist comment notes when an entry is prose-only.
+Because of this textual matching, several allowlist entries exist only because a
+*prose* mention of the pattern inflates the file's hit set — not because of a
+live call. Patterns must also be single-line: a regex spanning two source lines
+(e.g. registry construction on one line and ``.load()`` on the next) matches
+nothing, so such cross-line shapes are deliberately not patterns here.
 """
 
 from __future__ import annotations
@@ -66,7 +71,12 @@ _BLOCKING_PATTERNS: tuple[str, ...] = (
     r"time\.sleep\(",
     r"\.processEvents\(",
     r"get_overall_stats\(",
-    r"\bRegistry\([^)]*\)\.load\(\)",  # inline registry scan on the GUI thread
+    # NOTE: a single-line ``Registry(...).load()`` pattern was removed — registry
+    # construction and ``.load()`` are always on separate source lines, so it
+    # matched nothing (dead pattern giving false confidence). The expensive
+    # registry scans it aimed at are already covered: every GUI ``.load()`` runs
+    # inside a processor_factory / settings-panel work callable dispatched via
+    # run_off_thread (see create_episode_processor / time.sleep allowlists).
     r"create_episode_processor\(",
     r"parse_raw_entries\(",
     r"list_audio_streams\(",

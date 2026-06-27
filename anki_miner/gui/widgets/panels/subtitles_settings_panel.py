@@ -67,14 +67,14 @@ class _AsrState:
     the recursive ``model_manager.is_downloaded`` disk walk — never block the GUI
     thread (notably at app startup, when SettingsTab is built eagerly).
 
-    Carries the request inputs (``name``/roots) so the GUI-thread applier can
-    confirm it is still the latest and stash the roots for click handlers.
+    Carries only the probe results read by the GUI-thread applier
+    (:meth:`SubtitlesSettingsPanel._on_state_ready`). ``cuda_libs_root`` is
+    needed there to drive the CUDA-pack button; the other request inputs
+    (``name``/``models_root``/``bin_root``) are read live from ``self`` on
+    re-dispatch and so are not carried on the snapshot.
     """
 
-    name: str
-    models_root: object
     cuda_libs_root: object
-    bin_root: object
     engine_available: bool
     cuda_device_count: int
     model_downloaded: bool
@@ -579,10 +579,7 @@ class SubtitlesSettingsPanel(FormPanel):
                     alass_installed = False
 
             return _AsrState(
-                name=name,
-                models_root=models_root,
                 cuda_libs_root=cuda_libs_root,
-                bin_root=bin_root,
                 engine_available=engine_available,
                 cuda_device_count=cuda_device_count,
                 model_downloaded=model_downloaded,
