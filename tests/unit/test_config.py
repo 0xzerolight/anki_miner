@@ -323,6 +323,15 @@ def test_freqs_root_str_coercion():
     assert config.freqs_root == Path("/tmp/some/freqs")
 
 
+def test_onnx_pack_root_str_coercion():
+    """A str onnx_pack_root is coerced to Path in __post_init__ (like its siblings)."""
+    from anki_miner.config import AnkiMinerConfig
+
+    config = AnkiMinerConfig(onnx_pack_root="/tmp/some/onnx_pack")  # type: ignore[arg-type]
+    assert isinstance(config.onnx_pack_root, Path)
+    assert config.onnx_pack_root == Path("/tmp/some/onnx_pack")
+
+
 def test_freq_entry_is_frozen():
     from dataclasses import FrozenInstanceError
 

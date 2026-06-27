@@ -627,6 +627,26 @@ def test_notify_alass_download_finished_reprobes_install(qtbot, tmp_path, monkey
     assert panel.alass_status_label.text().lower() == "downloaded"
 
 
+def test_probe_error_preserves_last_known_installed_state(qtbot, tmp_path, monkeypatch):
+    """A probe FAILURE must not relabel an already-downloaded model as missing or
+    disable its button — it falls back to the last successful probe's flags."""
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 0)
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: False)
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    assert panel.model_status_label.text().lower() == "downloaded"
+
+    # A later probe blows up: the model must STILL read "Downloaded".
+    panel._on_state_error("boom")
+    assert panel.model_status_label.text().lower() == "downloaded"
+    assert panel.download_model_button.isEnabled()
+
+
 def test_inflight_reload_redispatches_latest(qtbot, tmp_path, monkeypatch):
     """A reload requested while a probe is in flight is not dropped: the latest
     config wins via a single trailing re-dispatch."""

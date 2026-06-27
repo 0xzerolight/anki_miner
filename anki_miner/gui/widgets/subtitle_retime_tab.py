@@ -456,7 +456,12 @@ class SubtitleRetimeTab(QWidget):
             return list_audio_streams(video_file, ffprobe_cmd=ffprobe_cmd)
 
         def _on_streams(result: object) -> None:
-            self.tracks_button.setEnabled(True)
+            try:
+                self.tracks_button.setEnabled(True)
+            except RuntimeError:
+                # Tab torn down while the probe was in flight (its C++ button is
+                # gone); the queued callback has nothing live to update.
+                return
             streams = cast("list[AudioStream]", result)
             if not streams:
                 QMessageBox.information(
@@ -482,8 +487,12 @@ class SubtitleRetimeTab(QWidget):
                     self.audio_track_label.setText(tr_format(self.tr("Track %1"), str(self._audio_track_override + 1)))
 
         def _on_probe_error(msg: str) -> None:
-            self.tracks_button.setEnabled(True)
             logger.error("Failed to probe audio tracks: %s", msg)
+            try:
+                self.tracks_button.setEnabled(True)
+            except RuntimeError:
+                # Tab torn down while the probe was in flight; nothing to surface.
+                return
             QMessageBox.warning(
                 self,
                 self.tr("Probe Failed"),

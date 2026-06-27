@@ -257,6 +257,41 @@ class TestSetSource:
             assert widget._offset == 0.0
 
 
+class TestAsyncPlayAndProbeError:
+    """m6: async set_source — queued play + probe-error feedback."""
+
+    def test_play_queues_when_player_not_built(self, qtbot):
+        widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
+        assert widget.player is None
+        widget.play()
+        assert widget._pending_play is True
+        # An explicit pause cancels the queued auto-play.
+        widget.pause()
+        assert widget._pending_play is False
+
+    def test_pending_play_honored_when_player_configured(self, qtbot, fake_media_classes):
+        widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
+        # Simulate a play() that arrived while the probe was in flight.
+        widget._pending_play = True
+        widget._source_generation = 7
+        widget._configure_player(7, Path("/tmp/fake.mkv"), (False, None))
+        fake_media_classes["player"].play.assert_called_once()
+        assert widget._pending_play is False
+
+    def test_probe_error_surfaces_message(self, qtbot):
+        widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
+        with patch(f"{MODULE}.get_primary_video_codec", side_effect=RuntimeError("bad probe")):
+            widget.set_source(Path("/tmp/fake.mkv"), [], 0.0)
+            qtbot.waitUntil(lambda: widget.subtitle_label.text() != "", timeout=2000)
+        assert widget.player is None
+        assert "could not load" in widget.subtitle_label.text().lower()
+        # isVisibleTo(parent) reflects the setVisible(True) even with no shown top-level.
+        assert widget.subtitle_label.isVisibleTo(widget)
+
+
 class TestSeekSeconds:
     """Tests for SubtitlePlayerWidget.seek_seconds."""
 

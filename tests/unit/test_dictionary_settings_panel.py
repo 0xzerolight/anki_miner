@@ -70,6 +70,23 @@ def test_panel_renders_default_chain(qapp, qtbot, monkeypatch, tmp_path):
     assert chain[1].kind == "jisho"
 
 
+def test_reorder_controls_disabled_during_scan_placeholder(qapp, qtbot, tmp_path):
+    """The move/remove buttons are disabled while the Loading placeholder shows
+    (no real rows) and re-enabled once the list is rebuilt."""
+    panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+
+    panel._show_loading_placeholder()
+    assert not panel._up_btn.isEnabled()
+    assert not panel._down_btn.isEnabled()
+    assert not panel._remove_btn.isEnabled()
+
+    panel._rebuild_list()
+    assert panel._up_btn.isEnabled()
+    assert panel._down_btn.isEnabled()
+    assert panel._remove_btn.isEnabled()
+
+
 def test_pitch_checkbox_tooltip_is_helper_text(qapp, qtbot, tmp_path):
     # After the helper->tooltip migration the redundant explicit setToolTip
     # was removed so the richer add_field helper is the single tooltip.
