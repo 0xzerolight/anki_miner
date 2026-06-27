@@ -58,7 +58,9 @@ def stats_service() -> MagicMock:
 def tab(stats_service: MagicMock, qtbot):
     widget = AnalyticsTab(stats_service)
     qtbot.addWidget(widget)
+    # refresh_data() now fetches off the GUI thread; wait for the render to land.
     widget.refresh_data()
+    qtbot.waitUntil(lambda: widget._last_refresh is not None, timeout=3000)
     yield widget
     widget.deleteLater()
 

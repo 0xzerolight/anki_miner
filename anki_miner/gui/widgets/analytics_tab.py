@@ -2,6 +2,7 @@
 
 import logging
 import time
+from dataclasses import dataclass
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -22,8 +23,24 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import configure_table_header
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCard
+from anki_miner.models.stats import DifficultyEntry, Milestone, MiningSession, OverallStats
 from anki_miner.services.stats_service import StatsService
+
+
+@dataclass(frozen=True)
+class _AnalyticsBundle:
+    """Pre-fetched analytics data assembled off the GUI thread.
+
+    Carries every query result so :meth:`AnalyticsTab._apply_bundle` can render
+    on the GUI thread without touching the (worker-thread) stats service.
+    """
+
+    stats: OverallStats
+    sessions: list[MiningSession]
+    difficulties: list[DifficultyEntry]
+    milestones: list[Milestone]
 
 
 class AnalyticsTab(QWidget):
@@ -37,6 +54,9 @@ class AnalyticsTab(QWidget):
         super().__init__(parent)
         self.stats_service = stats_service
         self._last_refresh: float | None = None
+        # Guard against overlapping off-thread refreshes stacking up (a fast
+        # tab switch fires showEvent repeatedly). Cleared in on_done/on_error.
+        self._refresh_in_flight: bool = False
         self._setup_ui()
         self._setup_accessibility()
 
@@ -219,6 +239,9 @@ class AnalyticsTab(QWidget):
     def refresh_data(self, force: bool = False) -> None:
         """Refresh all analytics data from the stats service.
 
+        The four SQLite queries run off the GUI thread (OVH); widget updates
+        happen back on the GUI thread once they complete.
+
         Args:
             force: Skip the staleness check. The Refresh button passes
                 ``force=True``; ``showEvent`` does not.
@@ -233,15 +256,51 @@ class AnalyticsTab(QWidget):
         ):
             return
 
-        try:
-            stats = self.stats_service.get_overall_stats()
-            self._update_dashboard(stats)
-            self._update_recent_sessions()
-            self._update_difficulty_ranking()
-            self._update_milestones(stats)
-            self._last_refresh = time.monotonic()
-        except Exception:
-            logging.getLogger(__name__).exception("Failed to refresh analytics data")
+        # In-flight guard: overlapping refreshes (rapid tab switching, or a
+        # Refresh click while a showEvent refresh is still running) would stack
+        # redundant SQLite work and racing renders.
+        if self._refresh_in_flight:
+            return
+        self._refresh_in_flight = True
+
+        service = self.stats_service
+
+        def _fetch() -> _AnalyticsBundle:
+            # Worker thread: touch ONLY the stats service / sqlite, never widgets.
+            stats = service.get_overall_stats()
+            return _AnalyticsBundle(
+                stats=stats,
+                sessions=service.get_recent_sessions(limit=20),
+                difficulties=service.get_series_difficulty(),
+                milestones=service.get_milestones(stats=stats),
+            )
+
+        run_off_thread(
+            self,
+            _fetch,
+            self._on_refresh_done,
+            self._on_refresh_error,
+        )
+
+    def _on_refresh_done(self, bundle: object) -> None:
+        """GUI thread: render the pre-fetched bundle and tick the TTL clock."""
+        self._refresh_in_flight = False
+        if not isinstance(bundle, _AnalyticsBundle):  # defensive; never expected
+            return
+        self._apply_bundle(bundle)
+        self._last_refresh = time.monotonic()
+
+    def _on_refresh_error(self, msg: str) -> None:
+        """GUI thread: clear the in-flight flag and log the failure."""
+        self._refresh_in_flight = False
+        logging.getLogger(__name__).error("Failed to refresh analytics data: %s", msg)
+
+    def _apply_bundle(self, bundle: _AnalyticsBundle) -> None:
+        """Render every section from a pre-fetched bundle (GUI thread)."""
+        self._update_dashboard(bundle.stats)
+        self._update_recent_sessions(bundle.sessions)
+        self._update_difficulty_ranking(bundle.difficulties)
+        self._update_milestones(bundle.milestones)
 
     def _update_dashboard(self, stats) -> None:
         self.card_total_cards.set_value(f"{stats.total_cards_created:,}")
@@ -249,8 +308,7 @@ class AnalyticsTab(QWidget):
         self.card_total_series.set_value(str(stats.series_count))
         self.card_avg_cards.set_value(f"{stats.avg_cards_per_session:.1f}")
 
-    def _update_recent_sessions(self) -> None:
-        sessions = self.stats_service.get_recent_sessions(limit=20)
+    def _update_recent_sessions(self, sessions: list[MiningSession]) -> None:
         has_sessions = len(sessions) > 0
         self.sessions_table.setVisible(has_sessions)
         self.sessions_empty_label.setVisible(not has_sessions)
@@ -278,8 +336,7 @@ class AnalyticsTab(QWidget):
             self.sessions_table.setSortingEnabled(was_sorting)
             self.sessions_table.setUpdatesEnabled(True)
 
-    def _update_difficulty_ranking(self) -> None:
-        difficulties = self.stats_service.get_series_difficulty()
+    def _update_difficulty_ranking(self, difficulties: list[DifficultyEntry]) -> None:
         has_difficulties = len(difficulties) > 0
         self.difficulty_table.setVisible(has_difficulties)
         self.difficulty_empty_label.setVisible(not has_difficulties)
@@ -306,14 +363,13 @@ class AnalyticsTab(QWidget):
             self.difficulty_table.setSortingEnabled(was_sorting)
             self.difficulty_table.setUpdatesEnabled(True)
 
-    def _update_milestones(self, stats) -> None:
+    def _update_milestones(self, milestones: list[Milestone]) -> None:
         # Clear existing milestone widgets
         while self.milestones_layout.count():
             child = self.milestones_layout.takeAt(0)
             if child and child.widget():
                 child.widget().deleteLater()  # type: ignore[union-attr]
 
-        milestones = self.stats_service.get_milestones(stats=stats)
         for milestone in milestones:
             self.milestones_layout.addWidget(self._create_milestone_widget(milestone))
 

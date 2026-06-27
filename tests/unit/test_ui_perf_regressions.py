@@ -52,7 +52,12 @@ def _make_stats_service() -> MagicMock:
 
 
 def test_analytics_showevent_skips_refresh_within_ttl(qtbot):
-    """Two showEvents in rapid succession only trigger one stats query batch."""
+    """Two showEvents in rapid succession only trigger one stats query batch.
+
+    The queries now run off the GUI thread; the first show's render must land
+    (so _last_refresh ticks) before the second show, otherwise the in-flight
+    guard — not the TTL — is what suppresses it. Either way only one batch runs.
+    """
     service = _make_stats_service()
     tab = AnalyticsTab(service)
     qtbot.addWidget(tab)
@@ -60,10 +65,11 @@ def test_analytics_showevent_skips_refresh_within_ttl(qtbot):
         # Reset counters: __init__ does not auto-refresh; showEvent does.
         service.get_overall_stats.reset_mock()
         tab.showEvent(None)  # type: ignore[arg-type]
+        qtbot.waitUntil(lambda: tab._last_refresh is not None, timeout=3000)
         first_calls = service.get_overall_stats.call_count
         assert first_calls == 1
         tab.showEvent(None)  # type: ignore[arg-type]
-        # Second show within TTL: skipped.
+        # Second show within TTL: skipped (no new dispatch).
         assert service.get_overall_stats.call_count == first_calls
     finally:
         tab.deleteLater()
@@ -76,11 +82,12 @@ def test_analytics_showevent_refreshes_after_ttl(qtbot):
     qtbot.addWidget(tab)
     try:
         tab.showEvent(None)  # type: ignore[arg-type]
+        qtbot.waitUntil(lambda: tab._last_refresh is not None, timeout=3000)
         service.get_overall_stats.reset_mock()
         # Backdate the last-refresh timestamp past the TTL.
         tab._last_refresh = time.monotonic() - (AnalyticsTab._REFRESH_TTL_SECONDS + 1.0)
         tab.showEvent(None)  # type: ignore[arg-type]
-        assert service.get_overall_stats.call_count == 1
+        qtbot.waitUntil(lambda: service.get_overall_stats.call_count == 1, timeout=3000)
     finally:
         tab.deleteLater()
 
@@ -92,10 +99,11 @@ def test_analytics_refresh_button_forces_refresh(qtbot):
     qtbot.addWidget(tab)
     try:
         tab.refresh_data(force=False)
+        qtbot.waitUntil(lambda: tab._last_refresh is not None, timeout=3000)
         service.get_overall_stats.reset_mock()
         # No timestamp tick — would be skipped without force.
         tab.refresh_data(force=True)
-        assert service.get_overall_stats.call_count == 1
+        qtbot.waitUntil(lambda: service.get_overall_stats.call_count == 1, timeout=3000)
     finally:
         tab.deleteLater()
 
