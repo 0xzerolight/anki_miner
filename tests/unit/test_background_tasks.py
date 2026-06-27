@@ -215,6 +215,7 @@ class TestShutdownJoinsOffThreadWorkers:
             "asr_model_download_worker",
             "alass_install_worker",
             "cuda_pack_download_worker",
+            "onnx_pack_download_worker",
             "prewarm_worker",
         ):
             setattr(ctrl, attr, None)

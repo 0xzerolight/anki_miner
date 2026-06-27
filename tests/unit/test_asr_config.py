@@ -91,6 +91,24 @@ def test_cuda_libs_root_is_path():
 
 
 # ---------------------------------------------------------------------------
+# onnx_pack_root field
+# ---------------------------------------------------------------------------
+
+
+def test_onnx_pack_root_resolves_under_anki_miner_home():
+    """onnx_pack_root must be derived from ANKI_MINER_HOME, defaulting to ANKI_MINER_HOME/onnx_pack."""
+    from anki_miner.config.paths import ANKI_MINER_HOME
+
+    cfg = AnkiMinerConfig()
+    assert cfg.onnx_pack_root == ANKI_MINER_HOME / "onnx_pack"
+
+
+def test_onnx_pack_root_is_path():
+    """onnx_pack_root must be a Path instance."""
+    assert isinstance(AnkiMinerConfig().onnx_pack_root, Path)
+
+
+# ---------------------------------------------------------------------------
 # Round-trip persistence (save → load via GUIConfigManager)
 # ---------------------------------------------------------------------------
 

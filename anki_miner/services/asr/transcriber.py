@@ -8,14 +8,75 @@ bodies, but this skeleton must be importable without either package installed.
 from __future__ import annotations
 
 import glob
+import importlib.util
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Callable
 
 from anki_miner.services.asr import _engine
 
 logger = logging.getLogger(__name__)
+
+# Junk-segment drop thresholds. These are Whisper's own internal fallback gates
+# (compression_ratio_threshold=2.4, log_prob_threshold=-1.0), reused here as hard
+# drops on the emitted segments — they remove the residual hallucinations VAD and
+# the decode flags don't catch: degenerate repetition loops (あら あら …, high
+# compression ratio) and low-confidence token salad (English garbage, very low
+# avg_logprob).
+_MAX_COMPRESSION_RATIO = 2.4
+_MIN_AVG_LOGPROB = -1.0
+
+
+def _ensure_onnx_pack_on_syspath(onnx_pack_root: Path | None) -> None:
+    """Add a downloaded onnxruntime pack dir to ``sys.path`` so VAD can import it.
+
+    The in-app VAD pack extracts the full ``onnxruntime/`` package tree into
+    ``onnx_pack_root``. The PyInstaller bundle excludes onnxruntime, so making
+    that extracted copy importable means putting its parent dir on ``sys.path``
+    before ``faster_whisper.vad`` does its lazy ``import onnxruntime``.
+
+    Idempotent and best-effort: only acts when the dir actually holds an
+    ``onnxruntime/`` package and is not already on the path. Never raises.
+    """
+    if onnx_pack_root is None:
+        return
+    try:
+        if not (onnx_pack_root / "onnxruntime" / "__init__.py").exists():
+            return
+        root = str(onnx_pack_root)
+        if root not in sys.path:
+            sys.path.insert(0, root)
+            importlib.invalidate_caches()
+    except Exception:  # noqa: BLE001  (best-effort; a path problem must not abort)
+        pass
+
+
+def vad_available(onnx_pack_root: Path | None = None) -> bool:
+    """Return True when Silero VAD can run, i.e. onnxruntime is importable.
+
+    onnxruntime is a hard dependency of faster-whisper, so a pip ``[asr]`` install
+    always has it. The PyInstaller bundle strips it (~57 MB) and ships the VAD as
+    an optional in-app download pack instead; when that pack is present in
+    *onnx_pack_root* this injects it onto ``sys.path`` first. ``find_spec`` is used
+    so no actual import (or onnxruntime init) happens here.
+    """
+    if importlib.util.find_spec("onnxruntime") is not None:
+        return True
+    _ensure_onnx_pack_on_syspath(onnx_pack_root)
+    return importlib.util.find_spec("onnxruntime") is not None
+
+
+def _is_junk_segment(seg) -> bool:
+    """Return True for a likely-hallucinated / non-speech segment to drop.
+
+    ``getattr`` defaults make this a no-op for segment objects lacking the fields
+    (e.g. minimal test fakes), so only real faster-whisper segments are filtered.
+    """
+    if getattr(seg, "compression_ratio", 0.0) > _MAX_COMPRESSION_RATIO:
+        return True
+    return getattr(seg, "avg_logprob", 0.0) < _MIN_AVG_LOGPROB
 
 
 def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
@@ -162,6 +223,7 @@ def transcribe(
     progress_cb: Callable[[float], None] | None = None,
     device: str = "auto",
     cuda_libs_root: Path | None = None,
+    onnx_pack_root: Path | None = None,
 ) -> list[tuple[float, float, str]]:
     """Transcribe *audio* using the specified faster-whisper model.
 
@@ -181,6 +243,10 @@ def transcribe(
             crashes a run — CPU is the always-safe fallback.
         cuda_libs_root: Optional managed dir holding downloaded cuDNN/cuBLAS
             shared libs to preload before a CUDA build.
+        onnx_pack_root: Optional managed dir holding a downloaded onnxruntime
+            pack; enables Silero VAD in the bundle (where onnxruntime is
+            stripped) by making it importable. Ignored when onnxruntime is
+            already available (pip ``[asr]`` install).
 
     Returns:
         A list of ``(start_s, end_s, text)`` tuples in chronological order.
@@ -206,17 +272,34 @@ def transcribe(
         cpu_threads,
     )
 
-    # vad_filter stays False on purpose: Silero VAD needs onnxruntime, which the
-    # PyInstaller bundle deliberately excludes (anki_miner.spec) to save ~100 MB.
-    # Enabling it here would crash only in the bundled build. Trade-off: on long
-    # silence/music stretches Whisper can hallucinate repeated text.
-    segments_iter, _info = model.transcribe(audio, language="ja", vad_filter=False)
+    # Decode flags that suppress the classic large-model hallucination failures:
+    #  * condition_on_previous_text=False — a hallucinated phrase no longer seeds
+    #    the next window, killing runaway loops (あら×22, 何を×14).
+    #  * word_timestamps=True — unlocks hallucination_silence_threshold AND snaps
+    #    each segment's start/end onto real word boundaries (so subtitles no
+    #    longer start before the speech).
+    #  * hallucination_silence_threshold — skips long silent gaps; works even
+    #    without VAD (the bundle path).
+    #  * vad_filter — Silero VAD is the definitive silence remover but needs
+    #    onnxruntime, which the bundle strips. It is auto-enabled when onnxruntime
+    #    is importable: from a pip [asr] install, or from the downloaded VAD pack
+    #    placed on sys.path by vad_available(). Off → the flags above still apply.
+    use_vad = vad_available(onnx_pack_root)
+    segments_iter, _info = model.transcribe(
+        audio,
+        language="ja",
+        condition_on_previous_text=False,
+        word_timestamps=True,
+        hallucination_silence_threshold=2.0,
+        vad_filter=use_vad,
+    )
 
     results: list[tuple[float, float, str]] = []
     for seg in segments_iter:
         if cancel_event is not None and cancel_event.is_set():
             break
-        results.append((seg.start, seg.end, seg.text.strip()))
+        if not _is_junk_segment(seg):
+            results.append((seg.start, seg.end, seg.text.strip()))
         if progress_cb is not None and duration_s > 0:
             progress_cb(min(seg.end / duration_s, 1.0))
 
