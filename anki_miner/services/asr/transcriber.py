@@ -9,15 +9,20 @@ from __future__ import annotations
 
 import glob
 import importlib.util
+import itertools
 import logging
 import os
 import sys
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from anki_miner.services.asr import _engine
 
 logger = logging.getLogger(__name__)
+
+# Sentinel for "first-segment peek exhausted the iterator" (empty transcript) so
+# an empty result is not confused with a falsy real segment.
+_PEEK_EMPTY = object()
 
 # Junk-segment drop thresholds. These are Whisper's own internal fallback gates
 # (compression_ratio_threshold=2.4, log_prob_threshold=-1.0), reused here as hard
@@ -47,7 +52,10 @@ def _ensure_onnx_pack_on_syspath(onnx_pack_root: Path | None) -> None:
             return
         root = str(onnx_pack_root)
         if root not in sys.path:
-            sys.path.insert(0, root)
+            # Append (not insert-at-0): the pack dir holds only the onnxruntime
+            # tree, so it never needs to win priority, and appending means it
+            # cannot shadow any same-named module already on the path.
+            sys.path.append(root)
             importlib.invalidate_caches()
     except Exception:  # noqa: BLE001  (best-effort; a path problem must not abort)
         pass
@@ -73,10 +81,14 @@ def _is_junk_segment(seg) -> bool:
 
     ``getattr`` defaults make this a no-op for segment objects lacking the fields
     (e.g. minimal test fakes), so only real faster-whisper segments are filtered.
+    A present-but-``None`` field is treated as "unknown" (not junk on that axis)
+    rather than crashing the comparison.
     """
-    if getattr(seg, "compression_ratio", 0.0) > _MAX_COMPRESSION_RATIO:
+    compression_ratio = getattr(seg, "compression_ratio", 0.0)
+    if compression_ratio is not None and compression_ratio > _MAX_COMPRESSION_RATIO:
         return True
-    return getattr(seg, "avg_logprob", 0.0) < _MIN_AVG_LOGPROB
+    avg_logprob = getattr(seg, "avg_logprob", 0.0)
+    return avg_logprob is not None and avg_logprob < _MIN_AVG_LOGPROB
 
 
 def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
@@ -162,12 +174,17 @@ def _resolve_model(
     model_name: str,
     models_root: Path,
     cpu_threads: int,
-):
+) -> tuple[Any, str]:
     """Construct a WhisperModel honouring *requested_device* with a CPU fallback.
 
     ``cpu`` builds CPU directly. ``auto``/``cuda`` build on GPU when one is present
     and construction succeeds; on no GPU or ANY construction failure they fall back
     to a CPU build (the always-safe path) — a GPU problem must never crash a run.
+
+    Returns ``(model, device_used)`` where ``device_used`` is ``"cpu"`` or
+    ``"cuda"``. The caller uses that flag to force the first decode under CUDA so
+    a *deferred* GPU runtime failure (ctranslate2 validates compute-type/cuDNN
+    lazily on first inference) can still fall back to CPU.
     """
 
     def _build_cpu():
@@ -181,7 +198,7 @@ def _resolve_model(
         )
 
     if requested_device == "cpu":
-        return _build_cpu()
+        return _build_cpu(), "cpu"
 
     # requested_device in {"auto", "cuda"}
     if _cuda_device_count() <= 0:
@@ -189,17 +206,18 @@ def _resolve_model(
             logger.warning("ASR: device='cuda' requested but no CUDA GPU is available; falling back to CPU.")
         else:
             logger.info("ASR: no CUDA GPU available; using CPU.")
-        return _build_cpu()
+        return _build_cpu(), "cpu"
 
     _preload_cuda_libs(cuda_libs_root)
     try:
-        return whisper_model_cls(
+        model = whisper_model_cls(
             model_name,
             device="cuda",
             compute_type="float16",
             download_root=models_root,
             local_files_only=True,
         )
+        return model, "cuda"
     except Exception as exc:  # noqa: BLE001  (CUDA libs may be missing/incompatible)
         if requested_device == "cuda":
             logger.warning(
@@ -209,7 +227,7 @@ def _resolve_model(
             )
         else:
             logger.info("ASR: CUDA unavailable (%s); using CPU.", exc)
-        return _build_cpu()
+        return _build_cpu(), "cpu"
 
 
 def transcribe(
@@ -263,7 +281,7 @@ def transcribe(
 
     whisper_model_cls = _engine.get_whisper_model_cls()
     cpu_threads = min(4, os.cpu_count() or 4)
-    model = _resolve_model(
+    model, device_used = _resolve_model(
         device,
         cuda_libs_root,
         whisper_model_cls,
@@ -285,14 +303,30 @@ def transcribe(
     #    is importable: from a pip [asr] install, or from the downloaded VAD pack
     #    placed on sys.path by vad_available(). Off → the flags above still apply.
     use_vad = vad_available(onnx_pack_root)
-    segments_iter, _info = model.transcribe(
-        audio,
-        language="ja",
-        condition_on_previous_text=False,
-        word_timestamps=True,
-        hallucination_silence_threshold=2.0,
-        vad_filter=use_vad,
-    )
+    transcribe_kwargs = {
+        "language": "ja",
+        "condition_on_previous_text": False,
+        "word_timestamps": True,
+        "hallucination_silence_threshold": 2.0,
+        "vad_filter": use_vad,
+    }
+    segments_iter, _info = model.transcribe(audio, **transcribe_kwargs)
+
+    # ctranslate2 validates the CUDA compute-type / cuDNN kernels lazily — a model
+    # that constructs cleanly on GPU can still raise when the first segment is
+    # decoded. Force that first pull here; on a CUDA runtime failure rebuild on CPU
+    # (the always-safe path) and restart so a GPU problem never aborts the run
+    # mid-stream. The peeked segment is chained back so none is lost.
+    if device_used == "cuda":
+        try:
+            first = next(segments_iter, _PEEK_EMPTY)
+        except Exception as exc:  # noqa: BLE001  (deferred CUDA runtime failure)
+            logger.warning("ASR: CUDA inference failed (%s); falling back to CPU.", exc)
+            model, _ = _resolve_model("cpu", cuda_libs_root, whisper_model_cls, model_name, models_root, cpu_threads)
+            segments_iter, _info = model.transcribe(audio, **transcribe_kwargs)
+            first = next(segments_iter, _PEEK_EMPTY)
+        if first is not _PEEK_EMPTY:
+            segments_iter = itertools.chain((first,), segments_iter)
 
     results: list[tuple[float, float, str]] = []
     for seg in segments_iter:

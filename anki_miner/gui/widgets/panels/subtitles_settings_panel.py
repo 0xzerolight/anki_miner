@@ -133,6 +133,15 @@ class SubtitlesSettingsPanel(FormPanel):
         # download) and are re-probed every refresh.
         self._engine_available_cache: bool | None = None
         self._cuda_device_count_cache: int | None = None
+        # Last-known install/download flags from the most recent SUCCESSFUL probe.
+        # A probe *failure* (_on_state_error) must not claim an installed model /
+        # pack is missing: forcing these to False mislabels an on-disk model as
+        # "Not downloaded" and disables its button until a later probe succeeds.
+        # On error we reuse these instead (default False before any probe lands).
+        self._model_downloaded_cache = False
+        self._cuda_pack_installed_cache = False
+        self._vad_pack_installed_cache = False
+        self._alass_installed_cache = False
         self._setup_fields()
 
     # ------------------------------------------------------------------
@@ -676,6 +685,12 @@ class SubtitlesSettingsPanel(FormPanel):
         # ctranslate2 / re-running find_spec each time).
         self._engine_available_cache = result.engine_available
         self._cuda_device_count_cache = result.cuda_device_count
+        # Remember the install/download flags so a later probe FAILURE can fall
+        # back to this last-known-good state instead of asserting "missing".
+        self._model_downloaded_cache = result.model_downloaded
+        self._cuda_pack_installed_cache = result.cuda_pack_installed
+        self._vad_pack_installed_cache = result.vad_pack_installed
+        self._alass_installed_cache = result.alass_installed
 
         self._apply_engine_state(result.engine_available)
         self._apply_model_state(result.engine_available, result.model_downloaded)
@@ -689,13 +704,17 @@ class SubtitlesSettingsPanel(FormPanel):
         """Surface a probe failure without leaving the panel stuck on Checking…."""
         self._state_in_flight = False
         logger.warning("ASR state probe failed: %s", msg)
-        # Apply a conservative all-unavailable snapshot so buttons aren't stuck
-        # disabled mid-"Checking…" and the guidance is coherent.
+        # Fall back to the last-known-good install/download flags rather than
+        # forcing False — a probe failure is not evidence that an installed
+        # model/pack disappeared, and asserting "missing" would mislabel them and
+        # lock their buttons until a later probe succeeds.
         self._apply_engine_state(self._engine_available_now())
-        self._apply_model_state(self._engine_available_now(), False)
-        self._apply_cuda_pack_state(self._cuda_libs_root, self._cuda_device_count_cache or 0, False)
-        self._apply_vad_pack_state(self._onnxruntime_importable_now(), False)
-        self._apply_alass_state(False)
+        self._apply_model_state(self._engine_available_now(), self._model_downloaded_cache)
+        self._apply_cuda_pack_state(
+            self._cuda_libs_root, self._cuda_device_count_cache or 0, self._cuda_pack_installed_cache
+        )
+        self._apply_vad_pack_state(self._onnxruntime_importable_now(), self._vad_pack_installed_cache)
+        self._apply_alass_state(self._alass_installed_cache)
         self._redispatch_pending_state()
 
     def _redispatch_pending_state(self) -> None:

@@ -68,6 +68,11 @@ class SubtitlePlayerWidget(QWidget):
         # which is exactly how a superseded or post-teardown probe is dropped.
         self._source_generation: int = 0
         self._probe_worker: object | None = None
+        # set_source is now async (the player is built only after the off-thread
+        # ffprobe returns), so a play() that arrives before the probe lands is
+        # remembered here and honoured once the player exists. pause()/stop()
+        # clear it; a new set_source resets it.
+        self._pending_play: bool = False
 
         # AV1 watchdog state — populated by set_source
         self._is_av1: bool = False
@@ -199,6 +204,9 @@ class SubtitlePlayerWidget(QWidget):
         self._offset = offset
         self._audio_track_override = audio_track_override
 
+        # A new source cancels any auto-play queued against the previous one.
+        self._pending_play = False
+
         # Bump the generation and capture it for the closure: a later set_source
         # supersedes this probe, so its callback must no-op when it finally lands.
         self._source_generation += 1
@@ -218,10 +226,19 @@ class SubtitlePlayerWidget(QWidget):
             """Build the player on the GUI thread once the probe returns."""
             self._configure_player(generation, video_path, result)  # type: ignore[arg-type]
 
+        def _on_probe_error(msg: str) -> None:
+            """Surface a probe failure instead of leaving a silently blank player."""
+            if generation != self._source_generation:
+                return
+            logger.warning("Subtitle player ffprobe failed: %s", msg)
+            self.subtitle_label.setText(tr_format(self.tr("Could not load video: %1"), msg))
+            self.subtitle_label.setVisible(True)
+
         self._probe_worker = run_off_thread(
             self,
             _probe,
             _configure,
+            _on_probe_error,
             error_prefix="ffprobe failed: ",
         )
 
@@ -257,6 +274,11 @@ class SubtitlePlayerWidget(QWidget):
         self.player.mediaStatusChanged.connect(self._on_media_status_changed)
 
         self.player.setSource(QUrl.fromLocalFile(str(video_path)))
+
+        # Honour a play() that arrived while the probe was still in flight.
+        if self._pending_play:
+            self._pending_play = False
+            self.player.play()
 
     def _teardown_player(self) -> None:
         """Stop playback and detach the audio output from the current player.
@@ -378,17 +400,25 @@ class SubtitlePlayerWidget(QWidget):
         self._offset = offset
 
     def play(self) -> None:
-        """Start playback."""
+        """Start playback.
+
+        If the source's ffprobe is still in flight (player not built yet), the
+        request is queued and honoured when the player is configured.
+        """
         if self.player is not None:
             self.player.play()
+        else:
+            self._pending_play = True
 
     def pause(self) -> None:
         """Pause playback."""
+        self._pending_play = False
         if self.player is not None:
             self.player.pause()
 
     def stop(self) -> None:
         """Stop playback (no-op if no source has been loaded)."""
+        self._pending_play = False
         if self.player is not None:
             self.player.stop()
 

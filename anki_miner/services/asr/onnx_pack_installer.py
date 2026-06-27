@@ -189,6 +189,10 @@ def install_onnx_pack(
         raise SetupError("onnxruntime installation cancelled")
 
     onnx_pack_root.mkdir(parents=True, exist_ok=True)
+    # Reclaim orphans from a previous crashed/killed install (a hard kill between
+    # download and os.replace leaves a .part wheel and/or a .staging-* dir). The
+    # promoted onnxruntime/ tree is never touched, so is_installed is unaffected.
+    _sweep_stale(onnx_pack_root)
     cancelled_check = cancel_event.is_set if cancel_event is not None else None
 
     def _on_progress(downloaded: int, total: int, _msg: str) -> None:
@@ -273,6 +277,20 @@ def _extract_package(part_path: Path, onnx_pack_root: Path) -> None:
         os.replace(extracted_pkg, target)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
+
+
+def _sweep_stale(onnx_pack_root: Path) -> None:
+    """Remove leftover ``.part`` wheels and ``.staging-*`` dirs from a crashed install.
+
+    Best-effort: a missing dir or an unremovable entry is ignored. Never touches
+    the promoted ``onnxruntime/`` tree.
+    """
+    with contextlib.suppress(OSError):
+        for part in onnx_pack_root.glob("*.part"):
+            with contextlib.suppress(OSError):
+                part.unlink()
+        for staging in onnx_pack_root.glob(".staging-*"):
+            shutil.rmtree(staging, ignore_errors=True)
 
 
 def _cleanup(path: Path | None) -> None:

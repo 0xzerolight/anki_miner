@@ -253,6 +253,9 @@ class AudioPackSettingsPanel(FormPanel):
 
     def _show_loading_placeholder(self) -> None:
         """Render a single disabled 'Loading…' row while a scan is in flight."""
+        # No real rows during the scan: disable the reorder/remove controls
+        # explicitly (they act on currentRow()); _rebuild_list re-enables them.
+        self._set_reorder_controls_enabled(False)
         self._list.setUpdatesEnabled(False)
         try:
             self._list.clear()
@@ -261,6 +264,12 @@ class AudioPackSettingsPanel(FormPanel):
             self._list.addItem(placeholder)
         finally:
             self._list.setUpdatesEnabled(True)
+
+    def _set_reorder_controls_enabled(self, enabled: bool) -> None:
+        """Toggle the move-up/down + remove buttons together."""
+        self._up_btn.setEnabled(enabled)
+        self._down_btn.setEnabled(enabled)
+        self._remove_btn.setEnabled(enabled)
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Audio Sources"))
@@ -496,3 +505,5 @@ class AudioPackSettingsPanel(FormPanel):
                 self._list.setItemWidget(item, row)
         finally:
             self._list.setUpdatesEnabled(True)
+            # Real rows are back: restore the controls the placeholder disabled.
+            self._set_reorder_controls_enabled(True)

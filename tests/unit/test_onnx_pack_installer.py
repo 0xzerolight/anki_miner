@@ -135,6 +135,21 @@ class TestInstall:
         onnx_pack_installer.install_onnx_pack(tmp_path)
         assert list(tmp_path.glob("*.part")) == []
 
+    def test_install_sweeps_orphans_from_a_crashed_run(self, tmp_path, monkeypatch):
+        spec = _force_supported_linux(monkeypatch)
+        _patch_download(monkeypatch, spec)
+        # Orphans a SIGKILL'd prior install left in the root.
+        (tmp_path / "leftover.part").write_bytes(b"x" * 1024)
+        orphan_staging = tmp_path / ".staging-onnx-abcd"
+        orphan_staging.mkdir()
+        (orphan_staging / "junk").write_bytes(b"junk")
+
+        onnx_pack_installer.install_onnx_pack(tmp_path)
+
+        assert list(tmp_path.glob("*.part")) == []
+        assert list(tmp_path.glob(".staging-*")) == []
+        assert onnx_pack_installer.is_installed(tmp_path) is True
+
     def test_progress_forwarded_with_component_label(self, tmp_path, monkeypatch):
         spec = _force_supported_linux(monkeypatch)
         _patch_download(monkeypatch, spec)
