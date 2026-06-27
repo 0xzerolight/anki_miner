@@ -86,7 +86,7 @@ def test_tracks_clicked_warns_when_no_video(tab):
 # ---------------------------------------------------------------------------
 
 
-def test_tracks_clicked_stores_override_on_accept(tab, tmp_path):
+def test_tracks_clicked_stores_override_on_accept(tab, tmp_path, qtbot):
     from PyQt6.QtWidgets import QDialog
 
     from anki_miner.utils.audio_track_detector import AudioStream
@@ -119,6 +119,9 @@ def test_tracks_clicked_stores_override_on_accept(tab, tmp_path):
         tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
         tab.video_selector.is_valid = MagicMock(return_value=True)
         tab._on_tracks_clicked()
+        # The probe runs off the GUI thread; wait for the dialog to be built in
+        # the GUI-thread callback.
+        qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
 
     mock_list.assert_called_once()
     mock_class.assert_called_once()
@@ -135,7 +138,7 @@ def test_tracks_clicked_stores_override_on_accept(tab, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_tracks_clicked_keeps_override_on_cancel(tab, tmp_path):
+def test_tracks_clicked_keeps_override_on_cancel(tab, tmp_path, qtbot):
     from PyQt6.QtWidgets import QDialog
 
     from anki_miner.utils.audio_track_detector import AudioStream
@@ -167,6 +170,7 @@ def test_tracks_clicked_keeps_override_on_cancel(tab, tmp_path):
         tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
         tab.video_selector.is_valid = MagicMock(return_value=True)
         tab._on_tracks_clicked()
+        qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
 
     assert tab._audio_track_override == 0
 
@@ -203,6 +207,7 @@ def test_tracks_clicked_passes_resolved_ffprobe(qapp, qtbot, test_config, tmp_pa
             widget.video_selector.get_path = MagicMock(return_value=str(fake_video))
             widget.video_selector.is_valid = MagicMock(return_value=True)
             widget._on_tracks_clicked()
+            qtbot.waitUntil(lambda: mock_list.called, timeout=3000)
 
         _, kwargs = mock_list.call_args
         assert kwargs.get("ffprobe_cmd") == str(fake_ffprobe)
@@ -249,7 +254,7 @@ def test_start_processing_passes_override_to_worker(tab, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_timing_clicked_passes_override_to_subtitle_viewer(tab, tmp_path):
+def test_timing_clicked_passes_override_to_subtitle_viewer(tab, tmp_path, qtbot):
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
     fake_subs = tmp_path / "ep01.ass"
@@ -276,6 +281,8 @@ def test_timing_clicked_passes_override_to_subtitle_viewer(tab, tmp_path):
         patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
     ):
         tab._on_timing_clicked()
+        # The parse runs off the GUI thread; wait for the viewer to be built.
+        qtbot.waitUntil(lambda: mock_viewer_cls.called, timeout=3000)
 
     mock_viewer_cls.assert_called_once()
     _, kwargs = mock_viewer_cls.call_args
@@ -319,7 +326,7 @@ def test_override_survives_processing_error_for_retry(tab):
 # ---------------------------------------------------------------------------
 
 
-def test_tracks_clicked_auto_detected_uses_inline_lookup(tab, tmp_path):
+def test_tracks_clicked_auto_detected_uses_inline_lookup(tab, tmp_path, qtbot):
     """auto_detected is resolved from the already-probed streams list, not a
     second ffprobe call. A stream with language_tag='jpn' must be passed as
     auto_detected; a stream with language_tag='eng' must not."""
@@ -350,6 +357,7 @@ def test_tracks_clicked_auto_detected_uses_inline_lookup(tab, tmp_path):
         tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
         tab.video_selector.is_valid = MagicMock(return_value=True)
         tab._on_tracks_clicked()
+        qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
 
     call_kwargs = mock_class.call_args[1]
     assert call_kwargs["auto_detected"] is jpn_stream
@@ -394,7 +402,7 @@ def test_timing_button_hidden_during_processing_and_restored(tab, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_curation_requested_passes_media_context_and_lookup_fn(tab, facade_processor, tmp_path):
+def test_curation_requested_passes_media_context_and_lookup_fn(tab, facade_processor, tmp_path, qtbot):
     """Dialog receives a CurationMediaContext and lookup_fn when files are set
     and a worker with a live processor is present."""
     from PyQt6.QtWidgets import QDialog
@@ -433,6 +441,9 @@ def test_curation_requested_passes_media_context_and_lookup_fn(tab, facade_proce
         patch("anki_miner.gui.widgets._mining_tab_base.WordCurationDialog", mock_dialog_cls),
     ):
         tab._on_curation_requested(words)
+        # The context build (subtitle parse) runs off-thread; wait for the
+        # GUI-thread callback to construct the dialog.
+        qtbot.waitUntil(lambda: mock_dialog_cls.called, timeout=3000)
 
     mock_dialog_cls.assert_called_once()
     call_args, call_kwargs = mock_dialog_cls.call_args
@@ -493,6 +504,7 @@ def test_curation_media_context_uses_resolved_ffprobe(qapp, qtbot, test_config, 
             patch("anki_miner.gui.widgets._mining_tab_base.WordCurationDialog", mock_dialog_cls),
         ):
             tab._on_curation_requested([])
+            qtbot.waitUntil(lambda: mock_dialog_cls.called, timeout=3000)
 
         _, call_kwargs = mock_dialog_cls.call_args
         ctx = call_kwargs.get("media_context")
@@ -508,7 +520,7 @@ def test_curation_media_context_uses_resolved_ffprobe(qapp, qtbot, test_config, 
 # ---------------------------------------------------------------------------
 
 
-def test_curation_requested_parse_error_passes_none_media_context(tab, tmp_path):
+def test_curation_requested_parse_error_passes_none_media_context(tab, tmp_path, qtbot):
     """When subtitle parsing raises, dialog is still called with media_context=None."""
     from PyQt6.QtWidgets import QDialog
 
@@ -540,6 +552,7 @@ def test_curation_requested_parse_error_passes_none_media_context(tab, tmp_path)
         ),
     ):
         tab._on_curation_requested([])
+        qtbot.waitUntil(lambda: mock_dialog_cls.called, timeout=3000)
 
     mock_dialog_cls.assert_called_once()
     _, call_kwargs = mock_dialog_cls.call_args
@@ -553,7 +566,7 @@ def test_curation_requested_parse_error_passes_none_media_context(tab, tmp_path)
 # ---------------------------------------------------------------------------
 
 
-def test_curation_requested_no_worker_passes_none_lookup_fn(tab, tmp_path):
+def test_curation_requested_no_worker_passes_none_lookup_fn(tab, tmp_path, qtbot):
     """When worker_thread is None, lookup_fn=None is passed regardless of files."""
     from PyQt6.QtWidgets import QDialog
 
@@ -584,6 +597,7 @@ def test_curation_requested_no_worker_passes_none_lookup_fn(tab, tmp_path):
         ),
     ):
         tab._on_curation_requested([])
+        qtbot.waitUntil(lambda: mock_dialog_cls.called, timeout=3000)
 
     _, call_kwargs = mock_dialog_cls.call_args
     assert call_kwargs.get("lookup_fn") is None
@@ -856,3 +870,179 @@ def test_mocked_mine_produces_result_and_curation_context_resolves(tab, tmp_path
 
     # After invoking the factory, curation_processor resolves to facade_processor.
     assert built is facade_processor
+
+
+# ---------------------------------------------------------------------------
+# 20. Test Timing parse runs off the GUI thread (GUI-freeze hardening)
+# ---------------------------------------------------------------------------
+
+
+def test_timing_parse_runs_off_gui_thread(tab, tmp_path, qtbot):
+    """The subtitle parse must run on a worker thread, not the GUI thread.
+
+    A large subtitle can take ~1s to parse; doing it inline freezes the UI.
+    """
+    import threading
+
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+
+    parse_thread: dict = {}
+
+    def _record(_path):
+        parse_thread["id"] = threading.get_ident()
+        return [(0.0, 1.0, "テスト")]
+
+    mock_parser_cls = MagicMock()
+    mock_parser_cls.return_value.parse_raw_entries.side_effect = _record
+
+    mock_viewer = MagicMock()
+    mock_viewer.exec.return_value = mock_viewer.DialogCode.Rejected
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+        patch("anki_miner.gui.widgets.subtitle_viewer.SubtitleViewer", return_value=mock_viewer) as viewer_cls,
+    ):
+        tab._on_timing_clicked()
+        # Button disabled while the parse runs off-thread.
+        assert not tab.timing_button.isEnabled()
+        qtbot.waitUntil(lambda: viewer_cls.called, timeout=3000)
+
+    assert parse_thread["id"] != threading.get_ident()  # parsed off the GUI thread
+    assert tab.timing_button.isEnabled()  # re-enabled after success
+
+
+def test_timing_empty_entries_shows_info_and_reenables(tab, tmp_path, qtbot):
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+
+    mock_parser_cls = MagicMock()
+    mock_parser_cls.return_value.parse_raw_entries.return_value = []
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+        patch("PyQt6.QtWidgets.QMessageBox.information") as mock_info,
+    ):
+        tab._on_timing_clicked()
+        qtbot.waitUntil(lambda: mock_info.called, timeout=3000)
+
+    mock_info.assert_called_once()
+    assert tab.timing_button.isEnabled()
+
+
+def test_timing_parse_error_shows_critical_and_reenables(tab, tmp_path, qtbot):
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+
+    mock_parser_cls = MagicMock()
+    mock_parser_cls.return_value.parse_raw_entries.side_effect = RuntimeError("bad file")
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+        patch("PyQt6.QtWidgets.QMessageBox.critical") as mock_crit,
+    ):
+        tab._on_timing_clicked()
+        qtbot.waitUntil(lambda: mock_crit.called, timeout=3000)
+
+    mock_crit.assert_called_once()
+    assert tab.timing_button.isEnabled()
+
+
+# ---------------------------------------------------------------------------
+# 21. Tracks ffprobe runs off the GUI thread (GUI-freeze hardening)
+# ---------------------------------------------------------------------------
+
+
+def test_tracks_probe_runs_off_gui_thread(tab, tmp_path, qtbot):
+    """list_audio_streams must run on a worker thread, not the GUI thread."""
+    import threading
+
+    from PyQt6.QtWidgets import QDialog
+
+    from anki_miner.utils.audio_track_detector import AudioStream
+
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+
+    probe_thread: dict = {}
+    stream = AudioStream(
+        global_index=1, audio_index=0, language_tag="jpn", title_tag=None, codec="aac", channels=2, is_default=True
+    )
+
+    def _record(*_a, **_k):
+        probe_thread["id"] = threading.get_ident()
+        return [stream]
+
+    mock_dialog = MagicMock()
+    mock_dialog.exec.return_value = QDialog.DialogCode.Rejected
+    mock_class = MagicMock(return_value=mock_dialog)
+    mock_class.DialogCode = QDialog.DialogCode
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams", side_effect=_record),
+        patch("anki_miner.gui.widgets.single_episode_tab.AudioTracksDialog", mock_class),
+    ):
+        tab._on_tracks_clicked()
+        # Button disabled while the probe runs off-thread.
+        assert not tab.tracks_button.isEnabled()
+        qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
+
+    assert probe_thread["id"] != threading.get_ident()  # probed off the GUI thread
+    assert tab.tracks_button.isEnabled()  # re-enabled after success
+
+
+def test_tracks_empty_streams_shows_info_and_reenables(tab, tmp_path, qtbot):
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams", return_value=[]),
+        patch("PyQt6.QtWidgets.QMessageBox.information") as mock_info,
+    ):
+        tab._on_tracks_clicked()
+        qtbot.waitUntil(lambda: mock_info.called, timeout=3000)
+
+    mock_info.assert_called_once()
+    assert tab.tracks_button.isEnabled()
+
+
+def test_tracks_probe_error_shows_warning_and_reenables(tab, tmp_path, qtbot):
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+
+    with (
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.list_audio_streams",
+            side_effect=RuntimeError("ffprobe blew up"),
+        ),
+        patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warn,
+    ):
+        tab._on_tracks_clicked()
+        qtbot.waitUntil(lambda: mock_warn.called, timeout=3000)
+
+    mock_warn.assert_called_once()
+    assert tab.tracks_button.isEnabled()
