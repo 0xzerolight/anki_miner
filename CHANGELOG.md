@@ -15,6 +15,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 
+## [2.7.2] - 2026-06-27
+
+### Added
+- **Frequency Sort field mapping.** Settings → Anki adds a FreqSort field so the frequency-sort value can be written to its own card field (label and helpers translated into es/fr/ja/ru).
+
+### Fixed
+- **ASR binary builds.** The bundled `av` (PyAV) module was missing from release binaries, which broke the offline ASR smoke and failed the v2.7.1 binary release. PyAV is now bundled and binaries ship again. (pip installs were unaffected — pip resolves `av` as a normal dependency.)
+
+
 ## [2.7.0] - 2026-06-27
 
 ### Added
