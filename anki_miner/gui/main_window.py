@@ -3,6 +3,7 @@
 import logging
 from dataclasses import replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
@@ -37,6 +38,9 @@ from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutService, ValidationService
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.utils.i18n import tr_format
+
+if TYPE_CHECKING:
+    from anki_miner.gui.capabilities import CapabilityTarget
 
 logger = logging.getLogger(__name__)
 
@@ -244,6 +248,10 @@ class MainWindow(QMainWindow):
         assert resources_action is not None
         resources_action.triggered.connect(self._download_recommended_resources)
 
+        find_feature_action = tools_menu.addAction(self.tr("Find a Feature..."))
+        assert find_feature_action is not None
+        find_feature_action.triggered.connect(self._run_capability_browser_tool)
+
         setup_wizard_action = tools_menu.addAction(self.tr("Setup Wizard..."))
         assert setup_wizard_action is not None
         setup_wizard_action.triggered.connect(self._run_setup_wizard_tool)
@@ -371,6 +379,48 @@ class MainWindow(QMainWindow):
                 return i
         return -1
 
+    # Stable capability key -> the widget class name registered as that main tab.
+    # Matched by class name (not index/label) so it survives tab reorder and i18n.
+    _MAIN_TAB_CLASSES = {
+        "episode": "SingleEpisodeTab",
+        "batch": "BatchProcessingTab",
+        "deckbuilder": "DeckBuilderTab",
+        "youtube": "YouTubeTab",
+        "audiobook": "AudiobookTab",
+        "analytics": "AnalyticsTab",
+        "subtitles": "SubtitlesTab",
+        "settings": "SettingsTab",
+    }
+
+    def _main_tab_index(self, key: str) -> int:
+        """Locate a top-level tab by stable capability key; -1 if absent."""
+        if key == "settings":
+            return self._settings_tab_index()
+        class_name = self._MAIN_TAB_CLASSES.get(key)
+        if class_name is None:
+            return -1
+        for i in range(self.tabs.count()):
+            if type(self.tabs.widget(i)).__name__ == class_name:
+                return i
+        return -1
+
+    def reveal_capability(self, target: "CapabilityTarget") -> None:
+        """Bring the tab that hosts ``target`` to the front (and its sub-tab).
+
+        Called by the Find a Feature browser. No-ops silently if the tab can't be
+        found (e.g. an optional tab was not registered) so a stale catalogue entry
+        never crashes the UI.
+        """
+        idx = self._main_tab_index(target.main_tab)
+        if idx < 0:
+            return
+        self.tabs.setCurrentIndex(idx)
+        if target.settings_subtab:
+            settings_widget = self.tabs.widget(idx)
+            open_subtab = getattr(settings_widget, "open_subtab", None)
+            if callable(open_subtab):
+                open_subtab(target.settings_subtab)
+
     def _open_settings(self) -> None:
         """Open the Settings tab."""
         idx = self._settings_tab_index()
@@ -447,6 +497,16 @@ class MainWindow(QMainWindow):
             # update_config (not from_settings) propagates via config_refreshed
             # to all tabs incl. Settings, and persists to disk.
             self.update_config(new_config)
+
+    def _run_capability_browser_tool(self) -> None:
+        """Tools-menu handler: open the Find a Feature browser.
+
+        The dialog drives navigation through :meth:`reveal_capability`; it does
+        not modify config, so there is nothing to apply on return.
+        """
+        from anki_miner.gui.widgets.dialogs.capability_browser import run_capability_browser
+
+        run_capability_browser(self, self)
 
     def _run_setup_wizard_tool(self) -> None:
         """Tools-menu handler: re-run the guided setup wizard (re-runnable).

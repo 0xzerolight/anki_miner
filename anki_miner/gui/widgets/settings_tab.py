@@ -201,21 +201,27 @@ class SettingsTab(QWidget):
         self.themes_panel = ThemesPanel(self.config.themes_root, self.config.ui_zoom)
         self.language_panel = LanguagePanel(self.config.ui_language)
 
-        # Add tabs with scroll areas for each panel
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.anki_panel), self.tr("Anki"))
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.media_panel), self.tr("Media"))
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.dictionary_panel), self.tr("Dictionaries"))
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.audio_panel), self.tr("Audio"))
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.frequency_panel), self.tr("Frequency"))
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), self.tr("Filtering"))
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), self.tr("YouTube"))
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.subtitles_panel), self.tr("Subtitles"))
-        # Themes tab — sub-tab index captured so MainWindow / shortcuts can
-        # jump straight to it via :meth:`open_themes_subtab`.
-        self._themes_subtab_index = self.tab_widget.addTab(
-            self._wrap_in_scroll_area(self.themes_panel), self.tr("Themes")
-        )
-        self.tab_widget.addTab(self._wrap_in_scroll_area(self.language_panel), self.tr("Language"))
+        # Add tabs with scroll areas for each panel. Stable string keys are
+        # captured into _subtab_index so callers (MainWindow.reveal_capability,
+        # the Find a Feature browser, theme shortcuts) can jump to a sub-tab by
+        # key rather than a hard-coded index or the translated label.
+        self._subtab_index: dict[str, int] = {
+            "anki": self.tab_widget.addTab(self._wrap_in_scroll_area(self.anki_panel), self.tr("Anki")),
+            "media": self.tab_widget.addTab(self._wrap_in_scroll_area(self.media_panel), self.tr("Media")),
+            "dictionaries": self.tab_widget.addTab(
+                self._wrap_in_scroll_area(self.dictionary_panel), self.tr("Dictionaries")
+            ),
+            "audio": self.tab_widget.addTab(self._wrap_in_scroll_area(self.audio_panel), self.tr("Audio")),
+            "frequency": self.tab_widget.addTab(self._wrap_in_scroll_area(self.frequency_panel), self.tr("Frequency")),
+            "filtering": self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), self.tr("Filtering")),
+            "youtube": self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), self.tr("YouTube")),
+            "subtitles": self.tab_widget.addTab(self._wrap_in_scroll_area(self.subtitles_panel), self.tr("Subtitles")),
+            "themes": self.tab_widget.addTab(self._wrap_in_scroll_area(self.themes_panel), self.tr("Themes")),
+            "language": self.tab_widget.addTab(self._wrap_in_scroll_area(self.language_panel), self.tr("Language")),
+        }
+        # Retained: _on_settings_subtab_changed and open_themes_subtab key off
+        # the Themes index; reading it from the map keeps a single source of truth.
+        self._themes_subtab_index = self._subtab_index["themes"]
         # Reset preview baseline when the user navigates away from Themes so
         # a later visit reverts to their last-chosen theme, not session start.
         self.tab_widget.currentChanged.connect(self._on_settings_subtab_changed)
@@ -489,13 +495,26 @@ class SettingsTab(QWidget):
 
         self.language_panel.set_language(self.config.ui_language)
 
+    def open_subtab(self, key: str) -> None:
+        """Switch the settings sub-tab to the one named by ``key``.
+
+        ``key`` is a stable identifier from
+        :data:`anki_miner.gui.capabilities.SETTINGS_SUBTABS` (e.g. ``"filtering"``,
+        ``"anki"``). Unknown keys are ignored so a stale caller can't crash the UI.
+        """
+        index = self._subtab_index.get(key)
+        if index is not None:
+            self.tab_widget.setCurrentIndex(index)
+
     def open_themes_subtab(self) -> None:
         """Switch the settings sub-tab to Themes.
 
-        Called by MainWindow when the user picks the 'All themes…' sentinel
-        in the header combo.
+        Thin wrapper over :meth:`open_subtab` kept because MainWindow's
+        ``_settings_tab_index`` uses this method name as the capability marker
+        that identifies the Settings tab, and the 'All themes…' header sentinel
+        calls it directly.
         """
-        self.tab_widget.setCurrentIndex(self._themes_subtab_index)
+        self.open_subtab("themes")
 
     def _on_settings_subtab_changed(self, index: int) -> None:
         """Reset the Themes panel preview baseline when leaving its sub-tab."""
