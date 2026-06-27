@@ -8,6 +8,7 @@ import shutil
 import stat
 import time
 from pathlib import Path
+from typing import cast
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
 from PyQt6.QtGui import QShowEvent
@@ -25,6 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AudioSourceEntry
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.services.audio_packs.registry import AudioPackMeta, AudioPackRegistry
 from anki_miner.utils.i18n import tr_format
@@ -161,6 +163,9 @@ class AudioPackSettingsPanel(FormPanel):
         # Guard: registry scan deferred to first showEvent so it does not run
         # on the GUI thread before the window paints (OVH-053).
         self._scanned: bool = False
+        # Set while an off-thread registry scan is running so overlapping
+        # scans / removes don't stack (OVH disk-scan-off-thread).
+        self._scan_in_flight: bool = False
         self._setup_fields()
 
     def showEvent(self, event: QShowEvent) -> None:  # type: ignore[override]
@@ -174,14 +179,62 @@ class AudioPackSettingsPanel(FormPanel):
         super().showEvent(event)
         if not self._scanned:
             self._scanned = True
-            self._rebuild_list()
+            self._scan_and_render_async()
 
     def refresh_registry(self) -> None:
-        """Force a registry rescan. Call after an import finishes."""
-        registry = AudioPackRegistry(self._packs_root)
-        registry.load()
-        self._view = _RegistryView(registry)
+        """Force a registry rescan. Call after an import finishes.
+
+        The disk scan runs off the GUI thread (OVH disk-scan-off-thread).
+        """
+        self._view = None
+        self._scanned = True
+        self._scan_and_render_async()
+
+    def _scan_and_render_async(self) -> None:
+        """Scan the registry off-thread (if not cached) then render the rows.
+
+        When ``_view`` is already cached (e.g. ``set_chain(registry_meta=...)``)
+        this renders synchronously with no worker. Otherwise a ``Loading…``
+        placeholder shows while ``AudioPackRegistry.load()`` runs on a worker
+        thread.
+        """
+        if self._view is not None or not self._scanned:
+            self._rebuild_list()
+            return
+        if self._scan_in_flight:
+            return
+        self._scan_in_flight = True
+        self._show_loading_placeholder()
+
+        packs_root = self._packs_root
+
+        def _scan() -> _RegistryView:
+            registry = AudioPackRegistry(packs_root)
+            registry.load()
+            return _RegistryView(registry)
+
+        run_off_thread(self, _scan, self._on_scan_done, self._on_scan_error)
+
+    def _on_scan_done(self, view: object) -> None:
+        self._scan_in_flight = False
+        self._view = cast("_RegistryView", view)
         self._rebuild_list()
+
+    def _on_scan_error(self, msg: str) -> None:
+        self._scan_in_flight = False
+        logger.warning("Audio pack registry scan failed: %s", msg)
+        self._rebuild_list()
+
+    def _show_loading_placeholder(self) -> None:
+        """Render a single disabled 'Loading…' row while a scan is in flight."""
+        self._list.setUpdatesEnabled(False)
+        try:
+            self._list.clear()
+            placeholder = QListWidgetItem(self.tr("Loading…"))
+            placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
+            self._list.addItem(placeholder)
+        finally:
+            self._list.setUpdatesEnabled(True)
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Audio Sources"))
@@ -293,25 +346,52 @@ class AudioPackSettingsPanel(FormPanel):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        if pack_index_dir is not None and pack_index_dir.exists():
-            try:
-                _robust_rmtree(pack_index_dir)
-            except OSError as e:
-                logger.error("Failed to delete audio pack index folder %s: %s", pack_index_dir, e)
-                QMessageBox.warning(
-                    self,
-                    self.tr("Remove failed"),
-                    tr_format(
-                        self.tr("Could not delete %1:\n%2\n\nThe audio pack was not removed."), pack_index_dir, e
-                    ),
-                )
-                return
+        # Capture the post-remove chain on the GUI thread (reads row widgets)
+        # BEFORE dispatching the disk delete off-thread.
+        new_chain = list(self.get_chain())
+        del new_chain[index]
 
-        self._chain = list(self.get_chain())
-        del self._chain[index]
-        # Disk state changed — drop cached view so next rebuild rescans.
+        if pack_index_dir is None or not pack_index_dir.exists():
+            self._finalize_remove(new_chain)
+            return
+
+        # The rmtree (sleep-backed retry loop) runs off the GUI thread; the
+        # Remove button + list are disabled while it runs.
+        self._remove_btn.setEnabled(False)
+        self._list.setEnabled(False)
+        target = pack_index_dir
+
+        def _delete() -> None:
+            _robust_rmtree(target)
+
+        run_off_thread(
+            self,
+            _delete,
+            lambda _r: self._on_remove_done(new_chain),
+            lambda msg: self._on_remove_error(target, msg),
+        )
+
+    def _on_remove_done(self, new_chain: list[AudioSourceEntry]) -> None:
+        self._remove_btn.setEnabled(True)
+        self._list.setEnabled(True)
+        self._finalize_remove(new_chain)
+
+    def _on_remove_error(self, pack_index_dir: Path, msg: str) -> None:
+        self._remove_btn.setEnabled(True)
+        self._list.setEnabled(True)
+        logger.error("Failed to delete audio pack index folder %s: %s", pack_index_dir, msg)
+        QMessageBox.warning(
+            self,
+            self.tr("Remove failed"),
+            tr_format(self.tr("Could not delete %1:\n%2\n\nThe audio pack was not removed."), pack_index_dir, msg),
+        )
+
+    def _finalize_remove(self, new_chain: list[AudioSourceEntry]) -> None:
+        """Commit the chain mutation + rescan after a successful disk delete."""
+        self._chain = new_chain
+        # Disk state changed — drop cached view so next render rescans.
         self._view = None
-        self._rebuild_list()
+        self._scan_and_render_async()
         self.chain_changed.emit()
         self.pack_removed.emit()
 
@@ -357,15 +437,13 @@ class AudioPackSettingsPanel(FormPanel):
         try:
             # clear() destroys the previous row widgets (and their signal connections), so there is no duplicate handler risk.
             self._list.clear()
-            # OVH-053: defer the disk scan until the panel has been shown at
-            # least once (showEvent sets _scanned); before first paint the rows
-            # render without pack metadata — a safe no-content state since
-            # the list is never visible until the Settings tab is opened.
-            if self._view is None and self._scanned:
-                registry = AudioPackRegistry(self._packs_root)
-                self._view = _RegistryView(registry)
-                self._view.load()
-            view = self._view  # may be None before first show (OVH-053)
+            # Render-only: the disk scan is owned by _scan_and_render_async,
+            # which runs AudioPackRegistry.load() off the GUI thread and only
+            # then calls back here with self._view populated. Before first show
+            # (OVH-053) self._view is None and rows render without pack metadata
+            # — a safe no-content state since the list is never visible until
+            # the Settings tab is opened.
+            view = self._view  # may be None before first show / scan
             for entry in self._chain:
                 meta: AudioPackMeta | None = None
                 if entry.kind == "pack":
