@@ -99,7 +99,7 @@ class TestDictChainReorderPersists:
 class TestDictChainRemovalPersistsExactlyOnce:
     """Removal must persist exactly once (chain_changed only, not also dictionary_removed)."""
 
-    def test_remove_persists_exactly_once(self, tab, confirm_remove, tmp_path):
+    def test_remove_persists_exactly_once(self, tab, confirm_remove, tmp_path, qtbot):
         """Removing a dict triggers chain_changed → exactly one config_changed emit."""
         # Create a physical dir so rmtree doesn't fail.
         dict_dir = tmp_path / "alpha"
@@ -120,12 +120,15 @@ class TestDictChainRemovalPersistsExactlyOnce:
 
         tab.dictionary_panel.remove(0)
 
+        # remove()'s rmtree now runs off the GUI thread; the persist fires once
+        # the chain_changed signal lands after the delete completes.
+        qtbot.waitUntil(lambda: len(persisted) >= 1, timeout=3000)
         assert len(persisted) == 1, f"removal must persist exactly once; got {len(persisted)} emits"
         chain = persisted[0]
         assert len(chain) == 1
         assert chain[0].kind == "jisho"
 
-    def test_remove_updates_self_config(self, tab, confirm_remove, tmp_path):
+    def test_remove_updates_self_config(self, tab, confirm_remove, tmp_path, qtbot):
         """After removal, tab.config.dictionary_chain no longer includes removed entry."""
         dict_dir = tmp_path / "alpha"
         dict_dir.mkdir()
@@ -141,7 +144,9 @@ class TestDictChainRemovalPersistsExactlyOnce:
 
         tab.dictionary_panel.remove(0)
 
-        assert len(tab.config.dictionary_chain) == 1
+        # remove()'s rmtree now runs off the GUI thread; wait for the config to
+        # be updated via the post-delete chain_changed persist.
+        qtbot.waitUntil(lambda: len(tab.config.dictionary_chain) == 1, timeout=3000)
         assert tab.config.dictionary_chain[0].kind == "jisho"
 
     def test_dictionary_removed_signal_not_connected_to_persist(self, tab):
