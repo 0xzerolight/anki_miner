@@ -455,10 +455,11 @@ def test_pack_row_removable_emits_signals(qapp, qtbot, tmp_path, confirm_remove)
 
     panel.remove(0)
 
+    # rmtree now runs off the GUI thread.
+    qtbot.waitUntil(lambda: removed == [None], timeout=3000)
     chain = panel.get_chain()
     assert [e.kind for e in chain] == ["jpod101"]
     assert changed == [None]
-    assert removed == [None]
 
 
 def test_remove_deletes_index_dir_on_disk(qapp, qtbot, tmp_path, confirm_remove):
@@ -478,7 +479,8 @@ def test_remove_deletes_index_dir_on_disk(qapp, qtbot, tmp_path, confirm_remove)
 
     panel.remove(0)
 
-    assert not pack_dir.exists(), "remove() must rmtree the index folder"
+    # rmtree now runs off the GUI thread.
+    qtbot.waitUntil(lambda: not pack_dir.exists(), timeout=3000)
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
@@ -557,6 +559,9 @@ def test_remove_failed_rmtree_does_not_emit_pack_removed(qapp, qtbot, monkeypatc
     panel.pack_removed.connect(lambda: removed.append(None))
 
     panel.remove(0)
+    # The off-thread rmtree fails; wait for the error handler to re-enable the
+    # Remove button (proof the error callback ran on the GUI thread).
+    qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
     assert removed == []
     assert [e.pack_id for e in panel.get_chain()[:1]] == ["a"], "failed remove must leave chain intact"
 
@@ -596,14 +601,15 @@ def test_remove_retries_on_transient_permission_error(qapp, qtbot, monkeypatch, 
     removed: list[None] = []
     panel.pack_removed.connect(lambda: removed.append(None))
 
-    # First remove → _robust_rmtree raises → pack stays, no signal.
+    # First remove → _robust_rmtree raises off-thread → pack stays, no signal.
     panel.remove(0)
+    qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
     assert removed == [], "first attempt raised — pack_removed must not fire"
     assert [e.pack_id for e in panel.get_chain()[:1]] == ["a"]
 
-    # Second remove → _robust_rmtree succeeds → pack gone, signal fires.
+    # Second remove → _robust_rmtree succeeds off-thread → pack gone, signal fires.
     panel.remove(0)
-    assert removed == [None], "second attempt succeeded — pack_removed must fire"
+    qtbot.waitUntil(lambda: removed == [None], timeout=3000)
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
@@ -704,8 +710,10 @@ def test_right_click_pack_row_emits_reimport_signal(qapp, qtbot, monkeypatch, tm
         )
     )
     # Registry scan is deferred to first showEvent (OVH-053); trigger it so
-    # _on_row_context_menu can resolve meta from the registry.
+    # _on_row_context_menu can resolve meta from the registry. The scan runs
+    # off the GUI thread.
     panel.show()
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
 
     constructed = _patch_menu_exec(monkeypatch, "Re-import…")
 
@@ -744,8 +752,9 @@ def test_right_click_remove_action_removes_pack(qapp, qtbot, monkeypatch, tmp_pa
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="pack", pack_id="a", enabled=True),))
-    # Registry scan is deferred to first showEvent (OVH-053).
+    # Registry scan is deferred to first showEvent (OVH-053); runs off-thread.
     panel.show()
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
 
     _patch_menu_exec(monkeypatch, "Remove")
 
@@ -756,7 +765,8 @@ def test_right_click_remove_action_removes_pack(qapp, qtbot, monkeypatch, tmp_pa
     pos = panel._list.visualItemRect(item).center()
     panel._on_row_context_menu(pos)
 
-    assert removed == [None]
+    # Remove delegates to self.remove(), whose rmtree runs off-thread.
+    qtbot.waitUntil(lambda: removed == [None], timeout=3000)
     assert panel._list.count() == 0
 
 
@@ -891,6 +901,9 @@ class TestShowEventDeferral:
 
         assert load_calls == []
         panel.show()
+        # Scan now runs off the GUI thread.
+        qtbot.waitUntil(lambda: len(load_calls) == 1, timeout=3000)
+        qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
         assert len(load_calls) == 1, "First showEvent must trigger exactly one registry scan"
 
     def test_second_show_event_does_not_rescan(self, qapp, qtbot, tmp_path, monkeypatch):
@@ -911,8 +924,88 @@ class TestShowEventDeferral:
         panel.set_chain(AnkiMinerConfig().expression_audio_chain)
 
         panel.show()
-        assert len(load_calls) == 1
+        qtbot.waitUntil(lambda: len(load_calls) == 1, timeout=3000)
+        qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
 
         panel.hide()
         panel.show()
         assert len(load_calls) == 1, "Second showEvent must not re-scan"
+
+
+# ---------------------------------------------------------------------------
+# OVH disk-scan-off-thread — registry scan + remove rmtree run off the GUI thread
+# ---------------------------------------------------------------------------
+
+
+class TestOffThreadDiskWork:
+    """First-show scan and Remove rmtree must run on a worker thread."""
+
+    def test_first_show_scan_runs_off_gui_thread(self, qapp, qtbot, tmp_path, monkeypatch):
+        import threading
+
+        main_id = threading.get_ident()
+        scan_threads: list[int] = []
+        real_load = asp_mod.AudioPackRegistry.load
+
+        def _spy_load(self):
+            scan_threads.append(threading.get_ident())
+            return real_load(self)
+
+        monkeypatch.setattr(asp_mod.AudioPackRegistry, "load", _spy_load)
+
+        _make_pack_on_disk(tmp_path, "ajt-pack", fmt="ajt", source="AJT")
+        panel = AudioPackSettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain((AudioSourceEntry(kind="pack", pack_id="ajt-pack", enabled=True),))
+        panel.show()
+
+        qtbot.waitUntil(lambda: bool(scan_threads), timeout=3000)
+        qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+        assert scan_threads and all(t != main_id for t in scan_threads), scan_threads
+
+    def test_remove_rmtree_runs_off_gui_thread(self, qapp, qtbot, tmp_path, confirm_remove, monkeypatch):
+        import threading
+
+        main_id = threading.get_ident()
+        rmtree_threads: list[int] = []
+        real_rmtree = asp_mod.shutil.rmtree
+
+        def _spy_rmtree(path, *a, **kw):
+            rmtree_threads.append(threading.get_ident())
+            return real_rmtree(path, *a, **kw)
+
+        monkeypatch.setattr(asp_mod.shutil, "rmtree", _spy_rmtree)
+
+        pack_dir = tmp_path / "a"
+        pack_dir.mkdir()
+        (pack_dir / "index.sqlite").write_bytes(b"placeholder")
+        panel = AudioPackSettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(
+            (
+                AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
+                AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),
+            )
+        )
+
+        panel.remove(0)
+        qtbot.waitUntil(lambda: not pack_dir.exists(), timeout=3000)
+        assert rmtree_threads and all(t != main_id for t in rmtree_threads), rmtree_threads
+
+    def test_remove_disables_then_reenables_button(self, qapp, qtbot, tmp_path, confirm_remove):
+        pack_dir = tmp_path / "a"
+        pack_dir.mkdir()
+        (pack_dir / "index.sqlite").write_bytes(b"placeholder")
+        panel = AudioPackSettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+        panel.set_chain(
+            (
+                AudioSourceEntry(kind="pack", pack_id="a", enabled=True),
+                AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),
+            )
+        )
+
+        panel.remove(0)
+        assert panel._remove_btn.isEnabled() is False
+        qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
+        assert not pack_dir.exists()
