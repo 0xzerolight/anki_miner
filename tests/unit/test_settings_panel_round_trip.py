@@ -58,6 +58,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "pitch_position": "PitchPos",
             "pitch_category": "PitchCat",
             "frequency": "Freq",
+            "frequency_sort": "FreqSort",
             "source": "Source",
         },
         anki_word_field="Word",

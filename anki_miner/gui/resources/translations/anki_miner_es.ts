@@ -438,8 +438,16 @@
         <translation>Campo de frecuencia</translation>
     </message>
     <message>
-        <source>Stores the word frequency rank.</source>
-        <translation>Almacena el rango de frecuencia de la palabra.</translation>
+        <source>Stores the per-source frequency breakdown (all sources).</source>
+        <translation>Almacena el desglose de frecuencia por fuente (todas las fuentes).</translation>
+    </message>
+    <message>
+        <source>Frequency Sort Field</source>
+        <translation>Campo de ordenación de frecuencia</translation>
+    </message>
+    <message>
+        <source>Stores the single frequency rank used for sorting (one number).</source>
+        <translation>Almacena el rango de frecuencia único usado para la ordenación (un número).</translation>
     </message>
     <message>
         <source>Source Field</source>
