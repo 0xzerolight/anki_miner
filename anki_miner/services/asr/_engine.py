@@ -45,3 +45,20 @@ def get_download_fn():
     import faster_whisper  # noqa: PLC0415  (intentional function-local import)
 
     return faster_whisper.download_model
+
+
+def cuda_device_count() -> int:
+    """Return the number of usable CUDA devices, or 0 on ANY failure.
+
+    Function-local ``ctranslate2`` import (the same no-top-level-import rule as
+    the rest of this seam) so default CI without the ``[asr]`` extra stays green.
+    Degrades to 0 on anything — ImportError (extra not installed), OSError (a
+    broken native CUDA runtime), or any other surprise — so callers can treat a
+    nonzero return as "a GPU is present and usable" without their own guard.
+    """
+    try:
+        import ctranslate2  # noqa: PLC0415  (intentional function-local import)
+
+        return int(ctranslate2.get_cuda_device_count())
+    except Exception:  # noqa: BLE001 — any failure means "no usable GPU"
+        return 0

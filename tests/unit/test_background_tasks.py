@@ -480,3 +480,92 @@ class TestStartAsrModelDownload:
 
         assert controller.asr_model_download_worker is None
         worker.deleteLater.assert_called_once()
+
+
+class _FakeCudaPackDownloadWorker(QObject):
+    """Fake CudaPackDownloadWorker — same status/result_ready/finished split."""
+
+    status = pyqtSignal(str)
+    result_ready = pyqtSignal(bool, str)
+    finished = pyqtSignal()
+
+    def __init__(self, cuda_libs_root, parent=None) -> None:
+        super().__init__(parent)
+        self._cuda_libs_root = cuda_libs_root
+        self._running = False
+        self.deleteLater = MagicMock()  # type: ignore[method-assign]
+
+    def isRunning(self) -> bool:  # noqa: N802
+        return self._running
+
+    def start(self) -> None:
+        self._running = True
+
+    def emit_result(self, ok: bool = True, message: str = "Done") -> None:
+        self.result_ready.emit(ok, message)
+
+    def emit_finished(self) -> None:
+        self._running = False
+        self.finished.emit()
+
+
+class TestStartCudaPackDownload:
+    """start_cuda_pack_download: guard, construction, status/finished routing, handle release."""
+
+    def _patch(self, monkeypatch, worker: _FakeCudaPackDownloadWorker, captured: dict | None = None) -> None:
+        def _make_worker(cuda_libs_root, parent=None):
+            if captured is not None:
+                captured["cuda_libs_root"] = cuda_libs_root
+            return worker
+
+        monkeypatch.setattr(
+            "anki_miner.gui.workers.cuda_pack_download_worker.CudaPackDownloadWorker",
+            _make_worker,
+        )
+
+    def test_starts_and_routes_status(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeCudaPackDownloadWorker(tmp_path)
+        captured: dict = {}
+        self._patch(monkeypatch, worker, captured)
+
+        status_received: list[str] = []
+        controller.start_cuda_pack_download(tmp_path, status_received.append, lambda ok, msg: None)
+
+        assert captured["cuda_libs_root"] == tmp_path
+        assert controller.cuda_pack_download_worker is worker
+
+        worker.status.emit("Downloading GPU libraries…")
+        assert status_received == ["Downloading GPU libraries…"]
+
+    def test_routes_result(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeCudaPackDownloadWorker(tmp_path)
+        self._patch(monkeypatch, worker)
+
+        finished_calls: list[tuple] = []
+        controller.start_cuda_pack_download(
+            tmp_path, lambda msg: None, lambda ok, msg: finished_calls.append((ok, msg))
+        )
+
+        worker.emit_result(True, "GPU libraries installed successfully.")
+        assert finished_calls == [(True, "GPU libraries installed successfully.")]
+
+    def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
+        worker_a = _FakeCudaPackDownloadWorker(tmp_path)
+        self._patch(monkeypatch, worker_a)
+        controller.start_cuda_pack_download(tmp_path, lambda m: None, lambda ok, m: None)
+        assert controller.cuda_pack_download_worker is worker_a
+
+        worker_b = _FakeCudaPackDownloadWorker(tmp_path)
+        self._patch(monkeypatch, worker_b)
+        controller.start_cuda_pack_download(tmp_path, lambda m: None, lambda ok, m: None)
+        assert controller.cuda_pack_download_worker is worker_a
+
+    def test_handle_released_on_finished(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeCudaPackDownloadWorker(tmp_path)
+        self._patch(monkeypatch, worker)
+        controller.start_cuda_pack_download(tmp_path, lambda m: None, lambda ok, m: None)
+
+        worker.emit_finished()
+
+        assert controller.cuda_pack_download_worker is None
+        worker.deleteLater.assert_called_once()
