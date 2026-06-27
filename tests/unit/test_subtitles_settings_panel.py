@@ -6,6 +6,8 @@ gating, the engine-missing guidance, and the in-app alass download button.
 
 from __future__ import annotations
 
+import threading
+
 import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
@@ -14,6 +16,12 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 
 _PANEL_MOD = "anki_miner.gui.widgets.panels.subtitles_settings_panel"
+
+
+def _wait_state_settled(qtbot, panel) -> None:
+    """Block until any in-flight off-thread state probe has been applied."""
+    qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
+
 
 # ---------------------------------------------------------------------------
 # Panel construction
@@ -43,6 +51,7 @@ def test_load_from_config_populates_selector_from_path(qtbot, tmp_path):
     alass_path = tmp_path / "alass"
     config = AnkiMinerConfig(alass_location=alass_path)
     panel.load_from_config(config)
+    _wait_state_settled(qtbot, panel)
     assert panel.alass_selector.get_path() == str(alass_path)
 
 
@@ -51,6 +60,7 @@ def test_load_from_config_with_none_clears_selector(qtbot):
     qtbot.addWidget(panel)
     config = AnkiMinerConfig(alass_location=None)
     panel.load_from_config(config)
+    _wait_state_settled(qtbot, panel)
     assert panel.alass_selector.get_path() == ""
 
 
@@ -61,9 +71,11 @@ def test_load_from_config_replaces_previous_value(qtbot, tmp_path):
     second_path = tmp_path / "alass_v2"
 
     panel.load_from_config(AnkiMinerConfig(alass_location=first_path))
+    _wait_state_settled(qtbot, panel)
     assert panel.alass_selector.get_path() == str(first_path)
 
     panel.load_from_config(AnkiMinerConfig(alass_location=second_path))
+    _wait_state_settled(qtbot, panel)
     assert panel.alass_selector.get_path() == str(second_path)
 
 
@@ -122,6 +134,7 @@ def test_round_trip_with_path(qtbot, tmp_path):
     alass_path = tmp_path / "alass"
     config = AnkiMinerConfig(alass_location=alass_path)
     panel.load_from_config(config)
+    _wait_state_settled(qtbot, panel)
     result = panel.contribute(config)
     assert result.alass_location == alass_path
 
@@ -131,6 +144,7 @@ def test_round_trip_with_none(qtbot):
     qtbot.addWidget(panel)
     config = AnkiMinerConfig(alass_location=None)
     panel.load_from_config(config)
+    _wait_state_settled(qtbot, panel)
     result = panel.contribute(config)
     assert result.alass_location is None
 
@@ -155,6 +169,7 @@ def test_contribute_preserves_asr_model_and_alass(qtbot, tmp_path):
     alass_path = tmp_path / "alass"
     config = AnkiMinerConfig(asr_model="large-v3", alass_location=None)
     panel.load_from_config(config)
+    _wait_state_settled(qtbot, panel)
 
     panel.model_combo.setCurrentText("small")
     panel.alass_selector.set_path(str(alass_path))
@@ -176,6 +191,7 @@ def test_engine_unavailable_disables_download_and_shows_guidance(qtbot, tmp_path
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     assert not panel.download_model_button.isEnabled()
     assert panel._asr_engine_guidance.isVisibleTo(panel)
@@ -187,6 +203,7 @@ def test_engine_available_enables_download_and_hides_guidance(qtbot, tmp_path, m
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     assert panel.download_model_button.isEnabled()
     assert not panel._asr_engine_guidance.isVisibleTo(panel)
@@ -199,6 +216,7 @@ def test_download_click_emits_when_engine_available(qtbot, tmp_path, monkeypatch
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_model="small", asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     received: list[str] = []
     panel.asr_download_requested.connect(received.append)
@@ -214,6 +232,7 @@ def test_download_click_noop_when_engine_unavailable(qtbot, tmp_path, monkeypatc
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     received: list[str] = []
     panel.asr_download_requested.connect(received.append)
@@ -259,6 +278,7 @@ def test_alass_status_reflects_installed_state(qtbot, tmp_path, monkeypatch):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(bin_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     assert "downloaded" in panel.alass_status_label.text().lower()
     assert panel.download_alass_button.isEnabled()
@@ -316,6 +336,7 @@ def test_load_from_config_sets_device(qtbot, tmp_path):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_device="cuda", cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
     assert panel.get_device() == "cuda"
 
 
@@ -343,6 +364,7 @@ def test_cuda_button_enabled_when_supported_and_gpu_present(qtbot, tmp_path, mon
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     assert panel.download_cuda_button.isEnabled()
     assert "not installed" in panel.cuda_status_label.text().lower()
@@ -353,6 +375,7 @@ def test_cuda_status_reflects_installed(qtbot, tmp_path, monkeypatch):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     assert panel.download_cuda_button.isEnabled()
     assert "installed" in panel.cuda_status_label.text().lower()
@@ -363,6 +386,7 @@ def test_cuda_button_disabled_when_no_gpu(qtbot, tmp_path, monkeypatch):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     assert not panel.download_cuda_button.isEnabled()
 
@@ -372,6 +396,7 @@ def test_cuda_button_hidden_when_unsupported(qtbot, tmp_path, monkeypatch):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     assert not panel.download_cuda_button.isEnabled()
     assert not panel.download_cuda_button.isVisibleTo(panel)
@@ -382,6 +407,7 @@ def test_cuda_download_click_emits_when_available(qtbot, tmp_path, monkeypatch):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     received: list[None] = []
     panel.cuda_pack_download_requested.connect(lambda: received.append(None))
@@ -396,6 +422,7 @@ def test_cuda_download_click_noop_when_unsupported(qtbot, tmp_path, monkeypatch)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     received: list[None] = []
     panel.cuda_pack_download_requested.connect(lambda: received.append(None))
@@ -411,16 +438,20 @@ def test_cuda_in_flight_guard_lifecycle(qtbot, tmp_path, monkeypatch):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
 
     panel.download_cuda_button.click()
     assert panel._cuda_pack_active
     assert not panel.download_cuda_button.isEnabled()
 
-    # A reload (config refresh) mid-download must keep it disabled.
+    # A reload (config refresh) mid-download must keep it disabled, even after
+    # the off-thread probe lands.
     panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
     assert not panel.download_cuda_button.isEnabled()
 
     panel.notify_cuda_pack_download_finished(tmp_path)
+    _wait_state_settled(qtbot, panel)
     assert not panel._cuda_pack_active
     assert panel.download_cuda_button.isEnabled()
 
@@ -430,3 +461,198 @@ def test_set_cuda_pack_status_sets_label(qtbot):
     qtbot.addWidget(panel)
     panel.set_cuda_pack_status("Downloading…")
     assert panel.cuda_status_label.text() == "Downloading…"
+
+
+# ---------------------------------------------------------------------------
+# Off-thread state probing (startup-freeze fix)
+# ---------------------------------------------------------------------------
+
+
+def test_heavy_probes_run_off_the_gui_thread(qtbot, tmp_path, monkeypatch):
+    """The expensive ctranslate2/find_spec/disk probes must not run on the GUI
+    thread when load_from_config fires (this is the startup-freeze fix)."""
+    main_thread_id = threading.get_ident()
+    seen: dict[str, int] = {}
+
+    def _record(key, value):
+        def _probe(*_args, **_kwargs):
+            seen[key] = threading.get_ident()
+            return value
+
+        return _probe
+
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", _record("available", True))
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", _record("cuda", 1))
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", _record("model", False))
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.is_installed", _record("cuda_pack", False))
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.is_installed", _record("alass", False))
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path, cuda_libs_root=tmp_path, bin_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    for key in ("available", "cuda", "model", "cuda_pack", "alass"):
+        assert key in seen, f"{key} probe did not run"
+        assert seen[key] != main_thread_id, f"{key} probe ran on the GUI thread"
+
+
+def test_checking_status_shown_and_buttons_disabled_while_probe_in_flight(qtbot, tmp_path, monkeypatch):
+    """Before the probe lands the download buttons are disabled (so a click can't
+    race the probe) and a neutral status is shown."""
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 1)
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: False)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.is_installed", lambda root: False)
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path, cuda_libs_root=tmp_path))
+
+    # Synchronously after load_from_config (before the worker finishes) the
+    # buttons are disabled.
+    assert panel._state_in_flight
+    assert not panel.download_model_button.isEnabled()
+    assert not panel.download_cuda_button.isEnabled()
+
+    _wait_state_settled(qtbot, panel)
+    assert panel.download_model_button.isEnabled()
+    assert panel.download_cuda_button.isEnabled()
+
+
+def test_cuda_device_count_cached_across_reloads(qtbot, tmp_path, monkeypatch):
+    """cuda_device_count + engine.available are stable for the process lifetime;
+    they must be probed once and reused on later reloads (no ctranslate2
+    re-import)."""
+    available_calls = {"n": 0}
+    cuda_calls = {"n": 0}
+
+    def _available():
+        available_calls["n"] += 1
+        return True
+
+    def _cuda():
+        cuda_calls["n"] += 1
+        return 1
+
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", _available)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", _cuda)
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: False)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.is_installed", lambda root: False)
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path, cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path, cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert cuda_calls["n"] == 1
+    assert available_calls["n"] == 1
+
+
+def test_install_flags_reprobed_on_each_refresh(qtbot, tmp_path, monkeypatch):
+    """model_downloaded / cuda_pack_installed / alass_installed change after a
+    download, so they must be re-probed on every refresh (not cached)."""
+    model_calls = {"n": 0}
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 0)
+
+    def _model(name, root):
+        model_calls["n"] += 1
+        return False
+
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", _model)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.is_installed", lambda root: False)
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path, cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path, cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert model_calls["n"] == 2
+
+
+def test_notify_asr_download_finished_reprobes_model(qtbot, tmp_path, monkeypatch):
+    """A finished model download re-probes the install flag and updates the label."""
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 0)
+    state = {"downloaded": False}
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: state["downloaded"])
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.is_installed", lambda root: False)
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_model="small", asr_models_root=tmp_path, cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    assert "not downloaded" in panel.model_status_label.text().lower()
+
+    state["downloaded"] = True
+    panel.notify_asr_download_finished("small", tmp_path)
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel._asr_download_active
+    assert panel.model_status_label.text().lower() == "downloaded"
+
+
+def test_notify_alass_download_finished_reprobes_install(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 0)
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: False)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: False)
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
+    state = {"installed": False}
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.is_installed", lambda root: state["installed"])
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(bin_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    assert "not downloaded" in panel.alass_status_label.text().lower()
+
+    state["installed"] = True
+    panel.notify_alass_download_finished()
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel._alass_download_active
+    assert panel.alass_status_label.text().lower() == "downloaded"
+
+
+def test_inflight_reload_redispatches_latest(qtbot, tmp_path, monkeypatch):
+    """A reload requested while a probe is in flight is not dropped: the latest
+    config wins via a single trailing re-dispatch."""
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 0)
+    seen_models: list = []
+
+    def _is_downloaded(name, root):
+        seen_models.append(root)
+        return False
+
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", _is_downloaded)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: False)
+
+    root_a = tmp_path / "a"
+    root_b = tmp_path / "b"
+    root_a.mkdir()
+    root_b.mkdir()
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    # First load starts a probe; second load while in flight must re-dispatch
+    # with root_b after the first lands.
+    panel.load_from_config(AnkiMinerConfig(asr_model="small", asr_models_root=root_a, cuda_libs_root=tmp_path))
+    panel.load_from_config(AnkiMinerConfig(asr_model="small", asr_models_root=root_b, cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    # The trailing (latest) config's models_root must have been probed.
+    assert root_b in seen_models

@@ -41,7 +41,7 @@ class TestSettingsTabAsrWiring:
         )
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
-        tab.subtitles_panel._refresh_status(tab.subtitles_panel.get_model(), test_config.asr_models_root)
+        qtbot.waitUntil(lambda: not tab.subtitles_panel._state_in_flight, timeout=5000)
 
         received: list[str] = []
         tab.asr_download_requested.connect(received.append)
@@ -57,6 +57,7 @@ class TestSettingsTabAsrWiring:
         qtbot.addWidget(tab)
         if not tab.subtitles_panel._alass_supported:
             pytest.skip("alass in-app download unsupported on this platform")
+        qtbot.waitUntil(lambda: not tab.subtitles_panel._state_in_flight, timeout=5000)
 
         received: list[None] = []
         tab.alass_download_requested.connect(lambda: received.append(None))
@@ -96,7 +97,7 @@ class TestSettingsTabAsrWiring:
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
         panel = tab.subtitles_panel
-        panel._refresh_status(panel.get_model(), test_config.asr_models_root)
+        qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
         assert panel.download_model_button.isEnabled()
 
         panel.download_model_button.click()
@@ -111,7 +112,7 @@ class TestSettingsTabAsrWiring:
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
         panel = tab.subtitles_panel
-        panel._refresh_status(panel.get_model(), test_config.asr_models_root)
+        qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
 
         panel.download_model_button.click()
         assert panel.model_status_label.text() == "Downloading…"
@@ -119,6 +120,7 @@ class TestSettingsTabAsrWiring:
         # Simulate an external config change reloading the panel (theme refresh,
         # update banner, JMdict-migration finish, etc.).
         panel.load_from_config(test_config)
+        qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
 
         assert not panel.download_model_button.isEnabled()
         assert panel.model_status_label.text() == "Downloading…"
@@ -129,11 +131,12 @@ class TestSettingsTabAsrWiring:
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
         panel = tab.subtitles_panel
-        panel._refresh_status(panel.get_model(), test_config.asr_models_root)
+        qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
         panel.download_model_button.click()
         assert not panel.download_model_button.isEnabled()
 
         panel.notify_asr_download_finished(panel.get_model(), test_config.asr_models_root)
+        qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
 
         assert panel.download_model_button.isEnabled()
 
@@ -144,15 +147,18 @@ class TestSettingsTabAsrWiring:
         panel = tab.subtitles_panel
         if not panel._alass_supported:
             pytest.skip("alass in-app download unsupported on this platform")
+        qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
 
         panel.download_alass_button.click()
         assert not panel.download_alass_button.isEnabled()
 
         # Reload mid-download must keep it disabled.
         panel.load_from_config(test_config)
+        qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
         assert not panel.download_alass_button.isEnabled()
 
         panel.notify_alass_download_finished()
+        qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
         assert panel.download_alass_button.isEnabled()
 
     def test_asr_model_round_trips_through_save(self, test_config: AnkiMinerConfig, qtbot, monkeypatch):
@@ -190,7 +196,7 @@ class TestSettingsTabCudaPackWiring:
         self._force_cuda_available(monkeypatch)
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
-        tab.subtitles_panel._refresh_cuda_pack_status(test_config.cuda_libs_root)
+        qtbot.waitUntil(lambda: not tab.subtitles_panel._state_in_flight, timeout=5000)
 
         received: list[None] = []
         tab.cuda_pack_download_requested.connect(lambda: received.append(None))
