@@ -80,6 +80,10 @@ class SubtitleRetimeTab(QWidget):
         # Per-run audio-track selection for single-file mode (audio-stream index,
         # or None for Japanese auto-detect). Reset when the video changes.
         self._audio_track_override: int | None = None
+        # alass availability is cached per-config: probing it (resolve_alass +
+        # shutil.which / Path.exists) is a PATH scan we must not repeat on every
+        # _alass_available() read. Recomputed only here and in update_config().
+        self._alass_is_available: bool = self._compute_alass_available()
 
         self._setup_ui()
         self._refresh_engine_state()
@@ -96,6 +100,10 @@ class SubtitleRetimeTab(QWidget):
         A run already in flight keeps the config it captured at construction.
         """
         self.config = config
+        # A config change is exactly when alass can appear/disappear (in-app
+        # download flips alass_location/bin_root, or the user edits the path),
+        # so recompute the cache BEFORE _refresh_engine_state reads it.
+        self._alass_is_available = self._compute_alass_available()
         self._refresh_engine_state()
 
     # ------------------------------------------------------------------
@@ -373,7 +381,16 @@ class SubtitleRetimeTab(QWidget):
         self.retime_button.setEnabled(available)
 
     def _alass_available(self) -> bool:
-        """Return True if the alass binary is reachable."""
+        """Return the cached alass availability (probed once per config)."""
+        return self._alass_is_available
+
+    def _compute_alass_available(self) -> bool:
+        """Probe whether the alass binary is reachable for the current config.
+
+        Runs the PATH scan (resolve_alass + shutil.which / Path.exists). Called
+        only from ``__init__`` and ``update_config`` — readers use the cached
+        ``self._alass_is_available`` via :meth:`_alass_available`.
+        """
         resolved = resolve_alass(self.config)
         if resolved == "alass":
             # PATH fallback — check shutil.which
