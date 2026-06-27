@@ -42,11 +42,15 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import SUBTITLE_FILE_FILTER, VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.widgets.dialogs import AudioTracksDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
+from anki_miner.utils import list_audio_streams
 from anki_miner.utils.alass_resolver import resolve_alass
+from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.file_pairing import FilePairMatcher
 from anki_miner.utils.i18n import tr_format
 
@@ -73,6 +77,9 @@ class SubtitleRetimeTab(QWidget):
         self._custom_output_dir: Path | None = None
         self._total_pairs: int = 0
         self._cancelled: bool = False
+        # Per-run audio-track selection for single-file mode (audio-stream index,
+        # or None for Japanese auto-detect). Reset when the video changes.
+        self._audio_track_override: int | None = None
 
         self._setup_ui()
         self._refresh_engine_state()
@@ -184,6 +191,26 @@ class SubtitleRetimeTab(QWidget):
         )
         layout.addWidget(self.subtitle_file_selector)
 
+        # Reset the audio-track override whenever the video changes (selection is
+        # per-run and must not silently carry over to a different file).
+        self.video_file_selector.path_changed.connect(self._on_video_path_changed)
+
+        # Single-mode audio-track override row. alass has no track flag, so the
+        # chosen track is pre-extracted and handed to alass as the reference.
+        self.track_row_widget = QWidget()
+        track_row = QHBoxLayout(self.track_row_widget)
+        track_row.setContentsMargins(0, 0, 0, 0)
+        track_row.setSpacing(SPACING.xs)
+        track_row.addWidget(QLabel(self.tr("Audio track:")))
+        self.audio_track_label = QLabel(self.tr("Japanese (auto-detect)"))
+        self.audio_track_label.setObjectName("output-location-value")
+        track_row.addWidget(self.audio_track_label, 1)
+        self.tracks_button = ModernButton(self.tr("Tracks…"), variant="secondary")
+        self.tracks_button.setToolTip(self.tr("Choose which audio track to align the subtitle against."))
+        self.tracks_button.clicked.connect(self._on_tracks_clicked)
+        track_row.addWidget(self.tracks_button)
+        layout.addWidget(self.track_row_widget)
+
         # Folder-mode selectors (hidden by default)
         self.video_folder_selector = FileSelector(
             label=self.tr("Video Folder:"),
@@ -238,6 +265,29 @@ class SubtitleRetimeTab(QWidget):
             self.tr("When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.")
         )
         layout.addWidget(self.overwrite_checkbox)
+
+        # Frame-rate correction toggle. Default OFF: resyncing a sub to its own
+        # video needs no framerate change, and alass's FPS guessing otherwise
+        # stretches an already-good sub and breaks the timing. Enable only for a
+        # sub sourced from a different-framerate release.
+        self.fps_correction_checkbox = QCheckBox(self.tr("Correct frame-rate differences"))
+        self.fps_correction_checkbox.setChecked(False)
+        self.fps_correction_checkbox.setToolTip(
+            self.tr(
+                "Leave off when the subtitle already matches this video's framerate. "
+                "Only enable for subs from a different release/framerate."
+            )
+        )
+        layout.addWidget(self.fps_correction_checkbox)
+
+        # Single-offset toggle: shift the whole subtitle by one constant amount
+        # instead of cutting it into independently-aligned segments.
+        self.no_split_checkbox = QCheckBox(self.tr("Single offset only (no split)"))
+        self.no_split_checkbox.setChecked(False)
+        self.no_split_checkbox.setToolTip(
+            self.tr("Shift the entire subtitle by one offset; never cut it into separately-timed segments.")
+        )
+        layout.addWidget(self.no_split_checkbox)
 
         # Split penalty row
         penalty_row = QHBoxLayout()
@@ -340,6 +390,7 @@ class SubtitleRetimeTab(QWidget):
         self.folder_mode_button.setChecked(False)
         self.video_file_selector.show()
         self.subtitle_file_selector.show()
+        self.track_row_widget.show()
         self.video_folder_selector.hide()
         self.subtitle_folder_selector.hide()
 
@@ -348,8 +399,54 @@ class SubtitleRetimeTab(QWidget):
         self.file_mode_button.setChecked(False)
         self.video_file_selector.hide()
         self.subtitle_file_selector.hide()
+        # Folder mode auto-detects the Japanese track per video; no per-file pick.
+        self.track_row_widget.hide()
         self.video_folder_selector.show()
         self.subtitle_folder_selector.show()
+
+    # ------------------------------------------------------------------
+    # Audio track selection (single-file mode)
+    # ------------------------------------------------------------------
+
+    def _on_video_path_changed(self, new_path: str) -> None:
+        """Reset the audio-track override when the video file changes."""
+        self._audio_track_override = None
+        self.audio_track_label.setText(self.tr("Japanese (auto-detect)"))
+
+    def _on_tracks_clicked(self) -> None:
+        """Open AudioTracksDialog to pick which audio track alass aligns against."""
+        video_path = self.video_file_selector.get_path().strip()
+        if not video_path:
+            QMessageBox.warning(self, self.tr("No Video File Selected"), self.tr("Select a video file first."))
+            return
+        video_file = Path(video_path)
+        if not video_file.is_file():
+            QMessageBox.warning(self, self.tr("File Not Found"), self.tr("Video file not found: ") + video_path)
+            return
+
+        streams = list_audio_streams(video_file, ffprobe_cmd=resolve_ffprobe(self.config))
+        if not streams:
+            QMessageBox.information(
+                self,
+                self.tr("No Audio Tracks"),
+                self.tr("No audio tracks detected. Check that ffprobe is installed and the file has audio."),
+            )
+            return
+
+        auto_stream = next((s for s in streams if s.language_tag in JAPANESE_LANGUAGE_CODES), None)
+
+        dialog = AudioTracksDialog(
+            streams=streams,
+            current_override=self._audio_track_override,
+            auto_detected=auto_stream,
+            parent=self,
+        )
+        if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
+            self._audio_track_override = dialog.selected_override()
+            if self._audio_track_override is None:
+                self.audio_track_label.setText(self.tr("Japanese (auto-detect)"))
+            else:
+                self.audio_track_label.setText(tr_format(self.tr("Track %1"), str(self._audio_track_override + 1)))
 
     # ------------------------------------------------------------------
     # Output location slots
@@ -412,12 +509,18 @@ class SubtitleRetimeTab(QWidget):
         self.progress_widget.reset()
         self.progress_widget.set_determinate(self._total_pairs)
 
+        # Single-file mode honors the per-file track pick; folder mode auto-detects.
+        track_override = self._audio_track_override if not self.video_file_selector.isHidden() else None
+
         worker = SubtitleRetimeWorker(
             self.config,
             pairs,
             output_dir=out_dir,
             overwrite=self.overwrite_checkbox.isChecked(),
             split_penalty=self.split_penalty_spinbox.value(),
+            disable_fps_guessing=not self.fps_correction_checkbox.isChecked(),
+            no_split=self.no_split_checkbox.isChecked(),
+            audio_track_override=track_override,
         )
         self.worker_thread = worker
 
