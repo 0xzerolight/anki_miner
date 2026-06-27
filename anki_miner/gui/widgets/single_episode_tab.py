@@ -6,7 +6,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence, QShortcut
@@ -33,6 +33,7 @@ from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.recent_files import RecentFilesManager
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import configure_expanding_container, field_label_width, make_label_fit_text
@@ -50,6 +51,7 @@ from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.orchestration import EpisodeProcessor
+    from anki_miner.utils.audio_track_detector import AudioStream
 
 logger = logging.getLogger(__name__)
 
@@ -361,34 +363,53 @@ class SingleEpisodeTab(MiningTabBase):
             return
 
         video_file = Path(video_path)
+        ffprobe_cmd = resolve_ffprobe(self.config)
 
-        # Probe (cached transparently by MediaExtractorService is per-extractor; here
-        # we probe directly for the dialog). Each click probes fresh — cheap for
-        # typical anime files (<1s).
-        streams = list_audio_streams(video_file, ffprobe_cmd=resolve_ffprobe(self.config))
+        # Probe off the GUI thread — ffprobe on a large file can block long
+        # enough to freeze the UI. Disable the button so a second click can't
+        # spawn a parallel probe; re-enabled in both callbacks.
+        self.tracks_button.setEnabled(False)
 
-        if not streams:
-            QMessageBox.information(
-                self,
-                self.tr("No Audio Tracks"),
-                self.tr("No audio tracks detected. Check that ffprobe is installed and the file has audio."),
+        def _probe() -> object:
+            # Each click probes fresh — cheap for typical anime files (<1s).
+            return list_audio_streams(video_file, ffprobe_cmd=ffprobe_cmd)
+
+        def _on_streams(result: object) -> None:
+            self.tracks_button.setEnabled(True)
+            streams = cast("list[AudioStream]", result)
+            if not streams:
+                QMessageBox.information(
+                    self,
+                    self.tr("No Audio Tracks"),
+                    self.tr("No audio tracks detected. Check that ffprobe is installed and the file has audio."),
+                )
+                return
+
+            # Resolve the auto-detected pick so the dialog can show it in the "Auto" radio.
+            auto_stream = next(
+                (s for s in streams if s.language_tag in JAPANESE_LANGUAGE_CODES),
+                None,
             )
-            return
 
-        # Resolve the auto-detected pick so the dialog can show it in the "Auto" radio.
-        auto_stream = next(
-            (s for s in streams if s.language_tag in JAPANESE_LANGUAGE_CODES),
-            None,
-        )
+            dialog = AudioTracksDialog(
+                streams=streams,
+                current_override=self._audio_track_override,
+                auto_detected=auto_stream,
+                parent=self,
+            )
+            if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
+                self._audio_track_override = dialog.selected_override()
 
-        dialog = AudioTracksDialog(
-            streams=streams,
-            current_override=self._audio_track_override,
-            auto_detected=auto_stream,
-            parent=self,
-        )
-        if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
-            self._audio_track_override = dialog.selected_override()
+        def _on_probe_error(msg: str) -> None:
+            self.tracks_button.setEnabled(True)
+            logger.error("Failed to probe audio tracks: %s", msg)
+            QMessageBox.warning(
+                self,
+                self.tr("Probe Failed"),
+                self.tr("Failed to detect audio tracks. Check that ffprobe is installed."),
+            )
+
+        run_off_thread(self, _probe, _on_streams, _on_probe_error)
 
     def _on_preview_clicked(self) -> None:
         """Handle preview button click."""
@@ -421,38 +442,49 @@ class SingleEpisodeTab(MiningTabBase):
 
         video_file = Path(video_path)
         subtitle_file = Path(subtitle_path)
+        offset = self.offset_spinbox.value()
 
-        # Parse raw subtitle entries
-        try:
-            offset = self.offset_spinbox.value()
-            # Parse with zero offset — SubtitleViewer handles offsetting itself
-            config_no_offset = replace(self.config, subtitle_offset=0.0)
-            parser = SubtitleParserService(config_no_offset)
-            entries = parser.parse_raw_entries(subtitle_file)
-        except Exception as e:
-            logger.error("Failed to parse subtitles: %s", e)
+        # Parse off the GUI thread — a large subtitle can take ~1s and would
+        # otherwise freeze the UI. Disable the button so a second click can't
+        # spawn a parallel parse; re-enabled in both callbacks.
+        # Parse with zero offset — SubtitleViewer handles offsetting itself.
+        config_no_offset = replace(self.config, subtitle_offset=0.0)
+        self.timing_button.setEnabled(False)
+
+        def _parse() -> object:
+            return SubtitleParserService(config_no_offset).parse_raw_entries(subtitle_file)
+
+        def _on_parsed(result: object) -> None:
+            self.timing_button.setEnabled(True)
+            entries = cast("list[tuple[float, float, str]]", result)
+            if not entries:
+                QMessageBox.information(
+                    self, self.tr("No Subtitles"), self.tr("No subtitle entries found in the file.")
+                )
+                return
+
+            # Open subtitle viewer
+            from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
+
+            viewer = SubtitleViewer(
+                video_file,
+                entries,
+                initial_offset=offset,
+                parent=self,
+                audio_track_override=self._audio_track_override,
+                ffprobe_cmd=resolve_ffprobe(self.config),
+            )
+            if viewer.exec() == SubtitleViewer.DialogCode.Accepted:
+                self.offset_spinbox.setValue(viewer.get_offset())
+
+        def _on_parse_error(msg: str) -> None:
+            self.timing_button.setEnabled(True)
+            logger.error("Failed to parse subtitles: %s", msg)
             QMessageBox.critical(
                 self, self.tr("Parse Error"), self.tr("Failed to parse subtitles. Check the file format.")
             )
-            return
 
-        if not entries:
-            QMessageBox.information(self, self.tr("No Subtitles"), self.tr("No subtitle entries found in the file."))
-            return
-
-        # Open subtitle viewer
-        from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
-
-        viewer = SubtitleViewer(
-            video_file,
-            entries,
-            initial_offset=offset,
-            parent=self,
-            audio_track_override=self._audio_track_override,
-            ffprobe_cmd=resolve_ffprobe(self.config),
-        )
-        if viewer.exec() == SubtitleViewer.DialogCode.Accepted:
-            self.offset_spinbox.setValue(viewer.get_offset())
+        run_off_thread(self, _parse, _on_parsed, _on_parse_error)
 
     def _start_processing(self, preview_mode: bool) -> None:
         """Start episode processing.
