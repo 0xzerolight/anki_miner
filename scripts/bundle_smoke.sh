@@ -63,7 +63,12 @@ echo
 # --- 3. ffmpeg encoder smoke: bundled ffmpeg ships the required encoders -------
 # libwebp_anim is asserted separately because still-image libwebp builds would
 # otherwise pass while animated-WebP screenshots fail at runtime.
-echo "=== smoke: ffmpeg encoders ==="
+# The required set is overridable via BUNDLE_SMOKE_FFMPEG_ENCODERS (space-
+# separated). Default is the full set. Intel macOS drops libsvtav1: evermeet.cx
+# x86_64 ffmpeg ships no SVT-AV1, and the app degrades gracefully (AVIF animated
+# screenshots fall back / report unavailable; WebP animated + static still work).
+REQUIRED_ENCODERS="${BUNDLE_SMOKE_FFMPEG_ENCODERS:-libmp3lame libopus libsvtav1 libwebp libwebp_anim}"
+echo "=== smoke: ffmpeg encoders (required: $REQUIRED_ENCODERS) ==="
 FF=""
 for name in ffmpeg ffmpeg.exe; do
   FF=$(find "$DIST" -type f -name "$name" | head -1)
@@ -78,14 +83,14 @@ else
   chmod +x "$FF" 2>/dev/null || true
   ENC=$("$FF" -hide_banner -encoders 2>/dev/null || true)
   MISSING=""
-  for e in libmp3lame libopus libsvtav1 libwebp libwebp_anim; do
+  for e in $REQUIRED_ENCODERS; do
     echo "$ENC" | grep -q "$e" || MISSING="$MISSING $e"
   done
   if [ -n "$MISSING" ]; then
     echo "::error::Bundled ffmpeg is missing required encoder(s):$MISSING"
     FAILED+=("ffmpeg-encoders")
   else
-    echo "BUNDLED_FFMPEG_ENCODERS_PASS: libmp3lame libopus libsvtav1 libwebp libwebp_anim"
+    echo "BUNDLED_FFMPEG_ENCODERS_PASS: $REQUIRED_ENCODERS"
     echo "PASS ffmpeg-encoders"
   fi
 fi

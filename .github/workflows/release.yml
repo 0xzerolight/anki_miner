@@ -79,23 +79,30 @@ jobs:
             artifact_name: AnkiMiner-Linux-x86_64
             install_target: ".[asr]"
             skip_asr_smoke: ""
+            ffmpeg_encoders: ""
           - os: windows-latest
             artifact_name: AnkiMiner-Windows-x86_64
             install_target: ".[asr]"
             skip_asr_smoke: ""
+            ffmpeg_encoders: ""
           - os: macos-latest
             artifact_name: AnkiMiner-macOS-arm64
             install_target: ".[asr]"
             skip_asr_smoke: ""
+            ffmpeg_encoders: ""
           # Intel x86_64 macOS. macos-13 was retired by GitHub (2025-12-04); a
           # retired label never gets a runner and queues forever. macos-15-intel
           # is GitHub's recommended standard Intel replacement (free on public
           # repos, served through ~Aug 2027 — the last x86_64 Actions image).
           # No [asr]: onnxruntime has no Intel-mac wheel (see matrix note above).
+          # No libsvtav1: evermeet.cx x86_64 ffmpeg ships no SVT-AV1 encoder, so
+          # the encoder smoke drops it (AVIF animated screenshots degrade to
+          # WebP/static — the app probes encoders and falls back gracefully).
           - os: macos-15-intel
             artifact_name: AnkiMiner-macOS-x86_64
             install_target: "."
             skip_asr_smoke: "1"
+            ffmpeg_encoders: "libmp3lame libopus libwebp libwebp_anim"
 
     runs-on: ${{ matrix.os }}
 
@@ -338,6 +345,7 @@ jobs:
         shell: bash
         env:
           BUNDLE_SMOKE_SKIP_ASR: ${{ matrix.skip_asr_smoke }}
+          BUNDLE_SMOKE_FFMPEG_ENCODERS: ${{ matrix.ffmpeg_encoders }}
         run: scripts/bundle_smoke.sh dist/AnkiMiner
 
       - name: Build Windows installer
