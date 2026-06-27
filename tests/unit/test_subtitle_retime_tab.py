@@ -786,3 +786,71 @@ def test_file_finished_still_logs_done_for_success(qtbot, tmp_path):
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Done" in log_text
     assert "episode.srt" in log_text
+
+
+# ---------------------------------------------------------------------------
+# alass availability caching (probe runs once per config, not per call)
+# ---------------------------------------------------------------------------
+
+
+def test_alass_probe_cached_not_rerun_per_call(qtbot, tmp_path):
+    """The alass PATH probe runs ONCE at construction, not on every _alass_available()."""
+    config = _make_config(tmp_path)
+    with (
+        patch("anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass", return_value="alass"),
+        patch(
+            "anki_miner.gui.widgets.subtitle_retime_tab.shutil.which",
+            return_value="/usr/bin/alass",
+        ) as which,
+    ):
+        tab = SubtitleRetimeTab(config)
+        qtbot.addWidget(tab)
+        # Construction probed exactly once.
+        assert which.call_count == 1
+        # Repeated availability reads must NOT re-probe.
+        assert tab._alass_available() is True
+        assert tab._alass_available() is True
+        tab._refresh_engine_state()
+        assert which.call_count == 1
+
+
+def test_update_config_recomputes_alass_cache(qtbot, tmp_path):
+    """update_config recomputes the cached bool: a newly available alass re-enables Retime."""
+    import dataclasses
+
+    config = _make_config(tmp_path)
+    with (
+        patch("anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass", return_value="alass"),
+        patch("anki_miner.gui.widgets.subtitle_retime_tab.shutil.which", return_value=None) as which,
+    ):
+        tab = SubtitleRetimeTab(config)
+        qtbot.addWidget(tab)
+        assert not tab.retime_button.isEnabled()
+        assert which.call_count == 1
+
+        # alass now appears on PATH; a config refresh must flip the cached bool.
+        which.return_value = "/usr/bin/alass"
+        tab.update_config(dataclasses.replace(config, alass_location="/x"))
+        assert which.call_count == 2
+        assert tab.retime_button.isEnabled()
+        assert tab._alass_is_available is True
+
+
+def test_on_retime_uses_cached_availability_without_reprobe(qtbot, tmp_path):
+    """The retime-button guard reads the cached bool; it does not re-probe PATH."""
+    config = _make_config(tmp_path)
+    with (
+        patch("anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass", return_value="alass"),
+        patch(
+            "anki_miner.gui.widgets.subtitle_retime_tab.shutil.which",
+            return_value="/usr/bin/alass",
+        ) as which,
+    ):
+        tab = SubtitleRetimeTab(config)
+        qtbot.addWidget(tab)
+        assert which.call_count == 1
+        # No files selected -> _on_retime bails after the (cached) guard, no re-probe.
+        # Patch the no-files warning modal so it does not block under offscreen Qt.
+        with patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning"):
+            tab._on_retime()
+        assert which.call_count == 1
