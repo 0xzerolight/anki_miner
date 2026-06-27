@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import threading
+from collections import deque
 from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast
@@ -305,6 +306,18 @@ class MiningTabBase(QWidget):
         # poison inside _teardown_previous_run is undone by _reset_curation_gate()
         # before the next run, so a rerun is never silently short-circuited (F1).
         self._curation_gate_poisoned = False
+        # Per-run identity so a stale off-thread context build (dispatched by
+        # _on_curation_requested) that finishes AFTER a teardown + new run can be
+        # recognised and dropped instead of popping a dialog for the dead run and
+        # setting the live run's event with stale words. _curation_token is a
+        # monotonic counter; _curation_live_token names the currently-active run
+        # (0 = none/invalidated, set by _poison_curation_gate). Each emission
+        # appends its token to _curation_emit_tokens (worker side) so the GUI slot
+        # can pop the token belonging to THAT emission — immune to a newer run
+        # bumping the counter between emit and slot delivery.
+        self._curation_token = 0
+        self._curation_live_token = 0
+        self._curation_emit_tokens: deque[int] = deque()
         self._curation_requested.connect(self._on_curation_requested)
 
     def _curation_bridge(self, words: list) -> list | None:
@@ -324,6 +337,13 @@ class MiningTabBase(QWidget):
         # Checking before clear() would let clear() erase a poison forever.
         if self._curation_gate_poisoned:
             return None
+        # Stamp this run's identity and record the emission's token so the GUI
+        # slot pops exactly the token for this emit (FIFO, one producer at a time
+        # — teardown joins the predecessor before the next run's bridge runs).
+        self._curation_token += 1
+        token = self._curation_token
+        self._curation_live_token = token
+        self._curation_emit_tokens.append(token)
         self._curation_requested.emit(words)
         self._curation_event.wait()  # Block worker until the GUI sets the event.
         return self._curation_result
@@ -342,6 +362,10 @@ class MiningTabBase(QWidget):
         """
         self._curation_gate_poisoned = True
         self._curation_result = None
+        # Invalidate the live run so any in-flight off-thread context build whose
+        # callback fires after this teardown/shutdown is recognised as stale
+        # (its token can no longer match) and dropped without touching the event.
+        self._curation_live_token = 0
         self._curation_event.set()
 
     def _reset_curation_gate(self) -> None:
@@ -434,6 +458,12 @@ class MiningTabBase(QWidget):
         * dialog construction/exec raising → the ``finally`` in
           :meth:`_show_curation_dialog`.
         """
+        # Pop the token for THIS emission (FIFO) so the build callbacks can detect
+        # if a teardown/new run supersedes them while the context build is in
+        # flight. Empty deque (e.g. a direct test call with no prior bridge emit)
+        # falls back to the live token, preserving legacy behaviour.
+        token = self._curation_emit_tokens.popleft() if self._curation_emit_tokens else self._curation_live_token
+
         if self._curation_cancelled or self._curation_gate_poisoned:
             # Cancel/shutdown landed before this slot ran; release the worker
             # as cancelled (None) instead of popping a dialog the user must
@@ -447,7 +477,7 @@ class MiningTabBase(QWidget):
                 "tuple[CurationMediaContext | None, Callable[[str], list[tuple[str, str]]] | None]",
                 result,
             )
-            self._show_curation_dialog(words, media_context, lookup_fn)
+            self._show_curation_dialog(words, media_context, lookup_fn, token)
 
         def _on_build_error(msg: str) -> None:
             # _make_curation_media_context already swallows parse errors and
@@ -455,7 +485,7 @@ class MiningTabBase(QWidget):
             # raises. Proceed table-only so the user can still curate — and so
             # _curation_event is still set (via _show_curation_dialog's finally).
             logger.warning("Failed to build curation context: %s; proceeding table-only", msg)
-            self._show_curation_dialog(words, None, None)
+            self._show_curation_dialog(words, None, None, token)
 
         run_off_thread(self, self._build_curation_context, _on_built, _on_build_error)
 
@@ -464,6 +494,7 @@ class MiningTabBase(QWidget):
         words: list,
         media_context: CurationMediaContext | None,
         lookup_fn: Callable[[str], list[tuple[str, str]]] | None,
+        token: int | None = None,
     ) -> None:
         """GUI-thread: exec the curation dialog, ALWAYS release the worker.
 
@@ -472,7 +503,16 @@ class MiningTabBase(QWidget):
         as cancelled (None) without popping a dialog. Otherwise the ``finally``
         guarantees ``_curation_event`` is set even if dialog construction/exec
         raises — otherwise ``_curation_bridge`` hangs forever.
+
+        ``token`` identifies the run whose off-thread build produced this call.
+        When it no longer matches the live run (a teardown/new run intervened
+        while the build was in flight), the build is stale: the originating
+        worker was already released by the teardown poison, so this returns
+        without popping a dialog or touching the live run's event. ``None``
+        (a direct call with no originating build) skips the check.
         """
+        if token is not None and token != self._curation_live_token:
+            return
         if self._curation_cancelled or self._curation_gate_poisoned:
             # Cancel/shutdown arrived during the off-thread parse window.
             self._curation_result = None
