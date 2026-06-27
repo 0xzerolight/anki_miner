@@ -8,6 +8,7 @@ panel widgets, the signal wiring, and the narrow chain persist
 stays one-way: tab → controller → workers/services.
 """
 
+import logging
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -17,11 +18,21 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.utils.i18n import tr_format
+
+logger = logging.getLogger(__name__)
+
+# Bounded join for the predecessor import worker before its reference is
+# dropped. Imports legitimately take a few seconds to wind down, but a stuck
+# worker must never freeze the GUI thread; on timeout we log and proceed,
+# leaking the old handle rather than blocking (mirrors
+# ``MiningTabBase._teardown_previous_run``).
+_IMPORT_JOIN_TIMEOUT_MS = 5000
 
 
 class DictionaryImportFlow:
@@ -505,8 +516,11 @@ class DictionaryImportFlow:
             # live, unparented QThread → "QThread: Destroyed while thread is
             # still running". wait() is at most microseconds from returning here.
             prev = self._active_import_worker
-            if prev is not None and prev.isRunning():
-                prev.wait()
+            if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
+                logger.warning(
+                    "Lingering dictionary import worker did not stop within %d ms; replacing it anyway",
+                    _IMPORT_JOIN_TIMEOUT_MS,
+                )
             self._active_import_worker = worker
 
             def on_progress(cur: int, total: int, msg: str) -> None:
