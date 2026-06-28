@@ -2083,6 +2083,14 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>Étape 3/5 — Extraction des médias de la vidéo</translation>
     </message>
     <message>
+        <source>Using WebP for animated screenshots — this ffmpeg build has no AVIF (libsvtav1) encoder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Animated screenshots unavailable — this ffmpeg build has no AVIF or WebP encoder; switch to static screenshots in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Expression audio: %1/%2 available</source>
         <translation>Audio d'expression : %1/%2 disponible</translation>
     </message>

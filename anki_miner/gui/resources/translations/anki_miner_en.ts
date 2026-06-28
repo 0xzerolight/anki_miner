@@ -2050,6 +2050,14 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Using WebP for animated screenshots — this ffmpeg build has no AVIF (libsvtav1) encoder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Animated screenshots unavailable — this ffmpeg build has no AVIF or WebP encoder; switch to static screenshots in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Expression audio: %1/%2 available</source>
         <translation type="unfinished" />
     </message>
