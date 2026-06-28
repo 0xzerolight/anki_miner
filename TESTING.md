@@ -92,14 +92,13 @@ There is no enforced coverage floor today. New code should add tests where reaso
 
 ## CI behavior
 
-`.github/workflows/ci.yml` defines six jobs:
+`.github/workflows/ci.yml` defines five jobs:
 
 1. **lint** — `ruff check .` + `black --check .` (Python 3.12).
 2. **typecheck** — `mypy anki_miner` (Python 3.12).
 3. **test** — `pytest -m "not youtube and not e2e and not asr"` on the full matrix (Python 3.11–3.13), no coverage.
 4. **test-asr** — `pytest -m "asr and not e2e"` with the `[asr]` extra installed (Python 3.12).
 5. **wheel-assets** — builds a wheel, runs `scripts/check_wheel_assets.py`.
-6. **i18n-drift** — verifies the translation catalogs are in sync with the extracted strings.
 
 All jobs must pass for a PR to be mergeable.
 
