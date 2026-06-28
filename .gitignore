@@ -93,3 +93,5 @@ gifs/test-gifs/
 logo_drafts/
 # subagent-driven-development artifacts
 sdd/
+# uv lockfile — project uses pip+venv (see CLAUDE.md), not uv; stray artifact
+uv.lock
