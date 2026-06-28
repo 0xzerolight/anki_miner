@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **AV1 preview "can't decode" notice no longer false-fires on capable hardware** (#82, follow-up). The first-frame nudge now seeks to the first subtitle and `pause()`s — the same path word-click already uses — so a hardware AV1 decoder actually presents a frame before the watchdog checks. The watchdog window was also widened to allow a slow cold hardware-decoder init. Mining is unaffected as always — screenshots come from FFmpeg, not the preview.
 
 ### Removed
 
