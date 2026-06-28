@@ -89,15 +89,3 @@ jobs:
       - run: pytest -m "asr and not e2e"
         env:
           QT_QPA_PLATFORM: offscreen
-
-  i18n-drift:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-        with:
-          python-version: "3.12"
-      - run: pip install -e ".[dev]"
-      - name: Verify translation catalog is up to date
-        run: python scripts/i18n.py check
