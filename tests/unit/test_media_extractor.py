@@ -293,20 +293,22 @@ class TestAnimatedScreenshot:
 
         assert result.screenshot_filename == "飲む_2000.webp"
 
-    def test_animated_config_dispatches_to_animated_path(self, animated_avif_service, video_file, tmp_path):
-        """_extract_screenshot must call animated impl when toggle is on."""
+    def test_animated_fmt_dispatches_to_animated_path(self, animated_avif_service, video_file, tmp_path):
+        """_extract_screenshot dispatches to the animated impl when given a format."""
         output_path = tmp_path / "clip.avif"
         with (
             patch.object(animated_avif_service, "_extract_animated_screenshot", return_value=True) as animated,
             patch.object(animated_avif_service, "_extract_static_screenshot", return_value=True) as static,
         ):
-            animated_avif_service._extract_screenshot(video_file, 1.0, 2.0, output_path)
+            animated_avif_service._extract_screenshot(video_file, 1.0, 2.0, output_path, "avif")
 
         animated.assert_called_once()
+        # The resolved format must reach the animated impl as the fmt kwarg.
+        assert animated.call_args.kwargs["fmt"] == "avif"
         static.assert_not_called()
 
-    def test_static_config_dispatches_to_static_path(self, service, video_file, tmp_path):
-        """_extract_screenshot must call static impl when toggle is off (default)."""
+    def test_none_fmt_dispatches_to_static_path(self, service, video_file, tmp_path):
+        """_extract_screenshot dispatches to the static impl when fmt is None (default)."""
         output_path = tmp_path / "frame.jpg"
         with (
             patch.object(service, "_extract_animated_screenshot", return_value=True) as animated,
@@ -542,6 +544,140 @@ class TestAnimatedScreenshot:
         assert recording_progress.errors[0][0] == "食べる"
         assert "media extraction failed" in recording_progress.errors[0][1]
         assert recording_progress.completes == 1
+
+
+class TestResolveAnimatedFormat:
+    """Tests for resolve_animated_format (the AVIF -> WebP fallback decision)."""
+
+    def _svc(self, test_config, fmt, **encoders):
+        cfg = dataclasses.replace(test_config, screenshot_animated=True, screenshot_animated_format=fmt)
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+        for name, available in encoders.items():
+            svc._animated_encoder_ok[name] = available
+        return svc
+
+    def test_configured_present_returns_configured_without_probing_webp(self, test_config):
+        """AVIF configured + libsvtav1 present → 'avif'; libwebp_anim never probed."""
+        svc = self._svc(test_config, "avif", libsvtav1=True)
+        with patch(f"{MODULE}.subprocess.run") as mock_run:
+            assert svc.resolve_animated_format() == "avif"
+        mock_run.assert_not_called()
+        assert "libwebp_anim" not in svc._animated_encoder_ok
+
+    def test_avif_missing_falls_back_to_webp(self, test_config):
+        svc = self._svc(test_config, "avif", libsvtav1=False, libwebp_anim=True)
+        assert svc.resolve_animated_format() == "webp"
+
+    def test_avif_and_webp_both_missing_returns_none(self, test_config):
+        svc = self._svc(test_config, "avif", libsvtav1=False, libwebp_anim=False)
+        assert svc.resolve_animated_format() is None
+
+    def test_webp_configured_missing_returns_none(self, test_config):
+        """A WebP-primary config has no further fallback — missing encoder → None."""
+        svc = self._svc(test_config, "webp", libwebp_anim=False)
+        assert svc.resolve_animated_format() is None
+
+    def test_webp_configured_present_returns_webp(self, test_config):
+        svc = self._svc(test_config, "webp", libwebp_anim=True)
+        assert svc.resolve_animated_format() == "webp"
+
+    def test_unknown_format_returned_unchanged_without_probe(self, test_config):
+        """An unsupported format is a config error: returned as-is, no probe."""
+        svc = self._svc(test_config, "gif")
+        with patch(f"{MODULE}.subprocess.run") as mock_run:
+            assert svc.resolve_animated_format() == "gif"
+        mock_run.assert_not_called()
+
+
+class TestAnimatedFormatFallbackWiring:
+    """End-to-end wiring of the resolved animated format through extract_media."""
+
+    def _avif_svc_missing_svtav1(self, test_config):
+        cfg = dataclasses.replace(test_config, screenshot_animated=True, screenshot_animated_format="avif")
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+        svc._animated_encoder_ok["libsvtav1"] = False
+        svc._animated_encoder_ok["libwebp_anim"] = True
+        return svc
+
+    def test_extension_matches_webp_encoder(self, test_config, video_file, make_tokenized_word):
+        """AVIF config + no libsvtav1 → the clip is libwebp_anim into a .webp filename."""
+        svc = self._avif_svc_missing_svtav1(test_config)
+        word = make_tokenized_word(lemma="食べる", start_time=1.5, duration=2.0)
+        mock_proc = _popen_mock()
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(Path, "exists", return_value=True),
+            patch.object(svc, "_extract_audio", return_value=False),
+        ):
+            result = svc.extract_media(video_file, word)
+
+        cmd = mock_popen.call_args[0][0]
+        assert "libwebp_anim" in cmd
+        assert "libsvtav1" not in cmd
+        assert cmd[-1].endswith(".webp")
+        assert result.screenshot_filename == "食べる_1500.webp"
+
+    def test_none_threaded_disables_screenshot_without_spawn(self, test_config, video_file, make_tokenized_word):
+        """animated_format=None (animated unavailable) → no screenshot, no spawn."""
+        cfg = dataclasses.replace(test_config, screenshot_animated=True, screenshot_animated_format="avif")
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+        word = make_tokenized_word(lemma="食べる", start_time=1.0)
+        with (
+            patch.object(svc, "_extract_screenshot") as spy_screenshot,
+            patch.object(svc, "_extract_audio", return_value=False),
+        ):
+            result = svc.extract_media(video_file, word, animated_format=None)
+
+        spy_screenshot.assert_not_called()
+        assert result.screenshot_path is None
+        assert result.screenshot_filename is None
+
+    def test_webp_primary_missing_encoder_drops_without_spawn(self, test_config, video_file, make_tokenized_word):
+        """WebP-primary config + missing libwebp_anim → screenshot skipped, no spawn."""
+        cfg = dataclasses.replace(test_config, screenshot_animated=True, screenshot_animated_format="webp")
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+        svc._animated_encoder_ok["libwebp_anim"] = False
+        word = make_tokenized_word(lemma="飲む", start_time=2.0)
+        with (
+            patch(f"{MODULE}.subprocess.Popen") as mock_popen,
+            patch.object(svc, "_extract_audio", return_value=False),
+        ):
+            result = svc.extract_media(video_file, word)
+
+        mock_popen.assert_not_called()
+        assert result.screenshot_filename is None
+
+    def test_batch_non_empty_via_webp_fallback(self, test_config, video_file, make_tokenized_word, recording_progress):
+        """Regression for the reported bug: AVIF config + no libsvtav1 → words still mined via WebP."""
+        svc = self._avif_svc_missing_svtav1(test_config)
+        words = [make_tokenized_word(lemma="食べる", start_time=1.0)]
+        mock_proc = _popen_mock()
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc),
+            patch.object(Path, "exists", return_value=True),
+            patch.object(svc, "_extract_audio", return_value=True),
+        ):
+            result = svc.extract_media_batch(video_file, words, recording_progress)
+
+        assert len(result) == 1
+        assert result[0][1].screenshot_filename.endswith(".webp")
+
+    def test_not_animated_skips_resolve_and_uses_jpg(self, service, video_file, make_tokenized_word):
+        """screenshot_animated=False → resolver never called, extension stays .jpg."""
+        word = make_tokenized_word(lemma="食べる", start_time=1.0)
+        with (
+            patch.object(service, "resolve_animated_format") as spy_resolve,
+            patch.object(service, "_extract_screenshot", return_value=True),
+            patch.object(service, "_extract_audio", return_value=True),
+        ):
+            result = service.extract_media(video_file, word)
+
+        spy_resolve.assert_not_called()
+        assert result.screenshot_filename.endswith(".jpg")
 
 
 class TestExtractAudio:

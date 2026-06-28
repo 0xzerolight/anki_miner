@@ -798,6 +798,33 @@ class EpisodeProcessor:
         self.presenter.show_info(
             QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Extracting media from video")
         )
+
+        # Resolve the animated screenshot format once and announce any fallback
+        # in the Activity Log, then thread the same value into the batch so the
+        # warning and the encode can never disagree. Only relevant when animated
+        # screenshots are configured and we are not in audiobook (audio_only)
+        # mode, where screenshots are skipped entirely; otherwise the batch's
+        # own default resolves to the static path.
+        extra_kwargs: dict[str, str | None] = {}
+        if self.config.screenshot_animated and not audio_only:
+            animated_fmt = self.media_extractor.resolve_animated_format()
+            extra_kwargs["animated_format"] = animated_fmt
+            if animated_fmt == "webp" and self.config.screenshot_animated_format == "avif":
+                self.presenter.show_warning(
+                    QCoreApplication.translate(
+                        "EpisodeProcessor",
+                        "Using WebP for animated screenshots — this ffmpeg build has no AVIF (libsvtav1) encoder.",
+                    )
+                )
+            elif animated_fmt is None:
+                self.presenter.show_warning(
+                    QCoreApplication.translate(
+                        "EpisodeProcessor",
+                        "Animated screenshots unavailable — this ffmpeg build has no AVIF or WebP encoder; "
+                        "switch to static screenshots in Settings.",
+                    )
+                )
+
         media_results: list[tuple[TokenizedWord, MediaData]] = self.media_extractor.extract_media_batch(
             video_file,
             unknown_words,
@@ -806,6 +833,7 @@ class EpisodeProcessor:
             temp_folder=run_temp_folder,
             audio_track_override=audio_track_override,
             audio_only=audio_only,
+            **extra_kwargs,
         )
 
         # Expression (pronunciation) audio, Issue #73. Sequential on purpose:

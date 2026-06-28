@@ -27,6 +27,13 @@ from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
 
+# Sentinel default for the threaded ``animated_format`` parameter. Distinct from
+# ``None`` (which means "no usable animated encoder — skip the screenshot"):
+# ``_RESOLVE`` means "argument not supplied — resolve the format myself". The
+# orchestrator threads a concrete ``str | None`` down the call chain; direct
+# callers (and existing tests) omit it and get the self-resolving behavior.
+_RESOLVE: Any = object()
+
 
 def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
     """Read a mono 16-bit PCM WAV and return (samples, sample_rate, duration_s).
@@ -159,6 +166,7 @@ class MediaExtractorService:
         audio_track_override: int | None = None,
         proc_registry: _FfmpegProcRegistry | None = None,
         audio_only: bool = False,
+        animated_format: Any = _RESOLVE,
     ) -> MediaData:
         """Extract screenshot and audio for a single word.
 
@@ -174,6 +182,12 @@ class MediaExtractorService:
             audio_only: When True (audiobook mining), skip screenshot extraction
                 entirely; screenshot fields stay None. extract_media_batch fills
                 them with per-book cover art instead.
+            animated_format: Effective animated screenshot format, threaded from
+                the batch so the format is resolved once per run. ``_RESOLVE``
+                (the default, used by direct callers) self-resolves via
+                ``resolve_animated_format``; a ``str`` is used as-is; ``None``
+                means no animated encoder is available, so the animated
+                screenshot is skipped (no ffmpeg spawn).
 
         Returns:
             MediaData with paths to extracted files
@@ -182,7 +196,19 @@ class MediaExtractorService:
         safe_word = safe_filename(word.lemma)
         timestamp = int(word.start_time * 1000)
 
-        screenshot_ext = self.config.screenshot_animated_format if self.config.screenshot_animated else "jpg"
+        # Effective animated format (str = encode it; None = animated unavailable).
+        # _RESOLVE means "not threaded" — resolve here for direct callers/tests.
+        if animated_format is _RESOLVE:
+            effective_fmt = (
+                self.resolve_animated_format() if (self.config.screenshot_animated and not audio_only) else None
+            )
+        else:
+            effective_fmt = animated_format
+
+        # The extension is the single source of the screenshot filename; it must
+        # match the container _extract_animated_screenshot writes (both derive
+        # from effective_fmt), or a WebP clip lands in a .avif filename.
+        screenshot_ext = effective_fmt if (self.config.screenshot_animated and effective_fmt is not None) else "jpg"
         screenshot_file = f"{safe_word}_{timestamp}.{screenshot_ext}"
         audio_file = f"{safe_word}_{timestamp}.{self.config.audio_format}"
 
@@ -201,11 +227,13 @@ class MediaExtractorService:
         # multi-GB MKV sources, the container-open cost is unquantified and
         # the precision/quality risk is non-zero.  Deferred; leave as-is.
 
-        # Extract screenshot (skipped for audiobooks — no video stream to grab)
+        # Extract screenshot (skipped for audiobooks — no video stream to grab).
+        # When animated is configured but no encoder is available (effective_fmt
+        # is None), the screenshot is skipped without spawning ffmpeg.
         screenshot_success = False
-        if not audio_only:
+        if not audio_only and not (self.config.screenshot_animated and effective_fmt is None):
             screenshot_success = self._extract_screenshot(
-                video_file, word.start_time, word.duration, screenshot_path, proc_registry
+                video_file, word.start_time, word.duration, screenshot_path, effective_fmt, proc_registry
             )
 
         # Extract audio
@@ -230,6 +258,7 @@ class MediaExtractorService:
         *,
         audio_track_override: int | None = None,
         audio_only: bool = False,
+        animated_format: Any = _RESOLVE,
     ) -> list[tuple[TokenizedWord, MediaData]]:
         """Extract media for multiple words in parallel.
 
@@ -246,6 +275,11 @@ class MediaExtractorService:
                 embedded cover art once for the whole batch and share it across
                 every word, and keep words on audio success instead of
                 screenshot success. Missing cover art never excludes a word.
+            animated_format: Effective animated screenshot format, resolved once
+                per run. ``_RESOLVE`` (the default) self-resolves here before the
+                pool so every worker shares one value; the orchestrator passes
+                the format it already resolved (for the Activity Log) so the
+                warning and the encode are always the same value.
 
         Returns:
             List of (word, media_data) tuples — only words whose screenshot
@@ -254,6 +288,16 @@ class MediaExtractorService:
         """
         if progress_callback:
             progress_callback.on_start(len(words), "Extracting media")
+
+        # Resolve the animated screenshot format once, before the pool, so every
+        # worker shares one value (no per-word re-resolution). A threaded value
+        # (str | None) is used as-is; only the _RESOLVE default self-resolves.
+        if animated_format is _RESOLVE:
+            animated_fmt = (
+                self.resolve_animated_format() if (self.config.screenshot_animated and not audio_only) else None
+            )
+        else:
+            animated_fmt = animated_format
 
         media_data_list: list[tuple[TokenizedWord, MediaData]] = []
         max_workers = self.config.max_parallel_workers
@@ -289,6 +333,7 @@ class MediaExtractorService:
                     audio_track_override=audio_track_override,
                     proc_registry=proc_registry,
                     audio_only=audio_only,
+                    animated_format=animated_fmt,
                 ): word
                 for word in words
             }
@@ -555,11 +600,20 @@ class MediaExtractorService:
         start_time: float,
         duration: float,
         output_path: Path,
+        animated_fmt: str | None = None,
         proc_registry: _FfmpegProcRegistry | None = None,
     ) -> bool:
-        """Extract a screenshot from video, dispatching to static or animated path."""
-        if self.config.screenshot_animated:
-            return self._extract_animated_screenshot(video_file, start_time, duration, output_path, proc_registry)
+        """Extract a screenshot, dispatching to the static or animated path.
+
+        ``animated_fmt`` decides the path: a format string ("avif"/"webp")
+        takes the animated path with that format; ``None`` takes the static
+        JPEG path. The caller (``extract_media``) has already resolved which
+        applies, so this no longer reads ``config.screenshot_animated``.
+        """
+        if animated_fmt is not None:
+            return self._extract_animated_screenshot(
+                video_file, start_time, duration, output_path, proc_registry, fmt=animated_fmt
+            )
         return self._extract_static_screenshot(video_file, start_time, duration, output_path, proc_registry)
 
     def _run_ffmpeg(
@@ -716,6 +770,32 @@ class MediaExtractorService:
                 )
             return available
 
+    def resolve_animated_format(self) -> str | None:
+        """Effective animated screenshot format usable on this ffmpeg build.
+
+        Returns the configured format when its encoder is present; ``"webp"``
+        when the configured format is AVIF but ``libsvtav1`` is missing and
+        ``libwebp_anim`` is available (the AVIF -> WebP fallback that lets the
+        SVT-AV1-less macOS Intel bundle still produce animated screenshots);
+        or ``None`` when no animated encoder is available at all.
+
+        An unknown/unsupported configured format is returned unchanged (no
+        fallback) — that is a config error, handled downstream exactly as
+        before (the word is skipped without spawning ffmpeg). Pure query;
+        encoder probes are cached via ``_check_encoder_available`` (its lock
+        makes this thread-safe), so it is cheap to call more than once.
+        """
+        configured = self.config.screenshot_animated_format
+        try:
+            encoder = self._encoder_for_format(configured)
+        except ValueError:
+            return configured  # unsupported format: leave it to the existing skip path
+        if self._check_encoder_available(encoder):
+            return configured
+        if configured == "avif" and self._check_encoder_available("libwebp_anim"):
+            return "webp"
+        return None
+
     def _extract_animated_screenshot(
         self,
         video_file: Path,
@@ -723,9 +803,18 @@ class MediaExtractorService:
         duration: float,
         output_path: Path,
         proc_registry: _FfmpegProcRegistry | None = None,
+        *,
+        fmt: str | None = None,
     ) -> bool:
-        """Extract a short animated clip (AVIF or WebP) instead of a static frame."""
-        fmt = self.config.screenshot_animated_format
+        """Extract a short animated clip (AVIF or WebP) instead of a static frame.
+
+        ``fmt`` is the resolved format to encode (the AVIF -> WebP fallback is
+        applied upstream by ``resolve_animated_format``); ``None`` falls back to
+        ``config.screenshot_animated_format`` for direct callers. The encoder,
+        container, and the caller's output filename all derive from this one
+        value, so they cannot disagree.
+        """
+        fmt = self.config.screenshot_animated_format if fmt is None else fmt
         try:
             encoder = self._encoder_for_format(fmt)
         except ValueError as e:

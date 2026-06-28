@@ -354,6 +354,89 @@ class TestProcessEpisode:
         me_kwargs = mock_services["media_extractor"].extract_media_batch.call_args.kwargs
         assert me_kwargs["audio_only"] is False
 
+    def _run_phase3(
+        self, test_config, mock_services, tmp_path, *, fmt="avif", resolved: "str | None" = "webp", audio_only=False
+    ):
+        """Drive process_episode through phase 3 with animated screenshots configured.
+
+        Returns the MagicMock presenter so callers can inspect show_warning.
+        """
+        cfg = replace(test_config, screenshot_animated=True, screenshot_animated_format=fmt)
+        presenter = MagicMock()
+        proc = EpisodeProcessor(
+            config=cfg,
+            subtitle_parser=mock_services["subtitle_parser"],
+            word_filter=mock_services["word_filter"],
+            media_extractor=mock_services["media_extractor"],
+            definition_service=mock_services["definition_service"],
+            anki_service=mock_services["anki_service"],
+            presenter=presenter,
+        )
+        word = _make_word()
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].resolve_animated_format.return_value = resolved
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", audio_only=audio_only)
+        return presenter
+
+    def test_avif_fallback_warns_and_threads_webp(self, test_config, mock_services, tmp_path):
+        """AVIF configured + resolver returns webp → warn once + thread animated_format=webp."""
+        presenter = self._run_phase3(test_config, mock_services, tmp_path, fmt="avif", resolved="webp")
+
+        warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
+        assert any("WebP" in w and "AVIF" in w for w in warnings)
+        me_kwargs = mock_services["media_extractor"].extract_media_batch.call_args.kwargs
+        assert me_kwargs["animated_format"] == "webp"
+
+    def test_no_animated_encoder_warns_unavailable(self, test_config, mock_services, tmp_path):
+        """Resolver returns None → 'unavailable' warning + thread animated_format=None."""
+        presenter = self._run_phase3(test_config, mock_services, tmp_path, fmt="avif", resolved=None)
+
+        warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
+        assert any("unavailable" in w.lower() for w in warnings)
+        me_kwargs = mock_services["media_extractor"].extract_media_batch.call_args.kwargs
+        assert me_kwargs["animated_format"] is None
+
+    def test_webp_configured_missing_warns_unavailable_not_fallback(self, test_config, mock_services, tmp_path):
+        """WebP-primary config + resolver None → generic 'unavailable', NOT the AVIF→WebP line."""
+        presenter = self._run_phase3(test_config, mock_services, tmp_path, fmt="webp", resolved=None)
+
+        warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
+        assert any("unavailable" in w.lower() for w in warnings)
+        assert not any("Using WebP" in w for w in warnings)
+
+    def test_usable_format_does_not_warn(self, test_config, mock_services, tmp_path):
+        """AVIF configured + resolver returns avif → no fallback warning."""
+        presenter = self._run_phase3(test_config, mock_services, tmp_path, fmt="avif", resolved="avif")
+
+        warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
+        assert not any("animated screenshot" in w.lower() for w in warnings)
+        me_kwargs = mock_services["media_extractor"].extract_media_batch.call_args.kwargs
+        assert me_kwargs["animated_format"] == "avif"
+
+    def test_audio_only_skips_resolve_and_warning(self, test_config, mock_services, tmp_path):
+        """audio_only=True → resolver never consulted, no fallback warning, no animated_format kwarg."""
+        presenter = self._run_phase3(test_config, mock_services, tmp_path, fmt="avif", resolved="webp", audio_only=True)
+
+        mock_services["media_extractor"].resolve_animated_format.assert_not_called()
+        warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
+        assert not any("WebP" in w for w in warnings)
+        me_kwargs = mock_services["media_extractor"].extract_media_batch.call_args.kwargs
+        assert "animated_format" not in me_kwargs
+
+    def test_fallback_warning_once_per_episode(self, test_config, mock_services, tmp_path):
+        """Each episode (each process_episode call) emits exactly one fallback warning."""
+        self._run_phase3(test_config, mock_services, tmp_path, fmt="avif", resolved="webp")
+        presenter = self._run_phase3(test_config, mock_services, tmp_path, fmt="avif", resolved="webp")
+
+        # The second run's presenter saw exactly one AVIF→WebP warning.
+        webp_warnings = [c.args[0] for c in presenter.show_warning.call_args_list if "Using WebP" in c.args[0]]
+        assert len(webp_warnings) == 1
+
     def test_subtitle_parse_error_handling(self, processor, mock_services, tmp_path):
         """SubtitleParseError should be caught and returned as error."""
         mock_services["subtitle_parser"].parse_subtitle_file.side_effect = SubtitleParseError("parse failed")
