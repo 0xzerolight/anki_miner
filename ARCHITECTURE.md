@@ -139,8 +139,10 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 
 **Optional services (created based on config flags):**
 
-- **FrequencyService**: loads word frequency CSV, exposes `lookup(word) -> rank`.
+- **MultiFrequencyService** (`services/frequency/`): aggregates an ordered chain of SQLite-indexed frequency sources built by `FrequencySourceRegistry` from `config.frequency_chain`. Each source is an `IndexedFreqProvider` over `freqs_root/<source_id>/index.sqlite`. `lookup_min(word)` returns the best (lowest) rank across all enabled sources for filtering/sorting; `lookup_all(word)` returns the per-source breakdown for the card. A legacy single `frequency.csv` is folded into the chain once on first launch by `legacy_migration.migrate_legacy_frequency_csv` (the old single-CSV `FrequencyService` was removed). Registry I/O happens in `load()`, not `__init__`.
 - **PitchAccentService**: loads pitch accent CSV, exposes `lookup_batch`.
+- **ASR transcription** (`services/asr/`): offline speech-to-text via `faster-whisper`. `transcriber.py` runs the model, `model_manager.py` handles in-app model/acceleration-pack downloads, `_engine.py` probes availability (degrades gracefully when the `[asr]` extra is absent). Feeds the Subtitles → Generate tab.
+- **SubtitleRetimerService** (`services/subtitle_retimer.py`): realigns an out-of-sync subtitle file to a video via the external `alass` binary, resolved by `utils/alass_resolver.py` and installed in-app by `services/alass_installer.py`. Feeds the Subtitles → Retime tab.
 - **KnownWordDB**: SQLite-backed persistent known word cache. Supports differential sync with Anki vocabulary.
 - **WordListService**: loads blacklist/whitelist text files for word filtering.
 - **HistoryService**: SQLite-backed mining history (`mining_history` table). Records what was mined, supports undo via stored card IDs.
@@ -202,6 +204,7 @@ Phase 2 — build: `AnkiService.ensure_deck` creates the target deck if it does 
 - **Media:** audio padding, screenshot offset, temp folder, subtitle offset (range ±300s), `ffmpeg_location` / `ffprobe_location` (explicit binary paths consumed by the resolver — see [ffmpeg / ffprobe](#ffmpeg--ffprobe))
 - **Filtering:** min word length, allowed POS tags, excluded subtypes, deduplication, `exclude_hiragana_only_words` / `exclude_katakana_only_words` (kana-only drops, default off), `excluded_wordsets` (active bundled JMnedict name wordsets)
 - **Dictionary:** `dictionary_chain` (the runtime-authoritative ordered list of providers — indexed dicts and Jisho, each toggleable), `dicts_root` (root for all installed `.sqlite` indexes; defaults to `ANKI_MINER_HOME/dicts/` via the `ANKI_MINER_HOME` constant in `config/paths.py`), Jisho URL/delay. Legacy `jmdict_path` + `use_offline_dict` are retained one release for first-launch migration only.
+- **Frequency:** `frequency_chain` (ordered tuple of `FreqEntry(source_id, enabled)` — the runtime-authoritative chain of frequency sources), `freqs_root` (root for the per-source `index.sqlite` files; defaults to `ANKI_MINER_HOME/freqs/`). The `frequency_sort` (FreqSort) `anki_fields` entry writes the chosen sort value to its own card field. Legacy `frequency_list_path` is retained for one-time `frequency.csv` migration only.
 - **YouTube:** `youtube_cookies_from_browser` (browser profile to pull cookies from) / `youtube_cookies_file` (explicit cookies file), max duration, subtitle mode
 - **Appearance:** `theme`, `theme_favorites`, `ui_font_scale` (whole-UI font scaling, clamped to [0.5, 2.0])
 - **Optional data:** pitch accent, frequency, known words DB, blacklist/whitelist paths and toggles
@@ -217,14 +220,15 @@ The `__post_init__` method uses `object.__setattr__` to convert string paths to 
 
 ### Window Structure
 
-`MainWindow` contains a `QTabWidget` with seven tabs (registered in `gui/app.py` as Episode Mining, Batch Mining, Deck Builder, YouTube, Audiobook, Analytics, Settings):
+`MainWindow` contains a `QTabWidget` with eight tabs (registered in `gui/app.py` as Episode Mining, Batch Mining, Deck Builder, YouTube, Audio, Analytics, Subtitles, Settings):
 1. **SingleEpisodeTab** ("Episode Mining"): file selectors (drag-and-drop), subtitle offset control, process/preview buttons, log widget, progress widget.
 2. **BatchProcessingTab** ("Batch Mining"): folder selection, `BatchQueue` management via queue panel, dual progress bars.
 3. **Deck Builder**: whole-series deck mining over a corpus of subtitles, driven by `DeckBuilderWorker` (see Orchestration). Two phases (aggregate/select, then build) separated by a GUI confirm gate.
 4. **YouTubeTab** (`gui/widgets/youtube_tab.py`): URL input + Add button, `QListWidget` queue of `YouTubeQueueItemWidget` rows (per-row status glyph, title, duration, sub source line, remove button), action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. Deck/note-type/tags widgets are global (see `AnkiSettingsPanel`). URL classification (plain video, playlist, video-in-playlist, Mix) is done without network access by `utils/youtube_url.py` (`classify_youtube_url`); playlist URLs dispatch to `YouTubePlaylistResolveWorker` then `YouTubePlaylistProbeWorker`; mixed watch+list URLs show a choice dialog; playlists over the `youtube_playlist_max` cap show an over-cap confirm.
 5. **AudiobookTab** (`gui/widgets/audiobook_tab.py`): audio + subtitle file selectors (subtitle auto-filled from a same-stem `.srt`/`.vtt`/`.ass`/`.ssa` next to the audio file) + Add button, `QListWidget` queue of `AudiobookQueueItemWidget` rows, action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. No probe stage — local pairs enter the queue READY. Mining runs `process_episode` with `audio_only=True`: no per-word screenshots; embedded cover art is extracted once per book and shared as every card's Picture (blank if absent), and the keep/drop decision keys on audio clip success. Stats/history identity: `series_name_override="Audiobook"`, `episode_name_override=<audio file stem>`.
 6. **AnalyticsTab**: mining statistics dashboard (queries `StatsService`).
-7. **SettingsTab**: config editing with sub-panels (Anki, Media, Dictionaries, Audio, Filtering, YouTube, Themes). Emits `config_changed` signal.
+7. **SubtitlesTab** (`gui/widgets/subtitles_tab.py`): a container with two inner tabs. **Generate** (`SubtitleCreationTab`) transcribes a video/audio file into an SRT with a local Whisper model (`services/asr/`), with in-app model + GPU/VAD pack downloads and a CPU-fallback device selector. **Retime** (`SubtitleRetimeTab`) realigns an out-of-sync subtitle file to a video via `alass` (`services/subtitle_retimer.py`).
+8. **SettingsTab**: config editing with sub-panels (Anki, Media, Dictionaries, Audio, Filtering, Frequency, Subtitles, YouTube, Themes). Emits `config_changed` signal.
 
 ### Worker Threads
 
@@ -246,6 +250,8 @@ Worker implementations:
 - `AudiobookQueueWorker` (`gui/workers/audiobook_queue_worker.py`): `CancellableWorker` subclass that drives a list of `AudiobookQueueItem` through `process_episode(audio_only=True)` sequentially. No fetch stage, no retry, no workspace allocation. Cancellation propagates into the processor via `cancel_event`, so a Stop mid-mine resolves at the next phase checkpoint without poisoning the shared processor.
 - `AudiobookQueueItemWidget` (`gui/widgets/audiobook_queue_item_widget.py`): pure renderer for one `AudiobookQueueItem` in the queue list.
 - `PitchImportWorker` (`gui/workers/pitch_import_worker.py`): `CancellableWorker` that runs the Yomitan pitch-accent zip importer so the GUI stays responsive during a large import.
+- `SubtitleGenWorker` (`gui/workers/subtitle_gen_worker.py`): `CancellableWorker` that runs the local Whisper (`faster-whisper`) transcription off the GUI thread for the Subtitles → Generate tab.
+- `SubtitleRetimeWorker` (`gui/workers/subtitle_retime_worker.py`): `CancellableWorker` that runs the `alass` retiming subprocess for the Subtitles → Retime tab.
 - `DeckBuilderWorker` (`gui/workers/deck_builder_worker.py`): see Orchestration section.
 
 ### Signal Architecture
@@ -327,7 +333,9 @@ All persistent user data under `~/.anki_miner/`:
 | `history.db` | SQLite | Mining history with undo support |
 | `stats.db` | SQLite | Analytics (sessions, difficulty, milestones) |
 | `pitch_accent.csv` | CSV | Pitch accent lookup data |
-| `frequency.csv` | CSV | Word frequency rankings |
+| `frequency.csv` | CSV | Legacy single frequency list; migrated once into the `freqs/` chain on first launch, then no longer consulted |
+| `freqs/<source_id>/index.sqlite` | SQLite | Per-source frequency index queried by `IndexedFreqProvider`; the runtime-authoritative frequency chain |
+| `audio_cache/jpod101/` | Files | JapanesePod101 expression audio cache: `jpod101_{mined_form}_{reading}.mp3` + zero-byte `.miss` negative markers |
 | `audio_packs/<pack_id>/index.sqlite` | SQLite | Per-pack expression audio index; audio files stay in their original location |
 | `audio_cache/local_packs/` | Files | Per-hit cache copies from installed packs: `{pack_id}_{mined_form}_{reading}{ext}` |
 | `audio_cache/googletts/` | Files | Google Translate synthetic-TTS cache: `googletts_{mined_form}_{reading}.mp3` (no `.miss` markers — synthetic failures are transient) |

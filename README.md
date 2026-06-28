@@ -93,12 +93,15 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **YouTube**: paste one or more URLs, then mine the queue.
 - **Audio**: queue local audio + subtitle/transcript pairs (audiobooks, podcasts, radio, songs, lectures) and mine them audio-only; embedded cover art stands in for screenshots.
 - **Analytics**: history, series difficulty rankings, milestones, undo.
-- **Settings**: Anki, Media, Dictionaries, Audio, Filtering, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
+- **Subtitles**: generate subtitles from speech with a local Whisper model (no GPU required; optional CUDA/VAD packs install in-app), or retime an out-of-sync subtitle file to your video with alass.
+- **Settings**: Anki, Media, Dictionaries, Audio, Filtering, Frequency, Subtitles, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
 
 ## Other Features
 
 - Extensive filtering options (i+1 filter, frequency limits, word blacklist, subtitle regex filtering, wordset filtering, and more).
 - Offline Yomitan dictionary import (definitions, pitch accent, frequency data) with priority ordering.
+- Multiple frequency lists chained together, each indexed separately and ordered by priority.
+- Expression (word-level) audio on cards from local audio packs, JapanesePod101, or Google Translate TTS (opt-in, chained).
 - Definition styling presets (like Yomitan) or custom CSS.
 - Subtitle timing preview with adjustable offset.
 - Animated screenshots (see example card gifs).
@@ -173,7 +176,7 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
 
 - **Features**:
   - [x] UI language selection.
-  - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles. (coming in v2.7.0)
+  - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles.
   - [ ] Jimaku integration.
   - [ ] Card modification tab: Modifying content in existing Anki cards.
   - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
