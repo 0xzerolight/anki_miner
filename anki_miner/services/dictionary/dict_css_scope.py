@@ -19,6 +19,10 @@ card field, the CSS is third-party and untrusted. We sanitize defensively:
   ``expression()``, …) are dropped wholesale.
 * Any rule whose text contains ``<`` is dropped — a ``</style>`` sequence would
   otherwise terminate the ``<style>`` element early and allow HTML injection.
+  The prelude is checked *comment-stripped* (its comments are never emitted; they
+  are dropped when the selector list is re-serialized), but the body is checked
+  *raw* (it is emitted verbatim, comments included, so a ``</style>`` inside a
+  body comment really would break out).
 * At-rules other than the conditional group rules (``@media`` / ``@supports`` /
   ``@container`` / ``@layer``) are removed — notably ``@import`` and
   ``@font-face`` (remote fetch vectors).
@@ -53,7 +57,9 @@ _CONDITIONAL_GROUP_AT_RULES = frozenset({"@media", "@supports", "@container", "@
 #   * ``@import`` — remote stylesheet fetch.
 #   * ``<``       — a ``</style>`` (or ``</STYLE >``) sequence would close the
 #                   surrounding <style> element and let arbitrary HTML through;
-#                   real CSS never needs a literal ``<``.
+#                   real CSS never needs a literal ``<``. Checked against the
+#                   comment-stripped prelude (its comments are dropped before
+#                   emission) but the raw body (emitted verbatim with comments).
 # A match drops the whole rule (coarse but safe: a single tainted declaration
 # forfeits its rule block, including any nested rules — legitimate dictionaries
 # never trip this).
@@ -264,7 +270,11 @@ def _scope_block(css: str, scope: str) -> str:
             continue
         if body is None:
             continue  # bare statement that is not an at-rule — drop
-        if _FORBIDDEN_RE.search(prelude) or _FORBIDDEN_RE.search(body):
+        # Prelude check uses the comment-stripped text: prelude comments are
+        # dropped on re-serialization (line below) so a ``<`` inside one can
+        # never reach the output (Issue #89). Body is checked raw — it is emitted
+        # verbatim with its comments, so a ``</style>`` in a body comment is real.
+        if _FORBIDDEN_RE.search(stripped) or _FORBIDDEN_RE.search(body):
             logger.debug("Dropping dictionary CSS rule with forbidden construct: %s", stripped[:80])
             continue
         selectors = [s.strip() for s in _split_top_level_commas(stripped)]

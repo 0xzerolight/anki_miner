@@ -132,6 +132,34 @@ def test_comment_between_rules_ignored():
     assert out == f"{SCOPE} a {{color: red}}"
 
 
+def test_comment_in_prelude_with_angle_brackets_not_dropped():
+    # Regression for Issue #89: a `<` inside a CSS comment in the prelude is a
+    # false positive — the comment is never emitted (the selector list is
+    # re-serialized comment-free), so the rule must survive. Mirrors Jitendex's
+    # forms-table rule, whose leading comment mentions <div>/<li>.
+    css = (
+        '/* The "forms" section may be contained in a <div> or a <li>. */\n'
+        'div[data-sc-content="forms"],\n'
+        'li[data-sc-content="forms"] { & td { clip-path: circle(); } }\n'
+    )
+    out = scope_dict_css(css, TITLE)
+    assert "clip-path: circle()" in out
+    assert f'{SCOPE} div[data-sc-content="forms"]' in out
+    assert f'{SCOPE} li[data-sc-content="forms"]' in out
+    assert "<div>" not in out and "<li>" not in out  # comment never leaks
+
+
+def test_body_comment_breakout_still_dropped():
+    # Security guard: the body is emitted verbatim *including comments*, so a
+    # `</style>` inside a body comment really would break out of <style>. The
+    # body check must stay on the raw text — do NOT strip body comments.
+    css = "a { color: red } b { /* </style><script>alert(1)</script> */ color: blue }"
+    out = scope_dict_css(css, TITLE)
+    assert "</style>" not in out
+    assert "<script" not in out
+    assert f"{SCOPE} a {{color: red}}" in out
+
+
 def test_real_jitendex_shaped_rules():
     css = (
         'span[data-sc-class="tag"] { border-radius: 0.3em; font-weight: bold; }\n'
