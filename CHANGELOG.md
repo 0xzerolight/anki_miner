@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **Dictionary CSS scoper no longer drops rules when a comment contains `<`** (#89). A `<` inside a CSS comment in a rule's selector (e.g. Jitendex's forms-table rule, whose comment mentions `<div>`/`<li>`) tripped the `</style>`-breakout guard and silently dropped the whole rule, losing round form-priority icons (`clip-path`) and forms-table cell borders. The prelude is now checked comment-stripped (its comments are never emitted); the body check stays raw because the body is emitted verbatim, so a `</style>` in a body comment really would break out.
 - **AV1 preview "can't decode" notice no longer false-fires on capable hardware** (#82, follow-up). The first-frame nudge now seeks to the first subtitle and `pause()`s — the same path word-click already uses — so a hardware AV1 decoder actually presents a frame before the watchdog checks. The watchdog window was also widened to allow a slow cold hardware-decoder init. Mining is unaffected as always — screenshots come from FFmpeg, not the preview.
 
 ### Removed
