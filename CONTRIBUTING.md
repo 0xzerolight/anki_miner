@@ -60,8 +60,8 @@ pytest
 
 See [TESTING.md](TESTING.md) for the full strategy. Quick reference:
 
-- `pytest` — default suite (excludes the `youtube` marker).
-- `pytest -m youtube` — network-dependent YouTube tests.
+- `pytest` — default suite (runs in parallel; excludes the `e2e` marker).
+- `pytest -m youtube` — network-dependent YouTube tests; `pytest -m asr` — local-Whisper tests.
 - Headless Qt: `QT_QPA_PLATFORM=offscreen` matches CI behavior.
 
 New code should add tests where reasonable; refactors should not regress existing coverage by a meaningful amount.
