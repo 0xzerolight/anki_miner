@@ -168,19 +168,90 @@ def test_per_pair_error_reported_and_batch_continues(tmp_path, qapp):
 
 
 def test_outer_exception_emitted_on_error_signal(tmp_path, qapp):
-    """An exception OUTSIDE the per-pair try (e.g. progress.on_start raising)
-    is surfaced on the worker's error signal rather than crashing the thread."""
-    proc = _ok_processor()
-    progress = MagicMock(name="ProgressCallback")
-    progress.on_start.side_effect = RuntimeError("callback exploded")
+    """An exception OUTSIDE the per-pair try (here, ``len(pairs)`` raising before
+    the loop) is surfaced on the worker's error signal rather than crashing the
+    thread."""
 
-    worker = ManualPairWorkerThread(proc, [_pair(tmp_path, 1)], progress_callback=progress)
+    class _BadPairs:
+        def __len__(self):
+            raise RuntimeError("callback exploded")
+
+    proc = _ok_processor()
+    worker = ManualPairWorkerThread(proc, _BadPairs(), progress_callback=None)
     errors: list[str] = []
     worker.error.connect(errors.append)
     worker.run()
 
     proc.process_episode.assert_not_called()
     assert errors == ["callback exploded"]
+
+
+# ---------------------------------------------------------------------------
+# Progress wiring — Overall bar (pair-level signals) + Current bar (callback)
+# ---------------------------------------------------------------------------
+
+
+def test_progress_callback_passed_through_to_process_episode(tmp_path, qapp):
+    """The worker forwards its progress_callback to process_episode so the
+    Current Episode bar gets per-episode stage progress (not None)."""
+    seen = []
+    proc = MagicMock()
+    proc.config = SimpleNamespace(subtitle_offset=0.0)
+
+    def fake_process(video, subtitle, preview_mode, progress_callback, curation_callback=None):
+        seen.append(progress_callback)
+        return SimpleNamespace(cards_created=0)
+
+    proc.process_episode.side_effect = fake_process
+    progress = MagicMock(name="ProgressCallback")
+    worker = ManualPairWorkerThread(proc, [_pair(tmp_path, 1), _pair(tmp_path, 2)], progress_callback=progress)
+    worker.run()
+
+    assert seen == [progress, progress]
+
+
+def test_batch_started_and_pair_finished_signals(tmp_path, qapp):
+    """Overall progress: batch_started fires once with the pair count and
+    pair_finished ticks (i, total) after each pair."""
+    proc = MagicMock()
+    proc.config = SimpleNamespace(subtitle_offset=0.0)
+    proc.process_episode.side_effect = lambda *a, **k: SimpleNamespace(cards_created=1)
+
+    pairs = [_pair(tmp_path, n) for n in range(3)]
+    worker = ManualPairWorkerThread(proc, pairs, progress_callback=None)
+
+    started: list[int] = []
+    ticks: list[tuple[int, int]] = []
+    worker.batch_started.connect(started.append)
+    worker.pair_finished.connect(lambda c, t: ticks.append((c, t)))
+    worker.run()
+
+    assert started == [3]
+    assert ticks == [(1, 3), (2, 3), (3, 3)]
+
+
+def test_pair_finished_advances_on_failure(tmp_path, qapp):
+    """A failing pair still advances the Overall bar (monotonic), so a mid-batch
+    error doesn't stall progress."""
+    proc = MagicMock()
+    proc.config = SimpleNamespace(subtitle_offset=0.0)
+
+    p1 = _pair(tmp_path, 1)
+    p2 = _pair(tmp_path, 2)
+
+    def fake_process(video, subtitle, preview_mode, progress_callback, curation_callback=None):
+        if video == p1.video:
+            raise RuntimeError("boom")
+        return SimpleNamespace(cards_created=1)
+
+    proc.process_episode.side_effect = fake_process
+    worker = ManualPairWorkerThread(proc, [p1, p2], progress_callback=None)
+
+    ticks: list[tuple[int, int]] = []
+    worker.pair_finished.connect(lambda c, t: ticks.append((c, t)))
+    worker.run()
+
+    assert ticks == [(1, 2), (2, 2)]
 
 
 def test_successful_batch_emits_all_results(tmp_path, qapp):

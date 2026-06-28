@@ -384,6 +384,11 @@ class BatchProcessingTab(MiningTabBase):
             processor_factory=_processor_factory,
         )
 
+        # Drive the Overall Progress bar from the worker's pair-level signals;
+        # the Current Episode bar is driven by the per-episode stage sweep via
+        # progress_callback (wired in __init__), mirroring the queue path.
+        self.worker_thread.batch_started.connect(self._on_batch_started)
+        self.worker_thread.pair_finished.connect(self._on_pair_finished)
         self.worker_thread.result_ready.connect(self._on_processing_finished)
         self.worker_thread.error.connect(self._on_processing_error)
         self.worker_thread.finished.connect(self._restore_buttons)
@@ -526,6 +531,30 @@ class BatchProcessingTab(MiningTabBase):
         """
         self.overall_progress_widget.set_determinate(total_items)
         self.overall_progress_widget.set_progress(0, total_items, self.tr("Starting queue processing..."))
+
+    def _on_batch_started(self, total_pairs: int) -> None:
+        """Quick Processing start: prime the Overall Progress bar with pair count.
+
+        Mirrors :meth:`_on_queue_started` for the folder-pair path
+        (ManualPairWorkerThread). The Current Episode bar is driven separately
+        by the per-episode stage sweep via ``progress_callback``.
+
+        Args:
+            total_pairs: Total number of episode pairs to process
+        """
+        self.overall_progress_widget.set_determinate(total_pairs)
+        self.overall_progress_widget.set_progress(0, total_pairs, self.tr("Starting batch processing..."))
+
+    def _on_pair_finished(self, completed: int, total: int) -> None:
+        """Quick Processing per-pair tick: advance the Overall Progress bar.
+
+        Args:
+            completed: Number of pairs finished so far (1-based)
+            total: Total number of pairs in the run
+        """
+        self.overall_progress_widget.set_progress(
+            completed, total, tr_format(self.tr("Completed: %1/%2"), completed, total)
+        )
 
     def _on_item_started(self, item_id: str, display_name: str) -> None:
         """Called when processing starts for an item.

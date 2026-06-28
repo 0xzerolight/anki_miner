@@ -29,6 +29,12 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
     """
 
     result_ready = pyqtSignal(list)  # List[ProcessingResult]
+    # Overall (pair-level) progress, mirroring BatchQueueWorkerThread's
+    # queue_started/item_completed so the tab's Overall Progress bar advances
+    # per pair. Per-episode stage progress flows separately through
+    # progress_callback into the Current Episode bar.
+    batch_started = pyqtSignal(int)  # total pairs
+    pair_finished = pyqtSignal(int, int)  # completed, total
 
     def __init__(
         self,
@@ -103,9 +109,11 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
 
             results = []
 
-            # Report overall progress
-            if self.progress_callback:
-                self.progress_callback.on_start(len(self.pairs), f"Processing {len(self.pairs)} episodes")
+            # Report overall (pair-level) progress on the dedicated signal so the
+            # tab's Overall Progress bar advances per pair. The Current Episode
+            # bar is driven separately by the per-episode stage sweep that
+            # process_episode reports through progress_callback below.
+            self.batch_started.emit(len(self.pairs))
 
             for i, pair in enumerate(self.pairs, 1):
                 if self.check_cancelled():
@@ -118,21 +126,18 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
                     self._curation_video = pair.video
                     self._curation_subtitle = pair.subtitle
                     self._curation_offset = self.episode_processor.config.subtitle_offset
+                    # Pass the callback through so per-episode stages (extract ->
+                    # definitions -> cards) drive the Current Episode bar; the
+                    # processor wraps it in a fresh StageWeightedProgress per
+                    # episode, so the bars don't conflict.
                     result = self.episode_processor.process_episode(
                         pair.video,
                         pair.subtitle,
                         preview_mode=False,
-                        progress_callback=None,  # Don't nest progress callbacks
+                        progress_callback=self.progress_callback,
                         curation_callback=self.curation_callback,
                     )
                     results.append(result)
-
-                    # Report progress
-                    if self.progress_callback:
-                        self.progress_callback.on_progress(
-                            i,
-                            f"[{i}/{len(self.pairs)}] {pair.video.name}: {result.cards_created} cards",
-                        )
 
                 except Exception as e:
                     # Report error for this pair but continue.
@@ -151,6 +156,10 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
                     )
                     if self.progress_callback:
                         self.progress_callback.on_error(pair.video.name, str(e))
+
+                # Advance the Overall Progress bar after each pair regardless of
+                # success/failure, so it stays monotonic when a pair errors.
+                self.pair_finished.emit(i, len(self.pairs))
 
             # Report completion
             if self.progress_callback and not self.check_cancelled():
