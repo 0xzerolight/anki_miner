@@ -842,7 +842,9 @@ class TestWordFilterService:
             assert swapped.sentence == "今日も食べる"
             assert "<b>食べる</b>" in swapped.sentence_bolded
             assert "<b>" in swapped.sentence_furigana_bolded
-            assert "食べる" in swapped.sentence_furigana_bolded
+            # Okurigana stays outside the bracket, so the bold run is 食[た]べる,
+            # not a contiguous "食べる".
+            assert "<b>食[た]べる</b>" in swapped.sentence_furigana_bolded
 
         def test_blacklisted_lemma_not_counted_as_unknown(self, test_config):
             """Lemmas absent from target_lemmas (blacklisted upstream) don't count.
