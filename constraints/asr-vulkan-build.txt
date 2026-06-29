@@ -17,9 +17,11 @@
 # 1. pywhispercpp source ref — BUILT FROM SOURCE (not the PyPI wheel)
 # ─────────────────────────────────────────────────────────────────────────────
 # Build the wheel from this exact tag. Matches the CPU floor pinned in
-# pyproject.toml ([asr-vulkan] -> pywhispercpp>=1.5.0) and requirements.lock, so
-# the Vulkan wheel and the CPU wheel are the same upstream version — only the
-# backend differs. release.yml installs it as:
+# pyproject.toml's [asr-vulkan] extra (pywhispercpp>=1.5.0), so the Vulkan wheel
+# and the CPU wheel are the same upstream version — only the backend differs.
+# (pywhispercpp is NOT in requirements.lock; that lock only pins
+# faster-whisper/ctranslate2 — the [asr-vulkan] extra is the floor.)
+# release.yml installs it as:
 #   pip wheel "pywhispercpp @ git+https://github.com/absadiki/pywhispercpp.git@v1.5.0"
 # (the git+ form is required: it fetches the submodules a PyPI sdist omits).
 #
