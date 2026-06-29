@@ -85,7 +85,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libegl1 libpulse0 libxkbcommon0
-      - run: pip install -e ".[dev,asr]"
+      - run: pip install -e ".[dev,asr,asr-vulkan]"
       - run: pytest -m "asr and not e2e"
         env:
           QT_QPA_PLATFORM: offscreen
