@@ -465,9 +465,21 @@ jobs:
           set -euo pipefail
           echo "Installing Vulkan pywhispercpp wheel: ${VULKAN_WHEEL}"
           pip install --force-reinstall --no-deps "${VULKAN_WHEEL}"
+          # --no-deps above (so the faster-whisper/ctranslate2 pins from [asr] are
+          # NOT disturbed) means pywhispercpp's own runtime deps are not installed.
+          # pywhispercpp.model imports pywhispercpp.constants (-> platformdirs) and
+          # pywhispercpp.utils (-> requests, tqdm) at module load, so without these
+          # the frozen bundle would raise ModuleNotFoundError on the first
+          # `import pywhispercpp.model` and the Vulkan engine would silently never
+          # activate. Install them (pure-Python, tiny) so PyInstaller collects them.
+          # Adding them to the [asr-vulkan] extra is NOT enough — the release job
+          # installs [asr], not [asr-vulkan].
+          pip install platformdirs requests tqdm
           # Provenance artifact: the built wheel's sha256, next to the bundle.
           mkdir -p dist
-          WHEEL_BASENAME=$(basename "${VULKAN_WHEEL}")
+          # Strip BOTH path separators: $VULKAN_WHEEL is a backslash path on
+          # Windows (PowerShell wrote it) and POSIX basename treats `\` literally.
+          WHEEL_BASENAME="${VULKAN_WHEEL##*[\\/]}"
           sha256sum "${VULKAN_WHEEL}" | awk -v n="${WHEEL_BASENAME}" '{print $1"  "n}' \
             > "dist/${{ matrix.artifact_name }}-pywhispercpp-vulkan.sha256"
           echo "Recorded sha256:"
@@ -491,9 +503,12 @@ jobs:
       #               build can't pass while animated screenshots fail at runtime).
       #   - whispercpp-vulkan : IMPORT/LOADABILITY ONLY — the from-source Vulkan
       #               pywhispercpp wheel was bundled (ggml-vulkan backend lib
-      #               present) and the frozen binary's hidden Vulkan probe prints
-      #               an integer device count (0 expected on GPU-less runners). It
-      #               proves NOTHING about GPU transcription. SKIPPED on macOS
+      #               present), the frozen binary's hidden Vulkan probe prints an
+      #               integer device count (0 expected on GPU-less runners), AND
+      #               the frozen binary actually `import pywhispercpp.model`s (the
+      #               real runtime chain that pulls platformdirs/requests/tqdm — so
+      #               a missing transitive dep fails the gate). It proves NOTHING
+      #               about GPU transcription. SKIPPED on macOS
       #               (skip_whispercpp_smoke: "1" on both macOS variants) —
       #               macOS stays on CT2/Metal and ships no Vulkan wheel.
       # shell: bash on every OS — windows-latest has bash on PATH; the script

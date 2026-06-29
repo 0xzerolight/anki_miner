@@ -68,7 +68,7 @@ echo
 # CI runners have no GPU, so the device count is expected to be 0 (CPU fallback)
 # and a real GPU transcription pass can only be validated manually on hardware.
 #
-# Two cheap, GPU-free assertions, both fail-closed:
+# Three cheap, GPU-free assertions, all fail-closed:
 #   (a) the ggml-vulkan backend MODULE is present in the bundle (libggml-vulkan*
 #       on Linux / ggml-vulkan*.dll on Windows). Its presence is what makes
 #       _engine.whisper_cpp_available() report a GPU-capable build; if the wheel
@@ -80,9 +80,18 @@ echo
 #       single integer on stdout, exit 0. This is exactly the value
 #       _engine.vulkan_device_count() parses, so a clean integer here is the
 #       "isinstance(vulkan_device_count(), int)" loadability gate.
+#   (c) the frozen binary actually `import pywhispercpp.model`s (via
+#       ANKI_MINER_SMOKE=whispercpp -> _run_whispercpp_bundled_smoke, which calls
+#       get_whisper_cpp_model_cls()). This is the REAL runtime import path the
+#       Vulkan engine takes — pywhispercpp.model pulls pywhispercpp.constants
+#       (-> platformdirs) and pywhispercpp.utils (-> requests, tqdm) at module
+#       load. Neither (a) the filesystem find nor (b) the ctypes probe imports
+#       pywhispercpp.model, so only (c) catches a transitive runtime dep missing
+#       from the bundle env (e.g. platformdirs not installed) or a frozen
+#       find_spec.origin failure. IMPORT/LOADABILITY ONLY — no GPU assertion.
 #
 # Skipped on macOS (BOTH arm64 and Intel): macOS stays on the CT2/Metal path and
-# ships no Vulkan pywhispercpp wheel, so neither assertion applies. Set
+# ships no Vulkan pywhispercpp wheel, so none of these assertions apply. Set
 # BUNDLE_SMOKE_SKIP_WHISPERCPP=1 on the macOS builds.
 echo "=== smoke: whispercpp-vulkan (import/loadability only — NOT a GPU test) ==="
 if [ "${BUNDLE_SMOKE_SKIP_WHISPERCPP:-}" = "1" ]; then
@@ -115,6 +124,16 @@ else
   else
     echo "::error::Vulkan probe exited nonzero (frozen binary could not load the ASR/ggml chain)"
     cat probe_err.log >&2 || true
+    WHISPERCPP_OK=0
+  fi
+  # (c) frozen binary imports pywhispercpp.model — the REAL runtime import chain
+  # (pulls platformdirs/requests/tqdm). Catches a transitive dep missing from the
+  # bundle env that (a)/(b) cannot. Import/loadability only; no GPU.
+  if ANKI_MINER_SMOKE=whispercpp QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_whispercpp.log \
+    && grep -q "BUNDLED_SMOKE_PASS" smoke_whispercpp.log; then
+    echo "pywhispercpp.model import resolved in the frozen bundle"
+  else
+    echo "::error::pywhispercpp.model failed to import from the frozen bundle (transitive runtime dep missing, e.g. platformdirs, or find_spec.origin failed)"
     WHISPERCPP_OK=0
   fi
   if [ "$WHISPERCPP_OK" = "1" ]; then

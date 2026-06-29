@@ -113,6 +113,36 @@ def _run_asr_bundled_smoke() -> int:
     return 0
 
 
+def _run_whispercpp_bundled_smoke() -> int:
+    """Env-var-gated smoke path for PyInstaller whisper.cpp (Vulkan) validation.
+
+    Triggered by ANKI_MINER_SMOKE=whispercpp. IMPORT/LOADABILITY ONLY — it does
+    NOT touch the GPU. It exercises the REAL runtime import chain the Vulkan
+    engine takes: ``import pywhispercpp.model`` (via get_whisper_cpp_model_cls),
+    which transitively imports pywhispercpp.constants (-> platformdirs) and
+    pywhispercpp.utils (-> requests, tqdm) at module load. A missing transitive
+    runtime dep (e.g. platformdirs absent from the bundle env) raises here, so
+    this catches what the ctypes-only Vulkan probe and the filesystem ggml-vulkan
+    find cannot. No model download, no device-count assertion. Not a CLI surface —
+    the flag is hidden, env-var-only, and exits before any Qt init.
+    """
+    from anki_miner.services.asr import _engine
+
+    try:
+        if not _engine.whisper_cpp_available():
+            raise RuntimeError(
+                "pywhispercpp + ggml-vulkan not available from bundle " "(whisper_cpp_available() returned False)"
+            )
+        # The real runtime import path: pulls pywhispercpp.model and its
+        # platformdirs/requests/tqdm transitive imports.
+        _engine.get_whisper_cpp_model_cls()
+    except Exception as exc:
+        print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
+    print("BUNDLED_SMOKE_PASS: whispercpp pywhispercpp.model import resolved")
+    return 0
+
+
 def _configure_logging(log_path: Path) -> None:
     """Attach (or re-point) a RotatingFileHandler on the root logger.
 
@@ -352,6 +382,9 @@ def main():
 
     if os.environ.get("ANKI_MINER_SMOKE") == "asr":
         sys.exit(_run_asr_bundled_smoke())
+
+    if os.environ.get("ANKI_MINER_SMOKE") == "whispercpp":
+        sys.exit(_run_whispercpp_bundled_smoke())
 
     # Env-var-gated ASR Vulkan device probe. The parent process
     # (_engine.vulkan_device_count) spawns a frozen bundle with this flag set so
