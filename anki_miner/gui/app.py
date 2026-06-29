@@ -326,6 +326,16 @@ def main():
     if os.environ.get("ANKI_MINER_SMOKE") == "asr":
         sys.exit(_run_asr_bundled_smoke())
 
+    # Env-var-gated ASR Vulkan device probe. The parent process
+    # (_engine.vulkan_device_count) spawns a frozen bundle with this flag set so
+    # the cold ctypes call into ggml-vulkan runs in a throwaway child — a broken
+    # Vulkan driver can C-abort uncatchably, and isolating it here means the abort
+    # kills only this child. Must run before any Qt init. Hidden, env-var-only.
+    if os.environ.get("ANKI_MINER_ASR_VULKAN_PROBE"):
+        from anki_miner.services.asr import _vulkan_probe
+
+        raise SystemExit(_vulkan_probe.main())
+
     # Attach the rotating file handler to the DEFAULT path before loading config
     # so config-load diagnostics — including the OVH-001 .bak-recovery warnings
     # emitted inside load_config — are captured: those warnings fire as soon as a
