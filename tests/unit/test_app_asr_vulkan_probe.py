@@ -48,6 +48,24 @@ def test_probe_branch_runs_before_any_qt_construction(monkeypatch):
     assert exc_info.value.code == 7
 
 
+def test_whispercpp_smoke_env_routes_into_smoke_and_exits(monkeypatch):
+    """ANKI_MINER_SMOKE=whispercpp exits with the smoke's return code, before Qt."""
+    monkeypatch.delenv("ANKI_MINER_ASR_VULKAN_PROBE", raising=False)
+    monkeypatch.setenv("ANKI_MINER_SMOKE", "whispercpp")
+
+    monkeypatch.setattr(app, "_run_whispercpp_bundled_smoke", lambda: 3)
+
+    def _no_qt(*args, **kwargs):
+        raise AssertionError("QApplication must not be constructed in the smoke branch")
+
+    monkeypatch.setattr(app, "QApplication", _no_qt)
+
+    with pytest.raises(SystemExit) as exc_info:
+        app.main()
+
+    assert exc_info.value.code == 3
+
+
 def test_no_probe_env_does_not_route_into_probe(monkeypatch):
     """Without the env var the probe branch is skipped (main proceeds past it)."""
     monkeypatch.delenv("ANKI_MINER_ASR_VULKAN_PROBE", raising=False)

@@ -1029,10 +1029,15 @@ def test_cascade_auto_no_gpu_uses_ct2_cpu(monkeypatch, tmp_path):
     assert [c["device"] for c in ct2] == ["cpu"]
 
 
-def test_cascade_auto_cpp_available_but_no_vulkan_device_uses_ct2_cpu(monkeypatch, tmp_path):
-    """device='auto', no CUDA, cpp available but no Vulkan device → CT2 CPU."""
+def test_cascade_auto_cpp_absent_with_vulkan_device_uses_ct2_cpu(monkeypatch, tmp_path):
+    """device='auto', no CUDA, a Vulkan device but whisper.cpp ABSENT → CT2 CPU.
+
+    Covers the cpp-absent leg of the auto-arm guard
+    ``not (whisper_cpp_available() and vulkan_device_count() > 0)`` — distinct
+    from the no-Vulkan-device leg above (cpp present, device count 0).
+    """
     cpp_constructed: list = []
-    ct2 = _wire_cpp(monkeypatch, cuda=0, vulkan=0, cpp_available=True, cpp_constructed=cpp_constructed)
+    ct2 = _wire_cpp(monkeypatch, cuda=0, vulkan=1, cpp_available=False, cpp_constructed=cpp_constructed)
 
     _run_cpp_transcribe(monkeypatch, tmp_path, device="auto")
     assert cpp_constructed == []
@@ -1126,6 +1131,50 @@ def test_cpp_cancel_via_abort_callback(monkeypatch, tmp_path):
     # Preset cancel short-circuits before any engine work.
     assert result == []
     assert ct2 == []
+
+
+def test_cpp_cancel_midflight_aborts_remaining_segments(monkeypatch, tmp_path):
+    """Setting cancel_event mid-decode → abort_callback stops the in-flight decode.
+
+    Mirrors the CT2 mid-iteration cancel test (test_transcribe_cancel_stops_early):
+    cancel fires INSIDE the first new_segment_callback (via progress_cb), so the
+    fake model's abort_callback() returns True before the SECOND segment is
+    emitted — exercising the _should_abort -> abort_callback in-flight path. The
+    first segment is emitted (live progress fires); the second must not be.
+    """
+    cancel = threading.Event()
+    emitted_progress: list[float] = []
+
+    def _progress(value: float) -> None:
+        emitted_progress.append(value)
+        cancel.set()  # cancel during the FIRST live segment callback
+
+    ct2 = _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_segments=[
+            make_cpp_segment(0, 100, "first", 0.9),
+            make_cpp_segment(100, 200, "second", 0.9),
+        ],
+    )
+    _run_cpp_transcribe(
+        monkeypatch,
+        tmp_path,
+        device="vulkan",
+        duration_s=2.0,
+        cancel_event=cancel,
+        progress_cb=_progress,
+    )
+    assert ct2 == []  # stayed on the cpp engine (no CT2 fallback)
+    # Exactly one LIVE segment callback fired (the first seg's 0.5), then the
+    # second seg's abort_callback short-circuited before its callback. The final
+    # progress_cb(1.0) still fires after the loop, so 0.5 then 1.0.
+    assert emitted_progress[0] == pytest.approx(0.5)
+    assert pytest.approx(1.0) not in emitted_progress[:-1]
+    assert emitted_progress[-1] == pytest.approx(1.0)
+    # The second segment's live progress (1.0 mid-loop) was never emitted, proving
+    # abort_callback stopped the decode in-flight: only the first + the final fired.
+    assert len(emitted_progress) == 2
 
 
 def test_cpp_transcribe_raises_falls_back_to_ct2_cpu(monkeypatch, tmp_path, caplog):

@@ -747,6 +747,61 @@ def test_asr_smoke_handler_returns_nonzero_on_import_error(capsys):
 
 
 # ---------------------------------------------------------------------------
+# whisper.cpp (Vulkan) smoke handler — import/loadability only
+# ---------------------------------------------------------------------------
+
+
+def test_whispercpp_smoke_handler_prints_pass_when_available(capsys):
+    """_run_whispercpp_bundled_smoke() prints BUNDLED_SMOKE_PASS when
+    whisper_cpp_available() is True and get_whisper_cpp_model_cls() succeeds
+    (the real pywhispercpp.model import chain that pulls platformdirs)."""
+    from anki_miner.gui.app import _run_whispercpp_bundled_smoke
+
+    fake_cls = MagicMock(__name__="Model")
+
+    with (
+        patch("anki_miner.services.asr._engine.whisper_cpp_available", return_value=True),
+        patch("anki_miner.services.asr._engine.get_whisper_cpp_model_cls", return_value=fake_cls),
+    ):
+        rc = _run_whispercpp_bundled_smoke()
+
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "BUNDLED_SMOKE_PASS" in captured.out
+
+
+def test_whispercpp_smoke_handler_returns_nonzero_when_unavailable(capsys):
+    """_run_whispercpp_bundled_smoke() returns nonzero when no Vulkan build."""
+    from anki_miner.gui.app import _run_whispercpp_bundled_smoke
+
+    with patch("anki_miner.services.asr._engine.whisper_cpp_available", return_value=False):
+        rc = _run_whispercpp_bundled_smoke()
+
+    assert rc != 0
+    captured = capsys.readouterr()
+    assert "BUNDLED_SMOKE_FAIL" in captured.err
+
+
+def test_whispercpp_smoke_handler_returns_nonzero_on_import_error(capsys):
+    """_run_whispercpp_bundled_smoke() returns nonzero when the model import
+    raises — exactly the platformdirs-missing case FIX-1 prevents."""
+    from anki_miner.gui.app import _run_whispercpp_bundled_smoke
+
+    with (
+        patch("anki_miner.services.asr._engine.whisper_cpp_available", return_value=True),
+        patch(
+            "anki_miner.services.asr._engine.get_whisper_cpp_model_cls",
+            side_effect=ModuleNotFoundError("No module named 'platformdirs'"),
+        ),
+    ):
+        rc = _run_whispercpp_bundled_smoke()
+
+    assert rc != 0
+    captured = capsys.readouterr()
+    assert "BUNDLED_SMOKE_FAIL" in captured.err
+
+
+# ---------------------------------------------------------------------------
 # file_skipped slot: logs "Skipped:", advances progress once
 # ---------------------------------------------------------------------------
 
