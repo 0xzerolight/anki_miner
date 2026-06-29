@@ -6,6 +6,7 @@ gating, the engine-missing guidance, and the in-app alass download button.
 
 from __future__ import annotations
 
+import sys
 import threading
 
 import pytest
@@ -13,9 +14,23 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
+from anki_miner.gui.widgets.panels.subtitles_settings_panel import (
+    SubtitlesSettingsPanel,
+    _device_options,
+)
 
 _PANEL_MOD = "anki_miner.gui.widgets.panels.subtitles_settings_panel"
+
+
+class _FakePlatform:
+    """Stand-in for the panel module's ``sys`` with a fixed ``platform``.
+
+    Lets a test pin ``sys.platform`` for the device-option helper without
+    mutating the real interpreter ``sys``.
+    """
+
+    def __init__(self, platform: str) -> None:
+        self.platform = platform
 
 
 def _wait_state_settled(qtbot, panel) -> None:
@@ -304,7 +319,9 @@ def test_panel_has_device_combo(qtbot):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     assert panel.device_combo is not None
-    assert panel.device_combo.count() == 3
+    # auto/cuda/cpu everywhere, plus Vulkan off macOS.
+    expected = 3 if sys.platform == "darwin" else 4
+    assert panel.device_combo.count() == expected
 
 
 def test_device_default_is_auto(qtbot):
@@ -346,6 +363,69 @@ def test_contribute_includes_device(qtbot):
     panel.set_device("cpu")
     new_config = panel.contribute(AnkiMinerConfig())
     assert new_config.asr_device == "cpu"
+
+
+# ---------------------------------------------------------------------------
+# Vulkan device option — platform gating + persisted-device hygiene
+# ---------------------------------------------------------------------------
+
+
+def test_device_options_includes_vulkan_off_macos():
+    """Off macOS the helper offers Vulkan alongside auto/cuda/cpu."""
+    values = [value for _label, value in _device_options("linux")]
+    assert values == ["auto", "cuda", "cpu", "vulkan"]
+
+
+def test_device_options_omits_vulkan_on_macos():
+    """On macOS the helper omits Vulkan (CT2/Metal only)."""
+    values = [value for _label, value in _device_options("darwin")]
+    assert "vulkan" not in values
+    assert values == ["auto", "cuda", "cpu"]
+
+
+def test_vulkan_option_present_in_dropdown_off_macos(qtbot, monkeypatch):
+    """The Vulkan label is in the device dropdown on a non-macOS platform."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    items = [panel.device_combo.itemText(i) for i in range(panel.device_combo.count())]
+    assert any("Vulkan" in item for item in items)
+    assert "vulkan" in [value for _label, value in panel._device_options]
+
+
+def test_vulkan_option_absent_in_dropdown_on_macos(qtbot, monkeypatch):
+    """The Vulkan label is omitted from the device dropdown on macOS."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("darwin"))
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    items = [panel.device_combo.itemText(i) for i in range(panel.device_combo.count())]
+    assert not any("Vulkan" in item for item in items)
+    assert "vulkan" not in [value for _label, value in panel._device_options]
+
+
+def test_select_vulkan_round_trips_through_contribute(qtbot, monkeypatch):
+    """Selecting vulkan off macOS yields get_device()=='vulkan' and persists it."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.set_device("vulkan")
+    assert panel.get_device() == "vulkan"
+
+    new_config = panel.contribute(AnkiMinerConfig())
+    assert new_config.asr_device == "vulkan"
+
+
+def test_load_from_config_vulkan_on_macos_falls_back_to_auto(qtbot, tmp_path, monkeypatch):
+    """A config carrying 'vulkan' opened on macOS (where it is unavailable) falls
+    back to 'auto' so the foreign value does not silently round-trip."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("darwin"))
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_device="vulkan", cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    assert panel.get_device() == "auto"
+    assert panel.contribute(AnkiMinerConfig()).asr_device == "auto"
 
 
 # ---------------------------------------------------------------------------
