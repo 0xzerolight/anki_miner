@@ -271,6 +271,7 @@ class TestBackgroundTasksShutdownDuckTyped:
         ctrl.alass_install_worker = None
         ctrl.cuda_pack_download_worker = None
         ctrl.onnx_pack_download_worker = None
+        ctrl.vulkan_model_download_worker = None
         ctrl.prewarm_worker = None
         ctrl._join_worker_for_close = MagicMock(return_value=True)
         return ctrl

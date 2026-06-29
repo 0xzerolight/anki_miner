@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
     from anki_miner.gui.workers.onnx_pack_download_worker import OnnxPackDownloadWorker
     from anki_miner.gui.workers.update_worker import UpdateWorkerThread
+    from anki_miner.gui.workers.vulkan_model_download_worker import VulkanModelDownloadWorker
     from anki_miner.gui.workers.ytdlp_update_worker import YtdlpUpdateWorker
     from anki_miner.services import ValidationService
 
@@ -115,6 +116,7 @@ class BackgroundTaskController(QObject):
         self.alass_install_worker: AlassInstallWorker | None = None
         self.cuda_pack_download_worker: CudaPackDownloadWorker | None = None
         self.onnx_pack_download_worker: OnnxPackDownloadWorker | None = None
+        self.vulkan_model_download_worker: VulkanModelDownloadWorker | None = None
         # Best-effort cache prewarm worker, scheduled by ``app.main()`` after
         # the first paint and adopted via set_prewarm(); cleared once it
         # finishes.
@@ -326,6 +328,43 @@ class BackgroundTaskController(QObject):
         worker.finished.connect(lambda w=worker: self._release_worker("onnx_pack_download_worker", w))
         worker.start()
 
+    def start_vulkan_download(
+        self,
+        asr_model: str,
+        asr_models_root: Path,
+        on_status: Callable[[str], None],
+        on_finished: Callable[[bool, str], None],
+    ) -> None:
+        """Start a Vulkan model download worker unless one is already running.
+
+        One action fetches BOTH the ggml acoustic model and the Silero VAD.
+        Mirrors :meth:`start_cuda_pack_download`: guards against a concurrent run,
+        lazy-imports the worker, connects ``status`` and ``result_ready`` to the
+        provided callbacks, and releases the handle on the native
+        ``QThread.finished``.
+
+        Args:
+            asr_model: Acoustic model identifier (e.g. ``"large-v3"``); typically
+                the panel's selected model.
+            asr_models_root: Directory where the ggml files will be placed;
+                typically ``config.asr_models_root``.
+            on_status: Slot for ``status(str)`` — typically
+                ``SettingsTab.set_vulkan_status``.
+            on_finished: Slot for ``result_ready(bool, str)`` — called with
+                ``(ok, message)`` when the install completes or fails.
+        """
+        if self.vulkan_model_download_worker is not None and self.vulkan_model_download_worker.isRunning():
+            return
+
+        from anki_miner.gui.workers.vulkan_model_download_worker import VulkanModelDownloadWorker
+
+        worker = VulkanModelDownloadWorker(asr_model, asr_models_root, parent=self)
+        self.vulkan_model_download_worker = worker
+        worker.status.connect(on_status)
+        worker.result_ready.connect(on_finished)
+        worker.finished.connect(lambda w=worker: self._release_worker("vulkan_model_download_worker", w))
+        worker.start()
+
     def maybe_migrate_jmdict(self, config: AnkiMinerConfig) -> bool:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background.
 
@@ -396,7 +435,7 @@ class BackgroundTaskController(QObject):
 
         # Controller-owned workers: validation, update check, yt-dlp update,
         # JMdict migration, ASR model download, alass install, CUDA pack download,
-        # onnxruntime (VAD) pack download.
+        # onnxruntime (VAD) pack download, Vulkan model download.
         join(self.validation_worker)
         join(self.update_worker)
         join(self.ytdlp_update_worker)
@@ -405,6 +444,7 @@ class BackgroundTaskController(QObject):
         join(self.alass_install_worker)
         join(self.cuda_pack_download_worker)
         join(self.onnx_pack_download_worker)
+        join(self.vulkan_model_download_worker)
 
         # The best-effort prewarm worker has no cancel hook (it's a short,
         # uninterruptible cache warm), so join it without timeout instead of
