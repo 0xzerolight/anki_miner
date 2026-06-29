@@ -23,6 +23,14 @@ def tab(test_config: AnkiMinerConfig, qtbot):
     widget = SettingsTab(test_config)
     qtbot.addWidget(widget)
     yield widget
+    # _on_save_clicked reconciles styling, which spawns a short-lived AnkiConnect
+    # worker; join it (and any other probe workers) and flush queued signals so a
+    # late status update can't fire into a torn-down QLabel. Mirrors closeEvent.
+    widget.shutdown()
+    for w in widget.iter_close_workers():
+        if w is not None:
+            w.wait(3000)
+    qtbot.wait(10)
 
 
 # ---------------------------------------------------------------------------

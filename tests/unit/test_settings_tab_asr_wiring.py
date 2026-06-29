@@ -180,6 +180,13 @@ class TestSettingsTabAsrWiring:
         assert len(saved_configs) >= 1
         assert saved_configs[-1].asr_model == "small"
 
+        # Join the styling worker save spawned so it can't outlive the tab.
+        tab.shutdown()
+        for w in tab.iter_close_workers():
+            if w is not None:
+                w.wait(3000)
+        qtbot.wait(10)
+
 
 class TestSettingsTabCudaPackWiring:
     """Pin GPU-pack download wiring on the merged Subtitles panel in SettingsTab."""
