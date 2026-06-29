@@ -797,3 +797,464 @@ def test_preload_cuda_libs_cdll_error_never_raises(monkeypatch, tmp_path):
 
     monkeypatch.setattr(ctypes, "CDLL", _boom)
     transcriber._preload_cuda_libs(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# whisper.cpp (pywhispercpp) engine path — device→engine cascade + cpp loop
+# ---------------------------------------------------------------------------
+
+
+def make_cpp_segment(t0: int, t1: int, text: str, probability: float) -> SimpleNamespace:
+    """Create a fake pywhispercpp Segment (t0/t1 in CENTISECONDS, geom-mean prob)."""
+    return SimpleNamespace(t0=t0, t1=t1, text=text, probability=probability)
+
+
+def fake_cpp_model_cls_factory(segments, *, raises: bool = False, constructed: list | None = None):
+    """Return a fake pywhispercpp Model class.
+
+    transcribe() fires *new_segment_callback* live per fake Segment (so progress
+    is driven exactly like the real engine) and then returns the materialized
+    list. Set *raises* to make transcribe() blow up after construction (exercises
+    the whole-attempt try/except → CT2 CPU fallback). Each Model path is recorded
+    in *constructed* when given.
+    """
+
+    class FakeCppModel:
+        def __init__(self, model_path):
+            self.model_path = model_path
+            if constructed is not None:
+                constructed.append(model_path)
+
+        def transcribe(
+            self,
+            audio,
+            *,
+            new_segment_callback=None,
+            abort_callback=None,
+            extract_probability=False,
+            **params,
+        ):
+            self.last_params = params
+            self.extract_probability = extract_probability
+            if raises:
+                raise RuntimeError("vulkan device lost")
+            for seg in segments:
+                if abort_callback is not None and abort_callback():
+                    break
+                if new_segment_callback is not None:
+                    new_segment_callback(seg)
+            return list(segments)
+
+    return FakeCppModel
+
+
+def _wire_cpp(
+    monkeypatch,
+    *,
+    cuda=0,
+    vulkan=0,
+    cpp_available=True,
+    cpp_segments=None,
+    cpp_raises=False,
+    cpp_constructed=None,
+):
+    """Monkeypatch the _engine cascade seams + the whisper.cpp Model class.
+
+    Returns the CT2 ``constructed`` list so callers can assert whether a CT2 CPU
+    model was built (the always-safe fallback).
+    """
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: cuda)
+    monkeypatch.setattr(_engine, "vulkan_device_count", lambda: vulkan)
+    monkeypatch.setattr(_engine, "whisper_cpp_available", lambda: cpp_available)
+    # _resolve_model consults the in-module _cuda_device_count for the CT2 'auto'
+    # path; keep it in lockstep with the cascade's cuda count so CT2 fallbacks are
+    # deterministic regardless of any real GPU on the host.
+    monkeypatch.setattr(transcriber, "_cuda_device_count", lambda: cuda)
+    monkeypatch.setattr(
+        _engine,
+        "get_whisper_cpp_model_cls",
+        lambda: fake_cpp_model_cls_factory(
+            cpp_segments or [],
+            raises=cpp_raises,
+            constructed=cpp_constructed,
+        ),
+    )
+    # The CT2 branch shares _resolve_model; capture its constructions too.
+    ct2_constructed: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(ct2_constructed))
+    # ggml acoustic + VAD present by default (overridable by the test).
+    monkeypatch.setattr(transcriber, "_cpp_ggml_present", lambda model_name, models_root: True)
+    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: False)
+    return ct2_constructed
+
+
+def _run_cpp_transcribe(monkeypatch, tmp_path, *, device, duration_s=1.0, **kw):
+    """Call transcriber.transcribe() with a zeroed audio array under *device*."""
+    import numpy as np
+
+    audio = np.zeros(16000, dtype=np.float32)
+    return transcriber.transcribe(
+        audio,
+        model_name="small",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=duration_s,
+        device=device,
+        **kw,
+    )
+
+
+# --- cascade matrix: which engine/device wins for each device × gpu combo ----
+
+
+def test_cascade_cpu_uses_ct2_cpu(monkeypatch, tmp_path):
+    """device='cpu' never touches the whisper.cpp seam — pure CT2 CPU."""
+    monkeypatch.setattr(
+        _engine,
+        "whisper_cpp_available",
+        lambda: (_ for _ in ()).throw(AssertionError("queried cpp on cpu device")),
+    )
+    monkeypatch.setattr(
+        _engine,
+        "vulkan_device_count",
+        lambda: (_ for _ in ()).throw(AssertionError("queried vulkan on cpu device")),
+    )
+    ct2: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(ct2))
+
+    _run_cpp_transcribe(monkeypatch, tmp_path, device="cpu")
+    assert [c["device"] for c in ct2] == ["cpu"]
+
+
+def test_cascade_cuda_uses_ct2_cuda(monkeypatch, tmp_path):
+    """device='cuda' + a CUDA GPU → CT2 CUDA, the whisper.cpp seam untouched."""
+    constructed: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(constructed))
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    monkeypatch.setattr(transcriber, "vad_available", lambda onnx_pack_root=None: False)
+    monkeypatch.setattr(
+        _engine,
+        "whisper_cpp_available",
+        lambda: (_ for _ in ()).throw(AssertionError("queried cpp on cuda device")),
+    )
+    _fake_ctranslate2(monkeypatch, device_count=1)
+
+    _run_cpp_transcribe(monkeypatch, tmp_path, device="cuda")
+    assert constructed[0]["device"] == "cuda"
+
+
+def test_cascade_vulkan_available_with_device_uses_cpp(monkeypatch, tmp_path):
+    """device='vulkan' + cpp available + a Vulkan device → whisper.cpp engine."""
+    cpp_constructed: list = []
+    ct2 = _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_available=True,
+        cpp_segments=[make_cpp_segment(0, 100, "a", 0.9)],
+        cpp_constructed=cpp_constructed,
+    )
+
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
+    assert len(cpp_constructed) == 1  # whisper.cpp Model built
+    assert ct2 == []  # CT2 never used
+    assert result == [(0.0, 1.0, "a")]
+
+
+def test_cascade_vulkan_unavailable_falls_back_to_ct2_cpu(monkeypatch, tmp_path, caplog):
+    """device='vulkan' but whisper_cpp_available()==False → CT2 CPU + a log."""
+    cpp_constructed: list = []
+    ct2 = _wire_cpp(monkeypatch, vulkan=1, cpp_available=False, cpp_constructed=cpp_constructed)
+
+    with caplog.at_level(logging.INFO, logger=transcriber.__name__):
+        _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
+    assert cpp_constructed == []
+    assert [c["device"] for c in ct2] == ["cpu"]
+    assert caplog.records  # logged the fallback
+
+
+def test_cascade_vulkan_no_device_falls_back_to_ct2_cpu(monkeypatch, tmp_path):
+    """device='vulkan', cpp available, but vulkan_device_count()==0 → CT2 CPU."""
+    cpp_constructed: list = []
+    ct2 = _wire_cpp(monkeypatch, vulkan=0, cpp_available=True, cpp_constructed=cpp_constructed)
+
+    _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
+    assert cpp_constructed == []
+    assert [c["device"] for c in ct2] == ["cpu"]
+
+
+def test_cascade_auto_prefers_cuda(monkeypatch, tmp_path):
+    """device='auto' + a CUDA GPU → CT2 CUDA wins over Vulkan."""
+    constructed: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(constructed))
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    monkeypatch.setattr(transcriber, "vad_available", lambda onnx_pack_root=None: False)
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 1)
+    # cpp present + vulkan present, but cuda must win and short-circuit cpp.
+    monkeypatch.setattr(
+        _engine,
+        "whisper_cpp_available",
+        lambda: (_ for _ in ()).throw(AssertionError("queried cpp when cuda present")),
+    )
+    _fake_ctranslate2(monkeypatch, device_count=1)
+
+    _run_cpp_transcribe(monkeypatch, tmp_path, device="auto")
+    assert constructed[0]["device"] == "cuda"
+
+
+def test_cascade_auto_no_cuda_uses_cpp_when_vulkan(monkeypatch, tmp_path):
+    """device='auto', no CUDA, cpp available + a Vulkan device → whisper.cpp."""
+    cpp_constructed: list = []
+    ct2 = _wire_cpp(
+        monkeypatch,
+        cuda=0,
+        vulkan=1,
+        cpp_available=True,
+        cpp_segments=[make_cpp_segment(0, 100, "x", 0.8)],
+        cpp_constructed=cpp_constructed,
+    )
+
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="auto")
+    assert len(cpp_constructed) == 1
+    assert ct2 == []
+    assert result == [(0.0, 1.0, "x")]
+
+
+def test_cascade_auto_no_gpu_uses_ct2_cpu(monkeypatch, tmp_path):
+    """device='auto', no CUDA, no Vulkan → CT2 CPU."""
+    cpp_constructed: list = []
+    ct2 = _wire_cpp(monkeypatch, cuda=0, vulkan=0, cpp_available=True, cpp_constructed=cpp_constructed)
+
+    _run_cpp_transcribe(monkeypatch, tmp_path, device="auto")
+    assert cpp_constructed == []
+    assert [c["device"] for c in ct2] == ["cpu"]
+
+
+def test_cascade_auto_cpp_available_but_no_vulkan_device_uses_ct2_cpu(monkeypatch, tmp_path):
+    """device='auto', no CUDA, cpp available but no Vulkan device → CT2 CPU."""
+    cpp_constructed: list = []
+    ct2 = _wire_cpp(monkeypatch, cuda=0, vulkan=0, cpp_available=True, cpp_constructed=cpp_constructed)
+
+    _run_cpp_transcribe(monkeypatch, tmp_path, device="auto")
+    assert cpp_constructed == []
+    assert [c["device"] for c in ct2] == ["cpu"]
+
+
+# --- whisper.cpp engine behaviour -------------------------------------------
+
+
+def test_cpp_segment_units_centiseconds_to_seconds(monkeypatch, tmp_path):
+    """Segment.t0=150 / t1=320 CENTISECONDS must become start=1.5 / end=3.2 SECONDS."""
+    ct2 = _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_segments=[make_cpp_segment(150, 320, " yo ", 0.9)],
+    )
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan", duration_s=4.0)
+    assert ct2 == []
+    assert result == [(1.5, 3.2, "yo")]
+
+
+def test_cpp_low_probability_segment_dropped_normal_kept(monkeypatch, tmp_path):
+    """A cpp segment with probability below the floor is dropped; a normal one is kept."""
+    floor = transcriber._MIN_CPP_SEGMENT_PROBABILITY
+    ct2 = _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_segments=[
+            make_cpp_segment(0, 100, "garbage", floor - 0.05),  # below floor → dropped
+            make_cpp_segment(100, 200, "keep", 0.9),  # above floor → kept
+        ],
+    )
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan", duration_s=2.0)
+    assert ct2 == []
+    assert result == [(1.0, 2.0, "keep")]
+
+
+def test_cpp_nan_probability_segment_kept(monkeypatch, tmp_path):
+    """A NaN/None probability is treated as unknown (kept), never dropped."""
+    import math
+
+    ct2 = _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_segments=[
+            make_cpp_segment(0, 100, "nan", float("nan")),
+            make_cpp_segment(100, 200, "none", None),
+        ],
+    )
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan", duration_s=2.0)
+    assert ct2 == []
+    assert result == [(0.0, 1.0, "nan"), (1.0, 2.0, "none")]
+    assert not math.isnan(0.0)  # sanity: floor predicate must not have crashed on NaN
+
+
+def test_cpp_progress_driven_live_from_callback(monkeypatch, tmp_path):
+    """Live progress comes from new_segment_callback, not from iterating the result."""
+    ct2 = _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_segments=[
+            make_cpp_segment(0, 100, "a", 0.9),
+            make_cpp_segment(100, 200, "b", 0.9),
+        ],
+    )
+    progress: list[float] = []
+    _run_cpp_transcribe(
+        monkeypatch,
+        tmp_path,
+        device="vulkan",
+        duration_s=2.0,
+        progress_cb=progress.append,
+    )
+    assert ct2 == []
+    # Two live callbacks (t1/100/dur = 0.5, 1.0) + final 1.0.
+    assert progress[0] == pytest.approx(0.5)
+    assert all(v <= 1.0 for v in progress)
+    assert progress[-1] == pytest.approx(1.0)
+
+
+def test_cpp_cancel_via_abort_callback(monkeypatch, tmp_path):
+    """A preset cancel_event makes abort_callback() True → no segments decoded."""
+    cancel = threading.Event()
+    cancel.set()
+    ct2 = _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_segments=[make_cpp_segment(0, 100, "should-not-appear", 0.9)],
+    )
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan", cancel_event=cancel)
+    # Preset cancel short-circuits before any engine work.
+    assert result == []
+    assert ct2 == []
+
+
+def test_cpp_transcribe_raises_falls_back_to_ct2_cpu(monkeypatch, tmp_path, caplog):
+    """If the whisper.cpp transcribe() RAISES, fall back to a full CT2 CPU re-decode."""
+    cpp_constructed: list = []
+    _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_raises=True,
+        cpp_constructed=cpp_constructed,
+    )
+    # Give the CT2 CPU fallback something to return so we prove it ran (this
+    # overrides the recording CT2 model _wire_cpp installed, so we assert via the
+    # returned segments rather than the captured CT2 constructions).
+    monkeypatch.setattr(
+        _engine,
+        "get_whisper_model_cls",
+        lambda: fake_model_cls_factory([make_segment(0.0, 1.0, "ct2-cpu")]),
+    )
+
+    with caplog.at_level(logging.WARNING, logger=transcriber.__name__):
+        result = _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
+
+    assert len(cpp_constructed) == 1  # cpp was attempted
+    assert result == [(0.0, 1.0, "ct2-cpu")]  # CT2 CPU re-decode returned
+    assert any(r.levelno == logging.WARNING for r in caplog.records)
+
+
+def test_cpp_missing_ggml_model_falls_back_to_ct2_cpu(monkeypatch, tmp_path, caplog):
+    """A missing ggml acoustic file → CT2 CPU, the cpp Model never constructed."""
+    cpp_constructed: list = []
+    ct2 = _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_segments=[make_cpp_segment(0, 100, "a", 0.9)],
+        cpp_constructed=cpp_constructed,
+    )
+    monkeypatch.setattr(transcriber, "_cpp_ggml_present", lambda model_name, models_root: False)
+
+    with caplog.at_level(logging.WARNING, logger=transcriber.__name__):
+        _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
+
+    assert cpp_constructed == []  # never built the cpp model
+    assert [c["device"] for c in ct2] == ["cpu"]
+    assert caplog.records
+
+
+def test_cpp_vad_enabled_only_when_present(monkeypatch, tmp_path):
+    """decode_params enable VAD iff is_vad_downloaded(); else vad=False, never crash."""
+    seen: dict = {}
+
+    def _capturing_cls():
+        class CapModel:
+            def __init__(self, model_path):
+                self.model_path = model_path
+
+            def transcribe(
+                self, audio, *, new_segment_callback=None, abort_callback=None, extract_probability=False, **params
+            ):
+                seen.update(params)
+                seen["extract_probability"] = extract_probability
+                return []
+
+        return CapModel
+
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 0)
+    monkeypatch.setattr(_engine, "vulkan_device_count", lambda: 1)
+    monkeypatch.setattr(_engine, "whisper_cpp_available", lambda: True)
+    monkeypatch.setattr(_engine, "get_whisper_cpp_model_cls", _capturing_cls)
+    monkeypatch.setattr(transcriber, "_cpp_ggml_present", lambda model_name, models_root: True)
+
+    vad_path = transcriber.ggml_model_installer.vad_model_path(tmp_path)
+    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: True)
+
+    _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
+
+    assert seen["language"] == "ja"
+    assert seen["no_context"] is True
+    assert seen["extract_probability"] is True
+    assert seen["vad"] is True
+    assert seen["vad_model_path"] == str(vad_path)
+
+
+def test_cpp_vad_disabled_when_absent(monkeypatch, tmp_path):
+    """When the VAD ggml is absent, vad=False and no vad_model_path is forced on."""
+    seen: dict = {}
+
+    def _capturing_cls():
+        class CapModel:
+            def __init__(self, model_path):
+                self.model_path = model_path
+
+            def transcribe(
+                self, audio, *, new_segment_callback=None, abort_callback=None, extract_probability=False, **params
+            ):
+                seen.update(params)
+                return []
+
+        return CapModel
+
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 0)
+    monkeypatch.setattr(_engine, "vulkan_device_count", lambda: 1)
+    monkeypatch.setattr(_engine, "whisper_cpp_available", lambda: True)
+    monkeypatch.setattr(_engine, "get_whisper_cpp_model_cls", _capturing_cls)
+    monkeypatch.setattr(transcriber, "_cpp_ggml_present", lambda model_name, models_root: True)
+    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: False)
+
+    _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
+
+    assert seen["vad"] is False
+
+
+def test_cpp_segments_generator_yields_ct2_duck_type(monkeypatch, tmp_path):
+    """_cpp_segments yields SimpleNamespace(start,end,text,probability) the CT2 loop eats."""
+    seg = make_cpp_segment(150, 320, "hi", 0.7)
+    model = fake_cpp_model_cls_factory([seg])("/fake/model.bin")
+
+    out = list(
+        transcriber._cpp_segments(
+            model,
+            object(),
+            duration_s=4.0,
+            progress_cb=None,
+            cancel_event=None,
+            decode_params={"language": "ja"},
+        )
+    )
+    assert len(out) == 1
+    assert out[0].start == pytest.approx(1.5)
+    assert out[0].end == pytest.approx(3.2)
+    assert out[0].text == "hi"
+    assert out[0].probability == pytest.approx(0.7)
