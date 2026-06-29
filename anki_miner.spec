@@ -177,11 +177,13 @@ a = Analysis(
     # Both target packages are imported function-locally in services/asr/_engine.py,
     # but PyInstaller's bytecode analysis finds those IMPORT opcodes and pulls the
     # packages into the graph, so the matching hooks auto-run from here — no
-    # hiddenimports entry needed.  collect_all in each hook returns empty lists when
-    # its package is absent, so the Intel-mac / no-[asr] build (which installs
-    # neither faster_whisper nor pywhispercpp) is unaffected: nothing is forced onto
-    # macOS.  The Linux/Windows release jobs install the from-source Vulkan
-    # pywhispercpp wheel before this spec runs (see release.yml).
+    # hiddenimports entry needed.  Each hook collects nothing when its package is
+    # absent (collect_all returns empty lists; hook-pywhispercpp also short-circuits
+    # its explicit ggml/whisper-lib collection on a missing find_spec), so the
+    # Intel-mac / no-[asr] build (which installs neither faster_whisper nor
+    # pywhispercpp) is unaffected: nothing is forced onto macOS.  The Linux/Windows
+    # release jobs install the from-source Vulkan pywhispercpp wheel before this
+    # spec runs (see release.yml).
     hookspath=[os.path.join(project_root, "PyInstaller-Hooks")],
     hooksconfig={},
     runtime_hooks=[],
