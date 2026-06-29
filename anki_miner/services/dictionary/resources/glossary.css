@@ -112,6 +112,16 @@
   color: var(--am-muted);
 }
 
+/* Cohabitation defense: some note types ship an unscoped list-item separator
+ * (e.g. `li:not(:first-child)::before { content: " | " }`) that would otherwise
+ * inject a stray marker between our senses. Neutralize generated content on our
+ * own structural sense items — the inner glossary list keeps its own ::before
+ * separators (higher specificity), so only the host's bleed-through is removed. */
+.yomitan-glossary ol[data-count] li.gloss-item::before,
+.yomitan-glossary ol[data-count] li.gloss-item::after {
+  content: none;
+}
+
 /* Block wrapper around each sense (a <div>, so block-level structured content
  * nests legally inside it). */
 .yomitan-glossary ol[data-count] .gloss-content {

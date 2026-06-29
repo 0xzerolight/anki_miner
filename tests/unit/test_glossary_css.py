@@ -61,6 +61,16 @@ class TestLoadGlossaryCss:
         assert '[data-sc-content="forms"] td' in css
         assert '[data-sc-content|="example-sentence"]' in css
 
+    def test_neutralizes_host_generated_content_on_sense_items(self):
+        # Cohabitation defense: a host note type's unscoped li::before separator
+        # must not bleed into our sense list. The reset targets only the outer
+        # gloss-item (the inner glossary list keeps its own ::before separators).
+        css = _no_comments(load_glossary_css())
+        assert "li.gloss-item::before" in css
+        assert "li.gloss-item::after" in css
+        reset = css[css.index("li.gloss-item::before") :]
+        assert "content: none" in reset[: reset.index("}")]
+
 
 class TestGlossaryYomitanLeak:
     """Every selector must be guarded by miner-only ``ol[data-count]`` markup.
