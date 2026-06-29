@@ -60,6 +60,73 @@ else
 fi
 echo
 
+# --- 2b. whisper.cpp (pywhispercpp Vulkan) IMPORT/LOADABILITY gate -------------
+# IMPORT/LOADABILITY ONLY. This proves the from-source Vulkan pywhispercpp wheel
+# replaced the CPU wheel and was collected into the frozen tree, and that the
+# bundled binary can load the ggml/whisper native chain far enough to return an
+# integer Vulkan device count. It proves NOTHING about Vulkan transcription: the
+# CI runners have no GPU, so the device count is expected to be 0 (CPU fallback)
+# and a real GPU transcription pass can only be validated manually on hardware.
+#
+# Two cheap, GPU-free assertions, both fail-closed:
+#   (a) the ggml-vulkan backend MODULE is present in the bundle (libggml-vulkan*
+#       on Linux / ggml-vulkan*.dll on Windows). Its presence is what makes
+#       _engine.whisper_cpp_available() report a GPU-capable build; if the wheel
+#       replacement or the hook collection silently failed, this lib is missing
+#       and the bundle would be a CPU-only build masquerading as Vulkan.
+#   (b) the frozen binary's hidden Vulkan probe (ANKI_MINER_ASR_VULKAN_PROBE=1,
+#       app.main routes it to _vulkan_probe before any Qt init) runs the cold
+#       ctypes load of ggml-vulkan in a child and prints the device count — a
+#       single integer on stdout, exit 0. This is exactly the value
+#       _engine.vulkan_device_count() parses, so a clean integer here is the
+#       "isinstance(vulkan_device_count(), int)" loadability gate.
+#
+# Skipped on macOS (BOTH arm64 and Intel): macOS stays on the CT2/Metal path and
+# ships no Vulkan pywhispercpp wheel, so neither assertion applies. Set
+# BUNDLE_SMOKE_SKIP_WHISPERCPP=1 on the macOS builds.
+echo "=== smoke: whispercpp-vulkan (import/loadability only — NOT a GPU test) ==="
+if [ "${BUNDLE_SMOKE_SKIP_WHISPERCPP:-}" = "1" ]; then
+  echo "SKIP whispercpp-vulkan (BUNDLE_SMOKE_SKIP_WHISPERCPP=1 — macOS CT2/Metal build)"
+else
+  WHISPERCPP_OK=1
+  # (a) ggml-vulkan backend MODULE present in the frozen tree.
+  VK_LIB=""
+  for pat in 'libggml-vulkan*.so*' 'ggml-vulkan*.dll' 'libggml-vulkan*.dylib'; do
+    VK_LIB=$(find "$DIST" -type f -name "$pat" | head -1)
+    [ -n "$VK_LIB" ] && break
+  done
+  if [ -z "$VK_LIB" ]; then
+    echo "::error::ggml-vulkan backend lib not found under $DIST — Vulkan pywhispercpp wheel was not bundled (wheel replacement or hook collection failed)"
+    find "$DIST" -name 'libggml*' -o -name 'ggml*.dll' 2>/dev/null | head -20 || true
+    WHISPERCPP_OK=0
+  else
+    echo "Found ggml-vulkan backend lib: $VK_LIB"
+  fi
+  # (b) frozen binary's Vulkan probe prints a single integer device count, exit 0.
+  if PROBE_OUT=$(ANKI_MINER_ASR_VULKAN_PROBE=1 QT_QPA_PLATFORM=offscreen "$APP" 2>probe_err.log); then
+    PROBE_OUT=$(printf '%s' "$PROBE_OUT" | tr -d '[:space:]')
+    if printf '%s' "$PROBE_OUT" | grep -Eq '^[0-9]+$'; then
+      echo "Vulkan device-count probe returned an integer: $PROBE_OUT (0 expected on GPU-less runners)"
+    else
+      echo "::error::Vulkan probe did not print a single integer device count: '$PROBE_OUT'"
+      cat probe_err.log >&2 || true
+      WHISPERCPP_OK=0
+    fi
+  else
+    echo "::error::Vulkan probe exited nonzero (frozen binary could not load the ASR/ggml chain)"
+    cat probe_err.log >&2 || true
+    WHISPERCPP_OK=0
+  fi
+  if [ "$WHISPERCPP_OK" = "1" ]; then
+    echo "BUNDLED_WHISPERCPP_VULKAN_LOADABLE_PASS"
+    echo "PASS whispercpp-vulkan"
+  else
+    echo "FAIL whispercpp-vulkan"
+    FAILED+=("whispercpp-vulkan")
+  fi
+fi
+echo
+
 # --- 3. ffmpeg encoder smoke: bundled ffmpeg ships the required encoders -------
 # libwebp_anim is asserted separately because still-image libwebp builds would
 # otherwise pass while animated-WebP screenshots fail at runtime.
