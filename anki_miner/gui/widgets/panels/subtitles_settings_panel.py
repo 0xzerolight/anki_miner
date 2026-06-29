@@ -14,6 +14,7 @@ Subtitles main tab:
 
 import importlib.util
 import logging
+import sys
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import cast
@@ -43,12 +44,33 @@ _MODEL_OPTIONS: list[tuple[str, str]] = [
     ("small", "small"),
 ]
 
-# Ordered (display_label, config_value) pairs for the ASR device dropdown.
+# Ordered (display_label, config_value) pairs for the ASR device dropdown that
+# are offered on every platform (CT2 backend: auto/cuda/cpu).
 _DEVICE_OPTIONS: list[tuple[str, str]] = [
     ("Auto (GPU if available)", "auto"),
     ("GPU (CUDA)", "cuda"),
     ("CPU", "cpu"),
 ]
+
+# The Vulkan engine only runs on Windows/Linux; macOS stays on CT2/Metal and
+# must not offer it.
+_VULKAN_DEVICE_OPTION: tuple[str, str] = ("GPU (Vulkan - AMD/Intel/NVIDIA)", "vulkan")
+
+
+def _device_options(platform: str | None = None) -> list[tuple[str, str]]:
+    """Return the ASR device (label, value) pairs available on *platform*.
+
+    Vulkan is appended everywhere except macOS (``sys.platform == "darwin"``).
+    ``platform`` defaults to the live ``sys.platform`` and is a parameter so the
+    platform branch is reachable from tests without monkeypatching ``sys``.
+    """
+    if platform is None:
+        platform = sys.platform
+    options = list(_DEVICE_OPTIONS)
+    if platform != "darwin":
+        options.append(_VULKAN_DEVICE_OPTION)
+    return options
+
 
 # Exact command that installs the optional speech-to-text engine. Shown
 # verbatim (and copyable) when faster-whisper is not importable.
@@ -109,6 +131,11 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_libs_root: Path | None = None
         self._onnx_pack_root: Path | None = None
         self._alass_supported = alass_installer.alass_install_supported()
+        # Device options offered on this platform (Vulkan omitted on macOS).
+        # Computed once via the platform-aware helper so the dropdown,
+        # set_device/get_device, and the load_from_config hygiene check all share
+        # one source of truth.
+        self._device_options = _device_options()
         # In-flight guards: a download disables its button until the worker
         # finishes. Without these, any state refresh re-run (config reload
         # mid-download) would re-enable the button and clobber the status label.
@@ -171,7 +198,7 @@ class SubtitlesSettingsPanel(FormPanel):
         )
 
         self.device_combo = QComboBox()
-        for label, _value in _DEVICE_OPTIONS:
+        for label, _value in self._device_options:
             self.device_combo.addItem(label)
         self.add_field(
             self.tr("ASR device"),
@@ -398,7 +425,7 @@ class SubtitlesSettingsPanel(FormPanel):
 
     def set_device(self, value: str) -> None:
         """Select the device dropdown entry matching *value*; falls back to 'auto'."""
-        for index, (_label, option_value) in enumerate(_DEVICE_OPTIONS):
+        for index, (_label, option_value) in enumerate(self._device_options):
             if option_value == value:
                 self.device_combo.setCurrentIndex(index)
                 return
@@ -407,8 +434,8 @@ class SubtitlesSettingsPanel(FormPanel):
     def get_device(self) -> str:
         """Return the device config value currently selected in the dropdown."""
         index = self.device_combo.currentIndex()
-        if 0 <= index < len(_DEVICE_OPTIONS):
-            return _DEVICE_OPTIONS[index][1]
+        if 0 <= index < len(self._device_options):
+            return self._device_options[index][1]
         return "auto"
 
     def _engine_available_now(self) -> bool:
@@ -845,7 +872,12 @@ class SubtitlesSettingsPanel(FormPanel):
         # ASR
         self._models_root = config.asr_models_root
         self.set_model(config.asr_model)
-        self.set_device(config.asr_device)
+        # Persisted-device hygiene: a value not offered on this platform (e.g. a
+        # config carrying "vulkan" opened on macOS, or any unknown value) must
+        # not silently round-trip. Fall back to "auto" so get_device()/contribute()
+        # then persist "auto" instead of the stale/foreign value.
+        available_devices = {value for _label, value in self._device_options}
+        self.set_device(config.asr_device if config.asr_device in available_devices else "auto")
         # alass
         self.alass_selector.set_path(str(config.alass_location) if config.alass_location else "")
         self._bin_root = config.bin_root
