@@ -1,0 +1,87 @@
+# constraints/asr-vulkan-build.txt — pins for the from-source Vulkan pywhispercpp
+# wheel build (release.yml "Build Vulkan pywhispercpp wheel" step, Linux + Windows).
+#
+# WHY a dedicated file (not requirements.lock): the CPU pywhispercpp pinned in
+# requirements.lock is a prebuilt PyPI wheel; the Vulkan backend has NO prebuilt
+# artifact on any OS, so we MUST build it from source per-OS with GGML_VULKAN=1.
+# This file pins every input to that build so the artifact is reproducible: the
+# pywhispercpp ref, the whisper.cpp submodule it carries, the Vulkan SDK / glslc
+# version, and the wheel-repair toolchain. Pin, do not float.
+#
+# These are NOT all pip constraints (the Vulkan SDK and the glslc shader compiler
+# come from the OS / the LunarG SDK action, not PyPI). The non-pip pins are
+# documented as comments and mirrored where they are consumed in release.yml; the
+# pip-installable build tools are listed as real constraints at the bottom.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. pywhispercpp source ref — BUILT FROM SOURCE (not the PyPI wheel)
+# ─────────────────────────────────────────────────────────────────────────────
+# Build the wheel from this exact tag. Matches the CPU floor pinned in
+# pyproject.toml ([asr-vulkan] -> pywhispercpp>=1.5.0) and requirements.lock, so
+# the Vulkan wheel and the CPU wheel are the same upstream version — only the
+# backend differs. release.yml installs it as:
+#   pip wheel "pywhispercpp @ git+https://github.com/absadiki/pywhispercpp.git@v1.5.0"
+# (the git+ form is required: it fetches the submodules a PyPI sdist omits).
+#
+#   PYWHISPERCPP_REF = v1.5.0
+#   PYWHISPERCPP_REPO = https://github.com/absadiki/pywhispercpp.git
+#
+# pywhispercpp's setup.py forwards every env var as a CMake -D (see its
+# build_extension: `for key, value in os.environ.items(): cmake_args.append(...)`),
+# so `GGML_VULKAN=1 GGML_BACKEND_DL=1 pip wheel ...` lands -DGGML_VULKAN=1
+# -DGGML_BACKEND_DL=1 on the whisper.cpp/ggml CMake configure. GGML_BACKEND_DL=1
+# makes ggml-vulkan a dlopen MODULE the ggml registry skips gracefully when the
+# Vulkan loader is absent (CPU-only machine) instead of hard-failing at import.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. whisper.cpp submodule SHA carried by pywhispercpp v1.5.0
+# ─────────────────────────────────────────────────────────────────────────────
+# The git+ install above checks out pywhispercpp v1.5.0 and recursively fetches
+# its submodules at the SHAs that tag records — so the whisper.cpp / ggml source
+# is already pinned transitively by PYWHISPERCPP_REF; we do NOT re-pin it
+# ourselves. Recorded here for provenance and to make a drift obvious.
+#
+# To re-pin (when bumping PYWHISPERCPP_REF), read the SHA the new tag carries:
+#   git clone --branch <tag> --depth 1 https://github.com/absadiki/pywhispercpp.git
+#   git -C pywhispercpp ls-tree HEAD whisper.cpp     # -> the whisper.cpp SHA
+#
+#   WHISPER_CPP_SHA = 9386f239401074690479731c1e41683fbbeac557   # carried by v1.5.0
+#   PYBIND11_SHA    = b70b8eb332fadf55d7e22b492da0e954c1a4fcb7   # carried by v1.5.0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. Vulkan SDK / glslc — supplies the headers + shader compiler at BUILD time
+# ─────────────────────────────────────────────────────────────────────────────
+# ggml-vulkan compiles its shaders to SPIR-V at BUILD time via glslc, so glslc +
+# the Vulkan headers must be present when CMake configures. NO GPU / no Vulkan
+# driver is needed in CI — the build only needs the toolchain, not a device.
+#
+# Linux: apt packages (Ubuntu 22.04 runner). Pin the package set, not exact
+#   patch versions (apt resolves the distro's current point release; the SDK
+#   version is not user-selectable on apt and stays back-compatible for the
+#   glslc/header surface ggml uses):
+#     libvulkan-dev   (Vulkan headers + the loader's dev symlink)
+#     glslc           (the shader compiler; from the shaderc-tools / glslc pkg)
+#     spirv-tools     (SPIR-V assembler/validator ggml's shader gen calls)
+#     spirv-headers   (SPIR-V headers)
+#
+# Windows: the LunarG Vulkan SDK via jakoch/install-vulkan-sdk-action, which sets
+#   VULKAN_SDK and puts glslc on PATH. Pin the action to an immutable commit SHA
+#   (matches the SHA-pinned third-party actions elsewhere in the workflows) AND a
+#   Vulkan SDK version so the toolchain is reproducible:
+#     VULKAN_SDK_ACTION = jakoch/install-vulkan-sdk-action@37effcfa045411f8bfbbda26df2fd1b3bf3436fa  # v1.6.0
+#     VULKAN_SDK_VERSION = 1.4.350.0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. wheel-repair toolchain — bundles the ggml/whisper libs INTO the wheel while
+#    EXCLUDING the Vulkan loader so the system/driver loader wins at runtime
+# ─────────────────────────────────────────────────────────────────────────────
+# We build with NO_REPAIR=1 so pywhispercpp's own repairwheel step (which vendors
+# EVERY external dep with NO way to pass an exclude — its CLI has no --exclude and
+# it calls auditwheel with an empty exclude set) does NOT run, then repair the
+# wheel ourselves with the real tools, which DO support --exclude:
+#   Linux:   auditwheel repair --exclude libvulkan.so.1 ...
+#   Windows: delvewheel repair --exclude vulkan-1.dll ...
+# Excluding the loader is the whole point: ggml-vulkan must bind the system's
+# Vulkan loader (the user's GPU driver), not a copy frozen at build time.
+auditwheel==6.7.0
+delvewheel==1.13.0
