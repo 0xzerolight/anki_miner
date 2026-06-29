@@ -131,11 +131,11 @@ def test_expression_audio_field_defaults_empty_and_roundtrips(qtbot):
 # === Card styling (Issue #44 / auto-sync) ===
 
 
-def test_styling_combo_lists_off_first(qtbot):
+def test_styling_checkbox_default_unchecked(qtbot):
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    assert panel.card_style_preset_combo.itemData(0) == "off"
-    assert panel.card_style_preset_combo.itemText(0) == "Off"
+    assert panel.manage_styling_checkbox.isChecked() is False
+    assert panel.get_manage_styling() is False
 
 
 def test_styling_apply_remove_buttons_removed(qtbot):
@@ -148,55 +148,43 @@ def test_styling_apply_remove_buttons_removed(qtbot):
     assert not hasattr(panel, "remove_styling_requested")
 
 
-def test_styling_preset_get_set_unknown_falls_back_to_off(qtbot):
+def test_manage_styling_get_set_round_trip(qtbot):
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    panel.set_card_style_preset("minimal")
-    assert panel.get_card_style_preset() == "minimal"
-    panel.set_card_style_preset("does-not-exist")
-    assert panel.get_card_style_preset() == "off"
+    panel.set_manage_styling(True)
+    assert panel.get_manage_styling() is True
+    panel.set_manage_styling(False)
+    assert panel.get_manage_styling() is False
 
 
 def test_off_disables_custom_css_box(qtbot):
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    panel.set_card_style_preset("minimal")
+    panel.set_manage_styling(True)
     assert panel.custom_css_edit.isEnabled()
-    panel.set_card_style_preset("off")
+    panel.set_manage_styling(False)
     assert not panel.custom_css_edit.isEnabled()
 
 
-def test_programmatic_set_does_not_mark_user_touched(qtbot):
+def test_user_toggle_updates_custom_css_box(qtbot):
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    panel.set_card_style_preset("minimal")
-    panel.set_custom_css(".x{}")
-    assert panel.is_styling_user_touched() is False
+    panel.set_manage_styling(False)
+    assert not panel.custom_css_edit.isEnabled()
+    # Simulate a real user toggle (signal fires for non-blocked changes).
+    panel.manage_styling_checkbox.setChecked(True)
+    assert panel.custom_css_edit.isEnabled()
 
 
-def test_user_combo_change_marks_touched(qtbot):
-    panel = AnkiSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.reset_styling_user_touched()
-    # Simulate a real user pick (the signal fires for non-blocked changes).
-    idx = panel.card_style_preset_combo.findData("minimal")
-    panel.card_style_preset_combo.setCurrentIndex(idx)
-    assert panel.is_styling_user_touched() is True
-
-
-def test_load_from_config_resets_touched(qtbot):
+def test_load_from_config_sets_checkbox(qtbot):
     from anki_miner.config import create_default_config
 
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    idx = panel.card_style_preset_combo.findData("minimal")
-    panel.card_style_preset_combo.setCurrentIndex(idx)  # user edit -> touched
-    assert panel.is_styling_user_touched() is True
-
+    panel.manage_styling_checkbox.setChecked(True)  # user edit
     panel.load_from_config(create_default_config())
-    assert panel.is_styling_user_touched() is False
-    # Default config is Off, so the CSS box is greyed.
-    assert panel.get_card_style_preset() == "off"
+    # Default config is off → unchecked, CSS box greyed.
+    assert panel.get_manage_styling() is False
     assert not panel.custom_css_edit.isEnabled()
 
 

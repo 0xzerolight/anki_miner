@@ -105,10 +105,6 @@ class SettingsTab(QWidget):
             "last_known_version",
             "first_run_shortcut_done",
             "first_run_setup_done",
-            # Styling-sync state flag, written by the reconcile flow — never a
-            # panel field, so a migrated-only change must not force a panel reload
-            # (which would clobber unsaved edits, OVH-007).
-            "card_style_migrated",
         }
     )
 
@@ -163,7 +159,6 @@ class SettingsTab(QWidget):
             anki_panel=self.anki_panel,
             filtering_panel=self.filtering_panel,
             get_config=lambda: self.config,
-            persist_styling=self._persist_styling_state,
         )
         # Ordered list of panels that participate in the Save round-trip.
         # _load_config calls load_from_config on each; _on_save_clicked folds
@@ -850,37 +845,31 @@ class SettingsTab(QWidget):
     def _persist_chain_change(self, new_chain: tuple[ChainEntry, ...]) -> None:
         """Save a chain mutation to disk and notify listeners.
 
-        Called after a successful import so the freshly-imported dictionary
-        is reachable on the very next lookup — without requiring the user
-        to manually click Save in Settings. Without this, the dict folder
-        exists on disk but is absent from dictionary_chain in gui_config,
-        i.e. invisible to DictionaryRegistry.build_provider_chain.
+        Called after a successful import (or a panel reorder/remove) so the
+        freshly imported dictionary is reachable on the very next lookup —
+        without requiring a manual Save. Without this, the dict folder exists on
+        disk but is absent from dictionary_chain in gui_config, i.e. invisible to
+        DictionaryRegistry.build_provider_chain.
+
+        Also re-syncs the managed glossary CSS: dictionary author ``styles.css``
+        now lives in the shared note-type block, so a chain change must rebuild
+        it. ``sync_styling`` is idempotent + offline-safe and only writes when
+        styling is managed.
         """
         new_config = replace(self.config, dictionary_chain=new_chain)
         self.config = new_config
         self.config_changed.emit(new_config)
-
-    def _persist_styling_state(self, preset: str, migrated: bool) -> None:
-        """Persist a card-styling reseed/sync outcome (Issue #44).
-
-        Called by :class:`AnkiProbeController` after the one-time migration reseed
-        or a confirmed sync, so the dropdown selection and the ``card_style_migrated``
-        flag survive a relaunch. Narrow persist (like the chain mutations) — not
-        the full Save pipeline — so it never trips the unrelated Save validations.
-        """
-        new_config = replace(self.config, card_style_preset=preset, card_style_migrated=migrated)
-        self.config = new_config
-        self.config_changed.emit(new_config)
+        if new_config.manage_card_styling:
+            self._anki_probe.sync_styling()
 
     def notify_anki_connected(self) -> None:
-        """Reconcile card styling now that AnkiConnect is reachable (Issue #44).
+        """Sync card styling now that AnkiConnect is reachable (Issue #44).
 
         Called by ``MainWindow`` on a successful AnkiConnect validation (startup
-        auto-check or Test Connection), the natural "Anki is up" signal. Drives
-        the read-only probe → one-time migration reseed → deferred-change sync →
-        live status refresh.
+        auto-check or Test Connection), the natural "Anki is up" signal — the
+        retry that flushes any styling sync deferred while Anki was unreachable.
         """
-        self._anki_probe.reconcile_styling()
+        self._anki_probe.sync_styling()
 
     def _persist_audio_chain_change(self, new_chain: tuple[AudioSourceEntry, ...]) -> None:
         """Save an audio chain mutation to disk and notify listeners.

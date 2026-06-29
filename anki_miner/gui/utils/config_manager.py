@@ -103,8 +103,8 @@ class GUIConfigManager:
         # Backfill any anki_fields keys that are new since the config was saved
         config_dict = cls._backfill_anki_fields(config_dict)
 
-        # Migrate pre-preset card-styling boolean → preset id
-        config_dict = cls._migrate_card_style_preset(config_dict)
+        # Fold legacy card-styling preset config into the manage_card_styling bool
+        config_dict = cls._migrate_card_styling(config_dict)
 
         # Migrate stale allowed_pos defaults (pre-v2.3.2 missing 代名詞)
         config_dict = cls._migrate_allowed_pos(config_dict)
@@ -390,38 +390,32 @@ class GUIConfigManager:
         return data
 
     @staticmethod
-    def _migrate_card_style_preset(data: dict[str, Any]) -> dict[str, Any]:
-        """Normalise the card-styling preset id across schema versions.
+    def _migrate_card_styling(data: dict[str, Any]) -> dict[str, Any]:
+        """Fold legacy card-styling config into the ``manage_card_styling`` bool.
 
-        Two migrations, in order:
+        Deterministic, no Anki probe. Chained, in order (skipped if a config
+        already carries ``manage_card_styling``):
 
-        1. Pre-preset boolean ``use_default_card_stylesheet`` → preset id
-           (``True`` → ``"default"``, ``False`` → ``"none"``). The legacy key is
-           left in place; the valid-keys filter in ``load_config`` drops it.
-        2. A retired preset id is remapped onto its surviving replacement
-           (``yomitan-classic`` → ``default``) so existing users keep their look.
-        3. Any ``card_style_preset`` value that is still not a known preset id is
-           coerced to ``"off"`` so an unrecognised/corrupt value can never write
-           styling. Known ids come from ``card_style_presets.PRESETS``.
+        1. Pre-preset boolean ``use_default_card_stylesheet`` (only when no
+           ``card_style_preset`` key exists): BOTH values historically wrote a
+           managed block (``True`` → ``"default"``, ``False`` → ``"none"``, and
+           ``"none"`` still writes a block), so either way the user was managing
+           the note type → ``manage_card_styling = True``.
+        2. ``card_style_preset`` → bool: ``"off"`` (or empty) → ``False``; any
+           other value (``default``/``minimal``/``none``/``yomitan-classic``/
+           unknown) → ``True``.
 
-        ``card_style_migrated`` is intentionally NOT set here: a config saved
-        before auto-sync simply lacks the key, so it defaults to ``False`` and the
-        one-time reseed runs on the next AnkiConnect-reachable launch (see
-        ``AnkiProbeController.reconcile_styling``).
+        Configs with neither key lack ``manage_card_styling`` and default to
+        ``False`` (don't manage). The legacy keys (``card_style_preset``,
+        ``card_style_migrated``, ``use_default_card_stylesheet``) are left in
+        place; the valid-keys filter in ``load_config`` drops them.
         """
-        from anki_miner.services.dictionary.card_style_presets import (
-            OFF_PRESET_ID,
-            PRESETS,
-            resolve_preset_alias,
-        )
-
+        if "manage_card_styling" in data:
+            return data
         if "card_style_preset" not in data and "use_default_card_stylesheet" in data:
-            data["card_style_preset"] = "default" if data["use_default_card_stylesheet"] else "none"
-
-        if "card_style_preset" in data:
-            resolved = resolve_preset_alias(data["card_style_preset"])
-            valid_ids = {p.id for p in PRESETS}
-            data["card_style_preset"] = resolved if resolved in valid_ids else OFF_PRESET_ID
+            data["manage_card_styling"] = True
+        elif "card_style_preset" in data:
+            data["manage_card_styling"] = data["card_style_preset"] not in ("off", "")
         return data
 
     @staticmethod

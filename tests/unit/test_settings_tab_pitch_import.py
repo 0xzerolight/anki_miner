@@ -9,6 +9,7 @@ the outcome deterministically.
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -36,7 +37,16 @@ def tab(test_config: AnkiMinerConfig, pitch_home: Path, qtbot):
     widget = SettingsTab(test_config)
     qtbot.addWidget(widget)
     yield widget
-    widget.deleteLater()
+    # _on_save_clicked reconciles styling, spawning a short-lived AnkiConnect
+    # worker; join it and flush queued signals so a late status update can't fire
+    # into a torn-down QLabel. Mirrors closeEvent.
+    widget.shutdown()
+    for w in widget.iter_close_workers():
+        if w is not None:
+            w.wait(3000)
+    qtbot.wait(10)
+    with contextlib.suppress(RuntimeError):
+        widget.deleteLater()
 
 
 def _capture_messagebox(monkeypatch, default_question_reply=QMessageBox.StandardButton.Yes):

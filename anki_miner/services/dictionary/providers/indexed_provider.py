@@ -38,14 +38,26 @@ class IndexedDictProvider:
         self._db_path = db_path
         self._display_name = display_name or dict_id
         self._conn: sqlite3.Connection | None = None
-        # Per-card <style> block carrying this dictionary's own styles.css,
-        # scoped to its glossary markup (Issue #87). Empty unless the dict
-        # shipped a styles.css that survived scoping; computed in load().
-        self._style_block = ""
+        # This dictionary's own styles.css, scoped to its glossary markup
+        # (Issue #87), as a bare CSS string (no <style> wrapper). Empty unless
+        # the dict shipped a styles.css that survived scoping; computed in
+        # load(). Folded into the shared note-type managed block by
+        # collect_dictionary_css — no longer injected per card.
+        self._scoped_css = ""
 
     @property
     def name(self) -> str:
         return self._display_name
+
+    @property
+    def dictionary_css(self) -> str:
+        """This dictionary's scoped styles.css (bare CSS, no <style> wrapper).
+
+        Empty for JMdict, online providers, and dicts imported before styles.css
+        capture. Concatenated into the shared note-type managed block by
+        ``collect_dictionary_css``; only valid after a successful ``load()``.
+        """
+        return self._scoped_css
 
     @property
     def is_online(self) -> bool:
@@ -85,11 +97,11 @@ class IndexedDictProvider:
             logger.warning("Failed to open %s: %s", self._db_path, e)
             return False
 
-        # Scope the dict's own styles.css (Issue #87) once, into a <style> block
-        # appended to every card by _render. Absent for JMdict and for dicts
-        # imported before this feature (they fall back to the note-type preset).
-        scoped = scope_dict_css(meta.get("styles_css", ""), self._display_name)
-        self._style_block = f"<style>{scoped}</style>" if scoped else ""
+        # Scope the dict's own styles.css (Issue #87) once. Stored bare (no
+        # <style> wrapper) and exposed via `dictionary_css`; collect_dictionary_css
+        # folds it into the shared note-type managed block. Absent for JMdict and
+        # for dicts imported before styles.css capture.
+        self._scoped_css = scope_dict_css(meta.get("styles_css", ""), self._display_name)
         return True
 
     def lookup(self, word: str) -> str | None:
@@ -177,7 +189,6 @@ class IndexedDictProvider:
             f'<ul class="gloss-list" data-count="{item_count}">{merged}</ul>'
             "</li>"
             "</ol>"
-            f"{self._style_block}"
             "</div>"
         )
 
