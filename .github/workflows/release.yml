@@ -78,24 +78,27 @@ jobs:
         # its loadability smoke. "1" only on Linux + Windows: macOS stays on the
         # CT2/Metal path (no official Vulkan artifact for macOS, and no value in
         # MoltenVK here), so the Vulkan steps are skipped and the whispercpp smoke
-        # is skipped (BUNDLE_SMOKE_SKIP_WHISPERCPP) on both macOS variants.
+        # is skipped via skip_whispercpp_smoke: "1" on both macOS variants.
         include:
           - os: ubuntu-22.04
             artifact_name: AnkiMiner-Linux-x86_64
             install_target: ".[asr]"
             skip_asr_smoke: ""
+            skip_whispercpp_smoke: ""
             ffmpeg_encoders: ""
             build_vulkan: "1"
           - os: windows-latest
             artifact_name: AnkiMiner-Windows-x86_64
             install_target: ".[asr]"
             skip_asr_smoke: ""
+            skip_whispercpp_smoke: ""
             ffmpeg_encoders: ""
             build_vulkan: "1"
           - os: macos-latest
             artifact_name: AnkiMiner-macOS-arm64
             install_target: ".[asr]"
             skip_asr_smoke: ""
+            skip_whispercpp_smoke: "1"
             ffmpeg_encoders: ""
             build_vulkan: ""
           # Intel x86_64 macOS. macos-13 was retired by GitHub (2025-12-04); a
@@ -110,6 +113,7 @@ jobs:
             artifact_name: AnkiMiner-macOS-x86_64
             install_target: "."
             skip_asr_smoke: "1"
+            skip_whispercpp_smoke: "1"
             ffmpeg_encoders: "libmp3lame libopus libwebp libwebp_anim"
             build_vulkan: ""
 
@@ -490,7 +494,7 @@ jobs:
       #               present) and the frozen binary's hidden Vulkan probe prints
       #               an integer device count (0 expected on GPU-less runners). It
       #               proves NOTHING about GPU transcription. SKIPPED on macOS
-      #               (BUNDLE_SMOKE_SKIP_WHISPERCPP=1 when build_vulkan != '1') —
+      #               (skip_whispercpp_smoke: "1" on both macOS variants) —
       #               macOS stays on CT2/Metal and ships no Vulkan wheel.
       # shell: bash on every OS — windows-latest has bash on PATH; the script
       # finds AnkiMiner(.exe) and ffmpeg(.exe) itself.
@@ -499,7 +503,7 @@ jobs:
         env:
           BUNDLE_SMOKE_SKIP_ASR: ${{ matrix.skip_asr_smoke }}
           BUNDLE_SMOKE_FFMPEG_ENCODERS: ${{ matrix.ffmpeg_encoders }}
-          BUNDLE_SMOKE_SKIP_WHISPERCPP: ${{ matrix.build_vulkan == '1' && '' || '1' }}
+          BUNDLE_SMOKE_SKIP_WHISPERCPP: ${{ matrix.skip_whispercpp_smoke }}
         run: scripts/bundle_smoke.sh dist/AnkiMiner
 
       - name: Build Windows installer
