@@ -11,12 +11,14 @@ import glob
 import importlib.util
 import itertools
 import logging
+import math
 import os
 import sys
+import types
 from pathlib import Path
 from typing import Any, Callable
 
-from anki_miner.services.asr import _engine
+from anki_miner.services.asr import _engine, ggml_model_installer
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,15 @@ _PEEK_EMPTY = object()
 # avg_logprob).
 _MAX_COMPRESSION_RATIO = 2.4
 _MIN_AVG_LOGPROB = -1.0
+
+# whisper.cpp Segments expose only a single geometric-mean token probability in
+# [0, 1] (with extract_probability=True), not compression_ratio/avg_logprob, so
+# _is_junk_segment is a no-op on them. This floor is the cpp path's lone junk
+# drop: a CONSERVATIVE cut that only removes egregious low-confidence garbage
+# (think English token salad / dead-air hallucinations), never marginal speech.
+# NaN/None probabilities are treated as "unknown" and kept.
+# PROVISIONAL: confirmed/tuned against the manual JP-clip release gate.
+_MIN_CPP_SEGMENT_PROBABILITY = 0.2
 
 
 def _ensure_onnx_pack_on_syspath(onnx_pack_root: Path | None) -> None:
@@ -89,6 +100,91 @@ def _is_junk_segment(seg) -> bool:
         return True
     avg_logprob = getattr(seg, "avg_logprob", 0.0)
     return avg_logprob is not None and avg_logprob < _MIN_AVG_LOGPROB
+
+
+def _is_low_probability_cpp_segment(seg) -> bool:
+    """Return True for a whisper.cpp segment to drop on low geom-mean probability.
+
+    Only drops when ``probability`` is a real number strictly below the floor; a
+    ``None`` or ``NaN`` probability (extract_probability off, or an undefined
+    score) is "unknown" and kept. This is the cpp counterpart to
+    :func:`_is_junk_segment`, which is a harmless no-op on cpp segments (they
+    lack compression_ratio/avg_logprob).
+    """
+    prob = getattr(seg, "probability", None)
+    if prob is None or not isinstance(prob, (int, float)) or math.isnan(prob):
+        return False
+    return bool(prob < _MIN_CPP_SEGMENT_PROBABILITY)
+
+
+def _cpp_ggml_present(model_name: str, models_root: Path) -> bool:
+    """Return True iff *model_name*'s ggml acoustic file is on disk under *models_root*.
+
+    Thin seam over ``ggml_model_installer`` so the cascade can short-circuit to
+    CT2 CPU when the GPU weights were never downloaded. Never raises — an unknown
+    model (no spec) or a stat failure degrades to "absent".
+    """
+    try:
+        return ggml_model_installer.is_ggml_downloaded(model_name, models_root)
+    except Exception:  # noqa: BLE001 — unknown model / odd path → treat as absent
+        return False
+
+
+def _cpp_decode_params(models_root: Path) -> dict[str, Any]:
+    """Build the whisper.cpp decode params, mirroring the CT2 anti-hallucination intent.
+
+    ``language="ja"`` and ``no_context=True`` (disable conditioning on previously
+    decoded text, killing runaway repetition loops — the cpp analogue of CT2's
+    ``condition_on_previous_text=False``). entropy_thold / logprob_thold /
+    no_speech_thold are left at whisper.cpp defaults: they already suppress
+    repetition and low-confidence output the same way CT2's gates do. VAD is
+    enabled ONLY when the Silero ggml is present — a missing VAD file never fails
+    the build, it just runs without VAD (the flags above still apply).
+    """
+    params: dict[str, Any] = {"language": "ja", "no_context": True}
+    if ggml_model_installer.is_vad_downloaded(models_root):
+        params["vad"] = True
+        params["vad_model_path"] = str(ggml_model_installer.vad_model_path(models_root))
+    else:
+        params["vad"] = False
+    return params
+
+
+def _cpp_segments(model, audio, *, duration_s, progress_cb, cancel_event, decode_params):
+    """Yield CT2-shaped segments from a whisper.cpp (pywhispercpp) decode.
+
+    pywhispercpp's ``transcribe`` is a single blocking call returning a fully
+    materialized ``List[Segment]`` — there is no lazy iterator — so live progress
+    MUST come from ``new_segment_callback`` (iterating the returned list is
+    instant and would snap the bar 0→100). The callback fires once per segment as
+    whisper.cpp emits it; ``abort_callback`` lets a set ``cancel_event`` stop the
+    in-flight decode. Each returned ``Segment`` is re-yielded as a
+    ``types.SimpleNamespace`` carrying ``start``/``end`` (t0/t1 are CENTISECONDS:
+    seconds = value / 100.0), ``text`` and ``probability`` — the SAME duck type
+    the CT2 result loop consumes (start/end/text).
+    """
+
+    def _on_segment(seg) -> None:
+        if progress_cb is not None and duration_s > 0:
+            progress_cb(min(seg.t1 / 100.0 / duration_s, 1.0))
+
+    def _should_abort() -> bool:
+        return bool(cancel_event is not None and cancel_event.is_set())
+
+    segments = model.transcribe(
+        audio,
+        new_segment_callback=_on_segment,
+        abort_callback=_should_abort,
+        extract_probability=True,
+        **decode_params,
+    )
+    for seg in segments:
+        yield types.SimpleNamespace(
+            start=seg.t0 / 100.0,
+            end=seg.t1 / 100.0,
+            text=seg.text,
+            probability=seg.probability,
+        )
 
 
 def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
@@ -279,6 +375,158 @@ def transcribe(
             progress_cb(1.0)
         return []
 
+    # Pick the engine from *device*. CT2 (cpu/cuda) is the unchanged default; only
+    # vulkan/auto with a usable Vulkan device and a present ggml model route to the
+    # whisper.cpp engine. A GPU/engine problem there never crashes the run — it
+    # falls back to a full CT2 CPU re-decode.
+    if _use_whisper_cpp_engine(device, model_name, models_root):
+        return _transcribe_cpp(
+            audio,
+            model_name=model_name,
+            models_root=models_root,
+            duration_s=duration_s,
+            cancel_event=cancel_event,
+            progress_cb=progress_cb,
+            cuda_libs_root=cuda_libs_root,
+            onnx_pack_root=onnx_pack_root,
+        )
+
+    # CT2 only understands cpu/cuda/auto; a 'vulkan' request that did not route to
+    # whisper.cpp (unavailable, no device, or missing ggml) falls back to CT2 CPU.
+    ct2_device = "cpu" if device == "vulkan" else device
+    return _transcribe_ct2(
+        audio,
+        model_name=model_name,
+        models_root=models_root,
+        duration_s=duration_s,
+        cancel_event=cancel_event,
+        progress_cb=progress_cb,
+        device=ct2_device,
+        cuda_libs_root=cuda_libs_root,
+        onnx_pack_root=onnx_pack_root,
+    )
+
+
+def _use_whisper_cpp_engine(device: str, model_name: str, models_root: Path) -> bool:
+    """Decide whether the whisper.cpp engine should run, given *device*.
+
+    Implements the device→engine cascade (CT2 behaviour unchanged):
+      * ``cpu`` / ``cuda`` → never (pure CT2; the seam is not even queried).
+      * ``vulkan`` → cpp iff whisper.cpp is available AND a Vulkan device exists;
+        else CT2 CPU.
+      * ``auto`` → CT2 CUDA wins if a CUDA GPU is present; otherwise cpp iff
+        whisper.cpp is available AND a Vulkan device exists; else CT2 CPU.
+
+    When cpp is otherwise selected but the ggml acoustic file is missing on disk,
+    logs and returns False so the caller falls back to CT2 CPU (never crashes).
+    """
+    if device in ("cpu", "cuda"):
+        return False
+
+    if device == "vulkan":
+        if not _engine.whisper_cpp_available():
+            logger.info("ASR: device='vulkan' but whisper.cpp is unavailable; using CPU.")
+            return False
+        if _engine.vulkan_device_count() <= 0:
+            logger.info("ASR: device='vulkan' but no Vulkan device is available; using CPU.")
+            return False
+    elif device == "auto":
+        # CUDA wins over Vulkan when both are present.
+        if _engine.cuda_device_count() > 0:
+            return False
+        if not (_engine.whisper_cpp_available() and _engine.vulkan_device_count() > 0):
+            return False
+    else:  # pragma: no cover — config validates device into the known set.
+        return False
+
+    if not _cpp_ggml_present(model_name, models_root):
+        logger.warning(
+            "ASR: whisper.cpp selected but the ggml model for %r is not downloaded; falling back to CPU.",
+            model_name,
+        )
+        return False
+    return True
+
+
+def _transcribe_cpp(
+    audio,
+    *,
+    model_name: str,
+    models_root: Path,
+    duration_s: float,
+    cancel_event,
+    progress_cb: Callable[[float], None] | None,
+    cuda_libs_root: Path | None,
+    onnx_pack_root: Path | None,
+) -> list[tuple[float, float, str]]:
+    """Transcribe via the whisper.cpp (pywhispercpp) engine, with a CT2 CPU fallback.
+
+    Wraps the ENTIRE attempt (Model construction + the single blocking
+    ``transcribe`` call) in try/except: pywhispercpp returns a fully-materialized
+    list AFTER decoding, so the CT2 peek-first-segment deferred-failure trick does
+    not apply — on ANY exception we log and re-run on CT2 CPU (a full CPU
+    re-decode), so a GPU/driver failure never crashes the run. Junk filtering,
+    cancel checks and live progress mirror the CT2 loop.
+    """
+    decode_params = _cpp_decode_params(models_root)
+    try:
+        model_cls = _engine.get_whisper_cpp_model_cls()
+        model = model_cls(str(ggml_model_installer.ggml_model_path(model_name, models_root)))
+
+        results: list[tuple[float, float, str]] = []
+        for seg in _cpp_segments(
+            model,
+            audio,
+            duration_s=duration_s,
+            progress_cb=progress_cb,
+            cancel_event=cancel_event,
+            decode_params=decode_params,
+        ):
+            if cancel_event is not None and cancel_event.is_set():
+                break
+            # _is_junk_segment is a harmless no-op on cpp segments (no
+            # compression_ratio/avg_logprob); the probability floor is the cpp
+            # path's actual junk drop.
+            if not _is_junk_segment(seg) and not _is_low_probability_cpp_segment(seg):
+                results.append((seg.start, seg.end, seg.text.strip()))
+
+        if progress_cb is not None:
+            progress_cb(1.0)
+        return results
+    except Exception as exc:  # noqa: BLE001 — any cpp/GPU failure → full CT2 CPU re-decode
+        logger.warning("ASR: whisper.cpp transcription failed (%s); falling back to CPU.", exc)
+        return _transcribe_ct2(
+            audio,
+            model_name=model_name,
+            models_root=models_root,
+            duration_s=duration_s,
+            cancel_event=cancel_event,
+            progress_cb=progress_cb,
+            device="cpu",
+            cuda_libs_root=cuda_libs_root,
+            onnx_pack_root=onnx_pack_root,
+        )
+
+
+def _transcribe_ct2(
+    audio,
+    *,
+    model_name: str,
+    models_root: Path,
+    duration_s: float,
+    cancel_event,
+    progress_cb: Callable[[float], None] | None,
+    device: str,
+    cuda_libs_root: Path | None,
+    onnx_pack_root: Path | None,
+) -> list[tuple[float, float, str]]:
+    """The faster-whisper (ctranslate2) transcription path — unchanged behaviour.
+
+    Honours ``device`` in ``{"cpu", "cuda", "auto"}`` with the established CPU
+    fallback (construction failure and deferred CUDA-runtime failure both rebuild
+    on CPU). Extracted verbatim from the original ``transcribe`` body so the
+    cpu/cuda paths stay byte-for-byte behaviourally identical.
+    """
     whisper_model_cls = _engine.get_whisper_model_cls()
     cpu_threads = min(4, os.cpu_count() or 4)
     model, device_used = _resolve_model(
