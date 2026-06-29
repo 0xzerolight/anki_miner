@@ -172,6 +172,16 @@ a = Analysis(
         "fugashi",
         "PyQt6.sip",
     ],
+    # PyInstaller-Hooks/ holds hook-faster_whisper.py (faster_whisper + ctranslate2
+    # + av) and hook-pywhispercpp.py (the whisper.cpp/ggml Vulkan ASR backend).
+    # Both target packages are imported function-locally in services/asr/_engine.py,
+    # but PyInstaller's bytecode analysis finds those IMPORT opcodes and pulls the
+    # packages into the graph, so the matching hooks auto-run from here — no
+    # hiddenimports entry needed.  collect_all in each hook returns empty lists when
+    # its package is absent, so the Intel-mac / no-[asr] build (which installs
+    # neither faster_whisper nor pywhispercpp) is unaffected: nothing is forced onto
+    # macOS.  The Linux/Windows release jobs install the from-source Vulkan
+    # pywhispercpp wheel before this spec runs (see release.yml).
     hookspath=[os.path.join(project_root, "PyInstaller-Hooks")],
     hooksconfig={},
     runtime_hooks=[],
