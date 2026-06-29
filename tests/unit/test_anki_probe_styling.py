@@ -110,3 +110,73 @@ def test_live_status_text_distinguishes_managed_from_off():
     ctrl_off, _ = _make(manage=False)
     assert "live" in ctrl_on._live_status_text().lower()
     assert "Off" in ctrl_off._live_status_text()
+
+
+# --- queued signal after panel teardown (CI teardown-flake regression) ---------
+#
+# A StylingWorker / fetch worker emits its completion signal cross-thread, so it
+# can be delivered *after* the target panel's C++ object is destroyed (a tab
+# closed mid-probe, or pytest's _drain_qt_deletes freeing the widget tree before
+# the worker emits). Touching the dead wrapper raised
+# ``RuntimeError: wrapped C/C++ object of type QLabel has been deleted`` inside
+# the Qt event loop — surfacing as a teardown ERROR on whichever test owned the
+# boundary. The slots now guard with sip.isdeleted and no-op.
+
+
+def test_styling_slots_noop_after_panel_deleted(qtbot):
+    from PyQt6 import sip
+    from PyQt6.QtCore import QEvent
+    from PyQt6.QtWidgets import QApplication, QWidget
+
+    class _Panel(QWidget):
+        def __init__(self) -> None:
+            super().__init__()
+            self.calls: list = []
+
+        def set_styling_status(self, *a, **kw) -> None:
+            # Touch the C++ object as the real panel does (it writes a child
+            # QLabel) so an unguarded call on a deleted wrapper raises.
+            self.isEnabled()
+            self.calls.append((a, kw))
+
+    panel = _Panel()
+    qtbot.addWidget(panel)
+    cfg = create_default_config()
+    ctrl = AnkiProbeController(
+        parent=panel,
+        anki_panel=panel,
+        filtering_panel=MagicMock(),
+        get_config=lambda: cfg,
+    )
+
+    # Destroy the panel's C++ object exactly as _drain_qt_deletes does.
+    panel.deleteLater()
+    QApplication.instance().sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    assert sip.isdeleted(panel)
+
+    # Queued completion slots land after deletion: must no-op, not raise.
+    ctrl._on_styling_error("Anki down")
+    ctrl._on_styling_finished("done")
+
+
+def test_fetch_decks_slots_noop_after_panel_deleted(qtbot):
+    from PyQt6 import sip
+    from PyQt6.QtCore import QEvent
+    from PyQt6.QtWidgets import QApplication, QWidget
+
+    filtering = QWidget()
+    qtbot.addWidget(filtering)
+    cfg = create_default_config()
+    ctrl = AnkiProbeController(
+        parent=MagicMock(spec=QWidget),
+        anki_panel=MagicMock(),
+        filtering_panel=filtering,
+        get_config=lambda: cfg,
+    )
+
+    filtering.deleteLater()
+    QApplication.instance().sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    assert sip.isdeleted(filtering)
+
+    ctrl._on_fetch_decks_finished(["Default"])
+    ctrl._on_fetch_decks_error("Anki down")

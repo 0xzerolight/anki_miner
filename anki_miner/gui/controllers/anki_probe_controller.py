@@ -15,6 +15,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from typing import Literal
 
+from PyQt6 import sip
 from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
@@ -95,6 +96,25 @@ class AnkiProbeController:
             if worker is not None and worker.isRunning():
                 worker.cancel()
 
+    @staticmethod
+    def _alive(widget: QWidget) -> bool:
+        """True unless ``widget``'s underlying C++ object has been destroyed.
+
+        A worker's completion signal is queued cross-thread, so it can be
+        delivered *after* the target panel is torn down (a tab closed mid-probe,
+        or test teardown freeing the widget tree before the worker emits).
+        Touching the dead wrapper then raises ``RuntimeError: wrapped C/C++
+        object of type ... has been deleted``. Every worker-completion slot
+        guards its target widget with this so a late signal no-ops instead of
+        crashing the Qt event loop.
+
+        Non-wrapped objects (e.g. a test ``MagicMock`` panel) aren't sip-tracked,
+        so ``isdeleted`` would reject them — treat those as always alive.
+        """
+        if not isinstance(widget, sip.simplewrapper):
+            return True
+        return not sip.isdeleted(widget)
+
     # === Fetch fields ===
 
     def fetch_fields(self) -> None:
@@ -144,6 +164,8 @@ class AnkiProbeController:
 
     def _on_fetch_fields_finished(self, field_names: list[str]) -> None:
         """Populate the panel with the fetched field list (main-thread slot)."""
+        if not self._alive(self._anki_panel):
+            return
         self._anki_panel.set_fetch_fields_button_enabled(True)
         if not field_names:
             # Empty list means AnkiConnect rejected the request or returned
@@ -159,6 +181,8 @@ class AnkiProbeController:
 
     def _on_fetch_fields_error(self, message: str) -> None:
         """Surface an unexpected worker exception via the note-type status line."""
+        if not self._alive(self._anki_panel):
+            return
         self._anki_panel.set_fetch_fields_button_enabled(True)
         self._anki_panel.set_notetype_status(False, message)
 
@@ -232,11 +256,15 @@ class AnkiProbeController:
 
     def _on_styling_finished(self, _message: str) -> None:
         """A write succeeded: report live, then flush any sync that landed mid-write."""
+        if not self._alive(self._anki_panel):
+            return
         self._anki_panel.set_styling_status(True, self._live_status_text())
         self._flush_pending_resync()
 
     def _on_styling_error(self, message: str) -> None:
         """A write failed (Anki down / note type missing): keep desired, retry later."""
+        if not self._alive(self._anki_panel):
+            return
         self._anki_panel.set_styling_status(
             None,
             tr_format(
@@ -301,6 +329,8 @@ class AnkiProbeController:
 
     def _on_fetch_decks_finished(self, deck_names: list[str]) -> None:
         """Hand the fetched deck list to the panel, which opens the picker."""
+        if not self._alive(self._filtering_panel):
+            return
         self._filtering_panel.set_add_deck_button_enabled(True)
         if not deck_names:
             QMessageBox.warning(
@@ -315,6 +345,8 @@ class AnkiProbeController:
 
     def _on_fetch_decks_error(self, message: str) -> None:
         """Surface an unexpected deck-fetch worker exception."""
+        if not self._alive(self._filtering_panel):
+            return
         self._filtering_panel.set_add_deck_button_enabled(True)
         QMessageBox.warning(
             self._parent,
