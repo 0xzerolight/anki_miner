@@ -100,7 +100,7 @@ class TestWrapTargetFurigana:
         tokens = [_make_mock_token("食べる", kana="タベル")]
         tagger = MagicMock(return_value=tokens)
         out = wrap_target_furigana(text, tagger, 0, 3)
-        assert out == "<b>食べる[たべる]</b>"
+        assert out == "<b>食[た]べる</b>"
 
     def test_target_at_start_no_leading_space(self):
         text = "王国です"
@@ -137,6 +137,21 @@ class TestWrapTargetFurigana:
         out = wrap_target_furigana(text, tagger, start, start + 1)
         assert out == "A <b>&amp;</b> B"
 
+    def test_target_iteration_mark_kept_in_bracket(self):
+        """Bold path: 々 is treated as kanji, so 時々 keeps its whole reading."""
+        tokens = [_make_mock_token("時々", kana="トキドキ")]
+        tagger = MagicMock(return_value=tokens)
+        out = wrap_target_furigana("時々", tagger, 0, 2)
+        assert out == "<b>時々[ときどき]</b>"
+
+    def test_html_special_in_kanji_token_is_escaped(self):
+        """Bold path: html-special chars in a kanji-bearing surface are escaped
+        through the okurigana formatter (whole-bracket branch here)."""
+        tokens = [_make_mock_token("A&B店", kana="エービーミセ")]
+        tagger = MagicMock(return_value=tokens)
+        out = wrap_target_furigana("A&B店", tagger, 0, 4)
+        assert out == "<b>A&amp;B店[えーびーみせ]</b>"
+
     def test_target_after_internal_space(self):
         """Issue #31: MeCab drops whitespace from its token stream, so a
         naive cursor walk drifts left by 1 per preceding space and bolds
@@ -168,7 +183,7 @@ class TestWrapTargetFurigana:
         start = text.index("好き")
         end = start + len("好き")
         out = wrap_target_furigana(text, tagger, start, end)
-        assert out == "なんで 素直[すなお]に <b>好き[すき]</b>"
+        assert out == "なんで 素直[すなお]に <b>好[す]き</b>"
 
     def test_target_before_internal_space_unchanged(self):
         """Token preceding the first space was already correct under the
@@ -184,7 +199,7 @@ class TestWrapTargetFurigana:
         start = text.index("素直")
         end = start + len("素直")
         out = wrap_target_furigana(text, tagger, start, end)
-        assert out == "<b>素直[すなお]</b>に 言え[いえ]ない"
+        assert out == "<b>素直[すなお]</b>に 言[い]えない"
 
     def test_no_spaces_unchanged_after_rewrite(self):
         """Regression guard: the no-space happy path that worked before

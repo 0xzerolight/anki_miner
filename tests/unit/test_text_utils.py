@@ -3,6 +3,8 @@
 from unittest.mock import MagicMock, PropertyMock
 
 from anki_miner.utils.text_utils import (
+    _format_furigana,
+    _is_kanji,
     clean_subtitle_text,
     generate_furigana,
     generate_furigana_from_tokens,
@@ -177,11 +179,11 @@ class TestGenerateFurigana:
         assert result == "スウェーデンやオランダは 王国[おうこく]です。"
 
     def test_kanji_with_okurigana(self):
-        """Mixed kanji+kana token should get full token annotated."""
+        """Mixed kanji+kana token keeps the okurigana outside the brackets."""
         token = _make_mock_token("食べる", kana="タベル")
         tagger = MagicMock(return_value=[token])
         result = generate_furigana("食べる", tagger)
-        assert result == "食べる[たべる]"
+        assert result == "食[た]べる"
 
     def test_unknown_token_no_kana(self):
         """Token with no kana attribute should be output as-is."""
@@ -202,6 +204,80 @@ class TestGenerateFurigana:
         tagger = MagicMock(return_value=[])
         result = generate_furigana("", tagger)
         assert result == ""
+
+    def test_trailing_okurigana_split(self):
+        """終い → 終[しま]い: trailing kana stays outside the bracket."""
+        token = _make_mock_token("終い", kana="シマイ")
+        tagger = MagicMock(return_value=[token])
+        assert generate_furigana("終い", tagger) == "終[しま]い"
+
+    def test_leading_and_trailing_okurigana_split(self):
+        """お祭り → お祭[まつ]り: honorific お and trailing り both stay out."""
+        token = _make_mock_token("お祭り", kana="オマツリ")
+        tagger = MagicMock(return_value=[token])
+        assert generate_furigana("お祭り", tagger) == "お祭[まつ]り"
+
+    def test_iteration_mark_kept_in_bracket(self):
+        """時々 → 時々[ときどき]: 々 counts as kanji, not stripped as okurigana."""
+        token = _make_mock_token("時々", kana="トキドキ")
+        tagger = MagicMock(return_value=[token])
+        assert generate_furigana("時々", tagger) == "時々[ときどき]"
+
+    def test_internal_okurigana_single_run(self):
+        """打ち合わせ → 打ち合[うちあ]わせ: only the single leading/trailing run
+        is stripped; internal okurigana stays inside the bracket."""
+        token = _make_mock_token("打ち合わせ", kana="ウチアワセ")
+        tagger = MagicMock(return_value=[token])
+        assert generate_furigana("打ち合わせ", tagger) == "打ち合[うちあ]わせ"
+
+    def test_all_kanji_not_mis_stripped(self):
+        """王国 → 王国[おうこく]: an all-kanji word still gets whole-word ruby."""
+        token = _make_mock_token("王国", kana="オウコク")
+        tagger = MagicMock(return_value=[token])
+        assert generate_furigana("王国", tagger) == "王国[おうこく]"
+
+
+class TestFormatFurigana:
+    """Unit tests for the okurigana-aware furigana formatter and kanji predicate.
+
+    These pin the formatter's guard branches directly (the token-driven tests
+    above cover the integrated path) so a future refactor that drops a guard is
+    caught here.
+    """
+
+    def test_is_kanji_includes_iteration_mark(self):
+        assert _is_kanji("一") and _is_kanji("鿿") and _is_kanji("々")
+        assert not _is_kanji("あ") and not _is_kanji("ア") and not _is_kanji("〇")
+
+    def test_single_kanji_whole_bracket(self):
+        assert _format_furigana("国", "くに") == "国[くに]"
+
+    def test_trailing_split(self):
+        assert _format_furigana("食べる", "たべる") == "食[た]べる"
+
+    def test_leading_and_trailing_split(self):
+        assert _format_furigana("お預け", "おあずけ") == "お預[あず]け"
+
+    def test_katakana_okurigana_falls_back(self):
+        """Trailing kana voiced/script-shifted vs the hiragana reading must NOT
+        be stripped — mirrors the Anki add-on comparing surface to the reading."""
+        assert _format_furigana("見ル", "みる") == "見ル[みる]"
+
+    def test_rendaku_tail_falls_back(self):
+        """入り口/いりぐち: the trailing 口 is kanji (run empty) and the inner り
+        is not a trailing run, so the whole word brackets."""
+        assert _format_furigana("入り口", "いりぐち") == "入り口[いりぐち]"
+
+    def test_leading_only_mismatch_falls_back(self):
+        """Branch symmetry with the trailing-mismatch guard: a leading-kana run
+        whose reading prefix differs is not stripped (unreachable for real
+        MeCab readings, but the guard must hold)."""
+        assert _format_furigana("お預", "よ") == "お預[よ]"
+
+    def test_reading_shorter_than_okurigana_no_crash(self):
+        """Degenerate guard: reading shorter than the okurigana run falls back to
+        whole-bracket instead of slicing into negative indices."""
+        assert _format_furigana("食べる", "た") == "食べる[た]"
 
 
 class TestGenerateReading:

@@ -75,6 +75,58 @@ def has_katakana(text: str) -> bool:
     return any("ァ" <= ch <= "ヶ" for ch in text)
 
 
+def _is_kanji(char: str) -> bool:
+    """True iff *char* is a CJK ideograph or the iteration mark 々.
+
+    々 (U+3005) sits below the CJK block (U+4E00–U+9FFF), so it must be added
+    explicitly; it is held inside the furigana bracket (時々 → 時々[ときどき],
+    not 時[とき]々). Used both as the kanji-containment gate and by
+    :func:`_format_furigana` to find the okurigana boundary.
+    """
+    return "一" <= char <= "鿿" or char == "々"
+
+
+def _format_furigana(surface: str, reading: str) -> str:
+    """Anki furigana for one morpheme, keeping okurigana outside the brackets.
+
+    Mirrors the Anki Japanese-support add-on: strip the single leading and
+    single trailing *kana* run that the surface shares with its reading
+    (okurigana), leaving them outside the ``[...]`` so ``終い``/``しまい`` renders
+    as ``終[しま]い`` rather than ``終い[しまい]``.
+
+    ``reading`` is expected to already be hiragana (the callers apply
+    :func:`katakana_to_hiragana`). Falls back to whole-surface bracketing when
+    nothing kanji-bearing would remain, or when the shared kana don't line up
+    with the reading — rendaku/sokuon/katakana okurigana (e.g. ``入り口``/``いりぐち``
+    → ``入り口[いりぐち]``), matching the add-on's comparison of the surface
+    against the hiragana reading.
+    """
+    trail_len = 0  # count of trailing non-kanji surface chars (okurigana)
+    for i in range(1, len(surface)):
+        if _is_kanji(surface[-i]):
+            break
+        trail_len = i
+    lead_len = 0  # count of leading non-kanji surface chars (e.g. honorific お)
+    for i in range(0, len(surface) - 1):
+        if _is_kanji(surface[i]):
+            break
+        lead_len = i + 1
+    # Only strip kana that literally match between surface and reading; this
+    # refuses a wrong split when the okurigana voices/changes in the reading.
+    if trail_len and reading[-trail_len:] != surface[-trail_len:]:
+        trail_len = 0
+    if lead_len and reading[:lead_len] != surface[:lead_len]:
+        lead_len = 0
+    if lead_len + trail_len >= len(surface) or lead_len + trail_len >= len(reading):
+        return f"{surface}[{reading}]"
+    return (
+        f"{reading[:lead_len]}"
+        f"{surface[lead_len:len(surface) - trail_len]}"
+        f"[{reading[lead_len:len(reading) - trail_len]}]"
+        f"{reading[len(reading) - trail_len:]}"
+    )
+
+
 def generate_furigana_from_tokens(tokens: Iterable[Any]) -> str:
     """Generate furigana-annotated text from an already-parsed token iterable.
 
@@ -92,7 +144,7 @@ def generate_furigana_from_tokens(tokens: Iterable[Any]) -> str:
     result = []
     for token in tokens:
         surface = token.surface
-        has_kanji = any("一" <= c <= "鿿" for c in surface)
+        has_kanji = any(_is_kanji(c) for c in surface)
         if not has_kanji:
             result.append(surface)
             continue
@@ -110,7 +162,7 @@ def generate_furigana_from_tokens(tokens: Iterable[Any]) -> str:
         else:
             # Add space separator before furigana only if preceded by another token
             prefix = " " if result else ""
-            result.append(f"{prefix}{surface}[{hiragana}]")
+            result.append(f"{prefix}{_format_furigana(surface, hiragana)}")
     return "".join(result)
 
 
@@ -270,11 +322,11 @@ def wrap_target_furigana_from_tokens(text: str, tokens: Iterable[Any], start: in
 
         # Build the annotated segment using the same rules as generate_furigana,
         # but with per-token HTML escaping so the surrounding <b> tags are
-        # the only raw HTML in the output. Hiragana never contains
-        # html-special characters, so it's left unescaped.
-        has_kanji = any("一" <= c <= "鿿" for c in surface)
-        escaped_surface = html.escape(surface)
-        annotated = escaped_surface
+        # the only raw HTML in the output. Escaping the whole post-split string
+        # equals the old escape-then-bracket: readings are pure kana (no
+        # &<>") and the surface is escaped either way, so no double/under-escape.
+        has_kanji = any(_is_kanji(c) for c in surface)
+        annotated = html.escape(surface)
         if has_kanji:
             try:
                 kana = token.feature.kana
@@ -284,7 +336,7 @@ def wrap_target_furigana_from_tokens(text: str, tokens: Iterable[Any], start: in
                 hiragana = katakana_to_hiragana(kana)
                 if hiragana != surface:
                     prefix = " " if out_has_content else ""
-                    annotated = f"{prefix}{escaped_surface}[{hiragana}]"
+                    annotated = f"{prefix}{html.escape(_format_furigana(surface, hiragana))}"
         bucket.append(annotated)
         if annotated:
             out_has_content = True
