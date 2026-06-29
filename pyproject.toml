@@ -182,7 +182,7 @@ module = ["fugashi.*", "pysubs2.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["faster_whisper.*", "ctranslate2.*"]
+module = ["faster_whisper.*", "ctranslate2.*", "pywhispercpp.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
