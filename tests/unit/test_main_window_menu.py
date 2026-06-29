@@ -8,7 +8,7 @@ file builds a real ``MainWindow`` with heavy startup side effects patched out.
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtCore import QSize, Qt, QUrl
 from PyQt6.QtWidgets import QToolButton, QWidget
 
 from anki_miner.config import AnkiMinerConfig
@@ -94,6 +94,21 @@ def test_corner_has_report_and_star_buttons(main_window):
     assert star.autoRaise() is True
     assert discord.autoRaise() is True
     assert discord.toolTip() == "Join the community on Discord"
+
+
+def test_discord_button_has_brand_icon(main_window):
+    """The Discord button shows the blurple brand mark beside its unchanged label."""
+    discord = _corner_container(main_window).findChild(QToolButton, "discord_button")
+    assert discord is not None
+    assert discord.text() == "Join Discord"  # label intentionally unchanged
+    assert discord.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+    icon = discord.icon()
+    assert not icon.isNull()
+    # The mark rasterizes at 16px and its core fill is Discord brand blurple #5865F2.
+    pixmap = icon.pixmap(QSize(16, 16))
+    assert not pixmap.isNull()
+    center = pixmap.toImage().pixelColor(8, 8)
+    assert (center.red(), center.green(), center.blue(), center.alpha()) == (0x58, 0x65, 0xF2, 255)
 
 
 def test_report_button_opens_issues_url(main_window, monkeypatch):

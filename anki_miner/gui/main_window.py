@@ -5,8 +5,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -28,6 +28,7 @@ from anki_miner.gui.constants import (
 )
 from anki_miner.gui.controllers import BackgroundTaskController
 from anki_miner.gui.presenters import GUIPresenter
+from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
@@ -306,13 +307,23 @@ class MainWindow(QMainWindow):
         star_button.clicked.connect(self._open_github_repo)
         corner_layout.addWidget(star_button)
 
-        # "Join Discord" button.
+        # "Join Discord" button — brand mark beside the label.
         discord_button = QToolButton(corner_widget)
         discord_button.setObjectName("discord_button")
         discord_button.setText(self.tr("Join Discord"))
-        discord_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         discord_button.setAutoRaise(True)
         discord_button.setToolTip(self.tr("Join the community on Discord"))
+        # Guard on the loaded icon (covers a missing OR unparseable SVG): a
+        # TextBesideIcon button with a null icon would leave a blank gap, so fall
+        # back to text-only if the brand mark fails to load.
+        discord_icon = QIcon(str(get_resource_dir() / "icons" / "discord.svg"))
+        if not discord_icon.isNull():
+            discord_button.setIcon(discord_icon)
+            # Pin the glyph size so it stays independent of Qt/QSS icon defaults.
+            discord_button.setIconSize(QSize(16, 16))
+            discord_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        else:
+            discord_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         discord_button.clicked.connect(self._open_discord)
         corner_layout.addWidget(discord_button)
 
