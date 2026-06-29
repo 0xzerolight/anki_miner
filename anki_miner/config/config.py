@@ -519,7 +519,7 @@ class AnkiMinerConfig:
 
         # Validate asr_device the same way: a stale/hand-edited config must never
         # pass an unsupported backend name through to the transcriber.
-        if self.asr_device not in {"auto", "cuda", "cpu"}:
+        if self.asr_device not in {"auto", "cuda", "cpu", "vulkan"}:
             object.__setattr__(self, "asr_device", "auto")
 
         # Keep anki_word_field in sync with anki_fields["word"]

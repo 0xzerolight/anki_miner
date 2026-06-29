@@ -63,12 +63,20 @@ def test_asr_device_valid_values_pass_through():
     assert AnkiMinerConfig(asr_device="auto").asr_device == "auto"
     assert AnkiMinerConfig(asr_device="cuda").asr_device == "cuda"
     assert AnkiMinerConfig(asr_device="cpu").asr_device == "cpu"
+    assert AnkiMinerConfig(asr_device="vulkan").asr_device == "vulkan"
+
+
+def test_asr_device_vulkan_round_trips_via_replace():
+    """asr_device='vulkan' is preserved (not reset) when built via replace()."""
+    cfg = replace(create_default_config(), asr_device="vulkan")
+    assert cfg.asr_device == "vulkan"
 
 
 def test_asr_device_invalid_resets_to_auto():
     """An unknown asr_device value resets to 'auto'."""
     assert AnkiMinerConfig(asr_device="gpu").asr_device == "auto"
     assert AnkiMinerConfig(asr_device="metal").asr_device == "auto"
+    assert AnkiMinerConfig(asr_device="rocm").asr_device == "auto"
     assert AnkiMinerConfig(asr_device="").asr_device == "auto"
 
 
