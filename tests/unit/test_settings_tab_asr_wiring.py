@@ -220,3 +220,36 @@ class TestSettingsTabCudaPackWiring:
 
         tab.set_cuda_pack_status("Installed")
         assert tab.subtitles_panel.cuda_status_label.text() == "Installed"
+
+
+class TestSettingsTabVulkanWiring:
+    """Pin Vulkan model download wiring on the merged Subtitles panel."""
+
+    def test_panel_emits_makes_tab_emit_and_sets_status(self, test_config: AnkiMinerConfig, qtbot):
+        """Panel's vulkan_model_download_requested → tab re-emits (carrying the
+        model name) + sets 'Downloading…'."""
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        panel = tab.subtitles_panel
+        if panel.download_vulkan_button is None:
+            pytest.skip("Vulkan download unsupported on this platform (macOS)")
+        qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
+
+        received: list[str] = []
+        tab.vulkan_model_download_requested.connect(received.append)
+
+        panel.download_vulkan_button.click()
+
+        assert received == [panel.get_model()]
+        assert panel.vulkan_status_label.text() == "Downloading…"
+
+    def test_set_vulkan_status_forwards_to_panel(self, test_config: AnkiMinerConfig, qtbot):
+        """set_vulkan_status() forwards text to the Subtitles panel status label."""
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        panel = tab.subtitles_panel
+        if panel.download_vulkan_button is None:
+            pytest.skip("Vulkan download unsupported on this platform (macOS)")
+
+        tab.set_vulkan_status("Installed")
+        assert panel.vulkan_status_label.text() == "Installed"

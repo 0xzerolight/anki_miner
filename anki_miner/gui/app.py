@@ -313,6 +313,33 @@ def _connect_vad_pack_download(window: MainWindow, settings_tab: SettingsTab) ->
     settings_tab.vad_pack_download_requested.connect(_on_vad_pack_download_requested)
 
 
+def _connect_vulkan_download(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Wire the Subtitles panel's "Download Vulkan model" button to the worker.
+
+    One action fetches BOTH the ggml acoustic model and the Silero VAD. Status
+    flows back to the panel; on finish the panel's in-flight guard is cleared and
+    its installed-state label refreshed via ``notify_vulkan_download_finished``.
+    Mirrors :func:`_connect_cuda_pack_download`.
+
+    Extracted from ``main()`` so the wiring is unit-testable without standing up
+    the whole app.
+    """
+
+    def _on_vulkan_download_requested(model_name: str) -> None:
+        def _on_vulkan_finished(ok: bool, message: str) -> None:
+            settings_tab.set_vulkan_status(message)
+            settings_tab.subtitles_panel.notify_vulkan_download_finished(ok, message)
+
+        window.background_tasks.start_vulkan_download(
+            model_name,
+            window.get_config().asr_models_root,
+            settings_tab.set_vulkan_status,
+            _on_vulkan_finished,
+        )
+
+    settings_tab.vulkan_model_download_requested.connect(_on_vulkan_download_requested)
+
+
 def main():
     """Launch the Anki Miner GUI application."""
     _scrub_pyinstaller_env()
@@ -523,6 +550,7 @@ def main():
     _connect_alass_download(window, settings_tab)
     _connect_cuda_pack_download(window, settings_tab)
     _connect_vad_pack_download(window, settings_tab)
+    _connect_vulkan_download(window, settings_tab)
     # Wire the Dictionary Settings panel's pre-remove hook so deleting a
     # dictionary closes cached sqlite handles across every tab first — Win11
     # rejects the rmtree otherwise (Issue #30).

@@ -216,6 +216,7 @@ class TestShutdownJoinsOffThreadWorkers:
             "alass_install_worker",
             "cuda_pack_download_worker",
             "onnx_pack_download_worker",
+            "vulkan_model_download_worker",
             "prewarm_worker",
         ):
             setattr(ctrl, attr, None)
@@ -667,4 +668,96 @@ class TestStartCudaPackDownload:
         worker.emit_finished()
 
         assert controller.cuda_pack_download_worker is None
+        worker.deleteLater.assert_called_once()
+
+
+class _FakeVulkanModelDownloadWorker(QObject):
+    """Fake VulkanModelDownloadWorker — same status/result_ready/finished split."""
+
+    status = pyqtSignal(str)
+    result_ready = pyqtSignal(bool, str)
+    finished = pyqtSignal()
+
+    def __init__(self, asr_model, asr_models_root, parent=None) -> None:
+        super().__init__(parent)
+        self._asr_model = asr_model
+        self._asr_models_root = asr_models_root
+        self._running = False
+        self.deleteLater = MagicMock()  # type: ignore[method-assign]
+
+    def isRunning(self) -> bool:  # noqa: N802
+        return self._running
+
+    def start(self) -> None:
+        self._running = True
+
+    def emit_result(self, ok: bool = True, message: str = "Done") -> None:
+        self.result_ready.emit(ok, message)
+
+    def emit_finished(self) -> None:
+        self._running = False
+        self.finished.emit()
+
+
+class TestStartVulkanDownload:
+    """start_vulkan_download: guard, construction, status/finished routing, handle release."""
+
+    def _patch(self, monkeypatch, worker: _FakeVulkanModelDownloadWorker, captured: dict | None = None) -> None:
+        def _make_worker(asr_model, asr_models_root, parent=None):
+            if captured is not None:
+                captured["asr_model"] = asr_model
+                captured["asr_models_root"] = asr_models_root
+            return worker
+
+        monkeypatch.setattr(
+            "anki_miner.gui.workers.vulkan_model_download_worker.VulkanModelDownloadWorker",
+            _make_worker,
+        )
+
+    def test_starts_and_routes_status(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeVulkanModelDownloadWorker("large-v3", tmp_path)
+        captured: dict = {}
+        self._patch(monkeypatch, worker, captured)
+
+        status_received: list[str] = []
+        controller.start_vulkan_download("large-v3", tmp_path, status_received.append, lambda ok, msg: None)
+
+        assert captured["asr_model"] == "large-v3"
+        assert captured["asr_models_root"] == tmp_path
+        assert controller.vulkan_model_download_worker is worker
+
+        worker.status.emit("Downloading Vulkan model…")
+        assert status_received == ["Downloading Vulkan model…"]
+
+    def test_routes_result(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeVulkanModelDownloadWorker("small", tmp_path)
+        self._patch(monkeypatch, worker)
+
+        finished_calls: list[tuple] = []
+        controller.start_vulkan_download(
+            "small", tmp_path, lambda msg: None, lambda ok, msg: finished_calls.append((ok, msg))
+        )
+
+        worker.emit_result(True, "Vulkan model installed successfully.")
+        assert finished_calls == [(True, "Vulkan model installed successfully.")]
+
+    def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
+        worker_a = _FakeVulkanModelDownloadWorker("large-v3", tmp_path)
+        self._patch(monkeypatch, worker_a)
+        controller.start_vulkan_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
+        assert controller.vulkan_model_download_worker is worker_a
+
+        worker_b = _FakeVulkanModelDownloadWorker("large-v3", tmp_path)
+        self._patch(monkeypatch, worker_b)
+        controller.start_vulkan_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
+        assert controller.vulkan_model_download_worker is worker_a
+
+    def test_handle_released_on_finished(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeVulkanModelDownloadWorker("large-v3", tmp_path)
+        self._patch(monkeypatch, worker)
+        controller.start_vulkan_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
+
+        worker.emit_finished()
+
+        assert controller.vulkan_model_download_worker is None
         worker.deleteLater.assert_called_once()

@@ -34,7 +34,13 @@ from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
 from anki_miner.services import alass_installer
-from anki_miner.services.asr import _engine, cuda_pack_installer, model_manager, onnx_pack_installer
+from anki_miner.services.asr import (
+    _engine,
+    cuda_pack_installer,
+    ggml_model_installer,
+    model_manager,
+    onnx_pack_installer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +111,7 @@ class _AsrState:
     alass_installed: bool
     onnxruntime_importable: bool
     vad_pack_installed: bool
+    vulkan_installed: bool
 
 
 class SubtitlesSettingsPanel(FormPanel):
@@ -122,6 +129,11 @@ class SubtitlesSettingsPanel(FormPanel):
     #: Emitted when the user clicks "Download silence removal"; the managed
     #: install target (``config.onnx_pack_root``) is resolved by the wiring.
     vad_pack_download_requested = pyqtSignal()
+    #: Emitted when the user clicks "Download Vulkan model"; carries the selected
+    #: acoustic model name. The install root (``config.asr_models_root``) is
+    #: resolved by the wiring. One action fetches BOTH the ggml acoustic model
+    #: and the Silero VAD.
+    vulkan_model_download_requested = pyqtSignal(str)
 
     def __init__(self, parent=None):
         """Initialize the Subtitles settings panel."""
@@ -136,6 +148,10 @@ class SubtitlesSettingsPanel(FormPanel):
         # set_device/get_device, and the load_from_config hygiene check all share
         # one source of truth.
         self._device_options = _device_options()
+        # The Vulkan model action is offered everywhere except macOS (Vulkan is
+        # unsupported there). Mirrors the device-option macOS handling so the
+        # button + its row are omitted entirely on macOS.
+        self._vulkan_supported = sys.platform != "darwin"
         # In-flight guards: a download disables its button until the worker
         # finishes. Without these, any state refresh re-run (config reload
         # mid-download) would re-enable the button and clobber the status label.
@@ -143,6 +159,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._alass_download_active = False
         self._cuda_pack_active = False
         self._vad_pack_active = False
+        self._vulkan_active = False
         # Off-thread state probe coordination. The heavy probes (ctranslate2
         # import + CUDA init, find_spec, model.bin disk walk) run on a worker;
         # _state_in_flight + _state_refresh_pending give the same single-shot
@@ -169,6 +186,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_pack_installed_cache = False
         self._vad_pack_installed_cache = False
         self._alass_installed_cache = False
+        self._vulkan_installed_cache = False
         self._setup_fields()
 
     # ------------------------------------------------------------------
@@ -296,6 +314,34 @@ class SubtitlesSettingsPanel(FormPanel):
         self._vad_guidance_label.setWordWrap(True)
         self._vad_guidance_label.setVisible(False)
         self.add_field("", self._vad_guidance_label)
+
+        # Vulkan model download. One action fetches BOTH the ggml acoustic model
+        # and the Silero VAD the whisper.cpp (Vulkan/CPU) backend loads off disk.
+        # The button + its row are omitted on macOS (Vulkan unsupported there),
+        # mirroring the device-option macOS handling; the attributes stay set to
+        # None so set_vulkan_status/notify can no-op safely.
+        self.download_vulkan_button: ModernButton | None = None
+        self.vulkan_status_label: QLabel | None = None
+        if self._vulkan_supported:
+            self.download_vulkan_button = ModernButton(self.tr("Download Vulkan model"), variant="secondary")
+            self.download_vulkan_button.setToolTip(
+                self.tr(
+                    "Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. "
+                    "Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards."
+                )
+            )
+            self.download_vulkan_button.clicked.connect(self._on_vulkan_download_clicked)
+
+            self.vulkan_status_label = QLabel("")
+            self.vulkan_status_label.setObjectName("settings-save-status")
+
+            vulkan_container = QWidget()
+            vulkan_row = QHBoxLayout(vulkan_container)
+            vulkan_row.setContentsMargins(0, 0, 0, 0)
+            vulkan_row.addWidget(self.download_vulkan_button)
+            vulkan_row.addWidget(self.vulkan_status_label)
+            vulkan_row.addStretch()
+            self.add_field(self.tr("Vulkan model"), vulkan_container)
 
     def _setup_alass_section(self) -> None:
         """alass path override plus in-app download (or Homebrew guidance)."""
@@ -593,6 +639,63 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_cuda_pack_status(self.tr("Not installed"))
 
     # ------------------------------------------------------------------
+    # Vulkan model download flow
+    # ------------------------------------------------------------------
+
+    def _on_vulkan_download_clicked(self) -> None:
+        """Disable the button in flight and request the Vulkan model download.
+
+        Carries the selected acoustic model name; the install root
+        (``config.asr_models_root``) is resolved by the wiring. One action fetches
+        BOTH the ggml acoustic model and the Silero VAD.
+        """
+        if self.download_vulkan_button is None:
+            return
+        self._vulkan_active = True
+        self.download_vulkan_button.setEnabled(False)
+        self.vulkan_model_download_requested.emit(self.get_model())
+
+    def set_vulkan_status(self, text: str) -> None:
+        """Set the Vulkan status label text (no-op when the button is omitted)."""
+        if self.vulkan_status_label is not None:
+            self.vulkan_status_label.setText(text)
+
+    def notify_vulkan_download_finished(self, ok: bool, msg: str) -> None:
+        """Clear the in-flight guard, set the status label + installed cache,
+        and re-enable the button after a Vulkan model download.
+
+        Wired to the download worker's finish callback (success or failure). The
+        worker's result *message* is shown verbatim (unlike the re-probe paths,
+        the worker already carries it), the installed cache is set to ``ok`` so a
+        later refresh reflects the new on-disk state, and the button is
+        re-enabled. A no-op on macOS where the button is omitted.
+        """
+        self._vulkan_active = False
+        self._vulkan_installed_cache = ok
+        self.set_vulkan_status(msg)
+        if self.download_vulkan_button is not None:
+            self.download_vulkan_button.setEnabled(True)
+
+    def _apply_vulkan_state(self, installed: bool) -> None:
+        """Reflect whether the Vulkan model (ggml + VAD) is present; re-enable.
+
+        Applies a pre-probed ``installed`` flag (gathered off-thread = both
+        ``is_ggml_downloaded`` AND ``is_vad_downloaded``). A no-op on macOS where
+        the button is omitted; a download in flight keeps the button disabled and
+        leaves any "Downloading…"/result status untouched.
+        """
+        if self.download_vulkan_button is None:
+            return
+        if self._vulkan_active:
+            self.download_vulkan_button.setEnabled(False)
+            return
+        self.download_vulkan_button.setEnabled(True)
+        if installed:
+            self.set_vulkan_status(self.tr("Installed"))
+        else:
+            self.set_vulkan_status(self.tr("Not installed"))
+
+    # ------------------------------------------------------------------
     # Off-thread availability/state probe
     # ------------------------------------------------------------------
 
@@ -621,6 +724,7 @@ class SubtitlesSettingsPanel(FormPanel):
         bin_root = self._bin_root
         onnx_pack_root = self._onnx_pack_root
         alass_supported = self._alass_supported
+        vulkan_supported = self._vulkan_supported
         # Reuse cached process-lifetime probes; re-probe install/download flags.
         engine_cache = self._engine_available_cache
         cuda_cache = self._cuda_device_count_cache
@@ -679,6 +783,18 @@ class SubtitlesSettingsPanel(FormPanel):
                 except Exception:  # noqa: BLE001 — guard any installer probe failure
                     vad_pack_installed = False
 
+            # The Vulkan model is "installed" only when BOTH ggml files are
+            # present: the acoustic model for the selected model AND the shared
+            # Silero VAD. Each presence check is a cheap dir stat.
+            vulkan_installed = False
+            if vulkan_supported and models_root is not None:
+                try:
+                    vulkan_installed = ggml_model_installer.is_ggml_downloaded(
+                        name, models_root
+                    ) and ggml_model_installer.is_vad_downloaded(models_root)
+                except Exception:  # noqa: BLE001 — guard any installer probe failure
+                    vulkan_installed = False
+
             return _AsrState(
                 cuda_libs_root=cuda_libs_root,
                 engine_available=engine_available,
@@ -688,6 +804,7 @@ class SubtitlesSettingsPanel(FormPanel):
                 alass_installed=alass_installed,
                 onnxruntime_importable=onnxruntime_importable,
                 vad_pack_installed=vad_pack_installed,
+                vulkan_installed=vulkan_installed,
             )
 
         run_off_thread(self, _probe, self._on_state_ready, self._on_state_error)
@@ -700,6 +817,8 @@ class SubtitlesSettingsPanel(FormPanel):
             self.download_cuda_button.setEnabled(False)
         if not self._vad_pack_active:
             self.download_vad_button.setEnabled(False)
+        if self.download_vulkan_button is not None and not self._vulkan_active:
+            self.download_vulkan_button.setEnabled(False)
         if self._alass_supported and not self._alass_download_active:
             self.download_alass_button.setEnabled(False)
 
@@ -718,12 +837,14 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_pack_installed_cache = result.cuda_pack_installed
         self._vad_pack_installed_cache = result.vad_pack_installed
         self._alass_installed_cache = result.alass_installed
+        self._vulkan_installed_cache = result.vulkan_installed
 
         self._apply_engine_state(result.engine_available)
         self._apply_model_state(result.engine_available, result.model_downloaded)
         self._apply_cuda_pack_state(result.cuda_libs_root, result.cuda_device_count, result.cuda_pack_installed)
         self._apply_vad_pack_state(result.onnxruntime_importable, result.vad_pack_installed)
         self._apply_alass_state(result.alass_installed)
+        self._apply_vulkan_state(result.vulkan_installed)
 
         self._redispatch_pending_state()
 
@@ -742,6 +863,7 @@ class SubtitlesSettingsPanel(FormPanel):
         )
         self._apply_vad_pack_state(self._onnxruntime_importable_now(), self._vad_pack_installed_cache)
         self._apply_alass_state(self._alass_installed_cache)
+        self._apply_vulkan_state(self._vulkan_installed_cache)
         self._redispatch_pending_state()
 
     def _redispatch_pending_state(self) -> None:

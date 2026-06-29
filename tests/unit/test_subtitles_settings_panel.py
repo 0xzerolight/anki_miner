@@ -882,3 +882,154 @@ def test_set_vad_pack_status_sets_label(qtbot):
     qtbot.addWidget(panel)
     panel.set_vad_pack_status("Downloading…")
     assert panel.vad_status_label.text() == "Downloading…"
+
+
+# ---------------------------------------------------------------------------
+# Vulkan model download — button presence, gating, signal, installed probe
+# ---------------------------------------------------------------------------
+
+
+def _patch_vulkan(monkeypatch, *, ggml: bool, vad: bool) -> None:
+    """Stub the ggml/VAD presence probes used by the Vulkan installed state."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.ggml_model_installer.is_ggml_downloaded", lambda name, root: ggml)
+    monkeypatch.setattr(f"{_PANEL_MOD}.ggml_model_installer.is_vad_downloaded", lambda root: vad)
+
+
+def test_vulkan_button_present_off_macos(qtbot, monkeypatch):
+    """The Vulkan download button exists on a non-macOS platform."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.download_vulkan_button is not None
+
+
+def test_vulkan_button_absent_on_macos(qtbot, monkeypatch):
+    """The Vulkan download button is omitted on macOS (Vulkan unsupported)."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("darwin"))
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.download_vulkan_button is None
+
+
+def test_vulkan_download_click_emits_with_model_name(qtbot, tmp_path, monkeypatch):
+    """Clicking the Vulkan button emits the request carrying the selected model."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    _patch_vulkan(monkeypatch, ggml=False, vad=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_model="small", asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    received: list[str] = []
+    panel.vulkan_model_download_requested.connect(received.append)
+    panel.download_vulkan_button.click()
+
+    assert received == ["small"]
+    assert panel._vulkan_active
+    assert not panel.download_vulkan_button.isEnabled()  # disabled in flight
+
+
+def test_vulkan_installed_probe_requires_both_ggml_and_vad(qtbot, tmp_path, monkeypatch):
+    """Installed state is is_ggml_downloaded AND is_vad_downloaded."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    _patch_vulkan(monkeypatch, ggml=True, vad=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert "installed" in panel.vulkan_status_label.text().lower()
+    assert "not" not in panel.vulkan_status_label.text().lower()
+
+
+def test_vulkan_not_installed_when_vad_missing(qtbot, tmp_path, monkeypatch):
+    """ggml present but VAD missing → not installed (AND, not OR)."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    _patch_vulkan(monkeypatch, ggml=True, vad=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert "not installed" in panel.vulkan_status_label.text().lower()
+
+
+def test_vulkan_not_installed_when_ggml_missing(qtbot, tmp_path, monkeypatch):
+    """VAD present but ggml missing → not installed (AND, not OR)."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    _patch_vulkan(monkeypatch, ggml=False, vad=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert "not installed" in panel.vulkan_status_label.text().lower()
+
+
+def test_notify_vulkan_download_finished_updates_status_and_cache(qtbot, tmp_path, monkeypatch):
+    """notify_vulkan_download_finished sets the status label + installed cache and
+    re-enables the button."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    _patch_vulkan(monkeypatch, ggml=False, vad=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    panel.download_vulkan_button.click()
+    assert panel._vulkan_active
+    assert not panel.download_vulkan_button.isEnabled()
+
+    panel.notify_vulkan_download_finished(True, "Vulkan model installed successfully.")
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel._vulkan_active
+    assert panel.vulkan_status_label.text() == "Vulkan model installed successfully."
+    assert panel._vulkan_installed_cache is True
+    assert panel.download_vulkan_button.isEnabled()
+
+
+def test_notify_vulkan_download_finished_failure_clears_guard(qtbot, tmp_path, monkeypatch):
+    """A failed finish clears the in-flight guard and marks not-installed."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    _patch_vulkan(monkeypatch, ggml=False, vad=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    panel.download_vulkan_button.click()
+    panel.notify_vulkan_download_finished(False, "download failed")
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel._vulkan_active
+    assert panel.vulkan_status_label.text() == "download failed"
+    assert panel._vulkan_installed_cache is False
+    assert panel.download_vulkan_button.isEnabled()
+
+
+def test_vulkan_in_flight_guard_survives_reload(qtbot, tmp_path, monkeypatch):
+    """A reload mid-download keeps the Vulkan button disabled."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    _patch_vulkan(monkeypatch, ggml=False, vad=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    panel.download_vulkan_button.click()
+    assert not panel.download_vulkan_button.isEnabled()
+
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    assert not panel.download_vulkan_button.isEnabled()
+
+
+def test_set_vulkan_status_no_op_on_macos(qtbot, monkeypatch):
+    """set_vulkan_status / notify are safe no-ops when the button is omitted."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("darwin"))
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    # Must not raise even though the button/label do not exist.
+    panel.set_vulkan_status("Downloading…")
+    panel.notify_vulkan_download_finished(True, "done")
