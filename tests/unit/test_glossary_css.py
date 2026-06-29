@@ -1,0 +1,135 @@
+"""Tests for the universal glossary stylesheet (resources/glossary.css).
+
+The single always-on base sheet replaces the old preset registry. It must stay
+fully guarded by miner-only ``ol[data-count]`` markup (so it never restyles
+Yomitan-exported glossary HTML sharing a note type), keep its theme-agnostic
+palette (no ``.nightMode`` dependency; ``color-mix()`` only under ``@supports``),
+and carry the structured-content hooks our renderer emits.
+"""
+
+import re
+
+from anki_miner.services.dictionary.card_style_presets import load_glossary_css
+
+
+def _no_comments(css: str) -> str:
+    """Strip CSS comments so prose in the header can't trip token checks."""
+    return re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+
+
+def _strip_supports(css: str) -> str:
+    """Drop `@supports … { … }` blocks (one nesting level) and comments."""
+    flat = _no_comments(css)
+    return re.sub(r"@supports[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}", "", flat, flags=re.DOTALL)
+
+
+def _iter_rules(css: str):
+    """Yield (selector_group, declarations) for each top-level rule.
+
+    `@supports` wrappers are unwrapped (opener removed, dangling close skipped) so
+    the rules inside are checked as if top-level — the guard invariant holds for
+    them too.
+    """
+    flat = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+    flat = re.sub(r"@supports[^{]*\{", "", flat)
+    for block in flat.split("}"):
+        if "{" not in block:
+            continue
+        selector_group, declarations = block.split("{", 1)
+        selector_group = selector_group.strip()
+        if selector_group:
+            yield selector_group, declarations
+
+
+class TestLoadGlossaryCss:
+    def test_non_empty(self):
+        assert load_glossary_css().strip()
+
+    def test_carries_renderer_hooks(self):
+        css = load_glossary_css()
+        # Structural hooks the renderer emits (yomitan_renderer / indexed_provider).
+        assert ".yomitan-glossary" in css
+        assert "ul.gloss-list" in css
+        assert ".gloss-sc-ruby" in css
+        assert ".gloss-sc-rt" in css
+        assert ".gloss-image" in css
+
+    def test_carries_structured_content_hooks(self):
+        css = load_glossary_css()
+        # Generic data-sc-* hooks for dicts that ship no styles.css (Issue #87).
+        assert 'span[data-sc-class="tag"]' in css
+        assert '[data-sc-content="forms"] td' in css
+        assert '[data-sc-content|="example-sentence"]' in css
+
+
+class TestGlossaryYomitanLeak:
+    """Every selector must be guarded by miner-only ``ol[data-count]`` markup.
+
+    The one marker only anki_miner emits is ``data-count`` on the outer ``<ol>``;
+    without the guard the sheet would stack onto Yomitan-exported glossary HTML in
+    a shared note type (double indentation). The single allowed exception is the
+    bare ``.yomitan-glossary`` tunables block, which may set custom properties
+    only (inert on Yomitan cards, keeps user overrides working).
+    """
+
+    def test_every_selector_guarded_by_miner_only_markup(self):
+        css = load_glossary_css()
+        for selector_group, declarations in _iter_rules(css):
+            for selector in selector_group.split(","):
+                selector = selector.strip()
+                if "ol[data-count]" in selector:
+                    continue
+                assert selector == ".yomitan-glossary", (
+                    f"selector {selector!r} can match Yomitan-exported HTML " "(missing ol[data-count] guard)"
+                )
+                for decl in declarations.split(";"):
+                    decl = decl.strip()
+                    if decl:
+                        assert decl.startswith("--"), (
+                            "unguarded .yomitan-glossary rule must only set custom " f"properties, found {decl!r}"
+                        )
+
+
+class TestThemeAgnostic:
+    """Theme-agnostic palette: no ``.nightMode``; ``color-mix()`` only guarded."""
+
+    def test_no_nightmode_or_scheme_dependency(self):
+        css = _no_comments(load_glossary_css())
+        assert ".nightMode" not in css
+        assert "prefers-color-scheme" not in css
+        assert "data-theme" not in css
+
+    def test_no_color_mix_outside_supports(self):
+        css = load_glossary_css()
+        assert "color-mix(" in css, "should use color-mix in an @supports block"
+        assert "color-mix(" not in _strip_supports(css), (
+            "color-mix() used outside an @supports guard — older WebViews would " "lose the color entirely"
+        )
+
+    def test_muted_text_never_color_mix_derived(self):
+        # Issue #87 Bug 2: --am-muted is body-text color applied to nested
+        # elements; a color-mix(currentColor …) value compounds to unreadable. It
+        # must never be redefined inside the @supports (color-mix) upgrade.
+        css = re.sub(r"/\*.*?\*/", "", load_glossary_css(), flags=re.DOTALL)
+        for block in re.findall(r"@supports[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}", css, flags=re.DOTALL):
+            assert "--am-muted" not in block, (
+                "--am-muted redefined inside @supports — would reintroduce the " "currentColor opacity cascade"
+            )
+
+
+class TestCuratedExclusions:
+    """Yomitan rules keyed on DOM state our renderer never emits must be absent."""
+
+    def test_excluded_rule_groups_absent(self):
+        css = _no_comments(load_glossary_css())
+        for token in (
+            "data-browser",
+            "data-glossary-layout-mode",
+            "data-collapsed",
+            "data-collapsible",
+            "data-image-rendering",
+            "data-appearance",
+            ".entry",
+            ".definition-item",
+        ):
+            assert token not in css, f"curated-out token {token!r} leaked into glossary.css"

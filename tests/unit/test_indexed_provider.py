@@ -646,8 +646,13 @@ class TestIndexedDictProviderDatabaseErrorGuard:
         assert str(tmp_path / "test.sqlite") in caplog.text
 
 
-class TestStylesCssPassthrough:
-    """Per-dictionary styles.css emission as a scoped <style> block (Issue #87)."""
+class TestDictionaryCss:
+    """Per-dictionary styles.css exposed (scoped) via ``dictionary_css``.
+
+    The scoped CSS is folded into the shared note-type managed block by
+    ``collect_dictionary_css`` — it is NOT injected per card. ``_render`` must
+    never emit a ``<style>`` block.
+    """
 
     def _seed(self, db_path: Path, *, styles_css: str | None) -> None:
         create_index(db_path)
@@ -660,32 +665,35 @@ class TestStylesCssPassthrough:
             meta["styles_css"] = styles_css
         write_meta(db_path, meta)
 
-    def test_styles_css_emitted_scoped_inside_glossary_div(self, tmp_path: Path):
+    def test_dictionary_css_is_scoped_and_render_has_no_style_block(self, tmp_path: Path):
         db = tmp_path / "t.sqlite"
         self._seed(db, styles_css='span[data-sc-class="tag"] { color: red }')
         provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
         assert provider.load() is True
-        out = provider.lookup("食べる")
-        assert out is not None
-        assert (
-            '<style>.yomitan-glossary [data-dictionary="Jitendex.org [2026-06-06]"] '
-            'span[data-sc-class="tag"] {color: red}</style></div>' in out
+        # Scoped CSS exposed bare (no <style> wrapper), scoped to the dict.
+        assert provider.dictionary_css == (
+            '.yomitan-glossary [data-dictionary="Jitendex.org [2026-06-06]"] ' 'span[data-sc-class="tag"] {color: red}'
         )
-
-    def test_no_styles_css_emits_no_style_block(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed(db, styles_css=None)
-        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
-        assert provider.load() is True
         out = provider.lookup("食べる")
         assert out is not None
         assert "<style>" not in out
 
-    def test_unsafe_styles_css_scopes_to_nothing_emits_no_block(self, tmp_path: Path):
+    def test_no_styles_css_empty_dictionary_css(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db, styles_css=None)
+        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
+        assert provider.load() is True
+        assert provider.dictionary_css == ""
+        out = provider.lookup("食べる")
+        assert out is not None
+        assert "<style>" not in out
+
+    def test_unsafe_styles_css_scoped_to_empty(self, tmp_path: Path):
         db = tmp_path / "t.sqlite"
         self._seed(db, styles_css="a { background: url(http://evil/x.png) }")
         provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
         assert provider.load() is True
+        assert provider.dictionary_css == ""
         out = provider.lookup("食べる")
         assert out is not None
         assert "<style>" not in out

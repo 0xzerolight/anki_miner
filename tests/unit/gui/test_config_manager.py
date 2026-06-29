@@ -142,104 +142,75 @@ class TestAnkiTagsRoundTrip:
 
 
 class TestCardStylingRoundTrip:
-    """Persistence of the Issue #44 card-styling fields through save/load."""
+    """Persistence + deterministic migration of the Issue #44 card-styling fields."""
 
     def test_save_and_load_preserves_card_styling(self, tmp_path, monkeypatch):
-        """Custom CSS and the selected preset id must survive save/load."""
+        """manage_card_styling + custom CSS must survive save/load."""
         cfg_file = tmp_path / "gui_config.json"
         monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
 
         css = '.yomitan-glossary { color: red; }\n[data-sc-content|="example-sentence"] { display: none; }'
-        config = replace(create_default_config(), card_style_preset="none", custom_card_css=css)
+        config = replace(create_default_config(), manage_card_styling=True, custom_card_css=css)
         GUIConfigManager.save_config(config)
 
         loaded = GUIConfigManager.load_config()
 
-        assert loaded.card_style_preset == "none"
+        assert loaded.manage_card_styling is True
         assert loaded.custom_card_css == css
 
     def test_legacy_config_without_card_styling_uses_defaults(self, tmp_path, monkeypatch):
         """A pre-Issue-#44 JSON file must load and fall back to the dataclass defaults."""
         cfg_file = tmp_path / "gui_config.json"
-        cfg_file.write_text(
-            json.dumps(
-                {
-                    "anki_deck_name": "Legacy Deck",
-                    # Note: card-styling keys intentionally absent.
-                }
-            ),
-            encoding="utf-8",
-        )
+        cfg_file.write_text(json.dumps({"anki_deck_name": "Legacy Deck"}), encoding="utf-8")
         monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
 
         loaded = GUIConfigManager.load_config()
 
-        # New default is "off" (opt-in); the one-time reseed flag starts False.
-        assert loaded.card_style_preset == "off"
+        # Default is off (opt-in) — a fresh install never restyles a note type.
+        assert loaded.manage_card_styling is False
         assert loaded.custom_card_css == ""
-        assert loaded.card_style_migrated is False
 
-    def test_legacy_boolean_migrates_to_preset_id(self, tmp_path, monkeypatch):
-        """A pre-preset JSON with use_default_card_stylesheet=False maps to "none"."""
-        cfg_file = tmp_path / "gui_config.json"
-        cfg_file.write_text(
-            json.dumps(
-                {
-                    "anki_deck_name": "Legacy Deck",
-                    "use_default_card_stylesheet": False,
-                }
-            ),
-            encoding="utf-8",
-        )
-        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+    # --- migration matrix (deterministic, no Anki probe) ---
 
-        loaded = GUIConfigManager.load_config()
+    def test_migrate_preset_off_to_unmanaged(self):
+        assert GUIConfigManager._migrate_card_styling({"card_style_preset": "off"})["manage_card_styling"] is False
 
-        assert loaded.card_style_preset == "none"
-
-    def test_migrate_card_style_preset_maps_boolean(self):
-        """The boolean→id migration: True→default, False→none, idempotent."""
-        assert (
-            GUIConfigManager._migrate_card_style_preset({"use_default_card_stylesheet": True})["card_style_preset"]
-            == "default"
-        )
-        assert (
-            GUIConfigManager._migrate_card_style_preset({"use_default_card_stylesheet": False})["card_style_preset"]
-            == "none"
-        )
-        # An already-present preset id is left untouched.
-        existing = {"card_style_preset": "minimal", "use_default_card_stylesheet": True}
-        assert GUIConfigManager._migrate_card_style_preset(existing)["card_style_preset"] == "minimal"
-
-    def test_migrate_card_style_preset_coerces_unknown_id_to_off(self):
-        """An unrecognised/corrupt preset id is coerced to "off" (never writes styling)."""
-        assert GUIConfigManager._migrate_card_style_preset({"card_style_preset": "bogus"})["card_style_preset"] == "off"
-        # Known ids — including "off" itself — pass through unchanged.
-        for valid in ("off", "default", "minimal", "none"):
+    def test_migrate_preset_nonoff_to_managed(self):
+        for value in ("default", "minimal", "none", "yomitan-classic", "bogus"):
             assert (
-                GUIConfigManager._migrate_card_style_preset({"card_style_preset": valid})["card_style_preset"] == valid
-            )
+                GUIConfigManager._migrate_card_styling({"card_style_preset": value})["manage_card_styling"] is True
+            ), value
 
-    def test_migrate_card_style_preset_remaps_retired_id(self):
-        """The retired ``yomitan-classic`` id is remapped onto ``default`` (the
-        rebuilt Rich preset) so existing users keep styling instead of dropping
-        to Off."""
+    def test_migrate_use_default_true_managed(self):
         assert (
-            GUIConfigManager._migrate_card_style_preset({"card_style_preset": "yomitan-classic"})["card_style_preset"]
-            == "default"
+            GUIConfigManager._migrate_card_styling({"use_default_card_stylesheet": True})["manage_card_styling"] is True
         )
 
-    def test_save_and_load_preserves_migrated_flag(self, tmp_path, monkeypatch):
-        """card_style_migrated must round-trip so the reseed only runs once."""
+    def test_migrate_use_default_false_still_managed(self):
+        # False historically mapped to "none", which still wrote a managed block,
+        # so the user WAS managing the note type — preserve that.
+        assert (
+            GUIConfigManager._migrate_card_styling({"use_default_card_stylesheet": False})["manage_card_styling"]
+            is True
+        )
+
+    def test_migrate_preset_wins_over_use_default(self):
+        data = {"card_style_preset": "off", "use_default_card_stylesheet": True}
+        assert GUIConfigManager._migrate_card_styling(data)["manage_card_styling"] is False
+
+    def test_migrate_idempotent_when_already_new_format(self):
+        data = {"manage_card_styling": False, "card_style_preset": "default"}
+        # Already migrated → don't re-derive from the legacy preset key.
+        assert GUIConfigManager._migrate_card_styling(data)["manage_card_styling"] is False
+
+    def test_migrate_no_keys_leaves_manage_absent(self):
+        assert "manage_card_styling" not in GUIConfigManager._migrate_card_styling({})
+
+    def test_legacy_boolean_round_trips_through_load(self, tmp_path, monkeypatch):
         cfg_file = tmp_path / "gui_config.json"
+        cfg_file.write_text(json.dumps({"use_default_card_stylesheet": False}), encoding="utf-8")
         monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
-
-        config = replace(create_default_config(), card_style_preset="minimal", card_style_migrated=True)
-        GUIConfigManager.save_config(config)
-
-        loaded = GUIConfigManager.load_config()
-        assert loaded.card_style_preset == "minimal"
-        assert loaded.card_style_migrated is True
+        assert GUIConfigManager.load_config().manage_card_styling is True
 
 
 class TestDictsRootRoundTrip:

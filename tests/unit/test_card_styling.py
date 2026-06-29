@@ -5,113 +5,92 @@ from anki_miner.services.dictionary.card_styling import (
     END_MARKER,
     apply_managed_block,
     build_managed_block,
-    detect_applied_preset,
-    load_default_card_css,
+    has_managed_block,
     strip_managed_block,
 )
 
-# A legacy BEGIN marker (no recorded preset id) — the form written before the
-# marker started embedding ``preset=<id>``. Used to verify back-compat.
-LEGACY_BEGIN = "/* === ANKI MINER DICT STYLES (managed — do not edit) === */"
+# Legacy BEGIN markers the migration must still match for replace/strip:
+# the original ``managed — do not edit`` form and the preset-era
+# ``managed; preset=<id>`` form. The marker regex is byte-stable across both.
+LEGACY_PLAIN_BEGIN = "/* === ANKI MINER DICT STYLES (managed — do not edit) === */"
+LEGACY_PRESET_BEGIN = "/* === ANKI MINER DICT STYLES (managed; preset=default; do not edit) === */"
 
-
-class TestLoadDefaultCss:
-    def test_returns_nonempty_with_sentinel_selector(self):
-        css = load_default_card_css()
-        assert css.strip()
-        assert ".yomitan-glossary" in css
+# A hook present in the always-on universal stylesheet.
+GLOSSARY_HOOK = ".yomitan-glossary"
 
 
 class TestBuildManagedBlock:
     def test_includes_both_markers(self):
-        block = build_managed_block(preset="default", custom_css="")
+        block = build_managed_block(custom_css="", dict_css="")
         assert block.startswith(BEGIN_MARKER_PREFIX)
         assert block.rstrip().endswith(END_MARKER)
 
-    def test_marker_records_preset_id(self):
-        block = build_managed_block(preset="minimal", custom_css="")
-        assert "preset=minimal" in block.splitlines()[0]
+    def test_marker_has_no_preset_segment(self):
+        # The static marker no longer records a preset id.
+        assert "preset=" not in build_managed_block(custom_css="", dict_css="").splitlines()[0]
 
-    def test_default_included_when_enabled(self):
-        block = build_managed_block(preset="default", custom_css="")
-        assert ".yomitan-glossary" in block
+    def test_always_includes_universal_base(self):
+        # The universal sheet is the always-on base, even with empty inputs.
+        assert GLOSSARY_HOOK in build_managed_block(custom_css="", dict_css="")
 
-    def test_default_omitted_when_none(self):
-        block = build_managed_block(preset="none", custom_css="")
-        # No preset body — just the two markers back to back.
-        assert ".yomitan-glossary" not in block
-        assert block.splitlines()[0].startswith(BEGIN_MARKER_PREFIX)
-        assert block.splitlines()[1] == END_MARKER
-
-    def test_named_preset_used(self):
-        minimal = build_managed_block(preset="minimal", custom_css="")
-        none_block = build_managed_block(preset="none", custom_css="")
-        assert minimal != none_block
-        assert ".yomitan-glossary" in minimal
-        assert len(minimal) > len(none_block) + len(".yomitan-glossary")
+    def test_dict_css_included(self):
+        block = build_managed_block(custom_css="", dict_css='[data-dictionary="X"]{color:red}')
+        assert '[data-dictionary="X"]{color:red}' in block
 
     def test_custom_css_appended(self):
-        block = build_managed_block(preset="none", custom_css=".x{color:red}")
+        block = build_managed_block(custom_css=".x{color:red}", dict_css="")
         assert ".x{color:red}" in block
         assert block.startswith(BEGIN_MARKER_PREFIX) and block.rstrip().endswith(END_MARKER)
 
-    def test_both_empty_still_emits_markers(self):
-        block = build_managed_block(preset="none", custom_css="   ")
+    def test_order_is_base_then_dict_then_custom(self):
+        block = build_managed_block(custom_css="/*CUSTOMMARK*/", dict_css="/*DICTMARK*/")
+        i_base = block.index(GLOSSARY_HOOK)
+        i_dict = block.index("/*DICTMARK*/")
+        i_custom = block.index("/*CUSTOMMARK*/")
+        assert i_base < i_dict < i_custom
+
+    def test_empty_inputs_still_emit_markers(self):
+        block = build_managed_block(custom_css="   ", dict_css="  ")
         assert BEGIN_MARKER_PREFIX in block and END_MARKER in block
 
+    def test_marker_like_text_in_inputs_is_inert(self):
+        # No preset parsing remains, so 'preset=' inside CSS is harmless; the block
+        # is still locatable.
+        block = build_managed_block(custom_css='.x{content:"preset=evil"}', dict_css="")
+        assert has_managed_block(block)
 
-class TestDetectAppliedPreset:
-    def test_none_when_no_block(self):
-        assert detect_applied_preset(".card{font-size:20px}") is None
-        assert detect_applied_preset("") is None
 
-    def test_returns_recorded_preset_id(self):
-        block = build_managed_block(preset="minimal", custom_css="")
-        assert detect_applied_preset(block) == "minimal"
+class TestHasManagedBlock:
+    def test_false_when_no_block(self):
+        assert not has_managed_block(".card{font-size:20px}")
+        assert not has_managed_block("")
 
-    def test_recorded_id_survives_surrounding_css(self):
-        block = build_managed_block(preset="default", custom_css=".x{}")
-        existing = apply_managed_block(".before{}\n\n.after{}", block)
-        assert detect_applied_preset(existing) == "default"
+    def test_true_for_built_block(self):
+        assert has_managed_block(build_managed_block(custom_css="", dict_css=""))
 
-    def test_retired_id_detected_verbatim_for_caller_to_resolve(self):
-        # A live block written by an old version records a retired id; detection
-        # returns it verbatim and the consumer (controller) maps it via
-        # resolve_preset_alias — see TestStylingMigrationAdopt.
-        block = build_managed_block(preset="yomitan-classic", custom_css="")
-        assert detect_applied_preset(block) == "yomitan-classic"
+    def test_true_for_legacy_plain_block(self):
+        assert has_managed_block(f"{LEGACY_PLAIN_BEGIN}\n.x{{}}\n{END_MARKER}")
 
-    def test_legacy_block_detected_as_empty_string(self):
-        legacy = f"{LEGACY_BEGIN}\n.x{{}}\n{END_MARKER}"
-        # Present (not None) but unknown source → "".
-        assert detect_applied_preset(legacy) == ""
-
-    def test_legacy_block_with_preset_in_body_not_misdetected(self):
-        # User custom CSS containing the literal ``preset=`` must NOT be read as
-        # the recorded preset id — only the BEGIN marker line is authoritative.
-        legacy = f'{LEGACY_BEGIN}\n.x{{content:"preset=evil"}}\n{END_MARKER}'
-        assert detect_applied_preset(legacy) == ""
-
-    def test_current_id_wins_over_preset_decoy_in_body(self):
-        block = build_managed_block(preset="minimal", custom_css='.x{content:"preset=evil"}')
-        assert detect_applied_preset(block) == "minimal"
+    def test_true_for_legacy_preset_block(self):
+        # The migration relies on the old preset= block still matching.
+        assert has_managed_block(f"{LEGACY_PRESET_BEGIN}\n.x{{}}\n{END_MARKER}")
 
 
 class TestApplyManagedBlock:
     def test_first_time_appends_after_user_css(self):
-        block = build_managed_block(preset="none", custom_css=".x{color:red}")
+        block = build_managed_block(custom_css=".x{color:red}", dict_css="")
         out = apply_managed_block(".card{font-size:20px}", block)
         assert out.startswith(".card{font-size:20px}")
         assert BEGIN_MARKER_PREFIX in out and END_MARKER in out
 
     def test_into_empty_css(self):
-        block = build_managed_block(preset="none", custom_css=".x{}")
+        block = build_managed_block(custom_css=".x{}", dict_css="")
         out = apply_managed_block("", block)
         assert out.strip().startswith(BEGIN_MARKER_PREFIX)
         assert out.strip().endswith(END_MARKER)
 
     def test_idempotent_no_duplicate_block(self):
-        block = build_managed_block(preset="default", custom_css=".x{}")
+        block = build_managed_block(custom_css=".x{}", dict_css="")
         once = apply_managed_block(".card{}", block)
         twice = apply_managed_block(once, block)
         assert once == twice
@@ -119,8 +98,8 @@ class TestApplyManagedBlock:
         assert once.count(END_MARKER) == 1
 
     def test_replace_preserves_surrounding_user_css(self):
-        block_v1 = build_managed_block(preset="none", custom_css=".v1{}")
-        block_v2 = build_managed_block(preset="none", custom_css=".v2{}")
+        block_v1 = build_managed_block(custom_css=".v1{}", dict_css="")
+        block_v2 = build_managed_block(custom_css=".v2{}", dict_css="")
         existing = apply_managed_block(".before{}", block_v1) + "\n.after{}"
         out = apply_managed_block(existing, block_v2)
         assert ".before{}" in out
@@ -129,29 +108,29 @@ class TestApplyManagedBlock:
         assert ".v1{}" not in out
         assert out.count(BEGIN_MARKER_PREFIX) == 1
 
-    def test_replace_legacy_block_in_place(self):
-        # A pre-existing legacy block must be replaced (not duplicated) when a
-        # new preset-tagged block is applied.
-        legacy = f".before{{}}\n\n{LEGACY_BEGIN}\n.old{{}}\n{END_MARKER}"
-        block = build_managed_block(preset="minimal", custom_css="")
+    def test_replace_legacy_preset_block_in_place(self):
+        # The migration case: an old preset-tagged block is replaced (not
+        # duplicated) when the new universal block is applied.
+        legacy = f".before{{}}\n\n{LEGACY_PRESET_BEGIN}\n.old{{}}\n{END_MARKER}"
+        block = build_managed_block(custom_css="", dict_css="")
         out = apply_managed_block(legacy, block)
         assert out.count(BEGIN_MARKER_PREFIX) == 1
         assert ".before{}" in out
         assert ".old{}" not in out
-        assert detect_applied_preset(out) == "minimal"
+        assert has_managed_block(out)
 
     def test_half_marker_appends_fresh_not_corrupt(self):
         # User deleted the END_MARKER — half a block. Must not be treated as a
         # valid block; append a fresh one and leave the orphan marker in place.
-        block = build_managed_block(preset="none", custom_css=".x{}")
-        broken = f".card{{}}\n{LEGACY_BEGIN}\n.orphan{{}}"
+        block = build_managed_block(custom_css=".x{}", dict_css="")
+        broken = f".card{{}}\n{LEGACY_PLAIN_BEGIN}\n.orphan{{}}"
         out = apply_managed_block(broken, block)
         assert ".orphan{}" in out  # orphan content preserved, not destroyed
         assert out.rstrip().endswith(END_MARKER)
         assert out.count(END_MARKER) == 1
 
     def test_multiple_blocks_collapse_to_one(self):
-        block = build_managed_block(preset="none", custom_css=".x{}")
+        block = build_managed_block(custom_css=".x{}", dict_css="")
         doubled = f"{block}\n\n.mid{{}}\n\n{block}"
         out = apply_managed_block(doubled, block)
         assert out.count(BEGIN_MARKER_PREFIX) == 1
@@ -160,7 +139,7 @@ class TestApplyManagedBlock:
 
 class TestStripManagedBlock:
     def test_removes_block_keeps_surrounding(self):
-        block = build_managed_block(preset="default", custom_css=".x{}")
+        block = build_managed_block(custom_css=".x{}", dict_css="")
         existing = apply_managed_block(".before{}\n\n.after{}", block)
         out = strip_managed_block(existing)
         assert BEGIN_MARKER_PREFIX not in out
@@ -168,8 +147,8 @@ class TestStripManagedBlock:
         assert ".before{}" in out
         assert ".after{}" in out
 
-    def test_strips_legacy_block(self):
-        legacy = f".before{{}}\n\n{LEGACY_BEGIN}\n.old{{}}\n{END_MARKER}\n\n.after{{}}"
+    def test_strips_legacy_preset_block(self):
+        legacy = f".before{{}}\n\n{LEGACY_PRESET_BEGIN}\n.old{{}}\n{END_MARKER}\n\n.after{{}}"
         out = strip_managed_block(legacy)
         assert BEGIN_MARKER_PREFIX not in out
         assert ".old{}" not in out
@@ -180,12 +159,12 @@ class TestStripManagedBlock:
         assert strip_managed_block(original) == original
 
     def test_block_only_strips_to_empty(self):
-        block = build_managed_block(preset="default", custom_css="")
+        block = build_managed_block(custom_css="", dict_css="")
         out = strip_managed_block(apply_managed_block("", block))
         assert out == ""
 
     def test_apply_then_strip_round_trips_to_original(self):
-        block = build_managed_block(preset="default", custom_css=".x{color:red}")
+        block = build_managed_block(custom_css=".x{color:red}", dict_css="")
         original = ".card{font-size:20px}"
         out = strip_managed_block(apply_managed_block(original, block))
         assert out.strip() == original.strip()

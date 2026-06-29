@@ -15,9 +15,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 # Every package resource tree that must ship intact in the wheel. The dictionary
-# resources hold the card-style presets (presets/*.css) loaded at runtime via
-# importlib.resources; a dropped/mistyped package-data glob would ship a broken
-# install while CI stayed green, which is exactly what this gate prevents.
+# resources hold the universal glossary stylesheet (glossary.css) loaded at
+# runtime via importlib.resources; a dropped/mistyped package-data glob would
+# ship a broken install while CI stayed green, which this gate prevents.
 RESOURCE_DIRS = [
     REPO_ROOT / "anki_miner" / "gui" / "resources",
     REPO_ROOT / "anki_miner" / "services" / "dictionary" / "resources",

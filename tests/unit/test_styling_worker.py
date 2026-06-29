@@ -8,17 +8,19 @@ back — one AnkiConnect read + one write, off the GUI thread. Tests pin:
 - mid-run cancel between read and write (no write, no success),
 - the two error branches (``AnkiConnectionError`` vs generic).
 
-StylingWorker was NOT merged into ``SingleCallWorker`` (two distinct service
-calls + a finished_ok payload), so it is tested as its own class. Exercised
-synchronously via ``run()``.
+The block's per-dictionary CSS is collected from ``config.dictionary_chain`` on
+the worker thread; tests use an empty chain so the worker never touches disk.
+Exercised synchronously via ``run()``.
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
 from unittest.mock import MagicMock
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError
-from anki_miner.gui.workers.styling_worker import StylingProbeWorker, StylingWorker
+from anki_miner.gui.workers.styling_worker import StylingWorker
 from anki_miner.services.dictionary.card_styling import (
     BEGIN_MARKER_PREFIX,
     END_MARKER,
@@ -37,13 +39,9 @@ class _Capture:
 
 
 def _make_worker(service, *, mode="apply", note_type="Japanese-1.0"):
-    return StylingWorker(
-        service,
-        mode=mode,
-        preset="dark",
-        custom_css=".card { color: red; }",
-        note_type=note_type,
-    )
+    # Empty dictionary_chain → collect_dictionary_css returns "" without disk I/O.
+    config = replace(AnkiMinerConfig(), custom_card_css=".card { color: red; }", dictionary_chain=())
+    return StylingWorker(service, mode=mode, config=config, note_type=note_type)
 
 
 # ---------------------------------------------------------------------------
@@ -66,14 +64,15 @@ def test_apply_mode_reads_then_writes_composed_block():
     # The managed block markers must be present in the written CSS.
     assert BEGIN_MARKER_PREFIX in written_css
     assert END_MARKER in written_css
-    # The user's pre-existing card CSS is preserved alongside our block.
+    # The user's custom CSS is composed into the block; user's card CSS survives.
+    assert ".card { color: red; }" in written_css
     assert ".card {}" in written_css
     assert written_note == "Japanese-1.0"
     assert ok.calls == ["Applied styles to 'Japanese-1.0'."]
 
 
 def test_remove_mode_strips_block_and_writes():
-    block = build_managed_block(preset="minimal", custom_css=".card { color: red; }")
+    block = build_managed_block(custom_css=".card { color: red; }", dict_css="")
     managed = f".card {{}}\n\n{block}\n"
     service = MagicMock()
     service.get_model_styling.return_value = managed
@@ -236,88 +235,3 @@ def test_error_suppressed_when_cancelled_during_failure():
     worker.run()
 
     assert errors.calls == []
-
-
-# ---------------------------------------------------------------------------
-# StylingProbeWorker — read-only "what's live" probe
-# ---------------------------------------------------------------------------
-
-
-class _Capture2:
-    """Collect two-arg signal emissions as tuples."""
-
-    def __init__(self) -> None:
-        self.calls: list[tuple] = []
-
-    def __call__(self, *args) -> None:
-        self.calls.append(args)
-
-
-def test_probe_reports_absent_block_as_off():
-    service = MagicMock()
-    service.get_model_styling.return_value = ".card { color: blue; }"
-    worker = StylingProbeWorker(service, note_type="Japanese-1.0")
-    result = _Capture2()
-    worker.result_ready.connect(result)
-
-    worker.run()
-
-    service.get_model_styling.assert_called_once_with("Japanese-1.0")
-    service.update_model_styling.assert_not_called()  # read-only
-    assert result.calls == [(False, "")]
-
-
-def test_probe_reports_recorded_preset():
-    block = build_managed_block(preset="minimal", custom_css="")
-    service = MagicMock()
-    service.get_model_styling.return_value = f".card {{}}\n\n{block}\n"
-    worker = StylingProbeWorker(service, note_type="Japanese-1.0")
-    result = _Capture2()
-    worker.result_ready.connect(result)
-
-    worker.run()
-
-    assert result.calls == [(True, "minimal")]
-
-
-def test_probe_reports_legacy_block_as_present_unknown():
-    legacy = "/* === ANKI MINER DICT STYLES (managed — do not edit) === */\n.x{}\n" + END_MARKER
-    service = MagicMock()
-    service.get_model_styling.return_value = legacy
-    worker = StylingProbeWorker(service, note_type="Japanese-1.0")
-    result = _Capture2()
-    worker.result_ready.connect(result)
-
-    worker.run()
-
-    # Present but source unknown → preset_id "".
-    assert result.calls == [(True, "")]
-
-
-def test_probe_connection_error_surfaces_on_error_signal():
-    service = MagicMock()
-    service.get_model_styling.side_effect = AnkiConnectionError("Anki not running")
-    worker = StylingProbeWorker(service, note_type="Japanese-1.0")
-    result = _Capture2()
-    errors = _Capture()
-    worker.result_ready.connect(result)
-    worker.error.connect(errors)
-
-    worker.run()
-
-    assert result.calls == []
-    assert errors.calls == ["Anki not running"]
-
-
-def test_probe_cancel_before_run_stays_silent():
-    service = MagicMock()
-    service.get_model_styling.return_value = ".card {}"
-    worker = StylingProbeWorker(service, note_type="Japanese-1.0")
-    result = _Capture2()
-    worker.result_ready.connect(result)
-
-    worker.cancel()
-    worker.run()
-
-    service.get_model_styling.assert_not_called()
-    assert result.calls == []

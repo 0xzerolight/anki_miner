@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import TYPE_CHECKING
 
@@ -12,6 +13,46 @@ if TYPE_CHECKING:
     from anki_miner.interfaces import DictionaryProvider
 
 logger = logging.getLogger(__name__)
+
+
+def collect_dictionary_css(config: AnkiMinerConfig) -> str:
+    """Concatenate every enabled indexed dictionary's scoped ``styles.css``.
+
+    Builds the configured provider chain from disk, loads each provider, and
+    joins the per-dictionary scoped CSS (``IndexedDictProvider.dictionary_css``)
+    in chain order — the Yomitan ``_getCustomCss`` analog that folds dictionary
+    author styling into the shared note-type managed block. Online providers
+    (Jisho) and dictionaries that ship no ``styles.css`` contribute nothing.
+
+    Does light per-dictionary SQLite I/O (registry scan + ``read_meta`` +
+    ``open_readonly`` via each provider's ``load()``), so it MUST run off the GUI
+    thread — it is invoked inside ``StylingWorker.run()``. Returns ``""`` when no
+    enabled dictionary ships styles. Never raises: a provider that fails to load
+    is skipped, mirroring the never-raises provider boundary elsewhere here. Each
+    provider opened here is closed before returning so no ``index.sqlite`` handle
+    leaks.
+    """
+    # Local import avoids any import-time coupling to the registry module.
+    from anki_miner.services.dictionary.registry import DictionaryRegistry
+
+    registry = DictionaryRegistry(config.dicts_root)
+    registry.load()
+    blocks: list[str] = []
+    for provider in registry.build_provider_chain(config):
+        css = ""
+        try:
+            provider.load()
+            css = getattr(provider, "dictionary_css", "")
+        except Exception as e:  # pragma: no cover - defensive
+            logger.warning("Failed to collect CSS from provider '%s': %s", provider.name, e)
+        finally:
+            closer = getattr(provider, "close", None)
+            if callable(closer):
+                with contextlib.suppress(Exception):
+                    closer()
+        if css and css.strip():
+            blocks.append(css.strip())
+    return "\n\n".join(blocks)
 
 
 class DefinitionService:

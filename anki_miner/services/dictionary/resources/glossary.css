@@ -1,0 +1,374 @@
+/*
+ * Anki Miner — universal glossary stylesheet.
+ *
+ * The single base look for mined-card glossary HTML. There are no "presets":
+ * this sheet is always the base when card styling is managed, and a dictionary's
+ * own styles.css (scoped to [data-dictionary="<title>"]) plus the user's custom
+ * CSS are concatenated after it into one managed block in the note type's CSS
+ * (see card_styling.build_managed_block). This mirrors Yomitan's model — one base
+ * stylesheet + data-driven hooks + per-dictionary author CSS scoped by name —
+ * adapted from Yomitan's ext/css/structured-content.css (GPL-3.0). Anki Miner is
+ * GPL-3.0-or-later, so the adaptation is license-compatible; it is curated and
+ * guard-rewritten, not a byte-for-byte copy.
+ *
+ * Discipline:
+ *  - Every rule is guarded by miner-only `ol[data-count]` markup (or targets the
+ *    bare `.yomitan-glossary` wrapper to set tunables) so it never restyles
+ *    Yomitan-EXPORTED glossary HTML that may share the note type. Enforced by
+ *    tests/unit/test_glossary_css.py.
+ *  - Colors are theme-agnostic: solid rgba grays that read on light and dark note
+ *    types, upgraded to currentColor-derived `color-mix()` only inside @supports.
+ *    No `.nightMode`/`prefers-color-scheme` dependency — works on AnkiMobile/
+ *    AnkiDroid WebViews that don't set those.
+ *  - Rules are hand-flattened (no native nesting) for old WebViews.
+ *  - Curated to the DOM our renderer actually emits (yomitan_renderer.py:
+ *    .gloss-sc-{tag}, data-sc-*, .gloss-image-*). Yomitan rules keyed on browser/
+ *    layout-mode/collapsible-image state we never emit are omitted.
+ */
+
+.yomitan-glossary {
+  /* Tunables — override from a plain `.yomitan-glossary` rule in custom CSS to
+   * re-skin without forking. Neutral grays so the sheet reads on both light and
+   * dark note types without a hard-coded background.
+   *
+   * `--am-muted` is the body-text tint and is deliberately a SOLID gray, never a
+   * `color-mix(currentColor …)` value: it is applied as `color:` to nested
+   * elements (extra-info wrapping example-sentence), and a currentColor-derived
+   * value re-evaluates at each level, so opacity would compound (95% → 30% → …)
+   * until inner text is unreadable (Issue #87). `--am-faint`/`--am-chip` only
+   * paint borders and chip backgrounds — which do NOT inherit, so they can't
+   * cascade — and are upgraded to currentColor-derived values under @supports;
+   * on engines without `color-mix()` (older AnkiDroid/AnkiMobile WebViews, Anki
+   * Desktop on Chromium < 111) the solid-gray bases apply. */
+  --am-muted: rgba(128, 128, 128, 0.95);
+  --am-faint: rgba(128, 128, 128, 0.4);
+  --am-chip: rgba(128, 128, 128, 0.16);
+  --am-accent: #4f7cff;
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue 50%)) {
+  .yomitan-glossary {
+    --am-faint: color-mix(in srgb, currentColor 22%, transparent);
+    --am-chip: color-mix(in srgb, currentColor 10%, transparent);
+  }
+}
+
+/* Outer dictionary list (miner-only markup): typography for the whole block,
+ * drop the default ordinal/indent chrome, and override Anki's centered `.card`. */
+.yomitan-glossary > ol[data-count] {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  font-size: 0.92em;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+/* Stack multiple dictionaries (each is its own .yomitan-glossary block) with a
+ * thin separator. */
+.yomitan-glossary + .yomitan-glossary > ol[data-count] {
+  margin-top: 0.85em;
+  padding-top: 0.7em;
+  border-top: 1px solid var(--am-faint);
+}
+
+/* Per-dictionary block. Restrained: comfortable spacing, no decorative rail. */
+.yomitan-glossary ol[data-count] li[data-dictionary] {
+  margin: 0;
+  padding: 0.1em 0;
+}
+
+/* The "(part-of-speech…, Dictionary Name)" line — a small muted label. */
+.yomitan-glossary ol[data-count] li[data-dictionary] > i {
+  display: inline-block;
+  margin-bottom: 0.3em;
+  font-size: 0.8em;
+  font-style: normal;
+  letter-spacing: 0.02em;
+  color: var(--am-muted);
+}
+
+/* Sense list: numbered, comfortable rhythm. */
+.yomitan-glossary ol[data-count] ul.gloss-list {
+  margin: 0.2em 0 0;
+  padding-left: 1.35em;
+  list-style-type: decimal;
+}
+
+/* A single sense (or an empty list) drops the ordinal — no "1." for one item. */
+.yomitan-glossary ol[data-count] ul.gloss-list[data-count="0"],
+.yomitan-glossary ol[data-count] ul.gloss-list[data-count="1"] {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.yomitan-glossary ol[data-count] li.gloss-item {
+  margin: 0.25em 0;
+}
+
+/* Progressive enhancement: muted ordinals where ::marker color is honored. */
+.yomitan-glossary ol[data-count] li.gloss-item::marker {
+  color: var(--am-muted);
+}
+
+/* Block wrapper around each sense (a <div>, so block-level structured content
+ * nests legally inside it). */
+.yomitan-glossary ol[data-count] .gloss-content {
+  font-weight: normal;
+}
+
+/* Structured-content lists (from dictionaries): one controlled indent per level.
+ * Nested ordered lists switch marker style so they don't read as the outer
+ * decimal sense numbering. */
+.yomitan-glossary ol[data-count] .gloss-sc-ul,
+.yomitan-glossary ol[data-count] .gloss-sc-ol {
+  margin: 0.2em 0;
+  padding-left: 1.2em;
+}
+
+.yomitan-glossary ol[data-count] .gloss-sc-ol .gloss-sc-ol {
+  list-style-type: lower-alpha;
+}
+
+/* Headings inside structured content — clamp browser defaults (2em + huge
+ * margins) so they don't blow out the compact glossary. */
+.yomitan-glossary ol[data-count] .gloss-sc-h1,
+.yomitan-glossary ol[data-count] .gloss-sc-h2,
+.yomitan-glossary ol[data-count] .gloss-sc-h3,
+.yomitan-glossary ol[data-count] .gloss-sc-h4,
+.yomitan-glossary ol[data-count] .gloss-sc-h5,
+.yomitan-glossary ol[data-count] .gloss-sc-h6 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0.3em 0;
+}
+
+/* Ruby/furigana — tighten line-height and shrink the annotation so the reading
+ * sits snug above the base instead of inheriting the block's 1.6 line-height. */
+.yomitan-glossary ol[data-count] .gloss-sc-ruby {
+  line-height: 1;
+}
+
+.yomitan-glossary ol[data-count] .gloss-sc-rt {
+  font-size: 0.5em;
+}
+
+/* Example sentences and supplementary notes — the data-sc-* hooks published
+ * Jitendex/Yomitan dictionaries emit. Indent + mute so they read as secondary.
+ * (Paste `[data-sc-content|="example-sentence"]{display:none}` into your custom
+ * CSS to hide them entirely — see the Jitendex "Custom Styles" wiki.) */
+.yomitan-glossary ol[data-count] [data-sc-content|="example-sentence"] {
+  display: block;
+  margin: 0.25em 0;
+  padding-left: 0.6em;
+  border-left: 2px solid var(--am-faint);
+  font-size: 0.95em;
+  color: var(--am-muted);
+}
+
+.yomitan-glossary ol[data-count] [data-sc-content|="extra-info"],
+.yomitan-glossary ol[data-count] [data-sc-content|="attribution"] {
+  font-size: 0.82em;
+  color: var(--am-muted);
+}
+
+/* Dictionary-bundled images (e.g. pitch-accent SVGs) — cap so they never blow
+ * out the card; vertical-align lives on the inline-block container, not the img
+ * (the container is what participates in line layout). */
+.yomitan-glossary ol[data-count] .gloss-image {
+  max-width: 100%;
+  max-height: 6em;
+  height: auto;
+}
+
+.yomitan-glossary ol[data-count] .gloss-image-link {
+  text-decoration: none;
+}
+
+.yomitan-glossary ol[data-count] .gloss-image-container {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Collapsible notes / conjugation tables. Scope the accent summary to glossary
+ * content so it never clashes with the muted dictionary label above. */
+.yomitan-glossary ol[data-count] details {
+  margin: 0.25em 0;
+}
+
+.yomitan-glossary ol[data-count] .gloss-content summary {
+  cursor: pointer;
+  color: var(--am-accent);
+}
+
+.yomitan-glossary ol[data-count] details[open] > summary {
+  margin-bottom: 0.25em;
+}
+
+/* Tables (inflection/reading layouts) — full borders, and scroll instead of
+ * overflowing the card when a dictionary embeds a wide table on a narrow screen. */
+.yomitan-glossary ol[data-count] table {
+  border-collapse: collapse;
+  margin: 0.3em 0;
+  max-width: 100%;
+  display: block;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+
+.yomitan-glossary ol[data-count] th,
+.yomitan-glossary ol[data-count] td {
+  padding: 0.18em 0.5em;
+  border: 1px solid var(--am-faint);
+  text-align: left;
+}
+
+.yomitan-glossary ol[data-count] th {
+  font-weight: 600;
+}
+
+/* Frequency / pitch hooks, when a dictionary surfaces them inline. */
+.yomitan-glossary ol[data-count] [data-sc-content|="frequency"],
+.yomitan-glossary ol[data-count] [data-sc-content|="pitch-accent"] {
+  font-size: 0.85em;
+  color: var(--am-muted);
+}
+
+/* ---------------------------------------------------------------------------
+ * Generic structured-content hooks (was _structured_content.css, Issue #87).
+ *
+ * Styles the common Yomitan data-sc-* hooks that published dictionaries —
+ * Jitendex, NHK, JMdict-derived monolinguals — produce, so a dictionary that
+ * ships NO styles.css still renders tag pills, note boxes, and inflection
+ * tables cleanly. When a dictionary DOES ship styles.css, its scoped block sits
+ * later in the managed block and wins; these only fill gaps.
+ *
+ * Colors reproduce Yomitan's conventional palette for JMdict-derived content;
+ * solid borders so they read without color-mix, tinted backgrounds added only
+ * under @supports.
+ * ------------------------------------------------------------------------- */
+
+/* Inline tag pills — part of speech, misc, field, dialect… A neutral chip by
+ * default; the few widely shared semantic kinds get their conventional color. */
+.yomitan-glossary ol[data-count] span[data-sc-class="tag"] {
+  display: inline-block;
+  margin-right: 0.4em;
+  padding: 0.05em 0.4em;
+  border-radius: 0.3em;
+  font-size: 0.8em;
+  font-weight: 600;
+  vertical-align: text-bottom;
+  word-break: keep-all;
+  background: var(--am-chip);
+  color: var(--am-muted);
+}
+.yomitan-glossary ol[data-count] span[data-sc-content="part-of-speech-info"] {
+  background: #565656;
+  color: #fff;
+}
+.yomitan-glossary ol[data-count] span[data-sc-content="misc-info"] {
+  background: #7a3b2e;
+  color: #fff;
+}
+.yomitan-glossary ol[data-count] span[data-sc-content="field-info"] {
+  background: #5b3a78;
+  color: #fff;
+}
+.yomitan-glossary ol[data-count] span[data-sc-content="dialect-info"] {
+  background: #2f6b39;
+  color: #fff;
+}
+.yomitan-glossary ol[data-count] span[data-sc-content="lang-source-wasei"] {
+  background: #b5651d;
+  color: #fff;
+}
+
+/* Note boxes — info gloss, sense note, cross-references, antonyms, language
+ * source. A left rail in the box's accent color (Yomitan also tints the
+ * background ~5–8%, added under @supports below). */
+.yomitan-glossary ol[data-count] div[data-sc-class="extra-box"] {
+  margin: 0.4em 0;
+  padding: 0.25em 0.5em;
+  border-left: 3px solid var(--am-faint);
+  border-radius: 0.3em;
+}
+.yomitan-glossary ol[data-count] div[data-sc-content="info-gloss"] {
+  border-left-color: #2f8a46;
+}
+.yomitan-glossary ol[data-count] div[data-sc-content="sense-note"] {
+  border-left-color: #c79a1e;
+}
+.yomitan-glossary ol[data-count] div[data-sc-content="lang-source"] {
+  border-left-color: #7a4fae;
+}
+.yomitan-glossary ol[data-count] div[data-sc-content="xref"] {
+  border-left-color: #1a73e8;
+}
+.yomitan-glossary ol[data-count] div[data-sc-content="antonym"] {
+  border-left-color: #a4422f;
+}
+
+/* Small labels inside the boxes ("Note", reference labels). */
+.yomitan-glossary ol[data-count] div[data-sc-class="extra-label"],
+.yomitan-glossary ol[data-count] span[data-sc-content="reference-label"] {
+  font-size: 0.8em;
+  color: var(--am-muted);
+}
+
+/* Example-sentence pair: the Japanese line a touch larger, its translation
+ * smaller. (The example block itself is muted/indented above.) */
+.yomitan-glossary ol[data-count] div[data-sc-content="example-sentence-a"] {
+  font-size: 1.15em;
+}
+.yomitan-glossary ol[data-count] div[data-sc-content="example-sentence-b"] {
+  font-size: 0.85em;
+}
+
+/* Inflection / forms tables: Yomitan inlines per-cell borders that we don't
+ * receive, so cells render borderless. Restore them at higher specificity than
+ * the generic table rule so forms tables read as a grid. */
+.yomitan-glossary ol[data-count] [data-sc-content="forms"] table {
+  border-collapse: collapse;
+  margin-top: 0.2em;
+}
+.yomitan-glossary ol[data-count] [data-sc-content="forms"] th,
+.yomitan-glossary ol[data-count] [data-sc-content="forms"] td {
+  border: 1px solid var(--am-faint);
+  padding: 0.2em 0.4em;
+  text-align: center;
+  vertical-align: top;
+}
+
+/* In-sense glossary list — Yomitan renders it inline with " | " separators
+ * rather than as a bulleted block. */
+.yomitan-glossary ol[data-count] ul[data-sc-content="glossary"] {
+  display: inline;
+  list-style: none;
+  padding-left: 0;
+}
+.yomitan-glossary ol[data-count] ul[data-sc-content="glossary"] > li {
+  display: inline;
+}
+.yomitan-glossary ol[data-count] ul[data-sc-content="glossary"] > li:not(:first-child)::before {
+  content: " | ";
+  color: var(--am-muted);
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue 50%)) {
+  .yomitan-glossary ol[data-count] div[data-sc-content="info-gloss"] {
+    background: color-mix(in srgb, #2f8a46 8%, transparent);
+  }
+  .yomitan-glossary ol[data-count] div[data-sc-content="sense-note"] {
+    background: color-mix(in srgb, #c79a1e 8%, transparent);
+  }
+  .yomitan-glossary ol[data-count] div[data-sc-content="lang-source"] {
+    background: color-mix(in srgb, #7a4fae 8%, transparent);
+  }
+  .yomitan-glossary ol[data-count] div[data-sc-content="xref"] {
+    background: color-mix(in srgb, #1a73e8 8%, transparent);
+  }
+  .yomitan-glossary ol[data-count] div[data-sc-content="antonym"] {
+    background: color-mix(in srgb, #a4422f 8%, transparent);
+  }
+}

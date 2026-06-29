@@ -1,9 +1,108 @@
 """Tests for DefinitionService — chain walking over injected providers."""
 
+from dataclasses import replace
+from pathlib import Path
 from unittest.mock import MagicMock
 
-from anki_miner.config import AnkiMinerConfig
-from anki_miner.services.definition_service import DefinitionService
+from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.services.definition_service import DefinitionService, collect_dictionary_css
+from anki_miner.services.dictionary.storage import (
+    SCHEMA_VERSION,
+    DictRow,
+    bulk_insert,
+    create_index,
+    write_meta,
+)
+
+
+def _seed_dict(root: Path, dict_id: str, source_name: str, *, styles_css: str | None = None) -> None:
+    folder = root / dict_id
+    folder.mkdir(parents=True, exist_ok=True)
+    db = folder / "index.sqlite"
+    create_index(db)
+    bulk_insert(db, [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', sequence=1)])
+    meta = {
+        "schema_version": str(SCHEMA_VERSION),
+        "source_name": source_name,
+        "format": "yomitan",
+        "entry_count": "1",
+    }
+    if styles_css is not None:
+        meta["styles_css"] = styles_css
+    write_meta(db, meta)
+
+
+def _config(root: Path, *entries: ChainEntry) -> AnkiMinerConfig:
+    return replace(AnkiMinerConfig(), dicts_root=root, dictionary_chain=entries)
+
+
+class TestCollectDictionaryCss:
+    """``collect_dictionary_css`` is the Yomitan ``_getCustomCss`` analog: each
+    enabled indexed dict's scoped ``styles.css`` concatenated in chain order."""
+
+    def test_empty_for_no_chain(self, tmp_path: Path):
+        assert collect_dictionary_css(_config(tmp_path)) == ""
+
+    def test_concatenates_scoped_css_in_chain_order(self, tmp_path: Path):
+        _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
+        _seed_dict(tmp_path, "b-dict", "B", styles_css="span { color: blue }")
+        css = collect_dictionary_css(
+            _config(
+                tmp_path,
+                ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
+                ChainEntry(kind="indexed", dict_id="b-dict", enabled=True),
+            )
+        )
+        # Each scoped to its own [data-dictionary]; A precedes B (chain order).
+        assert '[data-dictionary="A"]' in css
+        assert '[data-dictionary="B"]' in css
+        assert css.index('[data-dictionary="A"]') < css.index('[data-dictionary="B"]')
+
+    def test_skips_disabled_dict(self, tmp_path: Path):
+        _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
+        _seed_dict(tmp_path, "b-dict", "B", styles_css="span { color: blue }")
+        css = collect_dictionary_css(
+            _config(
+                tmp_path,
+                ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
+                ChainEntry(kind="indexed", dict_id="b-dict", enabled=False),
+            )
+        )
+        assert '[data-dictionary="A"]' in css
+        assert '[data-dictionary="B"]' not in css
+
+    def test_skips_dict_without_styles(self, tmp_path: Path):
+        _seed_dict(tmp_path, "a-dict", "A", styles_css=None)
+        assert (
+            collect_dictionary_css(_config(tmp_path, ChainEntry(kind="indexed", dict_id="a-dict", enabled=True))) == ""
+        )
+
+    def test_skips_jisho_online_provider(self, tmp_path: Path):
+        _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
+        css = collect_dictionary_css(
+            _config(
+                tmp_path,
+                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+                ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
+            )
+        )
+        assert '[data-dictionary="A"]' in css
+        # No crash from the online provider; it simply contributes nothing.
+
+    def test_distinct_titles_stay_isolated(self, tmp_path: Path):
+        _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
+        _seed_dict(tmp_path, "b-dict", "B", styles_css="span { color: blue }")
+        css = collect_dictionary_css(
+            _config(
+                tmp_path,
+                ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
+                ChainEntry(kind="indexed", dict_id="b-dict", enabled=True),
+            )
+        )
+        # Each dict's rule is prefixed with ITS OWN [data-dictionary] scope, so a
+        # rule can't leak across distinct-title dicts in the concatenated sheet.
+        assert '[data-dictionary="A"] span {color: red}' in css
+        assert '[data-dictionary="B"] span {color: blue}' in css
 
 
 def make_provider(name="Test", available=True, return_value=None, load_raises=None):

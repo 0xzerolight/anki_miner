@@ -11,6 +11,7 @@ Covers:
 
 from __future__ import annotations
 
+import contextlib
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -73,7 +74,16 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
     widget = SettingsTab(cfg)
     qtbot.addWidget(widget)
     yield widget
-    widget.deleteLater()
+    # _on_save_clicked reconciles styling, spawning a short-lived AnkiConnect
+    # worker; join it and flush queued signals so a late status update can't fire
+    # into a torn-down QLabel. Mirrors closeEvent.
+    widget.shutdown()
+    for w in widget.iter_close_workers():
+        if w is not None:
+            w.wait(3000)
+    qtbot.wait(10)
+    with contextlib.suppress(RuntimeError):
+        widget.deleteLater()
 
 
 @pytest.fixture

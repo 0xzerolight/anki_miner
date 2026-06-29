@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import replace
 from pathlib import Path
 
@@ -18,7 +19,18 @@ def tab(test_config: AnkiMinerConfig, qtbot):
     widget = SettingsTab(test_config)
     qtbot.addWidget(widget)
     yield widget
-    widget.deleteLater()
+    # _on_save_clicked reconciles styling, which spawns a short-lived AnkiConnect
+    # worker; join it (and any other probe workers) and flush queued signals so a
+    # late status update can't fire into a torn-down QLabel. Mirrors closeEvent.
+    widget.shutdown()
+    for w in widget.iter_close_workers():
+        if w is not None:
+            w.wait(3000)
+    qtbot.wait(10)
+    # The widget may already be reaped by pytest-qt's cleanup net during the
+    # flush above; deleteLater on a dead C++ object then raises.
+    with contextlib.suppress(RuntimeError):
+        widget.deleteLater()
 
 
 class TestYouTubePanelDefaults:
@@ -802,31 +814,32 @@ class TestCardStylingSyncWiring:
 
         tab._anki_probe.sync_styling.assert_called_once()
 
-    def test_notify_anki_connected_reconciles(self, tab):
+    def test_notify_anki_connected_syncs(self, tab):
         from unittest.mock import MagicMock
 
-        tab._anki_probe.reconcile_styling = MagicMock()
+        tab._anki_probe.sync_styling = MagicMock()
 
         tab.notify_anki_connected()
 
-        tab._anki_probe.reconcile_styling.assert_called_once()
+        tab._anki_probe.sync_styling.assert_called_once()
 
-    def test_persist_styling_state_updates_config_and_emits(self, tab):
-        received = []
-        tab.config_changed.connect(received.append)
+    def test_chain_change_resyncs_styling_when_managing(self, tab):
+        """A dictionary-chain change re-pushes the managed glossary CSS."""
+        from unittest.mock import MagicMock
 
-        tab._persist_styling_state("minimal", True)
+        tab.config = replace(tab.config, manage_card_styling=True)
+        tab._anki_probe.sync_styling = MagicMock()
 
-        assert tab.config.card_style_preset == "minimal"
-        assert tab.config.card_style_migrated is True
-        assert received and received[-1].card_style_preset == "minimal"
+        tab._persist_chain_change(tab.config.dictionary_chain)
 
-    def test_migrated_only_change_does_not_reload_panels(self, tab):
-        """A reseed that flips only card_style_migrated must not reload panels (OVH-007)."""
+        tab._anki_probe.sync_styling.assert_called_once()
+
+    def test_non_panel_key_change_does_not_reload_panels(self, tab):
+        """A change touching only a non-panel key must not reload panels (OVH-007)."""
         from unittest.mock import MagicMock
 
         tab._load_config = MagicMock()
-        updated = replace(tab.config, card_style_migrated=not tab.config.card_style_migrated)
+        updated = replace(tab.config, skipped_update_version="9.9.9")
 
         tab.update_config(updated)
 
