@@ -74,22 +74,30 @@ jobs:
         # there. The Intel build installs the base package only (skip_asr_smoke
         # then skips the asr smoke, which would fail with no faster-whisper);
         # the app degrades gracefully (ASR probes via find_spec → unavailable).
+        # build_vulkan drives the from-source Vulkan pywhispercpp wheel build and
+        # its loadability smoke. "1" only on Linux + Windows: macOS stays on the
+        # CT2/Metal path (no official Vulkan artifact for macOS, and no value in
+        # MoltenVK here), so the Vulkan steps are skipped and the whispercpp smoke
+        # is skipped (BUNDLE_SMOKE_SKIP_WHISPERCPP) on both macOS variants.
         include:
           - os: ubuntu-22.04
             artifact_name: AnkiMiner-Linux-x86_64
             install_target: ".[asr]"
             skip_asr_smoke: ""
             ffmpeg_encoders: ""
+            build_vulkan: "1"
           - os: windows-latest
             artifact_name: AnkiMiner-Windows-x86_64
             install_target: ".[asr]"
             skip_asr_smoke: ""
             ffmpeg_encoders: ""
+            build_vulkan: "1"
           - os: macos-latest
             artifact_name: AnkiMiner-macOS-arm64
             install_target: ".[asr]"
             skip_asr_smoke: ""
             ffmpeg_encoders: ""
+            build_vulkan: ""
           # Intel x86_64 macOS. macos-13 was retired by GitHub (2025-12-04); a
           # retired label never gets a runner and queues forever. macos-15-intel
           # is GitHub's recommended standard Intel replacement (free on public
@@ -103,6 +111,7 @@ jobs:
             install_target: "."
             skip_asr_smoke: "1"
             ffmpeg_encoders: "libmp3lame libopus libwebp libwebp_anim"
+            build_vulkan: ""
 
     runs-on: ${{ matrix.os }}
 
@@ -323,6 +332,143 @@ jobs:
           Write-Host "Bundled alass landed in vendor/alass/:"
           Get-ChildItem vendor\alass
 
+      # =====================================================================
+      # Vulkan-enabled pywhispercpp — BUILD FROM SOURCE, per-OS (Linux + Windows
+      # only; macOS stays CT2/Metal). No prebuilt Vulkan artifact exists on any
+      # OS, so we self-build. ADDITIVE: a failure here is loud (fail-closed, no
+      # `continue-on-error`) and does NOT touch the ffmpeg/alass/CT2 artifacts —
+      # it only adds the Vulkan ggml backend on top of the [asr] install.
+      #
+      # All pins live in constraints/asr-vulkan-build.txt (pywhispercpp ref,
+      # whisper.cpp submodule SHA carried by that ref, Vulkan SDK version, and the
+      # auditwheel/delvewheel repair tools). Shaders compile to SPIR-V at BUILD
+      # time via glslc — NO GPU is needed on the runner.
+      # =====================================================================
+
+      # Vulkan SDK / glslc supplies the headers + shader compiler at build time.
+      - name: Install Vulkan SDK (Linux)
+        if: runner.os == 'Linux' && matrix.build_vulkan == '1'
+        run: |
+          set -euo pipefail
+          # ggml-vulkan needs the Vulkan headers + glslc (shaderc) + SPIR-V tools
+          # to compile shaders to SPIR-V at build time. libvulkan-dev brings the
+          # loader's dev symlink (libvulkan.so) so CMake's find_package(Vulkan)
+          # succeeds; the loader itself is EXCLUDED from the wheel below so the
+          # user's GPU-driver loader wins at runtime. No GPU/driver needed to build.
+          sudo apt-get update
+          sudo apt-get install -y libvulkan-dev glslc spirv-tools spirv-headers
+          echo "glslc: $(glslc --version | head -1 || true)"
+
+      - name: Install Vulkan SDK (Windows)
+        if: runner.os == 'Windows' && matrix.build_vulkan == '1'
+        # LunarG Vulkan SDK via jakoch/install-vulkan-sdk-action. Pinned to an
+        # immutable commit SHA (matches the SHA-pinned third-party actions in this
+        # workflow) AND a Vulkan SDK version (constraints/asr-vulkan-build.txt).
+        # The action sets VULKAN_SDK and puts glslc on PATH for the build step.
+        uses: jakoch/install-vulkan-sdk-action@37effcfa045411f8bfbbda26df2fd1b3bf3436fa # v1.6.0
+        with:
+          vulkan_version: "1.4.350.0"
+          install_runtime: false
+          cache: true
+
+      # Build the wheel from the pinned pywhispercpp ref with the Vulkan backend,
+      # then repair it EXCLUDING the Vulkan loader. We pass NO_REPAIR=1 so
+      # pywhispercpp's own repairwheel step does NOT run — its repairwheel call
+      # vendors every external dep with no way to exclude the loader. We then run
+      # the real repair tool ourselves, which DOES support --exclude.
+      - name: Build Vulkan pywhispercpp wheel (Linux)
+        if: runner.os == 'Linux' && matrix.build_vulkan == '1'
+        env:
+          # setup.py forwards every env var as a CMake -D, so these become
+          # -DGGML_VULKAN=1 -DGGML_BACKEND_DL=1 on the whisper.cpp/ggml configure.
+          GGML_VULKAN: "1"
+          GGML_BACKEND_DL: "1"
+          NO_REPAIR: "1"
+        run: |
+          set -euo pipefail
+          # auditwheel does the wheel repair + loader exclusion (pinned).
+          pip install -c constraints/asr-vulkan-build.txt auditwheel
+          mkdir -p dist-vulkan-raw dist-vulkan
+          # git+ (not the PyPI sdist) so the whisper.cpp/pybind11 submodules are
+          # fetched at the SHAs the pinned tag records. --no-build-isolation would
+          # drop the build deps pywhispercpp declares, so keep isolation ON.
+          pip wheel --no-deps -w dist-vulkan-raw \
+            "pywhispercpp @ git+https://github.com/absadiki/pywhispercpp.git@v1.5.0"
+          RAW=$(find dist-vulkan-raw -name 'pywhispercpp-*.whl' | head -1)
+          echo "Raw (unrepaired) wheel: $RAW"
+          # Repair: graft the ggml/whisper libs INTO the wheel but EXCLUDE the
+          # Vulkan loader so ggml-vulkan binds the system/driver loader at runtime.
+          auditwheel repair --exclude libvulkan.so.1 --exclude libvulkan.so \
+            -w dist-vulkan "$RAW"
+          WHEEL=$(find dist-vulkan -name 'pywhispercpp-*.whl' | head -1)
+          echo "VULKAN_WHEEL=$WHEEL" >> "$GITHUB_ENV"
+          echo "Repaired Vulkan wheel: $WHEEL"
+          # Loud, fail-closed sanity: the loader must NOT be inside the wheel, and
+          # the ggml-vulkan backend MUST be.
+          unzip -l "$WHEEL" | tee wheel_contents.txt
+          if grep -Eiq 'libvulkan\.so' wheel_contents.txt; then
+            echo "::error::Vulkan loader leaked into the wheel — exclude failed"
+            exit 1
+          fi
+          if ! grep -Eiq 'libggml-vulkan' wheel_contents.txt; then
+            echo "::error::ggml-vulkan backend missing from the wheel — Vulkan build did not produce the backend"
+            exit 1
+          fi
+
+      - name: Build Vulkan pywhispercpp wheel (Windows)
+        if: runner.os == 'Windows' && matrix.build_vulkan == '1'
+        shell: pwsh
+        env:
+          GGML_VULKAN: "1"
+          GGML_BACKEND_DL: "1"
+          NO_REPAIR: "1"
+        run: |
+          $ErrorActionPreference = "Stop"
+          # delvewheel does the wheel repair + loader exclusion (pinned).
+          pip install -c constraints/asr-vulkan-build.txt delvewheel
+          New-Item -ItemType Directory -Force -Path dist-vulkan-raw, dist-vulkan | Out-Null
+          # git+ so the whisper.cpp/pybind11 submodules are fetched at the pinned SHAs.
+          pip wheel --no-deps -w dist-vulkan-raw `
+            "pywhispercpp @ git+https://github.com/absadiki/pywhispercpp.git@v1.5.0"
+          $raw = Get-ChildItem dist-vulkan-raw -Filter 'pywhispercpp-*.whl' | Select-Object -First 1
+          Write-Host "Raw (unrepaired) wheel: $($raw.FullName)"
+          # Repair: graft ggml/whisper DLLs into the wheel but EXCLUDE the Vulkan
+          # loader (vulkan-1.dll) so ggml-vulkan binds the system loader at runtime.
+          delvewheel repair --exclude vulkan-1.dll --add-path "$env:VULKAN_SDK\Bin" `
+            -w dist-vulkan $raw.FullName
+          $wheel = Get-ChildItem dist-vulkan -Filter 'pywhispercpp-*.whl' | Select-Object -First 1
+          "VULKAN_WHEEL=$($wheel.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Repaired Vulkan wheel: $($wheel.FullName)"
+          # Loud, fail-closed sanity: the loader must NOT be inside the wheel, and
+          # the ggml-vulkan backend MUST be.
+          python -c "import zipfile,sys; n=zipfile.ZipFile(sys.argv[1]).namelist(); print('\n'.join(n))" $wheel.FullName | Tee-Object wheel_contents.txt
+          if (Select-String -Path wheel_contents.txt -Pattern 'vulkan-1\.dll' -Quiet) {
+            Write-Error "Vulkan loader leaked into the wheel — exclude failed"; exit 1
+          }
+          if (-not (Select-String -Path wheel_contents.txt -Pattern 'ggml-vulkan' -Quiet)) {
+            Write-Error "ggml-vulkan backend missing from the wheel — Vulkan build did not produce the backend"; exit 1
+          }
+
+      # Install the built Vulkan wheel into the SAME env PyInstaller bundles from,
+      # BEFORE PyInstaller runs, replacing any CPU pywhispercpp. --force-reinstall
+      # so a pywhispercpp pulled in by [asr] (now or in future) is overwritten by
+      # the Vulkan build. Record the wheel's sha256 as a release artifact for
+      # provenance. shell: bash on both OSes (windows-latest has bash + sha256sum).
+      - name: Install Vulkan wheel into bundle env + record sha256
+        if: matrix.build_vulkan == '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Installing Vulkan pywhispercpp wheel: ${VULKAN_WHEEL}"
+          pip install --force-reinstall --no-deps "${VULKAN_WHEEL}"
+          # Provenance artifact: the built wheel's sha256, next to the bundle.
+          mkdir -p dist
+          WHEEL_BASENAME=$(basename "${VULKAN_WHEEL}")
+          sha256sum "${VULKAN_WHEEL}" | awk -v n="${WHEEL_BASENAME}" '{print $1"  "n}' \
+            > "dist/${{ matrix.artifact_name }}-pywhispercpp-vulkan.sha256"
+          echo "Recorded sha256:"
+          cat "dist/${{ matrix.artifact_name }}-pywhispercpp-vulkan.sha256"
+
       - name: Build with PyInstaller
         run: pyinstaller anki_miner.spec
 
@@ -339,13 +485,21 @@ jobs:
       #   - ffmpeg  : bundled ffmpeg ships libmp3lame/libopus/libsvtav1/libwebp/
       #               libwebp_anim (anim asserted separately so a still-only webp
       #               build can't pass while animated screenshots fail at runtime).
+      #   - whispercpp-vulkan : IMPORT/LOADABILITY ONLY — the from-source Vulkan
+      #               pywhispercpp wheel was bundled (ggml-vulkan backend lib
+      #               present) and the frozen binary's hidden Vulkan probe prints
+      #               an integer device count (0 expected on GPU-less runners). It
+      #               proves NOTHING about GPU transcription. SKIPPED on macOS
+      #               (BUNDLE_SMOKE_SKIP_WHISPERCPP=1 when build_vulkan != '1') —
+      #               macOS stays on CT2/Metal and ships no Vulkan wheel.
       # shell: bash on every OS — windows-latest has bash on PATH; the script
       # finds AnkiMiner(.exe) and ffmpeg(.exe) itself.
-      - name: Bundled smokes (youtube + asr + ffmpeg encoders)
+      - name: Bundled smokes (youtube + asr + ffmpeg encoders + whispercpp-vulkan)
         shell: bash
         env:
           BUNDLE_SMOKE_SKIP_ASR: ${{ matrix.skip_asr_smoke }}
           BUNDLE_SMOKE_FFMPEG_ENCODERS: ${{ matrix.ffmpeg_encoders }}
+          BUNDLE_SMOKE_SKIP_WHISPERCPP: ${{ matrix.build_vulkan == '1' && '' || '1' }}
         run: scripts/bundle_smoke.sh dist/AnkiMiner
 
       - name: Build Windows installer
@@ -399,13 +553,27 @@ jobs:
           rm -rf dist/deb-stage/av
           # Also strip the ctranslate2 shared lib itself (libctranslate2.so.*).
           find dist/deb-stage -name 'libctranslate2*.so*' -delete
-          # Fail closed: verify no bundled ffmpeg, ffprobe, or ctranslate2/
-          # faster_whisper libs remain in the stage tree.
+          # whisper.cpp/ggml (pywhispercpp Vulkan backend) — same rationale: the
+          # .deb is system-managed and stays lean; users who want local ASR
+          # pip-install the extra (now [asr-vulkan]) separately. The AppImage
+          # (built above) keeps these. Strip the package dir, the _pywhispercpp
+          # extension, and every ggml/whisper shared lib (incl. ggml-vulkan),
+          # across both onedir layouts.
+          rm -rf dist/deb-stage/_internal/pywhispercpp
+          rm -rf dist/deb-stage/pywhispercpp
+          find dist/deb-stage -name '_pywhispercpp*.so' -delete
+          find dist/deb-stage -name 'libggml*.so*' -delete
+          find dist/deb-stage -name 'libwhisper*.so*' -delete
+          # Fail closed: verify no bundled ffmpeg, ffprobe, ctranslate2/
+          # faster_whisper, or pywhispercpp/ggml/whisper libs remain in the stage tree.
           BAD=$(find dist/deb-stage -type f \( \
             -name 'ffmpeg' -o -name 'ffprobe' -o \
-            -name 'libctranslate2*.so*' \) ; \
+            -name 'libctranslate2*.so*' -o \
+            -name '_pywhispercpp*.so' -o \
+            -name 'libggml*.so*' -o -name 'libwhisper*.so*' \) ; \
             find dist/deb-stage -type d \( \
-            -name 'ctranslate2' -o -name 'faster_whisper' \))
+            -name 'ctranslate2' -o -name 'faster_whisper' -o \
+            -name 'pywhispercpp' \))
           if [ -n "$BAD" ]; then
             echo "::error::ASR/ffmpeg artifacts still present in deb stage tree:"
             echo "$BAD"
@@ -436,6 +604,7 @@ jobs:
           path: |
             dist/AnkiMiner-${{ steps.version.outputs.version }}-Linux-x86_64.AppImage
             dist/anki-miner_${{ steps.version.outputs.version }}_amd64.deb
+            dist/${{ matrix.artifact_name }}-pywhispercpp-vulkan.sha256
 
       - name: Upload artifact (macOS)
         if: runner.os == 'macOS'
@@ -453,6 +622,7 @@ jobs:
           if-no-files-found: error
           path: |
             dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
+            dist/${{ matrix.artifact_name }}-pywhispercpp-vulkan.sha256
 
   release:
     needs: build
@@ -474,3 +644,4 @@ jobs:
             artifacts/**/*-Setup.exe
             artifacts/**/*.AppImage
             artifacts/**/*.deb
+            artifacts/**/*-pywhispercpp-vulkan.sha256
