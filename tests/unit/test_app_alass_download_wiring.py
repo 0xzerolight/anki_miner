@@ -24,6 +24,22 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
     monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_maybe_offer_first_run_setup", lambda self: None)
+    # MainWindow.__init__ starts a background ValidationWorker against the
+    # neutered (config-less) ValidationService above -> it crashes and leaks a
+    # QThread. Stop it: these tests don't exercise startup validation.
+    monkeypatch.setattr(mw_module.MainWindow, "_run_validation", lambda self: None)
+    # notify_alass_download_finished() kicks off the panel's off-thread
+    # re-probe, which calls alass_available -> alass_resolver._resolve and
+    # RE-POPULATES the global _CACHE on a background thread. That write races
+    # the synchronous _clear_cache() + `assert _CACHE == {}` below: locally the
+    # probe lands after the assert (green), on CI it lands before (red). Neuter
+    # the re-probe so these tests observe only the synchronous handler they
+    # actually verify; the panel's own async refresh has its own tests.
+    from anki_miner.gui.widgets.panels.subtitles_settings_panel import (
+        SubtitlesSettingsPanel,
+    )
+
+    monkeypatch.setattr(SubtitlesSettingsPanel, "_refresh_state_async", lambda self, *a, **kw: None)
 
 
 @pytest.fixture
