@@ -991,6 +991,17 @@ def test_cascade_vulkan_no_device_falls_back_to_ct2_cpu(monkeypatch, tmp_path):
     assert [c["device"] for c in ct2] == ["cpu"]
 
 
+def test_cascade_vulkan_unavailable_with_cuda_uses_ct2_cuda(monkeypatch, tmp_path):
+    """device='vulkan' but no whisper.cpp backend, WITH a CUDA GPU present →
+    falls back to CT2 'auto' which builds CUDA (salvages GPU, not forced CPU)."""
+    cpp_constructed: list = []
+    ct2 = _wire_cpp(monkeypatch, cuda=1, vulkan=1, cpp_available=False, cpp_constructed=cpp_constructed)
+
+    _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
+    assert cpp_constructed == []
+    assert [c["device"] for c in ct2] == ["cuda"]
+
+
 def test_cascade_auto_prefers_cuda(monkeypatch, tmp_path):
     """device='auto' + a CUDA GPU → CT2 CUDA wins over Vulkan."""
     constructed: list[dict] = []
