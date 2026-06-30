@@ -3,7 +3,7 @@
 import pytest
 
 from anki_miner.utils import alass_resolver
-from anki_miner.utils.alass_resolver import resolve_alass
+from anki_miner.utils.alass_resolver import alass_available, resolve_alass
 
 
 class _Cfg:
@@ -235,3 +235,60 @@ class TestCaching:
         monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
 
         assert resolve_alass(_Cfg()) == str(bundled)
+
+
+class TestAlassAvailable:
+    """Coverage for the availability helper the Settings panel probes with."""
+
+    def test_bundled_available_with_empty_bin_root(self, tmp_path, monkeypatch):
+        # Regression shape: bundled binary present, managed bin_root empty.
+        meipass = tmp_path / "bundle"
+        bundled = meipass / "bin" / "alass"
+        bundled.parent.mkdir(parents=True)
+        bundled.write_text("#!/bin/sh\n")
+        bundled.chmod(0o755)
+        empty_bin_root = tmp_path / "bin"
+        empty_bin_root.mkdir()
+
+        monkeypatch.setattr(alass_resolver.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "_MEIPASS", str(meipass), raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+
+        assert alass_available(None, empty_bin_root) is True
+
+    def test_override_available(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        override = tmp_path / "my-alass"
+        override.write_text("#!/bin/sh\n")
+
+        assert alass_available(override, None) is True
+
+    def test_managed_available(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        bin_root = tmp_path / "bin"
+        bin_root.mkdir()
+        managed = bin_root / "alass"
+        managed.write_text("#!/bin/sh\n")
+        managed.chmod(0o755)
+
+        assert alass_available(None, bin_root) is True
+
+    def test_path_available_when_on_path(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        bin_root = tmp_path / "bin"
+        bin_root.mkdir()
+        monkeypatch.setattr(alass_resolver.shutil, "which", lambda name: "/usr/bin/alass")
+
+        assert alass_available(None, bin_root) is True
+
+    def test_unavailable_when_nothing_present(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        bin_root = tmp_path / "bin"
+        bin_root.mkdir()
+        monkeypatch.setattr(alass_resolver.shutil, "which", lambda name: None)
+
+        assert alass_available(None, bin_root) is False

@@ -19,11 +19,12 @@ that existing subprocess tests assert (``cmd[0] == "alass"``).
 """
 
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
 
-__all__ = ["resolve_alass"]
+__all__ = ["alass_available", "resolve_alass"]
 
 # Cache keyed by (name, override-as-str, bin-root-as-str, frozen-state, meipass)
 # so that a changed override, bin_root, or frozen state is never masked by a
@@ -104,3 +105,19 @@ def resolve_alass(config) -> str:
         getattr(config, "alass_location", None),
         getattr(config, "bin_root", None),
     )
+
+
+def alass_available(alass_location, bin_root) -> bool:
+    """Return True if alass is reachable for the given override + bin_root.
+
+    Resolves through the same order as :func:`resolve_alass` (override ->
+    bundled -> managed -> PATH) and reports whether the result is actually
+    present: an explicit path must exist on disk, and the bare ``"alass"``
+    literal must be found on PATH. Mirrors the retime tab's existing
+    availability probe so the Settings panel and the retime tab agree on
+    whether alass is usable.
+    """
+    resolved = _resolve("alass", alass_location, bin_root)
+    if resolved == "alass":
+        return shutil.which("alass") is not None
+    return Path(resolved).exists()

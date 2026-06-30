@@ -41,6 +41,7 @@ from anki_miner.services.asr import (
     model_manager,
     onnx_pack_installer,
 )
+from anki_miner.utils import alass_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,7 @@ class SubtitlesSettingsPanel(FormPanel):
         super().__init__(self.tr("Subtitles"), parent=parent)
         self._models_root = None
         self._bin_root: Path | None = None
+        self._alass_location: Path | None = None
         self._cuda_libs_root: Path | None = None
         self._onnx_pack_root: Path | None = None
         self._alass_supported = alass_installer.alass_install_supported()
@@ -554,7 +556,10 @@ class SubtitlesSettingsPanel(FormPanel):
             return
         self.download_alass_button.setEnabled(True)
         if installed:
-            self.set_alass_status(self.tr("Downloaded"))
+            # "Available" (not "Downloaded"): the binary may be bundled in the
+            # frozen build, on PATH, or set via an explicit path — none of which
+            # were "downloaded" by the in-app installer.
+            self.set_alass_status(self.tr("Available"))
         else:
             self.set_alass_status(self.tr("Not downloaded"))
 
@@ -722,6 +727,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._show_checking_status()
 
         bin_root = self._bin_root
+        alass_location = self._alass_location
         onnx_pack_root = self._onnx_pack_root
         alass_supported = self._alass_supported
         vulkan_supported = self._vulkan_supported
@@ -765,8 +771,12 @@ class SubtitlesSettingsPanel(FormPanel):
             alass_installed = False
             if alass_supported and bin_root is not None:
                 try:
-                    alass_installed = alass_installer.is_installed(bin_root)
-                except Exception:  # noqa: BLE001 — guard any installer probe failure
+                    # Probe actual resolvability (override / bundled / managed /
+                    # PATH), not just the managed-download dir — otherwise a
+                    # bundled or PATH alass is mislabeled "Not downloaded" while
+                    # the retime tab (which uses the same resolver) works fine.
+                    alass_installed = alass_resolver.alass_available(alass_location, bin_root)
+                except Exception:  # noqa: BLE001 — guard any resolver probe failure
                     alass_installed = False
 
             # onnxruntime importability (find_spec scans sys.path) is the heavy
@@ -1003,6 +1013,7 @@ class SubtitlesSettingsPanel(FormPanel):
         # alass
         self.alass_selector.set_path(str(config.alass_location) if config.alass_location else "")
         self._bin_root = config.bin_root
+        self._alass_location = config.alass_location
         self._onnx_pack_root = config.onnx_pack_root
         # One unified off-thread probe drives every status label + button state.
         self._refresh_state_async(config.asr_model, config.asr_models_root, config.cuda_libs_root)

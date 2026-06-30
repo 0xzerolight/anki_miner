@@ -18,6 +18,7 @@ from anki_miner.gui.widgets.panels.subtitles_settings_panel import (
     SubtitlesSettingsPanel,
     _device_options,
 )
+from anki_miner.utils import alass_resolver
 
 _PANEL_MOD = "anki_miner.gui.widgets.panels.subtitles_settings_panel"
 
@@ -289,14 +290,50 @@ def test_alass_download_button_emits_when_supported(qtbot, monkeypatch):
 
 def test_alass_status_reflects_installed_state(qtbot, tmp_path, monkeypatch):
     monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
-    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.is_installed", lambda root: True)
+    # The probe resolves availability (override/bundled/managed/PATH), not just
+    # the managed dir — so it patches the resolver helper, not is_installed.
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_resolver.alass_available", lambda loc, root: True)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(bin_root=tmp_path))
     _wait_state_settled(qtbot, panel)
 
-    assert "downloaded" in panel.alass_status_label.text().lower()
+    assert "available" in panel.alass_status_label.text().lower()
     assert panel.download_alass_button.isEnabled()
+
+
+def test_alass_status_available_when_bundled_without_managed_download(qtbot, tmp_path, monkeypatch):
+    """Regression: a bundled alass (frozen build) with an EMPTY managed bin_root
+    must show "Available", not "Not downloaded".
+
+    The Settings probe must resolve through the full chain (override/bundled/
+    managed/PATH), like the retime tab — checking only the managed bin_root
+    mislabeled bundled Linux/Windows builds as "Not downloaded".
+    """
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
+
+    # Simulate a frozen bundle that ships bin/alass; the managed bin_root is empty.
+    meipass = tmp_path / "bundle"
+    bundled = meipass / "bin" / "alass"
+    bundled.parent.mkdir(parents=True)
+    bundled.write_text("#!/bin/sh\n")
+    bundled.chmod(0o755)
+    empty_bin_root = tmp_path / "bin"
+    empty_bin_root.mkdir()
+
+    monkeypatch.setattr(alass_resolver.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(alass_resolver.sys, "_MEIPASS", str(meipass), raising=False)
+    monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+    alass_resolver._clear_cache()
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(bin_root=empty_bin_root))
+    _wait_state_settled(qtbot, panel)
+
+    assert "available" in panel.alass_status_label.text().lower()
+    assert panel.download_alass_button.isEnabled()
+    alass_resolver._clear_cache()
 
 
 def test_unsupported_platform_has_no_alass_button(qtbot, monkeypatch):
@@ -567,7 +604,7 @@ def test_heavy_probes_run_off_the_gui_thread(qtbot, tmp_path, monkeypatch):
     monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: True)
     monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.is_installed", _record("cuda_pack", False))
     monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
-    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.is_installed", _record("alass", False))
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_resolver.alass_available", _record("alass", False))
 
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
@@ -691,7 +728,7 @@ def test_notify_alass_download_finished_reprobes_install(qtbot, tmp_path, monkey
     monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: False)
     monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
     state = {"installed": False}
-    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.is_installed", lambda root: state["installed"])
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_resolver.alass_available", lambda loc, root: state["installed"])
 
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
@@ -704,7 +741,7 @@ def test_notify_alass_download_finished_reprobes_install(qtbot, tmp_path, monkey
     _wait_state_settled(qtbot, panel)
 
     assert not panel._alass_download_active
-    assert panel.alass_status_label.text().lower() == "downloaded"
+    assert panel.alass_status_label.text().lower() == "available"
 
 
 def test_probe_error_preserves_last_known_installed_state(qtbot, tmp_path, monkeypatch):
