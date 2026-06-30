@@ -182,7 +182,7 @@ class SubtitlesSettingsPanel(FormPanel):
         # Last-known install/download flags from the most recent SUCCESSFUL probe.
         # A probe *failure* (_on_state_error) must not claim an installed model /
         # pack is missing: forcing these to False mislabels an on-disk model as
-        # "Not downloaded" and disables its button until a later probe succeeds.
+        # "Not installed" and disables its button until a later probe succeeds.
         # On error we reuse these instead (default False before any probe lands).
         self._model_downloaded_cache = False
         self._cuda_pack_installed_cache = False
@@ -218,7 +218,6 @@ class SubtitlesSettingsPanel(FormPanel):
     def _setup_asr_section(self) -> None:
         """Whisper model dropdown, download button, and engine guidance."""
         self.add_section(self.tr("Speech-to-text"))
-        self._add_help(self.tr("Generate subtitles from audio when a file has none."))
 
         self.model_combo = QComboBox()
         for label, _value in _MODEL_OPTIONS:
@@ -276,7 +275,6 @@ class SubtitlesSettingsPanel(FormPanel):
     def _setup_addons_section(self) -> None:
         """Optional transcription accelerators/quality packs (CUDA / VAD / Vulkan)."""
         self.add_section(self.tr("Transcription add-ons (optional)"))
-        self._add_help(self.tr("Optional. Speed and accuracy extras — skip if unsure."))
 
         # GPU acceleration pack download. Mirrors the model-download row; gated by
         # _refresh_cuda_pack_status on platform support + NVIDIA-GPU presence.
@@ -310,8 +308,7 @@ class SubtitlesSettingsPanel(FormPanel):
         cuda_row.addWidget(self._cuda_guidance_label)
         cuda_row.addStretch()
         self.add_field(self.tr("GPU acceleration"), cuda_container)
-        # Always-on description; hidden in lockstep with its guidance label (the
-        # two are mutually exclusive, toggled in _apply_cuda_pack_state).
+        # Shown in lockstep with (the inverse of) its guidance label; see _apply_cuda_pack_state.
         self._cuda_help_label = self._add_help(self.tr("Faster transcription on NVIDIA GPUs (CUDA)."))
 
         # Silence removal (VAD) pack download. onnxruntime powers Whisper's VAD,
@@ -348,8 +345,7 @@ class SubtitlesSettingsPanel(FormPanel):
         vad_row.addWidget(self._vad_guidance_label)
         vad_row.addStretch()
         self.add_field(self.tr("Silence removal"), vad_container)
-        # Always-on description; hidden in lockstep with its guidance label (the
-        # two are mutually exclusive, toggled in _apply_vad_pack_state).
+        # Shown in lockstep with (the inverse of) its guidance label; see _apply_vad_pack_state.
         self._vad_help_label = self._add_help(
             self.tr("Skips music and silence so they are not transcribed as garbage.")
         )
@@ -381,14 +377,11 @@ class SubtitlesSettingsPanel(FormPanel):
             vulkan_row.addWidget(self.vulkan_status_label)
             vulkan_row.addStretch()
             self.add_field(self.tr("Vulkan model"), vulkan_container)
-            # Vulkan button is never hidden at runtime (whole row omitted on
-            # macOS at construction), so this line is always-on, no toggle.
             self._add_help(self.tr("Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan)."))
 
     def _setup_alass_section(self) -> None:
         """alass path override plus in-app download (or Homebrew guidance)."""
         self.add_section(self.tr("Alignment"))
-        self._add_help(self.tr("Retime existing subtitles to match the audio."))
 
         self.alass_selector = FileSelector(
             label="",
@@ -425,8 +418,6 @@ class SubtitlesSettingsPanel(FormPanel):
             alass_row.addWidget(self.alass_status_label)
             alass_row.addStretch()
             self.add_field(self.tr("alass download"), alass_container)
-            # alass button is never hidden at runtime (only disabled), so this
-            # line is always-on, no toggle.
             self._add_help(self.tr("Needed for retiming unless alass is already on your PATH."))
         else:
             # macOS: no upstream v2.0.0 binary — point users at Homebrew.
@@ -600,12 +591,11 @@ class SubtitlesSettingsPanel(FormPanel):
             return
         self.download_alass_button.setEnabled(True)
         if installed:
-            # "Available" (not "Downloaded"): the binary may be bundled in the
-            # frozen build, on PATH, or set via an explicit path — none of which
-            # were "downloaded" by the in-app installer.
-            self.set_alass_status(self.tr("Available"))
+            # "Installed" covers a managed download, a bundled binary, a PATH
+            # binary, or an explicit path — anywhere alass is reachable.
+            self.set_alass_status(self.tr("Installed"))
         else:
-            self.set_alass_status(self.tr("Not downloaded"))
+            self.set_alass_status(self.tr("Not installed"))
 
     # ------------------------------------------------------------------
     # GPU acceleration pack download flow
@@ -820,7 +810,7 @@ class SubtitlesSettingsPanel(FormPanel):
                 try:
                     # Probe actual resolvability (override / bundled / managed /
                     # PATH), not just the managed-download dir — otherwise a
-                    # bundled or PATH alass is mislabeled "Not downloaded" while
+                    # bundled or PATH alass is mislabeled "Not installed" while
                     # the retime tab (which uses the same resolver) works fine.
                     alass_installed = alass_resolver.alass_available(alass_location, bin_root)
                 except Exception:  # noqa: BLE001 — guard any resolver probe failure
@@ -956,9 +946,9 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_model_status("")
             return
         if model_downloaded:
-            self.set_model_status(self.tr("Downloaded"))
+            self.set_model_status(self.tr("Installed"))
         else:
-            self.set_model_status(self.tr("Not downloaded"))
+            self.set_model_status(self.tr("Not installed"))
 
     # ------------------------------------------------------------------
     # Silence-removal (VAD) pack download flow
