@@ -17,6 +17,7 @@ from anki_miner.config import AnkiMinerConfig
 
 def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
     from anki_miner.gui import main_window as mw_module
+    from anki_miner.gui.widgets.panels import subtitles_settings_panel as ssp_module
 
     monkeypatch.setattr(mw_module.GUIConfigManager, "load_config", lambda: test_config)
     monkeypatch.setattr(mw_module.GUIConfigManager, "save_config", lambda cfg: None)
@@ -24,6 +25,11 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
     monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_maybe_offer_first_run_setup", lambda self: None)
+    # The Vulkan download UI (button + status label) is built only when Vulkan is
+    # offerable: non-macOS AND the whisper.cpp Vulkan backend lib is present. CI
+    # has no libggml-vulkan, so force both so this wiring test has the button/label.
+    monkeypatch.setattr(ssp_module.sys, "platform", "linux")
+    monkeypatch.setattr(ssp_module._engine, "whisper_cpp_available", lambda: True)
 
 
 @pytest.fixture
