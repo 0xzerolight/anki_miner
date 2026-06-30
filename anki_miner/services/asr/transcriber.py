@@ -44,6 +44,20 @@ _MIN_AVG_LOGPROB = -1.0
 # PROVISIONAL: confirmed/tuned against the manual JP-clip release gate.
 _MIN_CPP_SEGMENT_PROBABILITY = 0.2
 
+# faster-whisper sets a segment's start/end to its first/last WORD time. With
+# vad_filter=True it removes silence, transcribes the concatenated speech, then
+# restores the original timeline — but Whisper still GROUPS words separated by a
+# long ORIGINAL silence into one segment, so that segment's restored start/end
+# spans the removed gap (the "subtitle held over minutes of silence" bug:
+# "聞いてますよ" came back as a single 645s segment — word '聞' at 0:17, the rest
+# at 11:02). The per-word timestamps are individually correct, so we re-cut each
+# CT2 segment wherever the gap between consecutive words exceeds this many
+# seconds, giving one tightly-bounded subtitle per real utterance. Distilled from
+# stable-ts's split_by_gap. 0.5/0.8/1.0s produced identical cuts on the test
+# material; 1.0s is the conservative pick (stable-ts defaults to 0.5, but 1.0
+# avoids over-splitting fluent Japanese speech into fragment subtitles).
+_MAX_WORD_GAP_S = 1.0
+
 
 def _ensure_onnx_pack_on_syspath(onnx_pack_root: Path | None) -> None:
     """Add a downloaded onnxruntime pack dir to ``sys.path`` so VAD can import it.
@@ -100,6 +114,57 @@ def _is_junk_segment(seg) -> bool:
         return True
     avg_logprob = getattr(seg, "avg_logprob", 0.0)
     return avg_logprob is not None and avg_logprob < _MIN_AVG_LOGPROB
+
+
+def _split_segment_on_word_gaps(seg, max_gap: float = _MAX_WORD_GAP_S):
+    """Yield ``(start_s, end_s, text)`` tuples, re-cut at large inter-word gaps.
+
+    A faster-whisper segment whose words straddle a long silence (Whisper groups
+    them despite the gap; see :data:`_MAX_WORD_GAP_S`) is split into one subtitle
+    per run of words, each bounded by its own first/last word time, wherever
+    ``next_word.start - prev_word.end > max_gap`` (strict ``>``).
+
+    Contract:
+      * No word data (``seg.words`` falsy — the whisper.cpp duck type, or
+        ``word_timestamps`` off) → emit the segment unchanged
+        ``(seg.start, seg.end, seg.text.strip())``. The cpp path is intentionally
+        never split here; it has no per-word timestamps.
+      * A single cluster (no gap exceeds *max_gap* — the overwhelming majority)
+        → emit ``(seg.start, seg.end, seg.text.strip())`` verbatim, so non-bug
+        output stays byte-identical to the pre-split behaviour (authoritative
+        ``seg.text``, never a word join).
+      * Only genuinely multi-cluster (silence-spanning) segments derive each
+        half's text from the joined words; such halves are stripped, clamped to
+        ``end >= start`` and dropped when empty, so the emitted tuples are clean
+        at the source (no reliance on srt_writer to drop them).
+
+    Word fields are read via ``getattr`` so a future faster-whisper rename
+    degrades to the whole-segment fallback instead of raising.
+    """
+    words = getattr(seg, "words", None)
+    if not words:
+        yield (seg.start, seg.end, seg.text.strip())
+        return
+
+    clusters: list[list] = [[words[0]]]
+    for word in words[1:]:
+        prev_end = getattr(clusters[-1][-1], "end", seg.start)
+        if getattr(word, "start", prev_end) - prev_end > max_gap:
+            clusters.append([word])
+        else:
+            clusters[-1].append(word)
+
+    if len(clusters) == 1:
+        # No real gap: keep the original segment's text and timing byte-for-byte.
+        yield (seg.start, seg.end, seg.text.strip())
+        return
+
+    for cluster in clusters:
+        start = getattr(cluster[0], "start", seg.start)
+        end = max(getattr(cluster[-1], "end", start), start)
+        text = "".join(getattr(word, "word", "") for word in cluster).strip()
+        if text and end > start:
+            yield (start, end, text)
 
 
 def _is_low_probability_cpp_segment(seg) -> bool:
@@ -541,9 +606,12 @@ def _transcribe_ct2(
     # Decode flags that suppress the classic large-model hallucination failures:
     #  * condition_on_previous_text=False — a hallucinated phrase no longer seeds
     #    the next window, killing runaway loops (あら×22, 何を×14).
-    #  * word_timestamps=True — unlocks hallucination_silence_threshold AND snaps
-    #    each segment's start/end onto real word boundaries (so subtitles no
-    #    longer start before the speech).
+    #  * word_timestamps=True — unlocks hallucination_silence_threshold AND, more
+    #    importantly, gives per-word times that _split_segment_on_word_gaps uses to
+    #    re-cut a segment Whisper stretched across a removed silence (see
+    #    _MAX_WORD_GAP_S). Assumes the faster-whisper contract that word_timestamps
+    #    populates roughly-monotonic words with tight per-word start/end; a fw
+    #    upgrade that changes it degrades to the unsplit whole-segment fallback.
     #  * hallucination_silence_threshold — skips long silent gaps; works even
     #    without VAD (the bundle path).
     #  * vad_filter — Silero VAD is the definitive silence remover but needs
@@ -581,7 +649,11 @@ def _transcribe_ct2(
         if cancel_event is not None and cancel_event.is_set():
             break
         if not _is_junk_segment(seg):
-            results.append((seg.start, seg.end, seg.text.strip()))
+            # Re-cut on word gaps so a segment Whisper stretched across a silence
+            # becomes one tight subtitle per real utterance (kept byte-identical
+            # for the common no-gap case). cpp segments lack words and are never
+            # routed here; _split_segment_on_word_gaps falls back for them.
+            results.extend(_split_segment_on_word_gaps(seg))
         if progress_cb is not None and duration_s > 0:
             progress_cb(min(seg.end / duration_s, 1.0))
 

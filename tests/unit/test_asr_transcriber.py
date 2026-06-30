@@ -22,6 +22,11 @@ pytestmark = pytest.mark.asr
 # ---------------------------------------------------------------------------
 
 
+def make_word(start: float, end: float, word: str) -> SimpleNamespace:
+    """Create a fake faster-whisper word namespace (``.start/.end/.word``)."""
+    return SimpleNamespace(start=start, end=end, word=word)
+
+
 def make_segment(
     start: float,
     end: float,
@@ -30,11 +35,14 @@ def make_segment(
     avg_logprob: float = 0.0,
     compression_ratio: float = 0.0,
     no_speech_prob: float = 0.0,
+    words: list | None = None,
 ) -> SimpleNamespace:
     """Create a fake faster-whisper segment namespace.
 
     The confidence fields default to values that pass the junk filter (so
     existing tests keep every segment); override them to exercise dropping.
+    ``words`` defaults to ``None`` (the word-less fallback path); pass a list of
+    :func:`make_word` results to exercise the gap-split.
     """
     return SimpleNamespace(
         start=start,
@@ -43,6 +51,7 @@ def make_segment(
         avg_logprob=avg_logprob,
         compression_ratio=compression_ratio,
         no_speech_prob=no_speech_prob,
+        words=words,
     )
 
 
@@ -1307,3 +1316,174 @@ def test_cpp_segments_generator_yields_ct2_duck_type(monkeypatch, tmp_path):
     assert out[0].end == pytest.approx(3.2)
     assert out[0].text == "hi"
     assert out[0].probability == pytest.approx(0.7)
+
+
+# ---------------------------------------------------------------------------
+# Word-gap re-cut (_split_segment_on_word_gaps) — fixes silence-spanning segments
+# ---------------------------------------------------------------------------
+
+
+def test_split_no_words_falls_back_to_whole_segment():
+    """seg.words is None → emit the segment unchanged (cpp / word_timestamps off)."""
+    seg = make_segment(0.0, 600.0, " hi ", words=None)
+    assert list(transcriber._split_segment_on_word_gaps(seg)) == [(0.0, 600.0, "hi")]
+
+
+def test_split_empty_words_list_falls_back_to_whole_segment():
+    """seg.words == [] (a reachable faster-whisper path) → whole-segment fallback.
+
+    Guards the sharp case: a LONG word-less segment must still re-emit its own
+    (start, end) rather than crash on words[0].
+    """
+    seg = make_segment(5.0, 650.0, " text ", words=[])
+    assert list(transcriber._split_segment_on_word_gaps(seg)) == [(5.0, 650.0, "text")]
+
+
+def test_split_cpp_duck_type_without_words_attr_falls_back():
+    """A segment object with no .words attribute at all → fallback, byte-identical."""
+    seg = SimpleNamespace(start=1.0, end=2.0, text=" a ")
+    assert list(transcriber._split_segment_on_word_gaps(seg)) == [(1.0, 2.0, "a")]
+
+
+def test_split_single_cluster_is_byte_identical_noop():
+    """All gaps < threshold → ONE tuple using authoritative seg.text, not a join.
+
+    The load-bearing regression guard: already-good output stays exactly as the
+    pre-split path produced it (seg.start, seg.end, seg.text.strip()). seg.text
+    is deliberately different from the word join to prove the source.
+    """
+    words = [make_word(10.0, 10.4, "そ"), make_word(10.4, 10.8, "う"), make_word(10.8, 11.2, "です")]
+    seg = make_segment(10.0, 11.2, " そうです ", words=words)
+    assert list(transcriber._split_segment_on_word_gaps(seg)) == [(10.0, 11.2, "そうです")]
+
+
+def test_split_two_clusters_on_large_gap():
+    """A segment straddling one silence → two tuples, each on its own word times."""
+    words = [
+        make_word(17.14, 17.5, "聞"),
+        make_word(662.24, 662.6, "いて"),
+        make_word(662.6, 662.76, "ます"),
+        make_word(662.76, 663.02, "よ"),
+    ]
+    seg = make_segment(17.14, 663.02, "聞いてますよ", words=words)
+    out = list(transcriber._split_segment_on_word_gaps(seg))
+    assert out == [(17.14, 17.5, "聞"), (662.24, 663.02, "いてますよ")]
+
+
+def test_split_three_clusters_on_two_gaps():
+    """Two internal gaps → three clusters (exercises the middle loop iteration)."""
+    words = [
+        make_word(0.0, 0.4, "A"),
+        make_word(0.4, 0.8, "a"),
+        make_word(30.0, 30.4, "B"),
+        make_word(60.0, 60.4, "C"),
+        make_word(60.4, 60.8, "c"),
+    ]
+    seg = make_segment(0.0, 60.8, "AaBCc", words=words)
+    out = list(transcriber._split_segment_on_word_gaps(seg))
+    assert out == [(0.0, 0.8, "Aa"), (30.0, 30.4, "B"), (60.0, 60.8, "Cc")]
+
+
+def test_split_gap_exactly_threshold_does_not_split():
+    """gap == _MAX_WORD_GAP_S → kept together (strict ``>`` comparator)."""
+    g = transcriber._MAX_WORD_GAP_S
+    words = [make_word(0.0, 1.0, "x"), make_word(1.0 + g, 1.4 + g, "y")]
+    seg = make_segment(0.0, 1.4 + g, "xy", words=words)
+    out = list(transcriber._split_segment_on_word_gaps(seg))
+    assert out == [(0.0, 1.4 + g, "xy")]
+
+
+def test_split_gap_just_over_threshold_splits():
+    """gap == _MAX_WORD_GAP_S + epsilon → splits into two."""
+    g = transcriber._MAX_WORD_GAP_S
+    words = [make_word(0.0, 1.0, "x"), make_word(1.0 + g + 0.05, 1.4 + g + 0.05, "y")]
+    seg = make_segment(0.0, 1.4 + g + 0.05, "xy", words=words)
+    out = list(transcriber._split_segment_on_word_gaps(seg))
+    assert len(out) == 2
+    assert out[0] == (0.0, 1.0, "x")
+    assert out[1][2] == "y"
+
+
+def test_split_punctuation_join_preserves_all_chars():
+    """Joining a split half loses/doubles no characters."""
+    words = [make_word(0.0, 0.3, "聞"), make_word(50.0, 50.3, "いて"), make_word(50.3, 50.6, "ますよ")]
+    seg = make_segment(0.0, 50.6, "聞いてますよ", words=words)
+    out = list(transcriber._split_segment_on_word_gaps(seg))
+    assert out[0][2] == "聞"
+    assert out[1][2] == "いてますよ"
+
+
+def test_split_negative_width_cluster_clamped_and_dropped():
+    """A backward (end < start) cluster is clamped to end>=start and dropped if empty-width.
+
+    faster-whisper's max_duration boundary hack can pull a word end backward;
+    the splitter must not emit an inverted tuple or crash.
+    """
+    words = [
+        make_word(0.0, 0.4, "ok"),
+        # second cluster: single word whose end precedes its start (inverted)
+        make_word(40.0, 39.5, "bad"),
+    ]
+    seg = make_segment(0.0, 40.0, "okbad", words=words)
+    out = list(transcriber._split_segment_on_word_gaps(seg))
+    # first cluster emitted normally; inverted second cluster clamped to end>=start → dropped
+    assert (0.0, 0.4, "ok") in out
+    assert all(end >= start for (start, end, _t) in out)
+
+
+def test_split_overlapping_words_do_not_split():
+    """A negative inter-word gap (overlap) is never > threshold → no spurious split."""
+    words = [make_word(0.0, 1.0, "a"), make_word(0.8, 1.6, "b")]
+    seg = make_segment(0.0, 1.6, "ab", words=words)
+    out = list(transcriber._split_segment_on_word_gaps(seg))
+    assert out == [(0.0, 1.6, "ab")]
+
+
+def test_split_empty_text_cluster_dropped():
+    """A split half whose joined text is empty after strip is not emitted."""
+    words = [make_word(0.0, 0.4, "hi"), make_word(50.0, 50.4, "   ")]
+    seg = make_segment(0.0, 50.4, "hi", words=words)
+    out = list(transcriber._split_segment_on_word_gaps(seg))
+    assert out == [(0.0, 0.4, "hi")]
+
+
+def test_transcribe_splits_silence_spanning_segment_end_to_end(monkeypatch, tmp_path):
+    """transcribe() re-cuts a stretched segment into two tuples (full CT2 path)."""
+    import numpy as np
+
+    words = [
+        make_word(17.14, 17.5, "聞"),
+        make_word(662.24, 663.02, "いてますよ"),
+    ]
+    segs = [make_segment(17.14, 663.02, "聞いてますよ", words=words)]
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: fake_model_cls_factory(segs))
+
+    result = transcriber.transcribe(
+        np.zeros(16000, dtype=np.float32),
+        model_name="small",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=700.0,
+        device="cpu",
+    )
+    assert result == [(17.14, 17.5, "聞"), (662.24, 663.02, "いてますよ")]
+
+
+def test_transcribe_drops_junk_before_splitting(monkeypatch, tmp_path):
+    """A junk segment is dropped whole; its words are never split/emitted."""
+    import numpy as np
+
+    words = [make_word(0.0, 0.4, "あ"), make_word(60.0, 60.4, "あ")]
+    # compression_ratio above the junk threshold → whole segment dropped first.
+    segs = [make_segment(0.0, 60.4, "ああ", compression_ratio=3.0, words=words)]
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: fake_model_cls_factory(segs))
+
+    result = transcriber.transcribe(
+        np.zeros(16000, dtype=np.float32),
+        model_name="small",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=70.0,
+        device="cpu",
+    )
+    assert result == []
