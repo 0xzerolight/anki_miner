@@ -13,6 +13,8 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from PyQt6.QtWidgets import QLabel
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import (
     SubtitlesSettingsPanel,
@@ -1070,3 +1072,133 @@ def test_set_vulkan_status_no_op_on_macos(qtbot, monkeypatch):
     # Must not raise even though the button/label do not exist.
     panel.set_vulkan_status("Downloading…")
     panel.notify_vulkan_download_finished(True, "done")
+
+
+# ---------------------------------------------------------------------------
+# Visible help text — section regrouping + per-download description lines
+# ---------------------------------------------------------------------------
+
+
+def _help_texts(panel) -> list[str]:
+    """Texts of every visible-style helper-text label in the panel."""
+    return [w.text() for w in panel.findChildren(QLabel) if w.objectName() == "helper-text"]
+
+
+def test_addons_section_heading_present(qtbot):
+    """The optional downloads live under their own section heading."""
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    headings = [w.text() for w in panel.findChildren(QLabel)]
+    assert "Transcription add-ons (optional)" in headings
+
+
+def test_help_lines_present(qtbot, monkeypatch):
+    """Each section intro + per-download line is rendered as helper-text."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    texts = _help_texts(panel)
+    for expected in (
+        "Generate subtitles from audio when a file has none.",
+        "Required before subtitle generation can run.",
+        "Optional. Speed and accuracy extras — skip if unsure.",
+        "Faster transcription on NVIDIA GPUs (CUDA).",
+        "Skips music and silence so they are not transcribed as garbage.",
+        "Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).",
+        "Retime existing subtitles to match the audio.",
+        "Needed for retiming unless alass is already on your PATH.",
+    ):
+        assert expected in texts
+
+
+def test_cuda_help_line_hidden_when_unsupported(qtbot, tmp_path, monkeypatch):
+    """No GPU-pack support → guidance shows, the description line hides (exclusive)."""
+    _patch_cuda(monkeypatch, supported=False, gpu_count=0)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel._cuda_help_label.isVisibleTo(panel)
+    assert panel._cuda_guidance_label.isVisibleTo(panel)
+
+
+def test_cuda_help_line_hidden_when_no_gpu(qtbot, tmp_path, monkeypatch):
+    """Supported but no NVIDIA GPU → button stays visible+disabled, guidance shows,
+    description line hides (the branch the help-line/guidance double-render bug lived in)."""
+    _patch_cuda(monkeypatch, supported=True, gpu_count=0)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel._cuda_help_label.isVisibleTo(panel)
+    assert panel._cuda_guidance_label.isVisibleTo(panel)
+    assert panel.download_cuda_button.isVisibleTo(panel)
+    assert not panel.download_cuda_button.isEnabled()
+
+
+def test_cuda_help_line_shown_when_gpu_present(qtbot, tmp_path, monkeypatch):
+    """Supported + GPU → description line shows, guidance hides."""
+    _patch_cuda(monkeypatch, supported=True, gpu_count=1)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert panel._cuda_help_label.isVisibleTo(panel)
+    assert not panel._cuda_guidance_label.isVisibleTo(panel)
+
+
+def test_vad_help_line_hidden_when_importable(qtbot, tmp_path, monkeypatch):
+    """onnxruntime present ([asr] install) → guidance shows, description line hides."""
+    _patch_vad(monkeypatch, ort_present=True, supported=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel._vad_help_label.isVisibleTo(panel)
+    assert panel._vad_guidance_label.isVisibleTo(panel)
+
+
+def test_vad_help_line_shown_when_supported(qtbot, tmp_path, monkeypatch):
+    """Supported + not importable → description line shows, guidance hides."""
+    _patch_vad(monkeypatch, ort_present=False, supported=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert panel._vad_help_label.isVisibleTo(panel)
+    assert not panel._vad_guidance_label.isVisibleTo(panel)
+
+
+def test_vad_help_line_hides_on_state_flip(qtbot, tmp_path, monkeypatch):
+    """A reload that flips to onnxruntime-importable hides the line in lockstep —
+    proving the line tracks state, not just its construction-time default."""
+    _patch_vad(monkeypatch, ort_present=False, supported=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    assert panel._vad_help_label.isVisibleTo(panel)
+    assert not panel._vad_guidance_label.isVisibleTo(panel)
+
+    _patch_vad(monkeypatch, ort_present=True, supported=True)
+    panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    assert not panel._vad_help_label.isVisibleTo(panel)
+    assert panel._vad_guidance_label.isVisibleTo(panel)
+
+
+def test_vulkan_help_line_absent_on_macos(qtbot, monkeypatch):
+    """macOS omits the Vulkan row + its line; GPU/silence lines stay present."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("darwin"))
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    texts = _help_texts(panel)
+    assert not any("Vulkan" in t for t in texts)
+    assert "Faster transcription on NVIDIA GPUs (CUDA)." in texts
+    assert "Skips music and silence so they are not transcribed as garbage." in texts

@@ -196,14 +196,29 @@ class SubtitlesSettingsPanel(FormPanel):
     # ------------------------------------------------------------------
 
     def _setup_fields(self) -> None:
-        """Build the Speech-to-text and Alignment sections."""
+        """Build the Speech-to-text, add-ons, and Alignment sections."""
         self._setup_asr_section()
+        self._setup_addons_section()
         self._setup_alass_section()
         self.add_stretch()
+
+    def _add_help(self, text: str) -> QLabel:
+        """Add a visible muted help line as its own full-width form row.
+
+        Reuses the QLabel#helper-text QSS. add_field("", label) renders it as the
+        first/next form ROW (directly under the heading / its download row); the
+        returned label lets callers that need lockstep visibility store it.
+        """
+        label = QLabel(text)
+        label.setObjectName("helper-text")
+        label.setWordWrap(True)
+        self.add_field("", label)
+        return label
 
     def _setup_asr_section(self) -> None:
         """Whisper model dropdown, download button, and engine guidance."""
         self.add_section(self.tr("Speech-to-text"))
+        self._add_help(self.tr("Generate subtitles from audio when a file has none."))
 
         self.model_combo = QComboBox()
         for label, _value in _MODEL_OPTIONS:
@@ -249,6 +264,7 @@ class SubtitlesSettingsPanel(FormPanel):
         download_row.addWidget(self.model_status_label)
         download_row.addStretch()
         self.add_field(self.tr("Model download"), download_container)
+        self._add_help(self.tr("Required before subtitle generation can run."))
 
         # Guidance shown only when faster-whisper is not installed. The engine is
         # a Python package (not a downloadable binary), so the app can't fetch it
@@ -256,6 +272,11 @@ class SubtitlesSettingsPanel(FormPanel):
         # surfacing a cryptic ImportError after a dead "Download model" click.
         self._asr_engine_guidance = self._build_engine_guidance()
         self.add_field("", self._asr_engine_guidance)
+
+    def _setup_addons_section(self) -> None:
+        """Optional transcription accelerators/quality packs (CUDA / VAD / Vulkan)."""
+        self.add_section(self.tr("Transcription add-ons (optional)"))
+        self._add_help(self.tr("Optional. Speed and accuracy extras — skip if unsure."))
 
         # GPU acceleration pack download. Mirrors the model-download row; gated by
         # _refresh_cuda_pack_status on platform support + NVIDIA-GPU presence.
@@ -278,6 +299,9 @@ class SubtitlesSettingsPanel(FormPanel):
         cuda_row.addWidget(self.cuda_status_label)
         cuda_row.addStretch()
         self.add_field(self.tr("GPU acceleration"), cuda_container)
+        # Always-on description; hidden in lockstep with its guidance label (the
+        # two are mutually exclusive, toggled in _apply_cuda_pack_state).
+        self._cuda_help_label = self._add_help(self.tr("Faster transcription on NVIDIA GPUs (CUDA)."))
 
         # Short guidance shown when GPU acceleration is unavailable (no support
         # on this platform, or no NVIDIA GPU detected).
@@ -309,6 +333,11 @@ class SubtitlesSettingsPanel(FormPanel):
         vad_row.addWidget(self.vad_status_label)
         vad_row.addStretch()
         self.add_field(self.tr("Silence removal"), vad_container)
+        # Always-on description; hidden in lockstep with its guidance label (the
+        # two are mutually exclusive, toggled in _apply_vad_pack_state).
+        self._vad_help_label = self._add_help(
+            self.tr("Skips music and silence so they are not transcribed as garbage.")
+        )
 
         # Guidance shown when VAD is already available (no download needed) or
         # unavailable on this platform.
@@ -344,10 +373,14 @@ class SubtitlesSettingsPanel(FormPanel):
             vulkan_row.addWidget(self.vulkan_status_label)
             vulkan_row.addStretch()
             self.add_field(self.tr("Vulkan model"), vulkan_container)
+            # Vulkan button is never hidden at runtime (whole row omitted on
+            # macOS at construction), so this line is always-on, no toggle.
+            self._add_help(self.tr("Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan)."))
 
     def _setup_alass_section(self) -> None:
         """alass path override plus in-app download (or Homebrew guidance)."""
         self.add_section(self.tr("Alignment"))
+        self._add_help(self.tr("Retime existing subtitles to match the audio."))
 
         self.alass_selector = FileSelector(
             label="",
@@ -384,6 +417,9 @@ class SubtitlesSettingsPanel(FormPanel):
             alass_row.addWidget(self.alass_status_label)
             alass_row.addStretch()
             self.add_field(self.tr("alass download"), alass_container)
+            # alass button is never hidden at runtime (only disabled), so this
+            # line is always-on, no toggle.
+            self._add_help(self.tr("Needed for retiming unless alass is already on your PATH."))
         else:
             # macOS: no upstream v2.0.0 binary — point users at Homebrew.
             guidance = self._build_guidance(
@@ -624,6 +660,7 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_cuda_pack_status("")
             self._cuda_guidance_label.setText(self.tr("GPU acceleration is not available on this platform."))
             self._cuda_guidance_label.setVisible(True)
+            self._cuda_help_label.setVisible(False)
             return
 
         self.download_cuda_button.setVisible(True)
@@ -632,9 +669,11 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_cuda_pack_status("")
             self._cuda_guidance_label.setText(self.tr("No NVIDIA GPU detected. GPU acceleration needs an NVIDIA card."))
             self._cuda_guidance_label.setVisible(True)
+            self._cuda_help_label.setVisible(False)
             return
 
         self._cuda_guidance_label.setVisible(False)
+        self._cuda_help_label.setVisible(True)
         self.download_cuda_button.setEnabled(True)
         if cuda_libs_root is None:
             return
@@ -971,6 +1010,7 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_vad_pack_status("")
             self._vad_guidance_label.setText(self.tr("Silence removal is available."))
             self._vad_guidance_label.setVisible(True)
+            self._vad_help_label.setVisible(False)
             return
 
         # onnx_pack_supported() is cheap (sys.platform/version) — fine on the GUI thread.
@@ -980,10 +1020,12 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_vad_pack_status("")
             self._vad_guidance_label.setText(self.tr("Silence removal is not available on this platform."))
             self._vad_guidance_label.setVisible(True)
+            self._vad_help_label.setVisible(False)
             return
 
         self.download_vad_button.setVisible(True)
         self._vad_guidance_label.setVisible(False)
+        self._vad_help_label.setVisible(True)
         self.download_vad_button.setEnabled(True)
         if installed:
             self.set_vad_pack_status(self.tr("Installed"))
