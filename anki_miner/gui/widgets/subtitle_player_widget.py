@@ -1,9 +1,10 @@
 """Reusable video player widget with subtitle overlay."""
 
 import logging
+import time
 from pathlib import Path
 
-from PyQt6.QtCore import QLocale, Qt, QTimer, QUrl
+from PyQt6.QtCore import QCoreApplication, QEvent, QLocale, Qt, QTimer, QUrl
 from PyQt6.QtMultimedia import QAudioOutput, QMediaMetaData, QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
@@ -284,17 +285,30 @@ class SubtitlePlayerWidget(QWidget):
             self.player.play()
 
     def _teardown_player(self) -> None:
-        """Stop playback and detach the audio output from the current player.
+        """Stop playback and detach both outputs from the current player.
 
         Factored out of ``set_source`` so it can be called from both re-source
         (reuse path) and ``closeEvent`` (widget discard path).  With both
         ``QAudioOutput`` and ``QMediaPlayer`` parented to ``self``, Qt will free
-        the C++ objects when the widget is destroyed — but detaching the output
+        the C++ objects when the widget is destroyed — but detaching the outputs
         first is still best practice to avoid a use-after-free window during
         the Qt object-tree teardown.  ``set_source`` builds a fresh player AND a
         fresh ``QAudioOutput`` on every re-source, so the old output is scheduled
         for deletion here too — otherwise one ``QAudioOutput`` accumulates under
         the widget per re-source until the widget itself is destroyed (F9).
+
+        Windows GUI-freeze fix (Test Timing → Apply Offset / Cancel "Not
+        Responding"): we now detach the VIDEO sink with ``setVideoOutput(None)``
+        — right after ``stop()`` — before the player is destroyed. The Qt6 FFmpeg
+        backend (the Windows default) hangs the GUI thread destroying a
+        ``QMediaPlayer`` whose D3D video sink is still attached; detaching it
+        first clears that. It is sequenced AFTER ``stop()`` (not before) so the
+        sink is never detached mid-``PlayingState`` — the Test Timing flow leaves
+        the player playing at teardown; detaching from a stopped player is safe in
+        every state (Playing/Paused/Stopped), which is all the curation/AV1 paths
+        need too. Qt documents no blocking/ordering contract here, so WHICH call
+        blocks on Windows is a hypothesis: the per-step DEBUG timing below, plus a
+        forced (drained) destruction, exist to localize it in a single Windows run.
 
         Also cancels/short-joins any in-flight ffprobe worker first — its callback
         would otherwise build a player into a half-torn-down widget. A probe stuck
@@ -307,19 +321,62 @@ class SubtitlePlayerWidget(QWidget):
 
         if self.player is None:
             return
-        self.player.stop()
-        self.player.positionChanged.disconnect(self._on_position_changed)
-        self.player.durationChanged.disconnect(self._on_duration_changed)
-        self.player.playbackStateChanged.disconnect(self._on_playback_state_changed)
-        self.player.errorOccurred.disconnect(self._on_media_error)
-        self.player.tracksChanged.disconnect(self._on_tracks_changed)
-        self.player.mediaStatusChanged.disconnect(self._on_media_status_changed)
-        self.player.setAudioOutput(None)
-        self.player.deleteLater()
+        # Bind a non-Optional local so the deferred ``_timed`` callables and the
+        # drain don't re-widen ``self.player`` back to Optional; same object, so
+        # mock assertions in tests are unaffected.
+        player = self.player
+
+        # Diagnostics are DEBUG-gated so default runtime AND default test runs are
+        # byte-for-byte unaffected (the forced DeferredDelete drain below would
+        # raise TypeError against a mocked player otherwise). Only setVideoOutput
+        # (None) is an always-on behavior change — the actual fix.
+        debug = logger.isEnabledFor(logging.DEBUG)
+
+        def _timed(label: str, call):
+            """Run ``call`` and, under DEBUG, log how long it took.
+
+            No ``try``/``except``: a backend throw must stay visible, and a hang
+            leaves a 'start' line with no 'done' — which still localizes the
+            blocking step on Windows.
+            """
+            if not debug:
+                return call()
+            logger.debug("teardown: %s start", label)
+            t0 = time.monotonic()
+            result = call()
+            logger.debug("teardown: %s done in %.3fs", label, time.monotonic() - t0)
+            return result
+
+        _timed("stop()", player.stop)
+        _timed("setVideoOutput(None)", lambda: player.setVideoOutput(None))
+        player.positionChanged.disconnect(self._on_position_changed)
+        player.durationChanged.disconnect(self._on_duration_changed)
+        player.playbackStateChanged.disconnect(self._on_playback_state_changed)
+        player.errorOccurred.disconnect(self._on_media_error)
+        player.tracksChanged.disconnect(self._on_tracks_changed)
+        player.mediaStatusChanged.disconnect(self._on_media_status_changed)
+        player.setAudioOutput(None)
+        _timed("deleteLater()", player.deleteLater)
+        if debug:
+            # ``deleteLater`` only QUEUES the C++ dtor; the queued delete is serviced
+            # by the OUTER QApplication loop after exec() exits, so a destruction-time
+            # hang otherwise surfaces as a post-dialog freeze the timing above can't
+            # see. Force just this player's dtor to run synchronously here (targeted
+            # receiver, not the None form conftest._drain_qt_deletes uses, so no
+            # unrelated objects are destroyed). Safe: the player's signals are already
+            # disconnected and it is not the object handling the current click event.
+            logger.debug("teardown: drain DeferredDelete start")
+            t0 = time.monotonic()
+            QCoreApplication.sendPostedEvents(player, QEvent.Type.DeferredDelete.value)
+            logger.debug("teardown: drain DeferredDelete done in %.3fs", time.monotonic() - t0)
         if self.audio_output is not None:
             self.audio_output.deleteLater()
         self.player = None
         self.audio_output = None
+        # The armed single-shot AV1 watchdog is intentionally left running (only
+        # set_source stops it): _on_av1_watchdog_timeout touches child widgets only,
+        # never self.player, so a late fire after teardown is a no-op, and the timer
+        # dies with the widget. Don't add _av1_watchdog.stop() here assuming oversight.
         self._av1_watchdog_pending = False
 
     def _join_probe_worker(self) -> None:
