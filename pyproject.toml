@@ -47,10 +47,15 @@ asr-cuda = [
     "nvidia-cudnn-cu12>=9.0.0,<10",
     "nvidia-cublas-cu12",
 ]
-# Adds the whisper.cpp engine (pywhispercpp) on top of the CT2-CPU fallback
-# floor. faster-whisper/ctranslate2 must stay present because the never-crash
-# CT2-CPU fallback depends on it; pywhispercpp ships prebuilt cp311/cp312/cp313
-# manylinux CPU wheels (>=1.5.0), so no Vulkan SDK / from-source build is needed.
+# Adds the whisper.cpp engine (pywhispercpp) on top of the CT2 floor. faster-
+# whisper/ctranslate2 must stay present because the never-crash CT2 fallback
+# depends on it. NOTE: pywhispercpp's prebuilt PyPI wheels (>=1.5.0) are CPU-ONLY
+# — they bundle libggml/libggml-cpu but NOT libggml-vulkan — so this pip extra
+# does NOT enable Vulkan GPU acceleration; whisper_cpp_available() returns False
+# and the GUI omits the Vulkan device. Actual Vulkan ships only in the bundled
+# release, which builds pywhispercpp from source with the Vulkan SDK (see
+# .github/workflows/release.yml, build_vulkan=1). For GPU on a pip install, use
+# the [asr-cuda] extra (NVIDIA) instead.
 asr-vulkan = [
     "faster-whisper>=1.1.0",
     "pywhispercpp>=1.5.0",
