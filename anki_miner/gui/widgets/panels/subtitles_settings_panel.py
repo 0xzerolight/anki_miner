@@ -292,23 +292,27 @@ class SubtitlesSettingsPanel(FormPanel):
         self.cuda_status_label = QLabel("")
         self.cuda_status_label.setObjectName("settings-save-status")
 
+        # Short guidance shown when GPU acceleration is unavailable (no support
+        # on this platform, or no NVIDIA GPU detected). Lives in the same HBox as
+        # the button/status so it renders in the field column beside the "GPU
+        # acceleration" label, not on a full-width row below it (a hidden button
+        # takes zero layout space). Mutually exclusive with the help line below;
+        # both toggled in _apply_cuda_pack_state.
+        self._cuda_guidance_label = QLabel("")
+        self._cuda_guidance_label.setWordWrap(True)
+        self._cuda_guidance_label.setVisible(False)
+
         cuda_container = QWidget()
         cuda_row = QHBoxLayout(cuda_container)
         cuda_row.setContentsMargins(0, 0, 0, 0)
         cuda_row.addWidget(self.download_cuda_button)
         cuda_row.addWidget(self.cuda_status_label)
+        cuda_row.addWidget(self._cuda_guidance_label)
         cuda_row.addStretch()
         self.add_field(self.tr("GPU acceleration"), cuda_container)
         # Always-on description; hidden in lockstep with its guidance label (the
         # two are mutually exclusive, toggled in _apply_cuda_pack_state).
         self._cuda_help_label = self._add_help(self.tr("Faster transcription on NVIDIA GPUs (CUDA)."))
-
-        # Short guidance shown when GPU acceleration is unavailable (no support
-        # on this platform, or no NVIDIA GPU detected).
-        self._cuda_guidance_label = QLabel("")
-        self._cuda_guidance_label.setWordWrap(True)
-        self._cuda_guidance_label.setVisible(False)
-        self.add_field("", self._cuda_guidance_label)
 
         # Silence removal (VAD) pack download. onnxruntime powers Whisper's VAD,
         # which strips silence/music so it is not transcribed as hallucinated
@@ -326,11 +330,22 @@ class SubtitlesSettingsPanel(FormPanel):
         self.vad_status_label = QLabel("")
         self.vad_status_label.setObjectName("settings-save-status")
 
+        # Guidance shown when VAD is already available (no download needed) or
+        # unavailable on this platform. Lives in the same HBox as the button/status
+        # so it renders in the field column beside the "Silence removal" label, not
+        # on a full-width row below it (a hidden button takes zero layout space).
+        # Mutually exclusive with the help line below; both toggled in
+        # _apply_vad_pack_state.
+        self._vad_guidance_label = QLabel("")
+        self._vad_guidance_label.setWordWrap(True)
+        self._vad_guidance_label.setVisible(False)
+
         vad_container = QWidget()
         vad_row = QHBoxLayout(vad_container)
         vad_row.setContentsMargins(0, 0, 0, 0)
         vad_row.addWidget(self.download_vad_button)
         vad_row.addWidget(self.vad_status_label)
+        vad_row.addWidget(self._vad_guidance_label)
         vad_row.addStretch()
         self.add_field(self.tr("Silence removal"), vad_container)
         # Always-on description; hidden in lockstep with its guidance label (the
@@ -338,13 +353,6 @@ class SubtitlesSettingsPanel(FormPanel):
         self._vad_help_label = self._add_help(
             self.tr("Skips music and silence so they are not transcribed as garbage.")
         )
-
-        # Guidance shown when VAD is already available (no download needed) or
-        # unavailable on this platform.
-        self._vad_guidance_label = QLabel("")
-        self._vad_guidance_label.setWordWrap(True)
-        self._vad_guidance_label.setVisible(False)
-        self.add_field("", self._vad_guidance_label)
 
         # Vulkan model download. One action fetches BOTH the ggml acoustic model
         # and the Silero VAD the whisper.cpp (Vulkan/CPU) backend loads off disk.
