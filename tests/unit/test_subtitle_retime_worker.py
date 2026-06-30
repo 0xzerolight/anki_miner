@@ -3,6 +3,7 @@ success/failure, AlassNotFoundError queue-stop, cancel, and log_cb forwarding.""
 
 from __future__ import annotations
 
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,19 @@ pytest.importorskip("PyQt6.QtCore")
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
+
+# A dakuten kana stem that genuinely decomposes under NFD (common kana like ねこ
+# are byte-identical NFC/NFD and would be a false-green for the dedup tests).
+_DECOMP_STEM = "が01"
+_NFC = unicodedata.normalize("NFC", _DECOMP_STEM)
+_NFD = unicodedata.normalize("NFD", _DECOMP_STEM)
+
+
+def _nfc_stem_srt_count(folder: Path, stem: str) -> int:
+    """Count .srt files in *folder* whose stem NFC-normalizes to *stem* (NFC)."""
+    target = unicodedata.normalize("NFC", stem)
+    return sum(1 for p in folder.iterdir() if p.suffix == ".srt" and unicodedata.normalize("NFC", p.stem) == target)
+
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -581,3 +595,82 @@ def test_file_skipped_signal_exists(qapp, tmp_path):
     """SubtitleRetimeWorker exposes a file_skipped(int, object) signal."""
     worker = _make_worker([], retimer=_fake_retimer_success)
     assert hasattr(worker, "file_skipped")
+
+
+# ---------------------------------------------------------------------------
+# Windows duplicate-subtitle bug: out_sub resolved against existing on-disk
+# files so an overwrite replaces a visually-identical (NFC/NFD) twin in place.
+# These reproduce on Linux because NFC and NFD are distinct dirents there too.
+# ---------------------------------------------------------------------------
+
+
+def _make_writing_retimer(captured: list[Path]):
+    """Retimer stub that records and writes to the out_sub it is handed."""
+
+    def _retimer(config, video, in_sub, out_sub, *, cancel_event=None, log_cb=None, **kwargs):
+        captured.append(Path(out_sub))
+        Path(out_sub).write_text("RETIMED")
+        return True
+
+    return _retimer
+
+
+def test_overwrite_replaces_nfd_twin_in_place(qapp, tmp_path):
+    """overwrite=True with an existing NFD-named output and an NFC video stem:
+    the retimer must receive the EXISTING NFD path (not a fresh NFC one), so
+    exactly one stem-matching .srt remains instead of a duplicate (fails pre-fix)."""
+    video = tmp_path / (_NFC + ".mkv")
+    in_sub = tmp_path / "offtimed.srt"
+    existing = tmp_path / (_NFD + ".srt")  # the pre-existing subtitle on disk
+    video.write_bytes(b"")
+    in_sub.write_text("offtimed")
+    existing.write_text("orig")
+
+    captured: list[Path] = []
+    worker = _make_worker([(video, in_sub)], overwrite=True, retimer=_make_writing_retimer(captured))
+    worker.run()
+
+    # Retimer targeted the existing NFD file byte-for-byte, not a new NFC name.
+    assert captured == [existing]
+    assert captured[0].name.encode("utf-8") == (_NFD + ".srt").encode("utf-8")
+    # Exactly one subtitle with this stem (no NFC/NFD twin).
+    assert _nfc_stem_srt_count(tmp_path, _NFC) == 1
+
+
+def test_overwrite_off_skips_nfd_twin(qapp, tmp_path):
+    """overwrite=False with an existing NFD-named output and NFC video stem:
+    must skip (resolver makes .exists() see the file) and NOT spawn a duplicate.
+    Pre-fix this path silently created a twin even with overwrite unchecked."""
+    video = tmp_path / (_NFC + ".mkv")
+    in_sub = tmp_path / "offtimed.srt"
+    existing = tmp_path / (_NFD + ".srt")
+    video.write_bytes(b"")
+    in_sub.write_text("offtimed")
+    existing.write_text("orig")
+
+    calls: list[Path] = []
+    worker = _make_worker([(video, in_sub)], overwrite=False, retimer=_make_writing_retimer(calls))
+    cap = _capture(worker)
+    worker.run()
+
+    assert calls == []  # retimer not called
+    assert len(cap["skipped"]) == 1
+    assert cap["skipped"][0][1] == existing
+    assert _nfc_stem_srt_count(tmp_path, _NFC) == 1
+
+
+def test_aliasing_source_sub_resynced_in_place(qapp, tmp_path):
+    """When the resolved out_sub IS the source subtitle (in_sub itself, under a
+    byte-variant name), the run produces exactly one file. Mode-agnostic at the
+    worker level (covers single-file and folder-same-folder)."""
+    video = tmp_path / (_NFC + ".mkv")
+    in_sub = tmp_path / (_NFD + ".srt")  # source sub == the only on-disk subtitle
+    video.write_bytes(b"")
+    in_sub.write_text("orig")
+
+    captured: list[Path] = []
+    worker = _make_worker([(video, in_sub)], overwrite=True, retimer=_make_writing_retimer(captured))
+    worker.run()
+
+    assert captured == [in_sub]  # out_sub resolved to the source's exact path
+    assert _nfc_stem_srt_count(tmp_path, _NFC) == 1
