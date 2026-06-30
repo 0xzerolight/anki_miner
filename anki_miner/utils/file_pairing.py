@@ -1,9 +1,66 @@
 """Utility for pairing video and subtitle files across folders."""
 
+import sys
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt")
+
+# Case folding is correct only where the filesystem is case-insensitive (Windows,
+# default macOS). On a case-sensitive volume, folding would treat two genuinely
+# distinct files as the same and an overwrite would destroy the wrong one.
+_CASE_INSENSITIVE_FS = sys.platform in ("win32", "darwin")
+
+
+def _nfc(name: str) -> str:
+    """NFC-normalize a filename string for robust comparison across sources."""
+    return unicodedata.normalize("NFC", name)
+
+
+def _name_match_key(name: str) -> str:
+    """Comparison key for a full filename used to resolve an output write target.
+
+    NFC always: NTFS stores exact UTF-16 and never normalizes, so an NFC request
+    otherwise never matches an existing NFD file (the duplicate-subtitle bug).
+    Casefold only on a case-insensitive FS, so case-distinct files on a
+    case-sensitive volume are never collapsed into a destructive overwrite.
+    macOS folds NFC/NFD itself, so this is effectively a Windows-NTFS fix.
+    """
+    key = _nfc(name)
+    return key.casefold() if _CASE_INSENSITIVE_FS else key
+
+
+def resolve_output_path(out_dir: Path, name: str) -> Path:
+    """Return the exact path the caller should write/replace for *name* in *out_dir*.
+
+    Returns an EXISTING file when one is the "same" file as *name* up to NFC
+    normalization (and case, on a case-insensitive FS), so an overwrite replaces
+    it in place instead of creating a visually-identical twin that Windows treats
+    as a separate file. The returned path may already exist — the caller will
+    overwrite it.
+
+    Safety: a byte-exact match wins outright. If two or more DISTINCT files match
+    only after normalization (and none is byte-exact), this refuses to guess and
+    returns ``out_dir / name`` (write the exact requested bytes) so no unrelated
+    subtitle is clobbered. Same fallback when *out_dir* is unreadable or holds no
+    match.
+    """
+    exact = out_dir / name
+    try:
+        entries = sorted(p for p in out_dir.iterdir() if p.is_file())
+    except OSError:
+        return exact
+    target = _name_match_key(name)
+    matches: list[Path] = []
+    for p in entries:
+        if p.name == name:  # byte-exact wins outright
+            return p
+        if _name_match_key(p.name) == target:
+            matches.append(p)
+    if len(matches) == 1:
+        return matches[0]
+    return exact  # 0 matches -> create; >=2 ambiguous -> refuse to guess
 
 
 def find_sibling_subtitle(video_path: Path) -> Path | None:
@@ -13,11 +70,13 @@ def find_sibling_subtitle(video_path: Path) -> Path | None:
     and whose extension is one of DEFAULT_SUBTITLE_PRIORITY.  Returns the first
     hit in priority order (.ass > .ssa > .srt), or None when no sibling exists.
 
-    Matching is case-insensitive on both stem and extension so a ``.SRT`` (or a
-    differing-case stem) is still found on case-sensitive filesystems.
+    Matching is case-insensitive on both stem and extension, and NFC-normalized
+    on the stem, so a ``.SRT`` (a differing-case stem, or an NFD-encoded stem) is
+    still found on case-sensitive filesystems. Reads are non-destructive, so the
+    casefold here is unconditional (unlike the write-side resolver).
     """
     folder = video_path.parent
-    stem_cf = video_path.stem.casefold()
+    stem_cf = _nfc(video_path.stem).casefold()
     try:
         entries = [p for p in folder.iterdir() if p.is_file()]
     except OSError:
@@ -25,7 +84,7 @@ def find_sibling_subtitle(video_path: Path) -> Path | None:
     by_ext: dict[str, Path] = {}
     for p in entries:
         ext = p.suffix.lower()
-        if ext in DEFAULT_SUBTITLE_PRIORITY and p.stem.casefold() == stem_cf:
+        if ext in DEFAULT_SUBTITLE_PRIORITY and _nfc(p.stem).casefold() == stem_cf:
             by_ext.setdefault(ext, p)
     for ext in DEFAULT_SUBTITLE_PRIORITY:
         if ext in by_ext:

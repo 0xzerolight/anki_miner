@@ -18,6 +18,7 @@ from pathlib import Path
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.utils.file_pairing import resolve_output_path
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -100,11 +101,12 @@ class SubtitleGenWorker(CancellableWorker):
 
             self.file_started.emit(idx)
 
-            # Determine output SRT path.
-            if self._output_dir is not None:
-                out_srt = self._output_dir / (video_path.stem + ".srt")
-            else:
-                out_srt = video_path.with_suffix(".srt")
+            # Determine output SRT path, resolved against existing on-disk files
+            # so a re-generate overwrites a visually-identical (NFC/NFD- or
+            # case-variant) subtitle in place instead of spawning a Windows
+            # duplicate. See resolve_output_path.
+            out_dir = self._output_dir if self._output_dir is not None else video_path.parent
+            out_srt = resolve_output_path(out_dir, video_path.stem + ".srt")
 
             # Skip-if-exists logic.
             if out_srt.exists() and not self._overwrite:

@@ -17,6 +17,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.utils.file_pairing import resolve_output_path
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -123,9 +124,13 @@ class SubtitleRetimeWorker(CancellableWorker):
 
             self.file_started.emit(idx)
 
-            # Determine output path: video stem + subtitle extension.
+            # Determine output path: video stem + subtitle extension, resolved
+            # against existing on-disk files so an overwrite replaces a
+            # visually-identical (NFC/NFD- or case-variant) subtitle in place
+            # instead of spawning a Windows duplicate. See resolve_output_path.
             name = video.stem + in_sub.suffix
-            out_sub = self._output_dir / name if self._output_dir is not None else video.parent / name
+            out_dir = self._output_dir if self._output_dir is not None else video.parent
+            out_sub = resolve_output_path(out_dir, name)
 
             # Skip-if-exists logic.
             if out_sub.exists() and not self._overwrite:

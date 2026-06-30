@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,18 @@ pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
+
+# A dakuten kana stem that genuinely decomposes under NFD (common kana are
+# byte-identical NFC/NFD and would not exercise the duplicate-subtitle bug).
+_DECOMP_STEM = "が01"
+_NFC = unicodedata.normalize("NFC", _DECOMP_STEM)
+_NFD = unicodedata.normalize("NFD", _DECOMP_STEM)
+
+
+def _nfc_stem_srt_count(folder: Path, stem: str) -> int:
+    target = unicodedata.normalize("NFC", stem)
+    return sum(1 for p in folder.iterdir() if p.suffix == ".srt" and unicodedata.normalize("NFC", p.stem) == target)
+
 
 # Requires numpy (transitive asr dep via faster-whisper); gated to the asr CI job.
 pytestmark = pytest.mark.asr
@@ -802,3 +815,67 @@ def test_file_skipped_signal_exists(qapp, tmp_path):
     extractor = _FakeExtractor()
     worker = _make_worker([], config, extractor=extractor)
     assert hasattr(worker, "file_skipped")
+
+
+# ---------------------------------------------------------------------------
+# Windows duplicate-subtitle bug: out_srt resolved against existing on-disk
+# files so a re-generate replaces a visually-identical (NFC/NFD) twin in place.
+# ---------------------------------------------------------------------------
+
+
+def test_overwrite_off_skips_nfd_twin(qapp, tmp_path, monkeypatch):
+    """overwrite=False with an existing NFD-named .srt and an NFC video stem must
+    skip (resolver makes .exists() see it), not spawn a duplicate. Pre-fix this
+    path created a twin even with overwrite unchecked."""
+    config = _make_config(tmp_path)
+    existing = tmp_path / (_NFD + ".srt")
+    existing.write_text("orig")
+
+    v = tmp_path / (_NFC + ".mkv")
+    v.write_bytes(b"")
+
+    extractor = _FakeExtractor(tmp_path=tmp_path)
+
+    import anki_miner.services.asr.transcriber as t
+
+    transcribe_calls: list = []
+    monkeypatch.setattr(t, "transcribe", lambda *a, **kw: transcribe_calls.append(1) or [])
+
+    worker = _make_worker([v], config, extractor=extractor, overwrite=False)
+    cap = _capture(worker)
+    worker.run()
+
+    assert cap["skipped"] == [(0, existing)]
+    assert cap["finished"] == []
+    assert transcribe_calls == []
+    assert extractor.calls == []
+    assert _nfc_stem_srt_count(tmp_path, _NFC) == 1
+
+
+def test_overwrite_replaces_nfd_twin_in_place(qapp, tmp_path, monkeypatch):
+    """overwrite=True with an existing NFD-named .srt and an NFC video stem: the
+    SRT must be written to the EXISTING NFD path, so exactly one stem-matching
+    .srt remains instead of an NFC/NFD twin (fails pre-fix)."""
+    config = _make_config(tmp_path)
+    config.media_temp_folder.mkdir(parents=True, exist_ok=True)
+
+    existing = tmp_path / (_NFD + ".srt")
+    existing.write_text("orig")
+
+    v = tmp_path / (_NFC + ".mkv")
+    v.write_bytes(b"")
+
+    extractor = _FakeExtractor(tmp_path=tmp_path)
+    _patch_wav_to_float32(monkeypatch)
+    _patch_transcribe(monkeypatch)
+    _patch_srt_writer(monkeypatch)
+
+    worker = _make_worker([v], config, extractor=extractor, overwrite=True)
+    cap = _capture(worker)
+    worker.run()
+
+    idx, out, err = cap["finished"][0]
+    assert err is None
+    assert out == existing
+    assert out.name.encode("utf-8") == (_NFD + ".srt").encode("utf-8")
+    assert _nfc_stem_srt_count(tmp_path, _NFC) == 1
