@@ -225,7 +225,7 @@ def test_engine_available_enables_download_and_hides_guidance(qtbot, tmp_path, m
 
     assert panel.download_model_button.isEnabled()
     assert not panel._asr_engine_guidance.isVisibleTo(panel)
-    assert "not downloaded" in panel.model_status_label.text().lower()
+    assert "not installed" in panel.model_status_label.text().lower()
 
 
 def test_download_click_emits_when_engine_available(qtbot, tmp_path, monkeypatch):
@@ -300,17 +300,17 @@ def test_alass_status_reflects_installed_state(qtbot, tmp_path, monkeypatch):
     panel.load_from_config(AnkiMinerConfig(bin_root=tmp_path))
     _wait_state_settled(qtbot, panel)
 
-    assert "available" in panel.alass_status_label.text().lower()
+    assert "installed" in panel.alass_status_label.text().lower()
     assert panel.download_alass_button.isEnabled()
 
 
-def test_alass_status_available_when_bundled_without_managed_download(qtbot, tmp_path, monkeypatch):
+def test_alass_status_installed_when_bundled_without_managed_download(qtbot, tmp_path, monkeypatch):
     """Regression: a bundled alass (frozen build) with an EMPTY managed bin_root
-    must show "Available", not "Not downloaded".
+    must show "Installed", not "Not installed".
 
     The Settings probe must resolve through the full chain (override/bundled/
     managed/PATH), like the retime tab — checking only the managed bin_root
-    mislabeled bundled Linux/Windows builds as "Not downloaded".
+    mislabeled bundled Linux/Windows builds as "Not installed".
     """
     monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
 
@@ -333,7 +333,7 @@ def test_alass_status_available_when_bundled_without_managed_download(qtbot, tmp
     panel.load_from_config(AnkiMinerConfig(bin_root=empty_bin_root))
     _wait_state_settled(qtbot, panel)
 
-    assert "available" in panel.alass_status_label.text().lower()
+    assert "installed" in panel.alass_status_label.text().lower()
     assert panel.download_alass_button.isEnabled()
     alass_resolver._clear_cache()
 
@@ -713,14 +713,14 @@ def test_notify_asr_download_finished_reprobes_model(qtbot, tmp_path, monkeypatc
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_model="small", asr_models_root=tmp_path, cuda_libs_root=tmp_path))
     _wait_state_settled(qtbot, panel)
-    assert "not downloaded" in panel.model_status_label.text().lower()
+    assert "not installed" in panel.model_status_label.text().lower()
 
     state["downloaded"] = True
     panel.notify_asr_download_finished("small", tmp_path)
     _wait_state_settled(qtbot, panel)
 
     assert not panel._asr_download_active
-    assert panel.model_status_label.text().lower() == "downloaded"
+    assert panel.model_status_label.text().lower() == "installed"
 
 
 def test_notify_alass_download_finished_reprobes_install(qtbot, tmp_path, monkeypatch):
@@ -736,14 +736,14 @@ def test_notify_alass_download_finished_reprobes_install(qtbot, tmp_path, monkey
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(bin_root=tmp_path))
     _wait_state_settled(qtbot, panel)
-    assert "not downloaded" in panel.alass_status_label.text().lower()
+    assert "not installed" in panel.alass_status_label.text().lower()
 
     state["installed"] = True
     panel.notify_alass_download_finished()
     _wait_state_settled(qtbot, panel)
 
     assert not panel._alass_download_active
-    assert panel.alass_status_label.text().lower() == "available"
+    assert panel.alass_status_label.text().lower() == "installed"
 
 
 def test_probe_error_preserves_last_known_installed_state(qtbot, tmp_path, monkeypatch):
@@ -758,11 +758,11 @@ def test_probe_error_preserves_last_known_installed_state(qtbot, tmp_path, monke
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
     _wait_state_settled(qtbot, panel)
-    assert panel.model_status_label.text().lower() == "downloaded"
+    assert panel.model_status_label.text().lower() == "installed"
 
     # A later probe blows up: the model must STILL read "Downloaded".
     panel._on_state_error("boom")
-    assert panel.model_status_label.text().lower() == "downloaded"
+    assert panel.model_status_label.text().lower() == "installed"
     assert panel.download_model_button.isEnabled()
 
 
@@ -1093,23 +1093,27 @@ def test_addons_section_heading_present(qtbot):
 
 
 def test_help_lines_present(qtbot, monkeypatch):
-    """Each section intro + per-download line is rendered as helper-text."""
+    """Each per-download description line is rendered as helper-text; the section
+    intros were removed (headings are self-explanatory)."""
     monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
     monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     texts = _help_texts(panel)
     for expected in (
-        "Generate subtitles from audio when a file has none.",
         "Required before subtitle generation can run.",
-        "Optional. Speed and accuracy extras — skip if unsure.",
         "Faster transcription on NVIDIA GPUs (CUDA).",
         "Skips music and silence so they are not transcribed as garbage.",
         "Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).",
-        "Retime existing subtitles to match the audio.",
         "Needed for retiming unless alass is already on your PATH.",
     ):
         assert expected in texts
+    for removed in (
+        "Generate subtitles from audio when a file has none.",
+        "Optional. Speed and accuracy extras — skip if unsure.",
+        "Retime existing subtitles to match the audio.",
+    ):
+        assert removed not in texts
 
 
 def test_cuda_help_line_hidden_when_unsupported(qtbot, tmp_path, monkeypatch):
