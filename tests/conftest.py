@@ -1,5 +1,6 @@
 """Pytest configuration and shared fixtures."""
 
+import logging
 import os
 import sys
 from pathlib import Path
@@ -33,6 +34,46 @@ from tests._home_isolation import (
 # patching done by ``_isolate_anki_home`` can never fool the tripwire into
 # watching the throwaway tmp dir instead of the real one.
 _REAL_ANKI_HOME = Path(os.path.expanduser("~")) / ".anki_miner"
+
+
+@pytest.fixture(autouse=True)
+def _no_logger_level_leak():
+    """Fail any test that leaves the root or ``anki_miner`` logger level changed.
+
+    ``_configure_logging`` (gui/app.py) pins the ``anki_miner`` namespace logger
+    to DEBUG. A test that triggers it and forgets to restore the level pollutes
+    every later test sharing the same xdist worker. Leaked DEBUG silently flips
+    DEBUG-gated production paths on -- e.g. the subtitle player teardown drain
+    (gui/widgets/subtitle_player_widget.py) calls
+    ``QCoreApplication.sendPostedEvents`` against a mocked player ONLY under
+    DEBUG, which raises ``TypeError`` and crashes the worker. Because
+    ``--dist loadfile`` sharding is worker-count dependent, the leak passes
+    locally and fails in CI. This guard restores the levels unconditionally (so a
+    leak can never cascade) and pins the blame to the offending test instead of a
+    random downstream Qt crash three files away.
+    """
+    root = logging.getLogger()
+    am = logging.getLogger("anki_miner")
+    before = (root.level, am.level)
+    try:
+        yield
+    finally:
+        after = (root.level, am.level)
+        # Restore unconditionally so a leak cannot poison the next test even if
+        # this fixture's assertion is later relaxed.
+        root.setLevel(before[0])
+        am.setLevel(before[1])
+        leaked = after != before
+    # Reached only when the test itself passed -- a genuine test failure
+    # propagates past the ``finally`` above, so this never masks one.
+    if leaked:
+        pytest.fail(
+            f"test leaked logger levels (root {before[0]}->{after[0]}, "
+            f"anki_miner {before[1]}->{after[1]}); restore them in a finally. "
+            "Leaked DEBUG flips DEBUG-gated production paths on and crashes "
+            "later tests sharing the xdist worker.",
+            pytrace=False,
+        )
 
 
 @pytest.fixture(scope="session", autouse=True)

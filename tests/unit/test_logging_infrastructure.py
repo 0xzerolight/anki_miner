@@ -176,8 +176,10 @@ class TestConfigureLogging:
         log_path = tmp_path / "app.log"
 
         root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
         handlers_before = list(root.handlers)
         root_level_before = root.level
+        am_level_before = am_logger.level
         added: list[logging.Handler] = []
         try:
             configure_logging(log_path)
@@ -185,6 +187,10 @@ class TestConfigureLogging:
             assert root.level == logging.WARNING
         finally:
             root.setLevel(root_level_before)
+            # configure_logging pins anki_miner to DEBUG; restore it too, or the
+            # leaked level flips DEBUG-gated production paths on for later tests
+            # sharing this xdist worker (see _no_logger_level_leak in conftest).
+            am_logger.setLevel(am_level_before)
             for h in added:
                 h.close()
                 root.removeHandler(h)
