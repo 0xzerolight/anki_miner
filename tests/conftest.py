@@ -76,6 +76,31 @@ def _no_logger_level_leak():
         )
 
 
+@pytest.fixture(autouse=True)
+def _clear_resolver_caches():
+    """Reset the process-global tool-resolver caches around every test.
+
+    The alass/ffmpeg/ytdlp resolvers memoize resolution in a module-global
+    ``_CACHE`` dict. A GUI test that builds a real panel/tab can leave an
+    off-thread availability probe in flight (``run_off_thread``); when it lands
+    it WRITES that global cache. Under ``--dist loadfile`` that write can leak
+    into a later test on the same worker that asserts cache state -> a
+    sharding-dependent CI-only failure. This is the same leaked-global class as
+    the alass download-wiring race (its intra-test variant is fixed in that
+    test's own fixture) and the ``_no_logger_level_leak`` guard above. Clearing
+    before AND after pins every test's resolver-cache view to a clean slate so
+    no cross-test write survives the boundary.
+    """
+    from anki_miner.utils import alass_resolver, ffmpeg_resolver, ytdlp_resolver
+
+    _resolver_mods = (alass_resolver, ffmpeg_resolver, ytdlp_resolver)
+    for _mod in _resolver_mods:
+        _mod._CACHE.clear()
+    yield
+    for _mod in _resolver_mods:
+        _mod._CACHE.clear()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _isolate_anki_home_session(tmp_path_factory):
     """Session-wide SAFETY FLOOR: home/CONFIG_FILE never resolve to the real
