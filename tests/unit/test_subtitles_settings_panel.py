@@ -1202,3 +1202,20 @@ def test_vulkan_help_line_absent_on_macos(qtbot, monkeypatch):
     assert not any("Vulkan" in t for t in texts)
     assert "Faster transcription on NVIDIA GPUs (CUDA)." in texts
     assert "Skips music and silence so they are not transcribed as garbage." in texts
+
+
+def test_vad_guidance_shares_row_with_label(qtbot):
+    """The VAD guidance sits in the button/status container, so when the button is
+    hidden it renders in the field column beside the "Silence removal" label
+    instead of dropping to a full-width row below it. Regression for the
+    label-on-top-of-status stacking bug."""
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel._vad_guidance_label.parent() is panel.download_vad_button.parent()
+
+
+def test_cuda_guidance_shares_row_with_label(qtbot):
+    """Same inline-field-column placement for the GPU acceleration guidance."""
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel._cuda_guidance_label.parent() is panel.download_cuda_button.parent()
