@@ -6,7 +6,6 @@ gating, the engine-missing guidance, and the in-app alass download button.
 
 from __future__ import annotations
 
-import sys
 import threading
 
 import pytest
@@ -39,6 +38,18 @@ class _FakePlatform:
 def _wait_state_settled(qtbot, panel) -> None:
     """Block until any in-flight off-thread state probe has been applied."""
     qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
+
+
+def _enable_vulkan(monkeypatch, *, platform: str = "linux", available: bool = True) -> None:
+    """Make Vulkan 'offerable' in a panel built after this call.
+
+    Pins the panel module's ``sys.platform`` and the whisper.cpp backend probe
+    (``_engine.whisper_cpp_available``) so the Vulkan device option + download
+    button appear deterministically. Without this, CI has no libggml-vulkan so
+    ``whisper_cpp_available()`` is False and Vulkan is correctly omitted.
+    """
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform(platform))
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.whisper_cpp_available", lambda: available)
 
 
 # ---------------------------------------------------------------------------
@@ -354,13 +365,23 @@ def test_unsupported_platform_has_no_alass_button(qtbot, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_panel_has_device_combo(qtbot):
+def test_panel_has_device_combo(qtbot, monkeypatch):
+    # Vulkan offerable (non-macOS + backend present) → auto/cuda/cpu/vulkan = 4.
+    _enable_vulkan(monkeypatch)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     assert panel.device_combo is not None
-    # auto/cuda/cpu everywhere, plus Vulkan off macOS.
-    expected = 3 if sys.platform == "darwin" else 4
-    assert panel.device_combo.count() == expected
+    assert panel.device_combo.count() == 4
+
+
+def test_panel_device_combo_omits_vulkan_without_backend(qtbot, monkeypatch):
+    """Non-macOS but no whisper.cpp Vulkan backend (the CPU-only pip wheel) →
+    only auto/cuda/cpu; the Vulkan option is not offered."""
+    _enable_vulkan(monkeypatch, available=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.device_combo.count() == 3
+    assert "vulkan" not in [value for _label, value in panel._device_options]
 
 
 def test_device_default_is_auto(qtbot):
@@ -409,27 +430,40 @@ def test_contribute_includes_device(qtbot):
 # ---------------------------------------------------------------------------
 
 
-def test_device_options_includes_vulkan_off_macos():
-    """Off macOS the helper offers Vulkan alongside auto/cuda/cpu."""
-    values = [value for _label, value in _device_options("linux")]
+def test_device_options_includes_vulkan_when_available():
+    """The helper offers Vulkan alongside auto/cuda/cpu when offerable."""
+    values = [value for _label, value in _device_options(vulkan_available=True)]
     assert values == ["auto", "cuda", "cpu", "vulkan"]
 
 
-def test_device_options_omits_vulkan_on_macos():
-    """On macOS the helper omits Vulkan (CT2/Metal only)."""
-    values = [value for _label, value in _device_options("darwin")]
+def test_device_options_omits_vulkan_when_unavailable():
+    """The helper omits Vulkan when the backend is not offerable."""
+    values = [value for _label, value in _device_options(vulkan_available=False)]
     assert "vulkan" not in values
     assert values == ["auto", "cuda", "cpu"]
 
 
-def test_vulkan_option_present_in_dropdown_off_macos(qtbot, monkeypatch):
-    """The Vulkan label is in the device dropdown on a non-macOS platform."""
-    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+def test_vulkan_option_present_in_dropdown_when_offerable(qtbot, monkeypatch):
+    """The Vulkan label is in the device dropdown on a non-macOS platform with
+    the whisper.cpp Vulkan backend present."""
+    _enable_vulkan(monkeypatch)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     items = [panel.device_combo.itemText(i) for i in range(panel.device_combo.count())]
     assert any("Vulkan" in item for item in items)
     assert "vulkan" in [value for _label, value in panel._device_options]
+
+
+def test_load_from_config_vulkan_without_backend_falls_back_to_auto(qtbot, tmp_path, monkeypatch):
+    """A persisted device='vulkan' opened on a non-macOS box WITHOUT the Vulkan
+    backend (the CPU-only pip wheel) migrates to 'auto' — the reporter's case."""
+    _enable_vulkan(monkeypatch, available=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_device="vulkan", cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    assert panel.get_device() == "auto"
+    assert panel.contribute(AnkiMinerConfig()).asr_device == "auto"
 
 
 def test_vulkan_option_absent_in_dropdown_on_macos(qtbot, monkeypatch):
@@ -443,8 +477,8 @@ def test_vulkan_option_absent_in_dropdown_on_macos(qtbot, monkeypatch):
 
 
 def test_select_vulkan_round_trips_through_contribute(qtbot, monkeypatch):
-    """Selecting vulkan off macOS yields get_device()=='vulkan' and persists it."""
-    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    """Selecting vulkan when offerable yields get_device()=='vulkan' and persists it."""
+    _enable_vulkan(monkeypatch)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
 
@@ -929,14 +963,19 @@ def test_set_vad_pack_status_sets_label(qtbot):
 
 
 def _patch_vulkan(monkeypatch, *, ggml: bool, vad: bool) -> None:
-    """Stub the ggml/VAD presence probes used by the Vulkan installed state."""
+    """Stub the ggml/VAD presence probes used by the Vulkan installed state.
+
+    Also forces ``whisper_cpp_available`` True so the Vulkan button/option are
+    offerable (CI has no libggml-vulkan); callers still pin a non-macOS platform.
+    """
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.whisper_cpp_available", lambda: True)
     monkeypatch.setattr(f"{_PANEL_MOD}.ggml_model_installer.is_ggml_downloaded", lambda name, root: ggml)
     monkeypatch.setattr(f"{_PANEL_MOD}.ggml_model_installer.is_vad_downloaded", lambda root: vad)
 
 
-def test_vulkan_button_present_off_macos(qtbot, monkeypatch):
-    """The Vulkan download button exists on a non-macOS platform."""
-    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+def test_vulkan_button_present_when_offerable(qtbot, monkeypatch):
+    """The Vulkan download button exists when Vulkan is offerable."""
+    _enable_vulkan(monkeypatch)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     assert panel.download_vulkan_button is not None
@@ -945,6 +984,15 @@ def test_vulkan_button_present_off_macos(qtbot, monkeypatch):
 def test_vulkan_button_absent_on_macos(qtbot, monkeypatch):
     """The Vulkan download button is omitted on macOS (Vulkan unsupported)."""
     monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("darwin"))
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.download_vulkan_button is None
+
+
+def test_vulkan_button_absent_without_backend(qtbot, monkeypatch):
+    """Non-macOS but no whisper.cpp Vulkan backend → the download button is
+    omitted (no point fetching ggml weights the engine can't load)."""
+    _enable_vulkan(monkeypatch, available=False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     assert panel.download_vulkan_button is None
@@ -1095,7 +1143,7 @@ def test_addons_section_heading_present(qtbot):
 def test_help_lines_present(qtbot, monkeypatch):
     """Each per-download description line is rendered as helper-text; the section
     intros were removed (headings are self-explanatory)."""
-    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    _enable_vulkan(monkeypatch)
     monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)

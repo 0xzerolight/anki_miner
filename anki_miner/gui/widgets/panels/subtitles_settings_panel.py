@@ -64,17 +64,16 @@ _DEVICE_OPTIONS: list[tuple[str, str]] = [
 _VULKAN_DEVICE_OPTION: tuple[str, str] = ("GPU (Vulkan - AMD/Intel/NVIDIA)", "vulkan")
 
 
-def _device_options(platform: str | None = None) -> list[tuple[str, str]]:
-    """Return the ASR device (label, value) pairs available on *platform*.
+def _device_options(vulkan_available: bool = False) -> list[tuple[str, str]]:
+    """Return the ASR device (label, value) pairs to offer.
 
-    Vulkan is appended everywhere except macOS (``sys.platform == "darwin"``).
-    ``platform`` defaults to the live ``sys.platform`` and is a parameter so the
-    platform branch is reachable from tests without monkeypatching ``sys``.
+    The Vulkan option is appended only when *vulkan_available* is True. The
+    caller folds in both the platform check (macOS has no Vulkan path) and the
+    whisper.cpp backend presence (``_engine.whisper_cpp_available()``), so the
+    option is shown only where it can actually run.
     """
-    if platform is None:
-        platform = sys.platform
     options = list(_DEVICE_OPTIONS)
-    if platform != "darwin":
+    if vulkan_available:
         options.append(_VULKAN_DEVICE_OPTION)
     return options
 
@@ -145,15 +144,23 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_libs_root: Path | None = None
         self._onnx_pack_root: Path | None = None
         self._alass_supported = alass_installer.alass_install_supported()
-        # Device options offered on this platform (Vulkan omitted on macOS).
-        # Computed once via the platform-aware helper so the dropdown,
-        # set_device/get_device, and the load_from_config hygiene check all share
-        # one source of truth.
-        self._device_options = _device_options()
-        # The Vulkan model action is offered everywhere except macOS (Vulkan is
-        # unsupported there). Mirrors the device-option macOS handling so the
-        # button + its row are omitted entirely on macOS.
-        self._vulkan_supported = sys.platform != "darwin"
+        # Vulkan ASR is "offerable" only where it can actually run: non-macOS AND
+        # the whisper.cpp Vulkan backend lib (libggml-vulkan) is installed. That
+        # lib ships only in the bundled release (built from source with the Vulkan
+        # SDK) — the PyPI pywhispercpp wheel is CPU-only — so on a plain pip
+        # install this is False and BOTH the "GPU (Vulkan)" device option and the
+        # "Download Vulkan model" button are omitted (selecting Vulkan there would
+        # silently fall back to CT2 anyway). whisper_cpp_available() is a cheap
+        # file-on-disk probe (find_spec + glob, sub-ms, never raises) keyed on lib
+        # PRESENCE, not GPU count; a backend-present-but-deviceless box still shows
+        # the option and correctly cascades to CPU at transcribe time. Computed
+        # once here because device_combo is built a single time at construction,
+        # before any off-thread _AsrState probe runs.
+        self._vulkan_offerable = (sys.platform != "darwin") and _engine.whisper_cpp_available()
+        # Device options offered here (Vulkan appended only when offerable).
+        # Computed once so the dropdown, set_device/get_device, and the
+        # load_from_config hygiene check all share one source of truth.
+        self._device_options = _device_options(vulkan_available=self._vulkan_offerable)
         # In-flight guards: a download disables its button until the worker
         # finishes. Without these, any state refresh re-run (config reload
         # mid-download) would re-enable the button and clobber the status label.
@@ -352,12 +359,13 @@ class SubtitlesSettingsPanel(FormPanel):
 
         # Vulkan model download. One action fetches BOTH the ggml acoustic model
         # and the Silero VAD the whisper.cpp (Vulkan/CPU) backend loads off disk.
-        # The button + its row are omitted on macOS (Vulkan unsupported there),
-        # mirroring the device-option macOS handling; the attributes stay set to
+        # The button + its row are omitted unless Vulkan is offerable (non-macOS
+        # AND the backend lib is installed) — downloading the ggml weights is
+        # pointless when the engine can't load them; the attributes stay set to
         # None so set_vulkan_status/notify can no-op safely.
         self.download_vulkan_button: ModernButton | None = None
         self.vulkan_status_label: QLabel | None = None
-        if self._vulkan_supported:
+        if self._vulkan_offerable:
             self.download_vulkan_button = ModernButton(self.tr("Download Vulkan model"), variant="secondary")
             self.download_vulkan_button.setToolTip(
                 self.tr(
@@ -767,7 +775,7 @@ class SubtitlesSettingsPanel(FormPanel):
         alass_location = self._alass_location
         onnx_pack_root = self._onnx_pack_root
         alass_supported = self._alass_supported
-        vulkan_supported = self._vulkan_supported
+        vulkan_offerable = self._vulkan_offerable
         # Reuse cached process-lifetime probes; re-probe install/download flags.
         engine_cache = self._engine_available_cache
         cuda_cache = self._cuda_device_count_cache
@@ -834,7 +842,7 @@ class SubtitlesSettingsPanel(FormPanel):
             # present: the acoustic model for the selected model AND the shared
             # Silero VAD. Each presence check is a cheap dir stat.
             vulkan_installed = False
-            if vulkan_supported and models_root is not None:
+            if vulkan_offerable and models_root is not None:
                 try:
                     vulkan_installed = ggml_model_installer.is_ggml_downloaded(
                         name, models_root
