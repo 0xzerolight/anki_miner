@@ -457,8 +457,14 @@ def transcribe(
         )
 
     # CT2 only understands cpu/cuda/auto; a 'vulkan' request that did not route to
-    # whisper.cpp (unavailable, no device, or missing ggml) falls back to CT2 CPU.
-    ct2_device = "cpu" if device == "vulkan" else device
+    # whisper.cpp (backend lib absent — e.g. the CPU-only PyPI wheel — no Vulkan
+    # device, or missing ggml) falls back to CT2 "auto", NOT forced CPU: the user
+    # asked for GPU, so use a CUDA GPU if one is present and usable (auto already
+    # rebuilds on CPU for no-GPU / CUDA-init failure). This salvages GPU speed for
+    # a persisted device='vulkan' config before the user reopens Settings (where
+    # the now-unavailable option is dropped to 'auto' by the load_from_config
+    # hygiene); strictly >= the old forced-CPU behaviour.
+    ct2_device = "auto" if device == "vulkan" else device
     return _transcribe_ct2(
         audio,
         model_name=model_name,
