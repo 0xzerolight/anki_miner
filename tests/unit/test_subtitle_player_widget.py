@@ -3,10 +3,10 @@
 import logging
 import threading
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
-from PyQt6.QtCore import QLocale
+from PyQt6.QtCore import QEvent, QLocale
 from PyQt6.QtMultimedia import QMediaPlayer
 
 from anki_miner.gui.widgets.subtitle_player_widget import (
@@ -714,6 +714,106 @@ class TestCloseEventTeardown:
 
         widget._teardown_player()
         widget._teardown_player()  # second call: player is None, must be no-op
+
+    def test_release_detaches_video_output(self, qtbot, fake_media_classes):
+        """release() must detach the video sink with setVideoOutput(None).
+
+        Windows GUI-freeze fix: destroying a QMediaPlayer whose D3D video sink is
+        still attached hangs the GUI thread on the Qt6 FFmpeg backend. release() is
+        the path both real consumers use (SubtitleViewer accept/reject/closeEvent
+        and WordCurationDialog._stop_player). assert_any_call(None) — NOT
+        assert_called_once — because a configured player is also passed the video
+        widget at build time (_configure_player).
+        """
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+
+        player = fake_media_classes["player"]
+        player.reset_mock()
+
+        widget.release()
+
+        player.setVideoOutput.assert_any_call(None)
+
+    def test_teardown_detaches_video_after_stop_before_deletelater(self, qtbot, fake_media_classes):
+        """The video-sink detach must land after stop() and before deleteLater().
+
+        Ordering is load-bearing: detaching from a *stopped* player is the safe
+        variant (never mid-PlayingState), and the sink must be gone before the
+        player is destroyed. Keys on the specific setVideoOutput(None) call so the
+        build-time setVideoOutput(video_widget) can't be matched by mistake.
+        """
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+
+        player = fake_media_classes["player"]
+        player.reset_mock()
+
+        widget.release()
+
+        names = player.mock_calls
+        stop_idx = names.index(call.stop())
+        detach_idx = names.index(call.setVideoOutput(None))
+        delete_idx = names.index(call.deleteLater())
+        assert stop_idx < detach_idx < delete_idx
+
+    def test_teardown_drains_deferred_delete_when_debug(self, qtbot, fake_media_classes, caplog):
+        """Under DEBUG, teardown forces the player's queued C++ dtor to run now.
+
+        deleteLater() only queues the destruction (serviced by the outer event
+        loop after exec() returns); the targeted sendPostedEvents drain pulls it
+        into the timed window so a destruction-time Windows hang is observable
+        here. Diagnostic-only and DEBUG-gated.
+        """
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+
+        player = fake_media_classes["player"]
+
+        with (
+            patch(f"{MODULE}.QCoreApplication") as fake_qca,
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+        ):
+            widget.release()
+
+        fake_qca.sendPostedEvents.assert_called_once_with(player, QEvent.Type.DeferredDelete.value)
+
+    def test_teardown_does_not_drain_when_debug_off(self, qtbot, fake_media_classes):
+        """With DEBUG off, the drain never runs — so sendPostedEvents (which would
+        raise TypeError on a mocked player) is never reached. Self-validating: it
+        asserts the gate is actually closed, so a future DEBUG-default regression
+        fails THIS test loudly instead of an opaque TypeError storm.
+        """
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+
+        # Precondition: the DEBUG gate must be closed in the default test config.
+        assert not logging.getLogger(MODULE).isEnabledFor(logging.DEBUG)
+
+        with patch(f"{MODULE}.QCoreApplication") as fake_qca:
+            widget.release()
+
+        fake_qca.sendPostedEvents.assert_not_called()
 
     def test_player_parented_to_widget_at_construction(self, qtbot):
         """QMediaPlayer and QAudioOutput must be parented to the widget (not None)
