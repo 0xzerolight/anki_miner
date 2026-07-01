@@ -352,16 +352,19 @@ jobs:
       # Vulkan SDK / glslc supplies the headers + shader compiler at build time.
       - name: Install Vulkan SDK (Linux)
         if: runner.os == 'Linux' && matrix.build_vulkan == '1'
-        run: |
-          set -euo pipefail
-          # ggml-vulkan needs the Vulkan headers + glslc (shaderc) + SPIR-V tools
-          # to compile shaders to SPIR-V at build time. libvulkan-dev brings the
-          # loader's dev symlink (libvulkan.so) so CMake's find_package(Vulkan)
-          # succeeds; the loader itself is EXCLUDED from the wheel below so the
-          # user's GPU-driver loader wins at runtime. No GPU/driver needed to build.
-          sudo apt-get update
-          sudo apt-get install -y libvulkan-dev glslc spirv-tools spirv-headers
-          echo "glslc: $(glslc --version | head -1 || true)"
+        # LunarG Vulkan SDK via jakoch/install-vulkan-sdk-action — SAME action and
+        # pins as the Windows step below. The SDK bundles the Vulkan headers, glslc
+        # (shaderc), SPIR-V tools and libvulkan.so, and the action sets VULKAN_SDK
+        # + puts glslc on PATH so CMake's find_package(Vulkan) succeeds; the loader
+        # is EXCLUDED from the wheel below so the user's GPU-driver loader wins at
+        # runtime. No GPU/driver needed to build. NOTE: apt cannot supply glslc on
+        # the pinned ubuntu-22.04 runner — shaderc is only packaged from 24.04, so
+        # `apt-get install glslc` fails with "Unable to locate package glslc".
+        uses: jakoch/install-vulkan-sdk-action@37effcfa045411f8bfbbda26df2fd1b3bf3436fa # v1.6.0
+        with:
+          vulkan_version: "1.4.350.0"
+          install_runtime: false
+          cache: true
 
       - name: Install Vulkan SDK (Windows)
         if: runner.os == 'Windows' && matrix.build_vulkan == '1'
