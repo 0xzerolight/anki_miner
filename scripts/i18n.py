@@ -33,6 +33,8 @@ FR_TS = TS_DIR / "anki_miner_fr.ts"
 FR_QM = TS_DIR / "anki_miner_fr.qm"
 ES_TS = TS_DIR / "anki_miner_es.ts"
 ES_QM = TS_DIR / "anki_miner_es.qm"
+DE_TS = TS_DIR / "anki_miner_de.ts"
+DE_QM = TS_DIR / "anki_miner_de.qm"
 
 # Every shipped catalog as (source .ts, compiled .qm). "en" is the source
 # language (all entries unfinished); the rest carry translations. pylupdate6
@@ -44,6 +46,7 @@ _CATALOGS: list[tuple[Path, Path]] = [
     (RU_TS, RU_QM),
     (FR_TS, FR_QM),
     (ES_TS, ES_QM),
+    (DE_TS, DE_QM),
 ]
 
 
