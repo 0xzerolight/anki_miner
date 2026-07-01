@@ -47,7 +47,10 @@ run_tolerant() {  # name, binary, cmd...
 run_hard     "black"      "${BIN}black" --check .
 run_hard     "ruff"       "${BIN}ruff" check .
 run_hard     "mypy"       "${BIN}mypy" anki_miner
-run_hard     "pytest"     "${BIN}pytest" -m "not youtube and not asr"
+# "and not e2e" is load-bearing: a CLI -m REPLACES the addopts -m "not e2e",
+# so omitting it here re-included the explicit-activation-only e2e tests,
+# which need a live Anki and mutate a real (test) deck.
+run_hard     "pytest"     "${BIN}pytest" -m "not youtube and not asr and not e2e"
 run_tolerant "vulture"    "vulture" "${BIN}vulture"
 run_tolerant "shellcheck" "shellcheck" shellcheck packaging/appimage/build-appimage.sh scripts/bundle_smoke.sh scripts/release_preflight.sh scripts/release_dryrun.sh
 
