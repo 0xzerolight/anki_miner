@@ -782,7 +782,16 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
             assert received[-1].blacklist_path is None
             assert received[-1].whitelist_path is None
         finally:
-            widget.deleteLater()
+            # _on_save_clicked reconciles styling, spawning a short-lived AnkiConnect
+            # worker; join it (mirroring the `tab` fixture) so a late signal cannot
+            # fire into a torn-down widget and SIGABRT a later test on this worker.
+            widget.shutdown()
+            for w in widget.iter_close_workers():
+                if w is not None:
+                    w.wait(3000)
+            qtbot.wait(10)
+            with contextlib.suppress(RuntimeError):
+                widget.deleteLater()
 
     def test_update_config_to_none_clears_previously_loaded_path(self, test_config, tmp_path, qtbot):
         """A programmatic update_config that drops the path must also clear the
@@ -796,7 +805,13 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
             widget.update_config(replace(test_config, blacklist_path=None))
             assert widget.filtering_panel.blacklist_selector.get_path() == ""
         finally:
-            widget.deleteLater()
+            widget.shutdown()
+            for w in widget.iter_close_workers():
+                if w is not None:
+                    w.wait(3000)
+            qtbot.wait(10)
+            with contextlib.suppress(RuntimeError):
+                widget.deleteLater()
 
 
 class TestCardStylingSyncWiring:
