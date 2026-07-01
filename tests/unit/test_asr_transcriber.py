@@ -1238,8 +1238,27 @@ def test_cpp_missing_ggml_model_falls_back_to_ct2_cpu(monkeypatch, tmp_path, cap
     assert caplog.records
 
 
-def test_cpp_vad_enabled_only_when_present(monkeypatch, tmp_path):
-    """decode_params enable VAD iff is_vad_downloaded(); else vad=False, never crash."""
+def test_cpp_decode_params_vad_on_when_ggml_present(tmp_path, monkeypatch):
+    """whisper.cpp's built-in VAD is kept ON when the ggml Silero file is present.
+
+    It feeds only speech to the quantized ggml model, preventing the silence/music
+    hallucinations that VAD-off produced on the cpp path. The VAD's silence-spanning
+    timestamps are re-anchored afterwards by _clip_cpp_segment_to_speech (DEFECT 3).
+    VAD is off only when the ggml Silero file is absent.
+    """
+    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: True)
+    monkeypatch.setattr(transcriber.ggml_model_installer, "vad_model_path", lambda models_root: tmp_path / "vad.bin")
+    p = transcriber._cpp_decode_params(tmp_path)
+    assert p["language"] == "ja" and p["no_context"] is True
+    assert p["vad"] is True and p["vad_model_path"] == str(tmp_path / "vad.bin")
+
+    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: False)
+    p2 = transcriber._cpp_decode_params(tmp_path)
+    assert p2["vad"] is False and "vad_model_path" not in p2
+
+
+def test_cpp_decode_params_extract_probability_still_on(monkeypatch, tmp_path):
+    """extract_probability stays True and language/no_context reach the model."""
     seen: dict = {}
 
     def _capturing_cls():
@@ -1261,9 +1280,8 @@ def test_cpp_vad_enabled_only_when_present(monkeypatch, tmp_path):
     monkeypatch.setattr(_engine, "whisper_cpp_available", lambda: True)
     monkeypatch.setattr(_engine, "get_whisper_cpp_model_cls", _capturing_cls)
     monkeypatch.setattr(transcriber, "_cpp_ggml_present", lambda model_name, models_root: True)
-
-    vad_path = transcriber.ggml_model_installer.vad_model_path(tmp_path)
     monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: True)
+    monkeypatch.setattr(transcriber.ggml_model_installer, "vad_model_path", lambda models_root: tmp_path / "vad.bin")
 
     _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
 
@@ -1271,36 +1289,85 @@ def test_cpp_vad_enabled_only_when_present(monkeypatch, tmp_path):
     assert seen["no_context"] is True
     assert seen["extract_probability"] is True
     assert seen["vad"] is True
-    assert seen["vad_model_path"] == str(vad_path)
+    assert seen["vad_model_path"] == str(tmp_path / "vad.bin")
 
 
-def test_cpp_vad_disabled_when_absent(monkeypatch, tmp_path):
-    """When the VAD ggml is absent, vad=False and no vad_model_path is forced on."""
-    seen: dict = {}
+# ---------------------------------------------------------------------------
+# _clip_cpp_segment_to_speech — clip END to the Silero mask, drop only long
+# out-of-speech spans (DEFECT 3: silence-spanning cpp segment ends)
+# ---------------------------------------------------------------------------
 
-    def _capturing_cls():
-        class CapModel:
-            def __init__(self, model_path):
-                self.model_path = model_path
 
-            def transcribe(
-                self, audio, *, new_segment_callback=None, abort_callback=None, extract_probability=False, **params
-            ):
-                seen.update(params)
-                return []
+def test_clip_cpp_flagship_stretched_re_anchored_not_dropped():
+    """FLAGSHIP: a segment stretched to 664 s over a real utterance at 16.4-17.1 s is
+    KEPT, re-anchored to that window — NOT dropped (the reported 聞いてますよ
+    00:00:16 → 00:11:04 span becomes ~00:00:16.4 → 00:00:17.1). Both ends snap to the
+    speech window: start clips up to 16.4, end down to 17.1."""
+    seg = SimpleNamespace(start=16.0, end=664.0, text="聞いてますよ", probability=0.9)
+    out = transcriber._clip_cpp_segment_to_speech(seg, [(16.4, 17.1)])
+    assert out == (16.4, 17.1, "聞いてますよ")
 
-        return CapModel
 
-    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 0)
-    monkeypatch.setattr(_engine, "vulkan_device_count", lambda: 1)
-    monkeypatch.setattr(_engine, "whisper_cpp_available", lambda: True)
-    monkeypatch.setattr(_engine, "get_whisper_cpp_model_cls", _capturing_cls)
-    monkeypatch.setattr(transcriber, "_cpp_ggml_present", lambda model_name, models_root: True)
-    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: False)
+def test_clip_cpp_short_out_of_speech_kept_unchanged():
+    """A short out-of-speech segment (dur < _NONSPEECH_MIN_DURATION_S, no overlap) is
+    a VAD miss and must be KEPT unchanged (cardinal rule)."""
+    seg = SimpleNamespace(start=100.0, end=102.0, text="し、さあ!", probability=0.9)
+    out = transcriber._clip_cpp_segment_to_speech(seg, [(10.0, 40.0)])
+    assert out == (100.0, 102.0, "し、さあ!")
 
-    _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
 
-    assert seen["vad"] is False
+def test_clip_cpp_long_out_of_speech_dropped():
+    """A long out-of-speech span (dur > _NONSPEECH_MIN_DURATION_S, no overlap) is a
+    sung lyric / outro and is DROPPED (None)."""
+    seg = SimpleNamespace(start=100.0, end=110.0, text="sung", probability=0.9)
+    assert transcriber._clip_cpp_segment_to_speech(seg, [(10.0, 40.0)]) is None
+
+
+def test_clip_cpp_speech_none_unchanged():
+    """speech=None (VAD unavailable) → segment returned unchanged (no clip/drop)."""
+    seg = SimpleNamespace(start=16.0, end=664.0, text="聞いてますよ", probability=0.9)
+    assert transcriber._clip_cpp_segment_to_speech(seg, None) == (16.0, 664.0, "聞いてますよ")
+
+
+def test_clip_cpp_empty_text_and_inverted_span_dropped():
+    """Empty text or end<=start → None (never emit an inverted/empty tuple)."""
+    assert (
+        transcriber._clip_cpp_segment_to_speech(SimpleNamespace(start=1.0, end=2.0, text="   "), [(1.0, 2.0)]) is None
+    )
+    assert transcriber._clip_cpp_segment_to_speech(SimpleNamespace(start=5.0, end=5.0, text="x"), [(1.0, 2.0)]) is None
+    assert transcriber._clip_cpp_segment_to_speech(SimpleNamespace(start=5.0, end=4.0, text="x"), [(1.0, 2.0)]) is None
+
+
+def test_clip_cpp_fluent_multi_window_clips_to_last_window():
+    """A segment spanning several consecutive speech windows clips its end to the
+    LAST window's end (fluent multi-clause speech), still tight."""
+    seg = SimpleNamespace(start=10.0, end=40.0, text="ずっと喋ってる", probability=0.9)
+    out = transcriber._clip_cpp_segment_to_speech(seg, [(10.0, 12.0), (13.0, 15.0)])
+    assert out == (10.0, 15.0, "ずっと喋ってる")
+
+
+def test_cpp_end_to_end_span_clipped_to_speech(monkeypatch, tmp_path):
+    """DEFECT 3 regression: a whisper.cpp segment stretched across silence has its END
+    clipped back onto the app's Silero mask, end-to-end through the cpp engine.
+
+    A stretched make_cpp_segment(16.0 s → 664.0 s, "聞いてますよ") + a Silero mask of a
+    single tight window [(16.4, 17.1)] must emit (16.4, 17.1, "聞いてますよ") — the text
+    intact, re-anchored to that window (both ends snap; no longer minutes long).
+    """
+    ct2 = _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_segments=[make_cpp_segment(1600, 66400, "聞いてますよ", 0.9)],  # t0/t1 centiseconds → 16.0/664.0 s
+    )
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda audio, onnx_pack_root: [(16.4, 17.1)])
+
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan", duration_s=664.0)
+    assert ct2 == []  # stayed on the cpp engine
+    assert len(result) == 1
+    start, end, text = result[0]
+    assert start == pytest.approx(16.4)
+    assert end == pytest.approx(17.1)
+    assert text == "聞いてますよ"
 
 
 def test_cpp_segments_generator_yields_ct2_duck_type(monkeypatch, tmp_path):

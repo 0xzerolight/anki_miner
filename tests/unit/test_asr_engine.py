@@ -367,3 +367,26 @@ def test_find_ggml_vulkan_lib_never_raises(monkeypatch):
     monkeypatch.setattr(importlib.util, "find_spec", _boom)
 
     assert _engine._find_ggml_vulkan_lib() is None
+
+
+def test_find_ggml_core_lib_picks_auditwheel_hashed_dispatcher(tmp_path):
+    """The dispatcher glob must match the AUDITWHEEL-HASHED libggml, not just the
+    plain name — the shipped wheel renames it to libggml-<hash>.so.0.9.8, and a
+    "libggml.so*" glob would miss it (registry never loads -> GGML_ASSERT abort in
+    the bundle; caught by the release dry-run). It must NOT pick the -base/-cpu/
+    -vulkan backend modules.
+    """
+    from anki_miner.services.asr import _engine
+
+    for name in (
+        "libggml-9964a741.so.0.9.8",  # hashed dispatcher (what auditwheel ships)
+        "libggml-base-abcd1234.so.0.9.8",
+        "libwhisper-ef012345.so.1.8.4",
+        "libggml-cpu.so",
+        "libggml-vulkan.so",
+    ):
+        (tmp_path / name).write_bytes(b"\x7fELF")
+
+    core = _engine._find_ggml_core_lib([tmp_path])
+    assert core is not None
+    assert core.name == "libggml-9964a741.so.0.9.8"

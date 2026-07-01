@@ -72,6 +72,11 @@ _MIN_SPEECH_OVERLAP = 0.05
 # is safely non-speech). This pair, not nsp, drops songs — keeping any short
 # out-of-speech real utterance regardless of its (unreliable, per-window) nsp.
 _NONSPEECH_MIN_DURATION_S = 4.0
+# Max silence (s) bridged when extending a whisper.cpp segment's end through
+# consecutive Silero speech regions in _clip_cpp_segment_to_speech: a gap this small
+# is a within-utterance pause (keep going); a larger gap is a real silence where the
+# utterance ended (stop, the next region belongs to another segment).
+_CPP_INTRA_UTTERANCE_GAP_S = 1.5
 # PROVISIONAL: tuned against the manual JP-clip release gate (anime; verify on
 # dense-BGM / quiet-VO before trusting on other genres).
 
@@ -209,6 +214,57 @@ def _is_nonspeech_ct2_segment(seg, speech: list[tuple[float, float]] | None) -> 
     return False
 
 
+def _clip_cpp_segment_to_speech(seg, speech):
+    """Re-anchor a whisper.cpp segment to its OWN speech window on the Silero mask.
+
+    Returns a TIGHT ``(start, end, text)``, or None to drop.
+
+    whisper.cpp's built-in VAD detects tight speech windows but maps segment
+    timestamps back onto the original timeline so that a segment's start/end
+    balloon across removed silence — a one-line utterance can report a multi-minute
+    span whose end (or the first segment's start) lands on a *different* utterance.
+    Clipping the end to the LAST speech region in the span would keep the balloon
+    (the span covers many later utterances); instead we anchor to the FIRST speech
+    region the span reaches and extend the end only through consecutive regions
+    separated by a within-utterance pause, stopping at the first real silence gap
+    (later regions belong to other segments). ``text`` is never touched.
+
+      * ``speech is None`` (VAD pack absent) → ``(start, end, text)`` unchanged
+        (documented degradation, identical to the CT2 mask-None branch).
+      * No speech region intersects the span → out of speech: drop when long
+        (> :data:`_NONSPEECH_MIN_DURATION_S`, outro / sung lyric) but KEEP a short
+        VAD miss (cardinal rule: never drop real dialogue).
+    """
+    start = float(seg.start)
+    end = float(seg.end)
+    text = seg.text.strip()
+    if not text or end <= start:
+        return None
+    if speech is None:
+        return (start, end, text)
+
+    # Speech regions overlapping the span, in chronological order.
+    overlapping = [(a, b) for a, b in speech if b > start and a < end]
+    if not overlapping:
+        # No speech region intersects the span → truly out of speech.
+        if (end - start) > _NONSPEECH_MIN_DURATION_S:
+            return None  # long out-of-speech: drop (outro / sung lyric)
+        return (start, end, text)  # short VAD miss: keep (cardinal rule)
+
+    # Anchor to the FIRST overlapping region; extend the end through consecutive
+    # regions bridged only by a within-utterance pause, stop at the first real gap.
+    clipped_start = max(start, overlapping[0][0])
+    clipped_end = min(overlapping[0][1], end)
+    for a, b in overlapping[1:]:
+        if a - clipped_end <= _CPP_INTRA_UTTERANCE_GAP_S:
+            clipped_end = min(b, end)
+        else:
+            break
+    if clipped_end <= clipped_start:
+        return (start, end, text)  # defensive: never emit an inverted/zero span
+    return (clipped_start, clipped_end, text)
+
+
 def _is_low_probability_cpp_segment(seg) -> bool:
     """Return True for a whisper.cpp segment to drop on low geom-mean probability.
 
@@ -238,15 +294,25 @@ def _cpp_ggml_present(model_name: str, models_root: Path) -> bool:
 
 
 def _cpp_decode_params(models_root: Path) -> dict[str, Any]:
-    """Build the whisper.cpp decode params, mirroring the CT2 anti-hallucination intent.
+    """Build the whisper.cpp decode params.
 
     ``language="ja"`` and ``no_context=True`` (disable conditioning on previously
-    decoded text, killing runaway repetition loops — the cpp analogue of CT2's
-    ``condition_on_previous_text=False``). entropy_thold / logprob_thold /
-    no_speech_thold are left at whisper.cpp defaults: they already suppress
-    repetition and low-confidence output the same way CT2's gates do. VAD is
-    enabled ONLY when the Silero ggml is present — a missing VAD file never fails
-    the build, it just runs without VAD (the flags above still apply).
+    decoded text, curbing runaway repetition loops).
+
+    whisper.cpp's built-in VAD is kept ON when the ggml Silero file is present: it
+    feeds only detected speech to the decoder, which is what stops the QUANTIZED
+    ggml model from hallucinating over the long silences / music of a sparse track.
+    Turning it OFF (mirroring CT2's ``vad_filter=False``) was tried and REGRESSED
+    the cpp path badly — verified on real audio it emitted "thanks for watching"-
+    style hallucinations, repetition loops, and ♪ music segments while DROPPING the
+    real dialogue, because the cpp path has none of CT2's no_speech_prob /
+    compression_ratio gates that make VAD-off safe there.
+
+    The VAD's known downside — it maps speech-only timestamps back onto the original
+    timeline and balloons a segment's start/end across removed silence (the
+    multi-minute-subtitle bug) — is corrected AFTERWARDS by re-anchoring each
+    segment to its own speech window against an independent Silero mask in
+    :func:`_transcribe_cpp` (see :func:`_clip_cpp_segment_to_speech`).
     """
     params: dict[str, Any] = {"language": "ja", "no_context": True}
     if ggml_model_installer.is_vad_downloaded(models_root):
@@ -583,8 +649,24 @@ def _transcribe_cpp(
     """
     decode_params = _cpp_decode_params(models_root)
     try:
+        # Register the ggml DL backends (cpu+vulkan) BEFORE importing pywhispercpp:
+        # ensure_ggml_backends_loaded() dlopens libggml with RTLD_GLOBAL and calls
+        # ggml_backend_load_all_from_path on it. Doing this first means pywhispercpp's
+        # extension binds THAT libggml instance (whose registry we just populated),
+        # not a second copy it would otherwise load via its own RUNPATH — otherwise
+        # whisper reads an empty registry and GGML_ASSERT(device) aborts on Model().
+        _engine.ensure_ggml_backends_loaded()
         model_cls = _engine.get_whisper_cpp_model_cls()
         model = model_cls(str(ggml_model_installer.ggml_model_path(model_name, models_root)))
+
+        # Independent Silero speech mask (same helper the CT2 path uses) to (a) clip
+        # each cpp segment's END back onto detected speech — cpp has no per-word times
+        # so a segment Whisper stretched across silence must be clipped, not re-cut —
+        # and (b) drop segments that lie entirely outside speech. None when the VAD
+        # cannot run (onnxruntime absent — slim bundle without the pack): then no
+        # clip/overlap drop applies and only the confidence gates run (documented
+        # degradation, identical to the CT2 mask-None branch).
+        speech = _speech_mask(audio, onnx_pack_root)
 
         results: list[tuple[float, float, str]] = []
         for seg in _cpp_segments(
@@ -600,8 +682,11 @@ def _transcribe_cpp(
             # _is_junk_segment is a harmless no-op on cpp segments (no
             # compression_ratio/avg_logprob); the probability floor is the cpp
             # path's actual junk drop.
-            if not _is_junk_segment(seg) and not _is_low_probability_cpp_segment(seg):
-                results.append((seg.start, seg.end, seg.text.strip()))
+            if _is_junk_segment(seg) or _is_low_probability_cpp_segment(seg):
+                continue
+            clipped = _clip_cpp_segment_to_speech(seg, speech)
+            if clipped is not None:
+                results.append(clipped)
 
         if progress_cb is not None:
             progress_cb(1.0)
