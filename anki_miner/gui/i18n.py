@@ -29,6 +29,11 @@ _LANGUAGES: dict[str, str] = {
     "es": "Español",
     "de": "Deutsch",
     "pt_br": "Português (Brasil)",
+    "id": "Bahasa Indonesia",
+    "vi": "Tiếng Việt",
+    "zh_cn": "简体中文",
+    "zh_tw": "繁體中文",
+    "it": "Italiano",
 }
 
 

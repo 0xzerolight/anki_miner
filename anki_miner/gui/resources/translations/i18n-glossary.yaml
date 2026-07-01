@@ -3,26 +3,26 @@
 # pt_br values are base lemmas (Anki's official pt-BR terms); translators apply
 # UI-appropriate casing (Title Case in labels, lowercase mid-sentence).
 terms:
-  deck:            { ja: "デッキ",                 ru: "Колода",              fr: "Paquet",                   es: "Mazo",                        de: "Stapel",                    pt_br: "baralho" }
-  card:            { ja: "カード",                 ru: "Карточка",            fr: "Carte",                    es: "Tarjeta",                     de: "Karte",                     pt_br: "cartão" }
-  note:            { ja: "ノート",                 ru: "Заметка",             fr: "Note",                     es: "Nota",                        de: "Notiz",                     pt_br: "nota" }
-  note type:       { ja: "ノートタイプ",           ru: "Тип заметки",         fr: "Type de note",             es: "Tipo de nota",                de: "Notiztyp",                  pt_br: "tipo de nota" }
-  field:           { ja: "フィールド",             ru: "Поле",                fr: "Champ",                    es: "Campo",                       de: "Feld",                      pt_br: "campo" }
-  mining:          { ja: "マイニング",             ru: "Майнинг",             fr: "Extraction",               es: "Minería",                     de: "Mining",                    pt_br: "mineração" }
-  mine:            { ja: "マイニング",             ru: "Майнить",             fr: "Extraire",                 es: "Minar",                       de: "sammeln",                   pt_br: "minerar" }
-  known words:     { ja: "既知単語",               ru: "Известные слова",     fr: "Mots connus",              es: "Palabras conocidas",          de: "Bekannte Wörter",           pt_br: "palavras conhecidas" }
-  known word DB:   { ja: "既知単語DB",             ru: "БД известных слов",   fr: "BD de mots connus",        es: "BD de palabras conocidas",    de: "Datenbank bekannter Wörter", pt_br: "BD de palavras conhecidas" }
-  word list:       { ja: "単語リスト",             ru: "Список слов",         fr: "Liste de mots",            es: "Lista de palabras",           de: "Wortliste",                 pt_br: "lista de palavras" }
-  subtitle:        { ja: "字幕",                   ru: "Субтитры",            fr: "Sous-titres",              es: "Subtítulos",                  de: "Untertitel",                pt_br: "legenda" }
-  frequency:       { ja: "頻度",                   ru: "Частотность",         fr: "Fréquence",                es: "Frecuencia",                  de: "Häufigkeit",                pt_br: "frequência" }
-  pitch accent:    { ja: "ピッチアクセント",       ru: "Тональное ударение",  fr: "Accent de hauteur",        es: "Acento tonal",                de: "Tonhöhenakzent",            pt_br: "acento tonal" }
-  lemma:           { ja: "見出し語",               ru: "Лемма",               fr: "Lemme",                    es: "Lema",                        de: "Grundform",                 pt_br: "lema" }
-  dictionary:      { ja: "辞書",                   ru: "Словарь",             fr: "Dictionnaire",             es: "Diccionario",                 de: "Wörterbuch",                pt_br: "dicionário" }
-  definition:      { ja: "語義",                   ru: "Определение",         fr: "Définition",               es: "Definición",                  de: "Definition",                pt_br: "definição" }
-  screenshot:      { ja: "スクリーンショット",     ru: "Скриншот",            fr: "Capture d'écran",          es: "Captura de pantalla",         de: "Screenshot",                pt_br: "captura de tela" }
-  filter:          { ja: "フィルター",             ru: "Фильтр",              fr: "Filtre",                   es: "Filtro",                      de: "Filter",                    pt_br: "filtro" }
-  connection:      { ja: "接続",                   ru: "Подключение",         fr: "Connexion",                es: "Conexión",                    de: "Verbindung",                pt_br: "conexão" }
-  episode:         { ja: "エピソード",             ru: "Эпизод",              fr: "Épisode",                  es: "Episodio",                    de: "Folge",                     pt_br: "episódio" }
-  playlist:        { ja: "プレイリスト",           ru: "Плейлист",            fr: "Liste de lecture",         es: "Lista de reproducción",       de: "Wiedergabeliste",           pt_br: "playlist" }
-  setup wizard:    { ja: "セットアップウィザード", ru: "Мастер настройки",    fr: "Assistant de configuration", es: "Asistente de configuración", de: "Einrichtungsassistent",     pt_br: "assistente de configuração" }
+  deck:          { ja: "デッキ", ru: "Колода", fr: "Paquet", es: "Mazo", de: "Stapel", pt_br: "baralho", id: "dek", vi: "bộ thẻ", zh_cn: "牌组", zh_tw: "牌組", it: "Mazzo" }
+  card:          { ja: "カード", ru: "Карточка", fr: "Carte", es: "Tarjeta", de: "Karte", pt_br: "cartão", id: "kartu", vi: "thẻ", zh_cn: "卡片", zh_tw: "卡片", it: "Carta" }
+  note:          { ja: "ノート", ru: "Заметка", fr: "Note", es: "Nota", de: "Notiz", pt_br: "nota", id: "catatan", vi: "ghi chú", zh_cn: "笔记", zh_tw: "筆記", it: "Nota" }
+  note type:     { ja: "ノートタイプ", ru: "Тип заметки", fr: "Type de note", es: "Tipo de nota", de: "Notiztyp", pt_br: "tipo de nota", id: "tipe catatan", vi: "loại ghi chú", zh_cn: "笔记类型", zh_tw: "筆記類型", it: "Tipo di nota" }
+  field:         { ja: "フィールド", ru: "Поле", fr: "Champ", es: "Campo", de: "Feld", pt_br: "campo", id: "bidang", vi: "trường", zh_cn: "字段", zh_tw: "欄位", it: "Campo" }
+  mining:        { ja: "マイニング", ru: "Майнинг", fr: "Extraction", es: "Minería", de: "Mining", pt_br: "mineração", id: "mining", vi: "khai thác", zh_cn: "挖词", zh_tw: "採集", it: "Mining" }
+  mine:          { ja: "マイニング", ru: "Майнить", fr: "Extraire", es: "Minar", de: "sammeln", pt_br: "minerar", id: "mining", vi: "khai thác", zh_cn: "挖词", zh_tw: "採集", it: "Estrarre" }
+  known words:   { ja: "既知単語", ru: "Известные слова", fr: "Mots connus", es: "Palabras conocidas", de: "Bekannte Wörter", pt_br: "palavras conhecidas", id: "kata yang dikenal", vi: "từ đã biết", zh_cn: "已知单词", zh_tw: "已知單字", it: "Parole conosciute" }
+  known word DB: { ja: "既知単語DB", ru: "БД известных слов", fr: "BD de mots connus", es: "BD de palabras conocidas", de: "Datenbank bekannter Wörter", pt_br: "BD de palavras conhecidas", id: "DB kata yang dikenal", vi: "CSDL từ đã biết", zh_cn: "已知单词数据库", zh_tw: "已知單字資料庫", it: "DB delle parole conosciute" }
+  word list:     { ja: "単語リスト", ru: "Список слов", fr: "Liste de mots", es: "Lista de palabras", de: "Wortliste", pt_br: "lista de palavras", id: "daftar kata", vi: "danh sách từ", zh_cn: "单词列表", zh_tw: "單字清單", it: "Elenco di parole" }
+  subtitle:      { ja: "字幕", ru: "Субтитры", fr: "Sous-titres", es: "Subtítulos", de: "Untertitel", pt_br: "legenda", id: "subtitel", vi: "phụ đề", zh_cn: "字幕", zh_tw: "字幕", it: "Sottotitoli" }
+  frequency:     { ja: "頻度", ru: "Частотность", fr: "Fréquence", es: "Frecuencia", de: "Häufigkeit", pt_br: "frequência", id: "frekuensi", vi: "tần suất", zh_cn: "词频", zh_tw: "頻率", it: "Frequenza" }
+  pitch accent:  { ja: "ピッチアクセント", ru: "Тональное ударение", fr: "Accent de hauteur", es: "Acento tonal", de: "Tonhöhenakzent", pt_br: "acento tonal", id: "aksen nada", vi: "trọng âm cao độ", zh_cn: "音调", zh_tw: "高低音調", it: "Accento tonale" }
+  lemma:         { ja: "見出し語", ru: "Лемма", fr: "Lemme", es: "Lema", de: "Grundform", pt_br: "lema", id: "lema", vi: "từ gốc", zh_cn: "原形", zh_tw: "詞元", it: "Lemma" }
+  dictionary:    { ja: "辞書", ru: "Словарь", fr: "Dictionnaire", es: "Diccionario", de: "Wörterbuch", pt_br: "dicionário", id: "kamus", vi: "từ điển", zh_cn: "词典", zh_tw: "字典", it: "Dizionario" }
+  definition:    { ja: "語義", ru: "Определение", fr: "Définition", es: "Definición", de: "Definition", pt_br: "definição", id: "definisi", vi: "định nghĩa", zh_cn: "释义", zh_tw: "釋義", it: "Definizione" }
+  screenshot:    { ja: "スクリーンショット", ru: "Скриншот", fr: "Capture d'écran", es: "Captura de pantalla", de: "Screenshot", pt_br: "captura de tela", id: "tangkapan layar", vi: "ảnh chụp màn hình", zh_cn: "截图", zh_tw: "螢幕截圖", it: "Schermata" }
+  filter:        { ja: "フィルター", ru: "Фильтр", fr: "Filtre", es: "Filtro", de: "Filter", pt_br: "filtro", id: "filter", vi: "bộ lọc", zh_cn: "过滤器", zh_tw: "篩選器", it: "Filtro" }
+  connection:    { ja: "接続", ru: "Подключение", fr: "Connexion", es: "Conexión", de: "Verbindung", pt_br: "conexão", id: "koneksi", vi: "kết nối", zh_cn: "连接", zh_tw: "連線", it: "Connessione" }
+  episode:       { ja: "エピソード", ru: "Эпизод", fr: "Épisode", es: "Episodio", de: "Folge", pt_br: "episódio", id: "episode", vi: "tập", zh_cn: "剧集", zh_tw: "集數", it: "Episodio" }
+  playlist:      { ja: "プレイリスト", ru: "Плейлист", fr: "Liste de lecture", es: "Lista de reproducción", de: "Wiedergabeliste", pt_br: "playlist", id: "playlist", vi: "danh sách phát", zh_cn: "播放列表", zh_tw: "播放清單", it: "Playlist" }
+  setup wizard:  { ja: "セットアップウィザード", ru: "Мастер настройки", fr: "Assistant de configuration", es: "Asistente de configuración", de: "Einrichtungsassistent", pt_br: "assistente de configuração", id: "wizard penyiapan", vi: "trình hướng dẫn cài đặt", zh_cn: "设置向导", zh_tw: "設定精靈", it: "Procedura guidata di configurazione" }
 do_not_translate: [Anki, AnkiConnect, GitHub, YouTube, JPod101, Google, ffmpeg, MeCab, Yomitan, Jisho]
