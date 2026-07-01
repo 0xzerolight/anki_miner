@@ -460,23 +460,63 @@ jobs:
           # -DGGML_VULKAN=1 -DGGML_BACKEND_DL=1 on the whisper.cpp/ggml configure.
           GGML_VULKAN: "1"
           GGML_BACKEND_DL: "1"
+          # GGML_BACKEND_DL forbids GGML_NATIVE — ggml-cpu hard-errors "GGML_NATIVE
+          # is not compatible with GGML_BACKEND_DL". OFF also keeps the CPU-fallback
+          # backend portable (no -march=native, so no illegal-instruction crash on
+          # user CPUs lacking the runner's AVX-512), matching the portable prebuilt
+          # [asr] pywhispercpp wheel this build replaces.
+          GGML_NATIVE: "OFF"
           NO_REPAIR: "1"
         run: |
           set -euo pipefail
-          # auditwheel does the wheel repair + loader exclusion (pinned).
-          pip install -c constraints/asr-vulkan-build.txt auditwheel
+          # auditwheel repairs + excludes the loader; wheel unpacks/repacks to
+          # inject the dlopen backend (see constraints/asr-vulkan-build.txt).
+          pip install -c constraints/asr-vulkan-build.txt auditwheel wheel
           mkdir -p dist-vulkan-raw dist-vulkan
           # git+ (not the PyPI sdist) so the whisper.cpp/pybind11 submodules are
           # fetched at the SHAs the pinned tag records. --no-build-isolation would
           # drop the build deps pywhispercpp declares, so keep isolation ON.
-          pip wheel --no-deps -w dist-vulkan-raw \
+          # --no-clean KEEPS the build tree: ggml builds the ggml-vulkan MODULE
+          # backend into build/temp.*/_pywhispercpp/bin (NOT the wheel), and the
+          # SHARED libs (libwhisper.so.1, libggml*) land in build/lib.* which is
+          # exactly the extension's DT_RUNPATH — both are needed below.
+          pip wheel --no-clean --no-deps -w dist-vulkan-raw \
             "pywhispercpp @ git+https://github.com/absadiki/pywhispercpp.git@v1.5.0"
           RAW=$(find dist-vulkan-raw -name 'pywhispercpp-*.whl' | head -1)
           echo "Raw (unrepaired) wheel: $RAW"
-          # Repair: graft the ggml/whisper libs INTO the wheel but EXCLUDE the
-          # Vulkan loader so ggml-vulkan binds the system/driver loader at runtime.
-          auditwheel repair --exclude libvulkan.so.1 --exclude libvulkan.so \
-            -w dist-vulkan "$RAW"
+          # Derive the exact build lib dir from the raw extension's RUNPATH
+          # (self-anchoring — avoids globbing /tmp for the right build tree).
+          mkdir -p _extprobe
+          EXT=$(unzip -Z1 "$RAW" | grep -E '^_pywhispercpp.*\.so$' | head -1)
+          unzip -o "$RAW" "$EXT" -d _extprobe >/dev/null
+          BUILD_LIBDIR=$(readelf -d "_extprobe/$EXT" \
+            | awk '/RUNPATH|RPATH/{gsub(/[][]/,"",$NF); print $NF}' | head -1)
+          echo "Build lib dir (RUNPATH): $BUILD_LIBDIR"
+          test -e "$BUILD_LIBDIR/libwhisper.so.1" \
+            || { echo "::error::libwhisper.so.1 not found under $BUILD_LIBDIR"; exit 1; }
+          # The MODULE backend dir is the sibling temp.* of the lib.* dir.
+          BUILD_ROOT=$(dirname "$BUILD_LIBDIR")
+          TAG=$(basename "$BUILD_LIBDIR" | sed 's/^lib\.//')
+          BACKEND_BIN="$BUILD_ROOT/temp.$TAG/_pywhispercpp/bin"
+          mapfile -t BACKEND_LIBS < <(find "$BACKEND_BIN" -name 'libggml-vulkan*.so*' 2>/dev/null)
+          [ "${#BACKEND_LIBS[@]}" -gt 0 ] \
+            || { echo "::error::libggml-vulkan*.so not built under $BACKEND_BIN"; exit 1; }
+          # Inject the backend MODULE lib(s) into the raw wheel + regen RECORD.
+          rm -rf _unpacked && wheel unpack -d _unpacked "$RAW"
+          WHDIR=$(ls -d _unpacked/pywhispercpp-*/)
+          cp "${BACKEND_LIBS[@]}" "$WHDIR"
+          rm -f "$WHDIR"pywhispercpp-*.dist-info/RECORD
+          mkdir -p dist-vulkan-inj && wheel pack -d dist-vulkan-inj "$WHDIR"
+          INJ=$(find dist-vulkan-inj -name 'pywhispercpp-*.whl' | head -1)
+          # Repair: LD_LIBRARY_PATH=build lib dir lets auditwheel locate
+          # libwhisper.so.1 (+libggml*); EXCLUDE the Vulkan loader (bind the user's
+          # driver loader at runtime) AND the injected backend module (repaired in
+          # place, NEEDED repointed into .libs, but not grafted as a dependency).
+          LD_LIBRARY_PATH="$BUILD_LIBDIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            auditwheel repair \
+              --exclude libvulkan.so.1 --exclude libvulkan.so \
+              --exclude libggml-vulkan.so \
+              -w dist-vulkan "$INJ"
           WHEEL=$(find dist-vulkan -name 'pywhispercpp-*.whl' | head -1)
           echo "VULKAN_WHEEL=$WHEEL" >> "$GITHUB_ENV"
           echo "Repaired Vulkan wheel: $WHEEL"
@@ -492,26 +532,85 @@ jobs:
             exit 1
           fi
 
+      # Ninja generator on Windows: the from-source pywhispercpp build otherwise
+      # picks the Visual Studio / MSBuild generator, whose FileTracker writes
+      # per-target .tlog paths under pip's deep temp tree that cross Windows'
+      # 260-char MAX_PATH and hard-fail with "FileTracker : error FTK1011"
+      # (deterministic — the ABI-probe .tlog is 262 chars). Ninja emits no .tlog
+      # at all, killing the whole FTK1011 class including the nested
+      # vulkan-shaders-gen ExternalProject (which inherits the generator), and
+      # pywhispercpp's setup.py drops "-A x64" when CMAKE_GENERATOR=Ninja. Ninja
+      # does NOT auto-load vcvars the way the VS generator does, so cl.exe must be
+      # put on PATH first — hence the MSVC dev-env step below. TMP/TEMP also point
+      # at the short RUNNER_TEMP (D:\a\_temp) so no build path nears MAX_PATH.
+      - name: Set up MSVC dev environment (Windows, for Ninja)
+        if: runner.os == 'Windows' && matrix.build_vulkan == '1'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: x64
+
       - name: Build Vulkan pywhispercpp wheel (Windows)
         if: runner.os == 'Windows' && matrix.build_vulkan == '1'
         shell: pwsh
         env:
           GGML_VULKAN: "1"
           GGML_BACKEND_DL: "1"
+          # GGML_BACKEND_DL forbids GGML_NATIVE + keeps the CPU fallback portable
+          # (see the Linux step above for the full rationale).
+          GGML_NATIVE: "OFF"
           NO_REPAIR: "1"
+          # Force Ninja so no MSBuild FileTracker .tlog is written (see comment
+          # above) — the actual fix for the FTK1011 MAX_PATH failure.
+          CMAKE_GENERATOR: "Ninja"
+          # cl on PATH (via msvc-dev-cmd) as the compiler — the vulkan-shaders-gen
+          # ExternalProject's fresh CMake reads CC/CXX from the env (it does NOT
+          # inherit -DCMAKE_C_COMPILER), so this makes its compiler detection
+          # deterministic on the VS-bundled ninja.
+          CC: "cl"
+          CXX: "cl"
+          # Short temp base for any pip/tool temp; the primary MAX_PATH fix is the
+          # short C:\ws source clone below.
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
         run: |
           $ErrorActionPreference = "Stop"
-          # delvewheel does the wheel repair + loader exclusion (pinned).
-          pip install -c constraints/asr-vulkan-build.txt delvewheel
+          # Build toolchain into THIS env (no pip build isolation). NO pip `ninja` —
+          # a real VS ninja is on PATH via msvc-dev-cmd; pip's ninja.exe is broken in
+          # the sub-build spawn context.
+          pip install -c constraints/asr-vulkan-build.txt delvewheel `
+            "setuptools>=42" wheel "cmake>=3.12" repairwheel "setuptools-scm>=8"
+          # Build from a SHORT source dir. Under pip's default git+ build path
+          # (<temp>\pip-wheel-XXXX\pywhispercpp_<32hex>\build\...) the vulkan-shaders-
+          # gen ExternalProject's TryCompile working directory reaches EXACTLY 260
+          # chars, so Windows CreateProcess fails to spawn ninja with ENOENT ("no
+          # such file or directory") and the host-tool build aborts ("CMAKE_C_
+          # COMPILER not set, after EnableLanguage"). Cloning to C:\ws and building
+          # in-tree (setup.py — no pip temp copy) drops that path to ~190, well under
+          # MAX_PATH. Ninja (via CMAKE_GENERATOR) still avoids the FTK1011 .tlog class.
+          $repo = $PWD.Path
+          if (Test-Path C:\ws) { Remove-Item -Recurse -Force C:\ws }
+          git clone --branch v1.5.0 --recurse-submodules `
+            https://github.com/absadiki/pywhispercpp.git C:\ws
+          if ($LASTEXITCODE -ne 0) { Write-Error "pywhispercpp clone failed"; exit 1 }
           New-Item -ItemType Directory -Force -Path dist-vulkan-raw, dist-vulkan | Out-Null
-          # git+ so the whisper.cpp/pybind11 submodules are fetched at the pinned SHAs.
-          pip wheel --no-deps -w dist-vulkan-raw `
-            "pywhispercpp @ git+https://github.com/absadiki/pywhispercpp.git@v1.5.0"
+          Push-Location C:\ws
+          python setup.py bdist_wheel --dist-dir "$repo\dist-vulkan-raw"
+          if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Error "pywhispercpp wheel build failed"; exit 1 }
+          Pop-Location
           $raw = Get-ChildItem dist-vulkan-raw -Filter 'pywhispercpp-*.whl' | Select-Object -First 1
           Write-Host "Raw (unrepaired) wheel: $($raw.FullName)"
-          # Repair: graft ggml/whisper DLLs into the wheel but EXCLUDE the Vulkan
-          # loader (vulkan-1.dll) so ggml-vulkan binds the system loader at runtime.
-          delvewheel repair --exclude vulkan-1.dll --add-path "$env:VULKAN_SDK\Bin" `
+          # The build put whisper.dll / ggml*.dll / ggml-vulkan.dll in the CMake bin
+          # dir (NOT the wheel — setup.py does not bundle them), so point delvewheel
+          # there. It grafts the .pyd's DLL deps (whisper, ggml, ggml-base, ggml-cpu)
+          # automatically; --include force-grafts the ggml-vulkan MODULE backend,
+          # which is dlopened (not a static import) and would otherwise be missed.
+          # EXCLUDE the Vulkan loader so ggml-vulkan binds the user's driver loader.
+          $vulkanDll = Get-ChildItem C:\ws\build -Recurse -Filter ggml-vulkan.dll -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $vulkanDll) { Write-Error "ggml-vulkan.dll not found under C:\ws\build"; exit 1 }
+          $bin = $vulkanDll.DirectoryName
+          Write-Host "Backend DLL dir: $bin"
+          delvewheel repair --exclude vulkan-1.dll --include ggml-vulkan.dll `
+            --add-path "$bin;$env:VULKAN_SDK\Bin" `
             -w dist-vulkan $raw.FullName
           $wheel = Get-ChildItem dist-vulkan -Filter 'pywhispercpp-*.whl' | Select-Object -First 1
           "VULKAN_WHEEL=$($wheel.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
