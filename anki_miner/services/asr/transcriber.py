@@ -44,19 +44,36 @@ _MIN_AVG_LOGPROB = -1.0
 # PROVISIONAL: confirmed/tuned against the manual JP-clip release gate.
 _MIN_CPP_SEGMENT_PROBABILITY = 0.2
 
-# faster-whisper sets a segment's start/end to its first/last WORD time. With
-# vad_filter=True it removes silence, transcribes the concatenated speech, then
-# restores the original timeline — but Whisper still GROUPS words separated by a
-# long ORIGINAL silence into one segment, so that segment's restored start/end
-# spans the removed gap (the "subtitle held over minutes of silence" bug:
-# "聞いてますよ" came back as a single 645s segment — word '聞' at 0:17, the rest
-# at 11:02). The per-word timestamps are individually correct, so we re-cut each
-# CT2 segment wherever the gap between consecutive words exceeds this many
-# seconds, giving one tightly-bounded subtitle per real utterance. Distilled from
-# stable-ts's split_by_gap. 0.5/0.8/1.0s produced identical cuts on the test
-# material; 1.0s is the conservative pick (stable-ts defaults to 0.5, but 1.0
-# avoids over-splitting fluent Japanese speech into fragment subtitles).
-_MAX_WORD_GAP_S = 1.0
+# --- Non-speech drop, CT2 path (vad_filter is OFF; see _transcribe_ct2) ---
+# Whisper transcribes the whole timeline, so it hallucinates over non-speech:
+# YouTube-outro phrases ("ご視聴ありがとうございました"), breaths/grunts, degenerate
+# repetition loops, sung ED/OP lyrics, crowd chants. We drop a segment when an
+# INDEPENDENT Silero-VAD speech mask says it lies outside speech AND a second
+# junk signal agrees — so a real line the VAD merely MISSED is never deleted on
+# the VAD verdict alone (the cardinal rule: never drop real dialogue).
+#
+# SAMPLE_RATE for the mask: faster-whisper fixes audio at 16 kHz, so get_speech_
+# timestamps' sample-indexed regions convert to seconds by ÷ this.
+_ASR_SAMPLE_RATE = 16000
+# no_speech_prob at/above this = confident non-speech ANYWHERE (drops loud
+# hallucinations that sit inside a VAD false-positive region). Real dialogue
+# measured ≤0.35 across the manual JP-clip gate, so this never touches speech.
+# nsp is a per-30s-WINDOW score, NOT per-segment, so it is used ONLY as this
+# high-confidence solo cut and NEVER as the primary discriminator.
+_CONFIDENT_NONSPEECH_PROB = 0.60
+# A segment whose own time span is covered by the speech mask below this fraction
+# lies OUTSIDE detected speech. Non-speech measured at exactly 0% here; real
+# dialogue ≥10% (segments slightly overrun the tight, un-padded mask).
+_MIN_SPEECH_OVERLAP = 0.05
+# Out-of-speech segments are dropped only with a corroborating junk signal:
+# a repetition loop (compression_ratio) or a long sustained span — sung lyrics
+# run 7–12 s, whereas a real line the VAD missed is a short interjection (a real
+# ≥ this-many-seconds line is always DETECTED by the VAD, so long+out-of-speech
+# is safely non-speech). This pair, not nsp, drops songs — keeping any short
+# out-of-speech real utterance regardless of its (unreliable, per-window) nsp.
+_NONSPEECH_MIN_DURATION_S = 4.0
+# PROVISIONAL: tuned against the manual JP-clip release gate (anime; verify on
+# dense-BGM / quiet-VO before trusting on other genres).
 
 
 def _ensure_onnx_pack_on_syspath(onnx_pack_root: Path | None) -> None:
@@ -116,55 +133,80 @@ def _is_junk_segment(seg) -> bool:
     return avg_logprob is not None and avg_logprob < _MIN_AVG_LOGPROB
 
 
-def _split_segment_on_word_gaps(seg, max_gap: float = _MAX_WORD_GAP_S):
-    """Yield ``(start_s, end_s, text)`` tuples, re-cut at large inter-word gaps.
+def _speech_mask(audio, onnx_pack_root: Path | None):
+    """Return Silero-VAD speech regions as ``[(start_s, end_s), ...]`` or None.
 
-    A faster-whisper segment whose words straddle a long silence (Whisper groups
-    them despite the gap; see :data:`_MAX_WORD_GAP_S`) is split into one subtitle
-    per run of words, each bounded by its own first/last word time, wherever
-    ``next_word.start - prev_word.end > max_gap`` (strict ``>``).
+    Runs faster-whisper's bundled Silero VAD once over *audio* to locate speech.
+    Returns None when the VAD cannot run (onnxruntime absent — the slim bundle
+    without the downloaded pack), in which case the caller skips the overlap-based
+    non-speech drop and only the confidence gates apply (documented degradation:
+    sung lyrics / faint non-speech may leak). Never raises.
 
-    Contract:
-      * No word data (``seg.words`` falsy — the whisper.cpp duck type, or
-        ``word_timestamps`` off) → emit the segment unchanged
-        ``(seg.start, seg.end, seg.text.strip())``. The cpp path is intentionally
-        never split here; it has no per-word timestamps.
-      * A single cluster (no gap exceeds *max_gap* — the overwhelming majority)
-        → emit ``(seg.start, seg.end, seg.text.strip())`` verbatim, so non-bug
-        output stays byte-identical to the pre-split behaviour (authoritative
-        ``seg.text``, never a word join).
-      * Only genuinely multi-cluster (silence-spanning) segments derive each
-        half's text from the joined words; such halves are stripped, clamped to
-        ``end >= start`` and dropped when empty, so the emitted tuples are clean
-        at the source (no reliance on srt_writer to drop them).
-
-    Word fields are read via ``getattr`` so a future faster-whisper rename
-    degrades to the whole-segment fallback instead of raising.
+    ``get_speech_timestamps`` returns SAMPLE indices; they convert to seconds by
+    ÷ :data:`_ASR_SAMPLE_RATE`. ``speech_pad_ms=0`` keeps the mask tight (padding
+    would widen regions and let near-speech hallucinations pass the overlap test);
+    ``min_speech_duration_ms=0`` keeps short real interjections IN the mask so
+    they are never manufactured into out-of-speech inputs for the drop.
     """
-    words = getattr(seg, "words", None)
-    if not words:
-        yield (seg.start, seg.end, seg.text.strip())
-        return
+    if not vad_available(onnx_pack_root):
+        return None
+    try:
+        from faster_whisper.vad import (  # noqa: PLC0415  (function-local: keep module importable without onnxruntime)
+            VadOptions,
+            get_speech_timestamps,
+        )
 
-    clusters: list[list] = [[words[0]]]
-    for word in words[1:]:
-        prev_end = getattr(clusters[-1][-1], "end", seg.start)
-        if getattr(word, "start", prev_end) - prev_end > max_gap:
-            clusters.append([word])
-        else:
-            clusters[-1].append(word)
+        regions = get_speech_timestamps(
+            audio,
+            vad_options=VadOptions(speech_pad_ms=0, min_speech_duration_ms=0),
+            sampling_rate=_ASR_SAMPLE_RATE,
+        )
+        return [(r["start"] / _ASR_SAMPLE_RATE, r["end"] / _ASR_SAMPLE_RATE) for r in regions]
+    except Exception as exc:  # noqa: BLE001 — a VAD failure degrades to "no mask", never aborts
+        logger.warning("ASR: Silero VAD speech-mask failed (%s); non-speech overlap drop disabled.", exc)
+        return None
 
-    if len(clusters) == 1:
-        # No real gap: keep the original segment's text and timing byte-for-byte.
-        yield (seg.start, seg.end, seg.text.strip())
-        return
 
-    for cluster in clusters:
-        start = getattr(cluster[0], "start", seg.start)
-        end = max(getattr(cluster[-1], "end", start), start)
-        text = "".join(getattr(word, "word", "") for word in cluster).strip()
-        if text and end > start:
-            yield (start, end, text)
+def _speech_overlap(start: float, end: float, speech: list[tuple[float, float]]) -> float:
+    """Fraction of the segment span ``[start, end]`` (seconds) covered by *speech*."""
+    if end <= start:
+        return 0.0
+    covered = 0.0
+    for a, b in speech:
+        lo, hi = max(start, a), min(end, b)
+        if hi > lo:
+            covered += hi - lo
+    return covered / (end - start)
+
+
+def _is_nonspeech_ct2_segment(seg, speech: list[tuple[float, float]] | None) -> bool:
+    """Return True for a CT2 segment to drop as non-speech (vad_filter-OFF path).
+
+    Reuses Whisper's own gates (:func:`_is_junk_segment`: compression_ratio /
+    avg_logprob) and adds two non-speech drops (see the module constants):
+      * ``no_speech_prob >= _CONFIDENT_NONSPEECH_PROB`` — confident non-speech.
+      * out-of-speech (overlap < :data:`_MIN_SPEECH_OVERLAP`) AND corroborated by
+        a repetition (compression_ratio) or a long span (:data:`_NONSPEECH_MIN_DURATION_S`).
+
+    The overlap arm never fires on ``no_speech_prob`` alone, so a real line the
+    VAD merely missed (short, out-of-speech, any nsp) survives. ``getattr``
+    defaults keep this a no-op on field-less fakes. Applied ONLY to CT2 segments;
+    the cpp path has no nsp/compression and uses :func:`_is_junk_segment` +
+    :func:`_is_low_probability_cpp_segment`.
+    """
+    if _is_junk_segment(seg):
+        return True
+    no_speech_prob = getattr(seg, "no_speech_prob", 0.0)
+    if no_speech_prob is not None and no_speech_prob >= _CONFIDENT_NONSPEECH_PROB:
+        return True
+    if speech is not None:
+        start = getattr(seg, "start", 0.0)
+        end = getattr(seg, "end", 0.0)
+        if _speech_overlap(start, end, speech) < _MIN_SPEECH_OVERLAP:
+            compression_ratio = getattr(seg, "compression_ratio", 0.0) or 0.0
+            if compression_ratio > _MAX_COMPRESSION_RATIO or (end - start) > _NONSPEECH_MIN_DURATION_S:
+                return True
+    return False
 
 
 def _is_low_probability_cpp_segment(seg) -> bool:
@@ -612,26 +654,38 @@ def _transcribe_ct2(
     # Decode flags that suppress the classic large-model hallucination failures:
     #  * condition_on_previous_text=False — a hallucinated phrase no longer seeds
     #    the next window, killing runaway loops (あら×22, 何を×14).
-    #  * word_timestamps=True — unlocks hallucination_silence_threshold AND, more
-    #    importantly, gives per-word times that _split_segment_on_word_gaps uses to
-    #    re-cut a segment Whisper stretched across a removed silence (see
-    #    _MAX_WORD_GAP_S). Assumes the faster-whisper contract that word_timestamps
-    #    populates roughly-monotonic words with tight per-word start/end; a fw
-    #    upgrade that changes it degrades to the unsplit whole-segment fallback.
+    #  * word_timestamps=True — REQUIRED: it unlocks hallucination_silence_threshold
+    #    (faster-whisper only applies that gate when word timestamps are on) and
+    #    snaps each segment's start/end onto real word boundaries. Do NOT remove it
+    #    as "unused": nothing else references it, but dropping it silently disables
+    #    hallucination_silence_threshold and loosens every subtitle boundary.
     #  * hallucination_silence_threshold — skips long silent gaps; works even
     #    without VAD (the bundle path).
-    #  * vad_filter — Silero VAD is the definitive silence remover but needs
-    #    onnxruntime, which the bundle strips. It is auto-enabled when onnxruntime
-    #    is importable: from a pip [asr] install, or from the downloaded VAD pack
-    #    placed on sys.path by vad_available(). Off → the flags above still apply.
-    use_vad = vad_available(onnx_pack_root)
+    #  * temperature=0.0 — collapse Whisper's decode-temperature fallback ladder to
+    #    greedy, so the same media transcribes to the SAME text run-to-run (the app
+    #    re-mines media and de-dups on episode identity; a nondeterministic
+    #    transcript would defeat that). With fallback off, a high compression_ratio
+    #    no longer means "already retried and failed", so the compression drop is
+    #    gated on being out-of-speech (see _is_nonspeech_ct2_segment) — a looped but
+    #    real line inside a speech region is never deleted by compression alone.
+    #  * vad_filter=False — DELIBERATELY OFF. With it ON, faster-whisper removes
+    #    silence, transcribes the concatenated speech, then restores the timeline;
+    #    Whisper groups words across removed silences into one segment whose restored
+    #    start/end SPAN the gap (the multi-minute-subtitle bug) and mis-align single
+    #    moras (the single-character-fragment bug). Transcribing the real timeline
+    #    instead yields tight, coherent segments; non-speech hallucinations are then
+    #    removed by _is_nonspeech_ct2_segment against an independent Silero mask.
     transcribe_kwargs = {
         "language": "ja",
         "condition_on_previous_text": False,
         "word_timestamps": True,
         "hallucination_silence_threshold": 2.0,
-        "vad_filter": use_vad,
+        "temperature": 0.0,
+        "vad_filter": False,
     }
+    # Independent Silero speech mask for the non-speech drop (None when the VAD
+    # cannot run — then only the confidence gates apply). Computed once.
+    speech = _speech_mask(audio, onnx_pack_root)
     segments_iter, _info = model.transcribe(audio, **transcribe_kwargs)
 
     # ctranslate2 validates the CUDA compute-type / cuDNN kernels lazily — a model
@@ -654,12 +708,8 @@ def _transcribe_ct2(
     for seg in segments_iter:
         if cancel_event is not None and cancel_event.is_set():
             break
-        if not _is_junk_segment(seg):
-            # Re-cut on word gaps so a segment Whisper stretched across a silence
-            # becomes one tight subtitle per real utterance (kept byte-identical
-            # for the common no-gap case). cpp segments lack words and are never
-            # routed here; _split_segment_on_word_gaps falls back for them.
-            results.extend(_split_segment_on_word_gaps(seg))
+        if not _is_nonspeech_ct2_segment(seg, speech):
+            results.append((seg.start, seg.end, seg.text.strip()))
         if progress_cb is not None and duration_s > 0:
             progress_cb(min(seg.end / duration_s, 1.0))
 

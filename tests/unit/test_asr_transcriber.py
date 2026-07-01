@@ -22,11 +22,6 @@ pytestmark = pytest.mark.asr
 # ---------------------------------------------------------------------------
 
 
-def make_word(start: float, end: float, word: str) -> SimpleNamespace:
-    """Create a fake faster-whisper word namespace (``.start/.end/.word``)."""
-    return SimpleNamespace(start=start, end=end, word=word)
-
-
 def make_segment(
     start: float,
     end: float,
@@ -35,14 +30,11 @@ def make_segment(
     avg_logprob: float = 0.0,
     compression_ratio: float = 0.0,
     no_speech_prob: float = 0.0,
-    words: list | None = None,
 ) -> SimpleNamespace:
     """Create a fake faster-whisper segment namespace.
 
-    The confidence fields default to values that pass the junk filter (so
-    existing tests keep every segment); override them to exercise dropping.
-    ``words`` defaults to ``None`` (the word-less fallback path); pass a list of
-    :func:`make_word` results to exercise the gap-split.
+    The confidence fields default to values that pass every drop filter (so
+    existing tests keep each segment); override them to exercise dropping.
     """
     return SimpleNamespace(
         start=start,
@@ -51,7 +43,6 @@ def make_segment(
         avg_logprob=avg_logprob,
         compression_ratio=compression_ratio,
         no_speech_prob=no_speech_prob,
-        words=words,
     )
 
 
@@ -187,7 +178,7 @@ def test_transcribe_builds_model_with_correct_params(monkeypatch, tmp_path):
 
 
 def test_transcribe_calls_model_transcribe_with_correct_params(monkeypatch, tmp_path):
-    """transcribe() must pass the anti-hallucination decode flags + conditional VAD."""
+    """transcribe() must pass the anti-hallucination decode flags with VAD OFF + greedy."""
     import numpy as np
 
     call_kwargs: dict = {}
@@ -203,9 +194,8 @@ def test_transcribe_calls_model_transcribe_with_correct_params(monkeypatch, tmp_
             return iter([]), SimpleNamespace(language="ja")
 
     monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: CapturingModel)
-    # Pin VAD availability so the assertion is deterministic regardless of whether
-    # onnxruntime happens to be importable in the test environment.
-    monkeypatch.setattr(transcriber, "vad_available", lambda onnx_pack_root=None: True)
+    # Isolate from the real Silero mask (the drop-filter is tested separately).
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda audio, onnx_pack_root: None)
 
     transcriber.transcribe(
         audio,
@@ -217,14 +207,15 @@ def test_transcribe_calls_model_transcribe_with_correct_params(monkeypatch, tmp_
 
     assert call_kwargs["language"] == "ja"
     assert call_kwargs["condition_on_previous_text"] is False
-    assert call_kwargs["word_timestamps"] is True
+    assert call_kwargs["word_timestamps"] is True  # required: unlocks hallucination_silence_threshold
     assert call_kwargs["hallucination_silence_threshold"] == 2.0
-    assert call_kwargs["vad_filter"] is True
+    assert call_kwargs["temperature"] == 0.0  # deterministic re-mining
+    assert call_kwargs["vad_filter"] is False  # DELIBERATELY off (spans + fragments bug)
     assert call_kwargs["audio_is_same"] is True
 
 
-def test_transcribe_vad_filter_reflects_availability(monkeypatch, tmp_path):
-    """vad_filter is False when onnxruntime/VAD is unavailable."""
+def _capture_transcribe_kwargs(monkeypatch, tmp_path, *, vad_available: bool) -> dict:
+    """Run transcribe() with a capturing fake model; return the decode kwargs."""
     import numpy as np
 
     call_kwargs: dict = {}
@@ -238,18 +229,23 @@ def test_transcribe_vad_filter_reflects_availability(monkeypatch, tmp_path):
             return iter([]), SimpleNamespace(language="ja")
 
     monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: CapturingModel)
-    monkeypatch.setattr(transcriber, "vad_available", lambda onnx_pack_root=None: False)
-
-    audio = np.zeros(16000, dtype=np.float32)
+    monkeypatch.setattr(transcriber, "vad_available", lambda onnx_pack_root=None: vad_available)
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda audio, onnx_pack_root: None)
     transcriber.transcribe(
-        audio,
+        np.zeros(16000, dtype=np.float32),
         model_name="small",
         models_root=tmp_path,
         sample_rate=16000,
         duration_s=1.0,
     )
+    return call_kwargs
 
-    assert call_kwargs["vad_filter"] is False
+
+def test_transcribe_vad_filter_always_off(monkeypatch, tmp_path):
+    """vad_filter is False regardless of onnxruntime availability (the VAD is now a
+    post-decode speech mask, not faster-whisper's timeline-mangling vad_filter)."""
+    assert _capture_transcribe_kwargs(monkeypatch, tmp_path, vad_available=True)["vad_filter"] is False
+    assert _capture_transcribe_kwargs(monkeypatch, tmp_path, vad_available=False)["vad_filter"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -1330,171 +1326,154 @@ def test_cpp_segments_generator_yields_ct2_duck_type(monkeypatch, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Word-gap re-cut (_split_segment_on_word_gaps) — fixes silence-spanning segments
+# Non-speech drop (vad_filter-OFF CT2 path): speech mask + overlap + gates
 # ---------------------------------------------------------------------------
 
 
-def test_split_no_words_falls_back_to_whole_segment():
-    """seg.words is None → emit the segment unchanged (cpp / word_timestamps off)."""
-    seg = make_segment(0.0, 600.0, " hi ", words=None)
-    assert list(transcriber._split_segment_on_word_gaps(seg)) == [(0.0, 600.0, "hi")]
+def test_speech_overlap_math():
+    """Fraction of a segment span covered by the speech mask (seconds)."""
+    mask = [(1.0, 2.0), (5.0, 6.0)]
+    assert transcriber._speech_overlap(1.0, 2.0, mask) == pytest.approx(1.0)  # full
+    assert transcriber._speech_overlap(3.0, 4.0, mask) == 0.0  # none
+    assert transcriber._speech_overlap(1.5, 2.5, mask) == pytest.approx(0.5)  # half
+    assert transcriber._speech_overlap(2.0, 2.0, mask) == 0.0  # zero-width
+    # [0.5,5.5] covers all of (1,2)=1.0 and half of (5,6)=0.5 → 1.5 / 5.0.
+    assert transcriber._speech_overlap(0.5, 5.5, mask) == pytest.approx((1.0 + 0.5) / 5.0)
 
 
-def test_split_empty_words_list_falls_back_to_whole_segment():
-    """seg.words == [] (a reachable faster-whisper path) → whole-segment fallback.
+def test_speech_mask_converts_samples_to_seconds(monkeypatch):
+    """B1: get_speech_timestamps returns SAMPLE indices; _speech_mask must ÷ 16000."""
+    import faster_whisper.vad as fw_vad
 
-    Guards the sharp case: a LONG word-less segment must still re-emit its own
-    (start, end) rather than crash on words[0].
-    """
-    seg = make_segment(5.0, 650.0, " text ", words=[])
-    assert list(transcriber._split_segment_on_word_gaps(seg)) == [(5.0, 650.0, "text")]
+    monkeypatch.setattr(transcriber, "vad_available", lambda onnx_pack_root=None: True)
+    # 16000 samples = 1.0 s, 32000 = 2.0 s at the fixed 16 kHz rate.
+    monkeypatch.setattr(fw_vad, "get_speech_timestamps", lambda audio, **kw: [{"start": 16000, "end": 32000}])
 
-
-def test_split_cpp_duck_type_without_words_attr_falls_back():
-    """A segment object with no .words attribute at all → fallback, byte-identical."""
-    seg = SimpleNamespace(start=1.0, end=2.0, text=" a ")
-    assert list(transcriber._split_segment_on_word_gaps(seg)) == [(1.0, 2.0, "a")]
+    mask = transcriber._speech_mask(object(), None)
+    assert mask == [(1.0, 2.0)]
+    # A segment at 1.0-2.0 s must therefore read as fully in-speech.
+    assert transcriber._speech_overlap(1.0, 2.0, mask) == pytest.approx(1.0)
 
 
-def test_split_single_cluster_is_byte_identical_noop():
-    """All gaps < threshold → ONE tuple using authoritative seg.text, not a join.
-
-    The load-bearing regression guard: already-good output stays exactly as the
-    pre-split path produced it (seg.start, seg.end, seg.text.strip()). seg.text
-    is deliberately different from the word join to prove the source.
-    """
-    words = [make_word(10.0, 10.4, "そ"), make_word(10.4, 10.8, "う"), make_word(10.8, 11.2, "です")]
-    seg = make_segment(10.0, 11.2, " そうです ", words=words)
-    assert list(transcriber._split_segment_on_word_gaps(seg)) == [(10.0, 11.2, "そうです")]
+def test_speech_mask_none_when_vad_unavailable(monkeypatch):
+    monkeypatch.setattr(transcriber, "vad_available", lambda onnx_pack_root=None: False)
+    assert transcriber._speech_mask(object(), None) is None
 
 
-def test_split_two_clusters_on_large_gap():
-    """A segment straddling one silence → two tuples, each on its own word times."""
-    words = [
-        make_word(17.14, 17.5, "聞"),
-        make_word(662.24, 662.6, "いて"),
-        make_word(662.6, 662.76, "ます"),
-        make_word(662.76, 663.02, "よ"),
-    ]
-    seg = make_segment(17.14, 663.02, "聞いてますよ", words=words)
-    out = list(transcriber._split_segment_on_word_gaps(seg))
-    assert out == [(17.14, 17.5, "聞"), (662.24, 663.02, "いてますよ")]
+def test_speech_mask_none_on_vad_error(monkeypatch):
+    import faster_whisper.vad as fw_vad
+
+    monkeypatch.setattr(transcriber, "vad_available", lambda onnx_pack_root=None: True)
+
+    def _boom(audio, **kw):
+        raise RuntimeError("vad exploded")
+
+    monkeypatch.setattr(fw_vad, "get_speech_timestamps", _boom)
+    assert transcriber._speech_mask(object(), None) is None  # degrades, never raises
 
 
-def test_split_three_clusters_on_two_gaps():
-    """Two internal gaps → three clusters (exercises the middle loop iteration)."""
-    words = [
-        make_word(0.0, 0.4, "A"),
-        make_word(0.4, 0.8, "a"),
-        make_word(30.0, 30.4, "B"),
-        make_word(60.0, 60.4, "C"),
-        make_word(60.4, 60.8, "c"),
-    ]
-    seg = make_segment(0.0, 60.8, "AaBCc", words=words)
-    out = list(transcriber._split_segment_on_word_gaps(seg))
-    assert out == [(0.0, 0.8, "Aa"), (30.0, 30.4, "B"), (60.0, 60.8, "Cc")]
+_IN = [(10.0, 40.0)]  # a speech region for the drop tests
 
 
-def test_split_gap_exactly_threshold_does_not_split():
-    """gap == _MAX_WORD_GAP_S → kept together (strict ``>`` comparator)."""
-    g = transcriber._MAX_WORD_GAP_S
-    words = [make_word(0.0, 1.0, "x"), make_word(1.0 + g, 1.4 + g, "y")]
-    seg = make_segment(0.0, 1.4 + g, "xy", words=words)
-    out = list(transcriber._split_segment_on_word_gaps(seg))
-    assert out == [(0.0, 1.4 + g, "xy")]
+def test_nonspeech_real_in_mask_kept():
+    seg = make_segment(11.0, 13.0, "本物", no_speech_prob=0.15, compression_ratio=1.2)
+    assert transcriber._is_nonspeech_ct2_segment(seg, _IN) is False
 
 
-def test_split_gap_just_over_threshold_splits():
-    """gap == _MAX_WORD_GAP_S + epsilon → splits into two."""
-    g = transcriber._MAX_WORD_GAP_S
-    words = [make_word(0.0, 1.0, "x"), make_word(1.0 + g + 0.05, 1.4 + g + 0.05, "y")]
-    seg = make_segment(0.0, 1.4 + g + 0.05, "xy", words=words)
-    out = list(transcriber._split_segment_on_word_gaps(seg))
-    assert len(out) == 2
-    assert out[0] == (0.0, 1.0, "x")
-    assert out[1][2] == "y"
+def test_nonspeech_confident_prob_dropped_any_overlap():
+    """no_speech_prob>=0.60 drops even inside the mask (VAD-false-positive hallucination)."""
+    seg = make_segment(11.0, 13.0, "ご視聴", no_speech_prob=0.9, compression_ratio=0.8)
+    assert transcriber._is_nonspeech_ct2_segment(seg, _IN) is True
 
 
-def test_split_punctuation_join_preserves_all_chars():
-    """Joining a split half loses/doubles no characters."""
-    words = [make_word(0.0, 0.3, "聞"), make_word(50.0, 50.3, "いて"), make_word(50.3, 50.6, "ますよ")]
-    seg = make_segment(0.0, 50.6, "聞いてますよ", words=words)
-    out = list(transcriber._split_segment_on_word_gaps(seg))
-    assert out[0][2] == "聞"
-    assert out[1][2] == "いてますよ"
+def test_nonspeech_long_out_of_speech_dropped():
+    """A 7 s out-of-speech span (sung lyric) drops on duration, not nsp."""
+    seg = make_segment(100.0, 107.0, "sung", no_speech_prob=0.30, compression_ratio=0.9)
+    assert transcriber._is_nonspeech_ct2_segment(seg, _IN) is True
 
 
-def test_split_negative_width_cluster_clamped_and_dropped():
-    """A backward (end < start) cluster is clamped to end>=start and dropped if empty-width.
-
-    faster-whisper's max_duration boundary hack can pull a word end backward;
-    the splitter must not emit an inverted tuple or crash.
-    """
-    words = [
-        make_word(0.0, 0.4, "ok"),
-        # second cluster: single word whose end precedes its start (inverted)
-        make_word(40.0, 39.5, "bad"),
-    ]
-    seg = make_segment(0.0, 40.0, "okbad", words=words)
-    out = list(transcriber._split_segment_on_word_gaps(seg))
-    # first cluster emitted normally; inverted second cluster clamped to end>=start → dropped
-    assert (0.0, 0.4, "ok") in out
-    assert all(end >= start for (start, end, _t) in out)
+def test_nonspeech_repetition_out_of_speech_dropped():
+    seg = make_segment(100.0, 101.0, "ああ" * 50, no_speech_prob=0.30, compression_ratio=9.0)
+    assert transcriber._is_nonspeech_ct2_segment(seg, _IN) is True
 
 
-def test_split_overlapping_words_do_not_split():
-    """A negative inter-word gap (overlap) is never > threshold → no spurious split."""
-    words = [make_word(0.0, 1.0, "a"), make_word(0.8, 1.6, "b")]
-    seg = make_segment(0.0, 1.6, "ab", words=words)
-    out = list(transcriber._split_segment_on_word_gaps(seg))
-    assert out == [(0.0, 1.6, "ab")]
+def test_nonspeech_short_out_of_speech_low_prob_KEPT():
+    """CARDINAL RULE: a short out-of-speech line the VAD MISSED, with low nsp, is a
+    real interjection and must NEVER be dropped on the overlap verdict alone."""
+    seg = make_segment(100.0, 102.0, "し、し、さあ!", no_speech_prob=0.09, compression_ratio=1.3)
+    assert transcriber._is_nonspeech_ct2_segment(seg, _IN) is False
 
 
-def test_split_empty_text_cluster_dropped():
-    """A split half whose joined text is empty after strip is not emitted."""
-    words = [make_word(0.0, 0.4, "hi"), make_word(50.0, 50.4, "   ")]
-    seg = make_segment(0.0, 50.4, "hi", words=words)
-    out = list(transcriber._split_segment_on_word_gaps(seg))
-    assert out == [(0.0, 0.4, "hi")]
+def test_nonspeech_short_out_of_speech_midband_prob_KEPT():
+    """A short out-of-speech line at nsp 0.30 (below the 0.60 confident cut) is kept:
+    the overlap arm never fires on nsp alone (Path-1 closed)."""
+    seg = make_segment(100.0, 102.0, "quiet real?", no_speech_prob=0.30, compression_ratio=1.2)
+    assert transcriber._is_nonspeech_ct2_segment(seg, _IN) is False
 
 
-def test_transcribe_splits_silence_spanning_segment_end_to_end(monkeypatch, tmp_path):
-    """transcribe() re-cuts a stretched segment into two tuples (full CT2 path)."""
+def test_nonspeech_co_resident_window_same_prob(monkeypatch):
+    """B3: two segments sharing one window's (per-window) nsp — the in-mask one is
+    KEPT, the out-of-mask long one is DROPPED. Overlap geometry, not nsp, decides."""
+    real = make_segment(11.0, 13.0, "real", no_speech_prob=0.30, compression_ratio=1.1)
+    junk = make_segment(100.0, 108.0, "sung", no_speech_prob=0.30, compression_ratio=1.1)
+    assert transcriber._is_nonspeech_ct2_segment(real, _IN) is False
+    assert transcriber._is_nonspeech_ct2_segment(junk, _IN) is True
+
+
+def test_nonspeech_overlap_boundary():
+    """overlap exactly at the 0.05 threshold is NOT < threshold → not dropped by overlap arm."""
+    thr = transcriber._MIN_SPEECH_OVERLAP
+    # segment [0,10] (dur 10s > 4s corroborates); mask covers [0, 10*thr] → overlap == thr.
+    seg = make_segment(0.0, 10.0, "edge", no_speech_prob=0.30, compression_ratio=1.0)
+    mask_at = [(0.0, 10.0 * thr)]
+    assert transcriber._is_nonspeech_ct2_segment(seg, mask_at) is False  # overlap == thr, not < thr
+    mask_below = [(0.0, 10.0 * thr - 0.01)]
+    assert transcriber._is_nonspeech_ct2_segment(seg, mask_below) is True  # overlap < thr, dur corroborates
+
+
+def test_nonspeech_prob_boundary():
+    g = transcriber._CONFIDENT_NONSPEECH_PROB
+    assert transcriber._is_nonspeech_ct2_segment(make_segment(11.0, 12.0, "x", no_speech_prob=g), _IN) is True
+    below = make_segment(11.0, 12.0, "x", no_speech_prob=g - 0.01, compression_ratio=1.0)
+    assert transcriber._is_nonspeech_ct2_segment(below, _IN) is False
+
+
+def test_nonspeech_mask_none_skips_overlap_arm():
+    """No mask (onnxruntime absent) → the overlap arm is skipped; only the confidence
+    gates apply, so an out-of-speech sung line at nsp 0.30 LEAKS (documented degradation)."""
+    seg = make_segment(100.0, 107.0, "sung", no_speech_prob=0.30, compression_ratio=0.9)
+    assert transcriber._is_nonspeech_ct2_segment(seg, None) is False
+
+
+def test_nonspeech_reuses_junk_gates():
+    """compression_ratio / avg_logprob junk gates still fire (via _is_junk_segment)."""
+    assert transcriber._is_nonspeech_ct2_segment(make_segment(11.0, 12.0, "x", compression_ratio=3.0), _IN) is True
+    assert transcriber._is_nonspeech_ct2_segment(make_segment(11.0, 12.0, "x", avg_logprob=-2.0), _IN) is True
+
+
+def test_nonspeech_no_crash_on_fieldless_segment():
+    """getattr defaults keep the filter a no-op on a bare namespace (test fakes)."""
+    seg = SimpleNamespace(start=11.0, end=12.0, text="x")
+    assert transcriber._is_nonspeech_ct2_segment(seg, _IN) is False
+
+
+def test_transcribe_drops_nonspeech_end_to_end(monkeypatch, tmp_path):
+    """Full CT2 path: a long out-of-speech hallucination is dropped, real kept."""
     import numpy as np
 
-    words = [
-        make_word(17.14, 17.5, "聞"),
-        make_word(662.24, 663.02, "いてますよ"),
+    segs = [
+        make_segment(11.0, 13.0, " 本物 ", no_speech_prob=0.15, compression_ratio=1.2),
+        make_segment(100.0, 108.0, " sung ", no_speech_prob=0.30, compression_ratio=0.9),
     ]
-    segs = [make_segment(17.14, 663.02, "聞いてますよ", words=words)]
     monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: fake_model_cls_factory(segs))
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda audio, onnx_pack_root: [(10.0, 40.0)])
 
     result = transcriber.transcribe(
         np.zeros(16000, dtype=np.float32),
         model_name="small",
         models_root=tmp_path,
         sample_rate=16000,
-        duration_s=700.0,
+        duration_s=110.0,
         device="cpu",
     )
-    assert result == [(17.14, 17.5, "聞"), (662.24, 663.02, "いてますよ")]
-
-
-def test_transcribe_drops_junk_before_splitting(monkeypatch, tmp_path):
-    """A junk segment is dropped whole; its words are never split/emitted."""
-    import numpy as np
-
-    words = [make_word(0.0, 0.4, "あ"), make_word(60.0, 60.4, "あ")]
-    # compression_ratio above the junk threshold → whole segment dropped first.
-    segs = [make_segment(0.0, 60.4, "ああ", compression_ratio=3.0, words=words)]
-    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: fake_model_cls_factory(segs))
-
-    result = transcriber.transcribe(
-        np.zeros(16000, dtype=np.float32),
-        model_name="small",
-        models_root=tmp_path,
-        sample_rate=16000,
-        duration_s=70.0,
-        device="cpu",
-    )
-    assert result == []
+    assert result == [(11.0, 13.0, "本物")]
