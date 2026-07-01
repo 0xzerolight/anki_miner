@@ -37,6 +37,16 @@ DE_TS = TS_DIR / "anki_miner_de.ts"
 DE_QM = TS_DIR / "anki_miner_de.qm"
 PT_BR_TS = TS_DIR / "anki_miner_pt_br.ts"
 PT_BR_QM = TS_DIR / "anki_miner_pt_br.qm"
+ID_TS = TS_DIR / "anki_miner_id.ts"
+ID_QM = TS_DIR / "anki_miner_id.qm"
+VI_TS = TS_DIR / "anki_miner_vi.ts"
+VI_QM = TS_DIR / "anki_miner_vi.qm"
+ZH_CN_TS = TS_DIR / "anki_miner_zh_cn.ts"
+ZH_CN_QM = TS_DIR / "anki_miner_zh_cn.qm"
+ZH_TW_TS = TS_DIR / "anki_miner_zh_tw.ts"
+ZH_TW_QM = TS_DIR / "anki_miner_zh_tw.qm"
+IT_TS = TS_DIR / "anki_miner_it.ts"
+IT_QM = TS_DIR / "anki_miner_it.qm"
 
 # Every shipped catalog as (source .ts, compiled .qm). "en" is the source
 # language (all entries unfinished); the rest carry translations. pylupdate6
@@ -50,6 +60,11 @@ _CATALOGS: list[tuple[Path, Path]] = [
     (ES_TS, ES_QM),
     (DE_TS, DE_QM),
     (PT_BR_TS, PT_BR_QM),
+    (ID_TS, ID_QM),
+    (VI_TS, VI_QM),
+    (ZH_CN_TS, ZH_CN_QM),
+    (ZH_TW_TS, ZH_TW_QM),
+    (IT_TS, IT_QM),
 ]
 
 
