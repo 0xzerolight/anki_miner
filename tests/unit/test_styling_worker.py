@@ -92,6 +92,51 @@ def test_remove_mode_strips_block_and_writes():
 
 
 # ---------------------------------------------------------------------------
+# No-op skip: identical CSS is never written back
+# ---------------------------------------------------------------------------
+#
+# Reconciles fire on every launch/save; a verbatim rewrite bumps the note
+# type's mtime and forces AnkiWeb sync churn each time. Both no-op branches
+# must skip the write but still report success.
+
+
+def test_remove_mode_without_block_skips_write():
+    """Stripping CSS that has no managed block is a no-op — no write."""
+    service = MagicMock()
+    service.get_model_styling.return_value = ".card {}\n"
+    worker = _make_worker(service, mode="remove")
+    ok = _Capture()
+    worker.finished_ok.connect(ok)
+
+    worker.run()
+
+    service.update_model_styling.assert_not_called()
+    assert ok.calls == ["Removed Anki Miner styles from 'Japanese-1.0'."]
+
+
+def test_apply_mode_with_block_already_live_skips_write():
+    """Re-applying an identical block (launch reconcile) is a no-op — no write."""
+    service = MagicMock()
+    # Run once against bare CSS to learn exactly what the worker writes...
+    service.get_model_styling.return_value = ".card {}"
+    worker = _make_worker(service, mode="apply")
+    worker.run()
+    written_css, _ = service.update_model_styling.call_args.args
+    service.reset_mock()
+
+    # ...then feed that exact CSS back: the second apply must not write.
+    service.get_model_styling.return_value = written_css
+    worker2 = _make_worker(service, mode="apply")
+    ok = _Capture()
+    worker2.finished_ok.connect(ok)
+
+    worker2.run()
+
+    service.update_model_styling.assert_not_called()
+    assert ok.calls == ["Applied styles to 'Japanese-1.0'."]
+
+
+# ---------------------------------------------------------------------------
 # Read-before-write ordering
 # ---------------------------------------------------------------------------
 
