@@ -68,12 +68,17 @@ echo
 # CI runners have no GPU, so the device count is expected to be 0 (CPU fallback)
 # and a real GPU transcription pass can only be validated manually on hardware.
 #
-# Three cheap, GPU-free assertions, all fail-closed:
+# Four cheap, GPU-free assertions, all fail-closed (the (c) decode is GPU-free by
+# construction — it forces the CPU backend on a GPU-less runner):
 #   (a) the ggml-vulkan backend MODULE is present in the bundle (libggml-vulkan*
 #       on Linux / ggml-vulkan*.dll on Windows). Its presence is what makes
 #       _engine.whisper_cpp_available() report a GPU-capable build; if the wheel
 #       replacement or the hook collection silently failed, this lib is missing
 #       and the bundle would be a CPU-only build masquerading as Vulkan.
+#   (a2) the ggml-cpu backend MODULE is present (libggml-cpu* / ggml-cpu.dll). It
+#       is a separate GGML_BACKEND_DL module (NOT compiled into libggml-base);
+#       absent means whisper.cpp cannot fall back to CPU when no Vulkan device
+#       exists (DEFECT 2). File-presence only, no Model creation.
 #   (b) the frozen binary's hidden Vulkan probe (ANKI_MINER_ASR_VULKAN_PROBE=1,
 #       app.main routes it to _vulkan_probe before any Qt init) runs the cold
 #       ctypes load of ggml-vulkan in a child and prints the device count — a
@@ -88,7 +93,11 @@ echo
 #       load. Neither (a) the filesystem find nor (b) the ctypes probe imports
 #       pywhispercpp.model, so only (c) catches a transitive runtime dep missing
 #       from the bundle env (e.g. platformdirs not installed) or a frozen
-#       find_spec.origin failure. IMPORT/LOADABILITY ONLY — no GPU assertion.
+#       find_spec.origin failure. When BUNDLE_SMOKE_GGML_MODEL points at a ggml
+#       acoustic file, (c) ALSO constructs a Model + runs a minimal CPU-backend
+#       decode — the only assertion that catches DEFECT 1 (no ggml_backend_load_all
+#       -> SIGABRT) and DEFECT 2's runtime effect (no CPU fallback). With no model
+#       set, (c) is IMPORT/LOADABILITY ONLY — no GPU, no decode.
 #
 # Skipped on macOS (BOTH arm64 and Intel): macOS stays on the CT2/Metal path and
 # ships no Vulkan pywhispercpp wheel, so none of these assertions apply. Set
@@ -110,6 +119,23 @@ else
     WHISPERCPP_OK=0
   else
     echo "Found ggml-vulkan backend lib: $VK_LIB"
+  fi
+  # (a2) ggml-cpu backend MODULE present — the CPU-fallback backend, a separate
+  # GGML_BACKEND_DL module (NOT compiled into libggml-base). Required so
+  # whisper.cpp can fall back to CPU when no Vulkan device exists (e.g. GPU-less
+  # runners) and for non-offloaded ops. Absent = DEFECT 2 regressed (first Model
+  # creation aborts / cannot fall back). File-presence only; no Model creation.
+  CPU_LIB=""
+  for pat in 'libggml-cpu*.so*' 'ggml-cpu*.dll' 'libggml-cpu*.dylib'; do
+    CPU_LIB=$(find "$DIST" -type f -name "$pat" | head -1)
+    [ -n "$CPU_LIB" ] && break
+  done
+  if [ -z "$CPU_LIB" ]; then
+    echo "::error::ggml-cpu backend lib not found under $DIST — CPU fallback backend not bundled (DEFECT 2)"
+    find "$DIST" -name 'libggml*' -o -name 'ggml*.dll' 2>/dev/null | head -20 || true
+    WHISPERCPP_OK=0
+  else
+    echo "Found ggml-cpu backend lib: $CPU_LIB"
   fi
   # (b) frozen binary's Vulkan probe prints a single integer device count, exit 0.
   if PROBE_OUT=$(ANKI_MINER_ASR_VULKAN_PROBE=1 QT_QPA_PLATFORM=offscreen "$APP" 2>probe_err.log); then
@@ -143,13 +169,30 @@ else
     fi
   fi
   # (c) frozen binary imports pywhispercpp.model — the REAL runtime import chain
-  # (pulls platformdirs/requests/tqdm). Catches a transitive dep missing from the
-  # bundle env that (a)/(b) cannot. Import/loadability only; no GPU.
-  if ANKI_MINER_SMOKE=whispercpp QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_whispercpp.log \
-    && grep -q "BUNDLED_SMOKE_PASS" smoke_whispercpp.log; then
-    echo "pywhispercpp.model import resolved in the frozen bundle"
+  # (pulls platformdirs/requests/tqdm) — AND, when a ggml acoustic model is
+  # available via BUNDLE_SMOKE_GGML_MODEL, constructs a pywhispercpp Model +
+  # runs a minimal CPU-backend decode. The construct+decode is what catches
+  # DEFECT 1 (ggml_backend_load_all never called -> SIGABRT on first Model) and
+  # DEFECT 2 (libggml-cpu not bundled -> no CPU fallback when no Vulkan device).
+  # On a GPU-less runner the Model MUST fall back to the CPU backend and decode
+  # without aborting; a SIGABRT (even IncompatibleDriver) is a FAIL here — unlike
+  # the (b) probe, the decode has NO tolerated-abort case. With no model set the
+  # decode is skipped (import/loadability only, as before) so CI stays green when
+  # the release job ships no ggml model. The env array is empty (a safe no-op
+  # prefix) when no model is provided.
+  WHISPERCPP_MODEL_ENV=()
+  if [ -n "${BUNDLE_SMOKE_GGML_MODEL:-}" ] && [ -f "${BUNDLE_SMOKE_GGML_MODEL}" ]; then
+    echo "Using ggml model for construct+decode smoke: ${BUNDLE_SMOKE_GGML_MODEL}"
+    WHISPERCPP_MODEL_ENV=(ANKI_MINER_SMOKE_GGML_MODEL="${BUNDLE_SMOKE_GGML_MODEL}")
   else
-    echo "::error::pywhispercpp.model failed to import from the frozen bundle (transitive runtime dep missing, e.g. platformdirs, or find_spec.origin failed)"
+    echo "No BUNDLE_SMOKE_GGML_MODEL set — whispercpp smoke runs import-only (no decode)"
+  fi
+  if env "${WHISPERCPP_MODEL_ENV[@]}" ANKI_MINER_SMOKE=whispercpp QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_whispercpp.log \
+    && grep -q "BUNDLED_SMOKE_PASS" smoke_whispercpp.log; then
+    echo "pywhispercpp.model resolved in the frozen bundle (import/construct/decode)"
+  else
+    echo "::error::pywhispercpp.model failed in the frozen bundle (import/construct/decode) — DEFECT 1/2 regressed or a transitive dep is missing (e.g. platformdirs, or find_spec.origin failed)"
+    cat smoke_whispercpp.log >&2 || true
     WHISPERCPP_OK=0
   fi
   if [ "$WHISPERCPP_OK" = "1" ]; then

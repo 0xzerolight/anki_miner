@@ -498,9 +498,15 @@ jobs:
           BUILD_ROOT=$(dirname "$BUILD_LIBDIR")
           TAG=$(basename "$BUILD_LIBDIR" | sed 's/^lib\.//')
           BACKEND_BIN="$BUILD_ROOT/temp.$TAG/_pywhispercpp/bin"
-          mapfile -t BACKEND_LIBS < <(find "$BACKEND_BIN" -name 'libggml-vulkan*.so*' 2>/dev/null)
-          [ "${#BACKEND_LIBS[@]}" -gt 0 ] \
+          # Both GGML_BACKEND_DL modules build here: the Vulkan backend AND the
+          # CPU-fallback backend (libggml-cpu — a separate dlopen module, NOT
+          # compiled into libggml-base). Inject both; fail closed if either is
+          # missing so a CPU-less or Vulkan-less wheel never ships silently.
+          mapfile -t BACKEND_LIBS < <(find "$BACKEND_BIN" \( -name 'libggml-vulkan*.so*' -o -name 'libggml-cpu*.so*' \) 2>/dev/null)
+          find "$BACKEND_BIN" -name 'libggml-vulkan*.so*' -print -quit | grep -q . \
             || { echo "::error::libggml-vulkan*.so not built under $BACKEND_BIN"; exit 1; }
+          find "$BACKEND_BIN" -name 'libggml-cpu*.so*' -print -quit | grep -q . \
+            || { echo "::error::libggml-cpu*.so not built under $BACKEND_BIN (GGML_BACKEND_DL CPU module missing)"; exit 1; }
           # Inject the backend MODULE lib(s) into the raw wheel + regen RECORD.
           rm -rf _unpacked && wheel unpack -d _unpacked "$RAW"
           WHDIR=$(ls -d _unpacked/pywhispercpp-*/)
@@ -510,12 +516,14 @@ jobs:
           INJ=$(find dist-vulkan-inj -name 'pywhispercpp-*.whl' | head -1)
           # Repair: LD_LIBRARY_PATH=build lib dir lets auditwheel locate
           # libwhisper.so.1 (+libggml*); EXCLUDE the Vulkan loader (bind the user's
-          # driver loader at runtime) AND the injected backend module (repaired in
-          # place, NEEDED repointed into .libs, but not grafted as a dependency).
+          # driver loader at runtime) AND the injected backend modules (ggml-vulkan
+          # + ggml-cpu — each repaired in place, NEEDED repointed into .libs, kept
+          # top-level, but not grafted as a dependency: both are dlopen modules).
           LD_LIBRARY_PATH="$BUILD_LIBDIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
             auditwheel repair \
               --exclude libvulkan.so.1 --exclude libvulkan.so \
               --exclude libggml-vulkan.so \
+              --exclude libggml-cpu.so \
               -w dist-vulkan "$INJ"
           WHEEL=$(find dist-vulkan -name 'pywhispercpp-*.whl' | head -1)
           echo "VULKAN_WHEEL=$WHEEL" >> "$GITHUB_ENV"
@@ -529,6 +537,10 @@ jobs:
           fi
           if ! grep -Eiq 'libggml-vulkan' wheel_contents.txt; then
             echo "::error::ggml-vulkan backend missing from the wheel — Vulkan build did not produce the backend"
+            exit 1
+          fi
+          if ! grep -Eiq 'libggml-cpu' wheel_contents.txt; then
+            echo "::error::ggml-cpu backend missing from the wheel — CPU fallback backend not bundled"
             exit 1
           fi
 
@@ -599,17 +611,31 @@ jobs:
           Pop-Location
           $raw = Get-ChildItem dist-vulkan-raw -Filter 'pywhispercpp-*.whl' | Select-Object -First 1
           Write-Host "Raw (unrepaired) wheel: $($raw.FullName)"
-          # The build put whisper.dll / ggml*.dll / ggml-vulkan.dll in the CMake bin
-          # dir (NOT the wheel — setup.py does not bundle them), so point delvewheel
-          # there. It grafts the .pyd's DLL deps (whisper, ggml, ggml-base, ggml-cpu)
-          # automatically; --include force-grafts the ggml-vulkan MODULE backend,
-          # which is dlopened (not a static import) and would otherwise be missed.
-          # EXCLUDE the Vulkan loader so ggml-vulkan binds the user's driver loader.
+          # The build put whisper.dll / ggml*.dll / ggml-vulkan.dll / ggml-cpu.dll in
+          # the CMake bin dir (NOT the wheel — setup.py does not bundle them), so point
+          # delvewheel there. It grafts the .pyd's DLL deps (whisper, ggml, ggml-base)
+          # automatically. Under GGML_BACKEND_DL both ggml-vulkan.dll AND ggml-cpu.dll
+          # are dlopen MODULES, NOT import-table deps of _pywhispercpp.pyd, so
+          # delvewheel's dependency walk does NOT reach either — both are force-grafted
+          # with --include. EXCLUDE the Vulkan loader so ggml-vulkan binds the user's
+          # driver loader.
           $vulkanDll = Get-ChildItem C:\ws\build -Recurse -Filter ggml-vulkan.dll -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $vulkanDll) { Write-Error "ggml-vulkan.dll not found under C:\ws\build"; exit 1 }
+          $cpuDll = Get-ChildItem C:\ws\build -Recurse -Filter ggml-cpu.dll -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $cpuDll) { Write-Error "ggml-cpu.dll not found under C:\ws\build (GGML_BACKEND_DL CPU module missing)"; exit 1 }
           $bin = $vulkanDll.DirectoryName
           Write-Host "Backend DLL dir: $bin"
-          delvewheel repair --exclude vulkan-1.dll --include ggml-vulkan.dll `
+          # --no-mangle-all: keep every vendored DLL's ORIGINAL name. delvewheel
+          # normally hashes names (ggml.dll -> ggml-<hash>.dll) and patches importers'
+          # import tables, but it does NOT patch the imports of --include'd DLLs. The
+          # ggml-cpu/ggml-vulkan MODULES are dlopen'd (not in any import table) so their
+          # own imports of ggml-base.dll / ggml.dll would be left pointing at the now-
+          # mangled names -> the module fails to load at runtime -> whisper reports 0
+          # backends and GGML_ASSERT(device) aborts (caught by the strengthened smoke).
+          # Keeping the whole ggml chain unmangled makes every intra-ggml import resolve
+          # against one consistent set of DLLs in the frozen tree.
+          delvewheel repair --no-mangle-all --exclude vulkan-1.dll `
+            --include ggml-vulkan.dll --include ggml-cpu.dll `
             --add-path "$bin;$env:VULKAN_SDK\Bin" `
             -w dist-vulkan $raw.FullName
           $wheel = Get-ChildItem dist-vulkan -Filter 'pywhispercpp-*.whl' | Select-Object -First 1
@@ -623,6 +649,9 @@ jobs:
           }
           if (-not (Select-String -Path wheel_contents.txt -Pattern 'ggml-vulkan' -Quiet)) {
             Write-Error "ggml-vulkan backend missing from the wheel — Vulkan build did not produce the backend"; exit 1
+          }
+          if (-not (Select-String -Path wheel_contents.txt -Pattern 'ggml-cpu' -Quiet)) {
+            Write-Error "ggml-cpu backend missing from the wheel — CPU fallback backend not bundled"; exit 1
           }
 
       # Install the built Vulkan wheel into the SAME env PyInstaller bundles from,
@@ -660,6 +689,55 @@ jobs:
       - name: Build with PyInstaller
         run: pyinstaller anki_miner.spec
 
+      # Fetch a tiny ggml acoustic model so the whispercpp smoke can do a REAL
+      # construct+decode (the only assertion that catches DEFECT 1's SIGABRT and
+      # DEFECT 2's missing CPU backend). Vulkan jobs only (Linux + Windows);
+      # macOS has no Vulkan wheel and leaves BUNDLE_SMOKE_GGML_MODEL empty ->
+      # the smoke stays import-only. ggml-tiny.bin is ~74 MB (NOT the 1 GB
+      # large-v3); the 1 s silent decode is sub-second. Pinned to an immutable
+      # HF blob + SHA256-verified fail-closed (matches the alass/nfpm/ffmpeg
+      # pinned downloads). FAIL-OPEN with a LOUD warning if the download itself
+      # fails (HF outage must not red a release) — but if the file DID download,
+      # the sha256 MUST match or the step fails.
+      - name: Fetch ggml-tiny model for whispercpp decode smoke (Linux)
+        if: runner.os == 'Linux' && matrix.build_vulkan == '1'
+        shell: bash
+        run: |
+          set -uo pipefail
+          URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin"
+          SHA256="be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21"
+          DEST="${RUNNER_TEMP}/ggml-tiny.bin"
+          if ! curl -fL "$URL" -o "$DEST"; then
+            echo "::warning::ggml-tiny.bin download failed (HF outage?) — whispercpp smoke will run import-only, not decode. NOT failing the release."
+            rm -f "$DEST"
+            exit 0
+          fi
+          echo "${SHA256}  ${DEST}" | sha256sum -c - \
+            || { echo "::error::ggml-tiny.bin sha256 mismatch — refusing to smoke against a corrupt model"; exit 1; }
+          echo "SMOKE_GGML_MODEL_PATH=${DEST}" >> "$GITHUB_ENV"
+          echo "Fetched ggml-tiny.bin for decode smoke: ${DEST}"
+
+      - name: Fetch ggml-tiny model for whispercpp decode smoke (Windows)
+        if: runner.os == 'Windows' && matrix.build_vulkan == '1'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $url = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin"
+          $sha256 = "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21"
+          $dest = Join-Path $env:RUNNER_TEMP "ggml-tiny.bin"
+          curl.exe -fL $url -o $dest
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::warning::ggml-tiny.bin download failed (HF outage?) — whispercpp smoke will run import-only, not decode. NOT failing the release."
+            if (Test-Path $dest) { Remove-Item -Force $dest }
+            exit 0
+          }
+          $actual = (Get-FileHash $dest -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $sha256) {
+            Write-Error "ggml-tiny.bin sha256 mismatch (expected $sha256 got $actual) — refusing to smoke against a corrupt model"; exit 1
+          }
+          "SMOKE_GGML_MODEL_PATH=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Fetched ggml-tiny.bin for decode smoke: $dest"
+
       # Bundle-validation smokes, all three in one shared script so the local
       # preflight (scripts/release_preflight.sh) and CI assert identically and
       # cannot drift. The script runs, fail-closed:
@@ -691,6 +769,10 @@ jobs:
           BUNDLE_SMOKE_SKIP_ASR: ${{ matrix.skip_asr_smoke }}
           BUNDLE_SMOKE_FFMPEG_ENCODERS: ${{ matrix.ffmpeg_encoders }}
           BUNDLE_SMOKE_SKIP_WHISPERCPP: ${{ matrix.skip_whispercpp_smoke }}
+          # ggml-tiny.bin path from the fetch step (Vulkan jobs only) — enables the
+          # whispercpp construct+decode smoke (DEFECT 1/2 coverage). Empty on macOS
+          # and when the HF download fell open, so the smoke stays import-only there.
+          BUNDLE_SMOKE_GGML_MODEL: ${{ env.SMOKE_GGML_MODEL_PATH }}
         run: scripts/bundle_smoke.sh dist/AnkiMiner
 
       - name: Build Windows installer

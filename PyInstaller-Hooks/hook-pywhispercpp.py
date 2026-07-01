@@ -13,22 +13,27 @@ measured on-disk locations, rather than trusting collect_all for binaries.
 PyInstaller's import graph DOES reach ``_pywhispercpp`` (model.py/constants.py do
 ``import _pywhispercpp``) and follows its NEEDED entries to pull the directly
 linked ggml/whisper libs (libwhisper, libggml, libggml-base) that auditwheel/
-delvewheel vendored next to the extension.  But ``libggml-vulkan`` is a
-``GGML_BACKEND_DL`` *module*, ``dlopen``-ed at runtime via ``ggml_backend_load_all``
-— it is NOT a NEEDED entry of ``_pywhispercpp``/libggml/libwhisper, so static
-analysis never reaches it and it would be left out of the bundle.  It is collected
-EXPLICITLY here, from wherever the per-OS wheel-repair tool leaves it: on Linux at
-the site-packages ROOT (auditwheel ``--exclude`` keeps the injected module
-top-level — step 2c grafts it into ``pywhispercpp.libs``); on Windows as a root
-``ggml-vulkan.dll`` (delvewheel — step 2b sweeps it next to the extension).
+delvewheel vendored next to the extension.  But ``libggml-vulkan`` AND ``libggml-cpu``
+are ``GGML_BACKEND_DL`` *modules*, ``dlopen``-ed at runtime via
+``ggml_backend_load_all`` — neither is a NEEDED entry of
+``_pywhispercpp``/libggml/libwhisper, so static analysis never reaches them and they
+would be left out of the bundle.  Both are collected EXPLICITLY here, from wherever
+the per-OS wheel-repair tool leaves them: on Linux at the site-packages ROOT
+(auditwheel ``--exclude`` keeps the injected modules top-level — step 2c grafts them
+into ``pywhispercpp.libs``); on Windows as root ``ggml-vulkan.dll`` / ``ggml-cpu.dll``
+(delvewheel — step 2b's ``ggml*.dll`` sweep places them next to the extension).
 
 The shared libs carried into the frozen tree:
 
   - libwhisper           (the whisper.cpp core)
   - libggml              (ggml dispatcher)
-  - libggml-base         (ggml base ops; the CPU kernels are compiled in HERE under
-                          GGML_BACKEND_DL, so the current Linux/Windows Vulkan wheels
-                          ship no separate libggml-cpu / ggml-cpu.dll module)
+  - libggml-base         (ggml base ops — NOT the CPU kernels)
+  - libggml-cpu          (CPU backend — a SEPARATELY-shipped GGML_BACKEND_DL module,
+                          NOT compiled into libggml-base. Under GGML_BACKEND_DL the
+                          CPU kernels are their own dlopen module (libggml-cpu.so /
+                          ggml-cpu.dll) the ggml registry loads at runtime; it is the
+                          CPU-fallback backend and ships in EVERY pywhispercpp wheel.
+                          Collected explicitly alongside libggml-vulkan below.)
   - libggml-vulkan       (Vulkan backend — present ONLY in the Vulkan wheel; the
                           GGML_BACKEND_DL module the ggml registry dlopen-s at
                           runtime, skipped gracefully when the loader is absent)
@@ -113,27 +118,30 @@ if _spec is not None and _spec.origin is not None:
         if _dll.is_file():
             binaries.append((str(_dll), "."))
 
-    # (2c) Linux: the from-source Vulkan wheel drops the ggml-vulkan MODULE at the
-    #      site ROOT, not inside pywhispercpp.libs.  release.yml injects it into the
-    #      raw wheel pre-auditwheel and passes ``auditwheel repair --exclude
-    #      libggml-vulkan.so``, so auditwheel keeps the file top-level — but still
-    #      repairs it in place: its RUNPATH is repointed to
-    #      ``$ORIGIN/pywhispercpp.libs`` and its NEEDED to the hashed .libs sonames.
-    #      There is no ``.so`` counterpart to the Windows (2b) DLL sweep, so without
-    #      this step libggml-vulkan is never collected and the frozen bundle silently
-    #      ships a CPU-only tree.  Collect it INTO ``pywhispercpp.libs`` (NOT the site
-    #      root ``.``): that is the dir the LOADED libggml lives in (per the extension
-    #      RUNPATH), so ggml_backend_load_all discovers it adjacent to libggml at
-    #      runtime, its ``$ORIGIN``-relative NEEDED resolve against the sibling hashed
-    #      libs, and _engine._find_ggml_vulkan_lib()'s ``*.libs`` search finds it in
-    #      the frozen tree.  Dest ``.`` would pass the smoke but leave the module one
-    #      dir above where ggml scans — a silent no-Vulkan-on-real-GPU bug.  The guard
-    #      is a no-op if a future auditwheel ever vendors it into .libs itself (step 2
-    #      already collected it), preventing a duplicate same-dest collision.
+    # (2c) Linux: the from-source Vulkan wheel drops the ggml-vulkan AND ggml-cpu
+    #      MODULES at the site ROOT, not inside pywhispercpp.libs.  release.yml injects
+    #      both into the raw wheel pre-auditwheel and passes ``auditwheel repair
+    #      --exclude libggml-vulkan.so --exclude libggml-cpu.so``, so auditwheel keeps
+    #      the files top-level — but still repairs each in place: its RUNPATH is
+    #      repointed to ``$ORIGIN/pywhispercpp.libs`` and its NEEDED to the hashed
+    #      .libs sonames.  There is no ``.so`` counterpart to the Windows (2b) DLL
+    #      sweep, so without this step neither module is collected and the frozen
+    #      bundle silently ships a tree with no GGML_BACKEND_DL backends (both the
+    #      Vulkan backend AND the CPU-fallback backend missing).  Collect them INTO
+    #      ``pywhispercpp.libs`` (NOT the site root ``.``): that is the dir the LOADED
+    #      libggml lives in (per the extension RUNPATH), so ggml_backend_load_all
+    #      discovers both adjacent to libggml at runtime, their ``$ORIGIN``-relative
+    #      NEEDED resolve against the sibling hashed libs, and
+    #      _engine._find_ggml_vulkan_lib()'s ``*.libs`` search finds ggml-vulkan in
+    #      the frozen tree.  Dest ``.`` would pass the smoke but leave the modules one
+    #      dir above where ggml scans — a silent no-backend bug.  The guard is a no-op
+    #      if a future auditwheel ever vendors them into .libs itself (step 2 already
+    #      collected them), preventing a duplicate same-dest collision.
     _already_in_libs = {os.path.basename(s) for (s, d) in binaries if d == "pywhispercpp.libs"}
-    for _so in _site_root.glob("libggml-vulkan*.so*"):
-        if _so.is_file() and _so.name not in _already_in_libs:
-            binaries.append((str(_so), "pywhispercpp.libs"))
+    for _pat in ("libggml-vulkan*.so*", "libggml-cpu*.so*"):
+        for _so in _site_root.glob(_pat):
+            if _so.is_file() and _so.name not in _already_in_libs:
+                binaries.append((str(_so), "pywhispercpp.libs"))
 
 # Defensive: drop the Vulkan loader if a wheel ever vendors it. The loader is the
 # ICD-dispatching shim that must come from the system / GPU driver at runtime, so

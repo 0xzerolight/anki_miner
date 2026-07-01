@@ -116,30 +116,73 @@ def _run_asr_bundled_smoke() -> int:
 def _run_whispercpp_bundled_smoke() -> int:
     """Env-var-gated smoke path for PyInstaller whisper.cpp (Vulkan) validation.
 
-    Triggered by ANKI_MINER_SMOKE=whispercpp. IMPORT/LOADABILITY ONLY — it does
-    NOT touch the GPU. It exercises the REAL runtime import chain the Vulkan
-    engine takes: ``import pywhispercpp.model`` (via get_whisper_cpp_model_cls),
-    which transitively imports pywhispercpp.constants (-> platformdirs) and
-    pywhispercpp.utils (-> requests, tqdm) at module load. A missing transitive
-    runtime dep (e.g. platformdirs absent from the bundle env) raises here, so
-    this catches what the ctypes-only Vulkan probe and the filesystem ggml-vulkan
-    find cannot. No model download, no device-count assertion. Not a CLI surface —
-    the flag is hidden, env-var-only, and exits before any Qt init.
+    Triggered by ANKI_MINER_SMOKE=whispercpp. It exercises the REAL runtime import
+    chain the Vulkan engine takes: ``import pywhispercpp.model`` (via
+    get_whisper_cpp_model_cls), which transitively imports pywhispercpp.constants
+    (-> platformdirs) and pywhispercpp.utils (-> requests, tqdm) at module load.
+    A missing transitive runtime dep (e.g. platformdirs absent from the bundle
+    env) raises here, so this catches what the ctypes-only Vulkan probe and the
+    filesystem ggml-vulkan find cannot.
+
+    When ANKI_MINER_SMOKE_GGML_MODEL points at an existing ggml acoustic file this
+    ALSO registers the ggml DL backends (ensure_ggml_backends_loaded — the DEFECT-1
+    fix) and constructs a pywhispercpp Model + runs a minimal decode over a short
+    silent buffer. The Model is built with GPU DISABLED (context_params
+    use_gpu=False) so it never enumerates Vulkan devices — on the ICD-less CI
+    runner enumeration C-aborts. With GPU off the decode runs on the libggml-cpu
+    backend, which is exactly what catches DEFECT 1 (no ggml_backend_load_all ->
+    SIGABRT on first Model) and DEFECT 2 (libggml-cpu not bundled -> no CPU
+    backend). With no model path the decode is skipped (import/loadability only)
+    so CI stays green when the release job ships no ggml model.
+
+    Not a CLI surface — the flag is hidden, env-var-only, and exits before any
+    Qt init.
     """
     from anki_miner.services.asr import _engine
 
+    model_path = os.environ.get("ANKI_MINER_SMOKE_GGML_MODEL")
+    will_decode = bool(model_path and os.path.isfile(model_path))
     try:
         if not _engine.whisper_cpp_available():
             raise RuntimeError(
                 "pywhispercpp + ggml-vulkan not available from bundle " "(whisper_cpp_available() returned False)"
             )
+        # DEFECT-1 fix: register the ggml DL backends (cpu + vulkan) BEFORE importing
+        # pywhispercpp, so its extension binds THIS (populated) libggml instance rather
+        # than loading a second copy via its RUNPATH (else whisper reads an empty
+        # registry and GGML_ASSERT(device) aborts on Model()). Only needed when we go
+        # on to construct a Model.
+        if will_decode:
+            _engine.ensure_ggml_backends_loaded()
         # The real runtime import path: pulls pywhispercpp.model and its
         # platformdirs/requests/tqdm transitive imports.
-        _engine.get_whisper_cpp_model_cls()
+        model_cls = _engine.get_whisper_cpp_model_cls()
     except Exception as exc:
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
-    print("BUNDLED_SMOKE_PASS: whispercpp pywhispercpp.model import resolved")
+
+    if not will_decode:
+        # No acoustic model available: import/loadability only, as before.
+        print("BUNDLED_SMOKE_PASS: whispercpp pywhispercpp.model import resolved (decode skipped — no ggml model)")
+        return 0
+
+    assert model_path is not None  # narrowed by will_decode (env set + file exists)
+    try:
+        import numpy as np  # noqa: PLC0415  (numpy ships in the [asr] frozen env)
+
+        # GPU DISABLED: use_gpu=False keeps the Model on the CPU backend and skips
+        # Vulkan device enumeration, which C-aborts on the ICD-less CI runner. This
+        # forces the exact libggml-cpu path DEFECT 2 must bundle; the construct is
+        # the call that SIGABRTs today when DEFECT 1 regresses.
+        model = model_cls(model_path, context_params={"use_gpu": False})
+        # 1 s of silence @ 16 kHz float32 mono; language ja + no_context mirror the
+        # real cpp decode params. No VAD (no silero file needed in the smoke).
+        audio = np.zeros(16000, dtype=np.float32)
+        model.transcribe(audio, language="ja", no_context=True)
+    except Exception as exc:
+        print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
+    print("BUNDLED_SMOKE_PASS: whispercpp pywhispercpp.model construct+decode resolved (CPU backend)")
     return 0
 
 
