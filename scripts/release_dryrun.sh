@@ -142,22 +142,41 @@ echo "    no GitHub Release created (newest tag unchanged: '${REL_BEFORE:-<none>
 #     scoped to each built leg (gh run view --log interleaves all legs).
 LOG_DIR="$(mktemp -d)"
 trap 'rm -rf "$LOG_DIR"' EXIT
-gh run view "$RUN_ID" --log >"$LOG_DIR/full.log" 2>/dev/null || true
 
+# Assert the Vulkan smoke ACTUALLY EXECUTED (not skipped) on a built leg by reading
+# that leg's OWN job log. Read PER JOB (gh run view --job <id> --log), NOT the whole
+# run log: a job's log finalizes when that job ends, but the WHOLE-run log finalizes
+# only after the run object settles — seconds-to-minutes later and PER LEG — so a
+# whole-run fetch fired the instant `gh run watch` returns can come back missing a
+# slower leg and race the assertion into a FALSE "pass-marker absent" on a green
+# build. bundle_smoke.sh prints BUNDLED_WHISPERCPP_VULKAN_LOADABLE_PASS only on the
+# ran-and-passed path and "SKIP whispercpp-vulkan" only on skip; assert PASS present
+# + SKIP absent.
 assert_vulkan_ran() { # $1 = os label present in the leg's job name, e.g. ubuntu-22.04
   local os="$1"
-  # Only assert for a build leg that was actually part of this run's selection.
-  if ! echo "$JOBS_JSON" | jq -e --arg os "$os" \
-    'any(.jobs[]; (.name | startswith("build")) and (.name | contains($os)))' >/dev/null; then
+  # The build leg's job id, if that leg was part of this run's selection.
+  local job_id
+  job_id="$(echo "$JOBS_JSON" | jq -r --arg os "$os" \
+    'first(.jobs[] | select((.name | startswith("build")) and (.name | contains($os))) | .databaseId) // empty')"
+  if [ -z "$job_id" ]; then
     return 0 # leg not in this selection; nothing to assert
   fi
-  local leg
-  leg="$(grep -F "$os" "$LOG_DIR/full.log" || true)"
-  if echo "$leg" | grep -q "SKIP whispercpp-vulkan"; then
+  # Fetch THIS job's log, retrying until it carries the whispercpp terminal marker
+  # (PASS or SKIP) or a bounded timeout — rides out per-job log archival lag without
+  # racing a false "absent".
+  local jlog="$LOG_DIR/job-$job_id.log"
+  for _ in $(seq 1 30); do
+    gh run view "$RUN_ID" --job "$job_id" --log >"$jlog" 2>/dev/null || true
+    if grep -qE "BUNDLED_WHISPERCPP_VULKAN_LOADABLE_PASS|SKIP whispercpp-vulkan" "$jlog" 2>/dev/null; then
+      break
+    fi
+    sleep 6
+  done
+  if grep -q "SKIP whispercpp-vulkan" "$jlog" 2>/dev/null; then
     echo "ERROR: Vulkan smoke was SKIPPED on the '$os' leg (expected to execute)." >&2
     exit 1
   fi
-  if ! echo "$leg" | grep -q "BUNDLED_WHISPERCPP_VULKAN_LOADABLE_PASS"; then
+  if ! grep -q "BUNDLED_WHISPERCPP_VULKAN_LOADABLE_PASS" "$jlog" 2>/dev/null; then
     echo "ERROR: Vulkan smoke pass-marker absent for the '$os' leg (smoke may not have executed)." >&2
     exit 1
   fi
