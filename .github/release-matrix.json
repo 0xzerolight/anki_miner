@@ -1,0 +1,42 @@
+[
+  {
+    "platform": "linux",
+    "os": "ubuntu-22.04",
+    "artifact_name": "AnkiMiner-Linux-x86_64",
+    "install_target": ".[asr]",
+    "skip_asr_smoke": "",
+    "skip_whispercpp_smoke": "",
+    "ffmpeg_encoders": "",
+    "build_vulkan": "1"
+  },
+  {
+    "platform": "windows",
+    "os": "windows-latest",
+    "artifact_name": "AnkiMiner-Windows-x86_64",
+    "install_target": ".[asr]",
+    "skip_asr_smoke": "",
+    "skip_whispercpp_smoke": "",
+    "ffmpeg_encoders": "",
+    "build_vulkan": "1"
+  },
+  {
+    "platform": "macos-arm64",
+    "os": "macos-latest",
+    "artifact_name": "AnkiMiner-macOS-arm64",
+    "install_target": ".[asr]",
+    "skip_asr_smoke": "",
+    "skip_whispercpp_smoke": "1",
+    "ffmpeg_encoders": "",
+    "build_vulkan": ""
+  },
+  {
+    "platform": "macos-intel",
+    "os": "macos-15-intel",
+    "artifact_name": "AnkiMiner-macOS-x86_64",
+    "install_target": ".",
+    "skip_asr_smoke": "1",
+    "skip_whispercpp_smoke": "1",
+    "ffmpeg_encoders": "libmp3lame libopus libwebp libwebp_anim",
+    "build_vulkan": ""
+  }
+]
