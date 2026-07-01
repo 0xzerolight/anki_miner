@@ -13,6 +13,24 @@ from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettings
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
+@pytest.fixture(autouse=True)
+def _no_real_styling_writes(monkeypatch):
+    """Keep Save/Reset-triggered styling syncs off the real network.
+
+    ``_on_save_clicked`` unconditionally fires ``sync_styling`` → a real
+    ``StylingWorker`` against AnkiConnect. With Anki open locally, the Reset
+    test put the DEFAULT config in the panel (note type "Lapis",
+    ``manage_card_styling=False``) and its next Save STRIPPED the managed
+    glossary CSS from the user's real Lapis note type (see
+    tests/_network_tripwire.py). Kill the worker spawn at the controller seam;
+    ``TestCardStylingSyncWiring`` still asserts the sync *wiring* via its own
+    instance-level ``sync_styling`` mocks, which this stub does not touch.
+    """
+    from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
+
+    monkeypatch.setattr(AnkiProbeController, "_start_styling_write", lambda self, mode: None)
+
+
 @pytest.fixture
 def tab(test_config: AnkiMinerConfig, qtbot):
     """Instantiate a SettingsTab against the shared test config."""

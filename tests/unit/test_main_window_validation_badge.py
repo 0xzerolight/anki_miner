@@ -20,6 +20,7 @@ from anki_miner.models import ValidationIssue, ValidationResult
 def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
     """Replace config persistence, validation service, and auto-check calls."""
     from anki_miner.gui import main_window as mw_module
+    from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
 
     monkeypatch.setattr(mw_module.GUIConfigManager, "load_config", lambda: test_config)
     monkeypatch.setattr(mw_module.GUIConfigManager, "save_config", lambda cfg: None)
@@ -28,6 +29,14 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
     monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_maybe_offer_first_run_setup", lambda self: None)
+    # The badge tests call _on_validation_result(ok=True) WITHOUT mocking
+    # notify_anki_connected, so the styling reconcile reaches sync_styling → a
+    # real StylingWorker against live AnkiConnect (tests/_network_tripwire.py) —
+    # and the fixture teardown never joins it (deleteLater only), leaving an
+    # unjoined worker whose connect lands in a random later test's guard
+    # window. Kill the spawn at the controller seam; the reconcile-wiring
+    # tests mock notify_anki_connected itself and are unaffected.
+    monkeypatch.setattr(AnkiProbeController, "_start_styling_write", lambda self, mode: None)
 
 
 @pytest.fixture

@@ -153,6 +153,7 @@ markers = [
     "e2e: real-service end-to-end GUI tests (require running Anki; excluded by default)",
     "soak: multi-session soak tests",
     "asr: requires faster-whisper and a downloaded ASR model",
+    "network: genuinely needs real network; suppresses the socket tripwire (tests/_network_tripwire.py)",
 ]
 
 [tool.black]
