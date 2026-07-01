@@ -184,10 +184,6 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Card styling will sync once Anki is reachable.</source>
-        <translation>El estilo de las tarjetas se sincronizará en cuanto Anki esté disponible.</translation>
-    </message>
-    <message>
         <source>Cannot build AnkiService: %1</source>
         <translation>No se puede crear AnkiService: %1</translation>
     </message>
@@ -204,24 +200,12 @@
         <translation>No se pudo conectar con Anki — el estilo de las tarjetas se sincronizará cuando vuelva. (%1)</translation>
     </message>
     <message>
-        <source>Anki offline — card styling state will sync when reachable.</source>
-        <translation>Anki sin conexión — el estado del estilo de las tarjetas se sincronizará cuando esté disponible.</translation>
+        <source>Glossary styling is live in Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Off — Anki Miner isn't styling this note type.</source>
         <translation>Desactivado — Anki Miner no está aplicando estilo a este tipo de nota.</translation>
-    </message>
-    <message>
-        <source>Live in Anki: %1</source>
-        <translation>Activo en Anki: %1</translation>
-    </message>
-    <message>
-        <source>Anki offline — styling will be removed when reachable.</source>
-        <translation>Anki sin conexión — el estilo se eliminará cuando esté disponible.</translation>
-    </message>
-    <message>
-        <source>Anki offline — “%1” will apply when reachable.</source>
-        <translation>Anki sin conexión — «%1» se aplicará cuando esté disponible.</translation>
     </message>
     <message>
         <source>Add Deck</source>
@@ -518,16 +502,16 @@
         <translation>Estilo de tarjeta</translation>
     </message>
     <message>
-        <source>Choose how mined cards look, then click Save Settings — Anki Miner writes a managed CSS block into the note type via AnkiConnect (your own CSS is never touched). “Off” removes it; “Custom CSS only” applies just your CSS below.</source>
-        <translation>Elija cómo se ven las tarjetas minadas y luego haga clic en Guardar ajustes — Anki Miner escribe un bloque CSS gestionado en el tipo de nota a través de AnkiConnect (su propio CSS nunca se toca). «Desactivado» lo elimina; «Solo CSS personalizado» aplica únicamente su CSS de abajo.</translation>
+        <source>Anki Miner can style mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). It manages a single CSS block in the note type via AnkiConnect — your own card CSS is never touched. Turn it off if your note type already styles everything.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Card style preset:</source>
-        <translation>Preajuste de estilo de tarjeta:</translation>
+        <source>Style mined-card glossaries</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Applied to the note type on Save. Your custom CSS below is appended after the preset.</source>
-        <translation>Se aplica al tipo de nota al guardar. Su CSS personalizado de abajo se añade después del preajuste.</translation>
+        <source>Applied to the note type on Save. Your custom CSS below is appended after the built-in styles.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Custom CSS:</source>
@@ -1034,12 +1018,16 @@ Mezclar varios programas en una carpeta puede emparejar mal episodios que compar
         <translation>Iniciando el procesamiento de la cola...</translation>
     </message>
     <message>
-        <source>Processing series: %1</source>
-        <translation>Procesando serie: %1</translation>
+        <source>Starting batch processing...</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Completed: %1/%2</source>
         <translation>Completado: %1/%2</translation>
+    </message>
+    <message>
+        <source>Processing series: %1</source>
+        <translation>Procesando serie: %1</translation>
     </message>
     <message>
         <source>Created %1 cards</source>
@@ -4576,6 +4564,14 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>Descarga del modelo</translation>
     </message>
     <message>
+        <source>Required before subtitle generation can run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription add-ons (optional)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download GPU acceleration</source>
         <translation>Descargar aceleración por GPU</translation>
     </message>
@@ -4588,6 +4584,10 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>Aceleración por GPU</translation>
     </message>
     <message>
+        <source>Faster transcription on NVIDIA GPUs (CUDA).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download silence removal</source>
         <translation>Descargar eliminación de silencios</translation>
     </message>
@@ -4598,6 +4598,26 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
     <message>
         <source>Silence removal</source>
         <translation>Eliminación de silencios</translation>
+    </message>
+    <message>
+        <source>Skips music and silence so they are not transcribed as garbage.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download Vulkan model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Vulkan model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Alignment</source>
@@ -4628,6 +4648,10 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>Descarga de alass</translation>
     </message>
     <message>
+        <source>Needed for retiming unless alass is already on your PATH.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
         <translation>No se publica ningún binario de alass para macOS. Instálelo con Homebrew:</translation>
     </message>
@@ -4640,12 +4664,12 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>Copiar</translation>
     </message>
     <message>
-        <source>Downloaded</source>
-        <translation>Descargado</translation>
+        <source>Installed</source>
+        <translation>Instalado</translation>
     </message>
     <message>
-        <source>Not downloaded</source>
-        <translation>No descargado</translation>
+        <source>Not installed</source>
+        <translation>No instalado</translation>
     </message>
     <message>
         <source>GPU acceleration is not available on this platform.</source>
@@ -4654,14 +4678,6 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
     <message>
         <source>No NVIDIA GPU detected. GPU acceleration needs an NVIDIA card.</source>
         <translation>No se detectó ninguna GPU NVIDIA. La aceleración por GPU necesita una tarjeta NVIDIA.</translation>
-    </message>
-    <message>
-        <source>Installed</source>
-        <translation>Instalado</translation>
-    </message>
-    <message>
-        <source>Not installed</source>
-        <translation>No instalado</translation>
     </message>
     <message>
         <source>Silence removal is available.</source>
@@ -4774,6 +4790,20 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
     <message>
         <source>Download archive</source>
         <translation>Descargar archivo comprimido</translation>
+    </message>
+</context><context>
+    <name>VulkanModelDownloadWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation type="unfinished">%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading Vulkan model…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Vulkan model installed successfully.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>WordCurationDialog</name>
