@@ -28,6 +28,7 @@ _LANGUAGES: dict[str, str] = {
     "fr": "Français",
     "es": "Español",
     "de": "Deutsch",
+    "pt_br": "Português (Brasil)",
 }
 
 
