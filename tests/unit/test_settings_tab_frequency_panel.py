@@ -18,6 +18,16 @@ from anki_miner.config import AnkiMinerConfig, FreqEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
+@pytest.fixture(autouse=True)
+def _no_real_styling_writes(monkeypatch):
+    """Save fires sync_styling → a real StylingWorker against live AnkiConnect
+    when Anki is open locally (tests/_network_tripwire.py). Kill the worker
+    spawn at the controller seam."""
+    from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
+
+    monkeypatch.setattr(AnkiProbeController, "_start_styling_write", lambda self, mode: None)
+
+
 @pytest.fixture
 def tab(test_config: AnkiMinerConfig, qtbot):
     widget = SettingsTab(test_config)

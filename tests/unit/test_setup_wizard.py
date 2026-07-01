@@ -250,6 +250,12 @@ def test_notetype_page_auto_map_stages_fields(qtbot, wiz_config):
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
+    # Auto-Map fires _warn_missing_fields -> an off-thread check_field_names
+    # against real AnkiConnect (tests/_network_tripwire.py); stub it like the
+    # warn-label tests below do.
+    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
+        return_value=MagicMock(check_field_names=lambda: (True, ""))
+    )
     page.notetype_combo.setCurrentText("Lapis")
     page._on_fields_fetched(["Expression", "Sentence", "MainDefinition", "Picture", "SentenceAudio"])
     page._on_auto_map_clicked()

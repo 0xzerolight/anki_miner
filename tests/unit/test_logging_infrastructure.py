@@ -503,6 +503,13 @@ class TestValidationServiceExceptionLogging:
                 "anki_miner.services.validation_service.ensure_directory",
                 side_effect=PermissionError("no write"),
             ),
+            # validate_setup runs EVERY check — without this the AnkiConnect
+            # probe posts to the real 127.0.0.1:8765 (tests/_network_tripwire.py);
+            # the sibling per-check tests above already patch this same seam.
+            patch(
+                "anki_miner.services.validation_service.post_action",
+                side_effect=RuntimeError("unexpected"),
+            ),
             caplog.at_level(logging.ERROR, logger="anki_miner.services.validation_service"),
         ):
             result = svc.validate_setup()

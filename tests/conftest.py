@@ -15,6 +15,12 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import MediaData, TokenizedWord
 from anki_miner.presenters import NullPresenter, NullProgressCallback
 
+# Network counterpart of the home isolation above: record-and-block any real
+# TCP connect a test attempts. See tests/_network_tripwire.py for the full WHY
+# (unit tests with Anki open stripped the user's real note-type CSS via live
+# AnkiConnect) and the record-vs-raise design rationale.
+from tests import _network_tripwire as _net
+
 # Single source of truth for the home-isolation mechanism, shared with the
 # standalone (non-pytest) E2E runner which never sees this conftest. See
 # tests/_home_isolation.py for the full WHY (independent per-module
@@ -34,6 +40,64 @@ from tests._home_isolation import (
 # patching done by ``_isolate_anki_home`` can never fool the tripwire into
 # watching the throwaway tmp dir instead of the real one.
 _REAL_ANKI_HOME = Path(os.path.expanduser("~")) / ".anki_miner"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _install_network_tripwire():
+    """Wrap ``socket.connect``/``connect_ex`` for the whole session (per xdist worker).
+
+    Installed once and removed only at session end — unpatching between tests
+    would open exactly the window where a leaked worker QThread's connect slips
+    through unrecorded (the same between-test hazard ``_isolate_anki_home_session``
+    exists for).
+    """
+    _net.install()
+    yield
+    _net.uninstall()
+
+
+# Defined before every other function-scoped autouse fixture so it SETS UP
+# first and TEARS DOWN last — its teardown-assert therefore runs after
+# test-local fixtures join their workers (``w.wait(3000)``) and after
+# ``_drain_qt_deletes``' post-yield ``processEvents()``, catching connects
+# spawned in either window.
+@pytest.fixture(autouse=True)
+def _network_guard(request):
+    """Fail any test whose code (incl. worker threads) attempted a real TCP connect.
+
+    The socket wrapper (see ``tests/_network_tripwire.py``) BLOCKS the connect
+    and records it; this fixture provides the failure signal by asserting the
+    record list is empty at setup and teardown. The raise alone cannot fail a
+    test — production code swallows it inside ``except Exception`` on worker
+    QThreads (that is how live AnkiConnect writes went unnoticed and stripped
+    the user's real note-type CSS).
+
+    Setup-assert: a stray connect that landed between test windows (unjoined
+    worker, drain-delivered queued slot) fails the NEXT test — loud, if
+    possibly attributed to an innocent neighbour. Both asserts clear the list
+    so one leak can never cascade across the worker's remaining suite.
+
+    Tests marked ``youtube``/``e2e``/``network`` legitimately need the network:
+    the wrapper is suppressed for their duration instead (the wrapper thread
+    cannot see pytest markers, hence the module-global flag).
+    """
+    if any(request.node.get_closest_marker(m) for m in ("youtube", "e2e", "network")):
+        _net.SUPPRESSED = True
+        try:
+            yield
+        finally:
+            _net.SUPPRESSED = False
+        return
+
+    stray = _net.summarize_recorded(_net.RECORDED)
+    _net.RECORDED.clear()
+    if stray:
+        pytest.fail(f"stray network connect(s) landed between tests: {stray}", pytrace=False)
+    yield
+    leaked = _net.summarize_recorded(_net.RECORDED)
+    _net.RECORDED.clear()
+    if leaked:
+        pytest.fail(leaked, pytrace=False)
 
 
 @pytest.fixture(autouse=True)
