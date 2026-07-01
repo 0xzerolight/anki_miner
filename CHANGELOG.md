@@ -11,11 +11,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+
+### Removed
+
+
+## [2.7.6] - 2026-07-01
+
+### Added
+- **Vulkan GPU transcription.** Subtitles → Generate can run the local Whisper model through a whisper.cpp Vulkan backend, so AMD and Intel GPUs get hardware-accelerated transcription alongside NVIDIA CUDA. The device selector gains a "Vulkan" option, and Download Vulkan model fetches the ggml model plus the Silero voice-activity pack. Vulkan ships only in the downloadable app builds; the PyPI install stays CPU-only, and a Vulkan device falls back to auto (CUDA if present, otherwise CPU) when no Vulkan backend is available.
+
+### Changed
+- **Card glossary styling is now a single universal stylesheet.** A Yomitan-faithful stylesheet is always applied and combined with each dictionary's own scoped CSS and your custom CSS into one managed block, replacing the per-preset styling model. Styling syncs automatically on Save.
+- **Subtitles panel reorganized.** Transcription downloads are grouped under a "Transcription add-ons (optional)" section with a one-line description under each, and component status now reads a consistent "Installed."
+
+### Fixed
+- **Cleaner, silence-free transcripts.** ASR now runs Whisper without its VAD filter for tighter segment boundaries, then drops hallucinated non-speech lines with an independent Silero speech mask. Because it transcribes the real timeline instead of concatenated speech, a short line no longer stretches across minutes of silence.
+- **Windows GUI no longer freezes when closing the preview** (Win11, FFmpeg backend). The video sink is detached before the media player is destroyed, so teardown no longer hangs the GUI thread.
+- **alass shows "Installed" when bundled or on PATH**, instead of only when downloaded into the managed folder — the status probe now resolves the full binary chain (override, bundled, managed, and PATH).
+- **No more duplicate subtitle files on Windows.** Subtitle output resolves to the real on-disk filename, so Unicode-normalization (NFC/NFD) differences no longer spawn a second file.
 - **Animated screenshots fall back to WebP when the AVIF encoder is missing.** On a build whose ffmpeg lacks the SVT-AV1 (`libsvtav1`) encoder — notably the Intel macOS bundle — mining with AVIF animated screenshots configured dropped every word (the screenshot failed, so the word was excluded) and surfaced only an opaque "No media extracted successfully". The format is now resolved once per run: AVIF falls back to WebP (`libwebp_anim`, which the Intel bundle ships), and the Activity Log states the fallback explicitly. If no animated encoder is available at all, the log says so and points at the static-screenshot setting, instead of failing silently.
 - **Dictionary CSS scoper no longer drops rules when a comment contains `<`** (#89). A `<` inside a CSS comment in a rule's selector (e.g. Jitendex's forms-table rule, whose comment mentions `<div>`/`<li>`) tripped the `</style>`-breakout guard and silently dropped the whole rule, losing round form-priority icons (`clip-path`) and forms-table cell borders. The prelude is now checked comment-stripped (its comments are never emitted); the body check stays raw because the body is emitted verbatim, so a `</style>` in a body comment really would break out.
 - **AV1 preview "can't decode" notice no longer false-fires on capable hardware** (#82, follow-up). The first-frame nudge now seeks to the first subtitle and `pause()`s — the same path word-click already uses — so a hardware AV1 decoder actually presents a frame before the watchdog checks. The watchdog window was also widened to allow a slow cold hardware-decoder init. Mining is unaffected as always — screenshots come from FFmpeg, not the preview.
-
-### Removed
+- **Furigana keeps okurigana outside the ruby brackets** — 終[しま]い rather than 終い[しまい], so the reading sits over the kanji only.
+- **Quick Processing updates both progress bars** (Overall and Current Episode) during folder runs.
+- **Closing Settings while it is still querying Anki no longer raises an error.** The field, deck, and styling probe callbacks now no-op when the panel has already been destroyed.
+- **Glossary sense items no longer inherit your note type's list-bullet styling.**
 
 
 ## [2.7.5] - 2026-06-27
