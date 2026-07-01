@@ -122,9 +122,25 @@ else
       WHISPERCPP_OK=0
     fi
   else
-    echo "::error::Vulkan probe exited nonzero (frozen binary could not load the ASR/ggml chain)"
-    cat probe_err.log >&2 || true
-    WHISPERCPP_OK=0
+    # The probe ALWAYS exits 0 by contract (its Python try/except prints "0" on any
+    # error — an absent lib or a missing NEEDED dep raises OSError and is caught). The
+    # ONE uncatchable case is a C++ abort: on a runner with the Vulkan loader but NO
+    # ICD (no GPU driver — the norm for hosted CI), ggml-vulkan's get_device_count
+    # calls vk::createInstance, which THROWS vk::IncompatibleDriverError ->
+    # std::terminate -> SIGABRT, which ctypes/Python cannot catch, so the frozen
+    # binary exits nonzero. That abort still PROVES loadability: the binary loaded
+    # libggml-vulkan, resolved its symbols, and ran through libvulkan as far as
+    # createInstance. The shipping app tolerates this identically — vulkan_device_count()
+    # runs this probe as a subprocess and treats a nonzero exit as 0 devices (CPU
+    # fallback). So an IncompatibleDriver abort is the GPU-less loadability-proven
+    # outcome; any OTHER nonzero exit is a genuine load failure and still fails closed.
+    if grep -qiE 'IncompatibleDriver|VK_ERROR_INCOMPATIBLE_DRIVER' probe_err.log; then
+      echo "Vulkan probe aborted with IncompatibleDriver (loader present, no ICD on this GPU-less runner) — loadability proven, 0 devices"
+    else
+      echo "::error::Vulkan probe exited nonzero for a non-driver reason (frozen binary could not load the ASR/ggml chain)"
+      cat probe_err.log >&2 || true
+      WHISPERCPP_OK=0
+    fi
   fi
   # (c) frozen binary imports pywhispercpp.model — the REAL runtime import chain
   # (pulls platformdirs/requests/tqdm). Catches a transitive dep missing from the
