@@ -87,3 +87,11 @@
 # Vulkan loader (the user's GPU driver), not a copy frozen at build time.
 auditwheel==6.7.0
 delvewheel==1.13.0
+# `wheel` unpacks/repacks the raw wheel to inject the ggml-vulkan MODULE backend
+# lib, which ggml builds to CMAKE_BINARY_DIR/bin (NOT the wheel) and dlopens at
+# runtime, so neither auditwheel nor delvewheel grafts it on its own.
+wheel==0.47.0
+# `ninja` — Windows only: pin CMAKE_MAKE_PROGRAM to this real ninja.exe so the
+# vulkan-shaders-gen ExternalProject sub-build does not inherit pip's broken
+# console-script shim from the parent CMake cache (FTK1011 fix uses Ninja).
+ninja==1.13.0
