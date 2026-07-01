@@ -22,11 +22,14 @@ logger = logging.getLogger(__name__)
 class StylingWorker(CancellableWorker):
     """Reads the note type's current CSS, edits the managed block, writes it back.
 
-    Short-lived: one read + one write against AnkiConnect, off the main thread so
-    the settings UI stays responsive. ``mode="apply"`` assembles the universal
-    glossary stylesheet + every enabled dictionary's scoped ``styles.css`` +
-    the user's custom CSS into the managed block and inserts/replaces it;
-    ``mode="remove"`` strips the block for a full revert.
+    Short-lived: one read + at most one write against AnkiConnect, off the main
+    thread so the settings UI stays responsive. ``mode="apply"`` assembles the
+    universal glossary stylesheet + every enabled dictionary's scoped
+    ``styles.css`` + the user's custom CSS into the managed block and
+    inserts/replaces it; ``mode="remove"`` strips the block for a full revert.
+    When the edit is a no-op (desired state already live) the write is skipped
+    entirely — reconciles fire on every launch/save, and a verbatim rewrite
+    would bump the note type's mtime and force AnkiWeb sync churn each time.
 
     The per-dictionary CSS is collected here (``collect_dictionary_css`` does
     per-dict SQLite I/O) precisely because this runs off the GUI thread. The
@@ -70,7 +73,12 @@ class StylingWorker(CancellableWorker):
             if self.check_cancelled():
                 return
 
-            self.service.update_model_styling(new_css, self.note_type)
+            # Identical output means the desired state is already live (a
+            # re-apply on launch, or a strip when no block exists). Writing it
+            # anyway would bump the note type's mtime and force pointless
+            # AnkiWeb sync churn on every reconcile — skip straight to success.
+            if new_css != existing:
+                self.service.update_model_styling(new_css, self.note_type)
 
             if not self.check_cancelled():
                 self.finished_ok.emit(message)
