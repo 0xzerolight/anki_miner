@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 - **Context-dependent noun readings match the sentence.** A word whose kanji reads more than one way (方 かた/ほう, 中 なか/ちゅう) now keeps the reading it had in the mined sentence — on the card's ExpressionReading and ExpressionFurigana, in its pitch-accent lookup, and in its word audio — instead of a reading picked by re-analyzing the word on its own. Following Yomitan, the reading flows from the single in-context analysis rather than being recomputed in isolation. The first run after upgrading re-fetches word audio once for affected nouns (the old cache entries simply go unused); verb and adjective readings are unchanged.
+- **Accented verbs and adjectives are now categorized 起伏 (kifuku).** Following the standard NHK convention (as Yomitan does), any downstep on a verb or i-adjective is 起伏, not 中高/頭高/尾高 — so 食べる[2] is kifuku rather than the mislabeled 中高. Previously only a drop on the final mora counted, which almost never happens for verbs, leaving nearly every accented verb/adjective mislabeled. The PitchCategory card field changes accordingly for verbs and adjectives; re-mine to refresh existing cards.
 
 ### Removed
 

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # Small kana that combine with the previous kana (not separate mora)
 _COMBINING_KANA = set("ゃゅょぁぃぅぇぉゎャュョァィゥェォヮ")
 
-# MeCab pos1 markers that trigger kifuku classification when drop == mora_count.
+# MeCab pos1 markers that make any downstep 起伏 (kifuku), per the NHK convention.
 VERBAL_POS = {"動詞", "形容詞"}
 
 ROMAJI_CATEGORY = {
@@ -44,21 +44,30 @@ def count_mora(reading: str) -> int:
 def classify_pitch(position: int, mora_count: int, pos: str | None = None) -> str:
     """Classify pitch accent pattern into a category.
 
+    Ported from Yomitan getPitchCategory
+    (ext/js/language/ja/japanese.js, upstream commit e2ed450): after heiban,
+    any downstep on a verb/adjective is 起伏 (kifuku) — the standard NHK
+    convention — while 頭高/中高/尾高 apply to nominals only. MeCab pos1 is a
+    stronger POS signal than Yomitan's JMdict-wordclass inference, so the
+    verbal branch is one condition here.
+
     Args:
         position: Pitch drop position (0 = heiban).
         mora_count: Number of mora in the word.
-        pos: Optional MeCab pos1 marker. When the drop sits on the final mora,
-            verbal POS (動詞/形容詞) yields 起伏; otherwise 尾高.
+        pos: Optional MeCab pos1 marker. Any downstep on a verbal POS
+            (動詞/形容詞) yields 起伏; nominals follow the positional rules.
 
     Returns:
         Category string: 平板, 頭高, 中高, 尾高, or 起伏.
     """
     if position == 0:
         return "平板"
+    if pos in VERBAL_POS and position > 0:
+        return "起伏"
     if position == 1:
         return "頭高"
     if position == mora_count:
-        return "起伏" if pos in VERBAL_POS else "尾高"
+        return "尾高"
     return "中高"
 
 

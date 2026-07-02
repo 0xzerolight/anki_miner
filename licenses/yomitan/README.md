@@ -20,6 +20,7 @@ the combined work carries the same license.
 | `anki_miner/utils/furigana_distribute.py` | `ext/js/language/ja/japanese.js` (`distributeFurigana` family) |
 | `anki_miner/services/ja_normalize.py` | `ext/js/language/ja/japanese.js` (`convertHalfWidthKanaToFullWidth`, `HALFWIDTH_KATAKANA_MAPPING`, `normalizeCJKCompatibilityCharacters`), `ext/js/language/CJK-util.js` (`normalizeRadicals`, `CJK_IDEOGRAPH_RANGES`, `isCodePointInRanges`) |
 | `tests/unit/test_ja_normalize.py` (fixture slices) | `test/japanese-util.test.js` |
+| `anki_miner/services/pitch_accent_service.py` (`classify_pitch`) | `ext/js/language/ja/japanese.js` (`getPitchCategory`) |
 | `anki_miner/services/_ankiconnect.py` (`_expect_list`) | `ext/js/comm/anki-connect.js` (`_normalizeArray`) |
 | `tests/unit/data/japanese_transforms_cases.py` (case table) | `test/language/japanese-transforms.test.js` |
 | `tests/unit/test_japanese_transforms_cases.py::has_term_reasons` | `test/fixtures/language-transformer-test.js` (`hasTermReasons`) |
