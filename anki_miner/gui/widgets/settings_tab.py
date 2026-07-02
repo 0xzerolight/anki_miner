@@ -23,12 +23,14 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry, FreqEntry
+from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
 from anki_miner.gui.controllers.audio_pack_import_flow import AudioPackImportFlow
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
 from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
 from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
     AnkiSettingsPanel,
@@ -43,6 +45,7 @@ from anki_miner.gui.widgets.panels import (
 )
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
+from anki_miner.services.expression_audio_fetcher import purge_miss_markers
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent import import_yomitan_pitch_zip
 from anki_miner.utils.i18n import tr_format
@@ -307,6 +310,7 @@ class SettingsTab(QWidget):
         # the same chain twice. pack_removed stays unconnected until a
         # consumer needs the removal-specific notification.
         self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
+        self.audio_panel.retry_missing_audio_requested.connect(self._on_retry_missing_audio)
 
         # Frequency panel signals — wire Add/Reimport to the import flow.
         self.frequency_panel.add_source_requested.connect(self._frequency_import_flow.add_source)
@@ -900,6 +904,44 @@ class SettingsTab(QWidget):
         new_config = replace(self.config, expression_audio_chain=new_chain)
         self.config = new_config
         self.config_changed.emit(new_config)
+
+    def _on_retry_missing_audio(self) -> None:
+        """Clear JPod101 ``.miss`` markers so absent words are re-tried next run.
+
+        Replaces the old folklore of deleting the ``audio_cache`` dir by hand.
+        The unlink sweep runs off the GUI thread (run_off_thread convention);
+        the removed count is confirmed in a dialog on completion.
+        """
+        cache_dir = ANKI_MINER_HOME / "audio_cache" / "jpod101"
+        self.audio_panel.set_retry_missing_enabled(False)
+        run_off_thread(
+            self,
+            lambda: purge_miss_markers(cache_dir),
+            self._on_retry_missing_audio_done,
+            self._on_retry_missing_audio_error,
+        )
+
+    def _on_retry_missing_audio_done(self, removed: object) -> None:
+        """Re-enable the button and report how many markers were cleared."""
+        self.audio_panel.set_retry_missing_enabled(True)
+        count = removed if isinstance(removed, int) else 0
+        QMessageBox.information(
+            self,
+            self.tr("Retry missing expression audio"),
+            tr_format(
+                self.tr("Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run."),
+                count,
+            ),
+        )
+
+    def _on_retry_missing_audio_error(self, msg: str) -> None:
+        """Re-enable the button and surface an unexpected sweep failure."""
+        self.audio_panel.set_retry_missing_enabled(True)
+        QMessageBox.warning(
+            self,
+            self.tr("Retry missing expression audio"),
+            tr_format(self.tr("Could not clear the markers: %1"), msg),
+        )
 
     def _persist_frequency_chain_change(self, new_chain: tuple[FreqEntry, ...]) -> None:
         """Save a frequency chain mutation to disk and notify listeners.
