@@ -152,6 +152,16 @@ class AnkiMinerConfig:
     # occurrence. Requires at least one enabled indexed offline dictionary;
     # without one, mining behavior is unchanged.
     compound_matching: bool = True
+    # Kana-only words via dictionary attestation (Yomitan wordhood-by-attestation,
+    # translator.js:470-516). The script gate rejects every pure-hiragana content
+    # word (ごまかす, しゃべる, うなずく, すげぇ); when this is on, such a word is
+    # mined iff a dictionary attests its lemma/orthBase as an exact headword — the
+    # same offline probe (DefinitionService.offline_terms_exist) compound matching
+    # uses. Requires at least one enabled indexed offline dictionary; without one
+    # parsing is byte-identical regardless of this flag. count_lemmas is made
+    # probe-aware in lockstep so Deck Builder previews never over-promise (T-38).
+    # Off by default pending a release of soak; consider flipping thereafter.
+    mine_kana_only_words: bool = False
     # Enabled name-wordset IDs (Issue #59). Each ID maps to a bundled
     # plain-text proper-noun list under resources/wordsets/<id>.txt.
     # Words on any enabled set are dropped from mining unless whitelisted.
