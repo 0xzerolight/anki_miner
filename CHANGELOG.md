@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Whole words and expressions instead of fragments (dictionary-attested compound matching).** 走り出した now mines one card 走り出す instead of 走り; 応急処置 stays one card instead of splitting into 応急 + 処置. Following Yomitan's approach — the dictionary defines word boundaries — the parser now merges adjacent tokens whenever the joined form (deinflected via UniDic orthBase) is a headword in an installed offline dictionary, longest match first. This includes expressions across particles: 気がした mines 気がする, and an attested collocation like 結論を出す replaces its component cards for that occurrence (by design — the longest dictionary-attested match wins; components stay mineable where they appear alone). Requires at least one enabled offline dictionary; without one, mining is unchanged. Toggle: `compound_matching` in the config file (default on). Words previously marked known as fragments may resurface as unknown compounds — that is the fix taking effect.
 
 ### Changed
 
