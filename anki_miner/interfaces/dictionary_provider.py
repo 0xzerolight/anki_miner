@@ -61,3 +61,12 @@ class DictionaryProvider(Protocol):
     #         """Batch variant of ``lookup``. The result for every word MUST be
     #         byte-identical to ``lookup(word)``. Returns a dict keyed by every
     #         requested word; a miss maps to None."""
+    #
+    # NOTE: ``has_terms`` is a second OPTIONAL method (compound matching). Only
+    # offline providers with an exact-headword index implement it; consumers
+    # probe via ``getattr`` and treat absence as "attests nothing" (no per-word
+    # fallback — see DefinitionService.offline_terms_exist). Contract:
+    #
+    #     def has_terms(self, terms: list[str]) -> set[str]:
+    #         """Return the subset of ``terms`` that exist as exact headwords
+    #         (term column, NOT reading). Never raises; degrade to empty set."""

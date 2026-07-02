@@ -269,6 +269,48 @@ class DefinitionService:
 
         return found
 
+    def offline_terms_exist(self, terms: list[str]) -> set[str]:
+        """Union of exact-headword existence across available OFFLINE providers.
+
+        Compound-matching probe: "does any enabled offline dictionary attest
+        this string as a headword". Walks the chain like
+        ``has_offline_definitions`` (offline-only, never raises), removing
+        found terms before consulting the next provider — union-with-early-exit,
+        equivalent to a full union for existence but cheaper.
+
+        Per-word fallback is intentionally omitted (unlike the batch walk in
+        ``has_offline_definitions``): every offline provider that can attest
+        headwords implements ``has_terms``; the ``lookup`` fallback there exists
+        for providers lacking ``lookup_many``, which does not apply here. A
+        provider without ``has_terms`` simply attests nothing.
+        """
+        self.ensure_loaded()
+
+        remaining = list(dict.fromkeys(terms))
+        found: set[str] = set()
+
+        for provider in self._providers:
+            if not remaining:
+                break
+            if provider.is_online or not provider.is_available():
+                continue
+            has_terms_fn = getattr(provider, "has_terms", None)
+            if not callable(has_terms_fn):
+                continue
+            try:
+                hits = has_terms_fn(remaining)
+            except Exception as e:
+                logger.warning(
+                    "Provider '%s' raised during has_terms; skipping: %s",
+                    provider.name,
+                    e,
+                )
+                continue
+            found.update(hits)
+            remaining = [t for t in remaining if t not in hits]
+
+        return found
+
     def get_glossary(self, word: str) -> str | None:
         """Collect hits from all enabled providers and concatenate as one HTML blob.
 

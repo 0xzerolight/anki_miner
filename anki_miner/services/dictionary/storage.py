@@ -315,6 +315,34 @@ def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tu
     return result
 
 
+# terms_exist binds each term ONCE (single-column IN), so the chunk can be
+# larger than lookup_many's _BIND_CHUNK while staying under sqlite's default
+# SQLITE_MAX_VARIABLE_NUMBER of 999.
+_EXIST_CHUNK = 900
+
+
+def terms_exist(conn: sqlite3.Connection, terms: list[str]) -> set[str]:
+    """Return the subset of ``terms`` present as an exact ``entries.term`` match.
+
+    Reading-column matches deliberately do NOT count: the compound matcher
+    asks "is this string a dictionary headword", not "can this kana string
+    be looked up somehow". Matching on reading would attest every kana
+    sequence that happens to be some entry's reading and cause spurious
+    token merges.
+    """
+    unique = list(dict.fromkeys(terms))
+    found: set[str] = set()
+    for start in range(0, len(unique), _EXIST_CHUNK):
+        chunk = unique[start : start + _EXIST_CHUNK]
+        placeholders = ", ".join("?" for _ in chunk)
+        rows = conn.execute(
+            f"SELECT DISTINCT term FROM entries WHERE term IN ({placeholders})",
+            chunk,
+        ).fetchall()
+        found.update(row[0] for row in rows)
+    return found
+
+
 # Sort key mirroring SQLite "ORDER BY sequence": NULL sorts before any value.
 # (is_not_null, value) where NULL -> (0, 0) sorts ahead of any integer.
 def _seq_key(sequence: int | None) -> tuple[int, int]:

@@ -20,6 +20,9 @@ from anki_miner.services.dictionary.storage import (
 from anki_miner.services.dictionary.storage import (
     lookup_many as storage_lookup_many,
 )
+from anki_miner.services.dictionary.storage import (
+    terms_exist as storage_terms_exist,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +140,26 @@ class IndexedDictProvider:
         # storage_lookup_many keys by unique requested words; re-expand to every
         # requested word (preserving duplicates) for caller convenience.
         return {w: self._render(rows_by_word.get(w, [])) for w in words}
+
+    def has_terms(self, terms: list[str]) -> set[str]:
+        """Batch exact-term existence probe (compound matching).
+
+        Returns the subset of ``terms`` that exist as headwords (``entries.term``)
+        in this dictionary. Reading-only matches do not count. Never raises:
+        unavailable or corrupt index degrades to an empty set (all-miss).
+        """
+        if self._conn is None:
+            return set()
+        try:
+            return storage_terms_exist(self._conn, terms)
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Dictionary '%s' (%s) raised DatabaseError during has_terms; treating as all-miss: %s",
+                self.dict_id,
+                self._db_path,
+                e,
+            )
+            return set()
 
     def _render(self, rows: list[tuple[str, str]]) -> str | None:
         """Assemble Lapis-shape HTML from (content, tags) rows. Returns None
