@@ -237,6 +237,117 @@ class Deinflector:
         return results
 
 
+# Window-stop bounds for find_highlight_end (candidate-COUNT bounds only;
+# the deinflection validator is the correctness guarantee).
+_EXTENDABLE_POS1 = ("動詞", "形容詞")
+_INFLECTIONAL_TAIL_POS1 = frozenset({"助動詞", "助詞", "動詞", "形容詞"})
+_WINDOW_CAP_CHARS = 13  # させられませんでした-class stacks are 10 kana; margin for …なかったです tails
+
+
+def _is_pure_hiragana(text: str) -> bool:
+    return bool(text) and all("ぁ" <= ch <= "ゟ" for ch in text)
+
+
+def _str_or_none(value: object) -> str | None:
+    # isinstance guard, NOT truthiness/getattr-default: MagicMock tokens
+    # auto-vivify truthy attribute values.
+    return value if isinstance(value, str) and value else None
+
+
+def find_highlight_end(
+    text: str,
+    raw_tokens: list,
+    tok_start: int,
+    tok_end: int,
+    token: Any,
+) -> int:
+    """End offset of the full inflected form starting at ``tok_start``.
+
+    Yomitan's ``originalTextLength`` mechanic adapted to a known lemma:
+    extend the mined 動詞/形容詞 token's span over following raw tokens and
+    accept the LONGEST candidate substring whose deinflection chain reaches
+    the token's ``orthBase``/lemma under the cType condition mask. No valid
+    chain (or any malformed input) ⇒ ``tok_end`` — today's stem-only span.
+
+    Window stops (bounds only, never the correctness guarantee): a
+    following raw token must be adjacent in ``text``, pure hiragana,
+    inflectional POS (助動詞/助詞/動詞/形容詞 — a 名詞 like こと stops the
+    window), and within ``tok_end + 13`` chars.
+    """
+    feature = getattr(token, "feature", None)
+    if getattr(feature, "pos1", None) not in _EXTENDABLE_POS1:
+        return tok_end
+    if not (0 <= tok_start < tok_end <= len(text)):
+        return tok_end
+
+    targets = set()
+    orth_base = _str_or_none(getattr(feature, "orthBase", None))
+    if orth_base is not None:
+        targets.add(orth_base)
+    lemma = _str_or_none(_extract_lemma_safe(token))
+    if lemma is not None:
+        targets.add(lemma)
+    if not targets:
+        return tok_end
+
+    deinflector = get_japanese_deinflector()
+    mask = deinflector.mask_for_ctype(getattr(feature, "cType", None))
+
+    candidate_ends = _extension_candidate_ends(text, raw_tokens, tok_end)
+    for candidate_end in reversed(candidate_ends):  # longest-first
+        candidate = text[tok_start:candidate_end]
+        for result in deinflector.transform(candidate):
+            if result.text in targets and conditions_match_mask(result.conditions, mask):
+                return candidate_end
+    return tok_end
+
+
+def conditions_match_mask(result_conditions: int, target_mask: int) -> bool:
+    """D2 acceptance gate: unknown cType (mask 0) accepts any chain; a known
+    cType requires a result carrying that condition bit. No standalone
+    ``result_conditions == 0`` acceptor — it would defeat the gate exactly
+    in the terminal case."""
+    return target_mask == 0 or (result_conditions & target_mask) != 0
+
+
+def _extract_lemma_safe(token: Any) -> object:
+    from anki_miner.services.morphology import extract_lemma
+
+    try:
+        return extract_lemma(token)
+    except Exception:  # noqa: BLE001 — mock/duck-typed tokens degrade to no-extension
+        return None
+
+
+def _extension_candidate_ends(text: str, raw_tokens: list, tok_end: int) -> list[int]:
+    """Ascending end offsets of contiguous inflectional-tail tokens after ``tok_end``."""
+    from anki_miner.services.morphology import iter_token_spans
+
+    ends: list[int] = []
+    prev_end = tok_end
+    try:
+        for tail_token, start, end in iter_token_spans(text, raw_tokens):
+            if end <= tok_end:
+                continue
+            if start != prev_end:
+                if start > prev_end:
+                    break  # whitespace gap / non-adjacent tail
+                continue  # token overlapping the mined span; skip
+            if end - tok_end > _WINDOW_CAP_CHARS:
+                break
+            surface = text[start:end]
+            if not _is_pure_hiragana(surface):
+                break
+            tail_feature = getattr(tail_token, "feature", None)
+            if getattr(tail_feature, "pos1", None) not in _INFLECTIONAL_TAIL_POS1:
+                break
+            ends.append(end)
+            prev_end = end
+    except (AttributeError, TypeError):
+        return []  # mock/duck-typed token stream: no extension
+    return ends
+
+
 @lru_cache(maxsize=1)
 def get_japanese_deinflector() -> Deinflector:
     """Process-wide ``Deinflector`` over the ported Yomitan Japanese table.

@@ -1,5 +1,6 @@
 """Tests for the Yomitan deinflection engine port (services/deinflection.py)."""
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -9,6 +10,7 @@ from anki_miner.services.deinflection import (
     Deinflector,
     build_condition_flags,
     conditions_match,
+    find_highlight_end,
     get_japanese_deinflector,
 )
 
@@ -383,3 +385,136 @@ class TestJapaneseChainVectors:
         deinflector = get_japanese_deinflector()
         results = deinflector.transform("食べさせられたくなかった")
         assert len(results) < _MAX_RESULTS / 4
+
+
+def _tok(surface, pos1=None, lemma=None, orth_base=None, ctype=None):
+    return SimpleNamespace(
+        surface=surface,
+        feature=SimpleNamespace(pos1=pos1, lemma=lemma, orthBase=orth_base, cType=ctype),
+    )
+
+
+class TestFindHighlightEnd:
+    def test_verb_extends_over_auxiliary(self):
+        text = "種を蒔いた"
+        tokens = [
+            _tok("種", "名詞"),
+            _tok("を", "助詞"),
+            _tok("蒔い", "動詞", lemma="蒔く", orth_base="蒔く", ctype="五段-カ行"),
+            _tok("た", "助動詞"),
+        ]
+        assert find_highlight_end(text, tokens, 2, 4, tokens[2]) == 5
+
+    def test_window_stops_at_punctuation(self):
+        text = "種を蒔いた。"
+        tokens = [
+            _tok("種", "名詞"),
+            _tok("を", "助詞"),
+            _tok("蒔い", "動詞", lemma="蒔く", orth_base="蒔く", ctype="五段-カ行"),
+            _tok("た", "助動詞"),
+            _tok("。", "補助記号"),
+        ]
+        assert find_highlight_end(text, tokens, 2, 4, tokens[2]) == 5
+
+    def test_window_stops_at_whitespace_gap(self):
+        text = "蒔い た"
+        tokens = [
+            _tok("蒔い", "動詞", lemma="蒔く", orth_base="蒔く", ctype="五段-カ行"),
+            _tok("た", "助動詞"),
+        ]
+        assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 2
+
+    def test_window_stops_at_noun_tail(self):
+        # 食べたことがある: こと is a pure-hiragana 名詞 — the POS stop must
+        # end the window after た.
+        text = "食べたことがある"
+        tokens = [
+            _tok("食べ", "動詞", lemma="食べる", orth_base="食べる", ctype="下一段-バ行"),
+            _tok("た", "助動詞"),
+            _tok("こと", "名詞"),
+            _tok("が", "助詞"),
+            _tok("ある", "動詞", lemma="有る"),
+        ]
+        assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 3
+
+    def test_window_cap_thirteen_chars(self):
+        text = "蒔い" + "た" * 20
+        tokens = [_tok("蒔い", "動詞", lemma="蒔く", orth_base="蒔く", ctype="五段-カ行")]
+        tokens += [_tok("た", "助動詞") for _ in range(20)]
+        # The candidate walk is capped at tok_end + 13; among the bounded
+        # candidates only 蒔いた (the first た) deinflects to 蒔く, so the
+        # longest VALID candidate wins — no crash, no overrun, no
+        # over-extension into the たた... run.
+        assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 3
+
+    def test_no_chain_falls_back_to_tok_end(self):
+        text = "蒔いよ"
+        tokens = [
+            _tok("蒔い", "動詞", lemma="蒔く", orth_base="蒔く", ctype="五段-カ行"),
+            _tok("よ", "助詞"),
+        ]
+        assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 2
+
+    def test_orthbase_divergence_extends_via_orthbase(self):
+        # 判った: unidic lemma is 分かる (different orthography); orthBase
+        # 判る is the reachable target.
+        text = "判った"
+        tokens = [
+            _tok("判っ", "動詞", lemma="分かる", orth_base="判る", ctype="五段-ラ行"),
+            _tok("た", "助動詞"),
+        ]
+        assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 3
+
+    def test_kanji_orthbase_adjective_extends(self):
+        # Kanji-written 無かった extends: the chain deinflects the
+        # kanji-inclusive surface to 無い (== orthBase).
+        text = "無かった"
+        tokens = [
+            _tok("無かっ", "形容詞", lemma="無い", orth_base="無い", ctype="形容詞"),
+            _tok("た", "助動詞"),
+        ]
+        assert find_highlight_end(text, tokens, 0, 3, tokens[0]) == 4
+
+    def test_full_aux_chain_teiru_extends_fully(self):
+        text = "海で泳いでいた"
+        tokens = [
+            _tok("海", "名詞"),
+            _tok("で", "助詞"),
+            _tok("泳い", "動詞", lemma="泳ぐ", orth_base="泳ぐ", ctype="五段-ガ行"),
+            _tok("で", "助詞"),
+            _tok("い", "動詞", lemma="居る", orth_base="いる", ctype="上一段-ア行"),
+            _tok("た", "助動詞"),
+        ]
+        assert find_highlight_end(text, tokens, 2, 4, tokens[2]) == 7
+
+    def test_benefactive_stops_at_te_form(self):
+        # No てくれる rule upstream: longest valid candidate is 買って.
+        text = "買ってくれた"
+        tokens = [
+            _tok("買っ", "動詞", lemma="買う", orth_base="買う", ctype="五段-ワア行"),
+            _tok("て", "助詞"),
+            _tok("くれ", "動詞", lemma="くれる", orth_base="くれる", ctype="下一段-ラ行"),
+            _tok("た", "助動詞"),
+        ]
+        assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 3
+
+    def test_non_verb_pos_short_circuits(self):
+        text = "刑務所だ"
+        tokens = [_tok("刑務所", "名詞"), _tok("だ", "助動詞")]
+        assert find_highlight_end(text, tokens, 0, 3, tokens[0]) == 3
+
+    def test_invalid_offsets_fall_back(self):
+        token = _tok("蒔い", "動詞", lemma="蒔く")
+        assert find_highlight_end("蒔いた", [token], 4, 2, token) == 2
+
+    def test_magicmock_multi_token_line_falls_back(self):
+        # First token carries real strings; the tail token is a bare
+        # MagicMock whose surface auto-vivifies — the candidate walk must
+        # degrade to tok_end, not raise or extend.
+        verb = _tok("蒔い", "動詞", lemma="蒔く", orth_base="蒔く", ctype="五段-カ行")
+        assert find_highlight_end("蒔いた", [verb, MagicMock()], 0, 2, verb) == 2
+
+    def test_magicmock_token_features_fall_back(self):
+        # Fully mocked mined token: pos1 is a Mock -> immediate short-circuit.
+        text = "蒔いた"
+        assert find_highlight_end(text, [MagicMock()], 0, 2, MagicMock()) == 2
