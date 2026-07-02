@@ -212,10 +212,11 @@ class TestGenerateFurigana:
         assert generate_furigana("終い", tagger) == "終[しま]い"
 
     def test_leading_and_trailing_okurigana_split(self):
-        """お祭り → お祭[まつ]り: honorific お and trailing り both stay out."""
+        """お祭り → お 祭[まつ]り: honorific お is its own bare segment and trailing
+        り stays out; the separator space keeps まつ bound to 祭 alone."""
         token = _make_mock_token("お祭り", kana="オマツリ")
         tagger = MagicMock(return_value=[token])
-        assert generate_furigana("お祭り", tagger) == "お祭[まつ]り"
+        assert generate_furigana("お祭り", tagger) == "お 祭[まつ]り"
 
     def test_iteration_mark_kept_in_bracket(self):
         """時々 → 時々[ときどき]: 々 counts as kanji, not stripped as okurigana."""
@@ -223,12 +224,12 @@ class TestGenerateFurigana:
         tagger = MagicMock(return_value=[token])
         assert generate_furigana("時々", tagger) == "時々[ときどき]"
 
-    def test_internal_okurigana_single_run(self):
-        """打ち合わせ → 打ち合[うちあ]わせ: only the single leading/trailing run
-        is stripped; internal okurigana stays inside the bracket."""
+    def test_internal_okurigana_per_kanji(self):
+        """打ち合わせ → 打[う]ち 合[あ]わせ: interior okurigana now segments
+        per kanji instead of being swallowed into one bracket."""
         token = _make_mock_token("打ち合わせ", kana="ウチアワセ")
         tagger = MagicMock(return_value=[token])
-        assert generate_furigana("打ち合わせ", tagger) == "打ち合[うちあ]わせ"
+        assert generate_furigana("打ち合わせ", tagger) == "打[う]ち 合[あ]わせ"
 
     def test_all_kanji_not_mis_stripped(self):
         """王国 → 王国[おうこく]: an all-kanji word still gets whole-word ruby."""
@@ -238,11 +239,12 @@ class TestGenerateFurigana:
 
 
 class TestFormatFurigana:
-    """Unit tests for the okurigana-aware furigana formatter and kanji predicate.
+    """Unit tests for the per-kanji furigana formatter and kanji predicate.
 
-    These pin the formatter's guard branches directly (the token-driven tests
-    above cover the integrated path) so a future refactor that drops a guard is
-    caught here.
+    These pin the Anki-bracket rendering of ``distribute_furigana`` segments —
+    the separator-space rule and the whole-word fallback — directly (the
+    token-driven tests above cover the integrated path). The full segmentation
+    corpus lives in ``test_furigana_distribute.py``.
     """
 
     def test_is_kanji_includes_iteration_mark(self):
@@ -256,27 +258,28 @@ class TestFormatFurigana:
         assert _format_furigana("食べる", "たべる") == "食[た]べる"
 
     def test_leading_and_trailing_split(self):
-        assert _format_furigana("お預け", "おあずけ") == "お預[あず]け"
+        """お預け → お 預[あず]け: leading お becomes its own bare segment, so a
+        separator space precedes 預 (あず binds to 預 alone in Anki)."""
+        assert _format_furigana("お預け", "おあずけ") == "お 預[あず]け"
 
-    def test_katakana_okurigana_falls_back(self):
-        """Trailing kana voiced/script-shifted vs the hiragana reading must NOT
-        be stripped — mirrors the Anki add-on comparing surface to the reading."""
-        assert _format_furigana("見ル", "みる") == "見ル[みる]"
+    def test_mismatched_script_okurigana_segments(self):
+        """見ル/みる: mismatched-script kana still segments, with the hiragana
+        reading distributed onto the katakana surface (見[み] ル[る])."""
+        assert _format_furigana("見ル", "みる") == "見[み] ル[る]"
 
-    def test_rendaku_tail_falls_back(self):
-        """入り口/いりぐち: the trailing 口 is kanji (run empty) and the inner り
-        is not a trailing run, so the whole word brackets."""
-        assert _format_furigana("入り口", "いりぐち") == "入り口[いりぐち]"
+    def test_rendaku_tail_segments_per_kanji(self):
+        """入り口/いりぐち: rendaku no longer forces whole-word bracketing — it
+        segments to 入[い]り 口[ぐち] (the space keeps ぐち bound to 口)."""
+        assert _format_furigana("入り口", "いりぐち") == "入[い]り 口[ぐち]"
 
-    def test_leading_only_mismatch_falls_back(self):
-        """Branch symmetry with the trailing-mismatch guard: a leading-kana run
-        whose reading prefix differs is not stripped (unreachable for real
-        MeCab readings, but the guard must hold)."""
+    def test_leading_kana_mismatch_falls_back(self):
+        """お預/よ: the leading kana お has no match in the reading, so no
+        consistent split exists and it falls back to whole-word bracketing."""
         assert _format_furigana("お預", "よ") == "お預[よ]"
 
     def test_reading_shorter_than_okurigana_no_crash(self):
-        """Degenerate guard: reading shorter than the okurigana run falls back to
-        whole-bracket instead of slicing into negative indices."""
+        """Degenerate case: a reading too short to cover the kana group yields no
+        consistent split, so it falls back to whole-word bracketing (no crash)."""
         assert _format_furigana("食べる", "た") == "食べる[た]"
 
 
