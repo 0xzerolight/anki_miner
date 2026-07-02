@@ -51,6 +51,13 @@ run_hard     "mypy"       "${BIN}mypy" anki_miner
 # so omitting it here re-included the explicit-activation-only e2e tests,
 # which need a live Anki and mutate a real (test) deck.
 run_hard     "pytest"     "${BIN}pytest" -m "not youtube and not asr and not e2e"
+# Mirrors CI's dedicated `test-asr` job (ci.yml): the asr-marked suite runs
+# separately from the main pytest step above, which excludes it. Needs the
+# [asr]/[asr-vulkan] extras in the venv; without them the asr tests skip via
+# their import seam rather than error, so this stays green either way. "and not
+# e2e" is load-bearing for the same reason as the main step (a CLI -m REPLACES
+# addopts' -m "not e2e").
+run_hard     "pytest-asr" "${BIN}pytest" -m "asr and not e2e"
 run_tolerant "vulture"    "vulture" "${BIN}vulture"
 run_tolerant "shellcheck" "shellcheck" shellcheck packaging/appimage/build-appimage.sh scripts/bundle_smoke.sh scripts/release_preflight.sh scripts/release_dryrun.sh
 
