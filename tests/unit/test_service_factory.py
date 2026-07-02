@@ -273,3 +273,54 @@ class TestFrequencyServiceWiring:
 
         # registry.load() swallows OSError internally → no sources → None.
         assert services.frequency_service is None
+
+
+class TestCompoundMatchingInjection:
+    """term_lookup wiring: injected iff toggle on AND an enabled indexed dict."""
+
+    def test_injected_with_enabled_indexed_entry(self, base_config):
+        cfg = dataclasses.replace(
+            base_config,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),),
+        )
+        services = service_factory.create_services(cfg)
+        matcher = services.subtitle_parser._compound_matcher
+        assert matcher is not None
+        assert matcher._lookup == services.definition_service.offline_terms_exist
+
+    def test_not_injected_without_indexed_entry(self, base_config):
+        cfg = dataclasses.replace(
+            base_config,
+            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
+        )
+        services = service_factory.create_services(cfg)
+        assert services.subtitle_parser._compound_matcher is None
+
+    def test_not_injected_when_toggle_off(self, base_config):
+        cfg = dataclasses.replace(
+            base_config,
+            compound_matching=False,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),),
+        )
+        services = service_factory.create_services(cfg)
+        assert services.subtitle_parser._compound_matcher is None
+
+    def test_not_injected_for_disabled_indexed_entry(self, base_config):
+        cfg = dataclasses.replace(
+            base_config,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=False),),
+        )
+        services = service_factory.create_services(cfg)
+        assert services.subtitle_parser._compound_matcher is None
+
+    def test_prebuilt_parser_untouched(self, base_config):
+        from anki_miner.services.subtitle_parser import SubtitleParserService
+
+        cfg = dataclasses.replace(
+            base_config,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),),
+        )
+        prebuilt = SubtitleParserService(cfg)  # no lookup — caller's choice stands
+        services = service_factory.create_services(cfg, subtitle_parser=prebuilt)
+        assert services.subtitle_parser is prebuilt
+        assert services.subtitle_parser._compound_matcher is None

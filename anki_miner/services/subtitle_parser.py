@@ -13,6 +13,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.word import select_mined_form
+from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
 from anki_miner.services.deinflection import find_highlight_end
 from anki_miner.services.morphology import (
     TokenInclusionRule,
@@ -47,11 +48,18 @@ _LINE_CACHE_MAX_FILES: int = 256
 class SubtitleParserService:
     """Parse subtitles and extract Japanese vocabulary words (stateless service)."""
 
-    def __init__(self, config: AnkiMinerConfig):
+    def __init__(self, config: AnkiMinerConfig, term_lookup: TermLookup | None = None):
         """Initialize the subtitle parser.
 
         Args:
             config: Configuration for parsing
+            term_lookup: Optional batch headword-existence probe
+                (``DefinitionService.offline_terms_exist``). When provided AND
+                ``config.compound_matching`` is on, dictionary-attested
+                multi-token spans are merged into single words (Yomitan
+                longest-match). ``None`` (no offline dictionary, toggle off,
+                or raw-entry-only callers) keeps parsing byte-identical to
+                the pre-compound-matching behavior.
         """
         self.config = config
         # Shared process-wide tagger (see services/tagger.py for the single-flight
@@ -67,6 +75,12 @@ class SubtitleParserService:
             allowed_pos=frozenset(config.allowed_pos),
             excluded_subtypes=frozenset(config.excluded_subtypes),
         )
+        # Dictionary-attested compound matching (see services/compound_matcher.py).
+        # Built only when a term lookup is injected AND the toggle is on; the
+        # matcher reuses the inclusion rule so spans start only at mineable tokens.
+        self._compound_matcher: CompoundDictionaryMatcher | None = None
+        if term_lookup is not None and config.compound_matching:
+            self._compound_matcher = CompoundDictionaryMatcher(term_lookup, self._inclusion_rule)
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
             try:
@@ -229,6 +243,8 @@ class SubtitleParserService:
             # Tokenize with MeCab and run compound-merge passes
             raw_tokens = list(self.tagger(text))
             merged_tokens = self._merge_compound_suffixes(raw_tokens)
+            if self._compound_matcher is not None:
+                merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
 
             line_state = (text, raw_tokens, merged_tokens, start_time, end_time, duration)
             line_states.append(line_state)
@@ -290,6 +306,16 @@ class SubtitleParserService:
 
         # Get reading if available
         reading = self._extract_reading(word_token)
+        # Strict ``is True`` (like the is_comment guard above): a MagicMock
+        # token auto-creates a truthy ``compound`` attribute in tests.
+        if getattr(word_token, "compound", False) is True:
+            # Compound-matcher synthetics carry concatenated component kana,
+            # which is visibly wrong for cross-particle merges (気がする →
+            # キガシ: particle kana + non-base verb stem). ``reading`` reaches
+            # the curation dialog's Reading column and TSV export, so
+            # regenerate it from the headword via the memoized tagger path
+            # (same source as expression_reading below).
+            reading = self._reading(lemma)
 
         # ExpressionFurigana/Reading match the mined card front: orthBase
         # (source-orthography dictionary form) for verbs/adjectives, surface

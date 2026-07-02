@@ -42,6 +42,7 @@ _PARSE_RELEVANT_FIELDS = (
     "bold_target_in_sentence",
     "allowed_pos",
     "excluded_subtypes",
+    "compound_matching",
     "use_subtitle_regex_filter",
     "subtitle_regex_filter",
     "subtitle_regex_replacement",
