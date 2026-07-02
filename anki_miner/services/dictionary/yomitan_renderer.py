@@ -234,7 +234,9 @@ def _is_safe_url(url: str) -> bool:
     slash = url.find("/")
     if colon != -1 and (slash == -1 or colon < slash):
         scheme = url[:colon].lower()
-        return scheme in ("http", "https", "mailto")
+        # Term-bank v3 href schema admits only ^(?:https?:|\?); mailto is not a
+        # valid structured-content link scheme, so it is not allowed here.
+        return scheme in ("http", "https")
     return True  # relative path, fragment, query — all safe
 
 
@@ -615,8 +617,17 @@ def _render_attrs(node: dict[str, YomitanNode], tag: str) -> str:
         parts.append(style_attr)
 
     href = node.get("href")
-    if isinstance(href, str) and tag == "a" and _is_safe_url(href):
-        parts.append(f'href="{escape(href, quote=True)}"')
+    if isinstance(href, str) and tag == "a":
+        if href.lstrip().startswith("?"):
+            # Yomitan-internal cross-reference (`?query=…`). These navigate to a
+            # Yomitan search page that does not exist inside an Anki webview
+            # (dead on desktop, undefined on AnkiMobile/AnkiDroid), so neuter to
+            # a no-op anchor. Mirrors Yomitan's Anki render path
+            # (ext/js/templates/anki-template-renderer-content-manager.js
+            # `prepareLink`: internal → '#'), upstream e2ed450.
+            parts.append('href="#"')
+        elif _is_safe_url(href):
+            parts.append(f'href="{escape(href, quote=True)}"')
 
     # Per-tag HTML attribute passthrough (title on most, colspan/rowspan on
     # td/th, open on details). `<img>` takes a separate path entirely — see

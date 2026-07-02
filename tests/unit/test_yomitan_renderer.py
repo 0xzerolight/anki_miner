@@ -896,3 +896,52 @@ class TestDeinflectionGlossaryItem:
     def test_deinflection_non_string_term_empty(self):
         html = render_glossary_entry([[123, ["past"]]])
         assert html == ('<li class="gloss-item"><div class="gloss-content"></div></li>')
+
+
+class TestInternalQueryLinks:
+    """Yomitan-internal cross-reference links (`href="?query=…"`) are dead
+    inside an Anki webview — there is no Yomitan search page to navigate to.
+    Yomitan's own Anki render path neuters them (prepareLink: internal → '#').
+    Jitendex emits these constantly."""
+
+    def test_internal_query_link_neutered_to_hash(self):
+        node = {"tag": "a", "href": "?query=犬", "content": "犬"}
+        out = structured_content_to_html(node)
+        assert 'href="#"' in out
+        assert "?query" not in out
+        assert out == '<a class="gloss-sc-a" href="#">犬</a>'
+
+    def test_bare_question_mark_neutered(self):
+        node = {"tag": "a", "href": "?", "content": "x"}
+        out = structured_content_to_html(node)
+        assert 'href="#"' in out
+
+    def test_internal_link_with_leading_whitespace_neutered(self):
+        node = {"tag": "a", "href": "  ?query=x", "content": "x"}
+        out = structured_content_to_html(node)
+        assert 'href="#"' in out
+        assert "query=x" not in out
+
+    def test_external_https_link_preserved(self):
+        node = {"tag": "a", "href": "https://example.com/x", "content": "link"}
+        out = structured_content_to_html(node)
+        assert 'href="https://example.com/x"' in out
+
+    def test_external_http_link_preserved(self):
+        node = {"tag": "a", "href": "http://example.com/x", "content": "link"}
+        out = structured_content_to_html(node)
+        assert 'href="http://example.com/x"' in out
+
+    def test_relative_link_still_preserved(self):
+        # Relative paths remain safe (can't execute); only ?-internal is neutered.
+        node = {"tag": "a", "href": "page.html#section", "content": "x"}
+        out = structured_content_to_html(node)
+        assert 'href="page.html#section"' in out
+
+    def test_mailto_link_dropped(self):
+        # The term-bank v3 href schema admits only ^(?:https?:|\?); mailto is not
+        # a valid SC link and is dropped (tightened from the old allowance).
+        node = {"tag": "a", "href": "mailto:x@example.com", "content": "mail"}
+        out = structured_content_to_html(node)
+        assert "mailto" not in out
+        assert out == '<a class="gloss-sc-a">mail</a>'
