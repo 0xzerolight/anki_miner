@@ -15,14 +15,20 @@ from anki_miner.utils.text_utils import wrap_target_furigana
 # --- Helpers for building mock MeCab tokens ---
 
 
-def _make_token(surface, pos1, pos2=None, lemma=None, kana=None):
-    """Build a mock fugashi word token with feature attributes."""
+def _make_token(surface, pos1, pos2=None, lemma=None, kana=None, orth_base=None):
+    """Build a mock fugashi word token with feature attributes.
+
+    ``orthBase`` defaults to the lemma (real UniDic tokens usually agree);
+    it must always be set explicitly — an auto-created MagicMock attribute
+    is truthy and would leak into ``mined_form``.
+    """
     token = MagicMock()
     token.surface = surface
     token.feature.pos1 = pos1
     token.feature.pos2 = pos2
     token.feature.lemma = lemma if lemma is not None else surface
     token.feature.kana = kana if kana is not None else surface
+    token.feature.orthBase = orth_base if orth_base is not None else token.feature.lemma
     return token
 
 
@@ -37,6 +43,7 @@ def _make_token_no_feature(surface):
     type(token.feature).pos2 = PropertyMock(side_effect=AttributeError)
     type(token.feature).lemma = PropertyMock(side_effect=AttributeError)
     type(token.feature).kana = PropertyMock(side_effect=AttributeError)
+    type(token.feature).orthBase = PropertyMock(side_effect=AttributeError)
     return token
 
 
@@ -361,6 +368,23 @@ class TestExpressionFuriganaSource:
         assert "破れる" in called_texts  # expression uses lemma
         assert "破れ" not in called_texts  # not the surface form
 
+    def test_verb_furigana_uses_orth_base_not_normalized_lemma(self, test_config, tmp_path):
+        """Kanji-variant verb: expression furigana comes from orthBase (乞う), not
+        unidic's normalized lemma (請う) — the card must keep the source kanji."""
+        token = _make_token("乞わ", "動詞", lemma="請う", kana="コワ", orth_base="乞う")
+        mock_furigana = self._run_parse(test_config, tmp_path, "神に祈りを乞われて", token)
+        called_texts = [c.args[0] for c in mock_furigana.call_args_list]
+        assert "乞う" in called_texts  # expression uses source-orthography dictionary form
+        assert "請う" not in called_texts  # not the normalized lemma
+
+    def test_adjective_furigana_uses_orth_base_not_normalized_lemma(self, test_config, tmp_path):
+        """Kanji-variant adjective: 淋しい stays 淋しい even when lemma is 寂しい."""
+        token = _make_token("淋しかっ", "形容詞", lemma="寂しい", kana="サビシカッ", orth_base="淋しい")
+        mock_furigana = self._run_parse(test_config, tmp_path, "淋しかった", token)
+        called_texts = [c.args[0] for c in mock_furigana.call_args_list]
+        assert "淋しい" in called_texts
+        assert "寂しい" not in called_texts
+
 
 class TestLemmaReading:
     """lemma_reading carries the lemma's OWN reading for the JPod101 audio retry.
@@ -407,6 +431,23 @@ class TestLemmaReading:
         # mined_form == lemma for verbs ⇒ lemma_reading reuses expression_reading.
         assert word.expression_reading == "やぶれる"
         assert word.lemma_reading == "やぶれる"
+
+    def test_variant_verb_mines_orth_base_and_keeps_lemma_reading(self, test_config, tmp_path):
+        """Kanji-variant verb (orthBase ≠ lemma): Expression fields follow the
+        source spelling 乞う while lemma_reading is recomputed from the
+        normalized lemma 請う for the JPod101 retry ladder."""
+        token = _make_token("乞わ", "動詞", lemma="請う", kana="コワ", orth_base="乞う")
+        word = self._parse_one(
+            test_config,
+            tmp_path,
+            "神に祈りを乞われて",
+            token,
+            {"乞う": "こう-from-orth", "請う": "こう-from-lemma"},
+        )
+        assert word.mined_form == "乞う"
+        assert word.lemma == "請う"
+        assert word.expression_reading == "こう-from-orth"
+        assert word.lemma_reading == "こう-from-lemma"
 
 
 class TestFuriganaMemoization:
@@ -790,6 +831,38 @@ class TestExtractLemma:
         """A Japanese tail after a hyphen (compound names) must NOT be stripped."""
         token = _make_token("メル", "名詞", lemma="メル-ビル")
         assert service._extract_lemma(token) == "メル-ビル"
+
+
+class TestExtractOrthBase:
+    """Tests for _extract_orth_base method (source-orthography dictionary form)."""
+
+    @pytest.fixture
+    def service(self, test_config):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(test_config)
+
+    def test_returns_orth_base(self, service):
+        """orthBase keeps the source kanji variant that lemma normalizes away."""
+        token = _make_token("乞わ", "動詞", lemma="請う", orth_base="乞う")
+        assert service._extract_orth_base(token) == "乞う"
+
+    def test_none_falls_back_to_lemma(self, service):
+        """fugashi maps unidic's ``*`` placeholder to None → fall back to lemma."""
+        token = _make_token("食べた", "動詞", lemma="食べる")
+        token.feature.orthBase = None
+        assert service._extract_orth_base(token) == "食べる"
+
+    def test_fallback_branch_keeps_gloss_stripping(self, service):
+        """The lemma fallback inherits extract_lemma's ASCII-gloss strip."""
+        token = _make_token("スクランブル", "名詞", lemma="スクランブル-scramble")
+        token.feature.orthBase = None
+        assert service._extract_orth_base(token) == "スクランブル"
+
+    def test_missing_attribute_falls_back(self, service):
+        """Synthetic merged-compound tokens have no orthBase attribute
+        (_SyntheticToken's SimpleNamespace feature) — must not crash."""
+        token = _make_token_no_feature("食べた")
+        assert service._extract_orth_base(token) == "食べた"
 
 
 class TestExtractReading:

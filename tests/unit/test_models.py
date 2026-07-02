@@ -6,7 +6,7 @@ import pytest
 
 from anki_miner.models.media import MediaData
 from anki_miner.models.processing import ProcessingResult, ValidationIssue, ValidationResult
-from anki_miner.models.word import LineLemmas, TokenizedWord, WordData
+from anki_miner.models.word import LineLemmas, TokenizedWord, WordData, select_mined_form
 
 
 class TestTokenizedWord:
@@ -125,6 +125,46 @@ class TestTokenizedWord:
             pos=pos,
         )
         assert word.mined_form == expected
+
+    @pytest.mark.parametrize(
+        "pos,surface,lemma,orth_base,expected",
+        [
+            # Kanji-variant verb: unidic lemma normalizes 乞う→請う; the card
+            # must keep the source spelling via orth_base.
+            ("動詞", "乞わ", "請う", "乞う", "乞う"),
+            ("動詞", "喰らえ", "食らう", "喰らう", "喰らう"),
+            # Kanji-variant adjective.
+            ("形容詞", "淋しかっ", "寂しい", "淋しい", "淋しい"),
+            # Empty orth_base (synthetic/OOV token) → lemma fallback.
+            ("動詞", "破れ", "破れる", "", "破れる"),
+            # Noun: surface wins regardless of a divergent orth_base.
+            ("名詞", "豪腕", "剛腕", "剛腕", "豪腕"),
+        ],
+    )
+    def test_mined_form_prefers_orth_base_for_conjugating_pos(self, pos, surface, lemma, orth_base, expected):
+        """Verbs/adjectives mine as orth_base (source orthography), falling back
+        to lemma when empty; nouns ignore orth_base entirely."""
+        word = TokenizedWord(
+            surface=surface,
+            lemma=lemma,
+            reading="",
+            sentence="",
+            start_time=0,
+            end_time=0,
+            duration=0,
+            pos=pos,
+            orth_base=orth_base,
+        )
+        assert word.mined_form == expected
+
+    def test_select_mined_form_matches_property(self):
+        """The module-level helper is the single selection rule the parser and
+        the property share."""
+        assert select_mined_form("動詞", "乞う", "請う", "乞わ") == "乞う"
+        assert select_mined_form("動詞", "", "請う", "乞わ") == "請う"
+        assert select_mined_form("形容詞", "淋しい", "寂しい", "淋しかっ") == "淋しい"
+        assert select_mined_form("名詞", "剛腕", "剛腕", "豪腕") == "豪腕"
+        assert select_mined_form(None, "テスト", "テスト", "テスト") == "テスト"
 
 
 class TestLineLemmas:

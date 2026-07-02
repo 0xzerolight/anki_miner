@@ -3,7 +3,7 @@
 Compound-merge passes, lemma/reading extraction and the POS/subtype
 inclusion gate, relocated out of ``subtitle_parser`` so they are usable
 without the file-parsing/caching service. Everything here operates on
-fugashi-shaped tokens (``.surface``, ``.feature.{pos1,pos2,lemma,kana}``)
+fugashi-shaped tokens (``.surface``, ``.feature.{pos1,pos2,lemma,kana,orthBase}``)
 and performs no I/O.
 
 Import direction is one-way: ``subtitle_parser`` imports from this module;
@@ -64,6 +64,31 @@ def extract_lemma(word_token) -> str:
             lemma = head
 
     return str(lemma)
+
+
+def extract_orth_base(word_token) -> str:
+    """Extract the dictionary form in the token's own orthography.
+
+    UniDic's ``lemma`` is the canonical headword and silently normalizes
+    orthographic kanji variants (乞う→請う, 喰らう→食らう); ``orthBase``
+    keeps the spelling the source text used (乞わ→乞う), which is what the
+    card Expression must show. Yomitan behaves the same way: it deinflects
+    the raw sentence string and never consults a normalized lemma.
+
+    Falls back to ``extract_lemma`` when the field is missing (synthetic
+    ``_SyntheticToken`` features have no ``orthBase`` attribute) or falsy
+    (fugashi maps unidic's ``*`` placeholder to ``None`` on OOV tokens);
+    the fallback inherits extract_lemma's surface fallback and ASCII-gloss
+    stripping. No gloss stripping on the orthBase branch — the English
+    gloss tail rides on the lemma/lForm fields only.
+    """
+    try:
+        orth_base = word_token.feature.orthBase
+    except AttributeError:
+        orth_base = None
+    if not orth_base:
+        return extract_lemma(word_token)
+    return str(orth_base)
 
 
 def extract_reading(word_token) -> str:

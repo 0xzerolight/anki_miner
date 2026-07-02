@@ -487,7 +487,8 @@ class WordCurationDialog(QDialog):
             self.table.setItem(row, 0, check_item)
 
             # Word (mined) — what becomes the Anki Expression
-            # (lemma for verbs/adjectives, surface for nouns)
+            # (source-orthography dictionary form for verbs/adjectives,
+            # surface for nouns)
             self.table.setItem(row, 1, self._make_readonly_item(word.mined_form))
 
             # Form in subtitle — the raw surface as it appeared

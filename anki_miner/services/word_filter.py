@@ -59,7 +59,8 @@ class WordFilterService:
         Comparison is by ``word.mined_form`` — the same string
         ``AnkiService.create_cards_batch`` writes to the card's Expression
         (first) field, and the same string Anki itself dedups on. This is
-        POS-aware: verbs/adjectives use lemma, nouns use surface (see
+        POS-aware: verbs/adjectives use the source-orthography dictionary
+        form (orth_base, falling back to lemma), nouns use surface (see
         ``TokenizedWord.mined_form``). Aligning the filter key with the
         stored field keeps the pipeline self-consistent and prevents the
         AnkiConnect duplicate error that surfaced when a noun's unidic
@@ -144,8 +145,9 @@ class WordFilterService:
         """Drop words whose card form is written entirely in a single kana script.
 
         The test is applied to ``word.mined_form`` — the exact text that becomes
-        the card's Expression field (POS-aware: verbs/adjectives use the lemma,
-        nouns and everything else use the surface). So 全部 written in the
+        the card's Expression field (POS-aware: verbs/adjectives use the
+        source-orthography dictionary form, nouns and everything else use the
+        surface). So 全部 written in the
         subtitle as ぜんぶ is excluded when ``exclude_hiragana_only`` is set, and
         katakana loanwords like コーヒー are excluded when ``exclude_katakana_only``
         is set. Mixed kana+kanji forms are never matched and are kept.
@@ -291,10 +293,12 @@ class WordFilterService:
         new surface so the Expression and its furigana/reading stay mutually
         consistent — but only when a tagger is available (production always
         supplies one); otherwise the originals are kept as a best-effort
-        fallback. Verbs/adjectives mine as ``lemma``, so their
+        fallback. Verbs/adjectives mine as ``orth_base`` (their parse-time
+        dictionary form, untouched by the swap), so their
         ``expression_furigana``/``expression_reading`` are unaffected by the
-        surface swap and are preserved unchanged. ``lemma``, ``reading``,
-        ``frequency_rank``, ``pos`` and ``video_file`` are preserved unchanged.
+        surface swap and are preserved unchanged. ``lemma``, ``orth_base``,
+        ``reading``, ``frequency_rank``, ``pos`` and ``video_file`` are
+        preserved unchanged.
 
         Args:
             mineable_unknowns: Words remaining after blacklist, frequency,
@@ -375,8 +379,9 @@ class WordFilterService:
         # ``expression_furigana``/``expression_reading`` (computed from the
         # ORIGINAL surface at parse time) would otherwise go stale, leaving the
         # Expression inconsistent with its own furigana/reading (T-37).
-        # Verbs/adjectives mine as ``lemma`` (unchanged by the swap), so their
-        # Expression fields stay valid and are left untouched. Recompute
+        # Verbs/adjectives mine as ``orth_base``, which dataclasses.replace
+        # below preserves (it is not swapped), so their Expression fields stay
+        # valid and are left untouched. Recompute
         # requires a tagger; production always supplies one (service_factory
         # wires the shared parser tagger). When absent (tagger-less unit setup),
         # the original values are kept as a best-effort fallback.
