@@ -40,7 +40,15 @@ class TestCountMora:
 
 
 class TestClassifyPitch:
-    """Tests for pitch category classification."""
+    """NHK-convention pitch category truth table.
+
+    Standard convention (see Yomitan getPitchCategory): after heiban, *any*
+    downstep on a verb/adjective is 起伏 (kifuku); 頭高/中高/尾高 apply to
+    nominals only. Cross-checked against the ``'heiban,kifuku'`` rows in
+    Yomitan's ``test/data/anki-note-builder-test-results.json`` sanity anchor.
+    """
+
+    # --- Nominals: the four positional categories -------------------------
 
     def test_heiban(self):
         assert classify_pitch(0, 3) == "平板"
@@ -61,23 +69,40 @@ class TestClassifyPitch:
     def test_odaka_two_mora(self):
         assert classify_pitch(2, 2) == "尾高"
 
-    def test_kifuku_verb(self):
+    def test_nominal_categories_explicit_noun_pos(self):
+        # An explicit 名詞 POS never triggers 起伏 — positional rules apply.
+        assert classify_pitch(0, 3, pos="名詞") == "平板"
+        assert classify_pitch(1, 3, pos="名詞") == "頭高"
+        assert classify_pitch(2, 3, pos="名詞") == "中高"
+        assert classify_pitch(3, 3, pos="名詞") == "尾高"  # odaka
+
+    # --- Verbs / adjectives: any downstep → 起伏 --------------------------
+
+    def test_kifuku_verb_final_mora(self):
         # 動詞 with drop on last mora → 起伏 (kifuku)
         assert classify_pitch(3, 3, pos="動詞") == "起伏"
 
-    def test_kifuku_i_adjective(self):
+    def test_kifuku_verb_medial_downstep(self):
+        # 食べる[2] of 3 morae: a medial drop on a verb is 起伏, NOT 中高.
+        # This is the mislabel the fix corrects.
+        assert classify_pitch(2, 3, pos="動詞") == "起伏"
+
+    def test_kifuku_verb_head_downstep(self):
+        # A head drop on a verb is 起伏, NOT 頭高.
+        assert classify_pitch(1, 3, pos="動詞") == "起伏"
+
+    def test_kifuku_i_adjective_final(self):
         # 形容詞 with drop on last mora → 起伏 (kifuku)
         assert classify_pitch(2, 2, pos="形容詞") == "起伏"
 
-    def test_odaka_noun_explicit(self):
-        # 名詞 with drop on last mora → 尾高 (odaka)
-        assert classify_pitch(3, 3, pos="名詞") == "尾高"
+    def test_kifuku_i_adjective_head(self):
+        # 高い[2] etc.: any accented i-adjective is 起伏.
+        assert classify_pitch(1, 2, pos="形容詞") == "起伏"
 
-    def test_verbal_pos_only_affects_final_mora(self):
-        # Non-final drop position keeps the standard category regardless of POS
-        assert classify_pitch(1, 3, pos="動詞") == "頭高"
-        assert classify_pitch(2, 3, pos="動詞") == "中高"
+    def test_verb_heiban_stays_heiban(self):
+        # Unaccented verbs are still 平板 — only downsteps become 起伏.
         assert classify_pitch(0, 3, pos="動詞") == "平板"
+        assert classify_pitch(0, 2, pos="形容詞") == "平板"
 
 
 class TestLoad:
@@ -363,8 +388,8 @@ class TestLookupDetailed:
     def test_batch_detailed_with_pos_and_romaji(self, tmp_path):
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text(
-            "たべる,食べる,2\n"  # 動詞, 3 mora → 中高/nakadaka
-            "はしる,走る,3\n",  # 動詞, 3 mora → 起伏/kifuku
+            "たべる,食べる,2\n"  # 動詞, 3 mora, medial drop → 起伏/kifuku
+            "はしる,走る,3\n",  # 動詞, 3 mora, final drop → 起伏/kifuku
             encoding="utf-8",
         )
         service = PitchAccentService(csv_file)
@@ -377,7 +402,9 @@ class TestLookupDetailed:
             ],
             fmt="romaji",
         )
-        assert results == [("2", "nakadaka"), ("3", "kifuku")]
+        # Both are accented verbs → kifuku (NHK convention); 食べる[2] is no
+        # longer mislabeled nakadaka.
+        assert results == [("2", "kifuku"), ("3", "kifuku")]
 
 
 class TestIsAvailable:
