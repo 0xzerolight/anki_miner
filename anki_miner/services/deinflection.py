@@ -45,6 +45,7 @@ Pure functions/objects, no I/O, no Qt. The Japanese rule table lives in
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any, Iterable, Mapping, Sequence
 
 _MAX_CONDITION_FLAGS = 32
@@ -234,3 +235,15 @@ class Deinflector:
                     )
                 )
         return results
+
+
+@lru_cache(maxsize=1)
+def get_japanese_deinflector() -> Deinflector:
+    """Process-wide ``Deinflector`` over the ported Yomitan Japanese table.
+
+    Lazy import keeps the ~830-rule table off this module's import path;
+    the build itself is a few milliseconds and happens once.
+    """
+    from anki_miner.services.japanese_transforms import CONDITIONS, TRANSFORMS
+
+    return Deinflector(CONDITIONS, TRANSFORMS)

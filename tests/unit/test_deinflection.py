@@ -9,6 +9,7 @@ from anki_miner.services.deinflection import (
     Deinflector,
     build_condition_flags,
     conditions_match,
+    get_japanese_deinflector,
 )
 
 # Synthetic mini-table exercising the engine mechanics without fugashi or
@@ -262,3 +263,123 @@ class TestMaskForCtype:
         # MagicMock auto-vivifies truthy attributes; isinstance(str) must gate.
         deinflector = _make()
         assert deinflector.mask_for_ctype(MagicMock()) == 0
+
+
+class TestJapaneseTableIntegrity:
+    """Guards the mechanically generated table against transcription drift.
+
+    Counts pinned to upstream commit e2ed450c2f11a591922822e77f008e70a87daf0c
+    (materialized rules after generator expansion, never literal call sites).
+    """
+
+    def test_materialized_counts_match_pinned_upstream(self):
+        from anki_miner.services.japanese_transforms import CONDITIONS, TRANSFORMS
+
+        deinflector = get_japanese_deinflector()
+        assert deinflector.transform_count == 54
+        assert deinflector.rule_count == 834
+        assert len(CONDITIONS) == 22
+        whole_word = [r for t in TRANSFORMS for r in t["rules"] if r["type"] == "wholeWord"]
+        # The special-honorific -masu helper generates exactly these.
+        assert len(whole_word) == 8
+
+    def test_all_suffixes_are_literal_nonempty_strings(self):
+        from anki_miner.services.japanese_transforms import TRANSFORMS
+
+        regex_meta = set("\\^$.|?*+()[]{}")
+        for transform in TRANSFORMS:
+            for rule in transform["rules"]:
+                assert rule["inflected"], transform["id"]
+                assert not (set(rule["inflected"]) & regex_meta), rule["inflected"]
+
+    def test_generator_helper_rules_present(self):
+        from anki_miner.services.japanese_transforms import TRANSFORMS
+
+        rules = {(t["id"], r["inflected"], r["deinflected"]) for t in TRANSFORMS for r in t["rules"]}
+        # irregularVerbSuffixInflections outputs (iku/godan-u-special/fu-verb).
+        assert ("-た", "行った", "行く") in rules
+        assert ("-た", "問うた", "問う") in rules
+        # specialHonorificMasuInflections outputs (whole-word).
+        assert ("-ます", "いらっしゃいます", "いらっしゃる") in rules
+        assert ("-ます", "くださいます", "くださる") in rules
+
+
+def _reaches(candidate: str, target: str, mask: int) -> bool:
+    deinflector = get_japanese_deinflector()
+    return any(r.text == target and (mask == 0 or (r.conditions & mask) != 0) for r in deinflector.transform(candidate))
+
+
+class TestJapaneseChainVectors:
+    """Chain vectors verified against the real upstream engine at the pinned
+    commit (differential run: identical result sets on all of these)."""
+
+    @pytest.mark.parametrize(
+        ("candidate", "target", "condition"),
+        [
+            ("蒔いた", "蒔く", "v5"),
+            ("食べた", "食べる", "v1"),
+            ("泳いで", "泳ぐ", "v5"),
+            ("買って", "買う", "v5"),
+            ("死んだ", "死ぬ", "v5"),
+            ("高かった", "高い", "adj-i"),
+            ("高くなかった", "高い", "adj-i"),
+            ("勉強しました", "勉強する", "vs"),
+            ("来た", "来る", "vk"),
+            # Upstream reaches 来る via BOTH the generic (v1|v5) path and the
+            # explicit kanji-来 vk rule; acceptance needs only the vk hit.
+            ("来なかった", "来る", "vk"),
+            ("した", "する", "vs"),
+            ("食べています", "食べる", "v1"),
+            ("泳いでいた", "泳ぐ", "v5"),
+            ("行かなかった", "行く", "v5"),
+            ("蒔いたら", "蒔く", "v5"),
+            ("行ったり", "行く", "v5"),
+            ("行きませんでした", "行く", "v5"),
+            ("食べさせられたくなかった", "食べる", "v1"),
+            ("行こう", "行く", "v5"),
+            ("食べろ", "食べる", "v1"),
+            ("食べちゃった", "食べる", "v1"),
+            ("食べてしまった", "食べる", "v1"),
+            ("食べておく", "食べる", "v1"),
+            # Irregular-helper vectors.
+            ("行った", "行く", "v5"),
+            ("問うた", "問う", "v5"),
+            ("いらっしゃいます", "いらっしゃる", "v5"),
+            ("くださいます", "くださる", "v5"),
+            # Kanji-orthBase words deinflect kanji-inclusive: they DO extend.
+            ("無かった", "無い", "adj-i"),
+            ("居なかった", "居る", "v1"),
+            ("判った", "判る", "v5"),
+        ],
+    )
+    def test_chain_reaches_target_under_mask(self, candidate, target, condition):
+        deinflector = get_japanese_deinflector()
+        mask = deinflector.condition_flags(condition)
+        assert mask != 0
+        assert _reaches(candidate, target, mask)
+
+    @pytest.mark.parametrize(
+        ("candidate", "target"),
+        [
+            # Upstream has no てみる/ていく/てくる or benefactive rules: the
+            # lemma is NOT reachable from the full complex (span stops at the
+            # shorter て-form candidate instead).
+            ("見てみる", "見る"),
+            ("食べていく", "食べる"),
+            ("食べてくる", "食べる"),
+            ("買ってくれた", "買う"),
+        ],
+    )
+    def test_non_rule_auxiliaries_do_not_reach_target(self, candidate, target):
+        assert not _reaches(candidate, target, 0)
+
+    def test_ctype_mask_rejects_cross_conjugation_coincidence(self):
+        # した reaches する only with vs conditions; a v5 mask (as if the
+        # mined token were a godan verb) must reject that chain.
+        deinflector = get_japanese_deinflector()
+        assert not _reaches("した", "する", deinflector.condition_flags("v5"))
+
+    def test_long_chain_stays_under_backstop_on_real_table(self):
+        deinflector = get_japanese_deinflector()
+        results = deinflector.transform("食べさせられたくなかった")
+        assert len(results) < _MAX_RESULTS / 4
