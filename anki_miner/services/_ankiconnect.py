@@ -40,6 +40,13 @@ def post_action(
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
     except (requests.RequestException, ValueError) as e:
         raise AnkiConnectionError(f"AnkiConnect call '{action}' failed: {e}") from e
+    if not isinstance(result, dict):
+        # A non-object body (wrong service on the port, a proxy error page that
+        # still parses as JSON) would otherwise crash on `result.get(...)`.
+        raise AnkiConnectionError(
+            f"AnkiConnect '{action}' returned a non-object response "
+            f"({type(result).__name__}); is another service listening on this port?"
+        )
     if result.get("error"):
         raise AnkiConnectionError(f"AnkiConnect error in '{action}': {result['error']}")
     return result.get("result")
@@ -79,6 +86,62 @@ def post_multi(
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
     except (requests.RequestException, ValueError) as e:
         raise AnkiConnectionError(f"AnkiConnect call 'multi' failed: {e}") from e
+    if not isinstance(result, dict):
+        raise AnkiConnectionError(
+            f"AnkiConnect 'multi' returned a non-object response "
+            f"({type(result).__name__}); is another service listening on this port?"
+        )
     if result.get("error"):
         raise AnkiConnectionError(f"AnkiConnect error in 'multi': {result['error']}")
     return result.get("result") or []
+
+
+def _expected_type_name(elem_type: type | tuple[type, ...]) -> str:
+    """Render one type or a tuple of types as a readable ``a or b`` name."""
+    if isinstance(elem_type, tuple):
+        return " or ".join(t.__name__ for t in elem_type)
+    return elem_type.__name__
+
+
+def _expect_list(
+    result: Any,
+    action: str,
+    expected_len: int = -1,
+    elem_type: type | tuple[type, ...] | None = None,
+) -> list:
+    """Validate an AnkiConnect ``result`` is a list of the expected shape.
+
+    Ported from Yomitan's ``AnkiConnect._normalizeArray``
+    (``ext/js/comm/anki-connect.js``, function ``_normalizeArray``) at upstream
+    commit e2ed450. Turns a malformed response (wrong service on the port, a
+    truncated array, wrong element types) into a typed
+    :class:`AnkiConnectionError` naming the offending index, instead of letting
+    it surface as an ``AttributeError``/``TypeError`` deeper in a consumer.
+
+    Args:
+        result: The ``result`` payload from :func:`post_action`.
+        action: Action name, used in error messages.
+        expected_len: Required length; a negative value accepts any length
+            (recording the observed length, as upstream does).
+        elem_type: If given, every element must be an instance of it (a type or
+            tuple of types). ``None`` skips per-element type checks.
+
+    Returns:
+        The validated list (the same object, unmodified).
+
+    Raises:
+        AnkiConnectionError: ``result`` is not a list, its length differs from a
+            non-negative ``expected_len``, or an element has the wrong type.
+    """
+    if not isinstance(result, list):
+        raise AnkiConnectionError(f"AnkiConnect '{action}' returned {type(result).__name__}, expected a list")
+    if expected_len >= 0 and len(result) != expected_len:
+        raise AnkiConnectionError(f"AnkiConnect '{action}' returned {len(result)} item(s), expected {expected_len}")
+    if elem_type is not None:
+        for i, item in enumerate(result):
+            if not isinstance(item, elem_type):
+                raise AnkiConnectionError(
+                    f"AnkiConnect '{action}' item at index {i} is "
+                    f"{type(item).__name__}, expected {_expected_type_name(elem_type)}"
+                )
+    return result

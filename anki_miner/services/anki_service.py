@@ -9,7 +9,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.models import CardPayload
-from anki_miner.services._ankiconnect import post_action
+from anki_miner.services._ankiconnect import _expect_list, post_action
 from anki_miner.services.anki_media_store import AnkiMediaStore
 from anki_miner.services.anki_note_builder import (
     OPTIONAL_FIELD_KEYS as _OPTIONAL_FIELD_KEYS,
@@ -310,14 +310,16 @@ class AnkiService:
 
         try:
             # Find ALL notes in the collection.
-            note_ids = (
+            note_ids = _expect_list(
                 post_action(
                     self.config.ankiconnect_url,
                     "findNotes",
                     params={"query": self._build_vocab_query()},
                     timeout=30,
                 )
-                or []
+                or [],
+                "findNotes",
+                elem_type=int,
             )
 
             if not note_ids:
@@ -334,19 +336,23 @@ class AnkiService:
 
             for i in range(0, len(note_ids), batch_size):
                 batch = note_ids[i : i + batch_size]
-                notes = (
+                notes = _expect_list(
                     post_action(
                         self.config.ankiconnect_url,
                         "notesInfo",
                         params={"notes": batch},
                         timeout=30,
                     )
-                    or []
+                    or [],
+                    "notesInfo",
+                    elem_type=dict,
                 )
 
                 for note in notes:
-                    fields = note.get("fields", {})
-                    if not fields:
+                    # A deleted note comes back as `{}`, and a malformed row may
+                    # carry a non-dict `fields`; both are treated as absent.
+                    fields = note.get("fields")
+                    if not isinstance(fields, dict) or not fields:
                         continue
                     # First field is always the expression/word in Anki
                     # convention. Normalize it the same way Anki dedups (strip
@@ -355,7 +361,11 @@ class AnkiService:
                     # — otherwise the word slips the filter and AnkiConnect
                     # rejects it as a duplicate at addNotes time.
                     first_field = next(iter(fields))
-                    word = _strip_for_dedup(fields[first_field].get("value", ""))
+                    field_info = fields[first_field]
+                    if not isinstance(field_info, dict):
+                        # Malformed field entry (not a {value, order} object).
+                        continue
+                    word = _strip_for_dedup(field_info.get("value", ""))
                     if word and _JAPANESE_RE.search(word):
                         existing_words.add(word)
 
@@ -484,14 +494,21 @@ class AnkiService:
                 # error still propagates to the pipeline boundary.
                 used_per_note_recovery = False
                 try:
-                    note_ids = (
+                    # _expect_list enforces the addNotes contract: a list of
+                    # exactly len(notes) slots, each an id (int) or null (None).
+                    # A shorter/mistyped array now raises AnkiConnectionError
+                    # (was a post-hoc under-merge warning); length alignment is
+                    # load-bearing for the positional zip below.
+                    note_ids = _expect_list(
                         post_action(
                             self.config.ankiconnect_url,
                             "addNotes",
                             params={"notes": notes},
                             timeout=60,
-                        )
-                        or []
+                        ),
+                        "addNotes",
+                        len(notes),
+                        (int, type(None)),
                     )
                 except AnkiConnectionError as e:
                     if not _is_duplicate_error(e):
@@ -523,18 +540,10 @@ class AnkiService:
                 total_created += batch_created
                 all_created_ids.extend(nid for nid in note_ids if nid is not None)
                 # note_ids align positionally with `notes` (hence `batch`) in
-                # both the batch and per-note-recovery paths, so a non-null slot
-                # identifies the word that was created.
-                # strict=False: note_ids is 1:1 with batch by the addNotes contract;
-                # a shorter list (malformed response) only under-merges, never crashes.
-                # Surface the contract violation so a silent under-merge isn't
-                # mistaken for a clean run (cards themselves are unaffected).
-                if len(note_ids) != len(batch):
-                    logger.warning(
-                        "addNotes returned %d id(s) for %d note(s); vocab cache may under-merge.",
-                        len(note_ids),
-                        len(batch),
-                    )
+                # both paths: the batch path is length-checked by _expect_list
+                # above, and the per-note-recovery path builds one slot per note.
+                # strict=False is retained defensively; the zip is now guaranteed
+                # 1:1 either way.
                 created_forms.extend(
                     item.word.mined_form for item, nid in zip(batch, note_ids, strict=False) if nid is not None
                 )
