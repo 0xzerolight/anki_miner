@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Furigana is distributed per kanji.** Readings now sit over the individual kanji they belong to instead of a single bracket spanning the whole word: 入り口 renders as 入[い]り 口[ぐち] (rendaku handled), 取り引き as 取[と]り 引[ひ]き, and 落ち着く as 落[お]ち 着[つ]く, following Yomitan's furigana distribution. Genuinely ambiguous words (e.g. 飼い犬) keep one whole-word reading rather than guess. Affects the ExpressionFurigana and SentenceFurigana card fields; re-mine to refresh existing cards. Display only — no cache, dedup, or audio identity depends on furigana.
 
 ### Fixed
+- **Accented verbs and adjectives are now categorized 起伏 (kifuku).** Following the standard NHK convention (as Yomitan does), any downstep on a verb or i-adjective is 起伏, not 中高/頭高/尾高 — so 食べる[2] is kifuku rather than the mislabeled 中高. Previously only a drop on the final mora counted, which almost never happens for verbs, leaving nearly every accented verb/adjective mislabeled. The PitchCategory card field changes accordingly for verbs and adjectives; re-mine to refresh existing cards.
 
 ### Removed
 
