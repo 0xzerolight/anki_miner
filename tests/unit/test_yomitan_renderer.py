@@ -873,6 +873,26 @@ class TestTypedGlossaryObjects:
         out = structured_content_to_html(node)
         assert out.startswith('<a class="gloss-image-link"')
 
+    def test_unknown_type_renders_empty_not_span(self):
+        # A typed glossary object with an unrecognized `type` must be dropped
+        # outright, NOT fall through to the tag path and emit an empty <span>.
+        node = {"type": "foo"}
+        assert structured_content_to_html(node) == ""
+
+    def test_unknown_type_with_text_payload_dropped(self):
+        # The payload of an unknown-type object is not salvaged as text and does
+        # not leak into an empty span either.
+        node = {"type": "bar", "text": "lost"}
+        out = structured_content_to_html(node)
+        assert out == ""
+        assert "lost" not in out
+        assert "span" not in out
+
+    def test_no_type_tag_node_unchanged(self):
+        # A node WITHOUT a `type` key keeps the existing tag-path behavior.
+        node = {"tag": "span", "content": "x"}
+        assert structured_content_to_html(node) == '<span class="gloss-sc-span">x</span>'
+
 
 class TestDeinflectionGlossaryItem:
     """Term-bank v3 permits a glossary item to be a deinflection pair
