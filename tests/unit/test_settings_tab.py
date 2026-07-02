@@ -19,9 +19,8 @@ def _no_real_styling_writes(monkeypatch):
 
     ``_on_save_clicked`` unconditionally fires ``sync_styling`` → a real
     ``StylingWorker`` against AnkiConnect. With Anki open locally, the Reset
-    test put the DEFAULT config in the panel (note type "Lapis",
-    ``manage_card_styling=False``) and its next Save STRIPPED the managed
-    glossary CSS from the user's real Lapis note type (see
+    test put a config in the panel (note type "Lapis") whose Save STRIPPED the
+    managed glossary CSS from the user's real Lapis note type (see
     tests/_network_tripwire.py). Kill the worker spawn at the controller seam;
     ``TestCardStylingSyncWiring`` still asserts the sync *wiring* via its own
     instance-level ``sync_styling`` mocks, which this stub does not touch.
