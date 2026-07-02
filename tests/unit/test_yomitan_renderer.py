@@ -807,3 +807,92 @@ class TestStyleCollisionDedup:
         out = structured_content_to_html(node)
         assert "font-size: 0.8em" in out
         assert "color: red" in out
+
+
+class TestTypedGlossaryObjects:
+    """Term-bank v3 glossary items may be typed objects: {type:'text'}, an
+    {type:'image'} object, or {type:'structured-content'}. Before this fix only
+    'structured-content' was dispatched — text/image objects fell through to the
+    empty-<span> path and were silently destroyed at import. Mirrors Yomitan's
+    _formatDictionaryTermGlossaryObject / _formatGlossary."""
+
+    def test_text_object_escaped(self):
+        node = {"type": "text", "text": "to eat"}
+        assert structured_content_to_html(node) == "to eat"
+
+    def test_text_object_html_escaped(self):
+        node = {"type": "text", "text": "<b>x</b>"}
+        assert structured_content_to_html(node) == "&lt;b&gt;x&lt;/b&gt;"
+
+    def test_text_object_newlines_become_br(self):
+        node = {"type": "text", "text": "① a\n② b"}
+        assert structured_content_to_html(node) == "① a<br>② b"
+
+    def test_text_object_crlf_normalized(self):
+        node = {"type": "text", "text": "a\r\nb\rc"}
+        assert structured_content_to_html(node) == "a<br>b<br>c"
+
+    def test_text_object_non_string_text_empty(self):
+        node = {"type": "text", "text": 42}
+        assert structured_content_to_html(node) == ""
+
+    def test_text_object_missing_text_empty(self):
+        node = {"type": "text"}
+        assert structured_content_to_html(node) == ""
+
+    def test_image_object_http_wrapped_in_envelope(self):
+        # Mirrors valid-dictionary1 term_bank_1.json entry 10 shape (px width/height).
+        node = {"type": "image", "path": "https://example.com/x.png", "width": 350, "height": 350}
+        out = structured_content_to_html(node)
+        assert out == (
+            '<a class="gloss-image-link" data-path="https://example.com/x.png">'
+            '<span class="gloss-image-container">'
+            '<img class="gloss-image" src="https://example.com/x.png" '
+            'style="width: 350px; height: 350px">'
+            "</span></a>"
+        )
+        assert DICT_MEDIA_CLASS not in out
+
+    def test_image_object_dict_internal_rewrites_src(self):
+        node = {"type": "image", "path": "image.gif"}
+        collected: set[str] = set()
+        out = structured_content_to_html(node, dict_id="d1", media_collector=collected)
+        assert 'src="d1__image.gif"' in out
+        assert "gloss-image anki-miner-dict-media" in out
+        assert collected == {"image.gif"}
+
+    def test_image_object_keeps_alt_and_title(self):
+        node = {"type": "image", "path": "https://example.com/x.png", "alt": "diagram", "title": "hint"}
+        out = structured_content_to_html(node)
+        assert 'alt="diagram"' in out
+        assert 'title="hint"' in out
+
+    def test_image_object_no_type_key_still_dispatches_by_tag(self):
+        # An SC img node (tag='img', no type) must still take the img path.
+        node = {"tag": "img", "path": "https://example.com/x.png"}
+        out = structured_content_to_html(node)
+        assert out.startswith('<a class="gloss-image-link"')
+
+
+class TestDeinflectionGlossaryItem:
+    """Term-bank v3 permits a glossary item to be a deinflection pair
+    [uninflected_term, rule_chain]. Yomitan consumes these to build its
+    deinflection DB, never as prose. Rendering the whole list as SC concatenated
+    the term and rule strings into garbage; we render just the base form."""
+
+    def test_deinflection_pair_renders_uninflected_term_only(self):
+        html = render_glossary_entry([["のたまう", ["past"]]])
+        assert html == ('<li class="gloss-item"><div class="gloss-content">のたまう</div></li>')
+
+    def test_deinflection_pair_escapes_term(self):
+        html = render_glossary_entry([["<x>", ["past"]]])
+        assert html == ('<li class="gloss-item"><div class="gloss-content">&lt;x&gt;</div></li>')
+
+    def test_deinflection_pair_does_not_emit_rule_strings(self):
+        html = render_glossary_entry([["oppidum", ["genitive plural"]]])
+        assert "genitive" not in html
+        assert "oppidum" in html
+
+    def test_deinflection_non_string_term_empty(self):
+        html = render_glossary_entry([[123, ["past"]]])
+        assert html == ('<li class="gloss-item"><div class="gloss-content"></div></li>')

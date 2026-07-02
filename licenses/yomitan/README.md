@@ -26,6 +26,7 @@ the combined work carries the same license.
 | `tests/unit/data/japanese_transforms_cases.py` (case table) | `test/language/japanese-transforms.test.js` |
 | `tests/unit/test_japanese_transforms_cases.py::has_term_reasons` | `test/fixtures/language-transformer-test.js` (`hasTermReasons`) |
 | `tests/unit/test_deinflection_cycles.py` | `test/language-transformer-cycles.test.js` |
+| `anki_miner/services/dictionary/yomitan_renderer.py` (`structured_content_to_html` typed-glossary dispatch, `_text_to_html`, `_render_attrs` internal-link neutering, `_coerce_style_value` style-value semantics) | `ext/js/dictionary/dictionary-importer.js` (`_formatDictionaryTermGlossaryObject`), `ext/js/templates/anki-template-renderer.js` (`_formatGlossary`, `_replaceNewlines`), `ext/js/templates/anki-template-renderer-content-manager.js` (`prepareLink`), `ext/js/display/structured-content-generator.js` (`_setStructuredContentElementStyle`, `_createLinkElement`) |
 
 Pinned upstream commit: `e2ed450c2f11a591922822e77f008e70a87daf0c`.
 
