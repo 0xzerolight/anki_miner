@@ -129,6 +129,12 @@ class AnkiMinerConfig:
 
     # Word filtering settings
     allowed_pos: tuple[str, ...] = field(default_factory=lambda: ("名詞", "動詞", "形容詞", "副詞", "形状詞", "代名詞"))
+    # NOTE: "非自立" here does NOT match unidic's "非自立可能" — and must not be
+    # "fixed" to it. 非自立可能 is a LEXICAL tag attached to 出す/見る/いる in
+    # every context (including as standalone main verbs), so excluding it would
+    # drop legitimate independent verbs, not just compound fragments. Fragment
+    # mining is solved by dictionary-attested compound matching instead
+    # (services/compound_matcher.py).
     excluded_subtypes: tuple[str, ...] = field(
         default_factory=lambda: (
             "非自立",
@@ -139,6 +145,13 @@ class AnkiMinerConfig:
             "固有名詞",
         )
     )
+    # Dictionary-attested compound matching (Yomitan longest-match principle):
+    # multi-token spans whose joined form is an offline-dictionary headword are
+    # mined as ONE word (走り出した → 走り出す, 応急処置 stays whole); longest
+    # match wins and consumed components are not separately mined from that
+    # occurrence. Requires at least one enabled indexed offline dictionary;
+    # without one, mining behavior is unchanged.
+    compound_matching: bool = True
     # Enabled name-wordset IDs (Issue #59). Each ID maps to a bundled
     # plain-text proper-noun list under resources/wordsets/<id>.txt.
     # Words on any enabled set are dropped from mining unless whitelisted.
