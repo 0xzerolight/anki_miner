@@ -8,6 +8,7 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
+from anki_miner.services.compound_matcher import CompoundSyntheticToken
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import generate_furigana, generate_reading
 from anki_miner.utils.text_utils import wrap_target_furigana
@@ -181,14 +182,12 @@ class TestParseSubtitleFile:
         token2 = _make_token("食べた", "動詞", lemma="食べる", kana="タベタ")
 
         mock_tagger = MagicMock()
-        # T2: sentence-level furigana/reading use raw_tokens (no extra tagger
-        # calls). Per-line: 1 tokenize. Per emitted word: expression_furigana
-        # + expression_reading. Line 1 emits a word → 3 tagger calls. Line 2
-        # dedup-skips after tokenize → 1 tagger call. Total: 4.
+        # Sentence-level furigana/reading reuse raw_tokens, and a dict-form verb
+        # (surface == orthBase) takes its expression reading from the token
+        # itself (Task 1.2), so each line is a single tokenize call. Line 2
+        # dedup-skips after tokenize. Total: 2.
         mock_tagger.side_effect = [
             [token1],  # line 1: _iter_parsed_lines tokenize
-            [token1],  # line 1: expression_furigana (mined)
-            [token1],  # line 1: expression_reading (mined)
             [token2],  # line 2: _iter_parsed_lines tokenize (then dedup skip)
         ]
 
@@ -227,15 +226,15 @@ class TestParseSubtitleFile:
         token2 = _make_token("学生", "名詞", lemma="学生X", kana="ガクセイ")
 
         mock_tagger = MagicMock()
-        # T2: sentence-level calls use raw_tokens. Each line: 1 tokenize + 2
-        # expression-level = 3 tagger calls. Two lines → 6.
+        # Sentence-level furigana/reading reuse raw_tokens, and surface-mined
+        # nouns take their expression reading from the token itself (Task 1.2),
+        # so a line is just its tokenize call — except token2's mined form (学生)
+        # differs from its lemma (学生X), which triggers one lemma_reading
+        # lookup for the JPod101 retry. Total: 3.
         mock_tagger.side_effect = [
             [token1],  # line 1: tokenize
-            [token1],  # line 1: expression_furigana (mined)
-            [token1],  # line 1: expression_reading (mined)
             [token2],  # line 2: tokenize
-            [token2],  # line 2: expression_furigana (mined)
-            [token2],  # line 2: expression_reading (mined)
+            [token2],  # line 2: lemma_reading (self._reading of lemma 学生X)
         ]
 
         with (
@@ -351,14 +350,33 @@ class TestExpressionFuriganaSource:
         return mock_furigana
 
     def test_noun_furigana_uses_surface(self, test_config, tmp_path):
-        """Noun token: expression furigana generated from surface."""
+        """Noun token: expression furigana/reading come from the surface token.
+
+        Task 1.2: surface-mined POS take their reading from the in-sentence
+        token itself (generate_furigana_from_tokens on that token), not from a
+        re-tokenized isolated pass — so the mis-lemma 剛腕 never leaks in.
+        """
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = "彼は豪腕の投手だ"
+        mock_line.start = 1000
+        mock_line.end = 3000
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
         token = _make_token("豪腕", "名詞", lemma="剛腕", kana="ゴウワン")
-        mock_furigana = self._run_parse(test_config, tmp_path, "彼は豪腕の投手だ", token)
-        # T2: sentence-level uses generate_furigana_from_tokens, not generate_furigana.
-        # generate_furigana is called once for the expression only.
-        called_texts = [c.args[0] for c in mock_furigana.call_args_list]
-        assert "豪腕" in called_texts  # expression uses surface
-        assert "剛腕" not in called_texts  # not the mis-lemma
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token]
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            words = service.parse_subtitle_file(sub_file)
+        word = words[0]
+        assert word.expression_furigana == "豪腕[ごうわん]"  # from surface + token kana
+        assert word.expression_reading == "ごうわん"
+        assert "剛腕" not in word.expression_furigana  # not the mis-lemma
 
     def test_verb_furigana_uses_lemma(self, test_config, tmp_path):
         """Verb token: expression furigana generated from lemma."""
@@ -450,6 +468,150 @@ class TestLemmaReading:
         assert word.lemma_reading == "こう-from-lemma"
 
 
+class TestTargetReadingSingleSource:
+    """Task 1.2: the card's target reading is the in-sentence token's own kana.
+
+    For surface-mined POS (``mined_form == surface``, non-compound) the
+    ExpressionReading/ExpressionFurigana flow from the context-disambiguated
+    MeCab token reading, NOT from re-tokenizing the surface in isolation — so a
+    polyphonic noun (方 かた/ほう) reads the way the learner heard it, and the
+    JPod101/audio-pack identity pair (mined_form + expression_reading) matches.
+    """
+
+    def _parse_one(self, test_config, tmp_path, line_text, token, *, wrong_furigana, wrong_reading):
+        """Parse a single line whose only token is ``token``.
+
+        The isolated-re-tokenization helpers ``generate_furigana`` /
+        ``generate_reading`` are stubbed to deliberately WRONG values, so an
+        assertion on the emitted reading proves whether the surface-mined path
+        consulted them (verb/compound path) or the token's own kana (noun path).
+        """
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = line_text
+        mock_line.start = 1000
+        mock_line.end = 3000
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token]
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value=wrong_furigana),
+            patch("anki_miner.services.subtitle_parser.generate_reading", return_value=wrong_reading),
+        ):
+            service = SubtitleParserService(test_config)
+            words = service.parse_subtitle_file(sub_file)
+        return words[0]
+
+    def test_context_noun_reading_from_token_not_isolated(self, test_config, tmp_path):
+        """方 read ほう in context: emitted reading tracks the token, not re-tokenization."""
+        token = _make_token("方", "名詞", lemma="方", kana="ホウ")
+        word = self._parse_one(
+            test_config,
+            tmp_path,
+            "こっちの方がいい",
+            token,
+            wrong_furigana="方[かた]",
+            wrong_reading="かた",
+        )
+        assert word.expression_reading == "ほう"
+        assert word.expression_furigana == "方[ほう]"
+
+    def test_context_noun_other_reading_tracks_token(self, test_config, tmp_path):
+        """Same surface with the other contextual kana → the other reading."""
+        token = _make_token("方", "名詞", lemma="方", kana="カタ")
+        word = self._parse_one(
+            test_config,
+            tmp_path,
+            "あの方",
+            token,
+            wrong_furigana="方[ほう]",
+            wrong_reading="ほう",
+        )
+        assert word.expression_reading == "かた"
+        assert word.expression_furigana == "方[かた]"
+
+    def test_katakana_noun_folds_to_hiragana(self, test_config, tmp_path):
+        """Katakana loanword surface: reading folds to hiragana, no furigana."""
+        token = _make_token("コーヒー", "名詞", lemma="コーヒー", kana="コーヒー")
+        word = self._parse_one(
+            test_config,
+            tmp_path,
+            "コーヒーを飲む",
+            token,
+            wrong_furigana="WRONG",
+            wrong_reading="わるい",
+        )
+        assert word.expression_reading == "こーひー"
+        assert word.expression_furigana == "コーヒー"
+
+    def test_verb_orthbase_reading_unchanged(self, test_config, tmp_path):
+        """Regression: a conjugated verb keeps the isolated orthBase reading.
+
+        mined orthBase 蒔く ≠ surface 蒔い, so the reading must come from
+        ``generate_reading(mined)`` (stubbed まく), never the surface kana マイ.
+        """
+        token = _make_token("蒔い", "動詞", lemma="蒔く", kana="マイ", orth_base="蒔く")
+        word = self._parse_one(
+            test_config,
+            tmp_path,
+            "種を蒔いた",
+            token,
+            wrong_furigana="蒔く[まく]",
+            wrong_reading="まく",
+        )
+        assert word.mined_form == "蒔く"
+        assert word.expression_reading == "まく"
+        assert word.expression_furigana == "蒔く[まく]"
+        assert word.expression_reading != "まい"  # not the surface token kana
+
+    def test_dict_form_verb_matches_token_reading(self, test_config, tmp_path):
+        """A dictionary-form verb (surface == orthBase) also reads from its token.
+
+        ``mined == surface`` here, so the surface-mined path applies; the token
+        kana タベル and the isolated reading agree, so the result is stable.
+        """
+        token = _make_token("食べる", "動詞", lemma="食べる", kana="タベル")
+        word = self._parse_one(
+            test_config,
+            tmp_path,
+            "パンを食べる",
+            token,
+            wrong_furigana="WRONG",
+            wrong_reading="WRONG",
+        )
+        assert word.expression_reading == "たべる"
+        assert word.expression_furigana == "食[た]べる"
+
+    def test_compound_synthetic_keeps_headword_reading(self, test_config, tmp_path):
+        """Regression: a compound synthetic keeps the headword-regenerated reading.
+
+        Its concatenated component kana (キガシ) is wrong, so the reading must
+        come from ``self._reading`` (stubbed きがする), not ``extract_reading``.
+        """
+        token = CompoundSyntheticToken(
+            surface="気がする",
+            pos1="動詞",
+            pos2="非自立可能",
+            lemma="気がする",
+            kana="キガシ",
+        )
+        word = self._parse_one(
+            test_config,
+            tmp_path,
+            "彼は気がする",
+            token,
+            wrong_furigana="気がする[きがする]",
+            wrong_reading="きがする",
+        )
+        assert word.expression_reading == "きがする"
+        assert word.expression_reading != "きがし"  # not the concatenated component kana
+
+
 class TestFuriganaMemoization:
     """Per-parse memoization of generate_furigana / generate_reading / wrap_target_furigana.
 
@@ -489,11 +651,12 @@ class TestFuriganaMemoization:
     def test_repeated_expression_furigana_memoized(self, test_config, tmp_path):
         """Same mined form on two lines → generate_furigana called once for that string.
 
-        Both lines have the same verb with lemma 食べる (mined form = lemma for verbs).
-        The global lemma dedup means only line-1's word is emitted into all_words,
-        but without caching, line-2's word would still trigger generate_furigana("食べる")
-        before the dedup check discards it.  With the cache the call is served from
-        _fg_cache and generate_furigana itself is not invoked a second time.
+        Both lines carry the same conjugated verb (surface 食べた, orthBase mined
+        form 食べる), so the isolated ``generate_furigana(食べる)`` path runs
+        rather than the surface-token path nouns take (Task 1.2). The global
+        lemma dedup means only line-1's word is emitted, but without caching
+        line-2's word would still trigger generate_furigana("食べる"); with the
+        cache the call is served from _fg_cache and not invoked a second time.
 
         We patch both generate_furigana AND generate_reading (and the tagger, to
         avoid StopIteration from the mock) so the only actual calls observed in
@@ -503,11 +666,11 @@ class TestFuriganaMemoization:
         sub_file = tmp_path / "test.srt"
         sub_file.write_text("placeholder", encoding="utf-8")
 
-        # Two lines; both tokenize to the same verb with lemma 食べる.
+        # Two lines; both tokenize to the same conjugated verb (mined 食べる).
         # Distinct sentence text ensures sentence-level calls don't accidentally
         # match "食べる" and inflate the expression-level count.
-        taberux2_subs = self._make_subs_two_lines("食べる", "また食べる")
-        token_taberu = _make_token("食べる", "動詞", lemma="食べる", kana="タベル")
+        taberux2_subs = self._make_subs_two_lines("食べた", "また食べた")
+        token_taberu = _make_token("食べた", "動詞", lemma="食べる", kana="タベタ", orth_base="食べる")
         mock_tagger = MagicMock()
         # All tagger calls return [token_taberu]; we only care about generate_furigana calls.
         mock_tagger.return_value = [token_taberu]
@@ -539,16 +702,18 @@ class TestFuriganaMemoization:
 
         The per-parse cache must be cleared at the start of each call so a
         second parse (possibly with a different file) is not served stale
-        entries from the first parse.
+        entries from the first parse. Uses a conjugated verb (surface 食べた ≠
+        orthBase 食べる) so the memoized isolated ``generate_furigana(mined)``
+        path is exercised — surface-mined nouns bypass it (Task 1.2).
         """
         sub_file = tmp_path / "test.srt"
         sub_file.write_text("placeholder", encoding="utf-8")
 
-        token = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        token = _make_token("食べた", "動詞", lemma="食べる", kana="タベタ", orth_base="食べる")
 
         def make_mock_subs():
             mock_line = MagicMock()
-            mock_line.text = "猫"
+            mock_line.text = "食べた"
             mock_line.start = 1000
             mock_line.end = 3000
             ms = MagicMock()
@@ -588,12 +753,16 @@ class TestFuriganaMemoization:
     # ------------------------------------------------------------------
 
     def test_repeated_expression_furigana_memoized_with_index(self, test_config, tmp_path):
-        """Same mined form on two lines → generate_furigana called once (with_index path)."""
+        """Same mined form on two lines → generate_furigana called once (with_index path).
+
+        Conjugated verb (surface 食べた, mined orthBase 食べる) so the isolated
+        ``generate_furigana`` path is exercised; nouns bypass it (Task 1.2).
+        """
         sub_file = tmp_path / "test.srt"
         sub_file.write_text("placeholder", encoding="utf-8")
 
-        taberux2_subs = self._make_subs_two_lines("食べる", "また食べる")
-        token_taberu = _make_token("食べる", "動詞", lemma="食べる", kana="タベル")
+        taberux2_subs = self._make_subs_two_lines("食べた", "また食べた")
+        token_taberu = _make_token("食べた", "動詞", lemma="食べる", kana="タベタ", orth_base="食べる")
         mock_tagger = MagicMock()
         mock_tagger.return_value = [token_taberu]
 
@@ -613,15 +782,20 @@ class TestFuriganaMemoization:
         assert len(words) >= 1
 
     def test_cache_reset_between_parse_with_index_calls(self, test_config, tmp_path):
-        """Cache reset between two parse_subtitle_file_with_index calls."""
+        """Cache reset between two parse_subtitle_file_with_index calls.
+
+        Conjugated verb (surface 食べた ≠ orthBase 食べる) so the memoized
+        isolated ``generate_furigana(mined)`` path runs; surface-mined nouns
+        bypass it (Task 1.2).
+        """
         sub_file = tmp_path / "test.srt"
         sub_file.write_text("placeholder", encoding="utf-8")
 
-        token = _make_token("猫", "名詞", lemma="猫", kana="ネコ")
+        token = _make_token("食べた", "動詞", lemma="食べる", kana="タベタ", orth_base="食べる")
 
         def make_mock_subs():
             mock_line = MagicMock()
-            mock_line.text = "猫"
+            mock_line.text = "食べた"
             mock_line.start = 1000
             mock_line.end = 3000
             ms = MagicMock()

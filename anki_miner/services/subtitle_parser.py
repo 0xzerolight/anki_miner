@@ -28,6 +28,7 @@ from anki_miner.utils import (
     clean_subtitle_text,
     generate_furigana,
     generate_reading,
+    katakana_to_hiragana,
     wrap_target_plain,
 )
 from anki_miner.utils.text_utils import (
@@ -324,8 +325,33 @@ class SubtitleParserService:
         pos = word_token.feature.pos1
         orth_base = self._extract_orth_base(word_token)
         mined = select_mined_form(pos, orth_base, lemma, surface)
-        expression_furigana = self._furigana(mined)
-        expression_reading = self._reading(mined)
+        if mined == surface and getattr(word_token, "compound", False) is not True:
+            # Single source of truth for the target reading (Task 1.2). When the
+            # card front IS the surface token, keep the context-disambiguated
+            # reading this token already carries instead of re-tokenizing the
+            # surface in isolation: an isolated pass picks a context-free reading
+            # for polyphonic nouns (方 かた/ほう, 中 なか/ちゅう), which would
+            # split the card's ExpressionReading, expression furigana, and the
+            # JPod101/audio-pack identity pair (mined_form + expression_reading)
+            # from what the learner heard. This applies Yomitan's invariant —
+            # one reading flows from the matched headword everywhere, and
+            # anki-note-builder.js `getReading` overrides the parser token
+            # reading with the entry reading (upstream e2ed450) — but inverted:
+            # here the MeCab token IS the trustworthy contextual source, so we
+            # propagate it outward rather than re-derive. ``reading`` here
+            # equals extract_reading(word_token)
+            # (the compound branch above, excluded by the guard, is the only
+            # thing that overrides it). Compound synthetics carry wrong
+            # concatenated component kana, so they take the else branch and keep
+            # the headword-regenerated reading.
+            expression_reading = katakana_to_hiragana(reading)
+            expression_furigana = generate_furigana_from_tokens([word_token])
+        else:
+            # Verbs/adjectives mine as orthBase, whose reading is genuinely not
+            # the surface token's kana (蒔い→蒔く); compound synthetics
+            # regenerate from the headword. Both re-derive from ``mined``.
+            expression_furigana = self._furigana(mined)
+            expression_reading = self._reading(mined)
         # Lemma reading for the JPod101 audio retry: when the mined form
         # misses, the loop retries with the lemma kanji and needs the lemma's
         # OWN reading (探す→さがす), not the surface reading (さがし). For
