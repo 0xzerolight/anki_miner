@@ -324,6 +324,19 @@ def _camel_to_kebab(name: str) -> str:
     return _CAMEL_RE.sub(r"\1-\2", name).lower()
 
 
+def _text_to_html(text: str) -> str:
+    """Escape a plain-text string and turn its newlines into <br>.
+
+    Mirrors Yomitan's `_stringToMultiLineHtml` / `_replaceNewlines`
+    (`ext/js/templates/anki-template-renderer.js`, upstream e2ed450): CRLF/CR
+    are folded to LF so Windows-authored text renders identically, then each
+    newline becomes a literal `<br>` (Anki collapses raw newlines in stored
+    card HTML).
+    """
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    return escape(normalized).replace("\n", "<br>")
+
+
 def _coerce_style_value(value: YomitanNode) -> str | None:
     """Stringify a Yomitan style value safely.
 
@@ -433,14 +446,27 @@ def structured_content_to_html(
     if not isinstance(node, dict):
         return ""
 
-    # Yomitan wraps top-level entries in {"type": "structured-content", "content": ...}
-    if node.get("type") == "structured-content":
+    # Typed glossary objects (term-bank v3): {"type": "text"|"image"|
+    # "structured-content"}. Yomitan dispatches these explicitly in
+    # `_formatDictionaryTermGlossaryObject` (ext/js/dictionary/dictionary-importer.js)
+    # and `_formatGlossary` (ext/js/templates/anki-template-renderer.js), upstream
+    # e2ed450. Without the text/image cases a v3-legal typed item falls through to
+    # the `<span>` path with no `content` and renders empty — silent data loss.
+    node_type = node.get("type")
+    if node_type == "structured-content":
         return structured_content_to_html(
             node.get("content", ""),
             _depth + 1,
             dict_id=dict_id,
             media_collector=media_collector,
         )
+    if node_type == "text":
+        text = node.get("text")
+        return _text_to_html(text) if isinstance(text, str) else ""
+    if node_type == "image":
+        # The image glossary object carries the same path/width/height/title/alt
+        # keys `_render_img` already reads (no `sizeUnits` → px, per schema).
+        return _render_img(node, dict_id=dict_id, media_collector=media_collector)
 
     tag = node.get("tag", "span")
     if tag not in _ALLOWED_TAGS:
@@ -654,8 +680,15 @@ def render_glossary_entry(
     parts: list[str] = []
     for item in glossary:
         if isinstance(item, str):
-            normalized = item.replace("\r\n", "\n").replace("\r", "\n")
-            inner = escape(normalized).replace("\n", "<br>")
+            inner = _text_to_html(item)
+        elif isinstance(item, list):
+            # Deinflection pair [uninflected_term, rule_chain] (term-bank v3).
+            # Yomitan consumes these to build its deinflection database, never as
+            # glossary prose; we have no deinflection UI, so render just the
+            # uninflected base form. Rendering the pair as structured content
+            # would concatenate the term with the rule strings into garbage.
+            term = item[0] if item and isinstance(item[0], str) else ""
+            inner = _text_to_html(term)
         else:
             inner = structured_content_to_html(item, dict_id=dict_id, media_collector=media_collector)
         parts.append(f'<li class="gloss-item"><div class="gloss-content">{inner}</div></li>')
