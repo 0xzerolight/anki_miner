@@ -2,7 +2,8 @@
 
 `anki_miner/services/deinflection.py` (engine),
 `anki_miner/services/japanese_transforms.py` (rule table),
-`anki_miner/utils/furigana_distribute.py` (furigana distribution), and their
+`anki_miner/utils/furigana_distribute.py` (furigana distribution),
+`anki_miner/services/ja_normalize.py` (pre-tokenization normalization), and their
 test corpus are Python ports of code from
 [Yomitan](https://github.com/yomidevs/yomitan), Copyright (C)
 Yomitan Authors, licensed under the **GNU General Public License, version 3
@@ -17,6 +18,8 @@ the combined work carries the same license.
 | `anki_miner/services/deinflection.py` | `ext/js/language/language-transformer.js`, `ext/js/language/language-transforms.js` |
 | `anki_miner/services/japanese_transforms.py` | `ext/js/language/ja/japanese-transforms.js` |
 | `anki_miner/utils/furigana_distribute.py` | `ext/js/language/ja/japanese.js` (`distributeFurigana` family) |
+| `anki_miner/services/ja_normalize.py` | `ext/js/language/ja/japanese.js` (`convertHalfWidthKanaToFullWidth`, `HALFWIDTH_KATAKANA_MAPPING`, `normalizeCJKCompatibilityCharacters`), `ext/js/language/CJK-util.js` (`normalizeRadicals`, `CJK_IDEOGRAPH_RANGES`, `isCodePointInRanges`) |
+| `tests/unit/test_ja_normalize.py` (fixture slices) | `test/japanese-util.test.js` |
 | `anki_miner/services/_ankiconnect.py` (`_expect_list`) | `ext/js/comm/anki-connect.js` (`_normalizeArray`) |
 | `tests/unit/data/japanese_transforms_cases.py` (case table) | `test/language/japanese-transforms.test.js` |
 | `tests/unit/test_japanese_transforms_cases.py::has_term_reasons` | `test/fixtures/language-transformer-test.js` (`hasTermReasons`) |
