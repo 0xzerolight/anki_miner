@@ -28,11 +28,13 @@ _PREFIX_WHITELIST = frozenset({"無", "不", "非", "反", "超", "未", "新", 
 _VERB_NOMINALIZER_SUFFIXES = frozenset({"方", "手", "様"})
 
 
-class _SyntheticToken:
+class SyntheticToken:
     """Duck-typed token replacement for merged compounds.
 
     Mimics fugashi token attribute access (.surface,
-    .feature.{pos1,pos2,lemma,kana}).
+    .feature.{pos1,pos2,lemma,kana}). Subclassed by
+    ``compound_matcher.CompoundSyntheticToken`` for dictionary-attested
+    merges.
     """
 
     __slots__ = ("surface", "feature")
@@ -40,6 +42,10 @@ class _SyntheticToken:
     def __init__(self, surface: str, pos1: str, pos2: str, lemma: str, kana: str):
         self.surface = surface
         self.feature = SimpleNamespace(pos1=pos1, pos2=pos2, lemma=lemma, kana=kana)
+
+
+# Back-compat alias for the pre-rename private name.
+_SyntheticToken = SyntheticToken
 
 
 def extract_lemma(word_token) -> str:
@@ -219,7 +225,7 @@ def _merge_noun_suffixes(tokens: list) -> list:
                     except AttributeError:
                         suffix_lemmas.append(t.surface)
                 merged.append(
-                    _SyntheticToken(
+                    SyntheticToken(
                         surface=surf,
                         pos1="名詞",
                         pos2=head_pos2,
@@ -286,7 +292,7 @@ def _merge_prefix_compounds(tokens: list) -> list:
                 except AttributeError:
                     root_lemma = root.surface
                 merged.append(
-                    _SyntheticToken(
+                    SyntheticToken(
                         surface=surf,
                         pos1="名詞",
                         pos2=root_pos2,
@@ -344,7 +350,7 @@ def _merge_verb_nominalizers(tokens: list) -> list:
                 except AttributeError:
                     suf_kana = suffix.surface
                 merged.append(
-                    _SyntheticToken(
+                    SyntheticToken(
                         surface=surf,
                         pos1="名詞",
                         pos2="普通名詞",
