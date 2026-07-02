@@ -12,6 +12,14 @@ the mocked tests in test_asr_transcriber.py.
 
 Gated to the asr CI job (needs the pywhispercpp wheel + numpy). Skips ONLY when
 the tiny model genuinely cannot be obtained (e.g. offline first run).
+
+Marked ``network``: obtaining the tiny model is a real HTTP download on a cold
+cache, which the socket tripwire (tests/_network_tripwire.py) otherwise records
+and fails at teardown — flaky on whether the runner already has the model. The
+marker suppresses the tripwire for these tests; when the download genuinely
+fails (offline), ``_load_tiny_model`` still catches it and skips, so the tests
+are never red for a missing model — they run when it is obtainable, skip when
+not.
 """
 
 from __future__ import annotations
@@ -20,8 +28,9 @@ import pytest
 
 from anki_miner.services.asr import _engine, transcriber
 
-# Live model load + decode; needs the pywhispercpp CPU wheel and numpy.
-pytestmark = pytest.mark.asr
+# Live model load + decode; needs the pywhispercpp CPU wheel and numpy. ``network``
+# lets the cold-cache model download through the socket tripwire (see docstring).
+pytestmark = [pytest.mark.asr, pytest.mark.network]
 
 _CLIP_SECONDS = 2.0
 _SAMPLE_RATE = 16000
