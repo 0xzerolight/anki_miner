@@ -1312,6 +1312,86 @@ def test_real_fugashi_mines_verb_nominalizer(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Pre-tokenization Japanese normalization (ja_normalize wired into
+# clean_subtitle_text) — end-to-end through the real fugashi pipeline.
+# ---------------------------------------------------------------------------
+
+
+def _mine_line(tmp_path, text):
+    srt_file = tmp_path / "norm.srt"
+    srt_file.write_text(
+        "1\n" "00:00:01,000 --> 00:00:05,000\n" + text + "\n",
+        encoding="utf-8",
+    )
+    config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+    return SubtitleParserService(config).parse_subtitle_file(srt_file)
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_real_fugashi_halfwidth_katakana_mines_fullwidth(tmp_path):
+    """Halfwidth ﾊﾟｿｺﾝ must normalize to パソコン and be mined."""
+    words = _mine_line(tmp_path, "ﾊﾟｿｺﾝを使う")
+
+    surfaces = {w.surface for w in words}
+    assert "パソコン" in surfaces, f"got: {surfaces}"
+    # No halfwidth katakana survives into the mined data.
+    for w in words:
+        assert "ﾊ" not in w.sentence and "ﾟ" not in w.sentence
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_real_fugashi_offset_invariant_on_halfwidth_line(tmp_path):
+    """Because normalization precedes tokenization, the stored sentence *is* the
+    normalized text: every mined word's surface is findable in its sentence at
+    the recorded offsets (Issue #20 invariant preserved by construction)."""
+    words = _mine_line(tmp_path, "ﾊﾟｿｺﾝを使う")
+
+    assert words
+    for w in words:
+        assert w.surface in w.sentence
+        assert w.sentence[w.surface_start : w.surface_end] == w.surface
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_real_fugashi_nfd_kana_tokenizes_like_precomposed(tmp_path):
+    """NFD-decomposed dakuten kana (か + U+3099) must tokenize identically to the
+    precomposed line — the whole point of the NFC step."""
+    import unicodedata
+
+    precomposed = "ゲームが好きだ"
+    decomposed = unicodedata.normalize("NFD", precomposed)
+    assert decomposed != precomposed  # sanity: the input really is decomposed
+
+    surfaces_pre = {w.surface for w in _mine_line(tmp_path, precomposed)}
+    surfaces_nfd = {w.surface for w in _mine_line(tmp_path, decomposed)}
+    assert surfaces_pre == surfaces_nfd
+    assert surfaces_pre  # and something was actually mined
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_real_fugashi_kangxi_radical_mines_kanji_word(tmp_path):
+    """OCR Kangxi radical ⼭ (U+2F2D) must fold to 山 (U+5C71) and mine 山-words."""
+    words = _mine_line(tmp_path, "高い⼭に登る")
+
+    surfaces = {w.surface for w in words}
+    assert "山" in surfaces, f"got: {surfaces}"
+    assert "登る" in surfaces, f"got: {surfaces}"
+    for w in words:
+        assert "⼭" not in w.sentence  # radical folded away
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_real_fugashi_kanji_variant_mines_standard_form(tmp_path):
+    """Astral 𠮟 (U+20B9F) must standardize to 叱 (U+53F1) and mine lemma 叱る."""
+    words = _mine_line(tmp_path, "母に𠮟られた")
+
+    lemmas = {w.lemma for w in words}
+    assert "叱る" in lemmas, f"got: {lemmas}"
+    for w in words:
+        assert "𠮟" not in w.sentence  # variant standardized away
+
+
+# ---------------------------------------------------------------------------
 # parse_subtitle_file_with_index — i+1 filter foundation
 # ---------------------------------------------------------------------------
 
