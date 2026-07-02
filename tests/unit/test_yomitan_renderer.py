@@ -1045,3 +1045,31 @@ class TestStyleValueSemantics:
         out = structured_content_to_html(node)
         assert "evil" not in out
         assert "url(" not in out
+
+
+class TestStructuredContentTextNodeNewlines:
+    """Item 4.4: newlines inside a structured-content text node become <br> at
+    any depth (Yomitan's _replaceNewlines walks every text node). Before this
+    fix only top-level plain-string glossary items got \\n→<br>; \\n inside SC
+    text collapsed to a space in the Anki webview."""
+
+    def test_top_level_text_node_newline_to_br(self):
+        assert structured_content_to_html("a\nb") == "a<br>b"
+
+    def test_text_node_crlf_and_cr_normalized(self):
+        assert structured_content_to_html("a\r\nb\rc") == "a<br>b<br>c"
+
+    def test_text_node_escaped_then_br(self):
+        assert structured_content_to_html("<b>\nx") == "&lt;b&gt;<br>x"
+
+    def test_newline_inside_element_content(self):
+        node = {"tag": "div", "content": "line1\nline2"}
+        assert structured_content_to_html(node) == '<div class="gloss-sc-div">line1<br>line2</div>'
+
+    def test_newline_in_deeply_nested_text_node(self):
+        node = {"tag": "div", "content": [{"tag": "span", "content": "x\ny"}]}
+        out = structured_content_to_html(node)
+        assert '<span class="gloss-sc-span">x<br>y</span>' in out
+
+    def test_newline_in_list_leaf(self):
+        assert structured_content_to_html(["a\nb", "c"]) == "a<br>bc"
