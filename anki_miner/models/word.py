@@ -54,8 +54,15 @@ class TokenizedWord:
     pos: str | None = None  # MeCab pos1 (動詞/形容詞/名詞/...) — used for kifuku/odaka distinction
     # Character offsets of the target morpheme within ``sentence`` (post-filter).
     # -1 sentinel means "not tracked" — card builder falls back to plain escape.
+    # Invariant: sentence[surface_start:surface_end] == surface (the Issue #20
+    # offset-drift canary) — do NOT widen these to the inflected form.
     surface_start: int = -1
     surface_end: int = -1
+    # End offset of the FULL inflected form (verb/adjective + auxiliary chain,
+    # Yomitan-deinflection-verified): 蒔いた bolds fully instead of just the
+    # stem morpheme 蒔い. -1 sentinel means "same as surface_end". Bolding
+    # spans [surface_start, bold_end); extension is strictly rightward.
+    highlight_end: int = -1
     # Precomputed bolded variants of sentence / sentence_furigana with
     # <b>...</b> wrapping the target morpheme. Populated at parse time
     # (or i+1 swap time) only when config.bold_target_in_sentence is on.
@@ -70,6 +77,12 @@ class TokenizedWord:
     # the curator shows no sentence picker. Each entry is a leaf: its own
     # sentence_candidates stays empty (no recursion).
     sentence_candidates: list["TokenizedWord"] = field(default_factory=list)
+
+    @property
+    def bold_end(self) -> int:
+        """End offset for bold wrapping: ``highlight_end`` when tracked,
+        else ``surface_end`` (single shared fallback rule)."""
+        return self.highlight_end if self.highlight_end >= 0 else self.surface_end
 
     @property
     def mined_form(self) -> str:
@@ -121,11 +134,12 @@ class LineLemmas:
     duration: float  # end_time - start_time
     sentence_furigana: str = ""  # Furigana annotation for the whole line
     sentence_reading: str = ""  # Plain-kana reading for the whole line
-    # Per-lemma (surface, start, end) for each content lemma's first
-    # appearance on this line. Used by the i+1 sentence filter to bold
-    # the correct morpheme after swapping the sentence to a different
-    # line. Tuple-of-tuples instead of dict to keep the dataclass frozen.
-    lemma_spans: tuple[tuple[str, str, int, int], ...] = field(default_factory=tuple)
+    # Per-lemma (lemma, surface, start, end, highlight_end) for each content
+    # lemma's first appearance on this line. Used by the i+1 sentence filter
+    # to bold the correct span after swapping the sentence to a different
+    # line; highlight_end covers the full inflected form (-1 = same as end).
+    # Tuple-of-tuples instead of dict to keep the dataclass frozen.
+    lemma_spans: tuple[tuple[str, str, int, int, int], ...] = field(default_factory=tuple)
 
 
 @dataclass

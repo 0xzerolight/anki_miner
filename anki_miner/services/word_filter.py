@@ -358,17 +358,21 @@ class WordFilterService:
         # lemma_spans), fall back to the original surface/offsets — bold would
         # then point at the old sentence, so we also disable the bolded fields.
         span_entry = next(
-            ((s, st, en) for (lemma_key, s, st, en) in match.lemma_spans if lemma_key == word.lemma),
+            ((s, st, en, he) for (lemma_key, s, st, en, he) in match.lemma_spans if lemma_key == word.lemma),
             None,
         )
         if span_entry is not None:
-            new_surface, new_start, new_end = span_entry
+            new_surface, new_start, new_end, new_highlight_end = span_entry
         else:
-            new_surface, new_start, new_end = word.surface, -1, -1
+            new_surface, new_start, new_end, new_highlight_end = word.surface, -1, -1, -1
 
         if self.config.bold_target_in_sentence and span_entry is not None and self.tagger is not None:
-            new_bolded = wrap_target_plain(match.line_text, new_start, new_end)
-            new_furi_bolded = wrap_target_furigana(match.line_text, self.tagger, new_start, new_end)
+            # Bold the full inflected form on the swapped-in line (same
+            # highlight_end semantics as parse-time bolding; -1 sentinel in
+            # hand-built indexes falls back to the surface span).
+            bold_end = new_highlight_end if new_highlight_end >= 0 else new_end
+            new_bolded = wrap_target_plain(match.line_text, new_start, bold_end)
+            new_furi_bolded = wrap_target_furigana(match.line_text, self.tagger, new_start, bold_end)
         else:
             new_bolded = ""
             new_furi_bolded = ""
@@ -397,6 +401,7 @@ class WordFilterService:
             surface=new_surface,
             surface_start=new_start,
             surface_end=new_end,
+            highlight_end=new_highlight_end,
             sentence=match.line_text,
             start_time=match.start_time,
             end_time=match.end_time,

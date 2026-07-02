@@ -313,11 +313,13 @@ def wrap_target_furigana_from_tokens(text: str, tokens: Iterable[Any], start: in
         elif tok_start >= end:
             bucket = post
         else:
-            # Token overlaps the bold window. The mined token is a single
-            # MeCab morpheme (possibly compound-merged), so it should
-            # always be fully contained. Partial overlap would only happen
-            # if offsets were assigned incorrectly — treat as containment
-            # to keep the output well-formed.
+            # Token overlaps the bold window. The window covers the mined
+            # morpheme plus (for verbs/adjectives) its trailing auxiliary
+            # tokens — highlight_end is raw-token-boundary aligned, so
+            # every overlapping token is fully contained and the body may
+            # legitimately hold several tokens (蒔い + た). Partial overlap
+            # would only happen if offsets were assigned incorrectly —
+            # treat as containment to keep the output well-formed.
             bucket = body
 
         # Build the annotated segment using the same rules as generate_furigana,
