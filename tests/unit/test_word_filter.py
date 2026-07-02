@@ -723,7 +723,7 @@ class TestWordFilterService:
                 start_time=10.0,
                 end_time=12.0,
                 duration=2.0,
-                lemma_spans=(("食べる", "食べる", 3, 6),),
+                lemma_spans=(("食べる", "食べる", 3, 6, 6),),
             )
             result = service.filter_i_plus_one([word], [line])
 
@@ -781,7 +781,7 @@ class TestWordFilterService:
                 start_time=10.0,
                 end_time=12.0,
                 duration=2.0,
-                lemma_spans=(("取引", "取引", 3, 5),),
+                lemma_spans=(("取引", "取引", 3, 5, 5),),
             )
 
             result = service.filter_i_plus_one([word], [line])
@@ -833,7 +833,7 @@ class TestWordFilterService:
                 start_time=10.0,
                 end_time=12.0,
                 duration=2.0,
-                lemma_spans=(("食べる", "食べる", 3, 6),),
+                lemma_spans=(("食べる", "食べる", 3, 6, 6),),
             )
 
             result = service.filter_i_plus_one([word], [line])
@@ -845,6 +845,54 @@ class TestWordFilterService:
             # Okurigana stays outside the bracket, so the bold run is 食[た]べる,
             # not a contiguous "食べる".
             assert "<b>食[た]べる</b>" in swapped.sentence_furigana_bolded
+
+        def test_i_plus_one_swap_bolds_full_inflected_form(self):
+            """The swapped-in line's bold span uses lemma_spans' highlight_end,
+            covering the verb's full inflected form (食べた), not just the
+            stem morpheme (食べ)."""
+            from unittest.mock import MagicMock
+
+            from anki_miner.config import AnkiMinerConfig
+
+            config = AnkiMinerConfig(bold_target_in_sentence=True)
+
+            def _tok(surface, kana):
+                token = MagicMock()
+                token.surface = surface
+                token.feature.kana = kana
+                return token
+
+            tagger = MagicMock(return_value=[_tok("昨日", "キノウ"), _tok("食べ", "タベ"), _tok("た", "タ")])
+            service = WordFilterService(config, tagger=tagger)
+
+            word = TokenizedWord(
+                surface="食べる",
+                lemma="食べる",
+                reading="タベル",
+                sentence="original",
+                start_time=0.0,
+                end_time=1.0,
+                duration=1.0,
+                pos="動詞",
+            )
+            line = LineLemmas(
+                line_text="昨日食べた",
+                lemmas=frozenset({"食べる"}),
+                start_time=10.0,
+                end_time=12.0,
+                duration=2.0,
+                # (lemma, surface, start, end, highlight_end): the inflected
+                # form 食べた spans [2, 5) while the stem morpheme is [2, 4).
+                lemma_spans=(("食べる", "食べ", 2, 4, 5),),
+            )
+
+            result = service.filter_i_plus_one([word], [line])
+            assert len(result) == 1
+            swapped = result[0]
+            assert swapped.sentence == "昨日食べた"
+            assert swapped.surface_end == 4
+            assert swapped.highlight_end == 5
+            assert "<b>食べた</b>" in swapped.sentence_bolded
 
         def test_blacklisted_lemma_not_counted_as_unknown(self, test_config):
             """Lemmas absent from target_lemmas (blacklisted upstream) don't count.

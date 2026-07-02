@@ -13,6 +13,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.word import select_mined_form
+from anki_miner.services.deinflection import find_highlight_end
 from anki_miner.services.morphology import (
     TokenInclusionRule,
     extract_lemma,
@@ -249,12 +250,17 @@ class SubtitleParserService:
         """Single-source token-span locator (see morphology.iter_token_spans)."""
         return iter_token_spans(text, tokens)
 
+    def _find_highlight_end(self, text: str, raw_tokens: list, tok_start: int, tok_end: int, word_token: Any) -> int:
+        """Full-inflected-form end offset (see deinflection.find_highlight_end)."""
+        return find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+
     def _emit_word(
         self,
         word_token: Any,
         tok_start: int,
         tok_end: int,
         *,
+        highlight_end: int,
         text: str,
         raw_tokens: list,
         start_time: float,
@@ -303,8 +309,10 @@ class SubtitleParserService:
         lemma_reading = expression_reading if mined == lemma else self._reading(lemma)
 
         if self.config.bold_target_in_sentence:
-            sentence_bolded = wrap_target_plain(text, tok_start, tok_end)
-            sentence_furigana_bolded = wrap_target_furigana_from_tokens(text, raw_tokens, tok_start, tok_end)
+            # Bold the full inflected form (verb/adjective + auxiliary
+            # chain), not just the stem morpheme: 蒔いた, not 蒔い.
+            sentence_bolded = wrap_target_plain(text, tok_start, highlight_end)
+            sentence_furigana_bolded = wrap_target_furigana_from_tokens(text, raw_tokens, tok_start, highlight_end)
         else:
             sentence_bolded = ""
             sentence_furigana_bolded = ""
@@ -326,6 +334,7 @@ class SubtitleParserService:
             pos=word_token.feature.pos1,
             surface_start=tok_start,
             surface_end=tok_end,
+            highlight_end=highlight_end,
             sentence_bolded=sentence_bolded,
             sentence_furigana_bolded=sentence_furigana_bolded,
         )
@@ -397,6 +406,7 @@ class SubtitleParserService:
                     word_token,
                     tok_start,
                     tok_end,
+                    highlight_end=self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token),
                     text=text,
                     raw_tokens=raw_tokens,
                     start_time=start_time,
@@ -451,8 +461,8 @@ class SubtitleParserService:
             # against the swapped-in line.
             line_lemmas: set[str] = set()
             included_tokens: list = []
-            included_spans: list[tuple[int, int]] = []
-            lemma_first_span: dict[str, tuple[str, int, int]] = {}
+            included_spans: list[tuple[int, int, int]] = []
+            lemma_first_span: dict[str, tuple[str, int, int, int]] = {}
             # Spans come from the shared locator — same offset and drop rule
             # as parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
             for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
@@ -461,8 +471,11 @@ class SubtitleParserService:
                 lemma_here = self._extract_lemma(word_token)
                 line_lemmas.add(lemma_here)
                 included_tokens.append(word_token)
-                included_spans.append((tok_start, tok_end))
-                lemma_first_span.setdefault(lemma_here, (word_token.surface, tok_start, tok_end))
+                # Computed once per token here and reused by the second pass,
+                # so parse_subtitle_file and _with_index stay output-identical.
+                highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+                included_spans.append((tok_start, tok_end, highlight_end))
+                lemma_first_span.setdefault(lemma_here, (word_token.surface, tok_start, tok_end, highlight_end))
 
             # A line with zero content words can never be i+1 — skip it from
             # the index entirely. (Word emission is also skipped trivially.)
@@ -484,18 +497,19 @@ class SubtitleParserService:
                     sentence_furigana=sentence_furigana,
                     sentence_reading=sentence_reading,
                     lemma_spans=tuple(
-                        (lemma_key, surface, span_start, span_end)
-                        for lemma_key, (surface, span_start, span_end) in lemma_first_span.items()
+                        (lemma_key, surface, span_start, span_end, span_highlight_end)
+                        for lemma_key, (surface, span_start, span_end, span_highlight_end) in lemma_first_span.items()
                     ),
                 )
             )
 
             # Second pass: emit deduped TokenizedWord entries (lemma-keyed).
-            for word_token, (tok_start, tok_end) in zip(included_tokens, included_spans, strict=True):
+            for word_token, (tok_start, tok_end, highlight_end) in zip(included_tokens, included_spans, strict=True):
                 word = self._emit_word(
                     word_token,
                     tok_start,
                     tok_end,
+                    highlight_end=highlight_end,
                     text=text,
                     raw_tokens=raw_tokens,
                     start_time=start_time,

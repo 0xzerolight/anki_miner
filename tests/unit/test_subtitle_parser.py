@@ -1885,9 +1885,16 @@ class TestSurfaceOffsetsAndBolding:
         assert ll.lemma_spans, "expected lemma_spans populated for the line"
         by_lemma = {entry[0]: entry for entry in ll.lemma_spans}
         keimusho_entry = by_lemma["刑務所"]
-        _, surface, span_start, span_end = keimusho_entry
+        _, surface, span_start, span_end, span_highlight_end = keimusho_entry
         assert surface == "刑務所"
         assert ll.line_text[span_start:span_end] == "刑務所"
+        # Nouns never extend: highlight_end == span_end.
+        assert span_highlight_end == span_end
+        # The verb 起こす extends over its auxiliary: 起こした.
+        okosu_entry = by_lemma["起こす"]
+        _, _, okosu_start, okosu_end, okosu_highlight_end = okosu_entry
+        assert okosu_highlight_end >= okosu_end
+        assert ll.line_text[okosu_start:okosu_highlight_end] == "起こした"
 
     def test_offsets_survive_internal_spaces(self, tmp_path):
         """Regression for Issue #20 and Issue #31: MeCab elides whitespace
@@ -1930,9 +1937,11 @@ class TestSurfaceOffsetsAndBolding:
         # 素直: was bolding " 素" before the fix.
         sunao = by_lemma["素直"]
         assert "<b>素直</b>" in sunao.sentence_bolded, sunao.sentence_bolded
-        # 通す: was bolding " 通" before the fix.
+        # 通す: was bolding " 通" before the #20 fix; the full inflected
+        # form 通して is bolded since the deinflection-span fix (the
+        # following 。 is 補助記号 and stops the window).
         toosu = by_lemma["通す"]
-        assert "<b>通し</b>" in toosu.sentence_bolded, toosu.sentence_bolded
+        assert "<b>通して</b>" in toosu.sentence_bolded, toosu.sentence_bolded
         # 真っ赤: was bolding "な 顔" before the fix.
         makka = by_lemma["真っ赤"]
         assert "<b>真っ赤</b>" in makka.sentence_bolded, makka.sentence_bolded
@@ -1974,11 +1983,80 @@ class TestSurfaceOffsetsAndBolding:
 
         assert len(line_index) == 1
         ll = line_index[0]
-        for lemma_key, surface, span_start, span_end in ll.lemma_spans:
+        for lemma_key, surface, span_start, span_end, span_highlight_end in ll.lemma_spans:
             assert ll.line_text[span_start:span_end] == surface, (
                 f"lemma_spans drift on {lemma_key!r}: "
                 f"slice={ll.line_text[span_start:span_end]!r}, surface={surface!r}"
             )
+            assert span_highlight_end >= span_end
+
+    # ------------------------------------------------------------------
+    # Full-inflected-form bolding (Yomitan deinflection span). Expected
+    # spans are pinned per vector — verified against the ported engine
+    # AND the real upstream engine at the pinned commit, not intuition.
+    # ------------------------------------------------------------------
+
+    @pytest.mark.parametrize(
+        ("sentence", "lemma", "expected_bold"),
+        [
+            # Unambiguous single-auxiliary cases.
+            ("種を蒔いた", "蒔く", "<b>蒔いた</b>"),
+            ("昨日食べた", "食べる", "<b>食べた</b>"),
+            ("犬が死んだ", "死ぬ", "<b>死んだ</b>"),
+            ("値段が高かった", "高い", "<b>高かった</b>"),
+            # Auxiliary chains (user-confirmed full-Yomitan behavior).
+            ("海で泳いでいた", "泳ぐ", "<b>泳いでいた</b>"),
+            # Non-rule stops: upstream has no benefactive/てみる/ていく
+            # rules, so the span ends at the last valid chain point.
+            ("本を買ってくれた", "買う", "<b>買って</b>"),
+            ("食べていく", "食べる", "<b>食べて</b>"),
+        ],
+    )
+    def test_bolds_full_inflected_form(self, tmp_path, sentence, lemma, expected_bold):
+        srt_file = tmp_path / "inflection.srt"
+        srt_file.write_text(
+            f"1\n00:00:01,000 --> 00:00:05,000\n{sentence}\n",
+            encoding="utf-8",
+        )
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            bold_target_in_sentence=True,
+        )
+        service = SubtitleParserService(config)
+        words = service.parse_subtitle_file(srt_file)
+        by_lemma = {w.lemma: w for w in words}
+        assert lemma in by_lemma, f"expected {lemma!r} mined from {sentence!r}: {sorted(by_lemma)}"
+        word = by_lemma[lemma]
+
+        # Plain bolded sentence covers the full inflected form.
+        assert expected_bold in word.sentence_bolded, word.sentence_bolded
+        # Offsets: surface invariant intact, highlight covers the bold text.
+        assert word.sentence[word.surface_start : word.surface_end] == word.surface
+        assert word.highlight_end >= word.surface_end
+        bold_text = expected_bold.removeprefix("<b>").removesuffix("</b>")
+        assert word.sentence[word.surface_start : word.bold_end] == bold_text
+        # Furigana-bolded body starts at the kanji head and spans the same
+        # source text (structural — readings come from unidic-lite).
+        import re as _re
+
+        m = _re.search(r"<b>([^<]+)</b>", word.sentence_furigana_bolded)
+        assert m, word.sentence_furigana_bolded
+        assert m.group(1).startswith(word.surface[0])
+
+    def test_hiragana_benefactive_not_mined_separately(self, tmp_path):
+        """くれ (呉れる) has a pure-hiragana surface: the pre-existing
+        has_kanji gate drops it, so 買ってくれた mines only 買う (and 本)."""
+        srt_file = tmp_path / "benefactive.srt"
+        srt_file.write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\n本を買ってくれた\n",
+            encoding="utf-8",
+        )
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        words = service.parse_subtitle_file(srt_file)
+        lemmas = {w.lemma for w in words}
+        assert "買う" in lemmas
+        assert not any("くれ" in lemma for lemma in lemmas)
 
 
 # ---------------------------------------------------------------------------
@@ -2322,7 +2400,9 @@ class TestT2TokenizeOnce:
         for w in words:
             expected_furi = generate_furigana(w.sentence, service.tagger)
             expected_read = generate_reading(w.sentence, service.tagger)
-            expected_bold = wrap_target_furigana(w.sentence, service.tagger, w.surface_start, w.surface_end)
+            # bold_end (not surface_end): the fixture's 起こした extends over
+            # its auxiliary since the deinflection-span fix.
+            expected_bold = wrap_target_furigana(w.sentence, service.tagger, w.surface_start, w.bold_end)
             assert w.sentence_furigana == expected_furi, (
                 f"sentence_furigana mismatch for {w.surface!r}: " f"{w.sentence_furigana!r} != {expected_furi!r}"
             )
@@ -2357,7 +2437,8 @@ class TestT2TokenizeOnce:
         for w in new_words:
             expected_furi = generate_furigana(w.sentence, service.tagger)
             expected_read = generate_reading(w.sentence, service.tagger)
-            expected_bold = wrap_target_furigana(w.sentence, service.tagger, w.surface_start, w.surface_end)
+            # bold_end covers the full inflected form (起こした in line 1).
+            expected_bold = wrap_target_furigana(w.sentence, service.tagger, w.surface_start, w.bold_end)
             assert w.sentence_furigana == expected_furi
             assert w.sentence_reading == expected_read
             assert w.sentence_furigana_bolded == expected_bold

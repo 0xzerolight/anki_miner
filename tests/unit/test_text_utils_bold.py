@@ -276,3 +276,28 @@ class TestWrapTargetFuriganaFromTokensEquivalence:
             expected = wrap_target_furigana(text, tagger, start, end)
             actual = wrap_target_furigana_from_tokens(text, tokens, start, end)
             assert actual == expected, f"Mismatch for {text!r} [{start}:{end}]: {actual!r} != {expected!r}"
+
+
+class TestMultiTokenBoldBody:
+    """The bold window may cover the mined verb PLUS its auxiliary tokens
+    (highlight_end is raw-token-boundary aligned), so the body bucket can
+    legitimately hold several tokens rendered as one contiguous <b> run."""
+
+    def test_window_covering_verb_and_auxiliary(self):
+        text = "種を蒔いた"
+        tokens = [
+            _make_mock_token("種", kana="タネ"),
+            _make_mock_token("を", kana="ヲ"),
+            _make_mock_token("蒔い", kana="マイ"),
+            _make_mock_token("た", kana="タ"),
+        ]
+        result = wrap_target_furigana_from_tokens(text, tokens, 2, 5)
+        assert "<b>" in result and "</b>" in result
+        body = result.split("<b>", 1)[1].split("</b>", 1)[0]
+        # Both the verb morpheme (with furigana) and the auxiliary are in
+        # ONE bold run; the following text is outside.
+        assert body.startswith(" 蒔[ま]い") or body.startswith("蒔[ま]い")
+        assert body.endswith("た")
+
+    def test_plain_wrap_covering_verb_and_auxiliary(self):
+        assert wrap_target_plain("種を蒔いた", 2, 5) == "種を<b>蒔いた</b>"
