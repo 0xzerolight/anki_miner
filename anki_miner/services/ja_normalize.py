@@ -25,9 +25,11 @@ Owned deviations from Yomitan (see the pinned plan item 1.3):
   the line), which Yomitan's guarded fold avoids because it must preserve the
   on-screen lookup string byte-for-byte. Here the cleaned line *is* the stored
   card sentence and canonical composition is non-destructive for subtitle text,
-  so stdlib NFC is chosen for reuse. One observable consequence on the Yomitan
-  test corpus: the archaic katakana ワ/ヰ/ヱ/ヲ + U+3099 compose to ヷ/ヸ/ヹ/ヺ
-  (Yomitan's guard leaves them decomposed) — strictly more canonical, harmless.
+  so stdlib NFC is chosen for reuse. Observable consequences vs the guarded
+  fold: compositions outside Yomitan's ``dakutenAllowed`` ranges also fold —
+  the archaic katakana ワ/ヰ/ヱ/ヲ + U+3099 compose to ヷ/ヸ/ヹ/ヺ (the case the
+  Yomitan test corpus pins), and likewise う/ウ + U+3099 → ゔ/ヴ — strictly
+  more canonical, harmless for MeCab input.
 
 * NFC runs as the *final* step of :func:`normalize_for_tokenization`, not at the
   position the plan's prose numbered it. The compat/radical steps are faithful
