@@ -12,6 +12,7 @@ this module must never import ``subtitle_parser``.
 
 from dataclasses import dataclass
 from types import SimpleNamespace
+from typing import Any, Iterator
 
 _NOMINAL_SUFFIX_POS2 = {"名詞的", "形状詞的", "副詞的"}
 
@@ -104,6 +105,35 @@ def extract_reading(word_token) -> str:
         return str(word_token.feature.kana or word_token.surface)
     except AttributeError:
         return str(word_token.surface)
+
+
+def iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
+    """Yield ``(token, start, end)`` for each token locatable in ``text``.
+
+    Locates each token's char span via ``str.find`` from a running
+    cursor. MeCab silently drops whitespace from the token stream, so
+    naive ``cursor += len(surface)`` walking drifts left by the count of
+    preceding spaces and misaligns every downstream offset (bold
+    wrapping, surface_start/end). Issue #20.
+
+    Tokens whose surface is not find-able are dropped (defensive: should
+    not happen for unmodified MeCab surfaces, but a merged compound whose
+    components were whitespace-separated in the source concatenates to a
+    space-free surface that is NOT find-able in ``text``). This locator
+    is the single source of truth for that drop rule:
+    ``parse_subtitle_file``, ``parse_subtitle_file_with_index`` AND
+    ``count_lemmas`` must all route through it, or the count-vs-mine
+    sets diverge and the Deck Builder preview over-promises (T-38).
+    """
+    cursor = 0
+    for token in tokens:
+        surface = token.surface
+        idx = text.find(surface, cursor)
+        if idx == -1:
+            continue
+        tok_end = idx + len(surface)
+        cursor = tok_end
+        yield token, idx, tok_end
 
 
 def merge_compound_suffixes(tokens: list) -> list:
