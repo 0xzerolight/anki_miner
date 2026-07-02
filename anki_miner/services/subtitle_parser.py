@@ -12,9 +12,11 @@ import pysubs2
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
+from anki_miner.models.word import select_mined_form
 from anki_miner.services.morphology import (
     TokenInclusionRule,
     extract_lemma,
+    extract_orth_base,
     extract_reading,
     merge_compound_suffixes,
 )
@@ -306,18 +308,21 @@ class SubtitleParserService:
         # Get reading if available
         reading = self._extract_reading(word_token)
 
-        # ExpressionFurigana/Reading match the mined card front:
-        # lemma for verbs/adjectives, surface for nouns (see
-        # TokenizedWord.mined_form for the trade-off).
+        # ExpressionFurigana/Reading match the mined card front: orthBase
+        # (source-orthography dictionary form) for verbs/adjectives, surface
+        # for nouns (see TokenizedWord.mined_form / select_mined_form for
+        # the trade-off).
         pos = word_token.feature.pos1
-        mined = lemma if pos in ("動詞", "形容詞") else surface
+        orth_base = self._extract_orth_base(word_token)
+        mined = select_mined_form(pos, orth_base, lemma, surface)
         expression_furigana = self._furigana(mined)
         expression_reading = self._reading(mined)
-        # Lemma reading for the JPod101 audio retry: when the surface form
+        # Lemma reading for the JPod101 audio retry: when the mined form
         # misses, the loop retries with the lemma kanji and needs the lemma's
         # OWN reading (探す→さがす), not the surface reading (さがし). For
-        # verb/adjective mining ``mined`` already IS the lemma, so reuse the
-        # value instead of re-tokenizing.
+        # most verb/adjective tokens ``mined`` (orthBase) equals the lemma,
+        # so reuse the value; a kanji-variant divergence (乞う vs 請う)
+        # recomputes the lemma's reading like the surface-mined case.
         lemma_reading = expression_reading if mined == lemma else self._reading(lemma)
 
         if self.config.bold_target_in_sentence:
@@ -330,6 +335,7 @@ class SubtitleParserService:
         return TokenizedWord(
             surface=surface,
             lemma=lemma,
+            orth_base=orth_base,
             reading=reading,
             sentence=text,
             start_time=start_time,
@@ -572,6 +578,10 @@ class SubtitleParserService:
     def _extract_lemma(self, word_token) -> str:
         """Extract lemma (dictionary form) from a token (see morphology.extract_lemma)."""
         return extract_lemma(word_token)
+
+    def _extract_orth_base(self, word_token) -> str:
+        """Extract source-orthography dictionary form (see morphology.extract_orth_base)."""
+        return extract_orth_base(word_token)
 
     def _extract_reading(self, word_token) -> str:
         """Extract kana reading from a token (see morphology.extract_reading)."""

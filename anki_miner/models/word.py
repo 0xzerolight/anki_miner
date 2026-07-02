@@ -6,6 +6,20 @@ from pathlib import Path
 from anki_miner.models.media import MediaData
 
 
+def select_mined_form(pos: str | None, orth_base: str, lemma: str, surface: str) -> str:
+    """Single selection rule for the card-front form.
+
+    Shared by ``TokenizedWord.mined_form`` and the parser's ``_emit_word``
+    (which needs the value before the word object exists, to derive
+    expression furigana/reading). Keep it the only place this rule lives —
+    a drifted copy silently splits the Expression field from the
+    dedup/known-words/audio identity.
+    """
+    if pos in ("動詞", "形容詞"):
+        return orth_base or lemma
+    return surface
+
+
 @dataclass
 class TokenizedWord:
     """A word extracted from subtitles with timing information."""
@@ -18,6 +32,12 @@ class TokenizedWord:
     end_time: float  # End time in seconds
     duration: float  # Duration in seconds
     video_file: Path | None = None  # Source video (for batch processing)
+    # Dictionary form in the sentence's own orthography (UniDic orthBase):
+    # 乞わ → 乞う even when unidic's canonical lemma is 請う. Card-front
+    # source of truth for verbs/adjectives; empty when the token had no
+    # orthBase (synthetic merged compounds, OOV) — mined_form then falls
+    # back to lemma.
+    orth_base: str = ""
     expression_furigana: str = ""  # Furigana for expression, e.g. "食べる[たべる]"
     expression_reading: str = ""  # Plain kana reading of expression, e.g. "たべる"
     lemma_reading: str = ""  # Plain kana reading of the lemma, for audio retry
@@ -55,16 +75,28 @@ class TokenizedWord:
     def mined_form(self) -> str:
         """The form that becomes the card front (Expression field).
 
-        Verbs and adjectives mine as lemma (dictionary form) so that
-        ``破れ`` becomes ``破れる`` — the learner studies the form that
-        recognizes/produces every conjugation (Issue #19).
+        Verbs and adjectives mine as the dictionary form so that ``破れ``
+        becomes ``破れる`` — the learner studies the form that
+        recognizes/produces every conjugation (Issue #19). The dictionary
+        form used is ``orth_base`` (source orthography), NOT ``lemma``:
+        unidic's canonical lemma silently swaps kanji variants
+        (乞う→請う, 喰らう→食らう) and the card must keep the spelling the
+        sentence actually used. Yomitan behaves the same way — it
+        deinflects the raw string and never normalizes to a canonical
+        headword. ``lemma`` remains the fallback when ``orth_base`` is
+        empty and stays the key for definition/frequency/pitch lookups.
+        Kana-surface verbs never reach mining (TokenInclusionRule requires
+        kanji or katakana), so orthBase-vs-lemma only ever differs on
+        kanji-surface variant tokens. Verbs carded before this change
+        stored the normalized lemma and will re-card once as the source
+        variant (accepted, no migration — see CHANGELOG).
 
         Nouns and other non-conjugating POS keep the surface form: unidic
         sometimes maps homograph-like nouns to a different headword
         (``豪腕`` → ``剛腕``); preserving surface for nouns avoids that
         regression (Issue #5).
         """
-        return self.lemma if self.pos in ("動詞", "形容詞") else self.surface
+        return select_mined_form(self.pos, self.orth_base, self.lemma, self.surface)
 
     def __str__(self) -> str:
         return f"{self.lemma} ({self.reading})"

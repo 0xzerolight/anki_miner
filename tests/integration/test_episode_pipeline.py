@@ -110,6 +110,9 @@ class TestEpisodePipeline:
             t.feature.pos2 = None
             t.feature.lemma = lemma
             t.feature.kana = lemma
+            # Must be set explicitly: an auto-created MagicMock attribute is
+            # truthy and would leak into mined_form via extract_orth_base.
+            t.feature.orthBase = lemma
             return t
 
         def tagger_func(text):
@@ -310,6 +313,7 @@ class TestEpisodePipeline:
         mock_token.feature.pos2 = None
         mock_token.feature.lemma = "食べる"
         mock_token.feature.kana = "タベル"
+        mock_token.feature.orthBase = "食べる"
 
         mock_tagger = MagicMock()
         mock_tagger.return_value = [mock_token]

@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **Mined verbs and adjectives keep the kanji spelling the subtitle used.** A sentence containing 乞う previously produced a card whose Expression read 請う: unidic's canonical lemma silently swaps orthographic kanji variants (乞う→請う, 喰らう→食らう). The Expression now uses the dictionary form in the sentence's own orthography (UniDic orthBase) — the same behavior as Yomitan, which deinflects the source text and never normalizes the spelling. Definition, frequency, and pitch lookups still use the lemma, so card data is unchanged. A verb previously carded under the normalized spelling will be offered once more as the source spelling if re-encountered (no migration, same precedent as legacy surface-form cards). After an i+1 sentence swap the Expression keeps the first-seen spelling even if the swapped sentence uses another variant — unchanged in kind from the previous lemma behavior.
 
 ### Removed
 
