@@ -457,12 +457,14 @@ class EpisodeProcessor:
         Records difficulty stats if a stats service is available.
         """
         # Attach frequency data if available (mutates words in-place). Each word
-        # gets the per-source breakdown (frequency_sources) for the card display
-        # plus the min rank (frequency_rank) that drives filtering/sort.
+        # gets the per-source breakdown (frequency_sources) for the card display,
+        # the min rank (frequency_rank) that drives the top-N filter, and the
+        # harmonic-mean rank (frequency_harmonic_rank) that drives the sort field.
         if self.frequency_service and self.frequency_service.is_available():
             for word in all_words:
                 word.frequency_sources = self.frequency_service.lookup_all(word.lemma)
                 word.frequency_rank = self.frequency_service.lookup_min(word.lemma)
+                word.frequency_harmonic_rank = self.frequency_service.lookup_harmonic(word.lemma)
             ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
             self.presenter.show_info(
                 tr_format(
@@ -1022,8 +1024,16 @@ class EpisodeProcessor:
                 extra_fields["pitch_category"] = pitch_category
             if word.frequency_sources:
                 extra_fields["frequency"] = render_frequency_html(word.frequency_sources)
-            if word.frequency_rank is not None:
-                extra_fields["frequency_sort"] = str(word.frequency_rank)
+            # Numeric sort column: the harmonic mean of the per-source ranks
+            # (Yomitan getFrequencyHarmonic), with the 9999999 sentinel for
+            # words no source ranks so they sort *last* rather than before rank 1
+            # (an omitted field reads as empty string in Anki's browser). Gated on
+            # the field being mapped so the default config's notes stay byte-for-
+            # byte identical; the sentinel is emitted only when a user opts in.
+            if self.config.anki_fields.get("frequency_sort"):
+                extra_fields["frequency_sort"] = (
+                    str(word.frequency_harmonic_rank) if word.frequency_harmonic_rank is not None else "9999999"
+                )
             if glossary:
                 extra_fields["glossary"] = glossary
             # Stamp the source unconditionally; AnkiService gates the write on a
