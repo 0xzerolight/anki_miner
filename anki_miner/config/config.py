@@ -274,12 +274,15 @@ class AnkiMinerConfig:
     # managed CSS block — the universal sheet + every enabled dictionary's scoped
     # styles.css + `custom_card_css` (the Yomitan `_getCustomCss` model) — into
     # the configured note type via AnkiConnect `updateModelStyling` on Save, on
-    # dictionary import, and when Anki becomes reachable. False (the default)
-    # leaves the note type untouched / strips the block, so a fresh install never
-    # restyles a note type without consent. `custom_card_css` (Yomitan/Jitendex
-    # snippets work verbatim) is appended after the dictionary CSS. Distinct from
-    # the app-UI `theme` fields below.
-    manage_card_styling: bool = False
+    # dictionary import, and when Anki becomes reachable. True (the default since
+    # v2.7.8) writes an additive, marker-delimited managed block — anki_miner
+    # only ever touches its own block and preserves any hand-written note-type
+    # CSS byte-for-byte. Without it, cards mined post-rework carry no styling at
+    # all (the CSS moved out of the card and into this block); default-ON is what
+    # delivers it. False strips the block for a full revert. `custom_card_css`
+    # (Yomitan/Jitendex snippets work verbatim) is appended after the dictionary
+    # CSS. Distinct from the app-UI `theme` fields below.
+    manage_card_styling: bool = True
     custom_card_css: str = ""
 
     # Deduplication settings

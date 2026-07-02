@@ -181,11 +181,12 @@ def test_load_from_config_sets_checkbox(qtbot):
 
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    panel.manage_styling_checkbox.setChecked(True)  # user edit
+    panel.manage_styling_checkbox.setChecked(False)  # user edit, opposite of default
     panel.load_from_config(create_default_config())
-    # Default config is off → unchecked, CSS box greyed.
-    assert panel.get_manage_styling() is False
-    assert not panel.custom_css_edit.isEnabled()
+    # Default config is ON (v2.7.8) → checked, CSS box enabled. Pins that the
+    # fresh-install checkbox reflects the new default.
+    assert panel.get_manage_styling() is True
+    assert panel.custom_css_edit.isEnabled()
 
 
 # ---------------------------------------------------------------------------
