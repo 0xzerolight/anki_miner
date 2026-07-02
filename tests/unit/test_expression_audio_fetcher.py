@@ -18,6 +18,7 @@ from anki_miner.services.expression_audio_fetcher import (
     JPod101AudioFetcher,
     _classify_request_exception,
     _first_candidate_hit,
+    purge_miss_markers,
 )
 
 MODULE = "anki_miner.services.expression_audio_fetcher"
@@ -168,6 +169,72 @@ class TestJPod101AudioFetcher:
         mock_get.assert_not_called()
         assert not list(tmp_path.glob("*.mp3"))
         assert not list(tmp_path.glob("*.miss"))
+
+    def _write_miss(self, tmp_path):
+        """Fetch once against the not-found placeholder to write a .miss marker."""
+        placeholder = b"placeholder"
+        digest = hashlib.sha256(placeholder).hexdigest()
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with (
+            patch(f"{MODULE}.JPOD101_NOT_FOUND_SHA256", digest),
+            patch("requests.Session.get", return_value=_response(content=placeholder)),
+        ):
+            fetcher.fetch("食べる", "たべる")
+        miss_files = list(tmp_path.glob("*.miss"))
+        assert len(miss_files) == 1
+        return fetcher, miss_files[0]
+
+    def test_fresh_miss_marker_within_ttl_skips_network(self, tmp_path):
+        """A .miss younger than the TTL still short-circuits to None (no re-fetch)."""
+        from anki_miner.services.expression_audio_fetcher import MISS_MARKER_TTL_SECONDS
+
+        fetcher, miss = self._write_miss(tmp_path)
+        # Age it to just inside the TTL window.
+        recent = time.time() - (MISS_MARKER_TTL_SECONDS - 86400)
+        os.utime(miss, (recent, recent))
+
+        with patch("requests.Session.get") as mock_get:
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is None
+        mock_get.assert_not_called()
+
+    def test_expired_miss_marker_refetches(self, tmp_path):
+        """A .miss older than the TTL is expired: the word is re-requested."""
+        from anki_miner.services.expression_audio_fetcher import MISS_MARKER_TTL_SECONDS
+
+        fetcher, miss = self._write_miss(tmp_path)
+        # Age the marker past the TTL; the word has since gained real audio.
+        old = time.time() - (MISS_MARKER_TTL_SECONDS + 86400)
+        os.utime(miss, (old, old))
+
+        with patch("requests.Session.get", return_value=_response()) as mock_get:
+            result = fetcher.fetch("食べる", "たべる")
+
+        mock_get.assert_called_once()
+        assert result is not None
+        assert result.exists()
+
+    def test_expired_miss_still_absent_resets_ttl(self, tmp_path):
+        """Re-confirming an expired miss re-touches it, resetting the TTL clock."""
+        from anki_miner.services.expression_audio_fetcher import MISS_MARKER_TTL_SECONDS
+
+        fetcher, miss = self._write_miss(tmp_path)
+        old = time.time() - (MISS_MARKER_TTL_SECONDS + 86400)
+        os.utime(miss, (old, old))
+
+        placeholder = b"placeholder"
+        digest = hashlib.sha256(placeholder).hexdigest()
+        with (
+            patch(f"{MODULE}.JPOD101_NOT_FOUND_SHA256", digest),
+            patch("requests.Session.get", return_value=_response(content=placeholder)) as mock_get,
+        ):
+            result = fetcher.fetch("食べる", "たべる")
+
+        mock_get.assert_called_once()
+        assert result is None
+        # mtime refreshed → no longer expired.
+        assert time.time() - miss.stat().st_mtime < MISS_MARKER_TTL_SECONDS
 
     def test_whitespace_only_reading_returns_none_without_network(self, tmp_path):
         """Whitespace-only reading is treated the same as empty."""
@@ -1193,3 +1260,42 @@ class TestChainedFailureStats:
     def test_empty_chain_returns_zeroed_counts(self):
         chain = ChainedExpressionAudioFetcher([])
         assert chain.stats() == dict.fromkeys(FAILURE_KEYS, 0)
+
+
+class TestPurgeMissMarkers:
+    """Tests for the purge_miss_markers cache-hygiene helper."""
+
+    def test_removes_all_miss_markers_and_returns_count(self, tmp_path):
+        (tmp_path / "a.miss").touch()
+        (tmp_path / "b.miss").touch()
+        (tmp_path / "keep.mp3").write_bytes(b"ID3keep")
+
+        removed = purge_miss_markers(tmp_path)
+
+        assert removed == 2
+        assert not list(tmp_path.glob("*.miss"))
+        assert (tmp_path / "keep.mp3").exists()
+
+    def test_missing_directory_returns_zero(self, tmp_path):
+        assert purge_miss_markers(tmp_path / "does_not_exist") == 0
+
+    def test_empty_directory_returns_zero(self, tmp_path):
+        assert purge_miss_markers(tmp_path) == 0
+
+    def test_unlink_error_is_skipped(self, tmp_path):
+        (tmp_path / "a.miss").touch()
+        (tmp_path / "b.miss").touch()
+
+        real_unlink = Path.unlink
+
+        def flaky_unlink(self, *args, **kwargs):
+            if self.name == "a.miss":
+                raise OSError("locked")
+            return real_unlink(self, *args, **kwargs)
+
+        with patch.object(Path, "unlink", flaky_unlink):
+            removed = purge_miss_markers(tmp_path)
+
+        assert removed == 1
+        assert (tmp_path / "a.miss").exists()
+        assert not (tmp_path / "b.miss").exists()
