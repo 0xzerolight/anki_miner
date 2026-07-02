@@ -31,6 +31,7 @@ HOME_CONSUMERS = (
     ("anki_miner.gui.app", "ANKI_MINER_HOME", lambda home: home),
     ("anki_miner.gui.utils.service_factory", "ANKI_MINER_HOME", lambda home: home),
     ("anki_miner.gui.utils.recent_files", "ANKI_MINER_HOME", lambda home: home),
+    ("anki_miner.gui.widgets.settings_tab", "ANKI_MINER_HOME", lambda home: home),
     (
         "anki_miner.gui.widgets.panels.dictionary_settings_panel",
         "ANKI_MINER_HOME",

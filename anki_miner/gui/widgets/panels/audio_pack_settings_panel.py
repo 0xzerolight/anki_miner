@@ -148,6 +148,10 @@ class AudioPackSettingsPanel(FormPanel):
     add_pack_requested = pyqtSignal()
     reimport_pack_requested = pyqtSignal(str)
     chain_changed = pyqtSignal()
+    # Emitted when the user asks to clear JPod101 .miss markers so absent words
+    # are re-tried next run. The settings tab owns the actual unlink sweep (it
+    # holds the audio_cache path); the panel only surfaces the affordance.
+    retry_missing_audio_requested = pyqtSignal()
     # Emitted once a pack has been successfully removed from both the in-memory
     # chain and disk. Distinct from ``chain_changed`` so the settings tab can
     # persist the new chain immediately — a delete is destructive and
@@ -311,8 +315,29 @@ class AudioPackSettingsPanel(FormPanel):
         buttons.addWidget(self._remove_btn)
 
         layout.addLayout(buttons)
+
+        # Cache-hygiene: clear the record of words JPod101 had no audio for so
+        # they are re-requested on the next run (replaces deleting the cache dir
+        # by hand). The unlink sweep is dispatched by the settings tab.
+        retry_row = QHBoxLayout()
+        self._retry_missing_btn = QPushButton(self.tr("Retry missing expression audio"))
+        self._retry_missing_btn.setToolTip(
+            self.tr(
+                "Forget which words JapanesePod101 had no audio for, so the next "
+                "mining run tries to download them again."
+            )
+        )
+        self._retry_missing_btn.clicked.connect(self.retry_missing_audio_requested.emit)
+        retry_row.addWidget(self._retry_missing_btn)
+        retry_row.addStretch()
+        layout.addLayout(retry_row)
+
         self.add_field("", container)
         self.add_stretch()
+
+    def set_retry_missing_enabled(self, enabled: bool) -> None:
+        """Enable/disable the retry button while its off-thread sweep runs."""
+        self._retry_missing_btn.setEnabled(enabled)
 
     def set_chain(
         self,
