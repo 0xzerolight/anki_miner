@@ -1,8 +1,9 @@
-# Yomitan-derived deinflection code — license and provenance
+# Yomitan-derived Japanese code — license and provenance
 
-`anki_miner/services/deinflection.py` (engine) and
-`anki_miner/services/japanese_transforms.py` (rule table) are Python ports of
-code from [Yomitan](https://github.com/yomidevs/yomitan), Copyright (C)
+`anki_miner/services/deinflection.py` (engine),
+`anki_miner/services/japanese_transforms.py` (rule table) and
+`anki_miner/utils/furigana_distribute.py` (furigana distribution) are Python
+ports of code from [Yomitan](https://github.com/yomidevs/yomitan), Copyright (C)
 Yomitan Authors, licensed under the **GNU General Public License, version 3
 or (at your option) any later version** — the full text is in
 [`COPYING.GPLv3`](COPYING.GPLv3). Anki Miner is itself GPL-3.0-or-later, so
@@ -14,6 +15,7 @@ the combined work carries the same license.
 |-------------|-----------------|
 | `anki_miner/services/deinflection.py` | `ext/js/language/language-transformer.js`, `ext/js/language/language-transforms.js` |
 | `anki_miner/services/japanese_transforms.py` | `ext/js/language/ja/japanese-transforms.js` |
+| `anki_miner/utils/furigana_distribute.py` | `ext/js/language/ja/japanese.js` (`distributeFurigana` family) |
 
 Pinned upstream commit: `e2ed450c2f11a591922822e77f008e70a87daf0c`.
 
