@@ -461,7 +461,12 @@ def structured_content_to_html(
         return ""
 
     if isinstance(node, str):
-        return escape(node)
+        # Every structured-content text node gets newline→<br> at any depth,
+        # matching Yomitan's `_replaceNewlines` (ext/js/templates/
+        # anki-template-renderer.js, upstream e2ed450). Anki collapses raw
+        # newlines in stored card HTML, so without this a multi-line SC text
+        # node loses its line breaks.
+        return _text_to_html(node)
 
     if isinstance(node, list):
         return "".join(
