@@ -82,6 +82,7 @@ _ALLOWED_STYLE_PROPS = frozenset(
         "text-decoration-color",
         "text-emphasis",
         "text-shadow",
+        "clip-path",
         "vertical-align",
         "text-align",
         "border",
@@ -119,6 +120,7 @@ _STYLE_SHORTCUT_KEYS = frozenset(
         "textDecorationLine",
         "textDecorationStyle",
         "textDecorationColor",
+        "clipPath",
         "verticalAlign",
         "textAlign",
         "textEmphasis",
@@ -339,16 +341,38 @@ def _text_to_html(text: str) -> str:
     return escape(normalized).replace("\n", "<br>")
 
 
-def _coerce_style_value(value: YomitanNode) -> str | None:
-    """Stringify a Yomitan style value safely.
+# Directional-margin props interpret a bare number as em; every other style
+# prop that accepts a number keeps the value unitless. Mirrors Yomitan's
+# `_setStructuredContentElementStyle` (ext/js/display/structured-content-generator.js,
+# upstream e2ed450), where only marginTop/Left/Right/Bottom do `${n}em`.
+_EM_NUMERIC_PROPS = frozenset({"margin-top", "margin-left", "margin-right", "margin-bottom"})
+# Style props whose value may be an array of strings, joined with a space. Only
+# text-decoration-line qualifies per the v3 schema; Yomitan joins the parts.
+_ARRAY_JOIN_PROPS = frozenset({"text-decoration-line"})
 
-    Numbers become bare strings (Yomitan uses unitless ints for some props).
-    Strings pass through after a bad-pattern scan.
+
+def _coerce_style_value(prop: str, value: YomitanNode) -> str | None:
+    """Stringify a Yomitan style value safely, property-aware.
+
+    Numbers on directional-margin props gain an `em` unit (the schema documents
+    bare numbers as em); numbers on other props stay unitless. `text-decoration-line`
+    may be an array of strings, joined with a space. Strings pass through after a
+    bad-pattern scan. Mirrors `_setStructuredContentElementStyle`
+    (ext/js/display/structured-content-generator.js, upstream e2ed450).
     """
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        return str(value)
+        if not math.isfinite(value):
+            return None
+        num = str(int(value)) if isinstance(value, float) and value.is_integer() else str(value)
+        return f"{num}em" if prop in _EM_NUMERIC_PROPS else num
+    if isinstance(value, list):
+        # Only text-decoration-line accepts an array; every element must be a
+        # string. Reject empties/mixed and fall through to scrub the joined value.
+        if prop not in _ARRAY_JOIN_PROPS or not value or not all(isinstance(v, str) for v in value):
+            return None
+        value = " ".join(value)
     if not isinstance(value, str):
         return None
     candidate = value.strip()
@@ -387,7 +411,7 @@ def _collect_style(node: dict[str, YomitanNode], *, seed: dict[str, str] | None 
             prop = _camel_to_kebab(key)
             if prop not in _ALLOWED_STYLE_PROPS:
                 continue
-            coerced = _coerce_style_value(value)
+            coerced = _coerce_style_value(prop, value)
             if coerced is None:
                 continue
             seen[prop] = coerced
@@ -398,7 +422,7 @@ def _collect_style(node: dict[str, YomitanNode], *, seed: dict[str, str] | None 
         prop = _camel_to_kebab(key)
         if prop in seen or prop not in _ALLOWED_STYLE_PROPS:
             continue
-        coerced = _coerce_style_value(node[key])
+        coerced = _coerce_style_value(prop, node[key])
         if coerced is None:
             continue
         seen[prop] = coerced

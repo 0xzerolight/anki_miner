@@ -945,3 +945,103 @@ class TestInternalQueryLinks:
         out = structured_content_to_html(node)
         assert "mailto" not in out
         assert out == '<a class="gloss-sc-a">mail</a>'
+
+
+class TestStyleValueSemantics:
+    """Item 4.3: property-aware style-value coercion mirroring Yomitan's
+    _setStructuredContentElementStyle. Directional margins interpret bare
+    numbers as em; textDecorationLine accepts an array (joined); clip-path is
+    allowed."""
+
+    # valid-dictionary1 uses marginTop/Left/Right/Bottom = 1 (bare integers).
+    @pytest.mark.parametrize("side", ["marginTop", "marginLeft", "marginRight", "marginBottom"])
+    def test_numeric_directional_margin_gets_em_unit(self, side):
+        node = {"tag": "div", "style": {side: 1}, "content": "x"}
+        out = structured_content_to_html(node)
+        kebab = {
+            "marginTop": "margin-top",
+            "marginLeft": "margin-left",
+            "marginRight": "margin-right",
+            "marginBottom": "margin-bottom",
+        }[side]
+        assert f"{kebab}: 1em" in out
+        # No bare unitless value survives.
+        assert f"{kebab}: 1;" not in out
+        assert f'{kebab}: 1"' not in out
+
+    def test_fractional_margin_gets_em_unit(self):
+        node = {"tag": "div", "style": {"marginLeft": 0.5}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "margin-left: 0.5em" in out
+
+    def test_integral_float_margin_has_no_trailing_zero(self):
+        node = {"tag": "div", "style": {"marginTop": 2.0}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "margin-top: 2em" in out
+        assert "2.0em" not in out
+
+    def test_string_margin_passes_through_unchanged(self):
+        node = {"tag": "div", "style": {"marginTop": "3px"}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "margin-top: 3px" in out
+
+    def test_numeric_margin_via_top_level_shortcut(self):
+        node = {"tag": "div", "marginBottom": 1, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "margin-bottom: 1em" in out
+
+    def test_non_finite_margin_dropped(self):
+        node = {"tag": "div", "style": {"marginTop": float("inf")}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "margin-top" not in out
+        assert "style=" not in out
+
+    def test_numeric_font_weight_still_unitless(self):
+        # Non-margin numeric props keep their bare value (font-weight: 700 is
+        # valid CSS); only directional margins get the em unit.
+        node = {"tag": "span", "style": {"fontWeight": 700}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "font-weight: 700" in out
+        assert "700em" not in out
+
+    def test_text_decoration_line_string_preserved(self):
+        node = {"tag": "span", "style": {"textDecorationLine": "underline"}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "text-decoration-line: underline" in out
+
+    def test_text_decoration_line_array_joined(self):
+        node = {"tag": "span", "style": {"textDecorationLine": ["underline", "line-through"]}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "text-decoration-line: underline line-through" in out
+
+    def test_text_decoration_line_array_via_shortcut(self):
+        node = {"tag": "span", "textDecorationLine": ["overline", "underline"], "content": "x"}
+        out = structured_content_to_html(node)
+        assert "text-decoration-line: overline underline" in out
+
+    def test_text_decoration_line_non_string_element_dropped(self):
+        node = {"tag": "span", "style": {"textDecorationLine": ["underline", 5]}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "text-decoration-line" not in out
+
+    def test_array_value_on_non_array_prop_dropped(self):
+        node = {"tag": "span", "style": {"color": ["red", "blue"]}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "color" not in out
+
+    def test_clip_path_allowed(self):
+        node = {"tag": "div", "style": {"clipPath": "inset(10px)"}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "clip-path: inset(10px)" in out
+
+    def test_clip_path_via_shortcut(self):
+        node = {"tag": "div", "clipPath": "circle(50%)", "content": "x"}
+        out = structured_content_to_html(node)
+        assert "clip-path: circle(50%)" in out
+
+    def test_clip_path_url_still_scrubbed(self):
+        # url() references are blocked defensively even in clip-path.
+        node = {"tag": "div", "style": {"clipPath": "url(https://evil/x.svg#c)"}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "evil" not in out
+        assert "url(" not in out
