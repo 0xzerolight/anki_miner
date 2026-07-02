@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+- **Subtitle text is normalized before tokenization.** Halfwidth katakana (ﾊﾟｿｺﾝ → パソコン), decomposed (NFD) kana, CJK-compatibility ligatures (㍿ → 株式会社), Kangxi-radical substitutions (⼭ → 山), and the 𠮟 variant now normalize before MeCab sees the line — words that previously tokenized as unknowns and were silently skipped now mine, and the stored card sentence shows the normalized text. Kanji detection also covers extended ranges (Ext-A, compatibility, astral), so words written with those characters are no longer rejected.
 - **Furigana is distributed per kanji.** Readings now sit over the individual kanji they belong to instead of a single bracket spanning the whole word: 入り口 renders as 入[い]り 口[ぐち] (rendaku handled), 取り引き as 取[と]り 引[ひ]き, and 落ち着く as 落[お]ち 着[つ]く, following Yomitan's furigana distribution. Genuinely ambiguous words (e.g. 飼い犬) keep one whole-word reading rather than guess. Affects the ExpressionFurigana and SentenceFurigana card fields; re-mine to refresh existing cards. Display only — no cache, dedup, or audio identity depends on furigana.
 
 ### Fixed
