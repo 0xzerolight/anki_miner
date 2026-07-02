@@ -2975,3 +2975,219 @@ class TestLineCacheMultiFile:
 
         assert counts_a1 == counts_a2
         assert counts_b["犬"] == 1
+
+
+# --- Dictionary-attested compound matching (services/compound_matcher.py) ---
+
+
+def _lookup_for(dictionary: set):
+    """Fake TermLookup: attests exactly the given headword set."""
+    return lambda terms: dictionary & set(terms)
+
+
+def _write_srt(tmp_path, name, line):
+    srt_file = tmp_path / name
+    srt_file.write_text(
+        "1\n" f"00:00:01,000 --> 00:00:05,000\n" f"{line}\n",
+        encoding="utf-8",
+    )
+    return srt_file
+
+
+class TestCompoundMatchingParserIntegration:
+    """Mock-tagger coverage of the matcher seam in _iter_parsed_lines."""
+
+    def _parse(self, tmp_path, test_config, text, tokens, dictionary, **parser_kwargs):
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("stub", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = text
+        mock_line.start = 1000
+        mock_line.end = 3000
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = tokens
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config, term_lookup=_lookup_for(dictionary), **parser_kwargs)
+            return service.parse_subtitle_file(sub_file)
+
+    def _hashiridashita_tokens(self):
+        return [
+            _make_token("走り", "動詞", "一般", lemma="走る", kana="ハシリ", orth_base="走る"),
+            _make_token("出し", "動詞", "非自立可能", lemma="出す", kana="ダシ", orth_base="出す"),
+            _make_token("た", "助動詞", "*", lemma="た", kana="タ"),
+        ]
+
+    def test_merged_word_offsets_and_component_suppression(self, tmp_path, test_config):
+        words = self._parse(tmp_path, test_config, "走り出した", self._hashiridashita_tokens(), {"走り出す"})
+
+        assert [w.surface for w in words] == ["走り出し"]
+        word = words[0]
+        assert word.lemma == "走り出す"
+        assert word.mined_form == "走り出す"
+        assert word.surface_start == 0
+        assert word.surface_end == 4  # 走り出し
+        # No fragment cards for the components.
+        assert not any(w.lemma in ("走る", "出す") for w in words)
+
+    def test_internal_whitespace_offsets(self, tmp_path, test_config):
+        """Issue #20 regression: MeCab drops whitespace from the token stream,
+        so the merged surface must be located via find, not cursor arithmetic."""
+        tokens = [_make_token("ねえ", "感動詞", "一般", kana="ネエ")] + self._hashiridashita_tokens()
+        words = self._parse(tmp_path, test_config, "ねえ 走り出した", tokens, {"走り出す"})
+        assert len(words) == 1
+        assert words[0].surface_start == 3
+        assert words[0].surface_end == 7
+
+    def test_sentence_bolded_wraps_full_compound(self, tmp_path, test_config):
+        from dataclasses import replace as dc_replace
+
+        config = dc_replace(test_config, bold_target_in_sentence=True)
+        words = self._parse(tmp_path, config, "走り出した", self._hashiridashita_tokens(), {"走り出す"})
+        # highlight extends over the trailing auxiliary chain: 走り出した
+        assert "<b>走り出した</b>" in words[0].sentence_bolded
+
+    def test_standalone_component_still_mined_without_compound(self, tmp_path, test_config):
+        tokens = [_make_token("出し", "動詞", "非自立可能", lemma="出す", kana="ダシ", orth_base="出す")]
+        words = self._parse(tmp_path, test_config, "出した", tokens, {"走り出す"})
+        assert [w.lemma for w in words] == ["出す"]
+
+    def test_compound_reading_regenerated_not_concat_kana(self, tmp_path, test_config):
+        """word.reading (curation dialog / TSV export) must be the headword's
+        regenerated reading, not concatenated component kana."""
+        tokens = [
+            _make_token("気", "名詞", "普通名詞", lemma="気", kana="キ"),
+            _make_token("が", "助詞", "格助詞", lemma="が", kana="ガ"),
+            _make_token("し", "動詞", "非自立可能", lemma="為る", kana="シ", orth_base="する"),
+            _make_token("た", "助動詞", "*", lemma="た", kana="タ"),
+        ]
+        words = self._parse(tmp_path, test_config, "気がした", tokens, {"気がする"})
+        assert len(words) == 1
+        word = words[0]
+        assert word.lemma == "気がする"
+        # generate_reading runs the real tagger inside the mocked context —
+        # here the mock returns our token list for any input, so just assert
+        # the concat artifact (particle kana + non-base stem) is NOT used.
+        assert word.reading != "キガシ"
+
+    def test_term_lookup_none_byte_identical(self, tmp_path, test_config):
+        """No lookup injected → output equals the pre-feature parser exactly."""
+        tokens_a = self._hashiridashita_tokens()
+        tokens_b = self._hashiridashita_tokens()
+
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("stub", encoding="utf-8")
+
+        def run(tokens, **kwargs):
+            mock_line = MagicMock()
+            mock_line.text = "走り出した"
+            mock_line.start = 1000
+            mock_line.end = 3000
+            mock_subs = MagicMock()
+            mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+            mock_tagger = MagicMock()
+            mock_tagger.return_value = tokens
+            with (
+                patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+                patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            ):
+                return SubtitleParserService(test_config, **kwargs).parse_subtitle_file(sub_file)
+
+        assert run(tokens_a) == run(tokens_b, term_lookup=None)
+
+    def test_toggle_off_disables_matching(self, tmp_path, test_config):
+        from dataclasses import replace as dc_replace
+
+        config = dc_replace(test_config, compound_matching=False)
+        words = self._parse(tmp_path, config, "走り出した", self._hashiridashita_tokens(), {"走り出す"})
+        assert [w.lemma for w in words] == ["走る", "出す"]
+
+    def test_index_and_count_paths_carry_compound(self, tmp_path, test_config):
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("stub", encoding="utf-8")
+
+        def make_ctx():
+            mock_line = MagicMock()
+            mock_line.text = "走り出した"
+            mock_line.start = 1000
+            mock_line.end = 3000
+            mock_subs = MagicMock()
+            mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+            mock_tagger = MagicMock()
+            mock_tagger.return_value = self._hashiridashita_tokens()
+            return mock_subs, mock_tagger
+
+        mock_subs, mock_tagger = make_ctx()
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config, term_lookup=_lookup_for({"走り出す"}))
+            words, lines = service.parse_subtitle_file_with_index(sub_file)
+            counts = service.count_lemmas(sub_file)
+
+        # T-38 parity: index, mining and counting all see the compound lemma.
+        assert [w.lemma for w in words] == ["走り出す"]
+        assert lines[0].lemmas == {"走り出す"}
+        assert counts["走り出す"] == 1
+        assert "走る" not in counts and "出す" not in counts
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestCompoundMatchingRealFugashi:
+    """End-to-end matcher behavior over real unidic tokenization."""
+
+    def _mine(self, tmp_path, line, dictionary, name="compound.srt"):
+        srt_file = _write_srt(tmp_path, name, line)
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config, term_lookup=_lookup_for(dictionary))
+        return service.parse_subtitle_file(srt_file)
+
+    def test_hashiridashita_mines_hashiridasu(self, tmp_path):
+        words = self._mine(tmp_path, "彼は急に走り出した。", {"走り出す"})
+        by_lemma = {w.lemma: w for w in words}
+        assert "走り出す" in by_lemma
+        word = by_lemma["走り出す"]
+        assert word.mined_form == "走り出す"
+        assert word.surface == "走り出し"
+        assert word.expression_furigana  # non-empty, regenerated from headword
+        # No fragment cards from the compound's components.
+        assert "走る" not in by_lemma
+        assert "出す" not in by_lemma
+
+    def test_oukyuushochi_mined_whole(self, tmp_path):
+        words = self._mine(tmp_path, "応急処置が必要だ。", {"応急処置"})
+        by_lemma = {w.lemma: w for w in words}
+        assert "応急処置" in by_lemma
+        assert by_lemma["応急処置"].mined_form == "応急処置"
+        assert "応急" not in by_lemma
+        assert "処置" not in by_lemma
+
+    def test_kigashita_mines_kigasuru_via_orth_base(self, tmp_path):
+        """為る-blocker regression: unidic lemma of し is 為る; orthBase する
+        must drive the candidate so 気がする is found."""
+        words = self._mine(tmp_path, "嫌な気がした。", {"気がする"})
+        by_lemma = {w.lemma: w for w in words}
+        assert "気がする" in by_lemma
+        word = by_lemma["気がする"]
+        assert word.mined_form == "気がする"
+        assert word.reading == "きがする"  # regenerated, not キガシ
+
+    def test_collocation_swallows_components_by_design(self, tmp_path):
+        """D4: an attested object+verb collocation replaces its components."""
+        words = self._mine(tmp_path, "結論を出した。", {"結論を出す"})
+        by_lemma = {w.lemma: w for w in words}
+        assert "結論を出す" in by_lemma
+        assert "結論" not in by_lemma
+        assert "出す" not in by_lemma
+
+    def test_no_dictionary_hits_keeps_current_behavior(self, tmp_path):
+        srt_file = _write_srt(tmp_path, "plain.srt", "彼は急に走り出した。")
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        with_lookup = SubtitleParserService(config, term_lookup=_lookup_for(set()))
+        without = SubtitleParserService(config)
+        assert with_lookup.parse_subtitle_file(srt_file) == without.parse_subtitle_file(srt_file)

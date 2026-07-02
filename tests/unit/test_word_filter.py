@@ -1035,3 +1035,59 @@ class TestAttachOccurrenceCounts:
         service.attach_occurrence_counts([word], collections.Counter(["食べる", "食べる"]))
 
         assert word.occurrence_count == 2
+
+
+class TestCompoundInteractions:
+    """Compound-matched words (dictionary-attested merges) through the filters.
+
+    A compound arrives from the parser as one word whose lemma == mined_form ==
+    the dictionary headword (e.g. 走り出す, 結論を出す); its components are not
+    separate words for that occurrence. These tests pin the filter semantics
+    that the compound-matching feature relies on.
+    """
+
+    @staticmethod
+    def _line(lemmas: set[str], text: str = "line") -> LineLemmas:
+        return LineLemmas(
+            line_text=text,
+            lemmas=frozenset(lemmas),
+            start_time=0.0,
+            end_time=1.0,
+            duration=1.0,
+            sentence_furigana="",
+            sentence_reading="",
+        )
+
+    def test_compound_mines_even_when_component_is_known(self, test_config):
+        """出す already in Anki must not block the 結論を出す compound card —
+        dedup keys on the compound's own mined_form."""
+        service = WordFilterService(test_config)
+        compound = create_word("結論を出す", surface="結論を出し", pos="動詞")
+        result = service.filter_unknown([compound], existing_vocabulary={"出す", "結論"})
+        assert result == [compound]
+
+    def test_known_compound_filtered_by_its_headword(self, test_config):
+        service = WordFilterService(test_config)
+        compound = create_word("結論を出す", surface="結論を出し", pos="動詞")
+        result = service.filter_unknown([compound], existing_vocabulary={"結論を出す"})
+        assert result == []
+
+    def test_i_plus_one_line_with_only_compound_unknown_qualifies(self, test_config):
+        """Pre-merge this line had two unknowns (走る + 出す) and failed i+1;
+        post-merge the single compound unknown qualifies."""
+        service = WordFilterService(test_config)
+        compound = create_word("走り出す", surface="走り出し", pos="動詞")
+        line = self._line({"走り出す", "彼"}, text="彼は走り出した")
+
+        result = service.filter_i_plus_one([compound], [line], all_unknown_lemmas={"走り出す"})
+
+        assert [w.lemma for w in result] == ["走り出す"]
+
+    def test_i_plus_one_line_with_compound_plus_second_unknown_fails(self, test_config):
+        service = WordFilterService(test_config)
+        compound = create_word("走り出す", surface="走り出し", pos="動詞")
+        line = self._line({"走り出す", "応急処置"}, text="応急処置して走り出した")
+
+        result = service.filter_i_plus_one([compound], [line], all_unknown_lemmas={"走り出す", "応急処置"})
+
+        assert result == []

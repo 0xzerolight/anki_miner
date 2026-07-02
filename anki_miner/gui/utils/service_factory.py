@@ -237,17 +237,31 @@ def create_services(
     """
     load_result = ServiceLoadResult()
 
+    # Build the provider chain + DefinitionService (gated eager-load shared with
+    # PrewarmWorker via build_definition_service). Constructed BEFORE the parser
+    # because the parser's compound matcher borrows its offline_terms_exist.
+    definition_service = build_definition_service(config, load_result)
+
     if subtitle_parser is None:
-        subtitle_parser = SubtitleParserService(config)
+        # Dictionary-attested compound matching: inject the headword-existence
+        # probe iff the toggle is on and an indexed offline dict is enabled —
+        # the same predicate as the eager-load above, so a Jisho-only config
+        # stays I/O-free and behaves exactly as before.
+        #
+        # Deck Builder parity note: the Deck Builder's base processor flows
+        # through THIS fresh-parser branch (it never pre-builds a parser), so
+        # preview (count_lemmas) and build share one matcher via the parser's
+        # line cache. If a future change pre-builds that parser elsewhere, it
+        # must wire term_lookup the same way or preview and build diverge.
+        term_lookup = None
+        if config.compound_matching and any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain):
+            term_lookup = definition_service.offline_terms_exist
+        subtitle_parser = SubtitleParserService(config, term_lookup=term_lookup)
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger
     # (fugashi.Tagger initialization is non-trivial).
     word_filter = WordFilterService(config, tagger=subtitle_parser.tagger)
     media_extractor = MediaExtractorService(config)
-
-    # Build the provider chain + DefinitionService (gated eager-load shared with
-    # PrewarmWorker via build_definition_service).
-    definition_service = build_definition_service(config, load_result)
     if anki_service is None:
         anki_service = AnkiService(config)
     youtube_fetcher = YouTubeFetcherService(config=config)
