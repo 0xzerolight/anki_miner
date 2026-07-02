@@ -939,3 +939,66 @@ class TestHasOfflineDefinitions:
         service = DefinitionService(test_config, providers=[p])
 
         assert service.has_offline_definitions([]) == {}
+
+
+def make_has_terms_provider(name="HT", table=None, available=True, online=False):
+    """Mock offline provider exposing ``has_terms`` (compound matching)."""
+    table = table or set()
+    p = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load", "close", "has_terms"])
+    p.name = name
+    p.is_online = online
+    p.is_available.return_value = available
+    p.load.return_value = True
+    p.has_terms.side_effect = lambda terms: table & set(terms)
+    return p
+
+
+class TestOfflineTermsExist:
+    """offline_terms_exist — exact-headword union across offline has_terms providers."""
+
+    def test_union_across_two_providers_with_early_exit(self, test_config):
+        p1 = make_has_terms_provider("A", {"走り出す"})
+        p2 = make_has_terms_provider("B", {"応急処置"})
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        found = service.offline_terms_exist(["走り出す", "応急処置", "無い語"])
+
+        assert found == {"走り出す", "応急処置"}
+        # early-exit: p2 must only be asked about terms p1 did not attest
+        p2.has_terms.assert_called_once()
+        assert "走り出す" not in p2.has_terms.call_args[0][0]
+
+    def test_online_provider_skipped(self, test_config):
+        online = make_has_terms_provider("Jisho", {"走り出す"}, online=True)
+        service = DefinitionService(test_config, providers=[online])
+        assert service.offline_terms_exist(["走り出す"]) == set()
+        online.has_terms.assert_not_called()
+
+    def test_unavailable_provider_skipped(self, test_config):
+        p = make_has_terms_provider("A", {"走り出す"}, available=False)
+        service = DefinitionService(test_config, providers=[p])
+        assert service.offline_terms_exist(["走り出す"]) == set()
+        p.has_terms.assert_not_called()
+
+    def test_provider_without_has_terms_attests_nothing(self, test_config):
+        legacy = make_provider("Legacy", return_value="<div>hit</div>")
+        service = DefinitionService(test_config, providers=[legacy])
+        assert service.offline_terms_exist(["走り出す"]) == set()
+        legacy.lookup.assert_not_called()  # no per-word fallback by design
+
+    def test_raising_provider_skipped_others_consulted(self, test_config):
+        bad = make_has_terms_provider("Bad")
+        bad.has_terms.side_effect = RuntimeError("boom")
+        good = make_has_terms_provider("Good", {"気がする"})
+        service = DefinitionService(test_config, providers=[bad, good])
+        assert service.offline_terms_exist(["気がする"]) == {"気がする"}
+
+    def test_no_providers(self, test_config):
+        service = DefinitionService(test_config, providers=[])
+        assert service.offline_terms_exist(["走り出す"]) == set()
+
+    def test_duplicates_collapsed(self, test_config):
+        p = make_has_terms_provider("A", {"走り出す"})
+        service = DefinitionService(test_config, providers=[p])
+        assert service.offline_terms_exist(["走り出す", "走り出す"]) == {"走り出す"}
+        assert p.has_terms.call_args[0][0] == ["走り出す"]

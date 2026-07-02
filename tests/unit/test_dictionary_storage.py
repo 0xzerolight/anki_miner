@@ -17,6 +17,7 @@ from anki_miner.services.dictionary.storage import (
     open_readonly,
     read_meta,
     read_meta_cached,
+    terms_exist,
     write_meta,
 )
 
@@ -635,3 +636,57 @@ class TestSurrogateScrubbing:
         meta = read_meta(db_path)
         assert meta["source_name"] == "Dict�Name"
         assert meta["format"] == "yomitan"
+
+
+class TestTermsExist:
+    def _seed(self, tmp_path: Path) -> Path:
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="走り出す", reading="はしりだす", content="<div>a</div>", sequence=1),
+                DictRow(term="応急処置", reading="おうきゅうしょち", content="<div>b</div>", sequence=2),
+                DictRow(term="気がする", reading="きがする", content="<div>c</div>", sequence=3),
+            ],
+        )
+        return db_path
+
+    def test_exact_term_matches_only(self, tmp_path: Path):
+        conn = open_readonly(self._seed(tmp_path))
+        try:
+            found = terms_exist(conn, ["走り出す", "気がする", "存在しない語"])
+            assert found == {"走り出す", "気がする"}
+        finally:
+            conn.close()
+
+    def test_reading_only_match_does_not_count(self, tmp_path: Path):
+        conn = open_readonly(self._seed(tmp_path))
+        try:
+            # はしりだす is a reading, not a headword — must NOT be attested.
+            assert terms_exist(conn, ["はしりだす"]) == set()
+        finally:
+            conn.close()
+
+    def test_empty_and_duplicate_input(self, tmp_path: Path):
+        conn = open_readonly(self._seed(tmp_path))
+        try:
+            assert terms_exist(conn, []) == set()
+            assert terms_exist(conn, ["応急処置", "応急処置", "応急処置"]) == {"応急処置"}
+        finally:
+            conn.close()
+
+    def test_chunking_over_900_terms(self, tmp_path: Path):
+        db_path = tmp_path / "big.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [DictRow(term=f"語{i}", reading=None, content="<div>x</div>", sequence=i) for i in range(1000)],
+        )
+        conn = open_readonly(db_path)
+        try:
+            queries = [f"語{i}" for i in range(1500)]  # 1000 hits + 500 misses, spans 2 chunks
+            found = terms_exist(conn, queries)
+            assert found == {f"語{i}" for i in range(1000)}
+        finally:
+            conn.close()
