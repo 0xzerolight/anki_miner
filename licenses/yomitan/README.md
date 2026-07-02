@@ -16,6 +16,7 @@ the combined work carries the same license.
 | `anki_miner/services/deinflection.py` | `ext/js/language/language-transformer.js`, `ext/js/language/language-transforms.js` |
 | `anki_miner/services/japanese_transforms.py` | `ext/js/language/ja/japanese-transforms.js` |
 | `anki_miner/utils/furigana_distribute.py` | `ext/js/language/ja/japanese.js` (`distributeFurigana` family) |
+| `anki_miner/services/_ankiconnect.py` (`_expect_list`) | `ext/js/comm/anki-connect.js` (`_normalizeArray`) |
 
 Pinned upstream commit: `e2ed450c2f11a591922822e77f008e70a87daf0c`.
 

@@ -9,6 +9,7 @@ import requests
 
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.models import CardPayload, MediaData
+from anki_miner.services._ankiconnect import _expect_list
 from anki_miner.services.anki_service import AnkiService
 
 # ---------------------------------------------------------------------------
@@ -21,6 +22,36 @@ def _mock_response(result=None, error=None):
     resp = MagicMock()
     resp.json.return_value = {"result": result, "error": error}
     return resp
+
+
+class TestExpectList:
+    """Direct tests for the _expect_list response-shape validator."""
+
+    def test_valid_list_passes_through(self):
+        data = [1, 2, 3]
+        assert _expect_list(data, "findNotes", elem_type=int) is data
+
+    def test_any_length_when_expected_negative(self):
+        assert _expect_list([1, 2], "findNotes", -1, int) == [1, 2]
+
+    def test_non_list_raises(self):
+        with pytest.raises(AnkiConnectionError, match="expected a list"):
+            _expect_list({"error": "x"}, "findNotes")
+
+    def test_length_mismatch_raises(self):
+        with pytest.raises(AnkiConnectionError, match="2 item.*expected 3"):
+            _expect_list([1, 2], "addNotes", 3)
+
+    def test_element_type_mismatch_reports_index(self):
+        with pytest.raises(AnkiConnectionError, match="index 1"):
+            _expect_list([1, "two", 3], "findNotes", elem_type=int)
+
+    def test_tuple_elem_type_allows_none_slots(self):
+        assert _expect_list([1, None, 3], "addNotes", 3, (int, type(None))) == [1, None, 3]
+
+    def test_none_elem_type_skips_element_check(self):
+        mixed = [1, "two", {}]
+        assert _expect_list(mixed, "multi", 3) == mixed
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +175,56 @@ class TestGetExistingVocabulary:
             pytest.raises(AnkiConnectionError),
         ):
             service.get_existing_vocabulary()
+
+    def test_non_dict_json_body_raises(self, test_config):
+        """A non-object JSON body (wrong service on the port, a proxy error page)
+        must raise AnkiConnectionError instead of crashing on `.get`."""
+        service = AnkiService(test_config)
+
+        bad_body = MagicMock()
+        bad_body.json.return_value = ["not", "an", "object"]
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=bad_body),
+            pytest.raises(AnkiConnectionError, match="non-object response"),
+        ):
+            service.get_existing_vocabulary()
+
+    def test_empty_notes_info_row_treated_absent(self, test_config):
+        """A `{}` notesInfo row (deleted note) must be skipped, not crash — and
+        valid rows in the same batch still contribute."""
+        service = AnkiService(test_config)
+
+        find_resp = _mock_response(result=[1, 2])
+        notes_resp = _mock_response(
+            result=[
+                {},  # deleted note → treated absent
+                {"fields": {"Expression": {"value": "食べる"}}},
+            ]
+        )
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"食べる"}
+
+    def test_malformed_field_entry_treated_absent(self, test_config):
+        """A note whose first field entry is not a {value, order} object must be
+        skipped rather than crash on `.get`."""
+        service = AnkiService(test_config)
+
+        find_resp = _mock_response(result=[1, 2])
+        notes_resp = _mock_response(
+            result=[
+                {"fields": {"Expression": "not-an-object"}},  # malformed → absent
+                {"fields": {"Expression": {"value": "飲む"}}},
+            ]
+        )
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"飲む"}
 
     def test_connection_error_raises_anki_connection_error(self, test_config):
         """Should raise AnkiConnectionError on ConnectionError."""
@@ -467,9 +548,10 @@ class TestCreateCardsBatch:
         # Exactly 2 batches (100 + 50), not more
         assert mock_post.call_count == 2
 
-    def test_warns_when_addnotes_returns_short_id_list(self, test_config, make_tokenized_word, caplog):
+    def test_short_addnotes_array_raises(self, test_config, make_tokenized_word):
         """A note_ids list shorter than the batch (malformed addNotes response)
-        under-merges the vocab cache; surface it instead of merging silently."""
+        must raise a typed AnkiConnectionError, not silently under-merge —
+        length alignment is load-bearing for the positional zip."""
         service = AnkiService(test_config)
         items = self._make_word_data(make_tokenized_word, n=3)
 
@@ -477,12 +559,23 @@ class TestCreateCardsBatch:
 
         with (
             patch("anki_miner.services._ankiconnect.requests.post", return_value=short_resp),
-            caplog.at_level(logging.WARNING),
+            pytest.raises(AnkiConnectionError, match="addNotes"),
         ):
-            result = service.create_cards_batch(items)
+            service.create_cards_batch(items)
 
-        assert result == 2
-        assert "vocab cache may under-merge" in caplog.text
+    def test_mistyped_addnotes_slot_raises(self, test_config, make_tokenized_word):
+        """A non-int, non-null slot in the addNotes result is malformed and
+        must raise with the offending index, not be counted as a creation."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=2)
+
+        bad_resp = _mock_response(result=[100, "oops"])
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=bad_resp),
+            pytest.raises(AnkiConnectionError, match="index 1"),
+        ):
+            service.create_cards_batch(items)
 
     def test_counts_only_non_null_note_ids(self, test_config, make_tokenized_word):
         """Should only count non-null IDs in the result array."""
@@ -2673,7 +2766,7 @@ class TestExistingVocabCache:
 
         with patch(
             "anki_miner.services.anki_service.post_action",
-            side_effect=[["1"], [{"fields": {"word": {"value": "食べる"}}}]],
+            side_effect=[[1], [{"fields": {"word": {"value": "食べる"}}}]],
         ) as mock_pa:
             result1 = service.get_existing_vocabulary()
             result2 = service.get_existing_vocabulary()
@@ -2767,8 +2860,8 @@ class TestExistingVocabCache:
 
         word = make_tokenized_word()
         media = MediaData()
-        # All IDs null → total_created == 0
-        resp = _mock_response(result=[None, None])
+        # Single note, its slot null → total_created == 0
+        resp = _mock_response(result=[None])
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             service.create_cards_batch([CardPayload(word=word, media=media, definition="def")])
