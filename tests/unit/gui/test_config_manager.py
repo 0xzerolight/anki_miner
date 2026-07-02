@@ -166,8 +166,10 @@ class TestCardStylingRoundTrip:
 
         loaded = GUIConfigManager.load_config()
 
-        # Default is off (opt-in) — a fresh install never restyles a note type.
-        assert loaded.manage_card_styling is False
+        # Default is ON since v2.7.8: an absent key inherits the dataclass
+        # default (True), so post-rework cards get styled. The re-seed does not
+        # fire here (no last_known_version → not the OFF-default era).
+        assert loaded.manage_card_styling is True
         assert loaded.custom_card_css == ""
 
     # --- migration matrix (deterministic, no Anki probe) ---
@@ -209,6 +211,61 @@ class TestCardStylingRoundTrip:
     def test_legacy_boolean_round_trips_through_load(self, tmp_path, monkeypatch):
         cfg_file = tmp_path / "gui_config.json"
         cfg_file.write_text(json.dumps({"use_default_card_stylesheet": False}), encoding="utf-8")
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+        # Goes through load_config so it DOES traverse the re-seed step, but stays
+        # True: _migrate_card_styling resolves True first, so the re-seed's
+        # `is False` guard skips.
+        assert GUIConfigManager.load_config().manage_card_styling is True
+
+    # --- default ON (v2.7.8) ---
+
+    def test_fresh_default_is_managed(self):
+        """A brand-new config manages card styling by default (v2.7.8)."""
+        assert create_default_config().manage_card_styling is True
+
+    # --- one-shot re-seed for the v2.7.6/2.7.7 OFF-default era ---
+
+    def test_reseed_flips_persisted_false_for_era_versions(self):
+        for version in ("2.7.6", "2.7.7"):
+            data = {"manage_card_styling": False, "last_known_version": version}
+            assert GUIConfigManager._reseed_manage_card_styling(data)["manage_card_styling"] is True, version
+
+    def test_reseed_leaves_pre_era_opt_out(self):
+        # Pre-rework version: a persisted False is a real preset-era opt-out.
+        data = {"manage_card_styling": False, "last_known_version": "2.7.5"}
+        assert GUIConfigManager._reseed_manage_card_styling(data)["manage_card_styling"] is False
+
+    def test_reseed_leaves_post_fix_opt_out(self):
+        # Set OFF under the fix build → a deliberate opt-out, honored.
+        data = {"manage_card_styling": False, "last_known_version": "2.7.8"}
+        assert GUIConfigManager._reseed_manage_card_styling(data)["manage_card_styling"] is False
+
+    def test_reseed_leaves_explicit_enable_untouched(self):
+        data = {"manage_card_styling": True, "last_known_version": "2.7.7"}
+        assert GUIConfigManager._reseed_manage_card_styling(data)["manage_card_styling"] is True
+
+    def test_reseed_leaves_absent_key_absent(self):
+        # Absent key must stay absent so the dataclass default applies; the
+        # re-seed only acts on an explicit persisted False.
+        data = {"last_known_version": "2.7.7"}
+        assert "manage_card_styling" not in GUIConfigManager._reseed_manage_card_styling(data)
+
+    def test_reseed_no_version_leaves_false(self):
+        # Can't attribute a bare False to the era without a version signal.
+        data = {"manage_card_styling": False}
+        assert GUIConfigManager._reseed_manage_card_styling(data)["manage_card_styling"] is False
+
+    def test_persisted_false_from_2_7_7_reseeds_through_load(self, tmp_path, monkeypatch):
+        """Load-bearing regression: the reporter's on-disk state regains styling.
+
+        Fails against a bare default-flip (which would keep the persisted False),
+        proving the re-seed closes the gap the blocker identified.
+        """
+        cfg_file = tmp_path / "gui_config.json"
+        cfg_file.write_text(
+            json.dumps({"manage_card_styling": False, "last_known_version": "2.7.7", "anki_deck_name": "X"}),
+            encoding="utf-8",
+        )
         monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
         assert GUIConfigManager.load_config().manage_card_styling is True
 

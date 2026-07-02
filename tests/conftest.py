@@ -402,6 +402,12 @@ def test_config(temp_dir):
         jmdict_path=temp_dir / "JMdict_e",
         subtitle_offset=0.0,
         max_parallel_workers=2,  # Reduced for tests
+        # Pin OFF so the (now default-ON) manage_card_styling doesn't fire the
+        # guarded _persist_chain_change → sync_styling → real StylingWorker seam
+        # in GUI tests that build a SettingsTab and mutate the dict chain (e.g.
+        # test_settings_tab_dict_chain_persist), which would trip the network
+        # tripwire. Styling-specific tests set manage_card_styling=True explicitly.
+        manage_card_styling=False,
         stats_db_path=temp_dir / "stats.db",
         # Keep tests off the real ~/.anki_miner: these paths otherwise default
         # under ANKI_MINER_HOME, so point dicts/known-words/history at tmp too.
