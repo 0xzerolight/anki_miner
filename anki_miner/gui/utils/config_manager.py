@@ -106,6 +106,11 @@ class GUIConfigManager:
         # Fold legacy card-styling preset config into the manage_card_styling bool
         config_dict = cls._migrate_card_styling(config_dict)
 
+        # One-shot re-seed: flip a persisted False→True for the v2.7.6/2.7.7
+        # OFF-default era (a bare default flip can't reach them). Runs after
+        # _migrate_card_styling so the key is settled before the era check.
+        config_dict = cls._reseed_manage_card_styling(config_dict)
+
         # Migrate stale allowed_pos defaults (pre-v2.3.2 missing 代名詞)
         config_dict = cls._migrate_allowed_pos(config_dict)
 
@@ -405,10 +410,16 @@ class GUIConfigManager:
            other value (``default``/``minimal``/``none``/``yomitan-classic``/
            unknown) → ``True``.
 
-        Configs with neither key lack ``manage_card_styling`` and default to
-        ``False`` (don't manage). The legacy keys (``card_style_preset``,
-        ``card_style_migrated``, ``use_default_card_stylesheet``) are left in
-        place; the valid-keys filter in ``load_config`` drops them.
+        Configs with neither key are left without ``manage_card_styling`` so
+        they inherit the dataclass default (True since v2.7.8). The legacy keys
+        (``card_style_preset``, ``card_style_migrated``,
+        ``use_default_card_stylesheet``) are left in place; the valid-keys filter
+        in ``load_config`` drops them.
+
+        Kept intentionally unchanged when the key is already present so that a
+        config already carrying ``manage_card_styling`` is untouched here — the
+        one-shot v2.7.6/2.7.7 re-seed to the new ON default lives in the separate
+        ``_reseed_manage_card_styling`` step (run immediately after this one).
         """
         if "manage_card_styling" in data:
             return data
@@ -416,6 +427,43 @@ class GUIConfigManager:
             data["manage_card_styling"] = True
         elif "card_style_preset" in data:
             data["manage_card_styling"] = data["card_style_preset"] not in ("off", "")
+        return data
+
+    # Versions that shipped the Issue #44 card-styling rework with
+    # ``manage_card_styling`` defaulting OFF. A config last saved by one of these
+    # has ``False`` baked into gui_config.json (save_config serializes every
+    # field, and the post-update version write / closeEvent persist the full
+    # config), which ``_migrate_card_styling``'s present-key early-return would
+    # otherwise preserve forever. ``last_known_version`` has shipped since v2.3.3,
+    # so every config from this era is guaranteed to carry it.
+    _STYLING_OFF_DEFAULT_ERA: frozenset[str] = frozenset({"2.7.6", "2.7.7"})
+
+    @classmethod
+    def _reseed_manage_card_styling(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """One-shot re-seed of a persisted ``manage_card_styling=False`` to True.
+
+        Fires only for configs last saved by the OFF-default era (v2.7.6/2.7.7),
+        detected via ``last_known_version``. A bare flip of the dataclass default
+        is inert for these users because their ``False`` is already on disk and
+        ``_migrate_card_styling`` respects the present key; this rescues them so
+        post-rework cards regain styling without a manual toggle.
+
+        One-shot and idempotent: at load time ``last_known_version`` on disk is
+        still the OFF-era value; the version write advances it to the running
+        version *after* ``load_config``, so this never fires again. Mirrors
+        ``_migrate_allowed_pos`` — it acts only on the exact legacy-default state
+        (``is False`` + era version), never on a value a user set under the new
+        default (whose ``last_known_version`` is outside the era) or an explicit
+        enable (already True). See config.py ``manage_card_styling``.
+
+        Owned tradeoff: the v2.7.7 checkbox was default-OFF, so on disk a
+        deliberate opt-out is indistinguishable from never-touched; this flips
+        both to ON. Acceptable because the write is purely additive (user CSS
+        byte-preserved) and one checkbox reverts it.
+        """
+        if data.get("manage_card_styling") is False and data.get("last_known_version") in cls._STYLING_OFF_DEFAULT_ERA:
+            logger.info("Re-seeding manage_card_styling to True (v2.7.6/2.7.7 OFF-default era)")
+            data["manage_card_styling"] = True
         return data
 
     @staticmethod

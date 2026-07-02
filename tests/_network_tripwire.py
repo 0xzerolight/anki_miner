@@ -3,9 +3,10 @@
 WHY THIS EXISTS: unit tests must never reach real services. The definitive
 incident (2026-07-01): with Anki open, SettingsTab save/reset tests ran a real
 ``StylingWorker`` against AnkiConnect on 127.0.0.1:8765 and stripped the managed
-glossary CSS block from the user's real "Lapis" note type — reset-to-defaults
-puts ``anki_note_type="Lapis"`` + ``manage_card_styling=False`` in the panel, so
-the next Save syncs mode="remove" against the real collection. Silent on every
+glossary CSS block from the user's real "Lapis" note type. At the time the
+default was ``manage_card_styling=False`` so the sync ran mode="remove"; since
+v2.7.8 the default is True so the analogous sync runs mode="apply" — either way
+it connects to the real collection, and this tripwire blocks it. Silent on every
 local suite run; invisible in CI (no Anki there → handled connection error).
 ``tests/_home_isolation.py`` guards the data dir; this module is its network
 counterpart.
