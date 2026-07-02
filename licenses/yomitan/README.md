@@ -18,6 +18,7 @@ the combined work carries the same license.
 | `anki_miner/services/japanese_transforms.py` | `ext/js/language/ja/japanese-transforms.js` |
 | `anki_miner/utils/furigana_distribute.py` | `ext/js/language/ja/japanese.js` (`distributeFurigana` family) |
 | `anki_miner/services/_ankiconnect.py` (`_expect_list`) | `ext/js/comm/anki-connect.js` (`_normalizeArray`) |
+| `anki_miner/services/expression_audio_fetcher.py` (`_classify_request_exception` + failure-cause tally) | `ext/js/background/backend.js` (`Backend._getAudioDownloadError`) |
 | `tests/unit/data/japanese_transforms_cases.py` (case table) | `test/language/japanese-transforms.test.js` |
 | `tests/unit/test_japanese_transforms_cases.py::has_term_reasons` | `test/fixtures/language-transformer-test.js` (`hasTermReasons`) |
 | `tests/unit/test_deinflection_cycles.py` | `test/language-transformer-cycles.test.js` |
