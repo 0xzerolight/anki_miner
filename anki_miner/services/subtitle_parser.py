@@ -16,6 +16,7 @@ from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
 from anki_miner.services.deinflection import find_highlight_end
 from anki_miner.services.morphology import (
+    TokenDecision,
     TokenInclusionRule,
     extract_lemma,
     extract_orth_base,
@@ -82,6 +83,13 @@ class SubtitleParserService:
         self._compound_matcher: CompoundDictionaryMatcher | None = None
         if term_lookup is not None and config.compound_matching:
             self._compound_matcher = CompoundDictionaryMatcher(term_lookup, self._inclusion_rule)
+        # Kana-only dictionary attestation (Task 2.1). Enabled iff the toggle is
+        # on AND a headword-existence probe was injected (same offline-dict
+        # requirement as compound matching, wired in service_factory); otherwise
+        # the probe is None, every kana candidate is rejected, and parsing is
+        # byte-identical. Independent of compound_matching: the two features
+        # borrow the same offline_terms_exist seam but gate separately.
+        self._kana_probe: TermLookup | None = term_lookup if config.mine_kana_only_words else None
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
             try:
@@ -120,7 +128,9 @@ class SubtitleParserService:
         # eviction (pop the oldest key when full). Prevents unbounded growth during
         # large Deck Builder builds while still caching all files touched in Phase 1
         # for Phase 2 reuse when the corpus fits within the cap.
-        self._line_cache: dict[Path, tuple[float, list[tuple[str, list, list, float, float, float]]]] = {}
+        self._line_cache: dict[
+            Path, tuple[float, list[tuple[str, list, list, frozenset[str], float, float, float]]]
+        ] = {}
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -178,16 +188,22 @@ class SubtitleParserService:
 
     def _iter_parsed_lines(
         self, subtitle_file: Path
-    ) -> Iterator[tuple[str, list[Any], list[Any], float, float, float]]:
+    ) -> Iterator[tuple[str, list[Any], list[Any], frozenset[str], float, float, float]]:
         """Yield post-tokenize per-line state for every non-empty subtitle line.
 
-        Yields ``(text, raw_tokens, merged_tokens, start_time, end_time, duration)``.
-        ``text`` is the cleaned + regex-filtered line; ``raw_tokens`` is the
-        direct output of ``self.tagger(text)`` (used by ``_from_tokens`` helpers
-        so the sentence is tokenized only once); ``merged_tokens`` is the full
-        output of ``_merge_compound_suffixes`` (callers apply
-        ``_should_include_word`` themselves so the index path and mining path
-        share identical token selection logic).
+        Yields ``(text, raw_tokens, merged_tokens, attested_kana, start_time,
+        end_time, duration)``. ``text`` is the cleaned + regex-filtered line;
+        ``raw_tokens`` is the direct output of ``self.tagger(text)`` (used by
+        ``_from_tokens`` helpers so the sentence is tokenized only once);
+        ``merged_tokens`` is the full output of ``_merge_compound_suffixes``
+        (callers apply ``_should_include_word`` themselves so the index path and
+        mining path share identical token selection logic). ``attested_kana`` is
+        the per-line set of kana-candidate lemmas a dictionary attests (Task
+        2.1), computed ONCE here and baked into the cached line-state so mining
+        and count_lemmas consult identical sets (T-38) and a cache replay
+        re-issues no probe. It is ``frozenset()`` whenever kana attestation is
+        disabled, so the flag's effect is fully captured in the baked state and
+        a reused parser instance cannot replay a stale variant.
 
         Per-file cache: keyed by resolved path → (mtime, line-state list);
         bounded to ``_LINE_CACHE_MAX_FILES`` entries via oldest-first eviction.
@@ -224,7 +240,7 @@ class SubtitleParserService:
         # mock it with an order-sensitive side_effect). The cache entry is only
         # committed once the generator is fully consumed, so a consumer that
         # abandons iteration early does not leave a truncated entry.
-        line_states: list[tuple[str, list, list, float, float, float]] = []
+        line_states: list[tuple[str, list, list, frozenset[str], float, float, float]] = []
         for line in subs:
             # Skip ASS/SSA Comment events (karaoke, sign TL, staff credits…).
             # pysubs2 SSAEvent.is_comment is a bool; we check ``is True`` (strict
@@ -247,7 +263,12 @@ class SubtitleParserService:
             if self._compound_matcher is not None:
                 merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
 
-            line_state = (text, raw_tokens, merged_tokens, start_time, end_time, duration)
+            # One batched dictionary-attestation probe per line (never per-word),
+            # over the FINAL merged tokens the mining loops iterate. Baked into the
+            # line-state so count_lemmas and both mining loops see the same set.
+            attested_kana = self._resolve_kana_candidates(merged_tokens)
+
+            line_state = (text, raw_tokens, merged_tokens, attested_kana, start_time, end_time, duration)
             line_states.append(line_state)
             yield line_state
 
@@ -270,6 +291,43 @@ class SubtitleParserService:
     def _find_highlight_end(self, text: str, raw_tokens: list, tok_start: int, tok_end: int, word_token: Any) -> int:
         """Full-inflected-form end offset (see deinflection.find_highlight_end)."""
         return find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+
+    def _resolve_kana_candidates(self, tokens: list) -> frozenset[str]:
+        """Return the lemmas of this line's kana candidates a dictionary attests.
+
+        A kana candidate is a pure-hiragana content word the script gate would
+        otherwise reject (``TokenDecision.KANA_CANDIDATE``). Each candidate's
+        lemma AND its source-orthography ``orthBase`` are probed in ONE batched
+        ``offline_terms_exist`` round-trip (Yomitan wordhood-by-attestation);
+        UniDic's lemma is kanji-canonical (うなずく→頷く, すげぇ→凄い) while a
+        dictionary may store either the kanji headword or a kana headword
+        (ごまかす), so a candidate attests when EITHER form is a stored headword
+        and its lemma joins the returned set. The probe is term-only by design
+        (``storage.terms_exist``): reading-column matches are excluded, so a
+        kana word keyed only under some kanji headword's *reading* stays
+        unmined — a deliberate narrowing (see Task 2.1 brief).
+
+        Returns an empty set when kana attestation is disabled (flag off / no
+        offline dictionary — ``_kana_probe is None``) or the line has no
+        candidates, so parsing stays byte-identical.
+        """
+        if self._kana_probe is None:
+            return frozenset()
+        candidates: list[tuple[str, str]] = []  # (lemma, orthBase) per candidate
+        probe_terms: list[str] = []
+        for token in tokens:
+            if self._inclusion_rule.classify(token) is not TokenDecision.KANA_CANDIDATE:
+                continue
+            lemma = self._extract_lemma(token)
+            orth = self._extract_orth_base(token)
+            candidates.append((lemma, orth))
+            probe_terms.append(lemma)
+            if orth != lemma:
+                probe_terms.append(orth)
+        if not probe_terms:
+            return frozenset()
+        found = self._kana_probe(probe_terms)
+        return frozenset(lemma for lemma, orth in candidates if lemma in found or orth in found)
 
     def _emit_word(
         self,
@@ -439,7 +497,15 @@ class SubtitleParserService:
         all_words: list[TokenizedWord] = []
         seen_lemmas: set[str] = set()  # Track unique words by dictionary form (lemma).
 
-        for text, raw_tokens, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subtitle_file):
+        for (
+            text,
+            raw_tokens,
+            merged_tokens,
+            attested_kana,
+            start_time,
+            end_time,
+            duration,
+        ) in self._iter_parsed_lines(subtitle_file):
             # Sentence-level furigana/reading depend only on ``text`` — compute
             # once per line and share across every word emitted from this line.
             # Use raw_tokens (pre-merge tagger output) so the sentence is
@@ -451,7 +517,7 @@ class SubtitleParserService:
             # Spans come from the shared locator (Issue #20 / T-38 — see
             # _iter_token_spans for the cursor+find and drop-rule rationale).
             for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if not self._should_include_word(word_token):
+                if not self._should_include_word(word_token, attested_kana):
                     continue
 
                 word = self._emit_word(
@@ -505,7 +571,15 @@ class SubtitleParserService:
         line_index: list[LineLemmas] = []
         seen_lemmas: set[str] = set()
 
-        for text, raw_tokens, merged_tokens, start_time, end_time, duration in self._iter_parsed_lines(subtitle_file):
+        for (
+            text,
+            raw_tokens,
+            merged_tokens,
+            attested_kana,
+            start_time,
+            end_time,
+            duration,
+        ) in self._iter_parsed_lines(subtitle_file):
             # First pass: collect every content-word lemma on this line.
             # _should_include_word handles particle/aux/proper-noun filtering.
             # We also record (surface, start, end) for the FIRST occurrence
@@ -518,7 +592,7 @@ class SubtitleParserService:
             # Spans come from the shared locator — same offset and drop rule
             # as parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
             for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if not self._should_include_word(word_token):
+                if not self._should_include_word(word_token, attested_kana):
                     continue
                 lemma_here = self._extract_lemma(word_token)
                 line_lemmas.add(lemma_here)
@@ -594,15 +668,16 @@ class SubtitleParserService:
             SubtitleParseError: If subtitle file cannot be parsed
         """
         counts: collections.Counter[str] = collections.Counter()
-        for text, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
+        for text, _raw_tokens, merged_tokens, attested_kana, *_ in self._iter_parsed_lines(subtitle_file):
             # Spans come from the SAME locator as the mining loops in
             # parse_subtitle_file* — a token mining drops (find == -1),
             # counting drops too, or the count-vs-mine sets diverge and the
             # Deck Builder preview over-promises (T-38). The cursor+find and
             # drop-rule rationale lives on _iter_token_spans; do not inline a
-            # divergent copy here.
+            # divergent copy here. ``attested_kana`` is the SAME baked probe set
+            # the mining loops consult, so kana-candidate inclusion agrees too.
             for token, _tok_start, _tok_end in self._iter_token_spans(text, merged_tokens):
-                if self._should_include_word(token):
+                if self._should_include_word(token, attested_kana):
                     counts[self._extract_lemma(token)] += 1
         return counts
 
@@ -630,6 +705,6 @@ class SubtitleParserService:
         """Extract kana reading from a token (see morphology.extract_reading)."""
         return extract_reading(word_token)
 
-    def _should_include_word(self, word_token) -> bool:
-        """POS/subtype inclusion gate (see morphology.TokenInclusionRule.should_include)."""
-        return self._inclusion_rule.should_include(word_token)
+    def _should_include_word(self, word_token, attested_kana: frozenset[str] | None = None) -> bool:
+        """POS/subtype/kana-attestation inclusion gate (see morphology.TokenInclusionRule.should_include)."""
+        return self._inclusion_rule.should_include(word_token, attested_kana)

@@ -243,18 +243,22 @@ def create_services(
     definition_service = build_definition_service(config, load_result)
 
     if subtitle_parser is None:
-        # Dictionary-attested compound matching: inject the headword-existence
-        # probe iff the toggle is on and an indexed offline dict is enabled —
-        # the same predicate as the eager-load above, so a Jisho-only config
-        # stays I/O-free and behaves exactly as before.
+        # Headword-existence probe: injected iff an indexed offline dict is
+        # enabled AND at least one consumer wants it — compound matching
+        # (services/compound_matcher.py) or kana-only attestation (Task 2.1,
+        # config.mine_kana_only_words). The two features borrow the same
+        # offline_terms_exist seam but gate independently inside the parser, so a
+        # Jisho-only config stays I/O-free and behaves exactly as before.
         #
         # Deck Builder parity note: the Deck Builder's base processor flows
         # through THIS fresh-parser branch (it never pre-builds a parser), so
-        # preview (count_lemmas) and build share one matcher via the parser's
+        # preview (count_lemmas) and build share the same probe via the parser's
         # line cache. If a future change pre-builds that parser elsewhere, it
         # must wire term_lookup the same way or preview and build diverge.
         term_lookup = None
-        if config.compound_matching and any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain):
+        if (config.compound_matching or config.mine_kana_only_words) and any(
+            e.kind == "indexed" and e.enabled for e in config.dictionary_chain
+        ):
             term_lookup = definition_service.offline_terms_exist
         subtitle_parser = SubtitleParserService(config, term_lookup=term_lookup)
     # Share the parser's tagger with the word filter so i+1 swap can

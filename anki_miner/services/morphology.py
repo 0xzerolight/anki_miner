@@ -10,6 +10,7 @@ Import direction is one-way: ``subtitle_parser`` imports from this module;
 this module must never import ``subtitle_parser``.
 """
 
+import enum
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Iterator
@@ -17,6 +18,35 @@ from typing import Any, Iterator
 from anki_miner.services.ja_normalize import is_cjk_ideograph
 
 _NOMINAL_SUFFIX_POS2 = {"名詞的", "形状詞的", "副詞的"}
+
+
+def _is_hiragana_run(surface: str) -> bool:
+    """True when every non-space char is in the hiragana block (U+3041-U+309F).
+
+    Marks the pure-hiragana content words (ごまかす, しゃべる, すげぇ) the script
+    gate would otherwise reject; mixed hiragana+katakana / hiragana+latin
+    surfaces return False so they stay rejected exactly as before.
+    """
+    stripped = [c for c in surface if c.strip()]
+    return bool(stripped) and all("ぁ" <= c <= "ゟ" for c in stripped)
+
+
+class TokenDecision(enum.Enum):
+    """Tri-state result of the POS/subtype/script inclusion gate.
+
+    ``ACCEPT`` / ``REJECT`` are terminal and reproduce the pre-2.1
+    ``should_include`` verdicts exactly. ``KANA_CANDIDATE`` is the single
+    behavioural addition: a pure-hiragana content word that clears every
+    POS/subtype/lemma gate and fails ONLY the script check (``len >= 2``).
+    Whether such a token is actually mined is decided out-of-band by the
+    parser's batched dictionary-attestation probe (Task 2.1) — the rule itself
+    stays I/O-free.
+    """
+
+    ACCEPT = "accept"
+    REJECT = "reject"
+    KANA_CANDIDATE = "kana_candidate"
+
 
 # Whitelist of 接頭辞 surfaces that productively form compounds with
 # 名詞/形状詞 roots. Used by _merge_prefix_compounds to avoid false positives
@@ -378,51 +408,77 @@ class TokenInclusionRule:
     allowed_pos: frozenset[str]
     excluded_subtypes: frozenset[str]
 
-    def should_include(self, word_token) -> bool:
-        """Determine if a word should be included based on POS and other criteria.
+    def should_include(self, word_token, attested_kana: frozenset[str] | None = None) -> bool:
+        """Whether a token is a mineable content word.
+
+        Thin wrapper over :meth:`classify`. ``attested_kana`` is the per-line
+        set of kana-candidate *lemmas* a dictionary attests (Task 2.1); a
+        ``KANA_CANDIDATE`` token is mined iff its lemma is in that set. The
+        default ``None`` — and the value the compound matcher passes — rejects
+        every candidate, so the gate is byte-identical to the pre-2.1
+        script-only behaviour whenever the kana-attestation flag is off or no
+        offline dictionary is available.
 
         Args:
             word_token: MeCab word token
+            attested_kana: dictionary-attested kana lemmas for the token's line,
+                or ``None`` when kana attestation is unavailable/disabled.
 
         Returns:
             True if word should be included, False otherwise
+        """
+        decision = self.classify(word_token)
+        if decision is TokenDecision.ACCEPT:
+            return True
+        if decision is TokenDecision.REJECT:
+            return False
+        # KANA_CANDIDATE: mine only when this line's probe attested its lemma.
+        return attested_kana is not None and extract_lemma(word_token) in attested_kana
+
+    def classify(self, word_token) -> TokenDecision:
+        """Tri-state inclusion decision (see :class:`TokenDecision`).
+
+        ACCEPT / REJECT preserve the original ``should_include`` verdicts
+        exactly; the only new outcome is KANA_CANDIDATE, returned for the
+        pure-hiragana content words the old gate rejected outright at its final
+        ``return bool(has_kanji)``.
         """
         surface = word_token.surface
 
         # Skip empty or whitespace-only tokens
         if not surface or not surface.strip():
-            return False
+            return TokenDecision.REJECT
 
         # Get part-of-speech tags
         try:
             pos1 = word_token.feature.pos1  # Main POS
             pos2 = word_token.feature.pos2  # Sub POS
         except AttributeError:
-            return False
+            return TokenDecision.REJECT
 
         # Skip particles, auxiliary verbs, symbols, punctuation
         if pos1 in ["助詞", "助動詞", "記号", "補助記号"]:
-            return False
+            return TokenDecision.REJECT
 
         # Skip interjections and fillers
         if pos1 in ["感動詞", "フィラー"]:
-            return False
+            return TokenDecision.REJECT
 
         # Check if it's a content word (noun, verb, adjective, adverb)
         if pos1 not in self.allowed_pos:
-            return False
+            return TokenDecision.REJECT
 
         # Check for excluded subtypes
         if pos2 and pos2 in self.excluded_subtypes:
-            return False
+            return TokenDecision.REJECT
 
         # Skip if no lemma available
         try:
             lemma = word_token.feature.lemma
             if not lemma:
-                return False
+                return TokenDecision.REJECT
         except AttributeError:
-            return False
+            return TokenDecision.REJECT
 
         # Check if word contains meaningful characters. Uses the shared ported
         # CJK_IDEOGRAPH_RANGES (Unified + Ext A-I + compat + astral) so kanji
@@ -443,15 +499,25 @@ class TokenInclusionRule:
             # ドア) are legitimate loanwords and must fall through to the ≥2-char
             # acceptance floor below.
             if pos1 == "副詞" and len(unique_chars) <= 2 and len(surface) <= 4:
-                return False
+                return TokenDecision.REJECT
 
             # If ends in small tsu and is short, likely sound effect
             if surface.endswith("ッ") and len(surface) <= 3:
-                return False
+                return TokenDecision.REJECT
 
             # Must be at least 2 chars to be valid katakana word
-            return len(surface) >= 2
+            return TokenDecision.ACCEPT if len(surface) >= 2 else TokenDecision.REJECT
 
         # For words with kanji, always include (POS/subtype gates above apply).
-        # Pure hiragana words (no kanji, not katakana) fall through and are rejected.
-        return bool(has_kanji)
+        if has_kanji:
+            return TokenDecision.ACCEPT
+
+        # Pure hiragana (no kanji, not katakana): the old gate returned False
+        # here. Flag it as a dictionary-attestation candidate when it clears the
+        # ≥2-char floor; the parser's probe decides inclusion. A None
+        # attested-set (flag off / no offline dict) makes should_include reject
+        # it, so behaviour is byte-identical. Anything not a clean hiragana run
+        # (mixed kana, stray latin) stays a hard REJECT.
+        if _is_hiragana_run(surface) and len(surface) >= 2:
+            return TokenDecision.KANA_CANDIDATE
+        return TokenDecision.REJECT
