@@ -722,6 +722,8 @@ class TestOptionalServices:
         mock_frequency.is_available.return_value = True
         mock_frequency.lookup_all.return_value = [("BCCWJ", 500), ("JPDB", 612)]
         mock_frequency.lookup_min.return_value = 500
+        # floor(2 / (1/500 + 1/612)) = 550 — the harmonic mean of the two ranks.
+        mock_frequency.lookup_harmonic.return_value = 550
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -730,8 +732,10 @@ class TestOptionalServices:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
+        # Map the optional frequency_sort field so the sort column is emitted.
+        config = replace(test_config, anki_fields={**test_config.anki_fields, "frequency_sort": "FrequencySort"})
         processor = EpisodeProcessor(
-            config=test_config,
+            config=config,
             presenter=NullPresenter(),
             pitch_accent_service=mock_pitch,
             frequency_service=mock_frequency,
@@ -746,13 +750,13 @@ class TestOptionalServices:
         assert extra_fields is not None
         assert extra_fields["pitch_position"] == "0"
         assert extra_fields["pitch_category"] == "平板"
-        # frequency is now the rendered per-source bullet list; frequency_sort
-        # carries the bare min rank for Anki's numeric sort column.
+        # frequency is the rendered per-source bullet list; frequency_sort carries
+        # the harmonic-mean rank (not the bare MIN) for Anki's numeric sort column.
         assert extra_fields["frequency"] == "<ul><li>BCCWJ: 500</li><li>JPDB: 612</li></ul>"
-        assert extra_fields["frequency_sort"] == "500"
+        assert extra_fields["frequency_sort"] == "550"
 
     def test_word_absent_from_all_sources_gets_no_frequency_fields(self, test_config, mock_services, tmp_path):
-        """A word no source ranks gets neither frequency nor frequency_sort."""
+        """Unranked word + unmapped frequency_sort field: neither field is written."""
         word = _make_word("食べる")
         media = _make_media()
 
@@ -761,6 +765,7 @@ class TestOptionalServices:
         # No source ranks this word.
         mock_frequency.lookup_all.return_value = []
         mock_frequency.lookup_min.return_value = None
+        mock_frequency.lookup_harmonic.return_value = None
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -769,6 +774,8 @@ class TestOptionalServices:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
+        # test_config leaves frequency_sort unmapped, so the sentinel is suppressed
+        # and the default-config wire stays byte-identical to pre-harmonic behavior.
         processor = EpisodeProcessor(
             config=test_config,
             presenter=NullPresenter(),
@@ -785,6 +792,44 @@ class TestOptionalServices:
         extra_fields = card_data[0].extra_fields or {}
         assert "frequency" not in extra_fields
         assert "frequency_sort" not in extra_fields
+
+    def test_unranked_word_writes_missing_sentinel_when_field_mapped(self, test_config, mock_services, tmp_path):
+        """Unranked word + mapped frequency_sort field: writes the 9999999 sentinel.
+
+        The sentinel sorts no-data cards *last* in Anki's browser instead of
+        before rank 1 (an omitted field reads as the empty string).
+        """
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup_all.return_value = []
+        mock_frequency.lookup_min.return_value = None
+        mock_frequency.lookup_harmonic.return_value = None
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        config = replace(test_config, anki_fields={**test_config.anki_fields, "frequency_sort": "FrequencySort"})
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        extra_fields = card_data[0].extra_fields or {}
+        # No per-source breakdown, but the sort field carries the missing sentinel.
+        assert "frequency" not in extra_fields
+        assert extra_fields["frequency_sort"] == "9999999"
 
 
 class TestPitchLemmaReading:
