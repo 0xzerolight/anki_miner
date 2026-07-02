@@ -7,15 +7,29 @@ from typing import Any
 
 from anki_miner.utils.furigana_distribute import distribute_furigana
 
+# NOTE: anki_miner.services.ja_normalize is imported *inside* the functions that
+# use it, not at module top. text_utils is imported (via anki_miner.utils) before
+# the services package finishes initializing, and services/__init__ eagerly loads
+# subtitle_parser, which imports clean_subtitle_text back from here — a top-level
+# import would deadlock that cycle. Function-local imports hit the sys.modules
+# cache after first load, so the cost is negligible.
+
 
 def clean_subtitle_text(text: str) -> str:
-    """Remove formatting tags and clean up subtitle text.
+    """Remove formatting tags, then Japanese-normalize for tokenization.
+
+    Tag/whitespace stripping runs first, then :func:`normalize_for_tokenization`
+    (halfwidth katakana → fullwidth, NFC combining-mark composition, CJK-compat
+    and radical NFKD folding) and the minimal kanji-variant map (𠮟 → 叱). Because
+    normalization precedes tokenization here, the returned string *is* the text
+    MeCab tokenizes and the stored card sentence, so token offsets, dedup keys,
+    and script-type filters all see one consistent normalized form.
 
     Args:
         text: Raw subtitle text with possible formatting tags
 
     Returns:
-        Cleaned text without formatting tags
+        Cleaned, normalized text without formatting tags
     """
     # Remove ASS/SSA style tags like {\pos(x,y)}, {\fad(100,200)}, etc.
     text = re.sub(r"\{[^}]*\}", "", text)
@@ -28,6 +42,15 @@ def clean_subtitle_text(text: str) -> str:
 
     # Normalize whitespace
     text = " ".join(text.split())
+
+    # Japanese pre-tokenization normalization (see anki_miner.services.ja_normalize).
+    from anki_miner.services.ja_normalize import (
+        normalize_for_tokenization,
+        standardize_kanji_variants,
+    )
+
+    text = normalize_for_tokenization(text)
+    text = standardize_kanji_variants(text)
 
     return text.strip()
 
@@ -80,12 +103,18 @@ def has_katakana(text: str) -> bool:
 def _is_kanji(char: str) -> bool:
     """True iff *char* is a CJK ideograph or the iteration mark 々.
 
-    々 (U+3005) sits below the CJK block (U+4E00–U+9FFF), so it must be added
+    Delegates the ideograph test to the shared
+    :func:`anki_miner.services.ja_normalize.is_cjk_ideograph` (ported from
+    Yomitan's ``CJK_IDEOGRAPH_RANGES``: Unified + Ext A–I + compatibility +
+    astral), so Ext-A/compat/astral kanji (﨑, 𠮟) are recognized, not just the
+    BMP Unified block. 々 (U+3005) sits below that range, so it is added
     explicitly; it is held inside the furigana bracket (時々 → 時々[ときどき],
     not 時[とき]々). Used both as the kanji-containment gate and by
     :func:`_format_furigana` to find the okurigana boundary.
     """
-    return "一" <= char <= "鿿" or char == "々"
+    from anki_miner.services.ja_normalize import is_cjk_ideograph
+
+    return is_cjk_ideograph(char) or char == "々"
 
 
 def _format_furigana(surface: str, reading: str) -> str:

@@ -60,6 +60,27 @@ class TestCleanSubtitleText:
         text = r"{\pos(100,200)}<b>日本語</b>\Nテスト"
         assert clean_subtitle_text(text) == "日本語 テスト"
 
+    def test_normalizes_halfwidth_katakana(self):
+        """Halfwidth katakana (with folded dakuten) is normalized to fullwidth."""
+        assert clean_subtitle_text("ﾊﾟｿｺﾝ") == "パソコン"
+
+    def test_normalizes_nfd_kana(self):
+        """NFD dakuten kana (\u306f + U+3099) is composed to the precomposed form."""
+        assert clean_subtitle_text("\u306f\u3099\u304b") == "\u3070\u304b"  # は+゙か -> ばか
+        assert clean_subtitle_text("\u304b\u3099") == "\u304c"  # か+゙ -> が
+
+    def test_normalizes_kangxi_radical(self):
+        """OCR Kangxi radical ⼭ (U+2F2D) folds to the real ideograph 山."""
+        assert clean_subtitle_text("⼭") == "山"
+
+    def test_expands_cjk_compatibility_ligature(self):
+        """CJK-compat ligature ㍿ expands to 株式会社."""
+        assert clean_subtitle_text("㍿") == "株式会社"
+
+    def test_standardizes_kanji_variant(self):
+        """Astral variant 𠮟 (U+20B9F) is standardized to 叱."""
+        assert clean_subtitle_text("𠮟られた") == "叱られた"
+
 
 # --- Helpers for building mock MeCab tokens ---
 
@@ -250,6 +271,13 @@ class TestFormatFurigana:
     def test_is_kanji_includes_iteration_mark(self):
         assert _is_kanji("一") and _is_kanji("鿿") and _is_kanji("々")
         assert not _is_kanji("あ") and not _is_kanji("ア") and not _is_kanji("〇")
+
+    def test_is_kanji_includes_extended_ranges(self):
+        # Now backed by the shared ported CJK_IDEOGRAPH_RANGES: Ext-A, compat
+        # ideographs, and astral extensions count as kanji, not just BMP Unified.
+        assert _is_kanji("㐀")  # U+3400 Ext A
+        assert _is_kanji("﨑")  # U+FA11 compatibility ideograph
+        assert _is_kanji("𠮟")  # U+20B9F Ext B (astral)
 
     def test_single_kanji_whole_bracket(self):
         assert _format_furigana("国", "くに") == "国[くに]"
