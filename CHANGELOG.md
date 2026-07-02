@@ -7,21 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
-- **Whole words and expressions instead of fragments (dictionary-attested compound matching).** 走り出した now mines one card 走り出す instead of 走り; 応急処置 stays one card instead of splitting into 応急 + 処置. Following Yomitan's approach — the dictionary defines word boundaries — the parser now merges adjacent tokens whenever the joined form (deinflected via UniDic orthBase) is a headword in an installed offline dictionary, longest match first. This includes expressions across particles: 気がした mines 気がする, and an attested collocation like 結論を出す replaces its component cards for that occurrence (by design — the longest dictionary-attested match wins; components stay mineable where they appear alone). Requires at least one enabled offline dictionary; without one, mining is unchanged. Toggle: `compound_matching` in the config file (default on). Words previously marked known as fragments may resurface as unknown compounds — that is the fix taking effect.
 
 ### Changed
 
 ### Fixed
-- **Mined verbs and adjectives keep the kanji spelling the subtitle used.** A sentence containing 乞う previously produced a card whose Expression read 請う: unidic's canonical lemma silently swaps orthographic kanji variants (乞う→請う, 喰らう→食らう). The Expression now uses the dictionary form in the sentence's own orthography (UniDic orthBase) — the same behavior as Yomitan, which deinflects the source text and never normalizes the spelling. Definition, frequency, and pitch lookups still use the lemma, so card data is unchanged. A verb previously carded under the normalized spelling will be offered once more as the source spelling if re-encountered (no migration, same precedent as legacy surface-form cards). After an i+1 sentence swap the Expression keeps the first-seen spelling even if the swapped sentence uses another variant — unchanged in kind from the previous lemma behavior.
-- **Sentence bold now covers the whole conjugated word.** 蒔いた is bolded as 蒔いた, not 蒔い — the highlight span is verified with a port of Yomitan's deinflection rules (auxiliary chains like 泳いでいた and 蒔いたら bold fully; where Yomitan has no rule, e.g. 買ってくれた, the span stops at 買って, matching Yomitan). Applies to both the Sentence and SentenceFurigana fields, including sentences swapped in by the i+1 filter.
 
 ### Removed
 
 
-## [2.7.6] - 2026-07-01
+## [2.7.7] - 2026-07-02
+
+> Supersedes 2.7.6, which reached PyPI but shipped no downloadable app build; its changes are folded in below.
 
 ### Added
 - **Vulkan GPU transcription.** Subtitles → Generate can run the local Whisper model through a whisper.cpp Vulkan backend, so AMD and Intel GPUs get hardware-accelerated transcription alongside NVIDIA CUDA. The device selector gains a "Vulkan" option, and Download Vulkan model fetches the ggml model plus the Silero voice-activity pack. Vulkan ships only in the downloadable app builds; the PyPI install stays CPU-only, and a Vulkan device falls back to auto (CUDA if present, otherwise CPU) when no Vulkan backend is available.
+- **Whole words and expressions instead of fragments (dictionary-attested compound matching).** 走り出した now mines one card 走り出す instead of 走り; 応急処置 stays one card instead of splitting into 応急 + 処置. Following Yomitan's approach — the dictionary defines word boundaries — the parser now merges adjacent tokens whenever the joined form (deinflected via UniDic orthBase) is a headword in an installed offline dictionary, longest match first. This includes expressions across particles: 気がした mines 気がする, and an attested collocation like 結論を出す replaces its component cards for that occurrence (by design — the longest dictionary-attested match wins; components stay mineable where they appear alone). Requires at least one enabled offline dictionary; without one, mining is unchanged. Toggle: `compound_matching` in the config file (default on). Words previously marked known as fragments may resurface as unknown compounds — that is the fix taking effect.
+- **Seven new UI languages.** German, Brazilian Portuguese, Simplified Chinese, Traditional Chinese, Italian, Indonesian, and Vietnamese join the existing English, Japanese, Spanish, French, and Russian translations, selectable in Settings (restart to apply).
 
 ### Changed
 - **Card glossary styling is now a single universal stylesheet.** A Yomitan-faithful stylesheet is always applied and combined with each dictionary's own scoped CSS and your custom CSS into one managed block, replacing the per-preset styling model. Styling syncs automatically on Save.
@@ -39,6 +40,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Quick Processing updates both progress bars** (Overall and Current Episode) during folder runs.
 - **Closing Settings while it is still querying Anki no longer raises an error.** The field, deck, and styling probe callbacks now no-op when the panel has already been destroyed.
 - **Glossary sense items no longer inherit your note type's list-bullet styling.**
+- **Glossary styling no longer triggers a needless Anki sync on every launch.** The universal stylesheet is reconciled at startup and on Save; it now writes the note type only when the CSS actually changes, so an unchanged note type is no longer marked modified — which previously forced an AnkiWeb sync every time the app opened.
+- **Mined verbs and adjectives keep the kanji spelling the subtitle used.** A sentence containing 乞う previously produced a card whose Expression read 請う: unidic's canonical lemma silently swaps orthographic kanji variants (乞う→請う, 喰らう→食らう). The Expression now uses the dictionary form in the sentence's own orthography (UniDic orthBase) — the same behavior as Yomitan, which deinflects the source text and never normalizes the spelling. Definition, frequency, and pitch lookups still use the lemma, so card data is unchanged. A verb previously carded under the normalized spelling will be offered once more as the source spelling if re-encountered (no migration, same precedent as legacy surface-form cards). After an i+1 sentence swap the Expression keeps the first-seen spelling even if the swapped sentence uses another variant — unchanged in kind from the previous lemma behavior.
+- **Sentence bold now covers the whole conjugated word.** 蒔いた is bolded as 蒔いた, not 蒔い — the highlight span is verified with a port of Yomitan's deinflection rules (auxiliary chains like 泳いでいた and 蒔いたら bold fully; where Yomitan has no rule, e.g. 買ってくれた, the span stops at 買って, matching Yomitan). Applies to both the Sentence and SentenceFurigana fields, including sentences swapped in by the i+1 filter.
 
 
 ## [2.7.5] - 2026-06-27
