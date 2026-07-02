@@ -498,6 +498,13 @@ def structured_content_to_html(
         # The image glossary object carries the same path/width/height/title/alt
         # keys `_render_img` already reads (no `sizeUnits` → px, per schema).
         return _render_img(node, dict_id=dict_id, media_collector=media_collector)
+    if node_type is not None:
+        # A typed glossary object with an unrecognized `type` is NOT a
+        # structured-content element — it must not fall through to the tag path
+        # below and silently render an empty `<span>` (dropping any `text`
+        # payload). Yomitan's typed dispatch has no default element branch, so we
+        # drop the unknown object outright rather than emit a bare span.
+        return ""
 
     tag = node.get("tag", "span")
     if tag not in _ALLOWED_TAGS:
