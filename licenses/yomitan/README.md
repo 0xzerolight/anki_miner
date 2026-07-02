@@ -26,6 +26,7 @@ the combined work carries the same license.
 | `tests/unit/data/japanese_transforms_cases.py` (case table) | `test/language/japanese-transforms.test.js` |
 | `tests/unit/test_japanese_transforms_cases.py::has_term_reasons` | `test/fixtures/language-transformer-test.js` (`hasTermReasons`) |
 | `tests/unit/test_deinflection_cycles.py` | `test/language-transformer-cycles.test.js` |
+| `anki_miner/services/frequency/multi_frequency_service.py` (`lookup_harmonic`) | `ext/js/data/anki-note-data-creator.js` (`getFrequencyHarmonic`) |
 
 Pinned upstream commit: `e2ed450c2f11a591922822e77f008e70a87daf0c`.
 

@@ -98,6 +98,62 @@ def test_lookup_min_none_no_providers():
     assert MultiFrequencyService([]).lookup_min("猫") is None
 
 
+def test_lookup_harmonic_multiple_sources():
+    # floor(3 / (1/100 + 1/42 + 1/300)) = floor(80.77) = 80. The harmonic mean
+    # keeps one niche source from dominating the way a bare MIN would.
+    svc = MultiFrequencyService(
+        [
+            _FakeProvider("JPDB", {"猫": 100}),
+            _FakeProvider("Novel", {"猫": 42}),
+            _FakeProvider("BCCWJ", {"猫": 300}),
+        ]
+    )
+    assert svc.lookup_harmonic("猫") == 80
+
+
+def test_lookup_harmonic_two_sources():
+    # floor(2 / (1/500 + 1/612)) = floor(550.36) = 550.
+    svc = MultiFrequencyService(
+        [
+            _FakeProvider("BCCWJ", {"猫": 500}),
+            _FakeProvider("JPDB", {"猫": 612}),
+        ]
+    )
+    assert svc.lookup_harmonic("猫") == 550
+
+
+def test_lookup_harmonic_single_hit_equals_rank():
+    # With one source the harmonic mean collapses to that source's rank.
+    svc = MultiFrequencyService(
+        [
+            _FakeProvider("JPDB", {}),
+            _FakeProvider("Novel", {"猫": 42}),
+        ]
+    )
+    assert svc.lookup_harmonic("猫") == 42
+
+
+def test_lookup_harmonic_none_when_no_hits():
+    svc = MultiFrequencyService([_FakeProvider("JPDB", {}), _FakeProvider("BCCWJ", {})])
+    assert svc.lookup_harmonic("猫") is None
+
+
+def test_lookup_harmonic_none_no_providers():
+    assert MultiFrequencyService([]).lookup_harmonic("猫") is None
+
+
+def test_lookup_harmonic_ignores_nonpositive_rank():
+    # Yomitan's getFrequencyNumbers drops frequencies <= 0; mirror that so a bad
+    # source rank of 0 neither divides-by-zero nor skews the mean.
+    svc = MultiFrequencyService(
+        [
+            _FakeProvider("Bad", {"猫": 0}),
+            _FakeProvider("Novel", {"猫": 50}),
+        ]
+    )
+    assert svc.lookup_harmonic("猫") == 50
+
+
 def test_close_closes_each_provider_once():
     a = _FakeProvider("A", {})
     b = _FakeProvider("B", {})

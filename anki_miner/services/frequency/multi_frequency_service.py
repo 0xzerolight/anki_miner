@@ -4,7 +4,9 @@ Wraps an ordered list of already-loaded :class:`IndexedFreqProvider` instances
 and layers them additively:
 
 * :meth:`lookup_min` returns the best (minimum) rank any source reports, driving
-  frequency filtering and the card's sort field.
+  the top-N frequency filter.
+* :meth:`lookup_harmonic` returns the harmonic mean of the per-source ranks
+  (Yomitan's ``getFrequencyHarmonic``), driving the card's numeric sort field.
 * :meth:`lookup_all` returns every source that has a rank for the term, in chain
   order — the per-source breakdown shown on the card.
 
@@ -16,6 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import math
 
 from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
@@ -51,6 +54,26 @@ class MultiFrequencyService:
         """Minimum rank across all providers, or None if none rank ``term``."""
         ranks = [rank for _name, rank in self.lookup_all(term)]
         return min(ranks) if ranks else None
+
+    def lookup_harmonic(self, term: str) -> int | None:
+        """Harmonic mean of the per-source ranks, or None if none rank ``term``.
+
+        Ported from Yomitan getFrequencyHarmonic
+        (ext/js/data/anki-note-data-creator.js, upstream commit e2ed450):
+        ``floor(n / Σ(1/f))`` over one rank per source. ``lookup_all`` already
+        yields at most one value per source, so Yomitan's one-value-per-
+        dictionary dedup holds by construction. Non-positive ranks are dropped
+        (mirrors upstream ``getFrequencyNumbers``' ``frequency > 0`` guard),
+        which also rules out a divide-by-zero. This drives the card's numeric
+        ``frequency_sort`` field so no single niche source dominates the sort the
+        way a bare MIN can; ``lookup_min`` still backs the top-N frequency
+        filter, which genuinely wants the best rank in any source.
+        """
+        ranks = [rank for _name, rank in self.lookup_all(term) if rank > 0]
+        if not ranks:
+            return None
+        total = sum(1.0 / rank for rank in ranks)
+        return math.floor(len(ranks) / total)
 
     def close(self) -> None:
         """Close every wrapped provider's sqlite handle.
