@@ -5,6 +5,8 @@ import re
 from collections.abc import Iterable
 from typing import Any
 
+from anki_miner.utils.furigana_distribute import distribute_furigana
+
 
 def clean_subtitle_text(text: str) -> str:
     """Remove formatting tags and clean up subtitle text.
@@ -87,44 +89,33 @@ def _is_kanji(char: str) -> bool:
 
 
 def _format_furigana(surface: str, reading: str) -> str:
-    """Anki furigana for one morpheme, keeping okurigana outside the brackets.
+    """Anki furigana for one morpheme, distributed per kanji group.
 
-    Mirrors the Anki Japanese-support add-on: strip the single leading and
-    single trailing *kana* run that the surface shares with its reading
-    (okurigana), leaving them outside the ``[...]`` so ``終い``/``しまい`` renders
-    as ``終[しま]い`` rather than ``終い[しまい]``.
+    Delegates to :func:`anki_miner.utils.furigana_distribute.distribute_furigana`
+    (a port of Yomitan's ``distributeFurigana``) to split ``reading`` across the
+    kanji of ``surface``, then renders each segment in Anki ``kanji[reading]``
+    bracket form. A separator space is inserted before a bracketed segment when
+    output already exists, so its reading binds to that kanji alone — Anki's
+    furigana filter attaches ``[...]`` to the preceding space-delimited run, so
+    ``入り口``/``いりぐち`` must render as ``入[い]り 口[ぐち]``, not
+    ``入[い]り口[ぐち]`` (which would put ぐち over り口). This matches Yomitan's
+    ``anki-template-renderer.js`` ``_furiganaPlain`` helper.
 
     ``reading`` is expected to already be hiragana (the callers apply
-    :func:`katakana_to_hiragana`). Falls back to whole-surface bracketing when
-    nothing kanji-bearing would remain, or when the shared kana don't line up
-    with the reading — rendaku/sokuon/katakana okurigana (e.g. ``入り口``/``いりぐち``
-    → ``入り口[いりぐち]``), matching the add-on's comparison of the surface
-    against the hiragana reading.
+    :func:`katakana_to_hiragana`). Interior kana and rendaku now segment
+    (取り引き/とりひき → ``取[と]り 引[ひ]き``); genuinely ambiguous splits (e.g.
+    飼い犬/かいいぬ) fall back to whole-word bracketing inside
+    :func:`distribute_furigana`. 々 stays inside its kanji group's bracket.
     """
-    trail_len = 0  # count of trailing non-kanji surface chars (okurigana)
-    for i in range(1, len(surface)):
-        if _is_kanji(surface[-i]):
-            break
-        trail_len = i
-    lead_len = 0  # count of leading non-kanji surface chars (e.g. honorific お)
-    for i in range(0, len(surface) - 1):
-        if _is_kanji(surface[i]):
-            break
-        lead_len = i + 1
-    # Only strip kana that literally match between surface and reading; this
-    # refuses a wrong split when the okurigana voices/changes in the reading.
-    if trail_len and reading[-trail_len:] != surface[-trail_len:]:
-        trail_len = 0
-    if lead_len and reading[:lead_len] != surface[:lead_len]:
-        lead_len = 0
-    if lead_len + trail_len >= len(surface) or lead_len + trail_len >= len(reading):
-        return f"{surface}[{reading}]"
-    return (
-        f"{reading[:lead_len]}"
-        f"{surface[lead_len:len(surface) - trail_len]}"
-        f"[{reading[lead_len:len(reading) - trail_len]}]"
-        f"{reading[len(reading) - trail_len:]}"
-    )
+    result = ""
+    for segment in distribute_furigana(surface, reading):
+        if segment.reading:
+            if result:
+                result += " "
+            result += f"{segment.text}[{segment.reading}]"
+        else:
+            result += segment.text
+    return result
 
 
 def generate_furigana_from_tokens(tokens: Iterable[Any]) -> str:
