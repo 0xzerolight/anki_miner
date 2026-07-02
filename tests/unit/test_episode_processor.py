@@ -13,6 +13,7 @@ from anki_miner.models import CardPayload, LineLemmas, MediaData, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import (
     EpisodeProcessor,
+    _audio_failure_diagnosis,
     _EpisodeContext,
     _sanitize_source_label,
 )
@@ -4393,3 +4394,155 @@ class TestWithinRunDuplicateCollapse:
         proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
 
         assert captured["mined_forms"] == ["食べる", "食べる"]
+
+
+def _counts(**kw):
+    """Build a full failure-cause counts dict, defaulting unset buckets to 0."""
+    from anki_miner.services.expression_audio_fetcher import FAILURE_KEYS
+
+    base = dict.fromkeys(FAILURE_KEYS, 0)
+    base.update(kw)
+    return base
+
+
+class TestAudioFailureDiagnosis:
+    """_audio_failure_diagnosis: name the dominant cause only when it matters."""
+
+    def test_no_failures_returns_none(self):
+        assert _audio_failure_diagnosis(_counts(), attempts=10) is None
+
+    def test_zero_attempts_returns_none(self):
+        assert _audio_failure_diagnosis(_counts(ssl=5), attempts=0) is None
+
+    def test_scattered_failures_below_half_stay_quiet(self):
+        # 2 failures out of 10 attempts — noise beside real hits/misses.
+        assert _audio_failure_diagnosis(_counts(ssl=2), attempts=10) is None
+
+    def test_ssl_dominant_reports_certificate_connection_message(self):
+        msg = _audio_failure_diagnosis(_counts(ssl=8), attempts=10)
+        assert msg is not None
+        assert "certificate/connection failure" in msg
+
+    def test_connection_dominant_reports_certificate_connection_message(self):
+        msg = _audio_failure_diagnosis(_counts(connection=6), attempts=10)
+        assert "certificate/connection failure" in msg
+
+    def test_timeout_dominant_reports_certificate_connection_message(self):
+        msg = _audio_failure_diagnosis(_counts(timeout=6), attempts=10)
+        assert "certificate/connection failure" in msg
+
+    def test_http_status_dominant_reports_server_errors(self):
+        msg = _audio_failure_diagnosis(_counts(http_status=6), attempts=10)
+        assert "server errors" in msg
+
+    def test_non_audio_dominant_reports_rate_limited(self):
+        msg = _audio_failure_diagnosis(_counts(non_audio=6), attempts=10)
+        assert "rate-limited" in msg
+
+    def test_tie_resolves_to_ssl_first(self):
+        # ssl and http_status tie at 3 each; ssl wins on stable key order.
+        msg = _audio_failure_diagnosis(_counts(ssl=3, http_status=3), attempts=10)
+        assert "certificate/connection failure" in msg
+
+    def test_exactly_half_triggers(self):
+        # total * 2 >= attempts boundary: 5 failures / 10 attempts fires.
+        assert _audio_failure_diagnosis(_counts(ssl=5), attempts=10) is not None
+
+
+class TestProcessorAudioFailureSummary:
+    """Phase-3 summary surfaces the dominant audio-failure cause."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    @staticmethod
+    def _enabled_config(test_config):
+        return replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+
+    @staticmethod
+    def _wire(mock_services, pairs):
+        words = [word for word, _ in pairs]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = pairs
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"] * len(words)
+        mock_services["anki_service"].create_cards_batch.return_value = len(words)
+
+    def test_dominant_ssl_failure_warns(self, test_config, mock_services, tmp_path):
+        config = self._enabled_config(test_config)
+        pairs = [(_make_word("食べる"), _make_media("taberu"))]
+        self._wire(mock_services, pairs)
+
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        fetcher.stats.return_value = _counts(ssl=1)
+
+        presenter = MagicMock()
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=presenter,
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
+        assert any("certificate/connection failure" in w for w in warnings)
+
+    def test_no_failures_emits_no_warning(self, test_config, mock_services, tmp_path):
+        config = self._enabled_config(test_config)
+        pairs = [(_make_word("食べる"), _make_media("taberu"))]
+        self._wire(mock_services, pairs)
+
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = tmp_path / "hit.mp3"
+        fetcher.stats.return_value = _counts()
+
+        presenter = MagicMock()
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=presenter,
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
+        assert not any("skipped this run" in w for w in warnings)
+
+    def test_fetcher_without_stats_is_safe(self, test_config, mock_services, tmp_path):
+        """A fetcher whose stats() returns a non-dict never crashes the run."""
+        config = self._enabled_config(test_config)
+        pairs = [(_make_word("食べる"), _make_media("taberu"))]
+        self._wire(mock_services, pairs)
+
+        # MagicMock's auto-stubbed stats() returns a MagicMock (not a dict).
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.cards_created == 1

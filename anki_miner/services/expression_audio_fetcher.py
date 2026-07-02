@@ -63,6 +63,38 @@ def _is_mp3(body: bytes) -> bool:
     return bool(body[0] == 0xFF and (body[1] & 0xE0) == 0xE0)
 
 
+# Per-run audio failure-cause buckets (Issue: audio-failure-cause-classification).
+# Ported concept from Yomitan's Backend._getAudioDownloadError
+# (ext/js/background/backend.js, upstream commit
+# e2ed450c2f11a591922822e77f008e70a87daf0c), which maps error classes to distinct
+# diagnoses — notably the historical expired-server-certificate incident. Here the
+# never-raises fetchers tally why each transient failure happened so the pipeline
+# can name the dominant cause instead of reporting an undiagnosable "X/Y available".
+FAILURE_KEYS = ("ssl", "connection", "timeout", "http_status", "non_audio")
+
+
+def _new_failure_counts() -> dict[str, int]:
+    """Return a fresh, zeroed failure-cause counter for one run."""
+    return dict.fromkeys(FAILURE_KEYS, 0)
+
+
+def _classify_request_exception(exc: BaseException) -> str:
+    """Map a raised request/OS exception to a failure-cause bucket.
+
+    Checks are ordered most-specific first: ``SSLError`` subclasses
+    ``ConnectionError`` and ``ConnectTimeout`` subclasses both ``Timeout`` and
+    ``ConnectionError``, so a naive order would misfile the expired-certificate
+    case (the whole point of this classification) as a plain connection error.
+    Anything else (generic ``RequestException``, ``OSError``) falls to
+    ``connection`` — a transport-family failure retried next run.
+    """
+    if isinstance(exc, requests.exceptions.SSLError):
+        return "ssl"
+    if isinstance(exc, requests.exceptions.Timeout):
+        return "timeout"
+    return "connection"
+
+
 def _first_candidate_hit(
     fetcher: "ExpressionAudioFetcher",
     candidates: list[tuple[str, str]],
@@ -121,6 +153,10 @@ class JPod101AudioFetcher:
         # present a browser UA so valid words actually download (see
         # _BROWSER_USER_AGENT note above).
         self._session.headers.update({"User-Agent": _BROWSER_USER_AGENT})
+        # Per-run failure-cause tally (see FAILURE_KEYS). Bumped only in the
+        # transient-failure branches below; a confirmed .miss (word genuinely
+        # absent) is NOT a failure and never counted. Read via stats().
+        self._failure_counts = _new_failure_counts()
 
     def fetch(
         self,
@@ -198,11 +234,13 @@ class JPod101AudioFetcher:
 
             try:
                 if response.status_code != 200:
+                    self._failure_counts["http_status"] += 1
                     return None
 
                 # A redirect that downgrades HTTPS → HTTP could expose audio
                 # data in transit; treat as transient so it is retried next run.
                 if not response.url.startswith("https://"):
+                    self._failure_counts["connection"] += 1
                     return None
 
                 # Read the body in chunks, aborting if it exceeds MAX_AUDIO_BYTES.
@@ -214,6 +252,7 @@ class JPod101AudioFetcher:
                     total += len(chunk)
                     if total > MAX_AUDIO_BYTES:
                         # Oversized — transient failure, nothing written.
+                        self._failure_counts["non_audio"] += 1
                         return None
                     chunks.append(chunk)
                 body = b"".join(chunks)
@@ -221,6 +260,7 @@ class JPod101AudioFetcher:
                 # Zero-byte 200 is ambiguous (network glitch, premature close) —
                 # treat as transient failure, not a confirmed miss.
                 if not body:
+                    self._failure_counts["connection"] += 1
                     return None
 
                 if hashlib.sha256(body).hexdigest() == JPOD101_NOT_FOUND_SHA256:
@@ -234,6 +274,7 @@ class JPod101AudioFetcher:
                 # etc.) as transient failures. No .miss marker so the word is
                 # retried on the next run once the rate-limit clears.
                 if not _is_mp3(body):
+                    self._failure_counts["non_audio"] += 1
                     return None
 
                 # Write atomically: stage to a unique temp file then rename so
@@ -261,6 +302,7 @@ class JPod101AudioFetcher:
                 response.close()
 
         except (requests.RequestException, OSError) as exc:
+            self._failure_counts[_classify_request_exception(exc)] += 1
             logger.debug("expression audio fetch failed for %s: %s", mined_form, exc)
             return None
 
@@ -271,6 +313,16 @@ class JPod101AudioFetcher:
     ) -> Path | None:
         """Try each candidate form, returning the first JPod101 hit."""
         return _first_candidate_hit(self, candidates, cancelled_check)
+
+    def stats(self) -> dict[str, int]:
+        """Return a copy of this run's failure-cause counts (see FAILURE_KEYS).
+
+        Duck-typed like ``close()`` (not on the ExpressionAudioFetcher
+        Protocol); the chain fans it out to name the dominant failure cause in
+        the pipeline summary. A copy is returned so callers cannot mutate the
+        live tally.
+        """
+        return dict(self._failure_counts)
 
     def close(self) -> None:
         """Close the underlying ``requests.Session`` (sockets / file handles).
@@ -347,6 +399,26 @@ class ChainedExpressionAudioFetcher:
             if result is not None:
                 return result
         return None
+
+    def stats(self) -> dict[str, int]:
+        """Aggregate per-run failure-cause counts across member fetchers.
+
+        ``stats()`` is optional/duck-typed (not on the ExpressionAudioFetcher
+        Protocol), exactly like ``close()``: members without it (e.g.
+        LocalAudioPackFetcher) are skipped, and a member raising is suppressed
+        so diagnostics never break a run. Unknown keys from a member are
+        ignored; missing keys default to zero.
+        """
+        totals = _new_failure_counts()
+        for fetcher in self._fetchers:
+            stats = getattr(fetcher, "stats", None)
+            if not callable(stats):
+                continue
+            with contextlib.suppress(Exception):
+                for key, value in stats().items():
+                    if key in totals:
+                        totals[key] += value
+        return totals
 
     def close(self) -> None:
         """Fan out ``close()`` to every member fetcher that defines one.

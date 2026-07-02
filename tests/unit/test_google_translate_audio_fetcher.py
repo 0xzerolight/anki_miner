@@ -281,3 +281,75 @@ def test_close_is_noop_and_does_not_raise(tmp_path):
     """close() is a documented no-op (gtts is per-call); must not raise."""
     fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
     fetcher.close()  # no exception expected
+
+
+class TestGoogleTranslateFailureStats:
+    """Per-run failure-cause counters for the synthetic TTS fetcher."""
+
+    def test_fresh_fetcher_has_zeroed_counts(self, tmp_path):
+        from anki_miner.services.expression_audio_fetcher import FAILURE_KEYS
+
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+        assert fetcher.stats() == dict.fromkeys(FAILURE_KEYS, 0)
+
+    def test_success_bumps_nothing(self, tmp_path):
+        from anki_miner.services.expression_audio_fetcher import FAILURE_KEYS
+
+        fake, _ = _gtts_stub(_VALID_MP3)
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.gtts.gTTS", fake):
+            assert fetcher.fetch("食べる", "たべる") is not None
+        assert fetcher.stats() == dict.fromkeys(FAILURE_KEYS, 0)
+
+    def test_non_audio_body_bumps_non_audio(self, tmp_path):
+        fake, _ = _gtts_stub(b"<html>error</html>")
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.gtts.gTTS", fake):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["non_audio"] == 1
+
+    def test_empty_body_bumps_connection(self, tmp_path):
+        fake, _ = _gtts_stub(b"")
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.gtts.gTTS", fake):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["connection"] == 1
+
+    def test_oversized_body_bumps_non_audio(self, tmp_path):
+        fake, _ = _gtts_stub(b"\xff\xfb" + b"\x00" * (MAX_AUDIO_BYTES + 1))
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.gtts.gTTS", fake):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["non_audio"] == 1
+
+    def test_ssl_error_bumps_ssl(self, tmp_path):
+        """A gtts-wrapped requests SSLError classifies as the ssl bucket."""
+        import requests
+
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+
+        class _BoomGTTS:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def write_to_fp(self, fp):
+                raise requests.exceptions.SSLError("certificate has expired")
+
+        with patch(f"{MODULE}.gtts.gTTS", _BoomGTTS):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["ssl"] == 1
+
+    def test_gtts_error_falls_to_connection(self, tmp_path):
+        """A non-requests synthesis fault falls to the connection bucket."""
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+
+        class _BoomGTTS:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def write_to_fp(self, fp):
+                raise ValueError("synthesis failed")
+
+        with patch(f"{MODULE}.gtts.gTTS", _BoomGTTS):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["connection"] == 1
