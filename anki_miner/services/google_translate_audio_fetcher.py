@@ -34,8 +34,10 @@ import gtts  # type: ignore[import-untyped]
 
 from anki_miner.services.expression_audio_fetcher import (
     MAX_AUDIO_BYTES,
+    _classify_request_exception,
     _first_candidate_hit,
     _is_mp3,
+    _new_failure_counts,
 )
 from anki_miner.utils.file_utils import safe_filename
 
@@ -63,6 +65,10 @@ class GoogleTranslateAudioFetcher:
         # NaN must clamp to 0.0 (time.sleep(nan) raises); the >= comparison
         # is False for nan, so the else branch handles it.
         self._delay = delay if delay >= 0.0 else 0.0
+        # Per-run failure-cause tally (see FAILURE_KEYS). Synthetic TTS keeps no
+        # negative markers, so every non-hit is a transient failure; bumped only
+        # in the branches below. Read via stats().
+        self._failure_counts = _new_failure_counts()
 
     def fetch(
         self,
@@ -125,15 +131,18 @@ class GoogleTranslateAudioFetcher:
             # Oversized body is almost certainly an error response — transient,
             # nothing written.
             if len(body) > MAX_AUDIO_BYTES:
+                self._failure_counts["non_audio"] += 1
                 return None
 
             # Empty body is a transient failure (premature close, etc.).
             if not body:
+                self._failure_counts["connection"] += 1
                 return None
 
             # Reject non-audio bodies (HTML error / rate-limit pages) as
             # transient; no marker so the word is retried next run.
             if not _is_mp3(body):
+                self._failure_counts["non_audio"] += 1
                 return None
 
             # Write atomically: stage to a unique temp file then rename so a
@@ -160,6 +169,10 @@ class GoogleTranslateAudioFetcher:
         # try/except by design — the fetcher owns all error handling and must
         # never raise per the ExpressionAudioFetcher contract.
         except Exception as exc:
+            # gtts wraps requests, so a network/SSL failure surfaces as a
+            # requests exception _classify_request_exception recognizes; a
+            # gTTSError or other synthesis fault falls to "connection".
+            self._failure_counts[_classify_request_exception(exc)] += 1
             logger.debug("google translate audio fetch failed for %s: %s", mined_form, exc)
             return None
 
@@ -170,6 +183,14 @@ class GoogleTranslateAudioFetcher:
     ) -> Path | None:
         """Try each candidate form, returning the first synthesized hit."""
         return _first_candidate_hit(self, candidates, cancelled_check)
+
+    def stats(self) -> dict[str, int]:
+        """Return a copy of this run's failure-cause counts (see FAILURE_KEYS).
+
+        Duck-typed like ``close()``; the chain aggregates it to diagnose the
+        dominant audio-failure cause in the pipeline summary.
+        """
+        return dict(self._failure_counts)
 
     def close(self) -> None:
         """No-op: gtts opens a per-call connection, no persistent handle to release.

@@ -101,6 +101,43 @@ def _expression_audio_candidates(word: TokenizedWord) -> list[tuple[str, str]]:
     return candidates
 
 
+def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | None:
+    """Name the dominant expression-audio failure cause, or None.
+
+    ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
+    failure bucket (ssl/connection/timeout/http_status/non_audio). Only surfaces
+    a diagnosis when transient failures DOMINATE the run — a genuine "word not in
+    JPod101" miss is never counted, so a high total means something systemic
+    (expired certificate, outage, rate-limit) rather than words simply being
+    absent. Scattered failures among mostly-successful fetches stay quiet.
+
+    Ties resolve to the earliest bucket (ssl first) via ``max`` over a stable
+    key order, matching Yomitan's priority on the most actionable cause.
+    """
+    total = sum(counts.values())
+    if attempts <= 0 or total == 0:
+        return None
+    # Require failures to cover at least half the attempted words before raising
+    # the alarm; below that they are noise beside real hits and misses.
+    if total * 2 < attempts:
+        return None
+    dominant = max(counts, key=lambda key: counts[key])
+    if dominant in ("ssl", "connection", "timeout"):
+        return QCoreApplication.translate(
+            "EpisodeProcessor",
+            "JPod101 certificate/connection failure — audio skipped this run, will retry next run",
+        )
+    if dominant == "http_status":
+        return QCoreApplication.translate(
+            "EpisodeProcessor",
+            "JPod101 returned repeated server errors — audio skipped this run, will retry next run",
+        )
+    return QCoreApplication.translate(
+        "EpisodeProcessor",
+        "JPod101 returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run",
+    )
+
+
 def _format_timestamp(seconds: float) -> str:
     """Format a float-second offset as ``HH:MM:SS`` (negative clamps to zero)."""
     total = max(0, int(seconds))
@@ -884,6 +921,22 @@ class EpisodeProcessor:
                     len(media_results),
                 )
             )
+            # Diagnose *why* audio failed when transient failures dominate the
+            # run, so an expired JPod101 certificate reads as an actionable
+            # warning rather than an indistinguishable low "X/Y available".
+            # stats() is duck-typed (like close()); the local-pack fetcher omits
+            # it, so a chain without a network source simply has nothing to
+            # report.
+            stats_fn = getattr(self.expression_audio_fetcher, "stats", None)
+            if callable(stats_fn):
+                counts = stats_fn()
+                # isinstance guard: a duck-typed fetcher (or a test MagicMock)
+                # that does not return a real counts dict is ignored, never
+                # crashing the run over a diagnostic.
+                if isinstance(counts, dict):
+                    diagnosis = _audio_failure_diagnosis(counts, len(media_results))
+                    if diagnosis is not None:
+                        self.presenter.show_warning(diagnosis)
 
         return media_results
 

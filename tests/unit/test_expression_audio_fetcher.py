@@ -10,11 +10,13 @@ from unittest.mock import MagicMock, patch
 import requests
 
 from anki_miner.services.expression_audio_fetcher import (
+    FAILURE_KEYS,
     JPOD101_NOT_FOUND_SHA256,
     MAX_AUDIO_BYTES,
     STALE_PART_AGE_SECONDS,
     ChainedExpressionAudioFetcher,
     JPod101AudioFetcher,
+    _classify_request_exception,
     _first_candidate_hit,
 )
 
@@ -1016,3 +1018,178 @@ class TestExpressionAudioClose:
         chain.close()  # must not raise
 
         after.close.assert_called_once_with()
+
+
+class TestClassifyRequestException:
+    """Failure-bucket mapping for raised exceptions (order-sensitive)."""
+
+    def test_ssl_error_maps_to_ssl_even_though_connection_subclass(self):
+        """SSLError subclasses ConnectionError, so it must be checked first."""
+        assert issubclass(requests.exceptions.SSLError, requests.exceptions.ConnectionError)
+        assert _classify_request_exception(requests.exceptions.SSLError("expired")) == "ssl"
+
+    def test_timeout_maps_to_timeout(self):
+        assert _classify_request_exception(requests.exceptions.Timeout()) == "timeout"
+
+    def test_connect_timeout_prefers_timeout_over_connection(self):
+        """ConnectTimeout subclasses both; timeout is the more specific bucket."""
+        assert _classify_request_exception(requests.exceptions.ConnectTimeout()) == "timeout"
+
+    def test_connection_error_maps_to_connection(self):
+        assert _classify_request_exception(requests.exceptions.ConnectionError()) == "connection"
+
+    def test_generic_request_exception_falls_to_connection(self):
+        assert _classify_request_exception(requests.RequestException()) == "connection"
+
+    def test_oserror_falls_to_connection(self):
+        assert _classify_request_exception(OSError("nope")) == "connection"
+
+
+class TestJPod101FailureStats:
+    """Per-run failure-cause counters bumped in the transient branches."""
+
+    def test_fresh_fetcher_has_zeroed_counts(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        assert fetcher.stats() == dict.fromkeys(FAILURE_KEYS, 0)
+
+    def test_stats_returns_a_copy(self, tmp_path):
+        """Mutating the returned dict must not corrupt the live tally."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        snapshot = fetcher.stats()
+        snapshot["ssl"] = 999
+        assert fetcher.stats()["ssl"] == 0
+
+    def test_non_200_bumps_http_status(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch("requests.Session.get", return_value=_response(status_code=503)):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["http_status"] == 1
+
+    def test_non_audio_body_bumps_non_audio(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch("requests.Session.get", return_value=_response(content=b"<html>rate limit</html>")):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["non_audio"] == 1
+
+    def test_oversized_body_bumps_non_audio(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        oversized = b"\xff\xfb" + b"\x00" * (MAX_AUDIO_BYTES + 1)
+        with patch("requests.Session.get", return_value=_response(content=oversized)):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["non_audio"] == 1
+
+    def test_empty_body_bumps_connection(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch("requests.Session.get", return_value=_response(content=b"")):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["connection"] == 1
+
+    def test_https_downgrade_bumps_connection(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        resp = _response(url="http://insecure.example/audio.mp3")
+        with patch("requests.Session.get", return_value=resp):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["connection"] == 1
+
+    def test_timeout_bumps_timeout(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch("requests.Session.get", side_effect=requests.exceptions.Timeout):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["timeout"] == 1
+
+    def test_ssl_error_bumps_ssl(self, tmp_path):
+        """The expired-certificate case — the whole point of the feature."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(
+            "requests.Session.get",
+            side_effect=requests.exceptions.SSLError("certificate has expired"),
+        ):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["ssl"] == 1
+        assert fetcher.stats()["connection"] == 0
+
+    def test_connection_error_bumps_connection(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(
+            "requests.Session.get",
+            side_effect=requests.exceptions.ConnectionError("refused"),
+        ):
+            assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats()["connection"] == 1
+
+    def test_confirmed_miss_bumps_nothing(self, tmp_path):
+        """A genuine not-found placeholder is a miss, not a failure."""
+        placeholder = b"not-found-placeholder-body"
+        with patch.object(hashlib, "sha256") as mock_sha:
+            mock_sha.return_value.hexdigest.return_value = JPOD101_NOT_FOUND_SHA256
+            fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+            with patch("requests.Session.get", return_value=_response(content=placeholder)):
+                assert fetcher.fetch("食べる", "たべる") is None
+        assert fetcher.stats() == dict.fromkeys(FAILURE_KEYS, 0)
+
+    def test_successful_fetch_bumps_nothing(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch("requests.Session.get", return_value=_response()):
+            assert fetcher.fetch("食べる", "たべる") is not None
+        assert fetcher.stats() == dict.fromkeys(FAILURE_KEYS, 0)
+
+    def test_repeated_failures_accumulate(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch("requests.Session.get", side_effect=requests.exceptions.SSLError):
+            fetcher.fetch("食べる", "たべる")
+            fetcher.fetch("飲む", "のむ")
+        assert fetcher.stats()["ssl"] == 2
+
+
+class TestChainedFailureStats:
+    """Chained fetcher aggregates member stats() (duck-typed like close())."""
+
+    def test_aggregates_across_members(self):
+        first = MagicMock()
+        first.stats.return_value = {"ssl": 3, "connection": 1, "timeout": 0, "http_status": 0, "non_audio": 0}
+        second = MagicMock()
+        second.stats.return_value = {"ssl": 1, "connection": 0, "timeout": 2, "http_status": 0, "non_audio": 5}
+        chain = ChainedExpressionAudioFetcher([first, second])
+
+        totals = chain.stats()
+
+        assert totals == {"ssl": 4, "connection": 1, "timeout": 2, "http_status": 0, "non_audio": 5}
+
+    def test_skips_member_without_stats(self):
+        class _NoStats:
+            def fetch(self, mined_form, reading, cancelled_check=None):
+                return None
+
+            def fetch_candidates(self, candidates, cancelled_check=None):
+                return None
+
+        counted = MagicMock()
+        counted.stats.return_value = {"ssl": 2, "connection": 0, "timeout": 0, "http_status": 0, "non_audio": 0}
+        chain = ChainedExpressionAudioFetcher([_NoStats(), counted])  # type: ignore[list-item]
+
+        assert chain.stats()["ssl"] == 2
+
+    def test_ignores_unknown_member_keys(self):
+        weird = MagicMock()
+        weird.stats.return_value = {"ssl": 1, "made_up": 99}
+        chain = ChainedExpressionAudioFetcher([weird])
+
+        totals = chain.stats()
+
+        assert totals["ssl"] == 1
+        assert "made_up" not in totals
+
+    def test_suppresses_member_stats_exception(self):
+        boom = MagicMock()
+        boom.stats.side_effect = RuntimeError("boom")
+        after = MagicMock()
+        after.stats.return_value = {"ssl": 7, "connection": 0, "timeout": 0, "http_status": 0, "non_audio": 0}
+        chain = ChainedExpressionAudioFetcher([boom, after])
+
+        totals = chain.stats()  # must not raise
+
+        assert totals["ssl"] == 7
+
+    def test_empty_chain_returns_zeroed_counts(self):
+        chain = ChainedExpressionAudioFetcher([])
+        assert chain.stats() == dict.fromkeys(FAILURE_KEYS, 0)
