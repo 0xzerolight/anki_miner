@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Iterator
 
+from anki_miner.services.ja_normalize import is_cjk_ideograph
+
 _NOMINAL_SUFFIX_POS2 = {"名詞的", "形状詞的", "副詞的"}
 
 # Whitelist of 接頭辞 surfaces that productively form compounds with
@@ -422,8 +424,11 @@ class TokenInclusionRule:
         except AttributeError:
             return False
 
-        # Check if word contains meaningful characters
-        has_kanji = any("\u4e00" <= c <= "\u9fff" for c in surface)
+        # Check if word contains meaningful characters. Uses the shared ported
+        # CJK_IDEOGRAPH_RANGES (Unified + Ext A-I + compat + astral) so kanji
+        # outside the BMP Unified block (compat ideographs, astral Ext-B)
+        # also count as kanji, not just U+4E00-U+9FFF.
+        has_kanji = any(is_cjk_ideograph(c) for c in surface)
         is_katakana = all("\u30a0" <= c <= "\u30ff" or c in "ー・" for c in surface if c.strip())
 
         # For katakana-only words, apply stricter filtering
