@@ -48,6 +48,46 @@ MAX_AUDIO_BYTES = 5 * 1024 * 1024
 # download and are left alone.
 STALE_PART_AGE_SECONDS = 60
 
+# .miss markers are permanent by design (batch mining must not re-hammer JPod101
+# for genuinely-absent words on every run), but a marker can outlive the word
+# actually gaining audio upstream. A marker whose mtime is older than this TTL is
+# treated as expired at the .exists() gate and transparently re-fetched. The
+# Settings -> Audio "Retry missing expression audio" button (purge_miss_markers)
+# is the manual override; this constant is the automatic one.
+MISS_MARKER_TTL_SECONDS = 180 * 24 * 60 * 60  # 180 days
+
+
+def _miss_marker_expired(miss_path: Path) -> bool:
+    """Return True if ``miss_path``'s mtime is older than ``MISS_MARKER_TTL_SECONDS``.
+
+    A marker that cannot be stat'd is treated as NOT expired (leave it as a
+    miss); the caller has already gated on ``.exists()``.
+    """
+    try:
+        return time.time() - miss_path.stat().st_mtime > MISS_MARKER_TTL_SECONDS
+    except OSError:
+        return False
+
+
+def purge_miss_markers(cache_dir: Path) -> int:
+    """Delete every ``*.miss`` marker under ``cache_dir``; return the count removed.
+
+    Backs the Settings -> Audio "Retry missing expression audio" affordance:
+    clearing the markers makes the next mining run re-request those words from
+    JPod101. A missing directory yields 0; a per-file unlink error is ignored so
+    one locked marker cannot abort the whole sweep.
+    """
+    if not cache_dir.is_dir():
+        return 0
+    removed = 0
+    for marker in cache_dir.glob("*.miss"):
+        try:
+            marker.unlink()
+            removed += 1
+        except OSError:
+            pass
+    return removed
+
 
 def _is_mp3(body: bytes) -> bool:
     """Return True if *body* looks like MP3 audio.
@@ -199,7 +239,10 @@ class JPod101AudioFetcher:
 
             if mp3_path.exists() and mp3_path.stat().st_size > 0:
                 return mp3_path
-            if miss_path.exists():
+            # An expired marker (older than MISS_MARKER_TTL_SECONDS) falls
+            # through to a re-fetch; a still-not-found word re-touches it below,
+            # resetting the TTL clock.
+            if miss_path.exists() and not _miss_marker_expired(miss_path):
                 return None
 
             # Sweep orphaned .part files left by previous crashes. Only runs on
@@ -264,9 +307,11 @@ class JPod101AudioFetcher:
                     return None
 
                 if hashlib.sha256(body).hexdigest() == JPOD101_NOT_FOUND_SHA256:
-                    # Confirmed not-found: marker prevents re-requesting.
-                    # Miss markers are permanent by design (Yomitan-style); delete
-                    # the cache dir to retry words that were incorrectly marked.
+                    # Confirmed not-found: marker prevents re-requesting. touch()
+                    # (not touch-if-absent) so re-confirming an expired marker
+                    # resets its TTL clock. Markers self-heal after
+                    # MISS_MARKER_TTL_SECONDS; Settings -> Audio "Retry missing
+                    # expression audio" (purge_miss_markers) clears them on demand.
                     miss_path.touch()
                     return None
 
