@@ -330,20 +330,14 @@ class AnkiMinerConfig:
 
     # Card styling (Issue #44). anki_miner emits definition HTML with its own
     # class scheme (`.yomitan-glossary`, `gloss-sc-*`, `data-sc-*`) and ships one
-    # universal glossary stylesheet (resources/glossary.css). When
-    # `manage_card_styling` is True, the Settings → Card Styling section syncs a
-    # managed CSS block — the universal sheet + every enabled dictionary's scoped
-    # styles.css + `custom_card_css` (the Yomitan `_getCustomCss` model) — into
-    # the configured note type via AnkiConnect `updateModelStyling` on Save, on
-    # dictionary import, and when Anki becomes reachable. True (the default since
-    # v2.7.8) writes an additive, marker-delimited managed block — anki_miner
-    # only ever touches its own block and preserves any hand-written note-type
-    # CSS byte-for-byte. Without it, cards mined post-rework carry no styling at
-    # all (the CSS moved out of the card and into this block); default-ON is what
-    # delivers it. False strips the block for a full revert. `custom_card_css`
+    # universal glossary stylesheet (resources/glossary.css). Glossary styling is
+    # self-contained per card (the Yomitan model): a `<style>` block — universal
+    # sheet + every enabled dictionary's scoped styles.css + `custom_card_css` —
+    # is embedded at the top of each card's glossary field at card-creation time
+    # (`EpisodeProcessor._phase5_create` → `build_card_style_block`). anki_miner
+    # never writes to the note type's card styling. `custom_card_css`
     # (Yomitan/Jitendex snippets work verbatim) is appended after the dictionary
     # CSS. Distinct from the app-UI `theme` fields below.
-    manage_card_styling: bool = True
     custom_card_css: str = ""
 
     # Deduplication settings

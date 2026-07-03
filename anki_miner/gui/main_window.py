@@ -688,12 +688,6 @@ class MainWindow(QMainWindow):
         # callers. Use the authoritative result.ankiconnect_ok flag.
         self._set_anki_connection_badge("connected" if result.ankiconnect_ok else "disconnected")
 
-        # AnkiConnect is reachable — the natural moment to reconcile card styling
-        # (one-time migration reseed + deferred-sync retry; Issue #44). Fires on
-        # the startup auto-check and on Test Connection.
-        if result.ankiconnect_ok:
-            self._reconcile_settings_styling()
-
         if result.all_passed:
             self.status_bar.set_operation(self.tr("System validation passed"), "success")
         elif not silent:
@@ -723,20 +717,6 @@ class MainWindow(QMainWindow):
         panel = getattr(self.tabs.widget(idx), "anki_panel", None)
         if panel is not None:
             panel.set_connection_status(status)
-
-    def _reconcile_settings_styling(self) -> None:
-        """Ask the Settings tab to reconcile card styling against a reachable Anki.
-
-        Located by capability (same self-healing lookup as the connection badge),
-        so it survives tab reorders and no-ops when the Settings tab is absent
-        (mid-teardown, or bare-window tests).
-        """
-        idx = self._settings_tab_index()
-        if idx < 0:
-            return
-        notify = getattr(self.tabs.widget(idx), "notify_anki_connected", None)
-        if callable(notify):
-            notify()
 
     def _on_processing_result(self, result: ProcessingResult) -> None:
         """Handle processing result from presenter.

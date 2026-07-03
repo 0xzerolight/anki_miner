@@ -13,7 +13,6 @@ Save.
 
 from collections.abc import Callable
 from dataclasses import replace
-from typing import Literal
 
 from PyQt6 import sip
 from PyQt6.QtCore import QCoreApplication
@@ -24,7 +23,6 @@ from anki_miner.gui.widgets.panels import AnkiSettingsPanel, FilteringSettingsPa
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
 from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
-from anki_miner.gui.workers.styling_worker import StylingWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.utils.i18n import tr_format
 
@@ -62,27 +60,21 @@ class AnkiProbeController:
         self._fetch_fields_worker: SingleCallWorker | None = None
         # Same GC-safety rationale for the deck-list fetch worker.
         self._fetch_decks_worker: SingleCallWorker | None = None
-        # GC-safety for the card-styling write worker (Issue #44).
-        self._styling_worker: StylingWorker | None = None
-        # A sync requested while a write is in flight (e.g. a dict import landing
-        # during a Save-write) is remembered here and re-fired when the write
-        # settles, so the latest dict set / toggle still reaches Anki.
-        self._resync_pending = False
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close (T-12).
 
-        The short-lived AnkiConnect workers — fetch fields, fetch decks, and the
-        styling write — are each a tab-parented QThread that can sit in a 15-60 s
-        blocking request. They have no ``worker_thread`` attribute,
-        so closeEvent discovers them (via ``SettingsTab.iter_close_workers``,
-        which delegates here) and routes each through the single
-        ``BackgroundTaskController._join_worker_for_close`` policy (cancel + bounded grace
-        join + laggard deferral). Returning them — rather than waiting here —
-        keeps every shutdown join in one place; abandoning them to Qt teardown
-        aborts with "QThread: Destroyed while thread is still running".
+        The short-lived AnkiConnect workers — fetch fields and fetch decks — are
+        each a tab-parented QThread that can sit in a 15-60 s blocking request.
+        They have no ``worker_thread`` attribute, so closeEvent discovers them
+        (via ``SettingsTab.iter_close_workers``, which delegates here) and routes
+        each through the single ``BackgroundTaskController._join_worker_for_close``
+        policy (cancel + bounded grace join + laggard deferral). Returning them —
+        rather than waiting here — keeps every shutdown join in one place;
+        abandoning them to Qt teardown aborts with "QThread: Destroyed while
+        thread is still running".
         """
-        return (self._fetch_fields_worker, self._fetch_decks_worker, self._styling_worker)
+        return (self._fetch_fields_worker, self._fetch_decks_worker)
 
     def shutdown(self) -> None:
         """Cancel every running AnkiConnect worker (cancel only, no wait).
@@ -185,113 +177,6 @@ class AnkiProbeController:
             return
         self._anki_panel.set_fetch_fields_button_enabled(True)
         self._anki_panel.set_notetype_status(False, message)
-
-    # === Card styling (Issue #44 / auto-sync) ===
-    #
-    # `manage_card_styling` is the desired state; the note type's managed CSS
-    # block is the applied state. `sync_styling` reconciles them — apply the
-    # universal sheet + scoped dict CSS + custom CSS when managing, strip the
-    # block when not. It is called on Save, on dictionary import, and when
-    # AnkiConnect becomes reachable; apply/strip are idempotent, so redundant
-    # re-syncs are harmless. The note type / URL come straight from the panel
-    # inputs (like fetch_fields) so a sync works against whatever is shown.
-
-    def sync_styling(self) -> None:
-        """Apply or remove the managed glossary CSS to match `manage_card_styling`."""
-        mode: Literal["apply", "remove"] = "apply" if self._get_config().manage_card_styling else "remove"
-        self._start_styling_write(mode)
-
-    def _build_styling_service(self, note_type: str) -> AnkiService | None:
-        """Build an AnkiService against the panel's note type + URL (None on error)."""
-        ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
-        config = self._get_config()
-        probe_config = replace(
-            config,
-            anki_note_type=note_type,
-            ankiconnect_url=ankiconnect_url or config.ankiconnect_url,
-        )
-        try:
-            return AnkiService(probe_config)
-        except ValueError as e:
-            self._anki_panel.set_styling_status(
-                False,
-                tr_format(QCoreApplication.translate("AnkiProbeController", "Cannot build AnkiService: %1"), e),
-            )
-            return None
-
-    def _start_styling_write(self, mode: Literal["apply", "remove"]) -> None:
-        """Spawn the write worker: apply the managed block, or strip it for ``remove``.
-
-        If a write is already in flight, remember the request (``_resync_pending``)
-        and re-fire it when the current write settles, so a trigger that lands
-        mid-write (e.g. a dict import during a Save-write) still takes effect.
-        """
-        if self._styling_worker is not None and self._styling_worker.isRunning():
-            self._resync_pending = True
-            return
-        note_type = self._anki_panel.get_note_type().strip()
-        if not note_type:
-            self._anki_panel.set_styling_status(
-                False,
-                QCoreApplication.translate("AnkiProbeController", "Enter a note type name before styling can sync."),
-            )
-            return
-        service = self._build_styling_service(note_type)
-        if service is None:
-            return
-        self._anki_panel.set_styling_status(
-            None, QCoreApplication.translate("AnkiProbeController", "Syncing card styling…")
-        )
-        worker = StylingWorker(
-            service,
-            mode=mode,
-            config=self._get_config(),
-            note_type=note_type,
-            parent=self._parent,
-        )
-        self._styling_worker = worker
-        worker.finished_ok.connect(self._on_styling_finished)
-        worker.error.connect(self._on_styling_error)
-        worker.start()
-
-    def _on_styling_finished(self, _message: str) -> None:
-        """A write succeeded: report live, then flush any sync that landed mid-write."""
-        if not self._alive(self._anki_panel):
-            return
-        self._anki_panel.set_styling_status(True, self._live_status_text())
-        self._flush_pending_resync()
-
-    def _on_styling_error(self, message: str) -> None:
-        """A write failed (Anki down / note type missing): keep desired, retry later."""
-        if not self._alive(self._anki_panel):
-            return
-        self._anki_panel.set_styling_status(
-            None,
-            tr_format(
-                QCoreApplication.translate(
-                    "AnkiProbeController", "Couldn't reach Anki — card styling will sync when it's back. (%1)"
-                ),
-                message,
-            ),
-        )
-        self._flush_pending_resync()
-
-    def _flush_pending_resync(self) -> None:
-        """Re-fire a sync requested while the just-finished write ran.
-
-        Clears the flag *before* re-firing so a still-unreachable Anki can't
-        loop: the re-fired write succeeds or fails once with the flag already
-        down. The AnkiConnect-reachable retry covers anything still deferred.
-        """
-        if self._resync_pending:
-            self._resync_pending = False
-            self.sync_styling()
-
-    def _live_status_text(self) -> str:
-        """Status text describing what is currently live in Anki."""
-        if self._get_config().manage_card_styling:
-            return QCoreApplication.translate("AnkiProbeController", "Glossary styling is live in Anki.")
-        return QCoreApplication.translate("AnkiProbeController", "Off — Anki Miner isn't styling this note type.")
 
     # === Excluded decks (Issue #38) ===
 

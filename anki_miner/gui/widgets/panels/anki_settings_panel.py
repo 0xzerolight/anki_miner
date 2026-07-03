@@ -456,29 +456,23 @@ class AnkiSettingsPanel(FormPanel):
         self.card_type_names_group.toggled.connect(self._card_type_names_body.setVisible)
         self.add_widget(self.card_type_names_group)
 
-        # Card Styling section (Issue #44). The checkbox is the *desired* state;
-        # styling auto-syncs into the note type on Save (no Apply/Remove buttons).
-        # The status line below reports what's actually live in Anki.
+        # Card Styling section (Issue #44). Mined-card glossaries are styled by a
+        # self-contained <style> block embedded in each card at card-creation
+        # time (the Yomitan model) — Anki Miner never writes to the note type.
+        # Custom CSS below is appended after the built-in styles inside that block.
         self.add_section(self.tr("Card Styling"))
 
         styling_helper = QLabel(
             self.tr(
-                "Anki Miner can style mined-card glossaries with one clean built-in stylesheet "
-                "(dictionaries that ship their own styles are applied automatically). It manages a "
-                "single CSS block in the note type via AnkiConnect — your own card CSS is never "
-                "touched. Turn it off if your note type already styles everything."
+                "Anki Miner styles mined-card glossaries with one clean built-in stylesheet "
+                "(dictionaries that ship their own styles are applied automatically). The styling "
+                "is embedded in each card, so it works on any note type, on mobile, and in exports — "
+                "and your note type's own card CSS is never touched."
             )
         )
         styling_helper.setObjectName("helper-text")
         styling_helper.setWordWrap(True)
         self.add_widget(styling_helper)
-
-        self.manage_styling_checkbox = QCheckBox(self.tr("Style mined-card glossaries"))
-        self.manage_styling_checkbox.setToolTip(
-            self.tr("Applied to the note type on Save. Your custom CSS below is appended after the built-in styles.")
-        )
-        self.manage_styling_checkbox.toggled.connect(self._on_styling_choice_changed)
-        self.add_widget(self.manage_styling_checkbox)
 
         css_label = QLabel(self.tr("Custom CSS:"))
         css_label.setObjectName("field-label")
@@ -502,16 +496,7 @@ class AnkiSettingsPanel(FormPanel):
         self.custom_css_edit.setFont(mono_font)
         self.custom_css_edit.setMinimumHeight(120)
         self.custom_css_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
-        self.custom_css_edit.textChanged.connect(self._on_styling_choice_changed)
         self.add_widget(self.custom_css_edit)
-
-        # Reflects what's actually live in Anki (set by the sync flow).
-        self.styling_status = QLabel()
-        self.styling_status.setObjectName("validation-status")
-        self.styling_status.setWordWrap(True)
-        self.add_widget(self.styling_status)
-
-        self._update_custom_css_enabled()
 
     def _add_labeled_field_with_button(
         self,
@@ -792,55 +777,7 @@ class AnkiSettingsPanel(FormPanel):
         """Set the check-all-models checkbox."""
         self.duplicate_check_all_models_checkbox.setChecked(value)
 
-    # === Card Styling (Issue #44 / auto-sync) ===
-    def _on_styling_choice_changed(self) -> None:
-        """React to a user edit of the manage toggle / custom CSS.
-
-        Programmatic loads block signals (see :meth:`set_manage_styling` /
-        :meth:`set_custom_css`), so this only fires for genuine user edits: it
-        greys the CSS box when styling is off and flashes a "Save to apply" hint
-        so the desired-vs-live gap is never silent.
-        """
-        self._update_custom_css_enabled()
-        self.set_styling_status(None, self.tr("Not applied yet — Save Settings to sync to Anki."))
-
-    def _update_custom_css_enabled(self) -> None:
-        """Grey out the custom CSS box when styling is off (text preserved)."""
-        self.custom_css_edit.setEnabled(self.get_manage_styling())
-
-    def set_styling_status(self, ok: bool | None, message: str = "") -> None:
-        """Update the card-styling status line (None=pending, True=ok, False=error)."""
-        if ok is None:
-            self.styling_status.setText(message or self.tr("Working..."))
-            self.styling_status.setProperty("status", "checking")
-        elif ok:
-            self.styling_status.setText(message or self.tr("Done"))
-            self.styling_status.setProperty("status", "success")
-        else:
-            self.styling_status.setText(message or self.tr("Failed"))
-            self.styling_status.setProperty("status", "error")
-
-        if style := self.styling_status.style():
-            style.unpolish(self.styling_status)
-            style.polish(self.styling_status)
-
-    def get_manage_styling(self) -> bool:
-        """Return whether Anki Miner should manage the note type's glossary CSS."""
-        return self.manage_styling_checkbox.isChecked()
-
-    def set_manage_styling(self, value: bool) -> None:
-        """Set the manage-styling checkbox without registering a user edit.
-
-        Blocks the toggle signal so a programmatic load never flashes the
-        "Save to apply" hint.
-        """
-        blocked = self.manage_styling_checkbox.blockSignals(True)
-        try:
-            self.manage_styling_checkbox.setChecked(value)
-        finally:
-            self.manage_styling_checkbox.blockSignals(blocked)
-        self._update_custom_css_enabled()
-
+    # === Card Styling (Issue #44) ===
     def get_custom_css(self) -> str:
         """Return the user's custom CSS text."""
         return self.custom_css_edit.toPlainText()
@@ -905,7 +842,6 @@ class AnkiSettingsPanel(FormPanel):
         self.set_ankiconnect_url(config.ankiconnect_url)
         self.set_anki_tags(config.anki_tags)
         self.set_card_fields(config.anki_fields)
-        self.set_manage_styling(config.manage_card_styling)
         self.set_custom_css(config.custom_card_css)
         self.set_pitch_category_format(config.pitch_category_format)
         self.set_card_type(config.card_type)
@@ -930,7 +866,6 @@ class AnkiSettingsPanel(FormPanel):
             anki_tags=self.get_anki_tags(),
             anki_fields=fields,
             anki_word_field=fields.get("word", "Expression"),
-            manage_card_styling=self.get_manage_styling(),
             custom_card_css=self.get_custom_css(),
             pitch_category_format=self.get_pitch_category_format(),
             card_type=cast(

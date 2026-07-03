@@ -733,11 +733,6 @@ class SettingsTab(QWidget):
         self.config_changed.emit(new_config)
         self._flash_save_status(self.tr("✓ Saved"))
 
-        # Auto-sync card styling into the note type (Issue #44). Runs after the
-        # config is persisted so it works against the just-saved note type; it
-        # never blocks the save and defers gracefully when Anki is unreachable.
-        self._anki_probe.sync_styling()
-
     def _flash_save_status(self, text: str) -> None:
         """Show a transient, non-modal confirmation beside the Save button.
 
@@ -885,25 +880,14 @@ class SettingsTab(QWidget):
         disk but is absent from dictionary_chain in gui_config, i.e. invisible to
         DictionaryRegistry.build_provider_chain.
 
-        Also re-syncs the managed glossary CSS: dictionary author ``styles.css``
-        now lives in the shared note-type block, so a chain change must rebuild
-        it. ``sync_styling`` is idempotent + offline-safe and only writes when
-        styling is managed.
+        A chain change alters which dictionaries' scoped CSS is embedded in the
+        per-card ``<style>`` block, but that block is assembled per-episode at
+        card-creation time (``EpisodeProcessor._phase5_create``), so nothing
+        needs to sync to Anki here.
         """
         new_config = replace(self.config, dictionary_chain=new_chain)
         self.config = new_config
         self.config_changed.emit(new_config)
-        if new_config.manage_card_styling:
-            self._anki_probe.sync_styling()
-
-    def notify_anki_connected(self) -> None:
-        """Sync card styling now that AnkiConnect is reachable (Issue #44).
-
-        Called by ``MainWindow`` on a successful AnkiConnect validation (startup
-        auto-check or Test Connection), the natural "Anki is up" signal — the
-        retry that flushes any styling sync deferred while Anki was unreachable.
-        """
-        self._anki_probe.sync_styling()
 
     def _persist_audio_chain_change(self, new_chain: tuple[AudioSourceEntry, ...]) -> None:
         """Save an audio chain mutation to disk and notify listeners.

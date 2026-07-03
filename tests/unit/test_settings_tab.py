@@ -13,23 +13,6 @@ from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettings
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
-@pytest.fixture(autouse=True)
-def _no_real_styling_writes(monkeypatch):
-    """Keep Save/Reset-triggered styling syncs off the real network.
-
-    ``_on_save_clicked`` unconditionally fires ``sync_styling`` → a real
-    ``StylingWorker`` against AnkiConnect. With Anki open locally, the Reset
-    test put a config in the panel (note type "Lapis") whose Save STRIPPED the
-    managed glossary CSS from the user's real Lapis note type (see
-    tests/_network_tripwire.py). Kill the worker spawn at the controller seam;
-    ``TestCardStylingSyncWiring`` still asserts the sync *wiring* via its own
-    instance-level ``sync_styling`` mocks, which this stub does not touch.
-    """
-    from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
-
-    monkeypatch.setattr(AnkiProbeController, "_start_styling_write", lambda self, mode: None)
-
-
 @pytest.fixture
 def tab(test_config: AnkiMinerConfig, qtbot):
     """Instantiate a SettingsTab against the shared test config."""
@@ -831,40 +814,8 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
                 widget.deleteLater()
 
 
-class TestCardStylingSyncWiring:
-    """Save triggers a styling sync; the connect signal triggers a reconcile (Issue #44)."""
-
-    def test_save_calls_sync_styling(self, tab, monkeypatch):
-        from unittest.mock import MagicMock
-
-        from PyQt6.QtWidgets import QMessageBox
-
-        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
-        tab._anki_probe.sync_styling = MagicMock()
-
-        tab._on_save_clicked()
-
-        tab._anki_probe.sync_styling.assert_called_once()
-
-    def test_notify_anki_connected_syncs(self, tab):
-        from unittest.mock import MagicMock
-
-        tab._anki_probe.sync_styling = MagicMock()
-
-        tab.notify_anki_connected()
-
-        tab._anki_probe.sync_styling.assert_called_once()
-
-    def test_chain_change_resyncs_styling_when_managing(self, tab):
-        """A dictionary-chain change re-pushes the managed glossary CSS."""
-        from unittest.mock import MagicMock
-
-        tab.config = replace(tab.config, manage_card_styling=True)
-        tab._anki_probe.sync_styling = MagicMock()
-
-        tab._persist_chain_change(tab.config.dictionary_chain)
-
-        tab._anki_probe.sync_styling.assert_called_once()
+class TestConfigChangePanelReload:
+    """A config change reloads panels only when a panel-owned key changed (OVH-007)."""
 
     def test_non_panel_key_change_does_not_reload_panels(self, tab):
         """A change touching only a non-panel key must not reload panels (OVH-007)."""

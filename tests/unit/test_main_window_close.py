@@ -185,7 +185,7 @@ class _FakeSettingsTab(SettingsTab):
     here) and route each through the same join policy as the mining tabs.
     """
 
-    def __init__(self, *, fields_running=False, decks_running=False, styling_running=False, wait_result=True) -> None:
+    def __init__(self, *, fields_running=False, decks_running=False, wait_result=True) -> None:
         from unittest.mock import MagicMock
 
         from PyQt6.QtWidgets import QWidget
@@ -205,7 +205,6 @@ class _FakeSettingsTab(SettingsTab):
         )
         self._anki_probe._fetch_fields_worker = _FakeWorker(running=fields_running, wait_result=wait_result)
         self._anki_probe._fetch_decks_worker = _FakeWorker(running=decks_running, wait_result=wait_result)
-        self._anki_probe._styling_worker = _FakeWorker(running=styling_running, wait_result=wait_result)
         # Import-flow controllers with idle (None) workers (OVH-004, 059, 060).
         self._dict_import_flow = DictionaryImportFlow(
             parent=self,
@@ -335,7 +334,7 @@ class TestCloseEventSettingsTab:
     """SettingsTab's AnkiConnect workers (T-12) must be cancelled + joined."""
 
     def test_running_settings_workers_cancelled_and_joined(self, main_window):
-        tab = _FakeSettingsTab(fields_running=True, decks_running=True, styling_running=True)
+        tab = _FakeSettingsTab(fields_running=True, decks_running=True)
         main_window.tabs.addTab(tab, "Settings")
 
         event = _trigger_close(main_window)
@@ -343,7 +342,6 @@ class TestCloseEventSettingsTab:
         for worker in (
             tab._anki_probe._fetch_fields_worker,
             tab._anki_probe._fetch_decks_worker,
-            tab._anki_probe._styling_worker,
         ):
             assert worker.cancel_called
             assert worker.wait_called_with == 2000
@@ -358,17 +356,16 @@ class TestCloseEventSettingsTab:
         for worker in (
             tab._anki_probe._fetch_fields_worker,
             tab._anki_probe._fetch_decks_worker,
-            tab._anki_probe._styling_worker,
         ):
             assert not worker.cancel_called
 
     def test_settings_laggard_defers_close(self, main_window):
-        tab = _FakeSettingsTab(styling_running=True, wait_result=False)
+        tab = _FakeSettingsTab(fields_running=True, wait_result=False)
         main_window.tabs.addTab(tab, "Settings")
 
         event = _trigger_close(main_window)
 
-        assert tab._anki_probe._styling_worker.cancel_called
+        assert tab._anki_probe._fetch_fields_worker.cancel_called
         event.accept.assert_not_called()
         event.ignore.assert_called_once()
 
