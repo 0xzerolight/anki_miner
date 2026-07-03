@@ -28,6 +28,9 @@ the combined work carries the same license.
 | `tests/unit/test_deinflection_cycles.py` | `test/language-transformer-cycles.test.js` |
 | `anki_miner/services/frequency/multi_frequency_service.py` (`lookup_harmonic`) | `ext/js/data/anki-note-data-creator.js` (`getFrequencyHarmonic`) |
 | `anki_miner/services/dictionary/yomitan_renderer.py` (`structured_content_to_html` typed-glossary dispatch, `_text_to_html`, `_render_attrs` internal-link neutering, `_coerce_style_value` style-value semantics) | `ext/js/dictionary/dictionary-importer.js` (`_formatDictionaryTermGlossaryObject`), `ext/js/templates/anki-template-renderer.js` (`_formatGlossary`, `_replaceNewlines`), `ext/js/templates/anki-template-renderer-content-manager.js` (`prepareLink`), `ext/js/display/structured-content-generator.js` (`_setStructuredContentElementStyle`, `_createLinkElement`) |
+| `anki_miner/services/dictionary/zip_safety.py` (`find_redundant_index_dir`, `raise_if_index_nested`) | `ext/js/dictionary/dictionary-importer.js` (`_findRedundantDirectories`, redundant-directory branch of `_readAndValidateIndex`) |
+| `anki_miner/services/dictionary/importers/yomitan_importer.py` (`_MEDIA_EXTENSION_WHITELIST`) | `ext/js/media/media-util.js` (`getImageMediaTypeFromFileName`) |
+| `anki_miner/services/dictionary/schema_validation.py` (structural bank checks) | `ext/js/dictionary/dictionary-importer.js` (`_getDataBankSchemas` / ajv bank validation — structural subset, no vendored schemas) |
 
 Pinned upstream commit: `e2ed450c2f11a591922822e77f008e70a87daf0c`.
 

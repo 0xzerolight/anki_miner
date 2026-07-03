@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Callable
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services.dictionary.zip_safety import raise_if_index_nested
 from anki_miner.services.frequency import storage
 from anki_miner.services.frequency.csv_parse import (
     _extract_word_rank,
@@ -68,6 +69,10 @@ class FreqSourceImportResult:
     format: str
     entry_count: int
     skipped_display_only: int
+    # Structurally-malformed meta-bank entries skipped during a zip import
+    # (always 0 for CSV/TSV sources). Surfaced to the user so a reduced import
+    # doesn't pass unnoticed.
+    skipped_malformed: int = 0
 
 
 def import_frequency_source(
@@ -139,14 +144,12 @@ def _import_zip(
         skipped_display_only = 0
 
         for bank in banks.iter_banks(progress=progress, cancel_check=cancel_check):
+            # Entries are already structurally validated by iter_banks (list,
+            # arity >= 3, non-blank term); only the mode/data logic remains.
             for entry in bank:
-                if not isinstance(entry, list) or len(entry) < 3:
-                    continue
                 if entry[1] != "freq":
                     continue
-                term = str(entry[0]).strip() if entry[0] is not None else ""
-                if not term:
-                    continue
+                term = str(entry[0]).strip()
 
                 data = entry[2]
                 rank = normalize_freq_rank(data)
@@ -180,15 +183,18 @@ def _import_zip(
             rows=rows,
             entry_count=len(ranks),
             skipped_display_only=skipped_display_only,
+            skipped_malformed=banks.skipped_malformed,
         )
 
     logger.info(
-        "Imported %d frequency entries from '%s' (revision '%s') as source '%s', skipped %d display-only",
+        "Imported %d frequency entries from '%s' (revision '%s') as source '%s', "
+        "skipped %d display-only, %d malformed",
         result.entry_count,
         title,
         revision,
         result.source_id,
         skipped_display_only,
+        result.skipped_malformed,
     )
     return result
 
@@ -298,6 +304,7 @@ def _finalize(
     rows: list[storage.FreqRow],
     entry_count: int,
     skipped_display_only: int,
+    skipped_malformed: int = 0,
 ) -> FreqSourceImportResult:
     """Build the index under a staging dir, then atomically promote it.
 
@@ -353,6 +360,7 @@ def _finalize(
         format=fmt,
         entry_count=entry_count,
         skipped_display_only=skipped_display_only,
+        skipped_malformed=skipped_malformed,
     )
 
 
@@ -403,8 +411,8 @@ def derive_source_id_from_zip(zip_path: Path) -> str:
         with zipfile.ZipFile(zip_path, "r") as zf:
             try:
                 info = zf.getinfo("index.json")
-            except KeyError as e:
-                raise SetupError("Zip missing required index.json") from e
+            except KeyError:
+                raise_if_index_nested(zf.namelist(), missing_msg="Zip missing required index.json")
             if info.file_size > _MAX_INDEX_JSON_BYTES:
                 raise SetupError(
                     f"index.json is implausibly large ({info.file_size:,} > {_MAX_INDEX_JSON_BYTES:,} bytes)"

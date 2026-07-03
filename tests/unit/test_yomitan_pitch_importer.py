@@ -130,6 +130,25 @@ class TestModeFilter:
         dest = tmp_path / "out.csv"
         result = import_yomitan_pitch_zip(zip_path, dest)
         assert result.entry_count == 2
+        # Mode-mismatches (freq/ipa) are not structural malformations.
+        assert result.skipped_malformed == 0
+
+    def test_malformed_meta_entries_counted_and_surfaced(self, tmp_path: Path) -> None:
+        """4.8: structurally-bad entries are counted, not silently dropped."""
+        zip_path = build_yomitan_pitch_zip(
+            tmp_path / "src.zip",
+            meta_banks=[
+                [
+                    ["猫", "pitch", {"reading": "ねこ", "pitches": [{"position": 1}]}],  # valid
+                    ["犬"],  # arity 1 < 3 → malformed
+                    "nope",  # not a list → malformed
+                    ["", "pitch", {"reading": "x", "pitches": [{"position": 0}]}],  # blank term → malformed
+                ]
+            ],
+        )
+        result = import_yomitan_pitch_zip(zip_path, tmp_path / "out.csv")
+        assert result.entry_count == 1
+        assert result.skipped_malformed == 3
 
 
 class TestErrors:
@@ -156,6 +175,27 @@ class TestErrors:
             zf.writestr("index.json", "not valid json")
             zf.writestr("term_meta_bank_1.json", "[]")
         with pytest.raises(SetupError, match="Invalid index.json"):
+            import_yomitan_pitch_zip(zip_path, tmp_path / "out.csv")
+
+    def test_nested_index_raises_rezip_diagnostic(self, tmp_path: Path) -> None:
+        """4.7b: a folder-zipped-instead-of-contents pitch zip is diagnosed."""
+        zip_path = tmp_path / "src.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("Sub/index.json", json.dumps({"title": "T", "revision": "v1", "format": 3}))
+            zf.writestr(
+                "Sub/term_meta_bank_1.json",
+                json.dumps([["猫", "pitch", {"reading": "ねこ", "pitches": [{"position": 1}]}]]),
+            )
+        with pytest.raises(SetupError, match="re-zip the folder CONTENTS"):
+            import_yomitan_pitch_zip(zip_path, tmp_path / "out.csv")
+
+    def test_non_array_meta_bank_raises(self, tmp_path: Path) -> None:
+        """4.8: a meta bank whose top-level JSON is not an array raises."""
+        zip_path = tmp_path / "src.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("index.json", json.dumps({"title": "T", "revision": "v1", "format": 3}))
+            zf.writestr("term_meta_bank_1.json", json.dumps({"oops": 1}))
+        with pytest.raises(SetupError, match="term_meta_bank_1.json"):
             import_yomitan_pitch_zip(zip_path, tmp_path / "out.csv")
 
     def test_missing_title(self, tmp_path: Path) -> None:

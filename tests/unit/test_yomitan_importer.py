@@ -209,6 +209,123 @@ class TestImportYomitanZip:
         # dest_root must not contain a partial dict folder
         assert not any(dest_root.iterdir()) if dest_root.exists() else True
 
+    def test_duplicate_import_fails_before_any_staging_work(self, tmp_path: Path):
+        """4.7a: a re-add of an existing dict (overwrite=False) must fail right
+        after deriving dict_id — before any per-file rendering/progress."""
+        zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip")
+        dest_root = tmp_path / "dicts"
+        import_yomitan_zip(zip_path, dest_root)
+
+        events: list[tuple[int, int, str]] = []
+        with pytest.raises(SetupError, match="already exists"):
+            import_yomitan_zip(
+                zip_path,
+                dest_root,
+                progress=lambda c, t, m: events.append((c, t, m)),
+            )
+        # No staging/render work happened: the progress callback never fired.
+        assert events == []
+
+    def test_nested_index_json_raises_rezip_diagnostic(self, tmp_path: Path):
+        """4.7b: a zip whose index.json is nested under a redundant directory
+        (user zipped the folder, not its contents) gets a guiding error."""
+        import zipfile
+
+        zip_path = tmp_path / "nested.zip"
+        zip_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("MyDict/index.json", '{"title": "x", "revision": "v1", "format": 3}')
+            zf.writestr("MyDict/term_bank_1.json", "[]")
+        with pytest.raises(SetupError, match="re-zip the folder CONTENTS"):
+            import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+    def test_malformed_term_entries_counted_and_surfaced(self, tmp_path: Path):
+        """4.8: structurally-bad entries are skipped-with-a-count, not silently
+        dropped, so a drastically-reduced import is visible."""
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "m.zip",
+            term_banks=[
+                [
+                    ["食べる", "たべる", "v1", "v1", 0, ["to eat"], 1, ""],  # valid
+                    ["飲む", "のむ"],  # arity 2 < 6 → malformed
+                    ["", "", "", "", 0, ["x"]],  # blank term → malformed
+                    "not-a-list",  # not a list → malformed
+                ]
+            ],
+        )
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        assert result.entry_count == 1
+        assert result.skipped_malformed == 3
+
+    def test_non_array_term_bank_raises_naming_file(self, tmp_path: Path):
+        """4.8: a term bank whose top-level JSON is not an array is wholly
+        unreadable and raises, naming the offending file."""
+        import zipfile
+
+        zip_path = tmp_path / "bad.zip"
+        zip_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("index.json", '{"title": "x", "revision": "v1", "format": 3}')
+            zf.writestr("term_bank_1.json", '{"oops": "object not array"}')
+        with pytest.raises(SetupError, match="term_bank_1.json"):
+            import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+    def test_media_unsupported_extension_warned_not_copied(self, tmp_path: Path):
+        """4.7c: a referenced asset with a non-image extension is skipped with a
+        context-rich warning instead of copied blindly into Anki's media store."""
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "m.zip",
+            term_banks=[
+                [
+                    [
+                        "走る",
+                        "はしる",
+                        "v5r",
+                        "",
+                        0,
+                        [{"type": "structured-content", "content": {"tag": "img", "path": "assets/note.txt"}}],
+                        1,
+                        "",
+                    ]
+                ]
+            ],
+            media_files={"assets/note.txt": b"hello"},
+        )
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+
+        assert any("note.txt" in w and "unsupported media type" in w for w in result.media_warnings)
+        assert not (dest_root / result.dict_id / "media" / "assets_note.txt").exists()
+
+    def test_media_undecodable_image_warned_not_copied(self, tmp_path: Path):
+        """4.7c: a referenced .png that is not actually a valid image fails the
+        Pillow decode probe and is warned about, not copied."""
+        pytest.importorskip("PIL")
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "m.zip",
+            term_banks=[
+                [
+                    [
+                        "走る",
+                        "はしる",
+                        "v5r",
+                        "",
+                        0,
+                        [{"type": "structured-content", "content": {"tag": "img", "path": "img/broken.png"}}],
+                        1,
+                        "",
+                    ]
+                ]
+            ],
+            media_files={"img/broken.png": b"not a real png"},
+        )
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+
+        assert any("broken.png" in w and "decode" in w for w in result.media_warnings)
+        assert not (dest_root / result.dict_id / "media" / "img_broken.png").exists()
+
     def test_dict_media_extracted_and_referenced_by_namespaced_filename(self, tmp_path: Path):
         """Yomitan zips for monolingual dicts ship SVG/PNG assets referenced
         from structured content. The importer must copy those into the dict's
@@ -419,6 +536,16 @@ class TestDeriveDictIdFromZip:
             zf.writestr("term_bank_1.json", "[]")
         with pytest.raises(SetupError, match="missing required index.json"):
             derive_dict_id_from_zip(bad)
+
+    def test_raises_rezip_diagnostic_on_nested_index(self, tmp_path: Path):
+        """4.7b: derive path must also surface the redundant-directory hint."""
+        import zipfile
+
+        nested = tmp_path / "nested.zip"
+        with zipfile.ZipFile(nested, "w") as zf:
+            zf.writestr("Sub/index.json", '{"title": "x", "revision": "v1", "format": 3}')
+        with pytest.raises(SetupError, match="re-zip the folder CONTENTS"):
+            derive_dict_id_from_zip(nested)
 
     def test_raises_on_blank_title(self, tmp_path: Path):
         import json
