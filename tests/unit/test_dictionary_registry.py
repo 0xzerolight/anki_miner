@@ -324,3 +324,112 @@ class TestDictionaryRegistryOSErrorGuard:
             registry.load()
 
         assert registry.get("anything") is None
+
+
+# ---------------------------------------------------------------------------
+# 4.0: schema-staleness gate helpers
+# ---------------------------------------------------------------------------
+
+
+def _seed_stale_dict(root: Path, dict_id: str, source_name: str):
+    """Seed an on-disk dict whose schema_version is wrong (needs reimport)."""
+    folder = root / dict_id
+    folder.mkdir(parents=True, exist_ok=True)
+    db = folder / "index.sqlite"
+    create_index(db)
+    write_meta(
+        db,
+        {
+            "schema_version": "1",  # stale (current is SCHEMA_VERSION)
+            "source_name": source_name,
+            "format": "yomitan",
+            "entry_count": "0",
+        },
+    )
+
+
+class TestStaleEnabled:
+    def test_enabled_stale_slot_flagged(self, tmp_path: Path):
+        _seed_stale_dict(tmp_path, "old-dict", "Old Dict")
+        config = replace(
+            AnkiMinerConfig(),
+            dicts_root=tmp_path,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="old-dict", enabled=True),),
+        )
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        stale = registry.stale_enabled(config)
+        assert [m.dict_id for m in stale] == ["old-dict"]
+
+    def test_current_slot_not_flagged(self, tmp_path: Path):
+        _seed_dict(tmp_path, "cur-dict", "Current")
+        config = replace(
+            AnkiMinerConfig(),
+            dicts_root=tmp_path,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="cur-dict", enabled=True),),
+        )
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        assert registry.stale_enabled(config) == []
+
+    def test_disabled_stale_slot_not_flagged(self, tmp_path: Path):
+        """A stale slot that is disabled in the chain proceeds (not gated)."""
+        _seed_stale_dict(tmp_path, "old-dict", "Old Dict")
+        config = replace(
+            AnkiMinerConfig(),
+            dicts_root=tmp_path,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="old-dict", enabled=False),),
+        )
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        assert registry.stale_enabled(config) == []
+
+    def test_missing_slot_not_flagged(self, tmp_path: Path):
+        """A referenced-but-absent dict is a different failure, not staleness."""
+        config = replace(
+            AnkiMinerConfig(),
+            dicts_root=tmp_path,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="ghost", enabled=True),),
+        )
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        assert registry.stale_enabled(config) == []
+
+
+class TestStaleHelpers:
+    def test_stale_enabled_dicts_scans_and_flags(self, tmp_path: Path):
+        from anki_miner.services.dictionary.registry import stale_enabled_dicts
+
+        _seed_stale_dict(tmp_path, "old-dict", "Old Dict")
+        config = replace(
+            AnkiMinerConfig(),
+            dicts_root=tmp_path,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="old-dict", enabled=True),),
+        )
+        assert [m.dict_id for m in stale_enabled_dicts(config)] == ["old-dict"]
+
+    def test_format_message_single_and_plural(self, tmp_path: Path):
+        from anki_miner.services.dictionary.registry import format_stale_reimport_message
+
+        _seed_stale_dict(tmp_path, "a", "Alpha")
+        _seed_stale_dict(tmp_path, "b", "Beta")
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        one = format_stale_reimport_message([registry.get("a")])
+        assert "Dictionary 'Alpha' needs reimport" in one
+        assert "Settings → Dictionaries → Reimport All" in one
+        two = format_stale_reimport_message([registry.get("a"), registry.get("b")])
+        assert "Dictionaries 'Alpha', 'Beta' need reimport" in two
+
+    def test_stale_dict_reimport_error(self, tmp_path: Path):
+        from anki_miner.services.dictionary.registry import stale_dict_reimport_error
+
+        _seed_stale_dict(tmp_path, "old-dict", "Old Dict")
+        stale_cfg = replace(
+            AnkiMinerConfig(),
+            dicts_root=tmp_path,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="old-dict", enabled=True),),
+        )
+        assert stale_dict_reimport_error(stale_cfg) is not None
+        clean_cfg = replace(stale_cfg, dictionary_chain=())
+        assert stale_dict_reimport_error(clean_cfg) is None
