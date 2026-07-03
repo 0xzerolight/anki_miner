@@ -49,6 +49,8 @@ the combined work carries the same license.
 | `anki_miner/services/dictionary/schema_validation.py` (structural bank checks) | `ext/js/dictionary/dictionary-importer.js` (`_getDataBankSchemas` / ajv bank validation — structural subset, no vendored schemas) |
 | `anki_miner/services/dictionary/yomitan_renderer.py` (`structured_content_to_html` typed-glossary dispatch, `_text_to_html`, `_render_attrs` internal-link neutering, `_coerce_style_value` style-value semantics, `_img_presentation_attrs` image data-* stamping) | `ext/js/dictionary/dictionary-importer.js` (`_formatDictionaryTermGlossaryObject`), `ext/js/templates/anki-template-renderer.js` (`_formatGlossary`, `_replaceNewlines`), `ext/js/templates/anki-template-renderer-content-manager.js` (`prepareLink`), `ext/js/display/structured-content-generator.js` (`_setStructuredContentElementStyle`, `_createLinkElement`, `createDefinitionImage`) |
 | `anki_miner/services/dictionary/resources/glossary.css` (monochrome recolor, pixelated image-rendering) | `ext/data/structured-content-style.json` (`.gloss-image-background`, `[data-appearance=monochrome]`, `[data-image-rendering=pixelated]` rules) |
+| `anki_miner/services/dictionary/storage.py` (`_LOOKUP_SQL` reading-boost key + `_reading_priority`, mirrored in `lookup`/`lookup_many`) | `ext/js/language/translator.js` (`Translator._sortTermDictionaryEntries` — `matchPrimaryReading` leading sort key, a boost not a filter) |
+| `anki_miner/services/dictionary/providers/indexed_provider.py` (`_render` sequence grouping + per-group tag lines) | `ext/js/language/translator.js` (`Translator._getRelatedDictionaryEntries`, `_createGroupedDictionaryEntry` — group definitions by `sequence`) |
 
 Pinned upstream commit: `e2ed450c2f11a591922822e77f008e70a87daf0c`.
 

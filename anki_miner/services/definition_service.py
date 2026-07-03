@@ -106,13 +106,17 @@ class DefinitionService:
 
     def get_definitions_batch(
         self,
-        words: list[str],
+        words: list[tuple[str, str | None]],
         progress_callback: ProgressCallback | None = None,
     ) -> list[str | None]:
-        """Resolve definitions for a list of words, preserving first-hit-wins.
+        """Resolve definitions for a list of ``(word, reading | None)`` pairs,
+        preserving first-hit-wins. The reading is a per-word ranking BOOST
+        threaded to each offline provider's ``lookup_many`` (matching-reading
+        senses lead; ``None`` = wildcard). Output stays a ``list[str | None]``
+        aligned to the input pairs.
 
         Fast path: providers exposing the optional ``lookup_many`` batch method
-        are queried ONCE for the still-unfilled words (one IN-clause SQLite
+        are queried ONCE for the still-unfilled pairs (one IN-clause SQLite
         query per dictionary instead of one query per word). Words an earlier
         provider resolves are removed from the remaining set BEFORE the next
         provider is consulted, so chain semantics are first-hit-wins across the
@@ -125,9 +129,15 @@ class DefinitionService:
         self.ensure_loaded()
 
         # Resolve over the chain into a per-word map keyed by the FIRST seen
-        # occurrence — duplicates collapse to one lookup, mirroring the chain.
+        # occurrence — duplicate words collapse to one lookup (first reading
+        # wins), mirroring the chain's word-level dedup.
         resolved: dict[str, str | None] = {}
-        remaining = list(dict.fromkeys(words))  # de-dup, preserve order
+        remaining: list[tuple[str, str | None]] = []
+        seen: set[str] = set()
+        for word, reading in words:
+            if word not in seen:
+                seen.add(word)
+                remaining.append((word, reading))
 
         # NOTE: the two ``except Exception`` clauses below are deliberately broad,
         # not an oversight. This is the never-raises provider boundary: a provider
@@ -152,18 +162,19 @@ class DefinitionService:
                         e,
                     )
                     continue
-                still_remaining: list[str] = []
-                for word in remaining:
+                still_remaining: list[tuple[str, str | None]] = []
+                for word, reading in remaining:
                     result = hits.get(word)
                     if result:
                         resolved[word] = result
                     else:
-                        still_remaining.append(word)
+                        still_remaining.append((word, reading))
                 remaining = still_remaining
             else:
-                # Per-word fallback for providers lacking the batch method.
+                # Per-word fallback for providers lacking the batch method (the
+                # reading boost applies only to the offline batch path).
                 still_remaining = []
-                for word in remaining:
+                for word, reading in remaining:
                     try:
                         result = provider.lookup(word)
                     except Exception as e:
@@ -173,16 +184,16 @@ class DefinitionService:
                             word,
                             e,
                         )
-                        still_remaining.append(word)
+                        still_remaining.append((word, reading))
                         continue
                     if result:
                         resolved[word] = result
                     else:
-                        still_remaining.append(word)
+                        still_remaining.append((word, reading))
                 remaining = still_remaining
 
         results: list[str | None] = []
-        for i, word in enumerate(words, 1):
+        for i, (word, _reading) in enumerate(words, 1):
             definition = resolved.get(word)
             results.append(definition)
             if progress_callback:
@@ -232,7 +243,8 @@ class DefinitionService:
             batch_fn = getattr(provider, "lookup_many", None)
             if callable(batch_fn):
                 try:
-                    hits = batch_fn(remaining)
+                    # Existence probe: no reading boost needed, so wildcard pairs.
+                    hits = batch_fn([(w, None) for w in remaining])
                 except Exception as e:
                     logger.warning(
                         "Provider '%s' raised during lookup_many; skipping: %s",
@@ -370,10 +382,12 @@ class DefinitionService:
 
     def get_glossaries_batch(
         self,
-        words: list[str],
+        words: list[tuple[str, str | None]],
         progress_callback: ProgressCallback | None = None,
     ) -> list[str | None]:
-        """Batch variant of get_glossary; preserves input order.
+        """Batch variant of get_glossary over ``(word, reading | None)`` pairs;
+        preserves input order. The reading is a per-word ranking BOOST threaded
+        to each offline provider's ``lookup_many``.
 
         Fast path (OVH-050): offline providers that expose ``lookup_many`` are
         queried ONCE for all words (one IN-clause SQLite query per dictionary
@@ -400,14 +414,23 @@ class DefinitionService:
             else:
                 offline_providers.append(provider)
 
+        # Unique (word, reading) pairs for the provider queries; first reading
+        # wins on duplicate words. Output is still mapped back to every input pair.
+        unique_pairs: list[tuple[str, str | None]] = []
+        seen: set[str] = set()
+        for word, reading in words:
+            if word not in seen:
+                seen.add(word)
+                unique_pairs.append((word, reading))
+
         # Per-word accumulator: word → list[str] of offline HTML hits.
-        offline_hits: dict[str, list[str]] = {w: [] for w in words}
+        offline_hits: dict[str, list[str]] = {w: [] for w, _ in unique_pairs}
 
         for provider in offline_providers:
             batch_fn = getattr(provider, "lookup_many", None)
             if callable(batch_fn):
                 try:
-                    provider_results = batch_fn(words)
+                    provider_results = batch_fn(unique_pairs)
                 except Exception as e:
                     logger.warning(
                         "Provider '%s' raised during lookup_many; skipping: %s",
@@ -415,12 +438,12 @@ class DefinitionService:
                         e,
                     )
                     continue
-                for w in words:
+                for w, _reading in unique_pairs:
                     html = provider_results.get(w)
                     if html:
                         offline_hits[w].append(html)
             else:
-                for w in words:
+                for w, _reading in unique_pairs:
                     try:
                         html = provider.lookup(w)
                     except Exception as e:
@@ -436,7 +459,7 @@ class DefinitionService:
 
         # Words with no offline hits fall back to online providers (per-word).
         online_results: dict[str, str | None] = {}
-        for w in words:
+        for w, _reading in unique_pairs:
             if not offline_hits[w]:
                 for provider in online_providers:
                     try:
@@ -456,7 +479,7 @@ class DefinitionService:
                     online_results[w] = None
 
         results: list[str | None] = []
-        for i, word in enumerate(words, 1):
+        for i, (word, _reading) in enumerate(words, 1):
             if offline_hits[word]:
                 glossary: str | None = "".join(offline_hits[word])
             else:
