@@ -84,10 +84,13 @@ def _peek_json(path: Path) -> object | None:
 
     Detection must never raise on a malformed index — parsing is where the
     ValueError surfaces — so read errors and bad JSON fall through to None.
+    ``ValueError`` covers both ``json.JSONDecodeError`` and the
+    ``UnicodeDecodeError`` that ``read_text`` raises on non-UTF-8 bytes; letting
+    the latter escape would slip past the import flow's ``except OSError`` guard.
     """
     try:
         data: object = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, ValueError):
         return None
     return data
 
