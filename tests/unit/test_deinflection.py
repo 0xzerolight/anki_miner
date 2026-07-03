@@ -563,3 +563,31 @@ class TestFindHighlightEndWithTrace:
         text = "刑務所だ"
         tokens = [_tok("刑務所", "名詞"), _tok("だ", "助動詞")]
         assert find_highlight_end_with_trace(text, tokens, 0, 3, tokens[0]) == (3, ())
+
+
+class TestConditionFlagsFromRules:
+    """``condition_flags_from_rules`` — Yomitan POS-check flag mapping."""
+
+    def test_empty_string_is_zero(self):
+        from anki_miner.services.deinflection import condition_flags_from_rules
+
+        assert condition_flags_from_rules("") == 0
+
+    def test_single_known_name(self):
+        from anki_miner.services.deinflection import condition_flags_from_rules, get_japanese_deinflector
+
+        d = get_japanese_deinflector()
+        assert condition_flags_from_rules("v1") == d.condition_flags("v1")
+
+    def test_multiple_names_are_ored(self):
+        from anki_miner.services.deinflection import condition_flags_from_rules, get_japanese_deinflector
+
+        d = get_japanese_deinflector()
+        assert condition_flags_from_rules("v5 adj-i") == (d.condition_flags("v5") | d.condition_flags("adj-i"))
+
+    def test_unknown_name_contributes_zero(self):
+        from anki_miner.services.deinflection import condition_flags_from_rules, get_japanese_deinflector
+
+        d = get_japanese_deinflector()
+        # "n"/"vt" are POS tags with no deinflection condition → 0, so only v1 counts.
+        assert condition_flags_from_rules("n v1 vt") == d.condition_flags("v1")
