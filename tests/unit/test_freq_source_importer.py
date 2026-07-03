@@ -203,23 +203,29 @@ class TestZipImport:
         assert _read_entries(dest, result.source_id) == [("川", None, 3), ("山", None, 5)]
 
     def test_zero_usable_rejected(self, tmp_path: Path) -> None:
-        # Only display-only entries → no usable ranks.
+        # Entries that yield neither a numeric rank nor a display label (bool
+        # value → both None) → truly unusable → rejected. (Digit-free string
+        # labels like "①"/"高" are NOT unusable any more — they import as a
+        # word-based source; see TestCategoricalImport.)
         zip_path = _write_zip(
-            tmp_path / "disp.zip",
-            banks=[["猫", "freq", "①"], ["犬", "freq", "高"]],
+            tmp_path / "bogus.zip",
+            banks=[["猫", "freq", {"value": True}], ["犬", "freq", {"value": True}]],
         )
         with pytest.raises(SetupError, match="no usable frequency entries"):
             import_frequency_source(zip_path, tmp_path / "sources")
 
     def test_display_only_skip_counted(self, tmp_path: Path) -> None:
+        # A mostly-numeric dict with a stray display-only marker: stays numeric
+        # (label coverage < 50%), the marker is skipped and counted.
         zip_path = _write_zip(
             tmp_path / "mix.zip",
-            banks=[["猫", "freq", 5], ["犬", "freq", "①"], ["鳥", "freq", "高"]],
+            banks=[["猫", "freq", 5], ["犬", "freq", 6], ["鳥", "freq", "①"]],
         )
         dest = tmp_path / "sources"
         result = import_frequency_source(zip_path, dest)
-        assert result.entry_count == 1
-        assert result.skipped_display_only == 2
+        assert result.is_categorical is False
+        assert result.entry_count == 2
+        assert result.skipped_display_only == 1
 
     def test_string_payload_with_number_now_imported_with_display(self, tmp_path: Path) -> None:
         # Pre-6.5 these string-shaped ranks were rejected wholesale; now the
@@ -304,6 +310,116 @@ class TestZipImport:
             zf.writestr("Sub/term_meta_bank_1.json", json.dumps([["猫", "freq", 5]]))
         with pytest.raises(SetupError, match="re-zip the folder CONTENTS"):
             import_frequency_source(zip_path, tmp_path / "sources")
+
+    def test_numeric_object_display_value_preserved_unstripped(self, tmp_path: Path) -> None:
+        # Refactor guard: a numeric-classified object-form entry keeps its
+        # (unstripped) displayValue byte-identical, exactly as before.
+        zip_path = _write_zip(
+            tmp_path / "num.zip",
+            banks=[["猫", "freq", {"value": 1099, "displayValue": "  1099/72000  "}]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.is_categorical is False
+        assert _read_display(dest, result.source_id) == [("猫", 1099, "  1099/72000  ")]
+
+
+class TestCategoricalImport:
+    """Word-based (categorical) sources: labels stored display-only at the
+    CATEGORICAL_RANK sentinel, excluded from numeric aggregation."""
+
+    def test_all_digit_free_imports_without_setup_error(self, tmp_path: Path) -> None:
+        zip_path = _write_zip(
+            tmp_path / "cat.zip",
+            banks=[["猫", "freq", "Basic"], ["犬", "freq", "初級"]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)  # must NOT raise
+        assert result.is_categorical is True
+        assert storage.read_meta(dest / result.source_id / "index.sqlite")["is_categorical"] == "1"
+        assert _read_display(dest, result.source_id) == [
+            ("犬", storage.CATEGORICAL_RANK, "初級"),
+            ("猫", storage.CATEGORICAL_RANK, "Basic"),
+        ]
+
+    def test_jlpt_stored_as_labels_not_extracted_digits(self, tmp_path: Path) -> None:
+        # "N5"/"N1" must NOT become ranks 5/1 (which would invert the level order).
+        zip_path = _write_zip(
+            tmp_path / "jlpt.zip",
+            banks=[["猫", "freq", "N5"], ["犬", "freq", "N5"], ["本", "freq", "N1"], ["山", "freq", "N1"]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.is_categorical is True
+        rows = _read_display(dest, result.source_id)
+        assert {r[1] for r in rows} == {storage.CATEGORICAL_RANK}  # every rank is the sentinel
+        assert {(term, disp) for term, _rank, disp in rows} == {
+            ("猫", "N5"),
+            ("犬", "N5"),
+            ("本", "N1"),
+            ("山", "N1"),
+        }
+
+    def test_object_form_level_is_categorical(self, tmp_path: Path) -> None:
+        zip_path = _write_zip(
+            tmp_path / "obj.zip",
+            banks=[
+                ["猫", "freq", {"value": 5, "displayValue": "N5"}],
+                ["犬", "freq", {"value": 5, "displayValue": "N5"}],
+                ["本", "freq", {"value": 1, "displayValue": "N1"}],
+                ["山", "freq", {"value": 1, "displayValue": "N1"}],
+            ],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.is_categorical is True
+        assert all(rank == storage.CATEGORICAL_RANK for _t, rank, _d in _read_display(dest, result.source_id))
+
+    def test_stray_bare_int_and_empty_display_rows_dropped(self, tmp_path: Path) -> None:
+        # A categorical source with a bare-int row and an empty-displayValue row:
+        # neither yields a label, so neither is stored (no sentinel-with-None row).
+        zip_path = _write_zip(
+            tmp_path / "stray.zip",
+            banks=[
+                ["猫", "freq", "Basic"],
+                ["犬", "freq", "初級"],
+                ["鳥", "freq", 5],  # bare int -> no label -> dropped
+                ["魚", "freq", {"value": 3, "displayValue": ""}],  # empty label -> dropped
+            ],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.is_categorical is True
+        rows = _read_display(dest, result.source_id)
+        assert {r[0] for r in rows} == {"猫", "犬"}  # 鳥 and 魚 dropped
+        assert all(disp is not None and disp != "" for _t, _r, disp in rows)
+
+    def test_categorical_never_converts_to_ranks(self, tmp_path: Path) -> None:
+        zip_path = _write_zip(
+            tmp_path / "noconv.zip",
+            banks=[["猫", "freq", "Basic"], ["犬", "freq", "初級"], ["本", "freq", "Basic"]],
+        )
+        result = import_frequency_source(zip_path, tmp_path / "sources")
+        assert result.is_categorical is True
+        assert result.converted_to_ranks is False
+
+    def test_declared_frequency_mode_stays_numeric(self, tmp_path: Path) -> None:
+        # A declared frequencyMode is the author asserting numeric — it overrides
+        # categorical detection even for a few-distinct decorated dict.
+        zip_path = _write_zip(
+            tmp_path / "occ.zip",
+            frequency_mode="occurrence-based",
+            banks=[["猫", "freq", "5回"], ["犬", "freq", "5回"], ["本", "freq", "100回"], ["山", "freq", "100回"]],
+        )
+        result = import_frequency_source(zip_path, tmp_path / "sources")
+        assert result.is_categorical is False
+
+    def test_numeric_dict_meta_flag_is_zero(self, tmp_path: Path) -> None:
+        zip_path = _write_zip(tmp_path / "num.zip", banks=[["猫", "freq", 5], ["犬", "freq", 3]])
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.is_categorical is False
+        assert storage.read_meta(dest / result.source_id / "index.sqlite")["is_categorical"] == "0"
 
 
 class TestCsvImport:

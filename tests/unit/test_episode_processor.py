@@ -680,6 +680,71 @@ class TestOptionalServices:
         assert word.frequency_harmonic_rank == 266
         assert word.frequency_sources == [("BCCWJ", 400, None), ("JPDB", 200, None)]
 
+    def test_categorical_only_word_gets_no_numeric_rank_but_keeps_label(self, test_config, mock_services, tmp_path):
+        """A word ranked ONLY by a word-based (categorical) source has no numeric
+        rank/sort, yet its level label still reaches the card breakdown."""
+        from anki_miner.services.frequency.render import render_frequency_html
+        from anki_miner.services.frequency.storage import CATEGORICAL_RANK
+
+        word = _make_word("食べる")
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup_all.return_value = [("JLPT", CATEGORICAL_RANK, "N5")]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Sentinel excluded from both scalar aggregates -> no numeric rank/sort.
+        assert word.frequency_rank is None
+        assert word.frequency_harmonic_rank is None
+        # But the breakdown keeps the source, and it renders the label (not the sentinel).
+        assert word.frequency_sources == [("JLPT", CATEGORICAL_RANK, "N5")]
+        html = render_frequency_html(word.frequency_sources)
+        assert "N5" in html
+        assert str(CATEGORICAL_RANK) not in html
+
+    def test_mixed_numeric_and_categorical_uses_numeric_only(self, test_config, mock_services, tmp_path):
+        """A word ranked by a real numeric source AND tagged by a categorical one
+        keeps the numeric rank/sort — the categorical sentinel must not collapse
+        the rank nor inflate the harmonic count n (45000, not 90000)."""
+        from anki_miner.services.frequency.storage import CATEGORICAL_RANK
+
+        word = _make_word("食べる")
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup_all.return_value = [("Freq", 45000, None), ("JLPT", CATEGORICAL_RANK, "N5")]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert word.frequency_rank == 45000
+        assert word.frequency_harmonic_rank == 45000  # NOT 90000 (no phantom n)
+        assert word.frequency_sources == [("Freq", 45000, None), ("JLPT", CATEGORICAL_RANK, "N5")]
+
     def test_frequency_filter_removes_words(self, test_config, mock_services, tmp_path):
         """Frequency filter should remove words outside the threshold."""
         config = replace(test_config, max_frequency_rank=1000)
