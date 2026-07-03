@@ -18,6 +18,7 @@ def build_yomitan_zip(
     format_version: int = 3,
     media_files: dict[str, bytes] | None = None,
     styles_css: str | None = None,
+    index_extra: dict[str, Any] | None = None,
 ) -> Path:
     """Create a minimal Yomitan zip at zip_path. Returns zip_path.
 
@@ -27,6 +28,9 @@ def build_yomitan_zip(
 
     `styles_css`, when given, writes a root ``styles.css`` — the per-dictionary
     stylesheet Yomitan dicts ship (Issue #87).
+
+    `index_extra`, when given, is merged into the ``index.json`` object — used to
+    inject legacy inline ``tagMeta`` for the schema-v3 tag-conversion path.
     """
     if term_banks is None:
         term_banks = [
@@ -40,19 +44,18 @@ def build_yomitan_zip(
             [["v1", "expression", -3, "Ichidan verb", 0]],
         ]
 
+    index_obj: dict[str, Any] = {
+        "title": title,
+        "revision": revision,
+        "format": format_version,
+        "sequenced": True,
+    }
+    if index_extra:
+        index_obj.update(index_extra)
+
     zip_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr(
-            "index.json",
-            json.dumps(
-                {
-                    "title": title,
-                    "revision": revision,
-                    "format": format_version,
-                    "sequenced": True,
-                }
-            ),
-        )
+        zf.writestr("index.json", json.dumps(index_obj))
         for i, bank in enumerate(term_banks, 1):
             zf.writestr(f"term_bank_{i}.json", json.dumps(bank))
         for i, bank in enumerate(tag_banks, 1):

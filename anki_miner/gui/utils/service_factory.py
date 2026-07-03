@@ -59,12 +59,42 @@ class Services:
     wordset_service: WordsetService | None
     youtube_fetcher: YouTubeFetcherService
     expression_audio_fetcher: ExpressionAudioFetcher
+    # Loaded dictionary registry (same handle that built the provider chain),
+    # injected into the EpisodeProcessor so its per-slot DictMeta.schema_ok
+    # backs the 4.0 staleness gate — NOT the built chain, which drops stale
+    # slots and would make the gate never fire.
+    dictionary_registry: DictionaryRegistry
     load_result: ServiceLoadResult
+
+
+def _load_dict_registry(
+    config: AnkiMinerConfig,
+    load_result: ServiceLoadResult | None = None,
+) -> DictionaryRegistry:
+    """Construct + scan a :class:`DictionaryRegistry` for ``config.dicts_root``.
+
+    Shared by :func:`build_definition_service` and :func:`create_services` so the
+    disk scan happens once per service build and the same handle drives both the
+    provider chain and the 4.0 staleness gate (``DictMeta.schema_ok``).
+    """
+    registry = DictionaryRegistry(config.dicts_root)
+    try:
+        registry.load()
+    except OSError as e:
+        # OSError here means the registry guard inside load() didn't catch it
+        # (shouldn't happen after OVH-048 fix, but belt-and-suspenders).
+        msg = f"Could not scan dictionaries folder: {e}"
+        logger.warning(msg)
+        if load_result is not None:
+            load_result.warnings.append(msg)
+    return registry
 
 
 def build_definition_service(
     config: AnkiMinerConfig,
     load_result: ServiceLoadResult | None = None,
+    *,
+    registry: DictionaryRegistry | None = None,
 ) -> DefinitionService:
     """Build the dictionary provider chain and its :class:`DefinitionService`.
 
@@ -79,20 +109,15 @@ def build_definition_service(
         load_result: Optional sink for human-readable load info/warnings
             (used by :func:`create_services`). ``None`` skips that reporting;
             the eager-load failure is then re-raised for the caller to handle.
+        registry: Optional pre-loaded registry to reuse (``create_services``
+            passes the one it also hands to the processor for the staleness
+            gate). ``None`` builds + scans its own (the PrewarmWorker path).
 
     Returns:
         The constructed DefinitionService (loaded iff an indexed entry is on).
     """
-    registry = DictionaryRegistry(config.dicts_root)
-    try:
-        registry.load()
-    except OSError as e:
-        # OSError here means the registry guard inside load() didn't catch it
-        # (shouldn't happen after OVH-048 fix, but belt-and-suspenders).
-        msg = f"Could not scan dictionaries folder: {e}"
-        logger.warning(msg)
-        if load_result is not None:
-            load_result.warnings.append(msg)
+    if registry is None:
+        registry = _load_dict_registry(config, load_result)
     providers = registry.build_provider_chain(config)
     definition_service = DefinitionService(config, providers=providers)
 
@@ -237,10 +262,12 @@ def create_services(
     """
     load_result = ServiceLoadResult()
 
-    # Build the provider chain + DefinitionService (gated eager-load shared with
-    # PrewarmWorker via build_definition_service). Constructed BEFORE the parser
-    # because the parser's compound matcher borrows its offline_terms_exist.
-    definition_service = build_definition_service(config, load_result)
+    # Scan the dictionary registry ONCE, then reuse the same handle for both the
+    # provider chain and the EpisodeProcessor's staleness gate (4.0). Built
+    # BEFORE the parser because the parser's compound matcher borrows the
+    # DefinitionService's offline_terms_exist.
+    dictionary_registry = _load_dict_registry(config, load_result)
+    definition_service = build_definition_service(config, load_result, registry=dictionary_registry)
 
     if subtitle_parser is None:
         # Headword-existence probe: injected iff an indexed offline dict is
@@ -371,6 +398,7 @@ def create_services(
         wordset_service=wordset_service,
         youtube_fetcher=youtube_fetcher,
         expression_audio_fetcher=expression_audio_fetcher,
+        dictionary_registry=dictionary_registry,
         load_result=load_result,
     )
 
@@ -423,6 +451,7 @@ def create_episode_processor(
         stats_service=stats_service,
         youtube_fetcher=services.youtube_fetcher,
         expression_audio_fetcher=services.expression_audio_fetcher,
+        dictionary_registry=services.dictionary_registry,
     )
 
 

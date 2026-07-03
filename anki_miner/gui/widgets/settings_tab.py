@@ -524,6 +524,17 @@ class SettingsTab(QWidget):
         if index is not None:
             self.tab_widget.setCurrentIndex(index)
 
+    def trigger_reimport_all(self) -> None:
+        """Run the Dictionary → Reimport All flow (4.0 migration prompt hook).
+
+        Public entry point the startup schema-staleness prompt calls after the
+        user opts to reimport now. Delegates to the same
+        ``DictionaryImportFlow.reimport_all`` the panel button drives, so the
+        one-click migration and the manual path stay identical.
+        """
+        self.open_subtab("dictionaries")
+        self._dict_import_flow.reimport_all()
+
     def open_themes_subtab(self) -> None:
         """Switch the settings sub-tab to Themes.
 

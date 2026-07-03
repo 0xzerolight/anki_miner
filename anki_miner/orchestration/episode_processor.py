@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import AnkiMinerException
+from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.models import CardPayload, MediaData, ProcessingResult, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia, SubMode
@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
     from anki_miner.models import LineLemmas
+    from anki_miner.services.dictionary.registry import DictionaryRegistry
     from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
     from anki_miner.services.known_word_db import KnownWordDB
     from anki_miner.services.pitch_accent_service import PitchAccentService
@@ -225,6 +226,7 @@ class EpisodeProcessor:
         stats_service: StatsService | None = None,
         youtube_fetcher: YouTubeFetcherService | None = None,
         expression_audio_fetcher: ExpressionAudioFetcher | None = None,
+        dictionary_registry: DictionaryRegistry | None = None,
     ):
         """Initialize the episode processor.
 
@@ -249,6 +251,11 @@ class EpisodeProcessor:
                 ``expression_audio`` Anki field is mapped (non-empty).  ``None``
                 is only valid for test construction; the service factory always
                 provides a (possibly empty-chain) fetcher.
+            dictionary_registry: Optional loaded registry backing the 4.0
+                schema-staleness backstop (``check_dictionary_staleness``). The
+                service factory injects the same handle that built the provider
+                chain; ``None`` (test construction / callers that skip the gate)
+                disables the backstop.
         """
         self.config = config
         self.subtitle_parser = subtitle_parser
@@ -265,6 +272,7 @@ class EpisodeProcessor:
         self.stats_service = stats_service
         self._youtube_fetcher = youtube_fetcher
         self.expression_audio_fetcher = expression_audio_fetcher
+        self._dictionary_registry = dictionary_registry
         self._cancelled = False
         # Per-run external cancel source (e.g. a worker's threading.Event
         # ``is_set``), installed/removed by process_episode around each run
@@ -1221,8 +1229,11 @@ class EpisodeProcessor:
         )
         # Outside the try/except so SetupError propagates to callers instead of
         # being absorbed into a "completed" ProcessingResult.  Before temp-folder
-        # allocation so no dir is leaked on failure.
+        # allocation so no dir is leaked on failure. The staleness backstop (4.0)
+        # runs first: a stale-index run would otherwise drop every word for lack
+        # of a definition and report a silent zero-card success.
         if not preview_mode:
+            self.check_dictionary_staleness()
             self._preflight_card_target()
         run_temp_folder = self._allocate_run_temp_folder()
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
@@ -1450,6 +1461,26 @@ class EpisodeProcessor:
         """Fail fast on a misconfigured Anki target; auto-create the deck (Issue #52)."""
         self.anki_service.verify_card_target()
 
+    def check_dictionary_staleness(self) -> None:
+        """Raise SetupError if any enabled indexed dict slot needs reimport (4.0).
+
+        The single-episode backstop for the schema-bump migration gate:
+        consults the injected registry's per-slot ``DictMeta.schema_ok`` (NOT the
+        built provider chain, which silently drops stale slots) so a user who
+        upgraded and mines before reimporting gets one actionable error instead
+        of a silent zero-card run. Queue workers front-run this with their own
+        pre-loop check so a batch aborts once rather than per item; this covers
+        the direct single-episode callers (episode / manual-pair / deck-builder).
+        No-op when no registry was injected.
+        """
+        if self._dictionary_registry is None:
+            return
+        stale = self._dictionary_registry.stale_enabled(self.config)
+        if stale:
+            from anki_miner.services.dictionary.registry import format_stale_reimport_message
+
+            raise SetupError(format_stale_reimport_message(stale))
+
     def process_youtube_url(
         self,
         url: str,
@@ -1529,6 +1560,9 @@ class EpisodeProcessor:
             # Deliberate early check: fail before the video download rather than
             # after.  process_episode re-runs the same pre-flight post-fetch;
             # that double-check is intentional — cheap idempotent localhost calls.
+            # The staleness backstop is likewise cheap and fails before the
+            # download when an enabled index needs reimport.
+            self.check_dictionary_staleness()
             self._preflight_card_target()
 
         # The fetch stage consults cancel_event directly (fetch_video gets it

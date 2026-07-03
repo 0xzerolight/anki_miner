@@ -169,6 +169,13 @@ class MainWindow(QMainWindow):
         if not self.config.first_run_setup_done:
             QTimer.singleShot(0, self._maybe_offer_first_run_setup)
 
+        # Schema-bump migration prompt (4.0): if an enabled indexed dictionary
+        # needs reimport after a schema upgrade, mining would silently emit zero
+        # cards. Prompt (deferred so the window paints first) offering one-click
+        # Reimport All. Runtime guard only — re-offered next launch until fixed.
+        self._stale_dict_prompt_handled = False
+        QTimer.singleShot(0, self._maybe_prompt_stale_dictionaries)
+
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         self.setWindowTitle("Anki Miner")
@@ -562,6 +569,55 @@ class MainWindow(QMainWindow):
             # is set even if the wizard raises, so it never re-fires. `config` is
             # the wizard's returned config when it completed, else the original.
             self.update_config(replace(config, first_run_setup_done=True))
+
+    def _maybe_prompt_stale_dictionaries(self) -> None:
+        """Prompt to Reimport All when an enabled index needs a schema upgrade (4.0).
+
+        Detection reuses the registry seam (``stale_enabled_dicts`` → per-slot
+        ``DictMeta.schema_ok``), not a new scanner. When any *enabled* indexed
+        chain entry is schema-stale, mining would silently drop every word for
+        lack of a definition, so we surface a blocking prompt offering one-click
+        Reimport All (which covers both yomitan ``source.zip`` slots and the
+        legacy JMdict slot; slots without a saved source are named in its
+        summary and fall to the per-row affordance). "Later" leaves mining gated
+        by the per-run pre-checks; the prompt re-offers next launch.
+        """
+        if self._stale_dict_prompt_handled:
+            return
+        from anki_miner.services.dictionary.registry import stale_enabled_dicts
+
+        stale = stale_enabled_dicts(self.config)
+        if not stale:
+            return
+        # Set before exec() so a re-entrant 0ms fire inside the modal loop bails.
+        self._stale_dict_prompt_handled = True
+
+        names = "\n".join(f"  • {m.source_name}" for m in stale)
+        body = (
+            self.tr("These dictionaries need to be re-imported after an app upgrade " "(their index format changed):")
+            + f"\n\n{names}\n\n"
+            + self.tr(
+                "Until you do, mining is blocked for them so you don't get "
+                "cards with no definitions. Re-import them now?"
+            )
+        )
+        reply = QMessageBox.question(
+            self,
+            self.tr("Dictionaries need re-importing"),
+            body,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        idx = self._settings_tab_index()
+        if idx < 0:
+            return
+        self.tabs.setCurrentIndex(idx)
+        settings_widget = self.tabs.widget(idx)
+        trigger = getattr(settings_widget, "trigger_reimport_all", None)
+        if callable(trigger):
+            trigger()
 
     def _show_about(self) -> None:
         """Show the About dialog."""

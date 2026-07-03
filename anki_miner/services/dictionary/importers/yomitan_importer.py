@@ -20,9 +20,11 @@ from anki_miner.services.dictionary.schema_validation import (
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
+    TagMeta,
     bulk_insert,
     create_index,
     write_meta,
+    write_tags,
 )
 from anki_miner.services.dictionary.yomitan_renderer import (
     dict_media_safe_basename,
@@ -173,6 +175,10 @@ def import_yomitan_zip(
                     definition_tags = str(entry[2]).split() if len(entry) > 2 and entry[2] else []
                     extra_term_tags = str(entry[7]).split() if len(entry) > 7 and entry[7] else []
                     all_tags = definition_tags + extra_term_tags
+                    # Column 4 (entry[3]) is `ruleIdentifiers`: the space-separated
+                    # deinflection condition flags. Stored raw on DictRow.rules for
+                    # the schema-v3 deinflector-fallback consumer (plan item 5.2).
+                    rules = str(entry[3]) if len(entry) > 3 and entry[3] else ""
                     content = render_glossary_entry(
                         glossary,
                         dict_id=dict_id,
@@ -184,6 +190,7 @@ def import_yomitan_zip(
                         reading=reading,
                         content=content,
                         tags=" ".join(all_tags),
+                        rules=rules,
                         score=score,
                         sequence=sequence,
                     )
@@ -191,6 +198,13 @@ def import_yomitan_zip(
                     progress(file_idx, len(term_files), f"Imported {term_file.name}")
 
         bulk_insert(db_path, rows())
+
+        # Tag metadata (schema v3): glob tag_bank_*.json + convert any legacy
+        # index.json tagMeta so the provider can expand tag names into hover
+        # chips. Absent tags simply leave the table empty (italic fallback).
+        tag_metas = _collect_tags(tmp_path, index)
+        if tag_metas:
+            write_tags(db_path, tag_metas)
 
         media_warnings = _copy_dict_media(tmp_path, staging / "media", media_paths, dict_id=dict_id)
 
@@ -254,6 +268,86 @@ def import_yomitan_zip(
             skipped_malformed=skipped_malformed,
             media_warnings=tuple(media_warnings),
         )
+
+
+def _collect_tags(zip_root: Path, index: dict) -> list[TagMeta]:
+    """Gather tag metadata from ``tag_bank_*.json`` + legacy ``index.json`` tagMeta.
+
+    Tag-bank files are read in sorted order and converted first; the legacy
+    inline ``tagMeta`` object is appended last so, under ``write_tags``'
+    last-wins upsert, an index-level definition overrides a same-named bank one
+    (mirrors Yomitan pushing ``_addOldIndexTags`` after the bank tags). A tag
+    that fails structural conversion is skipped, never aborting the import.
+    """
+    tags: list[TagMeta] = []
+    for tag_file in sorted(zip_root.glob("tag_bank_*.json")):
+        try:
+            entries = json.loads(tag_file.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            raise SetupError(f"Invalid {tag_file.name}: {e}") from e
+        ensure_bank_array(entries, tag_file.name)
+        for entry in entries:
+            tag = _convert_tag_bank_entry(entry)
+            if tag is not None:
+                tags.append(tag)
+    tags.extend(_convert_old_index_tag_meta(index.get("tagMeta")))
+    return tags
+
+
+def _convert_tag_bank_entry(entry: Any) -> TagMeta | None:
+    """Convert one tag-bank 5-tuple into a :class:`TagMeta`, or None if malformed.
+
+    Ported from Yomitan ``DictionaryImporter._convertTagBankEntry``
+    (ext/js/dictionary/dictionary-importer.js, upstream e2ed450): the tuple is
+    ``[name, category, order, notes, score]``. ``order`` maps to the ``ord``
+    column (SQL keyword clash). A blank name or a non-numeric order/score is
+    dropped rather than crashing the whole import.
+    """
+    if not isinstance(entry, list) or len(entry) < 5:
+        return None
+    try:
+        name = str(entry[0])
+        if not name:
+            return None
+        return TagMeta(
+            name=name,
+            category=str(entry[1]) if entry[1] is not None else "",
+            ord=int(entry[2]) if entry[2] is not None else 0,
+            notes=str(entry[3]) if entry[3] is not None else "",
+            score=float(entry[4]) if entry[4] is not None else 0.0,
+        )
+    except (TypeError, ValueError):
+        return None
+
+
+def _convert_old_index_tag_meta(tag_meta: Any) -> list[TagMeta]:
+    """Convert legacy ``index.json`` ``tagMeta`` into :class:`TagMeta` rows.
+
+    Ported from Yomitan ``DictionaryImporter._addOldIndexTags`` (upstream
+    e2ed450): ``tagMeta`` is an object mapping ``name`` → ``{category, order,
+    notes, score}``. Non-dict values are skipped.
+    """
+    if not isinstance(tag_meta, dict):
+        return []
+    out: list[TagMeta] = []
+    for name, value in tag_meta.items():
+        if not isinstance(value, dict):
+            continue
+        try:
+            order = value.get("order")
+            score = value.get("score")
+            out.append(
+                TagMeta(
+                    name=str(name),
+                    category=str(value.get("category", "")),
+                    ord=int(order) if order is not None else 0,
+                    notes=str(value.get("notes", "")),
+                    score=float(score) if score is not None else 0.0,
+                )
+            )
+        except (TypeError, ValueError):
+            continue
+    return out
 
 
 # A dictionary `styles.css` is a few KB in practice (Jitendex's is ~6 KB). Cap

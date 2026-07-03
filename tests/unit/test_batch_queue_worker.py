@@ -740,3 +740,38 @@ def test_batch_vocab_scan_at_most_once_across_items(tmp_path):
 
     # Only ONE AnkiService must be constructed for the whole run
     assert len(constructed_services) == 1, f"Expected 1 AnkiService construction, got {len(constructed_services)}"
+
+
+# ---------------------------------------------------------------------------
+# 4.0: schema-staleness pre-loop gate — abort once, no per-item rows
+# ---------------------------------------------------------------------------
+
+
+def test_stale_dict_aborts_queue_once(qapp):
+    """A stale enabled dict slot surfaces the error exactly once (no per-item
+    failure rows, no items picked) and still emits queue_finished."""
+    queue = MagicMock()
+    queue.pending_count = 3
+    config = AnkiMinerConfig()
+    worker = BatchQueueWorkerThread(queue, config, MagicMock(), None)
+
+    errors: list[str] = []
+    item_started, item_completed, item_failed, finished = [], [], [], []
+    worker.error.connect(errors.append)
+    worker.item_started.connect(lambda *a: item_started.append(a))
+    worker.item_completed.connect(lambda *a: item_completed.append(a))
+    worker.item_failed.connect(lambda *a: item_failed.append(a))
+    worker.queue_finished.connect(finished.append)
+
+    with patch(
+        "anki_miner.gui.workers.batch_queue_worker.stale_dict_reimport_error",
+        return_value="Dictionary 'X' needs reimport (schema upgrade) — Settings → Dictionaries → Reimport All",
+    ):
+        worker.run()
+
+    assert len(errors) == 1
+    assert "Reimport All" in errors[0]
+    # Abort-once: no item picked, no per-item rows.
+    queue.get_next_pending.assert_not_called()
+    assert item_started == [] and item_completed == [] and item_failed == []
+    assert finished == [0]  # queue_finished(total_cards=0)

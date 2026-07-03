@@ -618,3 +618,131 @@ class TestStylesCssCapture:
         result = import_yomitan_zip(zip_path, dest_root)
         meta = read_meta(dest_root / result.dict_id / "index.sqlite")
         assert "styles_css" not in meta
+
+
+class TestTagBankImport:
+    """schema v3: tag_bank_*.json + legacy index.json tagMeta → tags table."""
+
+    def test_tag_bank_written_to_tags_table(self, tmp_path: Path):
+        # Mirror valid-dictionary1's 15 tags across three banks.
+        tag_banks = [
+            [
+                ["E1", "default", 0, "example tag 1", 0],
+                ["E2", "default", 0, "example tag 2", 0],
+                ["P", "popular", 0, "popular term", 0],
+                ["n", "partOfSpeech", 0, "noun", 0],
+                ["vt", "partOfSpeech", 0, "transitive verb", 0],
+                ["abbr", "default", 0, "abbreviation", 0],
+            ],
+            [
+                ["K1", "default", 0, "example kanji tag 1", 0],
+                ["K2", "default", 0, "example kanji tag 2", 0],
+                ["kstat1", "class", 0, "kanji stat 1", 0],
+                ["kstat2", "code", 0, "kanji stat 2", 0],
+                ["kstat3", "index", 0, "kanji stat 3", 0],
+                ["kstat4", "misc", 0, "kanji stat 4", 0],
+                ["kstat5", "misc", 0, "kanji stat 5", 0],
+            ],
+            [
+                ["P1", "default", 0, "example pitch tag 1", 0],
+                ["P2", "default", 0, "example pitch tag 2", 0],
+            ],
+        ]
+        zip_path = build_yomitan_zip(tmp_path / "src" / "tags.zip", tag_banks=tag_banks)
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+
+        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        try:
+            rows = conn.execute("SELECT name, category, ord, notes, score FROM tags").fetchall()
+        finally:
+            conn.close()
+        by_name = {r[0]: r for r in rows}
+        assert len(rows) == 15
+        assert by_name["n"] == ("n", "partOfSpeech", 0, "noun", 0.0)
+        assert by_name["vt"][3] == "transitive verb"
+
+    def test_tag_bank_notes_and_order_preserved(self, tmp_path: Path):
+        tag_banks = [[["uk", "usage", -2, "word usually written using kana alone", 5]]]
+        zip_path = build_yomitan_zip(tmp_path / "src" / "uk.zip", tag_banks=tag_banks)
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        try:
+            row = conn.execute("SELECT category, ord, notes, score FROM tags WHERE name = ?", ("uk",)).fetchone()
+        finally:
+            conn.close()
+        assert row == ("usage", -2, "word usually written using kana alone", 5.0)
+
+    def test_legacy_index_tag_meta_converted(self, tmp_path: Path):
+        """A dict with no tag_bank files but an inline index.json tagMeta."""
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "legacy.zip",
+            tag_banks=[],
+            index_extra={
+                "tagMeta": {
+                    "n": {"category": "partOfSpeech", "order": 1, "notes": "noun", "score": 0},
+                    "uk": {"category": "usage", "order": -2, "notes": "usually kana", "score": 0},
+                }
+            },
+        )
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        try:
+            rows = {r[0]: r for r in conn.execute("SELECT name, category, ord, notes FROM tags")}
+        finally:
+            conn.close()
+        assert rows["n"] == ("n", "partOfSpeech", 1, "noun")
+        assert rows["uk"] == ("uk", "usage", -2, "usually kana")
+
+    def test_index_tag_meta_overrides_bank_on_name_clash(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "clash.zip",
+            tag_banks=[[["n", "bank", 0, "from bank", 0]]],
+            index_extra={"tagMeta": {"n": {"category": "index", "order": 9, "notes": "from index", "score": 0}}},
+        )
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        try:
+            row = conn.execute("SELECT category, notes FROM tags WHERE name = ?", ("n",)).fetchone()
+        finally:
+            conn.close()
+        assert row == ("index", "from index")
+
+    def test_no_tags_leaves_empty_table(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(tmp_path / "src" / "notags.zip", tag_banks=[])
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        try:
+            assert conn.execute("SELECT COUNT(*) FROM tags").fetchone()[0] == 0
+        finally:
+            conn.close()
+
+    def test_rules_populated_from_entry_column_3(self, tmp_path: Path):
+        """entry[3] (ruleIdentifiers) is stored on entries.rules."""
+        term_banks = [[["食べる", "たべる", "v1", "v1 vs", 0, ["to eat"], 1, ""]]]
+        zip_path = build_yomitan_zip(tmp_path / "src" / "rules.zip", term_banks=term_banks)
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        try:
+            rules = conn.execute("SELECT rules FROM entries WHERE term = ?", ("食べる",)).fetchone()[0]
+        finally:
+            conn.close()
+        assert rules == "v1 vs"
+
+    def test_reading_stored_hiragana_folded(self, tmp_path: Path):
+        """A katakana reading is folded to hiragana at import (schema v3)."""
+        term_banks = [[["硝子", "ガラス", "n", "", 0, ["glass"], 1, ""]]]
+        zip_path = build_yomitan_zip(tmp_path / "src" / "kana.zip", term_banks=term_banks)
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        try:
+            reading = conn.execute("SELECT reading FROM entries WHERE term = ?", ("硝子",)).fetchone()[0]
+        finally:
+            conn.close()
+        assert reading == "がらす"
