@@ -19,7 +19,6 @@ from anki_miner.services.anki_note_builder import (
     REQUIRED_FIELD_KEYS as _REQUIRED_FIELD_KEYS,
 )
 from anki_miner.services.anki_note_builder import (
-    _get_root_deck_name,
     _strip_for_dedup,
     build_note,
 )
@@ -750,26 +749,15 @@ class AnkiService:
         Ported from Yomitan ``AnkiConnect._getNoteQuery`` + ``_fieldsToQuery``
         (``ext/js/comm/anki-connect.js``, upstream e2ed450): a first-field-only
         ``"<field>:<value>"`` term (field name lower-cased — Anki field search is
-        case-insensitive on the name), optionally prefixed with a ``"deck:..."``
-        term for the configured duplicate scope so it searches the same universe
-        the pre-add probe used. ``deck-root`` is synthesized client-side via
-        :func:`_get_root_deck_name`, exactly as ``build_duplicate_scope_options``
-        does for the probe. Returns ``""`` for a fieldless note (never matches;
-        the caller then falls back to skip).
+        case-insensitive on the name), collection-wide so it searches the same
+        universe the pre-add probe used. Returns ``""`` for a fieldless note
+        (never matches; the caller then falls back to skip).
         """
         fields = note.get("fields") or {}
         if not fields:
             return ""
         first_key = next(iter(fields))
-        field_term = f'"{first_key.lower()}:{self._escape_dup_query(str(fields[first_key]))}"'
-        scope = self.config.duplicate_scope
-        if scope == "deck":
-            deck = self._escape_dup_query(self.config.anki_deck_name)
-            return f'"deck:{deck}" {field_term}'
-        if scope == "deck-root":
-            deck = self._escape_dup_query(_get_root_deck_name(self.config.anki_deck_name))
-            return f'"deck:{deck}" {field_term}'
-        return field_term
+        return f'"{first_key.lower()}:{self._escape_dup_query(str(fields[first_key]))}"'
 
     @staticmethod
     def _unwrap_multi_result(sub: Any) -> Any:

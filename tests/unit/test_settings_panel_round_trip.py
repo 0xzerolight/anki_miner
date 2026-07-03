@@ -78,8 +78,6 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "sentence": "SN",
             "audio": "AU",
         },
-        duplicate_scope="deck-root",
-        duplicate_check_all_models=True,
         # --- MediaSettingsPanel ---
         audio_format="opus",
         audio_bitrate=96,
@@ -136,8 +134,6 @@ _SAVE_PATH_FIELDS = frozenset(
         "pitch_category_format",
         "card_type",
         "card_type_marker_fields",
-        "duplicate_scope",
-        "duplicate_check_all_models",
         # MediaSettingsPanel
         "audio_format",
         "audio_bitrate",
