@@ -31,6 +31,8 @@ REQUIRED_FIELD_KEYS = {
 OPTIONAL_FIELD_KEYS = {
     "pitch_position",
     "pitch_category",
+    "pitch_graph",
+    "pitch_text",
     "frequency",
     "frequency_sort",
     "source",
@@ -41,6 +43,12 @@ OPTIONAL_FIELD_KEYS = {
     "cloze_suffix",
     "conjugation",
 }
+
+# Optional fields whose value is pre-rendered HTML/SVG inserted verbatim (like
+# glossary), NOT html.escape()d by the OPTIONAL pass — escaping would turn the
+# tags into literal text. They follow the skip-when-empty contract: an absent
+# value leaves the field untouched rather than blanking it.
+_RAW_HTML_FIELD_KEYS = ("frequency", "pitch_graph", "pitch_text")
 
 # The four Yomitan getCloze split fields (3.1). Kept in field_data (not the
 # extra_fields pass) so an empty prefix/suffix is still written verbatim rather
@@ -192,17 +200,19 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         if not extra_fields:
             extra_fields = None
 
-    # Pull frequency out of extra_fields BEFORE the OPTIONAL pass for the same
-    # reason as glossary: the frequency field is now a pre-rendered bullet list
-    # (<ul><li>Source: rank</li>…</ul>), not a bare number. Escaping it would
-    # turn the tags into literal text. frequency_sort (a bare number) stays in
-    # the normal escaped OPTIONAL pass — escaping a number is a no-op.
-    frequency_html = ""
-    if extra_fields and "frequency" in extra_fields:
-        frequency_html = extra_fields["frequency"] or ""
-        extra_fields = {k: v for k, v in extra_fields.items() if k != "frequency"}
-        if not extra_fields:
-            extra_fields = None
+    # Pull the raw-HTML optional fields out of extra_fields BEFORE the OPTIONAL
+    # pass for the same reason as glossary: they carry pre-rendered markup — a
+    # frequency bullet list (<ul><li>Source: rank</li>…</ul>), an inline pitch
+    # graph SVG, or a pitch overline span — not escapable text. Escaping would
+    # turn the tags into literal text. Sibling scalar fields (frequency_sort,
+    # pitch_position) stay in the escaped OPTIONAL pass — escaping a number/digit
+    # string is a no-op.
+    raw_html_values = dict.fromkeys(_RAW_HTML_FIELD_KEYS, "")
+    if extra_fields:
+        for raw_key in _RAW_HTML_FIELD_KEYS:
+            if raw_key in extra_fields:
+                raw_html_values[raw_key] = extra_fields[raw_key] or ""
+        extra_fields = {k: v for k, v in extra_fields.items() if k not in _RAW_HTML_FIELD_KEYS} or None
 
     # Build field values (only reference successfully stored media)
     picture_html = ""
@@ -251,7 +261,9 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         "sentence": sentence_field,
         "definition": definition or "",
         "glossary": glossary_html,
-        "frequency": frequency_html,
+        "frequency": raw_html_values["frequency"],
+        "pitch_graph": raw_html_values["pitch_graph"],
+        "pitch_text": raw_html_values["pitch_text"],
         "picture": picture_html,
         "audio": audio_ref,
         "expression_audio": expression_audio_ref,
@@ -266,11 +278,12 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         anki_field_name = config.anki_fields.get(key, "")
         if not anki_field_name:
             continue
-        # frequency carries pre-rendered bullet-list HTML and is inserted raw
-        # (like glossary). Unlike the always-emitted fields above it follows the
-        # optional gating contract: omit entirely when the value is empty so an
-        # unranked word leaves the field untouched rather than blanking it.
-        if key == "frequency" and not value:
+        # The raw-HTML fields (frequency, pitch_graph, pitch_text) are inserted
+        # verbatim (like glossary). Unlike the always-emitted fields above they
+        # follow the optional gating contract: omit entirely when the value is
+        # empty so a word with no data leaves the field untouched rather than
+        # blanking it.
+        if key in _RAW_HTML_FIELD_KEYS and not value:
             continue
         fields[anki_field_name] = value
 
