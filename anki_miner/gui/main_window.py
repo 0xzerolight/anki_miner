@@ -558,10 +558,13 @@ class MainWindow(QMainWindow):
             self,
             self.tr("Restyle Mined Cards"),
             self.tr(
-                "This rewrites the glossary field of your mined cards to embed the built-in "
+                "This rewrites the styling field of your mined cards (the glossary field, or "
+                "the definition field when no glossary field is mapped) to embed the built-in "
                 "styling directly in each card, so cards you mined earlier match ones mined "
                 "now. It's safe to run more than once and only adds styling — it never removes "
-                "card content.\n\nContinue?"
+                "card content.\n\nClose Anki's card browser and any open note editor first: "
+                "updating a note that is open for editing can lose your unsaved edits."
+                "\n\nContinue?"
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
