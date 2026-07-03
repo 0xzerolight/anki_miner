@@ -103,6 +103,79 @@ def _is_mp3(body: bytes) -> bool:
     return bool(body[0] == 0xFF and (body[1] & 0xE0) == 0xE0)
 
 
+# Ported from Yomitan ext/js/media/media-util.js
+# (getFileExtensionFromAudioMediaType), upstream commit
+# e2ed450c2f11a591922822e77f008e70a87daf0c. Maps a response Content-Type to the
+# file extension used for the cached Anki media filename. The two entries marked
+# below are additions beyond upstream: local-audio-yomichan serves opus/flac and
+# some servers label FLAC as audio/x-flac, neither of which upstream lists.
+AUDIO_MEDIA_TYPE_EXTENSIONS: dict[str, str] = {
+    "audio/aac": ".aac",
+    "audio/mpeg": ".mp3",
+    "audio/mp3": ".mp3",
+    "audio/mp4": ".mp4",
+    "audio/ogg": ".ogg",
+    "audio/vorbis": ".ogg",
+    "application/ogg": ".ogg",
+    "audio/opus": ".opus",  # addition (l-a-y opus); not in upstream
+    "audio/vnd.wav": ".wav",
+    "audio/wave": ".wav",
+    "audio/wav": ".wav",
+    "audio/x-wav": ".wav",
+    "audio/x-pn-wav": ".wav",
+    "audio/flac": ".flac",
+    "audio/x-flac": ".flac",  # addition (common FLAC alias); not in upstream
+    "audio/webm": ".webm",
+}
+
+
+def audio_extension_for_media_type(media_type: str | None) -> str | None:
+    """Return the file extension (incl. dot) for an audio Content-Type, or None.
+
+    Any charset/parameter suffix (``; charset=...``) and case are normalized off
+    before the lookup so ``audio/MPEG; q=1`` resolves like ``audio/mpeg``.
+    """
+    if not media_type:
+        return None
+    key = media_type.split(";", 1)[0].strip().lower()
+    return AUDIO_MEDIA_TYPE_EXTENSIONS.get(key)
+
+
+def _new_browser_session() -> "requests.Session":
+    """Return a fresh ``requests.Session`` presenting the browser User-Agent.
+
+    Shared by every online audio fetcher: the CDN behind JPod101's 301 redirect
+    (and, defensively, other endpoints) 403s the default ``python-requests`` UA
+    — see ``_BROWSER_USER_AGENT``.
+    """
+    session = requests.Session()
+    session.headers.update({"User-Agent": _BROWSER_USER_AGENT})
+    return session
+
+
+def _find_cached_by_stem(cache_dir: Path, stem: str) -> Path | None:
+    """Return a cached audio file whose name is ``<stem>.<ext>``, or None.
+
+    Extension varies by source (mp3/opus/flac/…), so match any suffix. Uses
+    ``iterdir`` + ``startswith`` rather than ``glob`` because a mined form may
+    contain glob metacharacters ([], *, ?) that would corrupt a glob pattern.
+    Skips ``.part`` staging files left by a crashed prior download. A missing or
+    unreadable directory yields None (first-fetch cold path).
+    """
+    prefix = f"{stem}."
+    try:
+        return next(
+            (
+                p
+                for p in cache_dir.iterdir()
+                if p.name.startswith(prefix) and not p.name.endswith(".part") and p.is_file()
+            ),
+            None,
+        )
+    except OSError:
+        return None
+
+
 # Per-run audio failure-cause buckets (Issue: audio-failure-cause-classification).
 # Ported concept from Yomitan's Backend._getAudioDownloadError
 # (ext/js/background/backend.js, upstream commit
@@ -133,6 +206,92 @@ def _classify_request_exception(exc: BaseException) -> str:
     if isinstance(exc, requests.exceptions.Timeout):
         return "timeout"
     return "connection"
+
+
+def download_audio_to_cache(
+    session: "requests.Session",
+    url: str,
+    cache_dir: Path,
+    stem: str,
+    *,
+    timeout: int = 10,
+    failure_counts: dict[str, int] | None = None,
+) -> Path | None:
+    """GET *url*, validate it is audio, and atomically cache it as ``<stem><ext>``.
+
+    Shared leaf for the custom and scrape fetchers (they reuse JPod101's
+    Session/UA/size-cap plumbing). The extension is chosen from the response
+    Content-Type (``audio_extension_for_media_type``), falling back to ``.mp3``
+    when the body sniffs as MP3 (``_is_mp3``) — this covers l-a-y's opus/flac/aac
+    as well as servers that omit or mislabel the type on an MP3.
+
+    Never raises: transient failures (non-200, oversized/empty/non-audio body,
+    network/OS error) tally into *failure_counts* (if given, keyed by
+    ``FAILURE_KEYS``) and return None. Unlike JPod101 no ``.miss`` marker is ever
+    written — custom/scrape server contents change, so a miss now may be a hit
+    later. Successful downloads ARE cached (Anki-media-unique ``stem`` supplied
+    by the caller). The write is atomic (unique ``.part`` temp + ``os.replace``)
+    so a killed process cannot leave a truncated file that passes a later
+    cache-hit check.
+    """
+
+    def _bump(key: str) -> None:
+        if failure_counts is not None:
+            failure_counts[key] += 1
+
+    try:
+        response = session.get(url, timeout=timeout, stream=True)
+        try:
+            if response.status_code != 200:
+                _bump("http_status")
+                return None
+
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in response.iter_content(chunk_size=8192):
+                total += len(chunk)
+                if total > MAX_AUDIO_BYTES:
+                    _bump("non_audio")
+                    return None
+                chunks.append(chunk)
+            body = b"".join(chunks)
+
+            if not body:
+                _bump("connection")
+                return None
+
+            ext = audio_extension_for_media_type(response.headers.get("Content-Type"))
+            if ext is None and _is_mp3(body):
+                ext = ".mp3"
+            if ext is None:
+                # Not recognizable audio (HTML error page, unknown type) —
+                # transient; retried next run since no marker is written.
+                _bump("non_audio")
+                return None
+
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            dest = cache_dir / f"{stem}{ext}"
+            with tempfile.NamedTemporaryFile(dir=cache_dir, suffix=".part", delete=False) as tmp_fd:
+                tmp_name = tmp_fd.name
+                try:
+                    tmp_fd.write(body)
+                except OSError:
+                    with contextlib.suppress(OSError):
+                        Path(tmp_name).unlink()
+                    raise
+            try:
+                os.replace(tmp_name, dest)
+            except OSError:
+                with contextlib.suppress(OSError):
+                    Path(tmp_name).unlink()
+                raise
+            return dest
+        finally:
+            response.close()
+    except (requests.RequestException, OSError) as exc:
+        _bump(_classify_request_exception(exc))
+        logger.debug("audio download failed for %s: %s", url, exc)
+        return None
 
 
 def _first_candidate_hit(
@@ -188,11 +347,9 @@ class JPod101AudioFetcher:
         self._delay = delay if delay >= 0.0 else 0.0
         # Not thread-safe; safe because each processor builds its own fetcher
         # (service_factory creates fresh Services per create_episode_processor call).
-        self._session = requests.Session()
         # The CDN behind the 301 redirect 403s the default python-requests UA;
-        # present a browser UA so valid words actually download (see
-        # _BROWSER_USER_AGENT note above).
-        self._session.headers.update({"User-Agent": _BROWSER_USER_AGENT})
+        # _new_browser_session presents a browser UA so valid words download.
+        self._session = _new_browser_session()
         # Per-run failure-cause tally (see FAILURE_KEYS). Bumped only in the
         # transient-failure branches below; a confirmed .miss (word genuinely
         # absent) is NOT a failure and never counted. Read via stats().
