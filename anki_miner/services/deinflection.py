@@ -263,11 +263,36 @@ def find_highlight_end(
 ) -> int:
     """End offset of the full inflected form starting at ``tok_start``.
 
+    Thin end-only wrapper over :func:`find_highlight_end_with_trace`; see there
+    for the full contract.
+    """
+    return find_highlight_end_with_trace(text, raw_tokens, tok_start, tok_end, token)[0]
+
+
+def find_highlight_end_with_trace(
+    text: str,
+    raw_tokens: list,
+    tok_start: int,
+    tok_end: int,
+    token: Any,
+) -> tuple[int, tuple[str, ...]]:
+    """Full-inflected-form end offset plus the accepted deinflection chain.
+
     Yomitan's ``originalTextLength`` mechanic adapted to a known lemma:
     extend the mined 動詞/形容詞 token's span over following raw tokens and
     accept the LONGEST candidate substring whose deinflection chain reaches
     the token's ``orthBase``/lemma under the cType condition mask. No valid
-    chain (or any malformed input) ⇒ ``tok_end`` — today's stem-only span.
+    chain (or any malformed input) ⇒ ``(tok_end, ())`` — today's stem-only span
+    with an empty chain.
+
+    The second element is the accepted result's transform-id chain in
+    Yomitan *attachment order* (dictionary form outward): 食べませんでした →
+    ``('-ます', 'negative', '-た')``. The BFS records frames surface-first
+    (``entry.trace + (frame,)``); upstream ``_extendTrace`` prepends and
+    ``translator.js`` maps ``trace → inflectionRules``, so the equivalent here
+    is ``reversed(result.trace)`` (verified against
+    ``japanese-transforms.test.js``). An empty tuple means no rightward
+    extension was accepted (the surface token stands alone).
 
     Window stops (bounds only, never the correctness guarantee): a
     following raw token must be adjacent in ``text``, pure hiragana,
@@ -276,9 +301,9 @@ def find_highlight_end(
     """
     feature = getattr(token, "feature", None)
     if getattr(feature, "pos1", None) not in _EXTENDABLE_POS1:
-        return tok_end
+        return tok_end, ()
     if not (0 <= tok_start < tok_end <= len(text)):
-        return tok_end
+        return tok_end, ()
 
     targets = set()
     orth_base = _str_or_none(getattr(feature, "orthBase", None))
@@ -288,7 +313,7 @@ def find_highlight_end(
     if lemma is not None:
         targets.add(lemma)
     if not targets:
-        return tok_end
+        return tok_end, ()
 
     deinflector = get_japanese_deinflector()
     mask = deinflector.mask_for_ctype(getattr(feature, "cType", None))
@@ -298,8 +323,9 @@ def find_highlight_end(
         candidate = text[tok_start:candidate_end]
         for result in deinflector.transform(candidate):
             if result.text in targets and conditions_match_mask(result.conditions, mask):
-                return candidate_end
-    return tok_end
+                chain = tuple(frame[0] for frame in reversed(result.trace))
+                return candidate_end, chain
+    return tok_end, ()
 
 
 def conditions_match_mask(result_conditions: int, target_mask: int) -> bool:

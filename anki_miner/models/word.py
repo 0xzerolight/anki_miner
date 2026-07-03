@@ -67,6 +67,13 @@ class TokenizedWord:
     # stem morpheme 蒔い. -1 sentinel means "same as surface_end". Bolding
     # spans [surface_start, bold_end); extension is strictly rightward.
     highlight_end: int = -1
+    # Deinflection chain that produced the accepted inflected span, in Yomitan
+    # attachment order (dictionary form outward): 食べさせられた →
+    # ('causative', 'potential or passive', '-た'). Empty when the span had no
+    # rightward extension. Backs the opt-in ``conjugation`` card field (3.2);
+    # transform ids, not upstream description strings (those were omitted from
+    # the ported rule table — see japanese_transforms.py).
+    inflection_chain: tuple[str, ...] = ()
     # Precomputed bolded variants of sentence / sentence_furigana with
     # <b>...</b> wrapping the target morpheme. Populated at parse time
     # (or i+1 swap time) only when config.bold_target_in_sentence is on.

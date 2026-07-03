@@ -39,6 +39,7 @@ OPTIONAL_FIELD_KEYS = {
     "cloze_body",
     "cloze_body_kana",
     "cloze_suffix",
+    "conjugation",
 }
 
 # The four Yomitan getCloze split fields (3.1). Kept in field_data (not the
