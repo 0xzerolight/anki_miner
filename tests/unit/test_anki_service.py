@@ -3671,3 +3671,359 @@ class TestProbeDuplicates:
             pytest.raises(AnkiConnectionError, match="canAddNotesWithErrorDetail"),
         ):
             service.create_cards_batch(items)
+
+
+# ---------------------------------------------------------------------------
+# TestCoalesceField / TestUpdateNotesCoalesce (7.4 duplicate coalesce-update)
+# ---------------------------------------------------------------------------
+
+_POST = "anki_miner.services._ankiconnect.requests.post"
+
+
+def _note(fields, deck="test_deck"):
+    """A minimal built AnkiConnect note dict (fields insertion order = query key)."""
+    return {"deckName": deck, "modelName": "test_note_type", "fields": fields, "tags": []}
+
+
+def _sub_actions(mock_post, call_index):
+    """The list of sub-actions inside the multi envelope at ``call_index``."""
+    return mock_post.call_args_list[call_index][1]["json"]["params"]["actions"]
+
+
+class TestCoalesceField:
+    """AnkiService._coalesce_field merge semantics (Yomitan coalesce case)."""
+
+    @pytest.mark.parametrize(
+        "existing, new, expected",
+        [
+            ("old", "new", "old"),  # existing non-empty wins — never clobber a user edit
+            ("old", "", "old"),  # existing non-empty, new empty -> keep existing
+            ("", "new", "new"),  # existing empty -> fill with new
+            ("", "", ""),  # both empty -> empty
+            (" ", "new", " "),  # whitespace existing is non-empty (JS ||) -> kept
+        ],
+    )
+    def test_coalesce(self, existing, new, expected):
+        assert AnkiService._coalesce_field(existing, new) == expected
+
+
+class TestUpdateNotesCoalesce:
+    """AnkiService.update_notes_coalesce: fill empty fields of existing duplicates."""
+
+    @staticmethod
+    def _actions(mock_post):
+        return [c[1]["json"]["action"] for c in mock_post.call_args_list]
+
+    def test_empty_notes_returns_zero_without_request(self, test_config):
+        service = AnkiService(test_config)
+        with patch(_POST) as mock_post:
+            assert service.update_notes_coalesce([]) == 0
+        mock_post.assert_not_called()
+
+    def test_fills_only_empty_existing_fields(self, test_config):
+        """Non-empty existing fields (incl. user-edited ones) are kept; only the
+        empty field is filled, and updateNoteFields carries ONLY that field."""
+        service = AnkiService(test_config)
+        note = _note({"Expression": "猫", "sentence": "猫だ。", "Frequency": "5"})
+
+        find = _mock_response(result=[[555]])
+        info = _mock_response(
+            result=[
+                {
+                    "noteId": 555,
+                    "fields": {
+                        "Expression": {"value": "猫", "order": 0},  # non-empty -> kept
+                        "sentence": {"value": "既存の文", "order": 1},  # user edit -> kept
+                        "Frequency": {"value": "", "order": 2},  # empty -> filled
+                    },
+                }
+            ]
+        )
+        upd = _mock_response(result=[None])
+
+        with patch(_POST, side_effect=[find, info, upd]) as mock_post:
+            assert service.update_notes_coalesce([note]) == 1
+
+        assert self._actions(mock_post) == ["multi", "notesInfo", "multi"]
+        find_action = _sub_actions(mock_post, 0)[0]
+        assert find_action["action"] == "findNotes"
+        assert find_action["params"]["query"] == '"expression:猫"'
+        upd_action = _sub_actions(mock_post, 2)[0]
+        assert upd_action["action"] == "updateNoteFields"
+        assert upd_action["params"]["note"] == {"id": 555, "fields": {"Frequency": "5"}}
+
+    def test_nothing_found_falls_back_to_skip(self, test_config):
+        """A query returning no ids -> no update, no notesInfo (fall back to skip)."""
+        service = AnkiService(test_config)
+        note = _note({"Expression": "猫"})
+        find = _mock_response(result=[[]])
+
+        with patch(_POST, side_effect=[find]) as mock_post:
+            assert service.update_notes_coalesce([note]) == 0
+
+        assert self._actions(mock_post) == ["multi"]
+
+    def test_fully_populated_existing_makes_no_update(self, test_config):
+        """Every mapped field already non-empty -> nothing to fill, no updateNoteFields."""
+        service = AnkiService(test_config)
+        note = _note({"Expression": "猫", "sentence": "猫だ。"})
+        find = _mock_response(result=[[555]])
+        info = _mock_response(
+            result=[
+                {
+                    "noteId": 555,
+                    "fields": {
+                        "Expression": {"value": "猫", "order": 0},
+                        "sentence": {"value": "既存", "order": 1},
+                    },
+                }
+            ]
+        )
+
+        with patch(_POST, side_effect=[find, info]) as mock_post:
+            assert service.update_notes_coalesce([note]) == 0
+
+        assert self._actions(mock_post) == ["multi", "notesInfo"]
+
+    def test_note_deleted_between_find_and_info_is_skipped(self, test_config):
+        """findNotes located an id but notesInfo returns {} (deleted) -> skip."""
+        service = AnkiService(test_config)
+        note = _note({"Expression": "猫", "sentence": "猫だ。"})
+        find = _mock_response(result=[[555]])
+        info = _mock_response(result=[{}])
+
+        with patch(_POST, side_effect=[find, info]) as mock_post:
+            assert service.update_notes_coalesce([note]) == 0
+
+        assert self._actions(mock_post) == ["multi", "notesInfo"]
+
+    def test_identical_queries_deduped_to_one_findnotes_and_one_update(self, test_config):
+        """Two notes with the same first field share one findNotes action and,
+        mapping to the same id, coalesce once (first note wins)."""
+        service = AnkiService(test_config)
+        note_a = _note({"Expression": "猫", "sentence": "文A"})
+        note_b = _note({"Expression": "猫", "sentence": "文B"})
+        find = _mock_response(result=[[555]])  # single sub-result for the single unique query
+        info = _mock_response(
+            result=[
+                {
+                    "noteId": 555,
+                    "fields": {
+                        "Expression": {"value": "猫", "order": 0},
+                        "sentence": {"value": "", "order": 1},
+                    },
+                }
+            ]
+        )
+        upd = _mock_response(result=[None])
+
+        with patch(_POST, side_effect=[find, info, upd]) as mock_post:
+            assert service.update_notes_coalesce([note_a, note_b]) == 1
+
+        assert len(_sub_actions(mock_post, 0)) == 1  # one deduped findNotes
+        upd_actions = _sub_actions(mock_post, 2)
+        assert len(upd_actions) == 1  # deduped by id
+        assert upd_actions[0]["params"]["note"]["fields"] == {"sentence": "文A"}  # first wins
+
+    def test_distinct_queries_two_findnotes_actions(self, test_config):
+        service = AnkiService(test_config)
+        note_a = _note({"Expression": "猫", "sentence": "文A"})
+        note_b = _note({"Expression": "犬", "sentence": "文B"})
+        find = _mock_response(result=[[555], [777]])
+        info = _mock_response(
+            result=[
+                {
+                    "noteId": 555,
+                    "fields": {"Expression": {"value": "猫", "order": 0}, "sentence": {"value": "", "order": 1}},
+                },
+                {
+                    "noteId": 777,
+                    "fields": {"Expression": {"value": "犬", "order": 0}, "sentence": {"value": "", "order": 1}},
+                },
+            ]
+        )
+        upd = _mock_response(result=[None, None])
+
+        with patch(_POST, side_effect=[find, info, upd]) as mock_post:
+            assert service.update_notes_coalesce([note_a, note_b]) == 2
+
+        find_actions = _sub_actions(mock_post, 0)
+        assert [a["params"]["query"] for a in find_actions] == ['"expression:猫"', '"expression:犬"']
+        assert mock_post.call_args_list[1][1]["json"]["params"]["notes"] == [555, 777]
+
+    def test_field_absent_from_existing_note_is_not_invented(self, test_config):
+        """A new-note field the existing note lacks (mapping mismatch) is skipped."""
+        service = AnkiService(test_config)
+        note = _note({"Expression": "猫", "NewField": "val"})
+        find = _mock_response(result=[[555]])
+        info = _mock_response(result=[{"noteId": 555, "fields": {"Expression": {"value": "猫", "order": 0}}}])
+
+        with patch(_POST, side_effect=[find, info]) as mock_post:
+            assert service.update_notes_coalesce([note]) == 0
+
+        assert self._actions(mock_post) == ["multi", "notesInfo"]
+
+    def test_deck_scope_prefixes_query(self, test_config):
+        import dataclasses
+
+        config = dataclasses.replace(test_config, anki_deck_name="Mining::ShowA", duplicate_scope="deck")
+        service = AnkiService(config)
+        note = _note({"Expression": "猫"}, deck="Mining::ShowA")
+        find = _mock_response(result=[[]])
+
+        with patch(_POST, side_effect=[find]) as mock_post:
+            service.update_notes_coalesce([note])
+
+        q = _sub_actions(mock_post, 0)[0]["params"]["query"]
+        assert q == '"deck:Mining::ShowA" "expression:猫"'
+
+    def test_deck_root_scope_uses_root_deck(self, test_config):
+        import dataclasses
+
+        config = dataclasses.replace(test_config, anki_deck_name="Mining::Anime::ShowA", duplicate_scope="deck-root")
+        service = AnkiService(config)
+        note = _note({"Expression": "猫"})
+        find = _mock_response(result=[[]])
+
+        with patch(_POST, side_effect=[find]) as mock_post:
+            service.update_notes_coalesce([note])
+
+        q = _sub_actions(mock_post, 0)[0]["params"]["query"]
+        assert q == '"deck:Mining" "expression:猫"'
+
+    def test_update_error_subresult_not_counted(self, test_config):
+        """A per-action updateNoteFields error is subtracted from the updated count."""
+        service = AnkiService(test_config)
+        note = _note({"Expression": "猫", "sentence": "猫だ。"})
+        find = _mock_response(result=[[555]])
+        info = _mock_response(
+            result=[
+                {
+                    "noteId": 555,
+                    "fields": {"Expression": {"value": "猫", "order": 0}, "sentence": {"value": "", "order": 1}},
+                }
+            ]
+        )
+        upd = _mock_response(result=[{"error": "note was not found", "result": None}])
+
+        with patch(_POST, side_effect=[find, info, upd]):
+            assert service.update_notes_coalesce([note]) == 0
+
+    def test_wrapped_findnotes_subresult_is_unwrapped(self, test_config):
+        """AnkiConnect may wrap a multi sub-result as {result, error}; handle it."""
+        service = AnkiService(test_config)
+        note = _note({"Expression": "猫", "sentence": "猫だ。"})
+        find = _mock_response(result=[{"result": [555], "error": None}])
+        info = _mock_response(
+            result=[
+                {
+                    "noteId": 555,
+                    "fields": {"Expression": {"value": "猫", "order": 0}, "sentence": {"value": "", "order": 1}},
+                }
+            ]
+        )
+        upd = _mock_response(result=[None])
+
+        with patch(_POST, side_effect=[find, info, upd]):
+            assert service.update_notes_coalesce([note]) == 1
+
+
+class TestDuplicateBehaviorUpdate:
+    """create_cards_batch wiring for config.duplicate_behavior (7.4)."""
+
+    pytestmark = pytest.mark.real_probe
+
+    @staticmethod
+    def _actions(mock_post):
+        return [c[1]["json"]["action"] for c in mock_post.call_args_list]
+
+    def test_default_config_duplicate_behavior_is_skip(self):
+        from anki_miner.config import AnkiMinerConfig
+
+        assert AnkiMinerConfig().duplicate_behavior == "skip"
+
+    def test_skip_mode_makes_no_update_calls(self, test_config, make_tokenized_word):
+        """Default 'skip': a probe-flagged duplicate is counted skipped; the wire
+        carries no findNotes/notesInfo/updateNoteFields (byte-identical to pre-7.4)."""
+        service = AnkiService(test_config)
+        w0 = make_tokenized_word(surface="猫", lemma="猫", sentence="猫だ。", pos="名詞")
+        items = [CardPayload(word=w0, media=MediaData(), definition="d0")]
+        probe = _mock_response(result=[{"canAdd": False, "error": "cannot create note because it is a duplicate"}])
+
+        with patch(_POST, side_effect=[probe]) as mock_post:
+            created = service.create_cards_batch(items)
+
+        assert created == 0
+        assert service.last_skipped_duplicates == 1
+        assert service.last_updated_notes == 0
+        assert self._actions(mock_post) == ["canAddNotesWithErrorDetail"]
+
+    def test_update_mode_coalesces_duplicate_and_adds_rest(self, test_config, make_tokenized_word):
+        import dataclasses
+
+        config = dataclasses.replace(test_config, duplicate_behavior="update")
+        service = AnkiService(config)
+        w0 = make_tokenized_word(surface="猫", lemma="猫", sentence="猫だ。", pos="名詞")  # duplicate
+        w1 = make_tokenized_word(surface="犬", lemma="犬", sentence="犬だ。", pos="名詞")  # new
+        items = [
+            CardPayload(word=w0, media=MediaData(), definition="d0"),
+            CardPayload(word=w1, media=MediaData(), definition="d1"),
+        ]
+        probe = _mock_response(
+            result=[
+                {"canAdd": False, "error": "cannot create note because it is a duplicate"},
+                {"canAdd": True, "error": None},
+            ]
+        )
+        find = _mock_response(result=[[555]])
+        info = _mock_response(
+            result=[
+                {
+                    "noteId": 555,
+                    "fields": {
+                        "word": {"value": "猫", "order": 0},  # existing first field kept
+                        "sentence": {"value": "", "order": 1},  # empty -> filled
+                    },
+                }
+            ]
+        )
+        upd = _mock_response(result=[None])
+        add = _mock_response(result=[101])
+
+        with patch(_POST, side_effect=[probe, find, info, upd, add]) as mock_post:
+            created = service.create_cards_batch(items)
+
+        assert created == 1
+        assert service.last_updated_notes == 1
+        assert service.last_skipped_duplicates == 0
+        # Undo safety: the updated existing note (555) is NOT a created card id.
+        assert service.last_created_note_ids == [101]
+        assert self._actions(mock_post) == [
+            "canAddNotesWithErrorDetail",
+            "multi",
+            "notesInfo",
+            "multi",
+            "addNotes",
+        ]
+        # The filled field carried the new run's sentence value.
+        upd_action = _sub_actions(mock_post, 3)[0]
+        assert upd_action["params"]["note"] == {"id": 555, "fields": {"sentence": "猫だ。"}}
+
+    def test_update_mode_unlocatable_duplicate_counts_as_skipped(self, test_config, make_tokenized_word):
+        import dataclasses
+
+        config = dataclasses.replace(test_config, duplicate_behavior="update")
+        service = AnkiService(config)
+        w0 = make_tokenized_word(surface="猫", lemma="猫", sentence="猫だ。", pos="名詞")
+        items = [CardPayload(word=w0, media=MediaData(), definition="d0")]
+        probe = _mock_response(result=[{"canAdd": False, "error": "cannot create note because it is a duplicate"}])
+        find = _mock_response(result=[[]])  # findNotes returns nothing
+
+        with patch(_POST, side_effect=[probe, find]) as mock_post:
+            created = service.create_cards_batch(items)
+
+        assert created == 0
+        assert service.last_updated_notes == 0
+        assert service.last_skipped_duplicates == 1
+        assert service.last_created_note_ids == []
+        assert self._actions(mock_post) == ["canAddNotesWithErrorDetail", "multi"]
