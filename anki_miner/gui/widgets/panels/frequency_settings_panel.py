@@ -114,6 +114,7 @@ class _FreqRow(QWidget):
         count: int,
         *,
         missing: bool = False,
+        is_categorical: bool = False,
     ):
         super().__init__()
         self.entry = entry
@@ -133,6 +134,14 @@ class _FreqRow(QWidget):
             badge = QLabel(format_label)
             badge.setStyleSheet("color: gray; font-size: 10px;")
             layout.addWidget(badge)
+
+        if is_categorical:
+            # Word-based sources hold level labels (N5/Basic) shown on the card
+            # but excluded from the frequency-rank cutoff — flag that here.
+            word_based = QLabel(self.tr("word-based"))
+            word_based.setStyleSheet("color: gray; font-size: 10px;")
+            word_based.setToolTip(self.tr("Level labels are shown on the card but not used for frequency filtering."))
+            layout.addWidget(word_based)
 
         if count:
             count_label = QLabel(tr_format(self.tr("%1 entries"), f"{count:,}"))
@@ -511,7 +520,8 @@ class FrequencySettingsPanel(FormPanel):
                 display = meta.source_name if meta else (entry.source_id or "(missing)")
                 fmt = _FORMAT_LABELS.get(meta.format, meta.format) if meta else ""
                 count = meta.entry_count if meta else 0
-                row = _FreqRow(entry, display, fmt, count, missing=missing)
+                is_categorical = meta.is_categorical if meta else False
+                row = _FreqRow(entry, display, fmt, count, missing=missing, is_categorical=is_categorical)
                 row.toggled.connect(self.chain_changed.emit)
                 item = QListWidgetItem()
                 item.setSizeHint(row.sizeHint())

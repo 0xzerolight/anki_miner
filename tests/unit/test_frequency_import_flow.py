@@ -147,6 +147,25 @@ class TestAddSource:
         assert infos, "success must surface an info dialog"
         assert "converted to ranks" in infos[-1][1]
 
+    def test_categorical_note_surfaced_in_info(self, tab, monkeypatch, stub_worker, tmp_path):
+        src = tmp_path / "jlpt.zip"
+        src.write_bytes(b"zip")
+        monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(src), ""))
+        infos = _capture_infos(monkeypatch)
+        tab._frequency_import_flow._persist_chain = lambda _chain: None
+        monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
+
+        tab._frequency_import_flow.add_source()
+        instance = stub_worker.instances[0]
+        _fire_done(
+            instance,
+            "jlpt",
+            {"entry_count": 2, "source_name": "JLPT", "format": "yomitan-freq", "is_categorical": True},
+        )
+
+        assert infos, "success must surface an info dialog"
+        assert "word-based" in infos[-1][1]
+
     def test_append_after_existing_entries(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "new.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")

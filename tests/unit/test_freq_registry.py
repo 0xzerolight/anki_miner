@@ -16,7 +16,14 @@ from anki_miner.services.frequency.registry import (
 from tests.unit.test_freq_storage import build_v1_index
 
 
-def _build_source(root: Path, source_id: str, rows: list[tuple], *, schema_version: int | None = None) -> None:
+def _build_source(
+    root: Path,
+    source_id: str,
+    rows: list[tuple],
+    *,
+    schema_version: int | None = None,
+    is_categorical: str | None = None,
+) -> None:
     db_path = root / source_id / "index.sqlite"
     meta = {
         "schema_version": str(storage.SCHEMA_VERSION if schema_version is None else schema_version),
@@ -24,8 +31,39 @@ def _build_source(root: Path, source_id: str, rows: list[tuple], *, schema_versi
         "source_name": source_id.upper(),
         "entry_count": str(len(rows)),
     }
+    if is_categorical is not None:
+        meta["is_categorical"] = is_categorical
     padded: list[storage.FreqRow] = [row if len(row) == 4 else (*row, None) for row in rows]
     storage.build_index(db_path, padded, meta)
+
+
+def test_is_categorical_round_trips(tmp_path: Path):
+    _build_source(tmp_path, "jlpt", [("猫", None, storage.CATEGORICAL_RANK)], is_categorical="1")
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+    meta = reg.get("jlpt")
+    assert meta is not None
+    assert meta.is_categorical is True
+
+
+def test_is_categorical_zero_reads_false(tmp_path: Path):
+    # Meta values are strings: bool("0") would be truthy, so the registry must
+    # compare == "1". A stored "0" reads back False.
+    _build_source(tmp_path, "num", [("猫", "ねこ", 100)], is_categorical="0")
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+    meta = reg.get("num")
+    assert meta is not None
+    assert meta.is_categorical is False
+
+
+def test_is_categorical_absent_defaults_false(tmp_path: Path):
+    _build_source(tmp_path, "legacy", [("猫", "ねこ", 100)])  # no is_categorical key
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+    meta = reg.get("legacy")
+    assert meta is not None
+    assert meta.is_categorical is False
 
 
 def test_load_finds_sources(tmp_path: Path):

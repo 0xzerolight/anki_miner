@@ -42,6 +42,11 @@ class FreqSourceMeta:
     schema_ok: bool
     version: int
     db_path: Path
+    # True when the source is word-based (categorical): its rows carry level
+    # labels stored display-only (storage.CATEGORICAL_RANK). Used only for the
+    # settings-panel badge / import message — the runtime exclusion is driven by
+    # the sentinel rank, not this flag, so build_sources ignores it.
+    is_categorical: bool = False
 
 
 class FrequencySourceRegistry:
@@ -95,6 +100,9 @@ class FrequencySourceRegistry:
                 schema_ok=(1 <= version <= SCHEMA_VERSION),
                 version=version,
                 db_path=db,
+                # Explicit == "1" — meta values are strings, so bool("0") would be
+                # truthy; only the literal "1" (or absent -> False) means categorical.
+                is_categorical=(meta.get("is_categorical") == "1"),
             )
 
     def get(self, source_id: str) -> FreqSourceMeta | None:
