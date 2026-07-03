@@ -20,7 +20,8 @@ the combined work carries the same license.
 | `anki_miner/utils/furigana_distribute.py` | `ext/js/language/ja/japanese.js` (`distributeFurigana` family) |
 | `anki_miner/services/ja_normalize.py` | `ext/js/language/ja/japanese.js` (`convertHalfWidthKanaToFullWidth`, `HALFWIDTH_KATAKANA_MAPPING`, `normalizeCJKCompatibilityCharacters`), `ext/js/language/CJK-util.js` (`normalizeRadicals`, `CJK_IDEOGRAPH_RANGES`, `isCodePointInRanges`) |
 | `tests/unit/test_ja_normalize.py` (fixture slices) | `test/japanese-util.test.js` |
-| `anki_miner/services/pitch_accent_service.py` (`classify_pitch`) | `ext/js/language/ja/japanese.js` (`getPitchCategory`) |
+| `anki_miner/services/pitch_accent_service.py` (`classify_pitch`, `downstep_positions`, `format_categories` H/L handling) | `ext/js/language/ja/japanese.js` (`getPitchCategory`, `getDownstepPositions`) |
+| `anki_miner/services/pitch_accent/yomitan_pitch_importer.py` (`_to_number_array`) | `ext/js/language/translator.js` (`Translator._toNumberArray`) |
 | `anki_miner/services/_ankiconnect.py` (`_expect_list`) | `ext/js/comm/anki-connect.js` (`_normalizeArray`) |
 | `anki_miner/services/anki_service.py` (`_probe_duplicates`, `_probe_duplicates_fallback`, `_strip_note_to_first_field`) | `ext/js/background/backend.js` (`partitionAddibleNotes`, `_findDuplicates`, `_findDuplicatesFallback`, `_stripNotesArray`), `ext/js/comm/anki-connect.js` (`canAddNotesWithErrorDetail`) |
 | `anki_miner/services/expression_audio_fetcher.py` (`_classify_request_exception` + failure-cause tally) | `ext/js/background/backend.js` (`Backend._getAudioDownloadError`) |
