@@ -4,12 +4,8 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <source>Turn Immersion Into Vocabulary</source>
-        <translation>Transformez l'immersion en vocabulaire</translation>
-    </message>
-    <message>
-        <source>Mine Japanese vocabulary cards straight from video — screenshots, audio, and definitions, automatically into Anki.</source>
-        <translation>Extrayez des cartes de vocabulaire japonais directement depuis la vidéo — captures d'écran, audio et définitions, automatiquement vers Anki.</translation>
+        <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch tabs</source>
@@ -92,8 +88,8 @@
         <translation>Sessions récentes</translation>
     </message>
     <message>
-        <source>No sessions yet. Process an episode to see your history here.</source>
-        <translation>Aucune session pour l'instant. Traitez un épisode pour voir votre historique ici.</translation>
+        <source>No sessions yet — process an episode to see your history.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Date</source>
@@ -124,8 +120,8 @@
         <translation>Classement de difficulté des séries</translation>
     </message>
     <message>
-        <source>Difficulty is based on the ratio of unknown words. Lower scores mean easier content for your current level.</source>
-        <translation>La difficulté est basée sur la proportion de mots inconnus. Un score plus bas signifie un contenu plus facile pour votre niveau actuel.</translation>
+        <source>Share of unknown words per series — lower means easier for your current level.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine multiple series to see difficulty comparisons.</source>
@@ -162,8 +158,8 @@
         <translation>Anki Miner communique avec Anki via l'extension AnkiConnect.</translation>
     </message>
     <message>
-        <source>AnkiConnect is a free Anki add-on. In Anki: Tools → Add-ons → Get Add-ons…, paste the code &lt;b&gt;%1&lt;/b&gt;, then restart Anki.</source>
-        <translation>AnkiConnect est une extension Anki gratuite. Dans Anki : Outils → Extensions → Télécharger des extensions…, collez le code &lt;b&gt;%1&lt;/b&gt;, puis redémarrez Anki.</translation>
+        <source>In Anki: Tools → Add-ons → Get Add-ons…, paste the code &lt;b&gt;%1&lt;/b&gt;, then restart Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Open the AnkiConnect add-on page</source>
@@ -262,42 +258,6 @@
         <translation>Interroger AnkiConnect pour les champs de ce type de note et remplir automatiquement les mappages ci-dessous.</translation>
     </message>
     <message>
-        <source>Duplicate Handling</source>
-        <translation>Gestion des doublons</translation>
-    </message>
-    <message>
-        <source>What counts as a duplicate when adding cards. Collection (default) skips a word if it already exists in any deck. Deck limits the check to the target deck; Deck root limits it to the whole subdeck tree under the deck's root — handy when you card each show into its own subdeck.</source>
-        <translation>Ce qui compte comme doublon lors de l'ajout de cartes. Collection (par défaut) ignore un mot s'il existe déjà dans n'importe quel paquet. Paquet limite la vérification au paquet cible ; Racine du paquet la limite à tout l'arbre de sous-paquets sous la racine du paquet — pratique lorsque vous placez chaque série dans son propre sous-paquet.</translation>
-    </message>
-    <message>
-        <source>Collection (whole collection)</source>
-        <translation>Collection (toute la collection)</translation>
-    </message>
-    <message>
-        <source>Deck (target deck only)</source>
-        <translation>Paquet (paquet cible uniquement)</translation>
-    </message>
-    <message>
-        <source>Deck root (whole subdeck tree)</source>
-        <translation>Racine du paquet (tout l'arbre de sous-paquets)</translation>
-    </message>
-    <message>
-        <source>Duplicate Scope</source>
-        <translation>Portée des doublons</translation>
-    </message>
-    <message>
-        <source>Where AnkiConnect looks for an existing copy before adding a card.</source>
-        <translation>Où AnkiConnect recherche une copie existante avant d'ajouter une carte.</translation>
-    </message>
-    <message>
-        <source>Check all note types for duplicates</source>
-        <translation>Vérifier les doublons dans tous les types de note</translation>
-    </message>
-    <message>
-        <source>Also treat a matching first field in a different note type as a duplicate.</source>
-        <translation>Traiter aussi comme un doublon un premier champ identique dans un type de note différent.</translation>
-    </message>
-    <message>
         <source>Card Field Mappings</source>
         <translation>Mappages des champs de carte</translation>
     </message>
@@ -342,32 +302,20 @@
         <translation>Champ Image</translation>
     </message>
     <message>
-        <source>Stores the screenshot.</source>
-        <translation>Stocke la capture d'écran.</translation>
-    </message>
-    <message>
         <source>Audio Field</source>
         <translation>Champ Audio</translation>
-    </message>
-    <message>
-        <source>Stores the sentence audio clip.</source>
-        <translation>Stocke l'extrait audio de la phrase.</translation>
     </message>
     <message>
         <source>Expression Audio Field</source>
         <translation>Champ Audio de l'expression</translation>
     </message>
     <message>
-        <source>Stores the word pronunciation audio clip; leave blank to disable. Sources are configured under Audio settings.</source>
-        <translation>Stocke l'extrait audio de prononciation du mot ; laissez vide pour désactiver. Les sources sont configurées dans les paramètres Audio.</translation>
+        <source>Word pronunciation audio; blank disables. Configure sources under Audio settings.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Expression Furigana Field</source>
         <translation>Champ Furigana de l'expression</translation>
-    </message>
-    <message>
-        <source>Stores the expression with furigana readings.</source>
-        <translation>Stocke l'expression avec les lectures en furigana.</translation>
     </message>
     <message>
         <source>Expression Reading Field</source>
@@ -380,10 +328,6 @@
     <message>
         <source>Sentence Furigana Field</source>
         <translation>Champ Furigana de la phrase</translation>
-    </message>
-    <message>
-        <source>Stores the sentence with furigana readings.</source>
-        <translation>Stocke la phrase avec les lectures en furigana.</translation>
     </message>
     <message>
         <source>Sentence Reading Field</source>
@@ -438,24 +382,16 @@
         <translation>Champs de données auxiliaires</translation>
     </message>
     <message>
-        <source>Need pitch_accent.csv / frequency.csv in ~/.anki_miner/. Blank = skip.</source>
-        <translation>Nécessite pitch_accent.csv / frequency.csv dans ~/.anki_miner/. Vide = ignorer.</translation>
+        <source>Need pitch_accent.csv in ~/.anki_miner/. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pitch Position Field</source>
         <translation>Champ Position de l'accent de hauteur</translation>
     </message>
     <message>
-        <source>Stores the numeric pitch drop position.</source>
-        <translation>Stocke la position numérique de la chute de hauteur.</translation>
-    </message>
-    <message>
         <source>Pitch Category Field</source>
         <translation>Champ Catégorie d'accent de hauteur</translation>
-    </message>
-    <message>
-        <source>Stores the pitch category label.</source>
-        <translation>Stocke l'étiquette de catégorie de l'accent de hauteur.</translation>
     </message>
     <message>
         <source>Japanese (平板/頭高/中高/尾高/起伏)</source>
@@ -574,8 +510,8 @@
         <translation>Style des cartes</translation>
     </message>
     <message>
-        <source>Anki Miner styles mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). The styling is embedded in each card, so it works on any note type, on mobile, and in exports — and your note type's own card CSS is never touched.</source>
-        <translation>Anki Miner met en forme les glossaires des cartes extraites avec une feuille de style intégrée et épurée (les dictionnaires qui fournissent leurs propres styles sont appliqués automatiquement). La mise en forme est intégrée à chaque carte : elle fonctionne donc avec n'importe quel type de note, sur mobile et dans les exports — et le CSS de carte de votre propre type de note n'est jamais modifié.</translation>
+        <source>Glossary styles are baked into each mined card, so your note type's CSS is never touched. Dictionaries that ship their own styles are applied automatically.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Custom CSS:</source>
@@ -742,8 +678,8 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Sources audio actives</translation>
     </message>
     <message>
-        <source>Top entry is tried first. Local audio packs are recommended; they're faster than JPod101 online.</source>
-        <translation>L'entrée du haut est essayée en premier. Les packs audio locaux sont recommandés ; ils sont plus rapides que JPod101 en ligne.</translation>
+        <source>Top entry is tried first.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>+ Add Audio Pack…</source>
@@ -754,8 +690,8 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>+ Ajouter une source en ligne…</translation>
     </message>
     <message>
-        <source>Add a custom URL/JSON source (e.g. local-audio-yomichan) or an online scrape source</source>
-        <translation>Ajouter une source URL/JSON personnalisée (par ex. local-audio-yomichan) ou une source de scraping en ligne</translation>
+        <source>Add a custom audio URL or online scrape source</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Move up in priority</source>
@@ -774,8 +710,8 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Réessayer l'audio d'expression manquant</translation>
     </message>
     <message>
-        <source>Forget which words JapanesePod101 had no audio for, so the next mining run tries to download them again.</source>
-        <translation>Oublier les mots pour lesquels JapanesePod101 n'avait pas d'audio, afin que la prochaine extraction tente à nouveau de les télécharger.</translation>
+        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
@@ -940,6 +876,18 @@ Le pack audio n'a pas été retiré.</translation>
         <translation>Progression</translation>
     </message>
     <message>
+        <source>Audio file not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>(none selected)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle file not found: %1</source>
+        <translation type="unfinished">Fichier de sous-titres introuvable : %1</translation>
+    </message>
+    <message>
         <source>Mining unavailable — services not initialized.</source>
         <translation>Extraction indisponible — services non initialisés.</translation>
     </message>
@@ -1039,19 +987,8 @@ Le pack audio n'a pas été retiré.</translation>
     </message>
     <message>
         <source>No matching video/subtitle pairs found.
-
-Files are paired by episode number, so point each folder at a single show:
-- episode_01.mp4 &lt;-&gt; episode_01.ass
-- episode_02.mp4 &lt;-&gt; episode_02.ass
-
-Mixing multiple shows in one folder can mispair episodes that share a number — add each show as its own queue item.</source>
-        <translation>Aucune paire vidéo/sous-titres correspondante trouvée.
-
-Les fichiers sont appariés par numéro d'épisode, donc pointez chaque dossier vers une seule série :
-- episode_01.mp4 &lt;-&gt; episode_01.ass
-- episode_02.mp4 &lt;-&gt; episode_02.ass
-
-Mélanger plusieurs séries dans un même dossier peut mal apparier les épisodes qui partagent un numéro — ajoutez chaque série comme son propre élément de file.</translation>
+Files pair by episode number — point each folder at a single show.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>No matching video/subtitle pairs found</source>
@@ -1149,9 +1086,8 @@ Total de cartes créées : %2</translation>
     </message>
     <message>
         <source>
-%1 episode(s) failed - see log for details</source>
-        <translation>
-%1 épisode(s) en échec - voir le journal pour les détails</translation>
+%1 episode(s) failed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Batch Processing Complete</source>
@@ -1264,16 +1200,16 @@ Total de cartes créées : %2</translation>
         <translation>Ignorer les mots rares (seuil de fréquence)</translation>
     </message>
     <message>
-        <source>Ignore words rarer than a chosen frequency rank so you learn common words first.</source>
-        <translation>Ignorez les mots plus rares qu'un rang de fréquence choisi afin d'apprendre d'abord les mots courants.</translation>
+        <source>Ignore words rarer than a chosen frequency rank.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Skip words you already know</source>
         <translation>Ignorer les mots que vous connaissez déjà</translation>
     </message>
     <message>
-        <source>Skip words already in your Anki collection or previously mined, via the known-words DB.</source>
-        <translation>Ignorez les mots déjà présents dans votre collection Anki ou déjà extraits, via la BD de mots connus.</translation>
+        <source>Skip words already in your Anki collection or previously mined.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -1296,8 +1232,8 @@ Total de cartes créées : %2</translation>
         <translation>Exclure les mots en kana seul</translation>
     </message>
     <message>
-        <source>Drop words written only in hiragana or katakana -- useful for kanji-focused decks.</source>
-        <translation>Écartez les mots écrits uniquement en hiragana ou katakana — utile pour les paquets axés sur les kanji.</translation>
+        <source>Drop words written only in hiragana or katakana.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -1328,8 +1264,8 @@ Total de cartes créées : %2</translation>
         <translation>Limiter la longueur des phrases</translation>
     </message>
     <message>
-        <source>Skip sentences that are too long or too short for a good card.</source>
-        <translation>Ignorez les phrases trop longues ou trop courtes pour une bonne carte.</translation>
+        <source>Skip sentences that are too long or too short.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Avoid duplicate cards</source>
@@ -1456,8 +1392,8 @@ Total de cartes créées : %2</translation>
         <translation>Style des cartes / CSS</translation>
     </message>
     <message>
-        <source>Apply a built-in card style or your own CSS, synced to Anki automatically.</source>
-        <translation>Appliquez un style de carte intégré ou votre propre CSS, synchronisé automatiquement avec Anki.</translation>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Furigana / readings</source>
@@ -1596,10 +1532,8 @@ Total de cartes créées : %2</translation>
         <translation>Ignorer les mots déjà présents dans ma collection Anki</translation>
     </message>
     <message>
-        <source>Checked: subtract your known words — good for personal study.
-Unchecked: mine every word — good for building a complete or shareable deck.</source>
-        <translation>Coché : soustraire vos mots connus — idéal pour l'étude personnelle.
-Décoché : extraire tous les mots — idéal pour construire un paquet complet ou partageable.</translation>
+        <source>Checked: skip your known words; unchecked: mine every word.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Actions</source>
@@ -1610,8 +1544,8 @@ Décoché : extraire tous les mots — idéal pour construire un paquet complet 
         <translation>Aperçu</translation>
     </message>
     <message>
-        <source>Analyse the corpus and preview which words will be included</source>
-        <translation>Analyser le corpus et prévisualiser quels mots seront inclus</translation>
+        <source>Analyze the corpus and preview which words will be included</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build Deck</source>
@@ -1678,8 +1612,8 @@ Décoché : extraire tous les mots — idéal pour construire un paquet complet 
         <translation>Aucune paire vidéo/sous-titres trouvée. Vérifiez les dossiers.</translation>
     </message>
     <message>
-        <source>Analysing corpus…</source>
-        <translation>Analyse du corpus…</translation>
+        <source>Analyzing corpus…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Preview ready — %1 cards, ~%2% coverage. Click 'Build Deck' to proceed.</source>
@@ -1964,8 +1898,8 @@ Ignorés (aucune source enregistrée — clic droit sur une ligne de dictionnair
         <translation>Dictionnaires actifs</translation>
     </message>
     <message>
-        <source>Top entry fills the MainDefinition field. Offline dictionaries are recommended; they're faster than Jisho.</source>
-        <translation>L'entrée du haut remplit le champ MainDefinition. Les dictionnaires hors ligne sont recommandés ; ils sont plus rapides que Jisho.</translation>
+        <source>Top entry fills the MainDefinition field.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>+ Add Dictionary…</source>
@@ -2166,10 +2100,9 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>Compréhension : %1 % des mots déjà connus</translation>
     </message>
     <message numerus="yes">
-        <source>All %n word(s) from this subtitle are already in your Anki collection — no new cards will be created. Card-format options (bold target word, etc.) only apply to newly mined cards.</source>
-        <translation>
-            <numerusform>%n mot de ce sous-titre est déjà dans votre collection Anki — aucune nouvelle carte ne sera créée. Les options de format de carte (mot cible en gras, etc.) ne s'appliquent qu'aux cartes nouvellement extraites.</numerusform>
-            <numerusform>Les %n mots de ce sous-titre sont déjà dans votre collection Anki — aucune nouvelle carte ne sera créée. Les options de format de carte (mot cible en gras, etc.) ne s'appliquent qu'aux cartes nouvellement extraites.</numerusform>
+        <source>All %n word(s) from this subtitle are already in Anki — no new cards created</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -2225,6 +2158,14 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>Captures d'écran animées indisponibles — cette version de ffmpeg n'a pas d'encodeur AVIF ni WebP ; passez aux captures d'écran statiques dans les Paramètres.</translation>
     </message>
     <message>
+        <source>Fetching expression audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Expression audio: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Expression audio: %1/%2 available</source>
         <translation>Audio d'expression : %1/%2 disponible</translation>
     </message>
@@ -2255,24 +2196,21 @@ Le dictionnaire n'a pas été supprimé.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n media file(s) could not be stored in Anki; those cards will have no audio or screenshot. Check that Anki/AnkiConnect is running and see the log for details.</source>
-        <translation>
-            <numerusform>%n fichier multimédia n'a pas pu être stocké dans Anki ; ces cartes n'auront ni audio ni capture d'écran. Vérifiez qu'Anki/AnkiConnect est en cours d'exécution et consultez le journal pour plus de détails.</numerusform>
-            <numerusform>%n fichiers multimédias n'ont pas pu être stockés dans Anki ; ces cartes n'auront ni audio ni capture d'écran. Vérifiez qu'Anki/AnkiConnect est en cours d'exécution et consultez le journal pour plus de détails.</numerusform>
+        <source>%n media file(s) could not be stored in Anki — those cards have no audio or screenshot</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message numerus="yes">
-        <source>Skipped %n word(s) Anki flagged as duplicates (same Expression as an existing card or another word in this batch).</source>
-        <translation>
-            <numerusform>%n mot ignoré, signalé comme doublon par Anki (même Expression qu'une carte existante ou qu'un autre mot de ce lot).</numerusform>
-            <numerusform>%n mots ignorés, signalés comme doublons par Anki (même Expression qu'une carte existante ou qu'un autre mot de ce lot).</numerusform>
+        <source>Skipped %n word(s) Anki flagged as duplicates (same Expression)</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message numerus="yes">
-        <source>Updated %n existing duplicate card(s): filled empty fields from this run.</source>
-        <translation>
-            <numerusform>%n carte en double existante mise à jour : champs vides remplis à partir de cette exécution.</numerusform>
-            <numerusform>%n cartes en double existantes mises à jour : champs vides remplis à partir de cette exécution.</numerusform>
+        <source>Updated %n existing duplicate card(s): filled empty fields</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -2288,10 +2226,9 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>Aucun mot sélectionné pour la création de cartes</translation>
     </message>
     <message numerus="yes">
-        <source>User selected %n word(s) for card creation</source>
-        <translation>
-            <numerusform>%n mot sélectionné par l'utilisateur pour la création de cartes</numerusform>
-            <numerusform>%n mots sélectionnés par l'utilisateur pour la création de cartes</numerusform>
+        <source>Mining %n selected word(s)</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -2303,6 +2240,12 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>
             <numerusform>Média extrait pour %n mot</numerusform>
             <numerusform>Média extrait pour %n mots</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -2440,8 +2383,8 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>Rang de fréquence max</translation>
     </message>
     <message>
-        <source>Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words. Words missing from the frequency list are excluded. Applies only when frequency data is enabled (toggle in the Dictionaries tab).</source>
-        <translation>Définissez 0 pour aucune limite, ou par exemple 10000 pour n'extraire que les 10 000 mots les plus fréquents. Les mots absents de la liste de fréquence sont exclus. S'applique uniquement lorsque les données de fréquence sont activées (option dans l'onglet Dictionnaires).</translation>
+        <source>Words missing from the frequency list are excluded</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Known Words Database</source>
@@ -2450,10 +2393,6 @@ Le dictionnaire n'a pas été supprimé.</translation>
     <message>
         <source>Use Local Known Words Database</source>
         <translation>Utiliser la BD de mots connus locale</translation>
-    </message>
-    <message>
-        <source>Caches known words locally to skip the Anki query on every run.</source>
-        <translation>Met en cache les mots connus localement pour éviter la requête Anki à chaque exécution.</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -2476,8 +2415,8 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>Paquets exclus</translation>
     </message>
     <message>
-        <source>Words in these decks (and their subdecks) are NOT treated as already known, so they stay mineable. Useful for kanji-shape decks like Remembering The Kanji that don't teach vocabulary.</source>
-        <translation>Les mots de ces paquets (et de leurs sous-paquets) ne sont PAS considérés comme déjà connus, ils restent donc extractibles. Utile pour les paquets de formes de kanji comme Remembering The Kanji qui n'enseignent pas le vocabulaire.</translation>
+        <source>Words in these decks (and their subdecks) stay mineable — not treated as already known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Add Deck…</source>
@@ -2508,10 +2447,6 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>Activer la liste noire</translation>
     </message>
     <message>
-        <source>Skip words found in the blacklist file</source>
-        <translation>Ignorer les mots présents dans le fichier de liste noire</translation>
-    </message>
-    <message>
         <source>Select whitelist file...</source>
         <translation>Sélectionner le fichier de liste blanche...</translation>
     </message>
@@ -2526,10 +2461,6 @@ Le dictionnaire n'a pas été supprimé.</translation>
     <message>
         <source>Enable Whitelist</source>
         <translation>Activer la liste blanche</translation>
-    </message>
-    <message>
-        <source>Always include words found in the whitelist file</source>
-        <translation>Toujours inclure les mots présents dans le fichier de liste blanche</translation>
     </message>
     <message>
         <source>Name Wordsets</source>
@@ -2568,16 +2499,12 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>Remplacement</translation>
     </message>
     <message>
-        <source>Text inserted in place of each match (empty deletes the match). Use Python backreferences (\1 \2) for capture groups. Note: NOT $1 $2 syntax like asbplayer; translate when copying patterns.</source>
-        <translation>Texte inséré à la place de chaque correspondance (vide supprime la correspondance). Utilisez les références arrière Python (\1 \2) pour les groupes de capture. Remarque : PAS la syntaxe $1 $2 comme asbplayer ; convertissez-la en copiant les motifs.</translation>
+        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Enable Subtitle Regex Filter</source>
         <translation>Activer le filtre regex des sous-titres</translation>
-    </message>
-    <message>
-        <source>Apply the filter to all parsed subtitle lines (mining and preview).</source>
-        <translation>Appliquer le filtre à toutes les lignes de sous-titres analysées (extraction et aperçu).</translation>
     </message>
     <message>
         <source>Parens (Tanaka)</source>
@@ -2632,8 +2559,8 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>Exclure les mots uniquement en katakana</translation>
     </message>
     <message>
-        <source>Skip words written entirely in katakana (e.g. コーヒー). Drops most foreign loanwords.</source>
-        <translation>Ignorer les mots écrits entièrement en katakana (par exemple コーヒー). Élimine la plupart des emprunts étrangers.</translation>
+        <source>Skip words written entirely in katakana (e.g. コーヒー).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -2644,8 +2571,8 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>N'extraire que les phrases i+1</translation>
     </message>
     <message>
-        <source>Only create cards for words that appear in a sentence with exactly ONE unknown word (the i+1 / immersion learning concept). Drops words whose only examples contain multiple unknowns, so expect significantly fewer cards per episode. Overrides sentence deduplication when enabled.</source>
-        <translation>Ne créer des cartes que pour les mots apparaissant dans une phrase contenant exactement UN seul mot inconnu (le concept i+1 / d'apprentissage par immersion). Élimine les mots dont les seuls exemples contiennent plusieurs inconnus, attendez-vous donc à nettement moins de cartes par épisode. Remplace la déduplication par phrase lorsqu'il est activé.</translation>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sentence Length</source>
@@ -2792,8 +2719,8 @@ Le dictionnaire n'a pas été supprimé.</translation>
         <translation>Activer les données de fréquence</translation>
     </message>
     <message>
-        <source>Enable to display word frequency rank on cards.</source>
-        <translation>Activez pour afficher le rang de fréquence du mot sur les cartes.</translation>
+        <source>Show word frequency rank on cards</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Remove frequency source</source>
@@ -2834,10 +2761,6 @@ La source de fréquence n'a pas été supprimée.</translation>
 </context><context>
     <name>HeaderWidget</name>
     <message>
-        <source>Turn Immersion Into Vocabulary</source>
-        <translation>Transformez l'immersion en vocabulaire</translation>
-    </message>
-    <message>
         <source>Theme:</source>
         <translation>Thème :</translation>
     </message>
@@ -2860,8 +2783,8 @@ La source de fréquence n'a pas été supprimée.</translation>
         <translation>Mots connus locaux</translation>
     </message>
     <message>
-        <source>Words you added from the Word Curator. These are ignored on every mining run, kept when you rebuild the cache, and exportable for re-import into jiten.moe.</source>
-        <translation>Mots que vous avez ajoutés depuis le Conservateur de mots. Ils sont ignorés à chaque exécution d'extraction, conservés lorsque vous reconstruisez le cache, et exportables pour réimportation dans jiten.moe.</translation>
+        <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Filter…</source>
@@ -2916,8 +2839,8 @@ La source de fréquence n'a pas été supprimée.</translation>
         <translation>Langue</translation>
     </message>
     <message>
-        <source>Restart Anki Miner to apply the new language.</source>
-        <translation>Redémarrez Anki Miner pour appliquer la nouvelle langue.</translation>
+        <source>Restart to apply.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -3028,8 +2951,8 @@ La source de fréquence n'a pas été supprimée.</translation>
         <translation>Ouvrir le dossier des journaux</translation>
     </message>
     <message>
-        <source>Open the folder containing anki_miner.log in your file manager</source>
-        <translation>Ouvrir le dossier contenant anki_miner.log dans votre gestionnaire de fichiers</translation>
+        <source>Open the log folder in your file manager</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Report a Bug / Suggest a Feature</source>
@@ -3072,16 +2995,12 @@ La source de fréquence n'a pas été supprimée.</translation>
         <translation>Redéfinir le style des cartes extraites</translation>
     </message>
     <message>
-        <source>This rewrites the styling field of your mined cards (the glossary field, or the definition field when no glossary field is mapped) to embed the built-in styling directly in each card, so cards you mined earlier match ones mined now. It's safe to run more than once and only adds styling — it never removes card content.
+        <source>Embed the built-in styling into cards you mined earlier so they match new ones. Safe to re-run and only adds styling.
 
-Close Anki's card browser and any open note editor first: updating a note that is open for editing can lose your unsaved edits.
+Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Cela réécrit le champ de style de vos cartes extraites (le champ de glossaire, ou le champ de définition si aucun champ de glossaire n'est associé) afin d'intégrer le style intégré directement dans chaque carte, de sorte que les cartes extraites précédemment correspondent à celles extraites maintenant. L'opération peut être exécutée plusieurs fois sans risque et ne fait qu'ajouter du style — elle ne supprime jamais le contenu des cartes.
-
-Fermez d'abord le navigateur de cartes d'Anki et tout éditeur de note ouvert : mettre à jour une note ouverte en édition peut faire perdre vos modifications non enregistrées.
-
-Continuer ?</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -3104,12 +3023,12 @@ Continuer ?</translation>
         <translation>Échec de la redéfinition du style</translation>
     </message>
     <message>
-        <source>These dictionaries need to be re-imported after an app upgrade (their index format changed):</source>
-        <translation>Ces dictionnaires doivent être réimportés après une mise à niveau de l'application (leur format d'index a changé) :</translation>
+        <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Until you do, mining is blocked for them so you don't get cards with no definitions. Re-import them now?</source>
-        <translation>En attendant, l'extraction est bloquée pour eux afin d'éviter des cartes sans définitions. Les réimporter maintenant ?</translation>
+        <source>Mining is blocked for them until you do. Re-import them now?</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Dictionaries need re-importing</source>
@@ -3194,16 +3113,16 @@ Continuer ?</translation>
         <translation>Marge audio</translation>
     </message>
     <message>
-        <source>Extra padding before and after the subtitle timing.</source>
-        <translation>Marge supplémentaire avant et après le minutage des sous-titres.</translation>
+        <source>Extra time before and after the subtitle.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Screenshot Offset</source>
         <translation>Décalage de la capture d'écran</translation>
     </message>
     <message>
-        <source>Offset from subtitle start when capturing the screenshot.</source>
-        <translation>Décalage par rapport au début du sous-titre lors de la capture d'écran.</translation>
+        <source>Measured from the subtitle start time.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Max Parallel Workers</source>
@@ -3718,16 +3637,8 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation>Réussi !</translation>
     </message>
     <message>
-        <source>Processing completed successfully</source>
-        <translation>Traitement terminé avec succès</translation>
-    </message>
-    <message>
         <source>Completed with Errors</source>
         <translation>Terminé avec des erreurs</translation>
-    </message>
-    <message>
-        <source>Some issues occurred during processing</source>
-        <translation>Des problèmes sont survenus pendant le traitement</translation>
     </message>
     <message>
         <source>Words Discovered</source>
@@ -3990,8 +3901,8 @@ Détails : %2</translation>
 </context><context>
     <name>SetupWizard</name>
     <message>
-        <source>Anki Miner works best with a frequency list, pitch accent data, and a dictionary. Download the recommended set now?</source>
-        <translation>Anki Miner fonctionne mieux avec une liste de fréquence, des données d'accent de hauteur et un dictionnaire. Télécharger l'ensemble recommandé maintenant ?</translation>
+        <source>Download the recommended frequency list, pitch accent data, and dictionary now?</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner Setup</source>
@@ -4052,14 +3963,6 @@ Détails : %2</translation>
         <translation>Progression</translation>
     </message>
     <message>
-        <source>Preview discovered words before creating cards (Ctrl+P)</source>
-        <translation>Prévisualiser les mots découverts avant de créer les cartes (Ctrl+P)</translation>
-    </message>
-    <message>
-        <source>Create Anki cards from the episode (Ctrl+Enter)</source>
-        <translation>Créer des cartes Anki à partir de l'épisode (Ctrl+Entrée)</translation>
-    </message>
-    <message>
         <source>File Selection</source>
         <translation>Sélection de fichiers</translation>
     </message>
@@ -4090,10 +3993,6 @@ Détails : %2</translation>
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Ajuster la synchronisation des sous-titres (positif = plus tard, négatif = plus tôt)</translation>
-    </message>
-    <message>
-        <source>Adjust if subtitles are out of sync</source>
-        <translation>Ajuster si les sous-titres sont désynchronisés</translation>
     </message>
     <message>
         <source>Missing Video File</source>
@@ -4169,20 +4068,16 @@ Détails : %2</translation>
         <source>Ready</source>
         <translation>Prêt</translation>
     </message>
-    <message>
-        <source>0 cards this session</source>
-        <translation>0 carte cette session</translation>
-    </message>
-    <message>
-        <source>Click to view detailed system validation</source>
-        <translation>Cliquez pour afficher la validation détaillée du système</translation>
-    </message>
     <message numerus="yes">
         <source>%n card(s) this session</source>
         <translation>
             <numerusform>%n carte cette session</numerusform>
             <numerusform>%n cartes cette session</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Click to view detailed system validation</source>
+        <translation>Cliquez pour afficher la validation détaillée du système</translation>
     </message>
     <message>
         <source>AnkiConnect is connected</source>
@@ -4447,8 +4342,8 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>alass introuvable ; installez-le ou définissez son chemin dans les Paramètres pour activer la re-synchronisation.</translation>
     </message>
     <message>
-        <source>Resync a subtitle file to its video by matching audio. Pick a video and the subtitle to align.</source>
-        <translation>Resynchroniser un fichier de sous-titres avec sa vidéo par correspondance audio. Choisissez une vidéo et le sous-titre à aligner.</translation>
+        <source>Resync a subtitle file to its video by matching audio.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mode:</source>
@@ -4535,8 +4430,8 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Corriger les différences de fréquence d'images</translation>
     </message>
     <message>
-        <source>Leave off when the subtitle already matches this video's framerate. Only enable for subs from a different release/framerate.</source>
-        <translation>Laissez désactivé lorsque les sous-titres correspondent déjà à la fréquence d'images de cette vidéo. N'activez que pour des sous-titres provenant d'une autre version/fréquence d'images.</translation>
+        <source>Enable only for subtitles from a different-framerate release.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Single offset only (no split)</source>
@@ -4549,10 +4444,6 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
     <message>
         <source>Split penalty:</source>
         <translation>Pénalité de découpe :</translation>
-    </message>
-    <message>
-        <source>Lower = more cut points for ad breaks; 1–20 is the useful range; default 7</source>
-        <translation>Valeur faible = plus de points de coupe pour les pauses publicitaires ; la plage utile est 1–20 ; valeur par défaut 7</translation>
     </message>
     <message>
         <source>Lower values create more cut points for ad breaks. Useful range 1–20; default 7.</source>
@@ -4773,8 +4664,8 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Périphérique ASR</translation>
     </message>
     <message>
-        <source>Auto uses the GPU when one is available and falls back to CPU. GPU needs an NVIDIA card plus the GPU acceleration pack (bundled installs) or the [asr-cuda] extra (source installs).</source>
-        <translation>Auto utilise le GPU lorsqu'il y en a un de disponible et se rabat sur le CPU. Le GPU nécessite une carte NVIDIA et le pack d'accélération GPU (installations groupées) ou l'extra [asr-cuda] (installations depuis les sources).</translation>
+        <source>Auto uses the GPU when available, else CPU; GPU needs an NVIDIA card plus the acceleration pack.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Download model</source>
@@ -4881,8 +4772,8 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Aucun binaire alass n'est publié pour macOS. Installez-le avec Homebrew :</translation>
     </message>
     <message>
-        <source>ASR engine not installed. Subtitle generation needs the faster-whisper engine. Install it with:</source>
-        <translation>Moteur ASR non installé. La génération de sous-titres nécessite le moteur faster-whisper. Installez-le avec :</translation>
+        <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Copy</source>
@@ -4939,8 +4830,8 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Zoom</translation>
     </message>
     <message>
-        <source>Restart Anki Miner to apply the new zoom.</source>
-        <translation>Redémarrez Anki Miner pour appliquer le nouveau zoom.</translation>
+        <source>Restart to apply.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Name</source>
@@ -4955,8 +4846,8 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Ouvrir le dossier des thèmes</translation>
     </message>
     <message>
-        <source>Open %1 in your file manager. Drop Anki Miner theme JSON files here to install them; they appear here on next launch.</source>
-        <translation>Ouvrir %1 dans votre gestionnaire de fichiers. Déposez ici des fichiers JSON de thème Anki Miner pour les installer ; ils apparaissent ici au prochain démarrage.</translation>
+        <source>Open %1; drop theme JSON files here to install on next launch.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Revert</source>
@@ -5057,8 +4948,8 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Filtrer par n'importe quel champ…</translation>
     </message>
     <message>
-        <source>Acts on highlighted rows when 2 or more are selected (Ctrl+Click or Shift+Click to select). Otherwise acts on all visible rows.</source>
-        <translation>Agit sur les lignes en surbrillance lorsque 2 ou plus sont sélectionnées (Ctrl+Clic ou Maj+Clic pour sélectionner). Sinon agit sur toutes les lignes visibles.</translation>
+        <source>Acts on 2+ highlighted rows (Ctrl/Shift+Click), else all visible rows.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Select All</source>
@@ -5073,8 +4964,8 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Ajouter aux mots connus</translation>
     </message>
     <message>
-        <source>Permanently ignore the highlighted row(s) — adds them to your local Known Words list so they are never mined again. Falls back to the current row when none are highlighted.</source>
-        <translation>Ignorer définitivement la ou les lignes en surbrillance — les ajoute à votre liste locale de mots connus afin qu'elles ne soient plus jamais extraites. Se rabat sur la ligne courante si aucune n'est en surbrillance.</translation>
+        <source>Add highlighted rows to your Known Words list — never mined again.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word (mined)</source>
@@ -5315,8 +5206,8 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Fichier de cookies</translation>
     </message>
     <message>
-        <source>Optional. Overrides the browser dropdown above. Export a Netscape cookies.txt with a 'Get cookies.txt LOCALLY' browser extension — works with ANY browser (Safari, Brave, Arc...). Keep the file private; it holds your YouTube login.</source>
-        <translation>Facultatif. Remplace le menu déroulant des navigateurs ci-dessus. Exportez un fichier Netscape cookies.txt avec une extension de navigateur « Get cookies.txt LOCALLY » — fonctionne avec N'IMPORTE QUEL navigateur (Safari, Brave, Arc…). Gardez le fichier privé ; il contient vos identifiants YouTube.</translation>
+        <source>Overrides the browser dropdown. Keep the file private — it holds your YouTube login.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> minutes</source>
