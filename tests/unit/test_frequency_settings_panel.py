@@ -35,7 +35,7 @@ def _make_source_on_disk(
     db_path = source_dir / "index.sqlite"
     build_index(
         db_path,
-        [("食べる", None, 1)],
+        [("食べる", None, 1, None)],
         {
             "schema_version": str(SCHEMA_VERSION),
             "format": fmt,
@@ -53,6 +53,7 @@ def _make_meta(
     source_name: str | None = None,
     entry_count: int = 100,
     schema_ok: bool = True,
+    version: int = SCHEMA_VERSION,
 ) -> FreqSourceMeta:
     """Build a FreqSourceMeta without touching disk."""
     return FreqSourceMeta(
@@ -61,6 +62,7 @@ def _make_meta(
         format=fmt,
         entry_count=entry_count,
         schema_ok=schema_ok,
+        version=version,
         db_path=Path("/fake/index.sqlite"),
     )
 

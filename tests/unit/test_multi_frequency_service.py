@@ -8,11 +8,20 @@ from anki_miner.services.frequency.multi_frequency_service import MultiFrequency
 class _FakeProvider:
     """Stand-in matching the IndexedFreqProvider surface MultiFrequencyService uses."""
 
-    def __init__(self, name: str, ranks: dict[str, int], *, available: bool = True):
+    def __init__(
+        self,
+        name: str,
+        ranks: dict[str, int],
+        *,
+        available: bool = True,
+        displays: dict[str, str] | None = None,
+    ):
         self._name = name
         self._ranks = ranks
+        self._displays = displays or {}
         self._available = available
         self.close_calls = 0
+        self.last_reading: str | None = None
 
     @property
     def name(self) -> str:
@@ -21,8 +30,12 @@ class _FakeProvider:
     def is_available(self) -> bool:
         return self._available
 
-    def lookup(self, term: str) -> int | None:
-        return self._ranks.get(term)
+    def lookup_detail(self, term: str, reading: str | None = None) -> tuple[int, str | None] | None:
+        self.last_reading = reading
+        rank = self._ranks.get(term)
+        if rank is None:
+            return None
+        return rank, self._displays.get(term)
 
     def close(self) -> None:
         self.close_calls += 1
@@ -56,7 +69,17 @@ def test_lookup_all_order_and_only_present():
             _FakeProvider("Novel", {"猫": 42}),
         ]
     )
-    assert svc.lookup_all("猫") == [("JPDB", 100), ("Novel", 42)]
+    assert svc.lookup_all("猫") == [("JPDB", 100, None), ("Novel", 42, None)]
+
+
+def test_lookup_all_carries_display_value():
+    svc = MultiFrequencyService(
+        [
+            _FakeProvider("JPDB", {"猫": 1099}, displays={"猫": "1099/72000"}),
+            _FakeProvider("BCCWJ", {"猫": 42}),  # no display -> None
+        ]
+    )
+    assert svc.lookup_all("猫") == [("JPDB", 1099, "1099/72000"), ("BCCWJ", 42, None)]
 
 
 def test_lookup_all_empty_when_no_hits():
@@ -66,6 +89,24 @@ def test_lookup_all_empty_when_no_hits():
 
 def test_lookup_all_no_providers():
     assert MultiFrequencyService([]).lookup_all("猫") == []
+
+
+def test_reading_threaded_to_each_provider():
+    a = _FakeProvider("A", {"猫": 100})
+    b = _FakeProvider("B", {"猫": 42})
+    svc = MultiFrequencyService([a, b])
+    svc.lookup_all("猫", "ねこ")
+    assert a.last_reading == "ねこ"
+    assert b.last_reading == "ねこ"
+
+
+def test_reading_threaded_through_min_and_harmonic():
+    a = _FakeProvider("A", {"猫": 100})
+    svc = MultiFrequencyService([a])
+    svc.lookup_min("猫", "ねこ")
+    assert a.last_reading == "ねこ"
+    svc.lookup_harmonic("猫", "みゃー")
+    assert a.last_reading == "みゃー"
 
 
 def test_lookup_min_picks_smallest():
