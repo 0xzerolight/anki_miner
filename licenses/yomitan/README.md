@@ -51,6 +51,7 @@ the combined work carries the same license.
 | `anki_miner/services/dictionary/resources/glossary.css` (monochrome recolor, pixelated image-rendering) | `ext/data/structured-content-style.json` (`.gloss-image-background`, `[data-appearance=monochrome]`, `[data-image-rendering=pixelated]` rules) |
 | `anki_miner/services/dictionary/storage.py` (`_LOOKUP_SQL` reading-boost key + `_reading_priority`, mirrored in `lookup`/`lookup_many`) | `ext/js/language/translator.js` (`Translator._sortTermDictionaryEntries` — `matchPrimaryReading` leading sort key, a boost not a filter) |
 | `anki_miner/services/dictionary/providers/indexed_provider.py` (`_render` sequence grouping + per-group tag lines) | `ext/js/language/translator.js` (`Translator._getRelatedDictionaryEntries`, `_createGroupedDictionaryEntry` — group definitions by `sequence`) |
+| `anki_miner/services/pitch_accent/render.py` (`is_mora_pitch_high`, `get_kana_morae`, `get_kana_diacritic_info`, `render_pitch_graph_svg`, `render_pitch_text`) | `ext/js/language/ja/japanese.js` (`isMoraPitchHigh`, `getKanaMorae`, `getKanaDiacriticInfo` + `DIACRITIC_MAPPING`), `ext/js/display/pronunciation-generator.js` (`createPronunciationGraph`, `createPronunciationText` + graph-dot/triangle helpers), with the inlined element styles hand-resolved from `ext/data/pronunciation-style.json` |
 
 Pinned upstream commit: `e2ed450c2f11a591922822e77f008e70a87daf0c`.
 

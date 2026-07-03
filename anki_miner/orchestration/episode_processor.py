@@ -35,6 +35,10 @@ from anki_miner.services import (
 from anki_miner.services.definition_service import collect_dictionary_css
 from anki_miner.services.dictionary.card_style_block import build_card_style_block
 from anki_miner.services.frequency.render import render_frequency_html
+from anki_miner.services.pitch_accent.render import (
+    render_pitch_graph_field,
+    render_pitch_text_field,
+)
 from anki_miner.utils import ensure_directory, has_katakana, hiragana_to_katakana, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 
@@ -1056,6 +1060,27 @@ class EpisodeProcessor:
             extra_fields: dict[str, str] = {}
             if pitch_position:
                 extra_fields["pitch_position"] = pitch_position
+                # Inline pitch graph / overline (6.3): rendered self-contained
+                # SVG/HTML, gated on the field being mapped so the default config
+                # stays byte-identical. Uses the SAME reading the pitch lookup
+                # used (lemma_reading or reading) for the morae, and the entry's
+                # per-mora nasal/devoice positions. One extra dict lookup only for
+                # a pitched word with the field mapped (both off by default).
+                want_graph = bool(self.config.anki_fields.get("pitch_graph"))
+                want_text = bool(self.config.anki_fields.get("pitch_text"))
+                if (want_graph or want_text) and self.pitch_accent_service:
+                    reading = word.lemma_reading or word.reading
+                    entry = self.pitch_accent_service.lookup_entry(word.lemma, reading)
+                    nasal = entry.nasal if entry else ()
+                    devoice = entry.devoice if entry else ()
+                    if want_graph:
+                        graph_html = render_pitch_graph_field(pitch_position, reading)
+                        if graph_html:
+                            extra_fields["pitch_graph"] = graph_html
+                    if want_text:
+                        text_html = render_pitch_text_field(pitch_position, reading, nasal, devoice)
+                        if text_html:
+                            extra_fields["pitch_text"] = text_html
             if pitch_category:
                 extra_fields["pitch_category"] = pitch_category
             if word.frequency_sources:

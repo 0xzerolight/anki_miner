@@ -19,6 +19,7 @@ from anki_miner.orchestration.episode_processor import (
 )
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.anki_service import AnkiService
+from anki_miner.services.pitch_accent_service import PitchEntry
 
 
 def _make_episode_context(tmp_path):
@@ -709,6 +710,72 @@ class TestOptionalServices:
         assert extra_fields is not None
         assert extra_fields["pitch_position"] == "0"
         assert extra_fields["pitch_category"] == "平板"
+
+    def test_pitch_graph_text_unmapped_by_default(self, test_config, mock_services, tmp_path):
+        """Default config: pitch_graph/pitch_text unmapped → not populated, no lookup_entry."""
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_pitch = MagicMock()
+        mock_pitch.is_available.return_value = True
+        mock_pitch.lookup_batch_detailed.return_value = [("0", "平板")]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            pitch_accent_service=mock_pitch,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        extra_fields = mock_services["anki_service"].create_cards_batch.call_args[0][0][0].extra_fields
+        assert "pitch_graph" not in extra_fields
+        assert "pitch_text" not in extra_fields
+        # The extra per-word entry lookup is skipped entirely when both are off.
+        mock_pitch.lookup_entry.assert_not_called()
+
+    def test_pitch_graph_text_mapped_renders_inline_markup(self, test_config, mock_services, tmp_path):
+        """Mapped pitch_graph/pitch_text → extra_fields carries rendered SVG/overline."""
+        word = _make_word("食べる")  # reading タベル → 3 morae
+        media = _make_media()
+
+        mock_pitch = MagicMock()
+        mock_pitch.is_available.return_value = True
+        mock_pitch.lookup_batch_detailed.return_value = [("0", "平板")]
+        mock_pitch.lookup_entry.return_value = PitchEntry("0", nasal=(), devoice=())
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        config = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "pitch_graph": "PitchGraph", "pitch_text": "PitchText"},
+        )
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            pitch_accent_service=mock_pitch,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        extra_fields = mock_services["anki_service"].create_cards_batch.call_args[0][0][0].extra_fields
+        assert 'class="pronunciation-graph"' in extra_fields["pitch_graph"]
+        assert 'viewBox="0 0 200 100"' in extra_fields["pitch_graph"]  # 50 * (3 + 1)
+        assert 'class="pronunciation-text"' in extra_fields["pitch_text"]
+        # The entry lookup uses the SAME reading the pitch batch lookup used.
+        mock_pitch.lookup_entry.assert_called_once_with(word.lemma, "タベル")
 
     def test_both_services_full_pipeline(self, test_config, mock_services, tmp_path):
         """Both services active should produce card data with both extra fields."""
