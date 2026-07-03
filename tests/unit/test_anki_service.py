@@ -10,6 +10,7 @@ import requests
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.models import CardPayload, MediaData
 from anki_miner.services._ankiconnect import _expect_list
+from anki_miner.services.anki_media_store import _content_addressed_name
 from anki_miner.services.anki_service import AnkiService
 
 # ---------------------------------------------------------------------------
@@ -1005,8 +1006,10 @@ class TestStoreMediaFilesBatch:
             audio_filename="clip.mp3",
         )
 
-        # multi response: two sub-results (one per file)
-        resp = _mock_response(result=["shot.jpg", "clip.mp3"])
+        # multi response: two non-error sub-results (one per file)
+        resp = _mock_response(result=[None, None])
+        ss_hashed = _content_addressed_name("shot.jpg", b"screenshot-data")
+        au_hashed = _content_addressed_name("clip.mp3", b"audio-data")
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             stored = service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
@@ -1016,10 +1019,14 @@ class TestStoreMediaFilesBatch:
         payload = mock_post.call_args[1]["json"]
         assert payload["action"] == "multi"
 
+        # Files are sent (and stored) under their content-hashed names (7.5).
         filenames_sent = [a["params"]["filename"] for a in payload["params"]["actions"]]
-        assert "shot.jpg" in filenames_sent
-        assert "clip.mp3" in filenames_sent
-        assert stored == {"shot.jpg", "clip.mp3"}
+        assert ss_hashed in filenames_sent
+        assert au_hashed in filenames_sent
+        assert stored == {ss_hashed, au_hashed}
+        # The hashed names are propagated back onto the payload's MediaData.
+        assert media.screenshot_filename == ss_hashed
+        assert media.audio_filename == au_hashed
 
     def test_skips_nonexistent_paths(self, test_config, make_tokenized_word, tmp_path):
         """Files with a path set but missing on disk: no upload attempt, counted as failures."""
@@ -1081,10 +1088,8 @@ class TestStoreMediaFilesBatch:
             )
             items.append(CardPayload(word=word, media=media, definition=f"def_{i}"))
 
-        # 3 cards × 2 files = 6 sub-results (all successful: no error key)
-        multi_resp = _mock_response(
-            result=["shot_0.jpg", "shot_1.jpg", "shot_2.jpg", "clip_0.mp3", "clip_1.mp3", "clip_2.mp3"]
-        )
+        # 3 cards × 2 files = 6 non-error sub-results (all successful)
+        multi_resp = _mock_response(result=[None] * 6)
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=multi_resp) as mock_post:
             stored = service._store_media_files_batch(items)
@@ -1095,8 +1100,10 @@ class TestStoreMediaFilesBatch:
         assert payload["action"] == "multi"
         assert len(payload["params"]["actions"]) == 6
 
-        # All filenames returned in stored set
-        expected = {f"shot_{i}.jpg" for i in range(3)} | {f"clip_{i}.mp3" for i in range(3)}
+        # All files stored under their content-hashed names
+        expected = {_content_addressed_name(f"shot_{i}.jpg", b"screenshot-data") for i in range(3)} | {
+            _content_addressed_name(f"clip_{i}.mp3", b"audio-data") for i in range(3)
+        }
         assert stored == expected
 
     def test_store_media_partial_failure_excludes_failed_filename(self, test_config, make_tokenized_word, tmp_path):
@@ -1233,7 +1240,7 @@ class TestStoreMediaFilesBatch:
             payload = call[1]["json"]
             assert payload["action"] == "multi"
             assert len(payload["params"]["actions"]) == 1
-        assert stored == {f"shot_{i}.jpg" for i in range(3)}
+        assert stored == {_content_addressed_name(f"shot_{i}.jpg", b"x" * 300) for i in range(3)}
 
     def test_duplicate_filenames_read_and_encoded_once(self, test_config, make_tokenized_word, tmp_path):
         """A filename shared by N payloads (audiobook cover art) is built once."""
@@ -1274,11 +1281,12 @@ class TestStoreMediaFilesBatch:
         assert built_filenames.count("cover.jpg") == 1
         assert build_mock.call_count == 4
 
-        # And shipped once in the multi POST
+        # And shipped once in the multi POST (under its content-hashed name)
+        cover_hashed = _content_addressed_name("cover.jpg", b"cover-data")
         payload = mock_post.call_args[1]["json"]
         filenames_sent = [a["params"]["filename"] for a in payload["params"]["actions"]]
-        assert filenames_sent.count("cover.jpg") == 1
-        assert stored == {"cover.jpg", "clip_0.mp3", "clip_1.mp3", "clip_2.mp3"}
+        assert filenames_sent.count(cover_hashed) == 1
+        assert stored == {cover_hashed} | {_content_addressed_name(f"clip_{i}.mp3", b"audio-data") for i in range(3)}
 
     def test_total_failure_sets_failure_counter(self, test_config, make_tokenized_word, tmp_path):
         """When multi and the per-file fallback both fail, the failure count is recorded."""
@@ -1467,7 +1475,9 @@ class TestExpressionAudio:
             expression_audio_filename="食べる_exp.mp3",
         )
 
-        resp = _mock_response(result=["clip.mp3", "食べる_exp.mp3"])
+        resp = _mock_response(result=[None, None])
+        clip_hashed = _content_addressed_name("clip.mp3", b"audio-data")
+        exp_hashed = _content_addressed_name("食べる_exp.mp3", b"expression-audio-data")
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             stored = service._store_media_files_batch(
@@ -1476,8 +1486,9 @@ class TestExpressionAudio:
 
         payload = mock_post.call_args[1]["json"]
         filenames_sent = [a["params"]["filename"] for a in payload["params"]["actions"]]
-        assert "食べる_exp.mp3" in filenames_sent
-        assert stored == {"clip.mp3", "食べる_exp.mp3"}
+        assert exp_hashed in filenames_sent
+        assert stored == {clip_hashed, exp_hashed}
+        assert media.expression_audio_filename == exp_hashed
 
     def test_store_batch_skips_expression_audio_when_none(self, test_config, make_tokenized_word, tmp_path):
         """No expression audio on the payload → nothing extra in the batch."""
@@ -1516,15 +1527,16 @@ class TestExpressionAudio:
             for i in range(2)
         ]
 
-        resp = _mock_response(result=["食べる_exp.mp3"])
+        resp = _mock_response(result=[None])
+        exp_hashed = _content_addressed_name("食べる_exp.mp3", b"expression-audio-data")
 
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             stored = service._store_media_files_batch(items)
 
         payload = mock_post.call_args[1]["json"]
         filenames_sent = [a["params"]["filename"] for a in payload["params"]["actions"]]
-        assert filenames_sent == ["食べる_exp.mp3"]
-        assert stored == {"食べる_exp.mp3"}
+        assert filenames_sent == [exp_hashed]
+        assert stored == {exp_hashed}
         assert service.last_media_store_failures == 0
 
 

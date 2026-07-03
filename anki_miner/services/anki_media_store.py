@@ -16,6 +16,7 @@ resident in memory at a time.  ``_chunk_media_actions`` is kept for the
 """
 
 import base64
+import hashlib
 import logging
 import re
 from collections.abc import Iterable, Iterator
@@ -23,11 +24,20 @@ from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError
-from anki_miner.models import CardPayload
+from anki_miner.models import CardPayload, MediaData
 from anki_miner.services._ankiconnect import post_action, post_multi
 from anki_miner.services.dictionary.yomitan_renderer import DICT_MEDIA_CLASS
 
 logger = logging.getLogger(__name__)
+
+# (filename_attr, path_attr) pairs on MediaData that carry an uploadable file.
+# Iterated by store_batch to collect sources and to propagate content-hashed
+# stored names back onto the payload before note building.
+_MEDIA_FIELD_ATTRS = (
+    ("screenshot_filename", "screenshot_path"),
+    ("audio_filename", "audio_path"),
+    ("expression_audio_filename", "expression_audio_path"),
+)
 
 # `<img>` tags emitted by yomitan_renderer for dictionary-bundled assets carry
 # `class="anki-miner-dict-media"`. Capture the whole tag, then pull `src` out —
@@ -110,8 +120,13 @@ def _chunk_media_actions(items: list[tuple[str, dict]]) -> Iterator[list[tuple[s
 
 def _stream_encode_chunks(
     items: Iterable[tuple[str, Path]],
-) -> Iterator[list[tuple[str, dict]]]:
-    """Yield chunks of ``(filename, action)`` pairs with lazy base64 encoding.
+) -> Iterator[list[tuple[str, str, dict]]]:
+    """Yield chunks of ``(orig_filename, stored_filename, action)`` triples.
+
+    ``orig_filename`` is the pre-hash name the payload carries; ``stored_filename``
+    is the content-addressed name actually sent to AnkiConnect (and set as
+    ``action.params.filename``), so the caller can propagate it back onto the
+    payload after a confirmed store (7.5).
 
     Unlike ``_chunk_media_actions`` (which requires actions to be pre-built),
     this generator encodes each file only when it is about to be added to the
@@ -123,7 +138,7 @@ def _stream_encode_chunks(
     Files that cannot be read (``OSError``) or stat'd are logged as warnings
     and skipped — consistent with ``_build_store_media_action`` behaviour.
     """
-    chunk: list[tuple[str, dict]] = []
+    chunk: list[tuple[str, str, dict]] = []
     chunk_bytes = 0
     for filename, src_path in items:
         # Estimate encoded size from file size to decide whether to flush first.
@@ -141,33 +156,57 @@ def _stream_encode_chunks(
             chunk = []
             chunk_bytes = 0
 
-        # Encode now — just before it enters the chunk.
-        action = _build_store_media_action(filename, src_path)
+        # Encode now — just before it enters the chunk. Card media is
+        # content-hashed so cross-episode same-name/different-bytes clips no
+        # longer overwrite each other in Anki's media collection.
+        action = _build_store_media_action(filename, src_path, content_hash=True)
         if action is None:
             # _build_store_media_action already logged the warning.
             continue
-        chunk.append((filename, action))
+        stored_name = action["params"]["filename"]
+        chunk.append((filename, stored_name, action))
         chunk_bytes += len(action["params"].get("data", ""))
 
     if chunk:
         yield chunk
 
 
-def _build_store_media_action(filename: str, src_path: Path) -> dict | None:
+def _content_addressed_name(filename: str, content: bytes) -> str:
+    """Return ``{stem}_{sha1[:12]}{ext}`` for a content-addressed Anki media name.
+
+    Ported concept from Yomitan ``ext/js/data/anki-util.js``
+    ``mediaFileNameHashOrTimestamp`` / ``generateAnkiNoteMediaFileName`` (upstream
+    commit e2ed450): a SHA-1 of the file bytes replaces the collision-prone
+    ``{word}_{timestamp}`` name so same content re-mines to one deterministic name
+    while different content (OP/ED karaoke at the same offset across episodes) can
+    no longer overwrite a prior card's clip via ``storeMediaFile``.
+    """
+    digest = hashlib.sha1(content).hexdigest()[:12]  # noqa: S324 - content address, not security
+    p = Path(filename)
+    return f"{p.stem}_{digest}{p.suffix}"
+
+
+def _build_store_media_action(filename: str, src_path: Path, content_hash: bool = False) -> dict | None:
     """Build a ``storeMediaFile`` action dict for use in a ``multi`` envelope.
 
-    Returns ``None`` and logs a warning if the file cannot be read.
+    Returns ``None`` and logs a warning if the file cannot be read. When
+    ``content_hash`` is True the stored ``params.filename`` is content-addressed
+    (``{stem}_{sha1[:12]}{ext}``) so distinct bytes never collide on one Anki
+    media name (7.5). The dict-media path passes False so the src name the
+    rendered ``<img>`` references is preserved.
     """
     try:
         with open(src_path, "rb") as f:
-            data_base64 = base64.b64encode(f.read()).decode("utf-8")
+            raw = f.read()
     except OSError as e:
         logger.warning(f"Failed to read media file {filename}: {e}")
         return None
+    stored_name = _content_addressed_name(filename, raw) if content_hash else filename
+    data_base64 = base64.b64encode(raw).decode("utf-8")
     return {
         "action": "storeMediaFile",
         "version": 6,
-        "params": {"filename": filename, "data": data_base64},
+        "params": {"filename": stored_name, "data": data_base64},
     }
 
 
@@ -200,6 +239,12 @@ class AnkiMediaStore:
         Per-sub-action AnkiConnect errors (sub-result with an ``"error"`` key)
         exclude that filename from the returned set.
 
+        Card media is content-hashed at encode time (7.5): the stored name is
+        ``{stem}_{sha1[:12]}{ext}``, and the final name AnkiConnect confirms is
+        propagated back onto every ``MediaData`` field that referenced the
+        pre-hash name — so ``build_note`` (which only references filenames in the
+        returned set) points cards at the actually-stored name.
+
         Sets ``self.last_store_failures`` to the count of files that could
         not be stored so callers can surface it to the user instead of silently
         creating cards with empty media fields.  Files whose source path was set
@@ -209,7 +254,8 @@ class AnkiMediaStore:
             word_data_list: List of CardPayload objects whose media should be uploaded
 
         Returns:
-            Set of filenames that were successfully stored
+            Set of the final (content-hashed / AnkiConnect-confirmed) filenames
+            that were successfully stored
         """
         # Dedup by filename first (cheap, no encoding).  First writer wins —
         # duplicate filenames point at the same content, so whichever path we
@@ -223,16 +269,18 @@ class AnkiMediaStore:
         # they should count as failures so the caller can warn the user about
         # cards landing with empty fields.
         vanished: set[str] = set()
+        # Every (MediaData, filename_attr) that referenced each pre-hash name, so
+        # the confirmed stored name can be written back onto all of them.
+        refs: dict[str, list[tuple[MediaData, str]]] = {}
         for item in word_data_list:
             media = item.media
-            for filename, src_path in [
-                (media.screenshot_filename, media.screenshot_path),
-                (media.audio_filename, media.audio_path),
-                (media.expression_audio_filename, media.expression_audio_path),
-            ]:
+            for fn_attr, path_attr in _MEDIA_FIELD_ATTRS:
+                filename = getattr(media, fn_attr)
+                src_path = getattr(media, path_attr)
                 if not filename or not src_path:
                     # Legitimately absent — no media for this field, stay silent.
                     continue
+                refs.setdefault(filename, []).append((media, fn_attr))
                 if not src_path.exists():
                     # Had a path but the file is gone; count as a failure unless
                     # already deduped (first encounter owns the failure slot).
@@ -251,14 +299,28 @@ class AnkiMediaStore:
         # Stream: encode lazily per chunk; only one chunk's base64 is in RAM
         # at a time.  Files that fail to encode are skipped (logged inside
         # _stream_encode_chunks) and excluded from the attempt count below.
-        stored: set[str] = set()
+        stored_finals: set[str] = set()
+        # pre-hash name -> final stored name (content hash, or AnkiConnect's own
+        # rename if it differs from what we sent).
+        rename: dict[str, str] = {}
         attempted: set[str] = set()
         for chunk in _stream_encode_chunks(paths_by_filename.items()):
-            attempted.update(fn for fn, _ in chunk)
-            stored |= self._store_media_chunk(chunk)
+            attempted.update(orig for orig, _, _ in chunk)
+            result_map = self._store_media_chunk([(sent, action) for _, sent, action in chunk])
+            for orig, sent, _ in chunk:
+                actual = result_map.get(sent)
+                if actual is not None:
+                    rename[orig] = actual
+                    stored_finals.add(actual)
 
-        self.last_store_failures = len(attempted) - len(stored) + len(vanished)
-        return stored
+        # Propagate the final Anki-side name onto every payload that referenced
+        # the pre-hash name so build_note points cards at the stored file.
+        for orig, final in rename.items():
+            for media, attr in refs.get(orig, ()):
+                setattr(media, attr, final)
+
+        self.last_store_failures = len(attempted) - len(rename) + len(vanished)
+        return stored_finals
 
     def upload_dict_media(self, word_data_list: list[CardPayload]) -> None:
         """Batch-upload all dict-media assets referenced across the whole card batch.
@@ -311,11 +373,23 @@ class AnkiMediaStore:
         # AND base64 byte budget, per-file fallback when a multi POST trips the
         # oversized-body connection reset. _store_media_chunk returns only the
         # srcs confirmed stored, so failures stay uncached and retry next batch.
+        # Dict media is cached by the src the rendered <img> references (the sent
+        # name / dict key), not any AnkiConnect rename — the HTML is already
+        # emitted, so the sent name is the one that must not be re-uploaded.
         for chunk in _chunk_media_actions(items):
-            self._dict_media_uploaded |= self._store_media_chunk(chunk)
+            self._dict_media_uploaded.update(self._store_media_chunk(chunk).keys())
 
-    def _store_media_chunk(self, chunk: list[tuple[str, dict]]) -> set[str]:
-        """Store one chunk via ``multi``; fall back to per-file POSTs on transport failure."""
+    def _store_media_chunk(self, chunk: list[tuple[str, dict]]) -> dict[str, str]:
+        """Store one chunk via ``multi``; fall back to per-file POSTs on transport failure.
+
+        Returns ``{sent_filename: stored_filename}`` for every file AnkiConnect
+        confirmed. ``storeMediaFile`` returns the name it actually stored under; we
+        adopt that when it differs from the sent name (AnkiConnect may sanitize)
+        so callers reference the real media name (7.5). A ``multi`` sub-result can
+        be a bare filename string, a ``{"result": name, "error": null}`` wrapper,
+        or (older versions / test stubs) a bare ``None`` success — all three are
+        handled; only a wrapper carrying a truthy ``error`` is treated as failure.
+        """
         filenames = [f for f, _ in chunk]
         actions = [a for _, a in chunk]
         try:
@@ -336,29 +410,41 @@ class AnkiMediaStore:
                 len(sub_results),
                 len(actions),
             )
-        stored: set[str] = set()
+        stored: dict[str, str] = {}
         for filename, sub_result in zip(filenames, sub_results, strict=False):
-            if not (isinstance(sub_result, dict) and sub_result.get("error")):
-                stored.add(filename)
+            if isinstance(sub_result, dict):
+                if sub_result.get("error"):
+                    continue
+                returned = sub_result.get("result")
+                actual = returned if isinstance(returned, str) and returned else filename
+            elif isinstance(sub_result, str) and sub_result:
+                # Bare-string form: the value IS the stored filename.
+                actual = sub_result
+            else:
+                # None / other: a bare success under the name we sent.
+                actual = filename
+            stored[filename] = actual
         return stored
 
-    def _store_media_files_individually(self, chunk: list[tuple[str, dict]]) -> set[str]:
+    def _store_media_files_individually(self, chunk: list[tuple[str, dict]]) -> dict[str, str]:
         """Per-file ``storeMediaFile`` fallback (tiny bodies) for a failed-multi chunk.
 
         This is the pre-batching upload path: each file goes in its own small POST,
         which avoids the oversized-body connection reset that breaks the ``multi``
-        envelope. Files AnkiConnect still rejects are logged and excluded.
+        envelope. Files AnkiConnect still rejects are logged and excluded. Returns
+        ``{sent_filename: stored_filename}``, adopting the name storeMediaFile
+        returns when it differs from the sent name.
         """
-        stored: set[str] = set()
+        stored: dict[str, str] = {}
         for filename, action in chunk:
             try:
-                post_action(
+                result = post_action(
                     self.config.ankiconnect_url,
                     "storeMediaFile",
                     params=action["params"],
                     timeout=30,
                 )
-                stored.add(filename)
+                stored[filename] = result if isinstance(result, str) and result else filename
             except AnkiConnectionError as e:
                 logger.warning("Failed to store media file %s individually: %s", filename, e)
         return stored

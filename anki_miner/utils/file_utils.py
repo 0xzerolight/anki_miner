@@ -27,8 +27,11 @@ def safe_filename(filename: str) -> str:
     """
     import re
 
-    # Remove or replace invalid filename characters
-    invalid_chars = '<>:"/\\|?*'
+    # Remove or replace invalid filename characters. `[` and `]` are included
+    # because they terminate Anki's `[sound:...]` media tag — a bracket in a
+    # media filename truncates the reference and corrupts the card (7.5; Yomitan
+    # strips `]` from audio filenames in backend.js).
+    invalid_chars = '<>:"/\\|?*[]'
     safe_name = filename
     for char in invalid_chars:
         safe_name = safe_name.replace(char, "_")
