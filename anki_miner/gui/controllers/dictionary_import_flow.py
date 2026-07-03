@@ -81,6 +81,35 @@ class DictionaryImportFlow:
         """
         return (self._active_import_worker,)
 
+    def _import_notes(self, meta: dict) -> str:
+        """Trailing note about malformed-skipped entries and media warnings.
+
+        Empty when the import was clean; otherwise a blank-line-separated block
+        appended to the success dialog so a drastically-reduced or media-lossy
+        import is visible to the user (plan 4.7/4.8) rather than silent. Full
+        per-file media warnings are also logged.
+        """
+        notes: list[str] = []
+        skipped = meta.get("skipped_malformed", 0)
+        if skipped:
+            notes.append(
+                tr_format(
+                    QCoreApplication.translate("DictionaryImportFlow", "Skipped %1 malformed entries."),
+                    f"{skipped:,}",
+                )
+            )
+        media_warnings = meta.get("media_warnings") or []
+        if media_warnings:
+            notes.append(
+                tr_format(
+                    QCoreApplication.translate("DictionaryImportFlow", "%1 media file(s) could not be imported."),
+                    f"{len(media_warnings):,}",
+                )
+            )
+            for warning in media_warnings:
+                logger.warning("Dictionary media skipped: %s", warning)
+        return ("\n\n" + "\n".join(notes)) if notes else ""
+
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
         """Toggle import-trigger buttons. Prevents overlapping import workers."""
         self._panel._add_btn.setEnabled(enabled)
@@ -135,7 +164,8 @@ class DictionaryImportFlow:
                     QCoreApplication.translate("DictionaryImportFlow", "Imported %1 (%2 entries)"),
                     dict_id,
                     f"{meta.get('entry_count', 0):,}",
-                ),
+                )
+                + self._import_notes(meta),
             )
             new_chain = self._with_dict_at_top(dict_id)
             # New dict folder on disk — invalidate the panel's cached registry
@@ -240,7 +270,8 @@ class DictionaryImportFlow:
                     QCoreApplication.translate("DictionaryImportFlow", "Re-imported %1 (%2 entries)"),
                     dict_id,
                     f"{meta.get('entry_count', 0):,}",
-                ),
+                )
+                + self._import_notes(meta),
             )
             # Refresh registry so the stale-flag warning clears on the row.
             current_chain = self._panel.get_chain()

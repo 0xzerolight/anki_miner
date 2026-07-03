@@ -221,6 +221,14 @@ class ZipImportFlow:
                 if result.skipped_display_only
                 else ""
             )
+            malformed_note = (
+                tr_format(
+                    QCoreApplication.translate("ZipImportFlow", " (skipped %1 malformed entries)"),
+                    f"{result.skipped_malformed:,}",
+                )
+                if result.skipped_malformed
+                else ""
+            )
             QMessageBox.information(
                 self._parent,
                 labels.success_title,
@@ -229,7 +237,8 @@ class ZipImportFlow:
                     f"{result.entry_count:,}",
                     result.source_name,
                 )
-                + skipped_note,
+                + skipped_note
+                + malformed_note,
             )
 
         setattr(self, commit_slot_attr, _commit)

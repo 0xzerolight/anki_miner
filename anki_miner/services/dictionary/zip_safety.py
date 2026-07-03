@@ -11,11 +11,55 @@ importers route through :func:`validate_zip_safe` before calling
 from __future__ import annotations
 
 import zipfile
+from collections.abc import Iterable
 from pathlib import Path
+from typing import NoReturn
 
 from anki_miner.exceptions import SetupError
 
 MAX_UNCOMPRESSED_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB
+
+INDEX_FILE_NAME = "index.json"
+
+
+def find_redundant_index_dir(member_names: Iterable[str]) -> str | None:
+    """Return the directory prefix an ``index.json`` is nested under, or None.
+
+    Port of Yomitan ``DictionaryImporter._findRedundantDirectories``
+    (``ext/js/dictionary/dictionary-importer.js``, upstream e2ed450): finds a
+    member whose basename is ``index.json`` and returns everything before it in
+    the path. Only meaningful when a root-level ``index.json`` is confirmed
+    absent — that is the "user zipped the folder itself instead of its
+    contents" mistake. Returns None when no ``index.json`` exists anywhere or it
+    already sits at the root (empty prefix).
+    """
+    index_path = ""
+    for name in member_names:
+        normalized = name.replace("\\", "/")
+        if normalized.rsplit("/", 1)[-1] == INDEX_FILE_NAME:
+            index_path = normalized
+    if not index_path:
+        return None
+    prefix = index_path[: index_path.rfind(INDEX_FILE_NAME)]
+    return prefix or None
+
+
+def raise_if_index_nested(member_names: Iterable[str], *, missing_msg: str) -> NoReturn:
+    """Raise a guiding ``SetupError`` for a nested/absent ``index.json``.
+
+    When a root ``index.json`` is missing but one is nested under a subdirectory
+    (the "re-zipped the folder, not its contents" mistake), raise a diagnostic
+    naming the redundant directory; otherwise raise ``missing_msg`` verbatim.
+    Port of the redundant-directory branch of
+    ``DictionaryImporter._readAndValidateIndex``
+    (``ext/js/dictionary/dictionary-importer.js``, upstream e2ed450).
+    """
+    nested = find_redundant_index_dir(member_names)
+    if nested:
+        raise SetupError(
+            f'index.json found nested under "{nested}" — ' "re-zip the folder CONTENTS, not the folder itself"
+        )
+    raise SetupError(missing_msg)
 
 
 def validate_zip_safe(zf: zipfile.ZipFile, tmp_root: Path) -> None:

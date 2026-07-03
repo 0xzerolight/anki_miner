@@ -13,6 +13,10 @@ from pathlib import Path
 from typing import Any, Callable
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services.dictionary.schema_validation import (
+    ensure_bank_array,
+    is_valid_term_bank_entry,
+)
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -24,7 +28,7 @@ from anki_miner.services.dictionary.yomitan_renderer import (
     dict_media_safe_basename,
     render_glossary_entry,
 )
-from anki_miner.services.dictionary.zip_safety import validate_zip_safe
+from anki_miner.services.dictionary.zip_safety import raise_if_index_nested, validate_zip_safe
 
 ProgressFn = Callable[[int, int, str], None]
 
@@ -44,6 +48,13 @@ class YomitanImportResult:
     source_name: str
     source_revision: str
     entry_count: int
+    # Structurally-malformed term-bank entries skipped during import (surfaced
+    # to the user so a drastically-reduced import doesn't pass unnoticed).
+    skipped_malformed: int = 0
+    # Context-rich warnings for referenced media that could not be copied
+    # (unsupported type / failed image decode), surfaced instead of silently
+    # dropped.
+    media_warnings: tuple[str, ...] = ()
 
 
 def import_yomitan_zip(
@@ -85,7 +96,8 @@ def import_yomitan_zip(
 
         index_file = tmp_path / "index.json"
         if not index_file.exists():
-            raise SetupError("Zip missing required index.json")
+            nested = [str(p.relative_to(tmp_path)) for p in tmp_path.rglob("index.json")]
+            raise_if_index_nested(nested, missing_msg="Zip missing required index.json")
 
         try:
             index = json.loads(index_file.read_text(encoding="utf-8"))
@@ -102,6 +114,14 @@ def import_yomitan_zip(
 
         dict_id = _derive_dict_id(title, revision)
 
+        # Fail fast on an already-imported dict BEFORE any staging/rendering
+        # work (mirrors Yomitan checking dictionaryExists right after reading
+        # index.json). The late check below the atomic rename stays as a
+        # race backstop. dest_root may not exist yet — .exists() is False then.
+        final_path = dest_root / dict_id
+        if final_path.exists() and not overwrite:
+            raise SetupError(f"Dictionary '{dict_id}' already exists")
+
         # Enumerate term bank files for progress totals
         term_files = sorted(tmp_path.glob("term_bank_*.json"))
         if not term_files:
@@ -114,6 +134,7 @@ def import_yomitan_zip(
         create_index(db_path)
 
         total_entries = 0
+        skipped_malformed = 0
         # Collects dict-internal asset paths (e.g. "sankoku8/svg-accent/X.svg")
         # referenced by `<img>` nodes during structured-content rendering. After
         # rows are inserted we copy each file out of the zip so AnkiService can
@@ -121,7 +142,7 @@ def import_yomitan_zip(
         media_paths: set[str] = set()
 
         def rows() -> Any:
-            nonlocal total_entries
+            nonlocal total_entries, skipped_malformed
             for file_idx, term_file in enumerate(term_files, 1):
                 if cancel_check and cancel_check():
                     raise SetupError("Import cancelled")
@@ -129,12 +150,17 @@ def import_yomitan_zip(
                     entries = json.loads(term_file.read_text(encoding="utf-8"))
                 except json.JSONDecodeError as e:
                     raise SetupError(f"Invalid {term_file.name}: {e}") from e
+                # A bank whose top-level JSON is not an array is wholly
+                # unreadable — raise instead of skipping every "entry".
+                ensure_bank_array(entries, term_file.name)
                 for entry in entries:
-                    if not isinstance(entry, list) or len(entry) < 6:
+                    # Structural gate the loop below implicitly assumes (list of
+                    # >= 6 positions, non-blank term). Count skips so a
+                    # drastically-reduced import is surfaced, not silent.
+                    if not is_valid_term_bank_entry(entry):
+                        skipped_malformed += 1
                         continue
-                    term = str(entry[0]).strip() if entry[0] is not None else ""
-                    if not term:
-                        continue  # silently skip malformed entries
+                    term = str(entry[0]).strip()
                     reading = str(entry[1]) if entry[1] else None
                     score = int(entry[4]) if len(entry) > 4 and entry[4] is not None else 0
                     glossary = entry[5] if isinstance(entry[5], list) else [entry[5]]
@@ -166,7 +192,7 @@ def import_yomitan_zip(
 
         bulk_insert(db_path, rows())
 
-        _copy_dict_media(tmp_path, staging / "media", media_paths)
+        media_warnings = _copy_dict_media(tmp_path, staging / "media", media_paths, dict_id=dict_id)
 
         meta = {
             "schema_version": str(SCHEMA_VERSION),
@@ -191,9 +217,10 @@ def import_yomitan_zip(
         # the atomic rename below promotes it together with the index.
         shutil.copy2(zip_path, staging / "source.zip")
 
-        # Move staging into dest_root atomically
+        # Move staging into dest_root atomically. final_path was computed up
+        # front for the early duplicate check; this late check is the race
+        # backstop (dir may have appeared since staging began).
         dest_root.mkdir(parents=True, exist_ok=True)
-        final_path = dest_root / dict_id
 
         if final_path.exists():
             if not overwrite:
@@ -224,6 +251,8 @@ def import_yomitan_zip(
             source_name=title,
             source_revision=revision,
             entry_count=total_entries,
+            skipped_malformed=skipped_malformed,
+            media_warnings=tuple(media_warnings),
         )
 
 
@@ -245,7 +274,53 @@ def _read_styles_css(zip_root: Path) -> str:
         return ""
 
 
-def _copy_dict_media(zip_root: Path, dest: Path, rel_paths: set[str]) -> None:
+# Image extensions Yomitan recognizes for dictionary media, ported from
+# `getImageMediaTypeFromFileName` (ext/js/media/media-util.js, upstream
+# e2ed450). A referenced asset outside this set is not a valid image and is
+# skipped with a warning rather than copied blindly into Anki's media store.
+_MEDIA_EXTENSION_WHITELIST = frozenset(
+    {
+        ".apng",
+        ".avif",
+        ".bmp",
+        ".gif",
+        ".ico",
+        ".cur",
+        ".jpg",
+        ".jpeg",
+        ".jfif",
+        ".pjpeg",
+        ".pjp",
+        ".png",
+        ".svg",
+        ".tif",
+        ".tiff",
+        ".webp",
+    }
+)
+
+
+def _image_decodes(path: Path) -> bool:
+    """Return True if ``path`` decodes as an image (or Pillow is unavailable).
+
+    Pillow is an optional dependency; when absent we skip the probe and assume
+    the file is fine (extension whitelist already applied). ``Image.verify()``
+    is the cheap header-integrity check — it catches truncated/garbage files a
+    dictionary might ship without decoding full pixel data.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        return True
+    try:
+        with Image.open(path) as im:
+            im.verify()
+        return True
+    except Exception:  # noqa: BLE001 — any Pillow failure means "won't decode"
+        return False
+
+
+def _copy_dict_media(zip_root: Path, dest: Path, rel_paths: set[str], *, dict_id: str) -> list[str]:
     """Copy referenced asset files out of the unzipped Yomitan tree.
 
     For each path encountered by the renderer (e.g. `sankoku8/svg-accent/X.svg`),
@@ -253,12 +328,20 @@ def _copy_dict_media(zip_root: Path, dest: Path, rel_paths: set[str]) -> None:
     locate it via ``<dicts_root>/<dict_id>/media/<flattened-basename>``. The
     flattened form matches what the renderer wrote into the Anki `<img src>`,
     so this is a stable, reversible mapping.
+
+    Assets whose extension is outside :data:`_MEDIA_EXTENSION_WHITELIST`, or
+    that fail a Pillow decode probe (SVG excepted — it is text, not a raster
+    Pillow can open), are skipped and reported in the returned warning list
+    instead of being copied blindly. Returns the collected warnings (empty on a
+    clean import). The ``media/`` dir is created lazily so a dict whose every
+    referenced asset is bad leaves no empty folder behind.
     """
+    warnings: list[str] = []
     if not rel_paths:
-        return
-    dest.mkdir(parents=True, exist_ok=True)
+        return warnings
     zip_root_resolved = zip_root.resolve()
-    for rel in rel_paths:
+    dest_created = False
+    for rel in sorted(rel_paths):
         safe = dict_media_safe_basename(rel)
         if safe is None:
             continue
@@ -272,7 +355,18 @@ def _copy_dict_media(zip_root: Path, dest: Path, rel_paths: set[str]) -> None:
             continue
         if not src_resolved.is_file():
             continue
+        ext = Path(rel).suffix.lower()
+        if ext not in _MEDIA_EXTENSION_WHITELIST:
+            warnings.append(f'"{rel}" referenced by {dict_id} has an unsupported media type "{ext}"')
+            continue
+        if ext != ".svg" and not _image_decodes(src_resolved):
+            warnings.append(f'"{rel}" referenced by {dict_id} failed to decode as an image')
+            continue
+        if not dest_created:
+            dest.mkdir(parents=True, exist_ok=True)
+            dest_created = True
         shutil.copy2(src_resolved, dest / safe)
+    return warnings
 
 
 def _derive_dict_id(title: str, revision: str) -> str:
@@ -301,8 +395,8 @@ def derive_dict_id_from_zip(zip_path: Path) -> str:
         with zipfile.ZipFile(zip_path, "r") as zf:
             try:
                 info = zf.getinfo("index.json")
-            except KeyError as e:
-                raise SetupError("Zip missing required index.json") from e
+            except KeyError:
+                raise_if_index_nested(zf.namelist(), missing_msg="Zip missing required index.json")
             # Reject on the DECLARED uncompressed size before reading a single
             # byte (a malicious archive can lie here, but a lie that *under*-
             # reports is still capped by the bounded read below).
