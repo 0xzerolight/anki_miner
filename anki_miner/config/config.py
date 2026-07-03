@@ -291,6 +291,17 @@ class AnkiMinerConfig:
     duplicate_scope: Literal["collection", "deck", "deck-root"] = "collection"
     duplicate_check_all_models: bool = False
 
+    # Duplicate handling (7.4, Yomitan duplicateBehavior "overwrite"/coalesce).
+    # "skip" (default) drops every probe-flagged duplicate — byte-identical to
+    # pre-7.4 (no findNotes/notesInfo/updateNoteFields calls are ever made).
+    # "update" coalesce-fills the existing note's EMPTY mapped fields with this
+    # run's values (never overwriting user-edited, non-empty content), letting a
+    # user who later maps expression_audio/pitch/frequency backfill old cards.
+    # Opt-in by design: bulk-updating real user notes is riskier than Yomitan's
+    # interactive one-note-at-a-time flow. Updated notes are NOT new notes, so
+    # they never enter last_created_note_ids and are not reverted by Undo.
+    duplicate_behavior: Literal["skip", "update"] = "skip"
+
     # Script-type filters (Issue #57). When set, words whose card form
     # (mined_form) is written entirely in one kana script are dropped before
     # card creation. Useful for a kanji-focused deck / discarding katakana

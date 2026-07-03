@@ -24,6 +24,7 @@ the combined work carries the same license.
 | `anki_miner/services/pitch_accent/yomitan_pitch_importer.py` (`_to_number_array`) | `ext/js/language/translator.js` (`Translator._toNumberArray`) |
 | `anki_miner/services/_ankiconnect.py` (`_expect_list`) | `ext/js/comm/anki-connect.js` (`_normalizeArray`) |
 | `anki_miner/services/anki_service.py` (`_probe_duplicates`, `_probe_duplicates_fallback`, `_strip_note_to_first_field`) | `ext/js/background/backend.js` (`partitionAddibleNotes`, `_findDuplicates`, `_findDuplicatesFallback`, `_stripNotesArray`), `ext/js/comm/anki-connect.js` (`canAddNotesWithErrorDetail`) |
+| `anki_miner/services/anki_service.py` (`update_notes_coalesce`, `_coalesce_field`, `_find_notes_query_for`, `_escape_dup_query`) | `ext/js/display/display-anki.js` (`_getOverwrittenNote`, `_getOverwrittenField` coalesce case), `ext/js/comm/anki-connect.js` (`findNoteIds`, `_getNoteQuery`, `_fieldsToQuery`, `_escapeQuery`) |
 | `anki_miner/services/expression_audio_fetcher.py` (`_classify_request_exception` + failure-cause tally) | `ext/js/background/backend.js` (`Backend._getAudioDownloadError`) |
 | `anki_miner/services/expression_audio_fetcher.py` (`AUDIO_MEDIA_TYPE_EXTENSIONS`, `audio_extension_for_media_type`) | `ext/js/media/media-util.js` (`getFileExtensionFromAudioMediaType`) |
 | `anki_miner/services/custom_audio_fetcher.py` (`_substitute_custom_url`, `_resolve_json_sources` shape check) | `ext/js/media/audio-downloader.js` (`AudioDownloader._getCustomUrl`, `_getInfoCustom`, `_getInfoCustomJson`) |
