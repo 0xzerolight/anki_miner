@@ -421,6 +421,8 @@ _NEW_FIELD_KEYS = (
     "cloze_body_kana",
     "cloze_suffix",
     "conjugation",
+    "pitch_graph",
+    "pitch_text",
 )
 
 

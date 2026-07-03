@@ -65,6 +65,8 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "cloze_body_kana": "ClozeBodyKana",
             "cloze_suffix": "ClozeSuffix",
             "conjugation": "Conjugation",
+            "pitch_graph": "PitchGraph",
+            "pitch_text": "PitchText",
         },
         anki_word_field="Word",
         custom_card_css=".custom { color: red; }",
