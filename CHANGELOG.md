@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Definitions are found for spelling variants and inflected input.** When a word's exact headword misses, lookup now falls back through its source spelling (乞う vs 請う), kana variants, and Yomitan's deinflection hypotheses validated against each entry's part-of-speech rules — so variant-spelling dictionaries hit, and pasting an inflected form like 食べさせられた into the in-app lookup finds 食べる. Mining pays this cost only for words that would otherwise have no definition.
 - **Dictionaries can check for updates.** Settings → Dictionaries gains a "Check for Updates" action: for dictionaries that publish an index URL (Jitendex-style `isUpdatable` metadata, kept at import), it fetches the remote index, validates it, and reports "rev X → rev Y" with the download link — you import the new zip through the normal flow. All network access stays behind the explicit click.
 - **Duplicates can update the existing card instead of being skipped (opt-in).** With `duplicate_behavior: "update"`, a re-mined word fills the empty mapped fields of its existing note (never touching fields you've edited) — useful after mapping new fields like pitch or cloze. Default remains skip.
 - **Settings exposes the new card fields, and hand-edited mappings survive.** The field-mapping panel gains inputs for the cloze and conjugation fields, and saving Settings no longer wipes `anki_fields` keys the panel doesn't know about.
