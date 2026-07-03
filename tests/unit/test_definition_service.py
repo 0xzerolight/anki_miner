@@ -137,7 +137,7 @@ class TestGetDefinition:
         p2 = make_provider("B", return_value="from B")
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definitions_batch(["x"])[0] == "from A"
+        assert service.get_definitions_batch([("x", None)])[0] == "from A"
         p1.lookup.assert_called_once_with("x")
         p2.lookup.assert_not_called()
 
@@ -147,7 +147,7 @@ class TestGetDefinition:
         p2 = make_provider("B", return_value="from B")
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definitions_batch(["x"])[0] == "from B"
+        assert service.get_definitions_batch([("x", None)])[0] == "from B"
         p1.lookup.assert_called_once_with("x")
         p2.lookup.assert_called_once_with("x")
 
@@ -157,7 +157,7 @@ class TestGetDefinition:
         p2 = make_provider("online", available=True, return_value="online result")
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definitions_batch(["x"])[0] == "online result"
+        assert service.get_definitions_batch([("x", None)])[0] == "online result"
         p1.lookup.assert_not_called()
         p2.lookup.assert_called_once()
 
@@ -167,12 +167,12 @@ class TestGetDefinition:
         p2 = make_provider("B", return_value=None)
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definitions_batch(["unknown"])[0] is None
+        assert service.get_definitions_batch([("unknown", None)])[0] is None
 
     def test_returns_none_when_no_providers(self, test_config):
         """Empty provider list yields None for every lookup."""
         service = DefinitionService(test_config, providers=[])
-        assert service.get_definitions_batch(["x"])[0] is None
+        assert service.get_definitions_batch([("x", None)])[0] is None
 
     def test_returns_none_when_all_unavailable(self, test_config):
         """When every provider is unavailable, the result is None."""
@@ -180,7 +180,7 @@ class TestGetDefinition:
         p2 = make_provider("B", available=False)
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definitions_batch(["x"])[0] is None
+        assert service.get_definitions_batch([("x", None)])[0] is None
         p1.lookup.assert_not_called()
         p2.lookup.assert_not_called()
 
@@ -238,7 +238,7 @@ class TestEnsureLoaded:
         service = DefinitionService(test_config, providers=[p1, p2])
 
         assert service.ensure_loaded() is True
-        assert service.get_definitions_batch(["x"])[0] == "ok"
+        assert service.get_definitions_batch([("x", None)])[0] == "ok"
 
     def test_batch_lookup_triggers_ensure_loaded(self, test_config):
         """Calling get_definitions_batch() lazily loads providers."""
@@ -246,7 +246,7 @@ class TestEnsureLoaded:
         service = DefinitionService(test_config, providers=[p1])
 
         # Did not call ensure_loaded explicitly
-        result = service.get_definitions_batch(["x"])[0]
+        result = service.get_definitions_batch([("x", None)])[0]
 
         p1.load.assert_called_once()
         assert result == "hit"
@@ -262,7 +262,7 @@ class TestGetDefinitionsBatch:
         p.lookup.side_effect = lambda w: responses.get(w)
         service = DefinitionService(test_config, providers=[p])
 
-        results = service.get_definitions_batch(["a", "b", "c"])
+        results = service.get_definitions_batch([("a", None), ("b", None), ("c", None)])
 
         assert results == ["def-a", None, "def-c"]
 
@@ -278,7 +278,7 @@ class TestGetDefinitionsBatch:
         p.lookup.side_effect = lambda w: responses.get(w)
         service = DefinitionService(test_config, providers=[p])
 
-        service.get_definitions_batch(["a", "b"], progress_callback=recording_progress)
+        service.get_definitions_batch([("a", None), ("b", None)], progress_callback=recording_progress)
 
         # on_start called once with total count and description
         assert len(recording_progress.starts) == 1
@@ -299,7 +299,7 @@ class TestGetDefinitionsBatch:
         p2 = make_provider("second", available=True, return_value="second-result")
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        results = service.get_definitions_batch(["a", "b"])
+        results = service.get_definitions_batch([("a", None), ("b", None)])
 
         assert results == ["first-only", "second-result"]
 
@@ -313,7 +313,7 @@ def make_batch_provider(name="Batch", available=True, table=None):
     p.is_available.return_value = available
     p.load.return_value = True
     p.lookup.side_effect = lambda w: table.get(w)
-    p.lookup_many.side_effect = lambda words: {w: table.get(w) for w in words}
+    p.lookup_many.side_effect = lambda pairs: {w: table.get(w) for w, _ in pairs}
     return p
 
 
@@ -325,19 +325,19 @@ class TestGetDefinitionsBatchFastPath:
         p2 = make_batch_provider("B", table={"x": "from B", "y": "from B"})
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        results = service.get_definitions_batch(["x", "y"])
+        results = service.get_definitions_batch([("x", None), ("y", None)])
 
         assert results == ["from A", "from B"]
         # p2.lookup_many must be called only for the still-unfilled word(s), not "x"
         p2.lookup_many.assert_called_once()
-        called_with = p2.lookup_many.call_args[0][0]
-        assert "x" not in called_with
-        assert "y" in called_with
+        called_words = [w for w, _ in p2.lookup_many.call_args[0][0]]
+        assert "x" not in called_words
+        assert "y" in called_words
 
     def test_batch_matches_expected_chain_resolution(self, test_config):
         p1 = make_batch_provider("A", table={"a": "A-a", "c": "A-c"})
         p2 = make_batch_provider("B", table={"b": "B-b", "c": "B-c-shadowed"})
-        words = ["a", "b", "c", "d"]
+        words = [("a", None), ("b", None), ("c", None), ("d", None)]
         service = DefinitionService(test_config, providers=[p1, p2])
 
         batch = service.get_definitions_batch(words)
@@ -348,7 +348,7 @@ class TestGetDefinitionsBatchFastPath:
         p1 = make_batch_provider("A", table={})
         p2 = make_batch_provider("B", table={})
         service = DefinitionService(test_config, providers=[p1, p2])
-        assert service.get_definitions_batch(["nope"]) == [None]
+        assert service.get_definitions_batch([("nope", None)]) == [None]
 
     def test_falls_back_to_per_word_for_provider_without_lookup_many(self, test_config):
         # provider without lookup_many (Jisho-like)
@@ -362,7 +362,7 @@ class TestGetDefinitionsBatchFastPath:
         p1 = make_batch_provider("A", table={"x": "A-x"})
         service = DefinitionService(test_config, providers=[p1, legacy])
 
-        results = service.get_definitions_batch(["x", "y"])
+        results = service.get_definitions_batch([("x", None), ("y", None)])
         assert results == ["A-x", "legacy-y"]
         # legacy queried per-word only for the unfilled "y", never "x"
         legacy.lookup.assert_called_once_with("y")
@@ -372,14 +372,14 @@ class TestGetDefinitionsBatchFastPath:
         p2 = make_batch_provider("B", table={"x": "B-x"})
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definitions_batch(["x"]) == ["B-x"]
+        assert service.get_definitions_batch([("x", None)]) == ["B-x"]
         p1.lookup_many.assert_not_called()
 
     def test_preserves_order_and_progress(self, test_config, recording_progress):
         p = make_batch_provider("M", table={"a": "def-a", "b": None})
         service = DefinitionService(test_config, providers=[p])
 
-        results = service.get_definitions_batch(["a", "b"], progress_callback=recording_progress)
+        results = service.get_definitions_batch([("a", None), ("b", None)], progress_callback=recording_progress)
         assert results == ["def-a", None]
         assert recording_progress.starts[0] == (2, "Fetching definitions")
         assert recording_progress.completes == 1
@@ -460,7 +460,7 @@ def make_batch_offline_provider(name="BatchOff", available=True, table=None):
     p.is_available.return_value = available
     p.load.return_value = True
     p.lookup.side_effect = lambda w: table.get(w)
-    p.lookup_many.side_effect = lambda words: {w: table.get(w) for w in words}
+    p.lookup_many.side_effect = lambda pairs: {w: table.get(w) for w, _ in pairs}
     return p
 
 
@@ -474,7 +474,7 @@ class TestGetGlossariesBatch:
         p.lookup.side_effect = lambda w: responses.get(w)
         service = DefinitionService(test_config, providers=[p])
 
-        results = service.get_glossaries_batch(["a", "b", "c"])
+        results = service.get_glossaries_batch([("a", None), ("b", None), ("c", None)])
 
         assert results == ["<div>a</div>", None, "<div>c</div>"]
 
@@ -489,7 +489,7 @@ class TestGetGlossariesBatch:
         p.lookup.side_effect = lambda w: responses.get(w)
         service = DefinitionService(test_config, providers=[p])
 
-        service.get_glossaries_batch(["a", "b"], progress_callback=recording_progress)
+        service.get_glossaries_batch([("a", None), ("b", None)], progress_callback=recording_progress)
 
         assert recording_progress.starts[0] == (2, "Fetching glossary entries")
         assert recording_progress.progresses[0] == (1, "Glossary found: a")
@@ -511,7 +511,7 @@ class TestGetGlossariesBatchFastPath:
         p = make_batch_offline_provider("Off", table={"x": "<div>x</div>", "y": "<div>y</div>"})
         service = DefinitionService(test_config, providers=[p])
 
-        results = service.get_glossaries_batch(["x", "y"])
+        results = service.get_glossaries_batch([("x", None), ("y", None)])
 
         # batch path was used
         p.lookup_many.assert_called_once()
@@ -525,7 +525,7 @@ class TestGetGlossariesBatchFastPath:
         p = make_batch_offline_provider("Off", table=table)
         service = DefinitionService(test_config, providers=[p])
 
-        batch_results = service.get_glossaries_batch(["a", "b", "c"])
+        batch_results = service.get_glossaries_batch([("a", None), ("b", None), ("c", None)])
 
         # Build per-word baseline directly
         per_word = [p.lookup(w) for w in ["a", "b", "c"]]
@@ -537,7 +537,7 @@ class TestGetGlossariesBatchFastPath:
         p2 = make_batch_offline_provider("Off2", table={"x": "<div>X2</div>", "y": "<div>Y2</div>"})
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        results = service.get_glossaries_batch(["x", "y"])
+        results = service.get_glossaries_batch([("x", None), ("y", None)])
 
         p1.lookup.assert_not_called()
         p2.lookup.assert_not_called()
@@ -551,7 +551,7 @@ class TestGetGlossariesBatchFastPath:
         online.is_online = True
         service = DefinitionService(test_config, providers=[offline, online])
 
-        results = service.get_glossaries_batch(["x", "z"])
+        results = service.get_glossaries_batch([("x", None), ("z", None)])
 
         # x has offline hit → online not consulted for x
         online.lookup.assert_called_once_with("z")
@@ -562,14 +562,14 @@ class TestGetGlossariesBatchFastPath:
         p = make_batch_offline_provider("Off", table={})
         service = DefinitionService(test_config, providers=[p])
 
-        assert service.get_glossaries_batch(["missing"]) == [None]
+        assert service.get_glossaries_batch([("missing", None)]) == [None]
 
     def test_unavailable_batch_provider_skipped(self, test_config):
         """Unavailable providers are skipped even if they have lookup_many."""
         p = make_batch_offline_provider("Off", available=False, table={"x": "<div>X</div>"})
         service = DefinitionService(test_config, providers=[p])
 
-        results = service.get_glossaries_batch(["x"])
+        results = service.get_glossaries_batch([("x", None)])
         assert results == [None]
         p.lookup_many.assert_not_called()
 
@@ -579,7 +579,7 @@ class TestGetGlossariesBatchFastPath:
         legacy.is_online = False
         service = DefinitionService(test_config, providers=[legacy])
 
-        results = service.get_glossaries_batch(["x"])
+        results = service.get_glossaries_batch([("x", None)])
         legacy.lookup.assert_called_once_with("x")
         assert results == ["<div>L</div>"]
 
@@ -629,7 +629,7 @@ class TestClose:
         p1.load.assert_called_once()
 
         service.close()
-        service.get_definitions_batch(["x"])
+        service.get_definitions_batch([("x", None)])
 
         assert p1.load.call_count == 2
 
@@ -785,7 +785,7 @@ class TestProviderRaisesMidChain:
         p.lookup.side_effect = RuntimeError("provider boom")
         service = DefinitionService(test_config, providers=[p])
 
-        result = service.get_definitions_batch(["x"])
+        result = service.get_definitions_batch([("x", None)])
         assert result == [None]
 
     def test_get_definitions_batch_lookup_many_skip_and_continue(self, test_config):
@@ -793,7 +793,7 @@ class TestProviderRaisesMidChain:
         p.lookup_many.side_effect = RuntimeError("batch boom")
         service = DefinitionService(test_config, providers=[p])
 
-        result = service.get_definitions_batch(["x"])
+        result = service.get_definitions_batch([("x", None)])
         assert result == [None]
 
     def test_earlier_provider_hits_survive_when_later_provider_raises(self, test_config):
@@ -805,7 +805,7 @@ class TestProviderRaisesMidChain:
         service = DefinitionService(test_config, providers=[p_ok, p_boom])
 
         # "a" resolves on p_ok; "b" falls through to p_boom which raises — skipped.
-        result = service.get_definitions_batch(["a", "b"])
+        result = service.get_definitions_batch([("a", None), ("b", None)])
         assert result == ["hit-a", None]
 
     def test_get_glossary_offline_skip_and_continue(self, test_config):
@@ -835,7 +835,7 @@ class TestProviderRaisesMidChain:
         p.lookup.side_effect = RuntimeError("glossaries boom")
         service = DefinitionService(test_config, providers=[p])
 
-        result = service.get_glossaries_batch(["x"])
+        result = service.get_glossaries_batch([("x", None)])
         assert result == [None]
 
     def test_lookup_all_offline_skip_and_continue(self, test_config):
@@ -856,7 +856,7 @@ class TestProviderRaisesMidChain:
         service = DefinitionService(test_config, providers=[p])
 
         caplog.set_level(logging.WARNING)
-        service.get_definitions_batch(["w"])
+        service.get_definitions_batch([("w", None)])
         assert "BadProv" in caplog.text
 
 
@@ -903,7 +903,7 @@ class TestHasOfflineDefinitions:
 
         assert result == {"x": True}
         # Second provider only sees words still unresolved after the first.
-        assert p2.lookup_many.call_args is None or "x" not in p2.lookup_many.call_args[0][0]
+        assert p2.lookup_many.call_args is None or "x" not in [w for w, _ in p2.lookup_many.call_args[0][0]]
 
     def test_skips_unavailable_provider(self, test_config):
         unavail = make_batch_provider("Bad", available=False, table={"x": "<div>x</div>"})

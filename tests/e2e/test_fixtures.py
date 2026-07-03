@@ -191,7 +191,7 @@ def test_seeded_dict_covers_every_expected_lemma(tmp_path: Path) -> None:
     service = DefinitionService(config, providers=providers)
 
     lemmas = list(fixtures_subtitle.EXPECTED_LEMMAS)
-    definitions = service.get_definitions_batch(lemmas)
+    definitions = service.get_definitions_batch([(lemma, None) for lemma in lemmas])
     assert len(definitions) == len(lemmas)
     for lemma, definition in zip(lemmas, definitions, strict=True):
         assert definition is not None, f"no offline definition for {lemma!r}"

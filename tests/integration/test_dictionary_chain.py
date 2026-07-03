@@ -62,7 +62,7 @@ def test_first_hit_wins_indexed_before_jisho(tmp_path: Path) -> None:
     with patch("anki_miner.services.dictionary.providers.jisho_provider.requests.get") as mock_get:
         # If Jisho is called, the test fails — high-priority should hit first
         mock_get.side_effect = AssertionError("Jisho should not be called when indexed dict hits")
-        result = service.get_definitions_batch(["食べる"])[0]
+        result = service.get_definitions_batch([("食べる", None)])[0]
         # IndexedDictProvider wraps stored content in the Yomitan/Lapis envelope
         # (see Task 4). The seeded content must appear inside that envelope,
         # and the low-priority entry must not.
@@ -98,7 +98,7 @@ def test_falls_through_to_jisho_when_no_indexed_hit(tmp_path: Path) -> None:
         mock_response = mock_get.return_value
         mock_response.status_code = 200
         mock_response.json.return_value = {"data": [{"senses": [{"english_definitions": ["jisho fallback"]}]}]}
-        result = service.get_definitions_batch(["聞く"])[0]  # not in the local dict
+        result = service.get_definitions_batch([("聞く", None)])[0]  # not in the local dict
         assert result is not None
         assert "jisho fallback" in result
         mock_get.assert_called()
