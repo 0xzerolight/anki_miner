@@ -184,32 +184,12 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Cannot build AnkiService: %1</source>
-        <translation>Не удалось создать AnkiService: %1</translation>
-    </message>
-    <message>
-        <source>Enter a note type name before styling can sync.</source>
-        <translation>Введите название типа заметки, чтобы синхронизировать стили.</translation>
-    </message>
-    <message>
-        <source>Syncing card styling…</source>
-        <translation>Синхронизация стилей карточек…</translation>
-    </message>
-    <message>
-        <source>Couldn't reach Anki — card styling will sync when it's back. (%1)</source>
-        <translation>Не удалось связаться с Anki — стили карточек синхронизируются, когда он снова станет доступен. (%1)</translation>
-    </message>
-    <message>
-        <source>Glossary styling is live in Anki.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Off — Anki Miner isn't styling this note type.</source>
-        <translation>Выкл. — Anki Miner не задаёт стили для этого типа заметки.</translation>
-    </message>
-    <message>
         <source>Add Deck</source>
         <translation>Добавить колоду</translation>
+    </message>
+    <message>
+        <source>Cannot build AnkiService: %1</source>
+        <translation>Не удалось создать AnkiService: %1</translation>
     </message>
     <message>
         <source>Could not fetch decks. Is Anki running with AnkiConnect?</source>
@@ -280,6 +260,42 @@
     <message>
         <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
         <translation>Запросить у AnkiConnect поля этого типа заметки и автоматически заполнить сопоставления ниже.</translation>
+    </message>
+    <message>
+        <source>Duplicate Handling</source>
+        <translation>Обработка дубликатов</translation>
+    </message>
+    <message>
+        <source>What counts as a duplicate when adding cards. Collection (default) skips a word if it already exists in any deck. Deck limits the check to the target deck; Deck root limits it to the whole subdeck tree under the deck's root — handy when you card each show into its own subdeck.</source>
+        <translation>Что считается дубликатом при добавлении карточек. «Коллекция» (по умолчанию) пропускает слово, если оно уже есть в любой колоде. «Колода» ограничивает проверку целевой колодой; «Корень колоды» ограничивает её всем деревом вложенных колод под корнем колоды — удобно, когда вы создаёте карточки по каждому сериалу в отдельной вложенной колоде.</translation>
+    </message>
+    <message>
+        <source>Collection (whole collection)</source>
+        <translation>Коллекция (вся коллекция)</translation>
+    </message>
+    <message>
+        <source>Deck (target deck only)</source>
+        <translation>Колода (только целевая колода)</translation>
+    </message>
+    <message>
+        <source>Deck root (whole subdeck tree)</source>
+        <translation>Корень колоды (всё дерево вложенных колод)</translation>
+    </message>
+    <message>
+        <source>Duplicate Scope</source>
+        <translation>Область поиска дубликатов</translation>
+    </message>
+    <message>
+        <source>Where AnkiConnect looks for an existing copy before adding a card.</source>
+        <translation>Где AnkiConnect ищет существующую копию перед добавлением карточки.</translation>
+    </message>
+    <message>
+        <source>Check all note types for duplicates</source>
+        <translation>Проверять дубликаты во всех типах заметок</translation>
+    </message>
+    <message>
+        <source>Also treat a matching first field in a different note type as a duplicate.</source>
+        <translation>Также считать дубликатом совпадающее первое поле в другом типе заметки.</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -378,6 +394,46 @@
         <translation>Хранит предложение в виде чистой каны.</translation>
     </message>
     <message>
+        <source>Cloze Prefix Field</source>
+        <translation>Поле префикса Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
+        <translation>Хранит текст предложения перед целевым словом (разбиение Cloze от Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Body Field</source>
+        <translation>Поле тела Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
+        <translation>Хранит целевое слово в том виде, в каком оно встречается в предложении (разбиение Cloze от Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Body Kana Field</source>
+        <translation>Поле каны тела Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
+        <translation>Хранит чтение каной изменённого целевого слова (разбиение Cloze от Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Suffix Field</source>
+        <translation>Поле суффикса Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
+        <translation>Хранит текст предложения после целевого слова (разбиение Cloze от Yomitan).</translation>
+    </message>
+    <message>
+        <source>Conjugation Field</source>
+        <translation>Поле спряжения</translation>
+    </message>
+    <message>
+        <source>Stores the deinflection chain showing how the word was conjugated.</source>
+        <translation>Хранит цепочку деинфлексии, показывающую, как слово было проспрягано.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Поля вспомогательных данных</translation>
     </message>
@@ -416,6 +472,22 @@
     <message>
         <source>Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.</source>
         <translation>Ромадзи соответствует CSS Yomitan/Lapis; японский — для устаревших заметок.</translation>
+    </message>
+    <message>
+        <source>Pitch Graph Field</source>
+        <translation>Поле графика тонального ударения</translation>
+    </message>
+    <message>
+        <source>Stores the SVG pitch accent graph (Yomitan-style).</source>
+        <translation>Хранит SVG-график тонального ударения (в стиле Yomitan).</translation>
+    </message>
+    <message>
+        <source>Pitch Text Field</source>
+        <translation>Поле текста тонального ударения</translation>
+    </message>
+    <message>
+        <source>Stores the overline-annotated pitch reading (Yomitan-style).</source>
+        <translation>Хранит чтение с разметкой тона надчёркиванием (в стиле Yomitan).</translation>
     </message>
     <message>
         <source>Frequency Field</source>
@@ -502,16 +574,8 @@
         <translation>Стили карточек</translation>
     </message>
     <message>
-        <source>Anki Miner can style mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). It manages a single CSS block in the note type via AnkiConnect — your own card CSS is never touched. Turn it off if your note type already styles everything.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Style mined-card glossaries</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Applied to the note type on Save. Your custom CSS below is appended after the built-in styles.</source>
-        <translation type="unfinished" />
+        <source>Anki Miner styles mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). The styling is embedded in each card, so it works on any note type, on mobile, and in exports — and your note type's own card CSS is never touched.</source>
+        <translation>Anki Miner оформляет глоссарии намайненных карточек одной аккуратной встроенной таблицей стилей (словари, поставляемые со своими стилями, применяются автоматически). Оформление встроено в каждую карточку, поэтому оно работает с любым типом заметки, на мобильных устройствах и в экспортах — а собственный CSS карточек вашего типа заметки никогда не затрагивается.</translation>
     </message>
     <message>
         <source>Custom CSS:</source>
@@ -576,22 +640,6 @@
     <message>
         <source>Note type not found</source>
         <translation>Тип заметки не найден</translation>
-    </message>
-    <message>
-        <source>Not applied yet — Save Settings to sync to Anki.</source>
-        <translation>Ещё не применено — нажмите «Сохранить настройки», чтобы синхронизировать с Anki.</translation>
-    </message>
-    <message>
-        <source>Working...</source>
-        <translation>Выполняется...</translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Готово</translation>
-    </message>
-    <message>
-        <source>Failed</source>
-        <translation>Ошибка</translation>
     </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
@@ -702,6 +750,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>+ Добавить аудиопакет…</translation>
     </message>
     <message>
+        <source>+ Add Online Source…</source>
+        <translation>+ Добавить онлайн-источник…</translation>
+    </message>
+    <message>
+        <source>Add a custom URL/JSON source (e.g. local-audio-yomichan) or an online scrape source</source>
+        <translation>Добавить пользовательский источник URL/JSON (например, local-audio-yomichan) или онлайн-источник для скрейпинга</translation>
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Повысить приоритет</translation>
     </message>
@@ -712,6 +768,38 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Remove</source>
         <translation>Удалить</translation>
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation>Повторить загрузку отсутствующего аудио выражений</translation>
+    </message>
+    <message>
+        <source>Forget which words JapanesePod101 had no audio for, so the next mining run tries to download them again.</source>
+        <translation>Забыть, для каких слов у JapanesePod101 не было аудио, чтобы следующий запуск майнинга снова попытался их скачать.</translation>
+    </message>
+    <message>
+        <source>Google Translate (synthetic TTS)</source>
+        <translation>Google Переводчик (синтетический TTS)</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 dictionary (scrape)</source>
+        <translation>Словарь JapanesePod101 (скрейпинг)</translation>
+    </message>
+    <message>
+        <source>Jisho.org (scrape)</source>
+        <translation>Jisho.org (скрейпинг)</translation>
+    </message>
+    <message>
+        <source>Custom JSON</source>
+        <translation>Пользовательский JSON</translation>
+    </message>
+    <message>
+        <source>Custom URL</source>
+        <translation>Пользовательский URL</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 (online)</source>
+        <translation>JapanesePod101 (онлайн)</translation>
     </message>
     <message>
         <source>Remove audio pack</source>
@@ -744,14 +832,6 @@ The audio pack was not removed.</source>
     <message>
         <source>Re-import…</source>
         <translation>Повторный импорт…</translation>
-    </message>
-    <message>
-        <source>Google Translate (synthetic TTS)</source>
-        <translation>Google Переводчик (синтетический TTS)</translation>
-    </message>
-    <message>
-        <source>JapanesePod101 (online)</source>
-        <translation>JapanesePod101 (онлайн)</translation>
     </message>
 </context><context>
     <name>AudioTracksDialog</name>
@@ -1019,7 +1099,7 @@ Mixing multiple shows in one folder can mispair episodes that share a number —
     </message>
     <message>
         <source>Starting batch processing...</source>
-        <translation type="unfinished" />
+        <translation>Запуск пакетной обработки...</translation>
     </message>
     <message>
         <source>Completed: %1/%2</source>
@@ -1658,6 +1738,14 @@ Unchecked: mine every word — good for building a complete or shareable deck.</
 </context><context>
     <name>DictionaryImportFlow</name>
     <message>
+        <source>Skipped %1 malformed entries.</source>
+        <translation>Пропущено %1 некорректных записей.</translation>
+    </message>
+    <message>
+        <source>%1 media file(s) could not be imported.</source>
+        <translation>Не удалось импортировать %1 медиафайл(ов).</translation>
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zip</source>
         <translation>Выберите zip-архив словаря Yomitan</translation>
     </message>
@@ -1811,6 +1899,44 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <source>Restore from Disk</source>
         <translation>Восстановить с диска</translation>
     </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>Проверить обновления</translation>
+    </message>
+    <message>
+        <source>No installed dictionaries to check.</source>
+        <translation>Нет установленных словарей для проверки.</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation>Проверка обновлений словарей…</translation>
+    </message>
+    <message>
+        <source>Update Check Failed</source>
+        <translation>Не удалось проверить обновления</translation>
+    </message>
+    <message>
+        <source>All dictionaries are up to date.</source>
+        <translation>Все словари обновлены до последней версии.</translation>
+    </message>
+    <message>
+        <source>Updates available:</source>
+        <translation>Доступны обновления:</translation>
+    </message>
+    <message>
+        <source>  • %1: revision %2 → %3
+    %4</source>
+        <translation>  • %1: ревизия %2 → %3
+    %4</translation>
+    </message>
+    <message>
+        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
+        <translation>Скачайте новый zip, затем повторно импортируйте его через меню «Повторный импорт…» в строке словаря.</translation>
+    </message>
+    <message>
+        <source>Could not check:</source>
+        <translation>Не удалось проверить:</translation>
+    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1856,6 +1982,14 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
         <translation>Повторно добавить словари, найденные в папке хранения, которых нет в списке выше (например, после сброса настроек). Повторный импорт не требуется.</translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>Проверить обновления</translation>
+    </message>
+    <message>
+        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
+        <translation>Загрузить онлайн-индекс каждого обновляемого словаря и сообщить о более новых ревизиях. Скачивание не выполняется — импортируйте новый zip самостоятельно.</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -1982,6 +2116,18 @@ The dictionary was not removed.</source>
 </context><context>
     <name>EpisodeProcessor</name>
     <message>
+        <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
+        <translation>Сбой подключения/сертификата источника аудио слов — аудио пропущено в этом запуске, повтор при следующем запуске</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned repeated server errors — audio skipped this run, will retry next run</source>
+        <translation>Источник аудио слов вернул повторяющиеся ошибки сервера — аудио пропущено в этом запуске, повтор при следующем запуске</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run</source>
+        <translation>Источник аудио слов вернул ответы без аудио (вероятно, ограничение частоты запросов) — аудио пропущено в этом запуске, повтор при следующем запуске</translation>
+    </message>
+    <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation>Шаг 1/5 — Разбор субтитров: %1</translation>
     </message>
@@ -2075,11 +2221,11 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Using WebP for animated screenshots — this ffmpeg build has no AVIF (libsvtav1) encoder.</source>
-        <translation type="unfinished" />
+        <translation>Для анимированных скриншотов используется WebP — в этой сборке ffmpeg нет кодировщика AVIF (libsvtav1).</translation>
     </message>
     <message>
         <source>Animated screenshots unavailable — this ffmpeg build has no AVIF or WebP encoder; switch to static screenshots in Settings.</source>
-        <translation type="unfinished" />
+        <translation>Анимированные скриншоты недоступны — в этой сборке ffmpeg нет кодировщика AVIF или WebP; переключитесь на статичные скриншоты в настройках.</translation>
     </message>
     <message>
         <source>Expression audio: %1/%2 available</source>
@@ -2127,6 +2273,14 @@ The dictionary was not removed.</source>
             <numerusform>Пропущено %n слово, помеченное Anki как дубликат (то же выражение, что у существующей карточки или другого слова в этой партии).</numerusform>
             <numerusform>Пропущено %n слова, помеченных Anki как дубликаты (то же выражение, что у существующей карточки или другого слова в этой партии).</numerusform>
             <numerusform>Пропущено %n слов, помеченных Anki как дубликаты (то же выражение, что у существующей карточки или другого слова в этой партии).</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Updated %n existing duplicate card(s): filled empty fields from this run.</source>
+        <translation>
+            <numerusform>Обновлена %n существующая карточка-дубликат: пустые поля заполнены из этого запуска.</numerusform>
+            <numerusform>Обновлено %n существующих карточки-дубликата: пустые поля заполнены из этого запуска.</numerusform>
+            <numerusform>Обновлено %n существующих карточек-дубликатов: пустые поля заполнены из этого запуска.</numerusform>
         </translation>
     </message>
     <message>
@@ -2574,6 +2728,14 @@ The dictionary was not removed.</source>
         <translation>Отмена</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (пропущено %1 некорректных записей)</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> Это источник на основе количества вхождений; его значения были преобразованы в ранги.</translation>
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation>Источник частотности добавлен</translation>
     </message>
@@ -2856,6 +3018,10 @@ The frequency source was not removed.</source>
         <translation>Мастер настройки...</translation>
     </message>
     <message>
+        <source>Restyle Mined Cards...</source>
+        <translation>Изменить стиль намайненных карточек...</translation>
+    </message>
+    <message>
         <source>&amp;Help</source>
         <translation>&amp;Справка</translation>
     </message>
@@ -2910,6 +3076,54 @@ The frequency source was not removed.</source>
     <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>Не удалось создать ярлык на рабочем столе.</translation>
+    </message>
+    <message>
+        <source>Restyle Mined Cards</source>
+        <translation>Изменить стиль намайненных карточек</translation>
+    </message>
+    <message>
+        <source>This rewrites the styling field of your mined cards (the glossary field, or the definition field when no glossary field is mapped) to embed the built-in styling directly in each card, so cards you mined earlier match ones mined now. It's safe to run more than once and only adds styling — it never removes card content.
+
+Close Anki's card browser and any open note editor first: updating a note that is open for editing can lose your unsaved edits.
+
+Continue?</source>
+        <translation>Это перезаписывает поле оформления ваших намайненных карточек (поле глоссария или поле определения, если поле глоссария не назначено), чтобы внедрить встроенное оформление прямо в каждую карточку, и карточки, намайненные ранее, совпадали по виду с намайненными сейчас. Операцию безопасно запускать несколько раз, и она только добавляет оформление — она никогда не удаляет содержимое карточек.
+
+Сначала закройте обозреватель карточек Anki и любой открытый редактор заметок: обновление заметки, открытой для редактирования, может привести к потере несохранённых изменений.
+
+Продолжить?</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards…</source>
+        <translation>Изменение стиля намайненных карточек…</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards… %1/%2</source>
+        <translation>Изменение стиля намайненных карточек… %1/%2</translation>
+    </message>
+    <message>
+        <source>Restyle complete</source>
+        <translation>Изменение стиля завершено</translation>
+    </message>
+    <message>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
+        <translation>Изменён стиль %1 карточек. (%2 просканировано; %3 уже оформлено.)</translation>
+    </message>
+    <message>
+        <source>Restyle failed</source>
+        <translation>Не удалось изменить стиль</translation>
+    </message>
+    <message>
+        <source>These dictionaries need to be re-imported after an app upgrade (their index format changed):</source>
+        <translation>Эти словари необходимо повторно импортировать после обновления приложения (формат их индекса изменился):</translation>
+    </message>
+    <message>
+        <source>Until you do, mining is blocked for them so you don't get cards with no definitions. Re-import them now?</source>
+        <translation>Пока вы этого не сделаете, майнинг для них заблокирован, чтобы вы не получили карточки без определений. Импортировать их повторно сейчас?</translation>
+    </message>
+    <message>
+        <source>Dictionaries need re-importing</source>
+        <translation>Требуется повторный импорт словарей</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -3748,6 +3962,18 @@ Details: %2</source>
         <translation>✓ Сброшено до значений по умолчанию</translation>
     </message>
     <message>
+        <source>Retry missing expression audio</source>
+        <translation>Повторить загрузку отсутствующего аудио выражений</translation>
+    </message>
+    <message>
+        <source>Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run.</source>
+        <translation>Очищено %1 маркеров отсутствующего аудио. Эти слова будут повторно опробованы при следующем запуске майнинга.</translation>
+    </message>
+    <message>
+        <source>Could not clear the markers: %1</source>
+        <translation>Не удалось очистить маркеры: %1</translation>
+    </message>
+    <message>
         <source>Rebuild Known Words DB</source>
         <translation>Перестроить БД известных слов</translation>
     </message>
@@ -4575,11 +4801,11 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Required before subtitle generation can run.</source>
-        <translation type="unfinished" />
+        <translation>Требуется перед запуском генерации субтитров.</translation>
     </message>
     <message>
         <source>Transcription add-ons (optional)</source>
-        <translation type="unfinished" />
+        <translation>Дополнения для транскрипции (необязательно)</translation>
     </message>
     <message>
         <source>Download GPU acceleration</source>
@@ -4595,7 +4821,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Faster transcription on NVIDIA GPUs (CUDA).</source>
-        <translation type="unfinished" />
+        <translation>Более быстрая транскрипция на видеокартах NVIDIA (CUDA).</translation>
     </message>
     <message>
         <source>Download silence removal</source>
@@ -4611,23 +4837,23 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Skips music and silence so they are not transcribed as garbage.</source>
-        <translation type="unfinished" />
+        <translation>Пропускает музыку и тишину, чтобы они не транскрибировались как мусор.</translation>
     </message>
     <message>
         <source>Download Vulkan model</source>
-        <translation type="unfinished" />
+        <translation>Скачать модель Vulkan</translation>
     </message>
     <message>
         <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
-        <translation type="unfinished" />
+        <translation>Скачать модель whisper.cpp ggml и Silero VAD в папку Anki Miner. Требуется для транскрипции на GPU (Vulkan) на видеокартах AMD/Intel/NVIDIA.</translation>
     </message>
     <message>
         <source>Vulkan model</source>
-        <translation type="unfinished" />
+        <translation>Модель Vulkan</translation>
     </message>
     <message>
         <source>Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).</source>
-        <translation type="unfinished" />
+        <translation>Более быстрая транскрипция на видеокартах AMD, Intel или NVIDIA (Vulkan).</translation>
     </message>
     <message>
         <source>Alignment</source>
@@ -4659,7 +4885,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Needed for retiming unless alass is already on your PATH.</source>
-        <translation type="unfinished" />
+        <translation>Требуется для пересинхронизации, если alass ещё не в вашем PATH.</translation>
     </message>
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
@@ -4805,15 +5031,15 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <name>VulkanModelDownloadWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation type="unfinished">%1 (%2%)</translation>
+        <translation>%1 (%2%)</translation>
     </message>
     <message>
         <source>Downloading Vulkan model…</source>
-        <translation type="unfinished" />
+        <translation>Скачивание модели Vulkan…</translation>
     </message>
     <message>
         <source>Vulkan model installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>Модель Vulkan успешно установлена.</translation>
     </message>
 </context><context>
     <name>WordCurationDialog</name>
@@ -5244,8 +5470,26 @@ Continue with import?</source>
         <translation> (пропущено записей только для отображения: %1)</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (пропущено %1 некорректных записей)</translation>
+    </message>
+    <message>
         <source>Imported %1 entries from '%2'.</source>
         <translation>Импортировано записей: %1 из «%2».</translation>
+    </message>
+</context><context>
+    <name>_AddSourceDialog</name>
+    <message>
+        <source>Add Audio Source</source>
+        <translation>Добавить аудиоисточник</translation>
+    </message>
+    <message>
+        <source>Source type:</source>
+        <translation>Тип источника:</translation>
+    </message>
+    <message>
+        <source>URL template (use {term} and {reading}):</source>
+        <translation>Шаблон URL (используйте {term} и {reading}):</translation>
     </message>
 </context><context>
     <name>_ChainRow</name>

@@ -25,4 +25,4 @@ terms:
   episode:       { ja: "エピソード", ru: "Эпизод", fr: "Épisode", es: "Episodio", de: "Folge", pt_br: "episódio", id: "episode", vi: "tập", zh_cn: "剧集", zh_tw: "集數", it: "Episodio" }
   playlist:      { ja: "プレイリスト", ru: "Плейлист", fr: "Liste de lecture", es: "Lista de reproducción", de: "Wiedergabeliste", pt_br: "playlist", id: "playlist", vi: "danh sách phát", zh_cn: "播放列表", zh_tw: "播放清單", it: "Playlist" }
   setup wizard:  { ja: "セットアップウィザード", ru: "Мастер настройки", fr: "Assistant de configuration", es: "Asistente de configuración", de: "Einrichtungsassistent", pt_br: "assistente de configuração", id: "wizard penyiapan", vi: "trình hướng dẫn cài đặt", zh_cn: "设置向导", zh_tw: "設定精靈", it: "Procedura guidata di configurazione" }
-do_not_translate: [Anki, AnkiConnect, GitHub, YouTube, JPod101, Google, ffmpeg, MeCab, Yomitan, Jisho]
+do_not_translate: [Anki, AnkiConnect, GitHub, YouTube, JPod101, Google, ffmpeg, MeCab, Yomitan, Jisho, Vulkan, CUDA, AVIF, WebP, alass, Silero, VAD, whisper.cpp, ggml]

@@ -184,32 +184,12 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Cannot build AnkiService: %1</source>
-        <translation>AnkiService を構築できません: %1</translation>
-    </message>
-    <message>
-        <source>Enter a note type name before styling can sync.</source>
-        <translation>スタイルを同期するには、ノートタイプ名を入力してください。</translation>
-    </message>
-    <message>
-        <source>Syncing card styling…</source>
-        <translation>カードのスタイルを同期中…</translation>
-    </message>
-    <message>
-        <source>Couldn't reach Anki — card styling will sync when it's back. (%1)</source>
-        <translation>Anki に接続できませんでした — 接続が回復するとカードのスタイルが同期されます。(%1)</translation>
-    </message>
-    <message>
-        <source>Glossary styling is live in Anki.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Off — Anki Miner isn't styling this note type.</source>
-        <translation>オフ — Anki Miner はこのノートタイプにスタイルを適用していません。</translation>
-    </message>
-    <message>
         <source>Add Deck</source>
         <translation>デッキを追加</translation>
+    </message>
+    <message>
+        <source>Cannot build AnkiService: %1</source>
+        <translation>AnkiService を構築できません: %1</translation>
     </message>
     <message>
         <source>Could not fetch decks. Is Anki running with AnkiConnect?</source>
@@ -280,6 +260,42 @@
     <message>
         <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
         <translation>このノートタイプのフィールドを AnkiConnect に問い合わせ、下のマッピングを自動的に入力します。</translation>
+    </message>
+    <message>
+        <source>Duplicate Handling</source>
+        <translation>重複の処理</translation>
+    </message>
+    <message>
+        <source>What counts as a duplicate when adding cards. Collection (default) skips a word if it already exists in any deck. Deck limits the check to the target deck; Deck root limits it to the whole subdeck tree under the deck's root — handy when you card each show into its own subdeck.</source>
+        <translation>カードを追加する際に何を重複とみなすかを設定します。「コレクション」（デフォルト）は、いずれかのデッキに単語が既に存在する場合にスキップします。「デッキ」はチェックを対象デッキに限定し、「デッキルート」はそのデッキのルート以下のサブデッキツリー全体に限定します。番組ごとに専用のサブデッキへカードを作成する場合に便利です。</translation>
+    </message>
+    <message>
+        <source>Collection (whole collection)</source>
+        <translation>コレクション（コレクション全体）</translation>
+    </message>
+    <message>
+        <source>Deck (target deck only)</source>
+        <translation>デッキ（対象デッキのみ）</translation>
+    </message>
+    <message>
+        <source>Deck root (whole subdeck tree)</source>
+        <translation>デッキルート（サブデッキツリー全体）</translation>
+    </message>
+    <message>
+        <source>Duplicate Scope</source>
+        <translation>重複の範囲</translation>
+    </message>
+    <message>
+        <source>Where AnkiConnect looks for an existing copy before adding a card.</source>
+        <translation>カードを追加する前に AnkiConnect が既存のコピーを探す範囲です。</translation>
+    </message>
+    <message>
+        <source>Check all note types for duplicates</source>
+        <translation>すべてのノートタイプで重複をチェック</translation>
+    </message>
+    <message>
+        <source>Also treat a matching first field in a different note type as a duplicate.</source>
+        <translation>別のノートタイプでも最初のフィールドが一致する場合は重複とみなします。</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -378,6 +394,46 @@
         <translation>例文をかなのみで格納します。</translation>
     </message>
     <message>
+        <source>Cloze Prefix Field</source>
+        <translation>穴埋め接頭フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
+        <translation>対象単語の前にある文のテキストを保存します（Yomitan の穴埋め分割）。</translation>
+    </message>
+    <message>
+        <source>Cloze Body Field</source>
+        <translation>穴埋め本体フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
+        <translation>文中に現れる形の対象単語を保存します（Yomitan の穴埋め分割）。</translation>
+    </message>
+    <message>
+        <source>Cloze Body Kana Field</source>
+        <translation>穴埋め本体かなフィールド</translation>
+    </message>
+    <message>
+        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
+        <translation>活用した対象単語のかな読みを保存します（Yomitan の穴埋め分割）。</translation>
+    </message>
+    <message>
+        <source>Cloze Suffix Field</source>
+        <translation>穴埋め接尾フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
+        <translation>対象単語の後にある文のテキストを保存します（Yomitan の穴埋め分割）。</translation>
+    </message>
+    <message>
+        <source>Conjugation Field</source>
+        <translation>活用フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the deinflection chain showing how the word was conjugated.</source>
+        <translation>単語がどのように活用されたかを示す脱活用の連鎖を保存します。</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>補助データフィールド</translation>
     </message>
@@ -416,6 +472,22 @@
     <message>
         <source>Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.</source>
         <translation>ローマ字は Yomitan/Lapis の CSS に対応します。日本語は従来のノート向けです。</translation>
+    </message>
+    <message>
+        <source>Pitch Graph Field</source>
+        <translation>ピッチグラフフィールド</translation>
+    </message>
+    <message>
+        <source>Stores the SVG pitch accent graph (Yomitan-style).</source>
+        <translation>SVG のピッチアクセントグラフを保存します（Yomitan 形式）。</translation>
+    </message>
+    <message>
+        <source>Pitch Text Field</source>
+        <translation>ピッチテキストフィールド</translation>
+    </message>
+    <message>
+        <source>Stores the overline-annotated pitch reading (Yomitan-style).</source>
+        <translation>上線で注釈付けされたピッチ読みを保存します（Yomitan 形式）。</translation>
     </message>
     <message>
         <source>Frequency Field</source>
@@ -502,16 +574,8 @@
         <translation>カードのスタイル</translation>
     </message>
     <message>
-        <source>Anki Miner can style mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). It manages a single CSS block in the note type via AnkiConnect — your own card CSS is never touched. Turn it off if your note type already styles everything.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Style mined-card glossaries</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Applied to the note type on Save. Your custom CSS below is appended after the built-in styles.</source>
-        <translation type="unfinished" />
+        <source>Anki Miner styles mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). The styling is embedded in each card, so it works on any note type, on mobile, and in exports — and your note type's own card CSS is never touched.</source>
+        <translation>Anki Miner は、マイニングしたカードの用語集を、組み込みのすっきりしたスタイルシート 1 つでスタイリングします（独自のスタイルを備えた辞書は自動的に適用されます）。スタイルは各カードに埋め込まれるため、どのノートタイプでも、モバイルでも、エクスポートでも機能します。お使いのノートタイプ自身のカード CSS は一切変更されません。</translation>
     </message>
     <message>
         <source>Custom CSS:</source>
@@ -576,22 +640,6 @@
     <message>
         <source>Note type not found</source>
         <translation>ノートタイプが見つかりません</translation>
-    </message>
-    <message>
-        <source>Not applied yet — Save Settings to sync to Anki.</source>
-        <translation>まだ適用されていません — 「設定を保存」で Anki に同期してください。</translation>
-    </message>
-    <message>
-        <source>Working...</source>
-        <translation>処理中...</translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>完了</translation>
-    </message>
-    <message>
-        <source>Failed</source>
-        <translation>失敗</translation>
     </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
@@ -702,6 +750,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>+ 音声パックを追加…</translation>
     </message>
     <message>
+        <source>+ Add Online Source…</source>
+        <translation>+ オンラインソースを追加…</translation>
+    </message>
+    <message>
+        <source>Add a custom URL/JSON source (e.g. local-audio-yomichan) or an online scrape source</source>
+        <translation>カスタムの URL/JSON ソース（例: local-audio-yomichan）またはオンラインのスクレイプソースを追加します</translation>
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>優先順位を上げる</translation>
     </message>
@@ -712,6 +768,38 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Remove</source>
         <translation>削除</translation>
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation>取得できなかった表現音声を再試行</translation>
+    </message>
+    <message>
+        <source>Forget which words JapanesePod101 had no audio for, so the next mining run tries to download them again.</source>
+        <translation>JapanesePod101 に音声がなかった単語の記録を消去し、次回のマイニング実行時に再度ダウンロードを試みるようにします。</translation>
+    </message>
+    <message>
+        <source>Google Translate (synthetic TTS)</source>
+        <translation>Google 翻訳（合成 TTS）</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 dictionary (scrape)</source>
+        <translation>JapanesePod101 辞書（スクレイプ）</translation>
+    </message>
+    <message>
+        <source>Jisho.org (scrape)</source>
+        <translation>Jisho.org（スクレイプ）</translation>
+    </message>
+    <message>
+        <source>Custom JSON</source>
+        <translation>カスタム JSON</translation>
+    </message>
+    <message>
+        <source>Custom URL</source>
+        <translation>カスタム URL</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 (online)</source>
+        <translation>JapanesePod101（オンライン）</translation>
     </message>
     <message>
         <source>Remove audio pack</source>
@@ -744,14 +832,6 @@ The audio pack was not removed.</source>
     <message>
         <source>Re-import…</source>
         <translation>再インポート…</translation>
-    </message>
-    <message>
-        <source>Google Translate (synthetic TTS)</source>
-        <translation>Google 翻訳（合成 TTS）</translation>
-    </message>
-    <message>
-        <source>JapanesePod101 (online)</source>
-        <translation>JapanesePod101（オンライン）</translation>
     </message>
 </context><context>
     <name>AudioTracksDialog</name>
@@ -1019,7 +1099,7 @@ Mixing multiple shows in one folder can mispair episodes that share a number —
     </message>
     <message>
         <source>Starting batch processing...</source>
-        <translation type="unfinished" />
+        <translation>バッチ処理を開始しています...</translation>
     </message>
     <message>
         <source>Completed: %1/%2</source>
@@ -1658,6 +1738,14 @@ Unchecked: mine every word — good for building a complete or shareable deck.</
 </context><context>
     <name>DictionaryImportFlow</name>
     <message>
+        <source>Skipped %1 malformed entries.</source>
+        <translation>不正な形式のエントリを %1 件スキップしました。</translation>
+    </message>
+    <message>
+        <source>%1 media file(s) could not be imported.</source>
+        <translation>メディアファイルを %1 件インポートできませんでした。</translation>
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zip</source>
         <translation>Yomitan辞書のzipを選択</translation>
     </message>
@@ -1811,6 +1899,44 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <source>Restore from Disk</source>
         <translation>ディスクから復元</translation>
     </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>アップデートを確認</translation>
+    </message>
+    <message>
+        <source>No installed dictionaries to check.</source>
+        <translation>確認できるインストール済みの辞書がありません。</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation>辞書のアップデートを確認しています…</translation>
+    </message>
+    <message>
+        <source>Update Check Failed</source>
+        <translation>アップデートの確認に失敗しました</translation>
+    </message>
+    <message>
+        <source>All dictionaries are up to date.</source>
+        <translation>すべての辞書は最新です。</translation>
+    </message>
+    <message>
+        <source>Updates available:</source>
+        <translation>利用可能なアップデート：</translation>
+    </message>
+    <message>
+        <source>  • %1: revision %2 → %3
+    %4</source>
+        <translation>  • %1: リビジョン %2 → %3
+    %4</translation>
+    </message>
+    <message>
+        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
+        <translation>新しい zip をダウンロードし、辞書の行の「再インポート…」メニューから再インポートしてください。</translation>
+    </message>
+    <message>
+        <source>Could not check:</source>
+        <translation>確認できませんでした：</translation>
+    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1856,6 +1982,14 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
         <translation>上のリストにない、保存フォルダ内で見つかった辞書を再追加します（設定のリセット後など）。再インポートは不要です。</translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>アップデートを確認</translation>
+    </message>
+    <message>
+        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
+        <translation>更新可能な各辞書のオンラインインデックスを取得し、より新しいリビジョンがあれば報告します。ダウンロードは行われません。新しい zip はご自身で再インポートしてください。</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -1982,6 +2116,18 @@ The dictionary was not removed.</source>
 </context><context>
     <name>EpisodeProcessor</name>
     <message>
+        <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
+        <translation>単語音声ソースの接続／証明書エラー — 今回の実行では音声をスキップしました。次回の実行で再試行します</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned repeated server errors — audio skipped this run, will retry next run</source>
+        <translation>単語音声ソースがサーバーエラーを繰り返し返しました — 今回の実行では音声をスキップしました。次回の実行で再試行します</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run</source>
+        <translation>単語音声ソースが音声以外の応答を返しました（レート制限の可能性）— 今回の実行では音声をスキップしました。次回の実行で再試行します</translation>
+    </message>
+    <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation>ステップ 1/5 — 字幕を解析中: %1</translation>
     </message>
@@ -2069,11 +2215,11 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Using WebP for animated screenshots — this ffmpeg build has no AVIF (libsvtav1) encoder.</source>
-        <translation type="unfinished" />
+        <translation>アニメーションスクリーンショットに WebP を使用します — この ffmpeg ビルドには AVIF（libsvtav1）エンコーダーがありません。</translation>
     </message>
     <message>
         <source>Animated screenshots unavailable — this ffmpeg build has no AVIF or WebP encoder; switch to static screenshots in Settings.</source>
-        <translation type="unfinished" />
+        <translation>アニメーションスクリーンショットは利用できません — この ffmpeg ビルドには AVIF または WebP エンコーダーがありません。設定で静止スクリーンショットに切り替えてください。</translation>
     </message>
     <message>
         <source>Expression audio: %1/%2 available</source>
@@ -2113,6 +2259,12 @@ The dictionary was not removed.</source>
         <source>Skipped %n word(s) Anki flagged as duplicates (same Expression as an existing card or another word in this batch).</source>
         <translation>
             <numerusform>Anki が重複と判定した %n 単語をスキップしました（既存のカードまたはこの一括処理内の別の単語と同じ表現）。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Updated %n existing duplicate card(s): filled empty fields from this run.</source>
+        <translation>
+            <numerusform>既存の重複カード %n 枚を更新しました：今回の実行で空のフィールドを埋めました。</numerusform>
         </translation>
     </message>
     <message>
@@ -2556,6 +2708,14 @@ The dictionary was not removed.</source>
         <translation>キャンセル</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （不正な形式のエントリを %1 件スキップしました）</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> これは出現回数ベースのソースです。カウントは順位に変換されました。</translation>
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation>頻度ソースを追加しました</translation>
     </message>
@@ -2838,6 +2998,10 @@ The frequency source was not removed.</source>
         <translation>セットアップウィザード...</translation>
     </message>
     <message>
+        <source>Restyle Mined Cards...</source>
+        <translation>マイニングしたカードのスタイルを再適用...</translation>
+    </message>
+    <message>
         <source>&amp;Help</source>
         <translation>ヘルプ(&amp;H)</translation>
     </message>
@@ -2892,6 +3056,54 @@ The frequency source was not removed.</source>
     <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>デスクトップショートカットの作成に失敗しました。</translation>
+    </message>
+    <message>
+        <source>Restyle Mined Cards</source>
+        <translation>マイニングしたカードのスタイルを再適用</translation>
+    </message>
+    <message>
+        <source>This rewrites the styling field of your mined cards (the glossary field, or the definition field when no glossary field is mapped) to embed the built-in styling directly in each card, so cards you mined earlier match ones mined now. It's safe to run more than once and only adds styling — it never removes card content.
+
+Close Anki's card browser and any open note editor first: updating a note that is open for editing can lose your unsaved edits.
+
+Continue?</source>
+        <translation>これは、マイニングしたカードのスタイリングフィールド（用語集フィールド、または用語集フィールドが割り当てられていない場合は語義フィールド）を書き換え、組み込みのスタイルを各カードに直接埋め込みます。これにより、以前マイニングしたカードが今マイニングしたカードと一致するようになります。複数回実行しても安全で、スタイルを追加するだけです。カードの内容が削除されることはありません。
+
+先に Anki のカードブラウザと開いているノートエディタをすべて閉じてください。編集中に開いているノートを更新すると、保存していない編集内容が失われる可能性があります。
+
+続行しますか？</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards…</source>
+        <translation>マイニングしたカードのスタイルを再適用しています…</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards… %1/%2</source>
+        <translation>マイニングしたカードのスタイルを再適用しています… %1/%2</translation>
+    </message>
+    <message>
+        <source>Restyle complete</source>
+        <translation>スタイルの再適用が完了しました</translation>
+    </message>
+    <message>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
+        <translation>%1 枚のカードのスタイルを再適用しました。（%2 枚をスキャン、%3 枚は既に適用済み。）</translation>
+    </message>
+    <message>
+        <source>Restyle failed</source>
+        <translation>スタイルの再適用に失敗しました</translation>
+    </message>
+    <message>
+        <source>These dictionaries need to be re-imported after an app upgrade (their index format changed):</source>
+        <translation>アプリのアップグレード後、これらの辞書は再インポートが必要です（インデックス形式が変更されました）：</translation>
+    </message>
+    <message>
+        <source>Until you do, mining is blocked for them so you don't get cards with no definitions. Re-import them now?</source>
+        <translation>再インポートするまで、語義のないカードが作成されないように、これらの辞書でのマイニングはブロックされます。今すぐ再インポートしますか？</translation>
+    </message>
+    <message>
+        <source>Dictionaries need re-importing</source>
+        <translation>辞書の再インポートが必要です</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -3730,6 +3942,18 @@ Details: %2</source>
         <translation>✓ デフォルトに戻しました</translation>
     </message>
     <message>
+        <source>Retry missing expression audio</source>
+        <translation>取得できなかった表現音声を再試行</translation>
+    </message>
+    <message>
+        <source>Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run.</source>
+        <translation>%1 件の音声欠落マーカーを消去しました。これらの単語は次回のマイニング実行時に再試行されます。</translation>
+    </message>
+    <message>
+        <source>Could not clear the markers: %1</source>
+        <translation>マーカーを消去できませんでした: %1</translation>
+    </message>
+    <message>
         <source>Rebuild Known Words DB</source>
         <translation>既知単語DBを再構築</translation>
     </message>
@@ -4555,11 +4779,11 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Required before subtitle generation can run.</source>
-        <translation type="unfinished" />
+        <translation>字幕生成を実行する前に必要です。</translation>
     </message>
     <message>
         <source>Transcription add-ons (optional)</source>
-        <translation type="unfinished" />
+        <translation>文字起こしアドオン（任意）</translation>
     </message>
     <message>
         <source>Download GPU acceleration</source>
@@ -4575,7 +4799,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Faster transcription on NVIDIA GPUs (CUDA).</source>
-        <translation type="unfinished" />
+        <translation>NVIDIA GPU（CUDA）でより高速な文字起こしができます。</translation>
     </message>
     <message>
         <source>Download silence removal</source>
@@ -4591,23 +4815,23 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Skips music and silence so they are not transcribed as garbage.</source>
-        <translation type="unfinished" />
+        <translation>音楽や無音部分をスキップし、無意味なテキストとして文字起こしされないようにします。</translation>
     </message>
     <message>
         <source>Download Vulkan model</source>
-        <translation type="unfinished" />
+        <translation>Vulkan モデルをダウンロード</translation>
     </message>
     <message>
         <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
-        <translation type="unfinished" />
+        <translation>whisper.cpp の ggml モデルと Silero VAD を Anki Miner のフォルダにダウンロードします。AMD／Intel／NVIDIA のグラフィックカードでの GPU（Vulkan）文字起こしに必要です。</translation>
     </message>
     <message>
         <source>Vulkan model</source>
-        <translation type="unfinished" />
+        <translation>Vulkan モデル</translation>
     </message>
     <message>
         <source>Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).</source>
-        <translation type="unfinished" />
+        <translation>AMD、Intel、または NVIDIA の GPU（Vulkan）でより高速な文字起こしができます。</translation>
     </message>
     <message>
         <source>Alignment</source>
@@ -4639,7 +4863,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Needed for retiming unless alass is already on your PATH.</source>
-        <translation type="unfinished" />
+        <translation>alass が既に PATH にある場合を除き、リタイミングに必要です。</translation>
     </message>
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
@@ -4785,15 +5009,15 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <name>VulkanModelDownloadWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation type="unfinished">%1 (%2%)</translation>
+        <translation>%1 (%2%)</translation>
     </message>
     <message>
         <source>Downloading Vulkan model…</source>
-        <translation type="unfinished" />
+        <translation>Vulkan モデルをダウンロードしています…</translation>
     </message>
     <message>
         <source>Vulkan model installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>Vulkan モデルのインストールが完了しました。</translation>
     </message>
 </context><context>
     <name>WordCurationDialog</name>
@@ -5224,8 +5448,26 @@ Continue with import?</source>
         <translation>（表示専用の %1 件のエントリをスキップしました）</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （不正な形式のエントリを %1 件スキップしました）</translation>
+    </message>
+    <message>
         <source>Imported %1 entries from '%2'.</source>
         <translation>'%2' から %1 件のエントリをインポートしました。</translation>
+    </message>
+</context><context>
+    <name>_AddSourceDialog</name>
+    <message>
+        <source>Add Audio Source</source>
+        <translation>音声ソースを追加</translation>
+    </message>
+    <message>
+        <source>Source type:</source>
+        <translation>ソースの種類：</translation>
+    </message>
+    <message>
+        <source>URL template (use {term} and {reading}):</source>
+        <translation>URL テンプレート（{term} と {reading} を使用）：</translation>
     </message>
 </context><context>
     <name>_ChainRow</name>

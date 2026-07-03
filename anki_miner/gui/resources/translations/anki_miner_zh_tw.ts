@@ -184,32 +184,12 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Cannot build AnkiService: %1</source>
-        <translation>無法建立 AnkiService：%1</translation>
-    </message>
-    <message>
-        <source>Enter a note type name before styling can sync.</source>
-        <translation>請先輸入筆記類型名稱才能同步樣式。</translation>
-    </message>
-    <message>
-        <source>Syncing card styling…</source>
-        <translation>正在同步卡片樣式…</translation>
-    </message>
-    <message>
-        <source>Couldn't reach Anki — card styling will sync when it's back. (%1)</source>
-        <translation>無法連線至 Anki——卡片樣式將在恢復連線後同步。（%1）</translation>
-    </message>
-    <message>
-        <source>Glossary styling is live in Anki.</source>
-        <translation>詞彙表樣式已在 Anki 中生效。</translation>
-    </message>
-    <message>
-        <source>Off — Anki Miner isn't styling this note type.</source>
-        <translation>關閉——Anki Miner 未為此筆記類型套用樣式。</translation>
-    </message>
-    <message>
         <source>Add Deck</source>
         <translation>新增牌組</translation>
+    </message>
+    <message>
+        <source>Cannot build AnkiService: %1</source>
+        <translation>無法建立 AnkiService：%1</translation>
     </message>
     <message>
         <source>Could not fetch decks. Is Anki running with AnkiConnect?</source>
@@ -280,6 +260,42 @@
     <message>
         <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
         <translation>向 AnkiConnect 查詢此筆記類型的欄位並自動填入下方的對應。</translation>
+    </message>
+    <message>
+        <source>Duplicate Handling</source>
+        <translation>重複處理</translation>
+    </message>
+    <message>
+        <source>What counts as a duplicate when adding cards. Collection (default) skips a word if it already exists in any deck. Deck limits the check to the target deck; Deck root limits it to the whole subdeck tree under the deck's root — handy when you card each show into its own subdeck.</source>
+        <translation>新增卡片時判定重複的依據。「收藏庫」（預設）會在任一牌組中已存在該單字時跳過。「牌組」僅檢查目標牌組；「牌組根」則檢查該牌組根底下的整個子牌組樹狀結構——當你將每部作品各自採集到專屬子牌組時很方便。</translation>
+    </message>
+    <message>
+        <source>Collection (whole collection)</source>
+        <translation>收藏庫（整個收藏庫）</translation>
+    </message>
+    <message>
+        <source>Deck (target deck only)</source>
+        <translation>牌組（僅目標牌組）</translation>
+    </message>
+    <message>
+        <source>Deck root (whole subdeck tree)</source>
+        <translation>牌組根（整個子牌組樹）</translation>
+    </message>
+    <message>
+        <source>Duplicate Scope</source>
+        <translation>重複範圍</translation>
+    </message>
+    <message>
+        <source>Where AnkiConnect looks for an existing copy before adding a card.</source>
+        <translation>AnkiConnect 在新增卡片前搜尋既有副本的範圍。</translation>
+    </message>
+    <message>
+        <source>Check all note types for duplicates</source>
+        <translation>檢查所有筆記類型是否重複</translation>
+    </message>
+    <message>
+        <source>Also treat a matching first field in a different note type as a duplicate.</source>
+        <translation>也將不同筆記類型中相符的第一個欄位視為重複。</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -378,6 +394,46 @@
         <translation>以純假名儲存例句。</translation>
     </message>
     <message>
+        <source>Cloze Prefix Field</source>
+        <translation>克漏字前綴欄位</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
+        <translation>儲存目標單字之前的句子文字（Yomitan 克漏字切分）。</translation>
+    </message>
+    <message>
+        <source>Cloze Body Field</source>
+        <translation>克漏字主體欄位</translation>
+    </message>
+    <message>
+        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
+        <translation>儲存目標單字在句子中呈現的形態（Yomitan 克漏字切分）。</translation>
+    </message>
+    <message>
+        <source>Cloze Body Kana Field</source>
+        <translation>克漏字主體假名欄位</translation>
+    </message>
+    <message>
+        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
+        <translation>儲存變化後目標單字的假名讀音（Yomitan 克漏字切分）。</translation>
+    </message>
+    <message>
+        <source>Cloze Suffix Field</source>
+        <translation>克漏字後綴欄位</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
+        <translation>儲存目標單字之後的句子文字（Yomitan 克漏字切分）。</translation>
+    </message>
+    <message>
+        <source>Conjugation Field</source>
+        <translation>詞形變化欄位</translation>
+    </message>
+    <message>
+        <source>Stores the deinflection chain showing how the word was conjugated.</source>
+        <translation>儲存去變化鏈，顯示該單字是如何變化而來的。</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>輔助資料欄位</translation>
     </message>
@@ -416,6 +472,22 @@
     <message>
         <source>Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.</source>
         <translation>羅馬字符合 Yomitan／Lapis CSS；日文則適用於舊筆記。</translation>
+    </message>
+    <message>
+        <source>Pitch Graph Field</source>
+        <translation>高低音調圖欄位</translation>
+    </message>
+    <message>
+        <source>Stores the SVG pitch accent graph (Yomitan-style).</source>
+        <translation>儲存 SVG 高低音調圖（Yomitan 風格）。</translation>
+    </message>
+    <message>
+        <source>Pitch Text Field</source>
+        <translation>高低音調文字欄位</translation>
+    </message>
+    <message>
+        <source>Stores the overline-annotated pitch reading (Yomitan-style).</source>
+        <translation>儲存以上劃線標註的音調讀音（Yomitan 風格）。</translation>
     </message>
     <message>
         <source>Frequency Field</source>
@@ -502,16 +574,8 @@
         <translation>卡片樣式</translation>
     </message>
     <message>
-        <source>Anki Miner can style mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). It manages a single CSS block in the note type via AnkiConnect — your own card CSS is never touched. Turn it off if your note type already styles everything.</source>
-        <translation>Anki Miner 可用一份簡潔的內建樣式表為採集卡片的詞彙表套用樣式（自帶樣式的字典會自動套用）。它透過 AnkiConnect 管理筆記類型中的單一 CSS 區塊——絕不會動到你自己的卡片 CSS。若你的筆記類型已為一切套用樣式，可將其關閉。</translation>
-    </message>
-    <message>
-        <source>Style mined-card glossaries</source>
-        <translation>為採集卡片的詞彙表套用樣式</translation>
-    </message>
-    <message>
-        <source>Applied to the note type on Save. Your custom CSS below is appended after the built-in styles.</source>
-        <translation>儲存時套用至筆記類型。你在下方的自訂 CSS 會接續在內建樣式之後。</translation>
+        <source>Anki Miner styles mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). The styling is embedded in each card, so it works on any note type, on mobile, and in exports — and your note type's own card CSS is never touched.</source>
+        <translation>Anki Miner 以一份簡潔的內建樣式表，為採集卡片的字義表設定樣式（隨附自身樣式的字典會自動套用）。樣式會嵌入每張卡片，因此在任何筆記類型、行動裝置與匯出檔中都能運作——而且絕不會更動你筆記類型本身的卡片 CSS。</translation>
     </message>
     <message>
         <source>Custom CSS:</source>
@@ -576,22 +640,6 @@
     <message>
         <source>Note type not found</source>
         <translation>找不到筆記類型</translation>
-    </message>
-    <message>
-        <source>Not applied yet — Save Settings to sync to Anki.</source>
-        <translation>尚未套用——請儲存設定以同步至 Anki。</translation>
-    </message>
-    <message>
-        <source>Working...</source>
-        <translation>處理中...</translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>完成</translation>
-    </message>
-    <message>
-        <source>Failed</source>
-        <translation>失敗</translation>
     </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
@@ -702,6 +750,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>+ 新增音訊包…</translation>
     </message>
     <message>
+        <source>+ Add Online Source…</source>
+        <translation>+ 新增線上來源…</translation>
+    </message>
+    <message>
+        <source>Add a custom URL/JSON source (e.g. local-audio-yomichan) or an online scrape source</source>
+        <translation>新增自訂的 URL/JSON 來源（例如 local-audio-yomichan）或線上擷取來源</translation>
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>提高優先順序</translation>
     </message>
@@ -712,6 +768,38 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Remove</source>
         <translation>移除</translation>
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation>重試缺少的詞語音訊</translation>
+    </message>
+    <message>
+        <source>Forget which words JapanesePod101 had no audio for, so the next mining run tries to download them again.</source>
+        <translation>忘記 JapanesePod101 沒有音訊的單字，讓下次採集執行時再次嘗試下載它們。</translation>
+    </message>
+    <message>
+        <source>Google Translate (synthetic TTS)</source>
+        <translation>Google 翻譯（合成 TTS）</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 dictionary (scrape)</source>
+        <translation>JapanesePod101 字典（擷取）</translation>
+    </message>
+    <message>
+        <source>Jisho.org (scrape)</source>
+        <translation>Jisho.org（擷取）</translation>
+    </message>
+    <message>
+        <source>Custom JSON</source>
+        <translation>自訂 JSON</translation>
+    </message>
+    <message>
+        <source>Custom URL</source>
+        <translation>自訂 URL</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 (online)</source>
+        <translation>JapanesePod101（線上）</translation>
     </message>
     <message>
         <source>Remove audio pack</source>
@@ -744,14 +832,6 @@ The audio pack was not removed.</source>
     <message>
         <source>Re-import…</source>
         <translation>重新匯入…</translation>
-    </message>
-    <message>
-        <source>Google Translate (synthetic TTS)</source>
-        <translation>Google 翻譯（合成 TTS）</translation>
-    </message>
-    <message>
-        <source>JapanesePod101 (online)</source>
-        <translation>JapanesePod101（線上）</translation>
     </message>
 </context><context>
     <name>AudioTracksDialog</name>
@@ -1658,6 +1738,14 @@ Unchecked: mine every word — good for building a complete or shareable deck.</
 </context><context>
     <name>DictionaryImportFlow</name>
     <message>
+        <source>Skipped %1 malformed entries.</source>
+        <translation>已跳過 %1 筆格式錯誤的項目。</translation>
+    </message>
+    <message>
+        <source>%1 media file(s) could not be imported.</source>
+        <translation>有 %1 個媒體檔案無法匯入。</translation>
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zip</source>
         <translation>選擇 Yomitan 字典 zip</translation>
     </message>
@@ -1811,6 +1899,44 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <source>Restore from Disk</source>
         <translation>從磁碟還原</translation>
     </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>檢查更新</translation>
+    </message>
+    <message>
+        <source>No installed dictionaries to check.</source>
+        <translation>沒有可檢查的已安裝字典。</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation>正在檢查字典更新…</translation>
+    </message>
+    <message>
+        <source>Update Check Failed</source>
+        <translation>更新檢查失敗</translation>
+    </message>
+    <message>
+        <source>All dictionaries are up to date.</source>
+        <translation>所有字典皆為最新版本。</translation>
+    </message>
+    <message>
+        <source>Updates available:</source>
+        <translation>有可用的更新：</translation>
+    </message>
+    <message>
+        <source>  • %1: revision %2 → %3
+    %4</source>
+        <translation>  • %1：修訂版 %2 → %3
+    %4</translation>
+    </message>
+    <message>
+        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
+        <translation>下載新的 zip，然後透過字典列的「重新匯入…」選單重新匯入。</translation>
+    </message>
+    <message>
+        <source>Could not check:</source>
+        <translation>無法檢查：</translation>
+    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1856,6 +1982,14 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
         <translation>重新加入儲存資料夾中找到但不在上方清單的字典（例如設定重設後）。無需重新匯入。</translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>檢查更新</translation>
+    </message>
+    <message>
+        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
+        <translation>擷取每個可更新字典的線上索引並回報任何較新的修訂版。不會進行下載——請自行重新匯入新的 zip。</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -1981,6 +2115,18 @@ The dictionary was not removed.</source>
     </message>
 </context><context>
     <name>EpisodeProcessor</name>
+    <message>
+        <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
+        <translation>單字音訊來源連線／憑證失敗——本次執行已略過音訊，將於下次執行時重試</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned repeated server errors — audio skipped this run, will retry next run</source>
+        <translation>單字音訊來源回傳重複的伺服器錯誤——本次執行已略過音訊，將於下次執行時重試</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run</source>
+        <translation>單字音訊來源回傳非音訊的回應（可能遭速率限制）——本次執行已略過音訊，將於下次執行時重試</translation>
+    </message>
     <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation>步驟 1/5——正在解析字幕：%1</translation>
@@ -2113,6 +2259,12 @@ The dictionary was not removed.</source>
         <source>Skipped %n word(s) Anki flagged as duplicates (same Expression as an existing card or another word in this batch).</source>
         <translation>
             <numerusform>已略過 %n 個 Anki 標記為重複的單字（與現有卡片或此批次中另一個單字的 Expression 相同）。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Updated %n existing duplicate card(s): filled empty fields from this run.</source>
+        <translation>
+            <numerusform>已更新 %n 張既有的重複卡片：以本次執行的內容填入空白欄位。</numerusform>
         </translation>
     </message>
     <message>
@@ -2556,6 +2708,14 @@ The dictionary was not removed.</source>
         <translation>取消</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （已跳過 %1 筆格式錯誤的項目）</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> 這是以出現次數為基準的來源；其計數已轉換為排名。</translation>
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation>已新增頻率來源</translation>
     </message>
@@ -2838,6 +2998,10 @@ The frequency source was not removed.</source>
         <translation>設定精靈…</translation>
     </message>
     <message>
+        <source>Restyle Mined Cards...</source>
+        <translation>重新設定採集卡片樣式...</translation>
+    </message>
+    <message>
         <source>&amp;Help</source>
         <translation>說明(&amp;H)</translation>
     </message>
@@ -2892,6 +3056,54 @@ The frequency source was not removed.</source>
     <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>建立桌面捷徑失敗。</translation>
+    </message>
+    <message>
+        <source>Restyle Mined Cards</source>
+        <translation>重新設定採集卡片樣式</translation>
+    </message>
+    <message>
+        <source>This rewrites the styling field of your mined cards (the glossary field, or the definition field when no glossary field is mapped) to embed the built-in styling directly in each card, so cards you mined earlier match ones mined now. It's safe to run more than once and only adds styling — it never removes card content.
+
+Close Anki's card browser and any open note editor first: updating a note that is open for editing can lose your unsaved edits.
+
+Continue?</source>
+        <translation>此操作會改寫你採集卡片的樣式欄位（字義表欄位，或在未對應字義表欄位時改用釋義欄位），將內建樣式直接嵌入每張卡片，讓你先前採集的卡片與現在採集的一致。可安全地執行多次，且只會新增樣式——絕不會移除卡片內容。
+
+請先關閉 Anki 的卡片瀏覽器與所有開啟中的筆記編輯器：更新正在編輯的筆記可能會遺失你尚未儲存的編輯。
+
+要繼續嗎？</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards…</source>
+        <translation>正在重新設定採集卡片樣式…</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards… %1/%2</source>
+        <translation>正在重新設定採集卡片樣式… %1/%2</translation>
+    </message>
+    <message>
+        <source>Restyle complete</source>
+        <translation>重新設定樣式完成</translation>
+    </message>
+    <message>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
+        <translation>已重新設定 %1 張卡片的樣式。（已掃描 %2 張；%3 張已有樣式。）</translation>
+    </message>
+    <message>
+        <source>Restyle failed</source>
+        <translation>重新設定樣式失敗</translation>
+    </message>
+    <message>
+        <source>These dictionaries need to be re-imported after an app upgrade (their index format changed):</source>
+        <translation>這些字典在應用程式升級後需要重新匯入（其索引格式已變更）：</translation>
+    </message>
+    <message>
+        <source>Until you do, mining is blocked for them so you don't get cards with no definitions. Re-import them now?</source>
+        <translation>在你完成之前，將封鎖使用這些字典採集，以免你得到沒有釋義的卡片。要立即重新匯入嗎？</translation>
+    </message>
+    <message>
+        <source>Dictionaries need re-importing</source>
+        <translation>字典需要重新匯入</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -3728,6 +3940,18 @@ Details: %2</source>
     <message>
         <source>✓ Reset to defaults</source>
         <translation>✓ 已重設為預設值</translation>
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation>重試缺少的詞語音訊</translation>
+    </message>
+    <message>
+        <source>Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run.</source>
+        <translation>已清除 %1 個缺少音訊的標記。這些單字將於下次採集執行時重試。</translation>
+    </message>
+    <message>
+        <source>Could not clear the markers: %1</source>
+        <translation>無法清除標記：%1</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5224,8 +5448,26 @@ Continue with import?</source>
         <translation>（已略過 %1 個僅供顯示的項目）</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （已跳過 %1 筆格式錯誤的項目）</translation>
+    </message>
+    <message>
         <source>Imported %1 entries from '%2'.</source>
         <translation>已從「%2」匯入 %1 個項目。</translation>
+    </message>
+</context><context>
+    <name>_AddSourceDialog</name>
+    <message>
+        <source>Add Audio Source</source>
+        <translation>新增音訊來源</translation>
+    </message>
+    <message>
+        <source>Source type:</source>
+        <translation>來源類型：</translation>
+    </message>
+    <message>
+        <source>URL template (use {term} and {reading}):</source>
+        <translation>URL 範本（使用 {term} 與 {reading}）：</translation>
     </message>
 </context><context>
     <name>_ChainRow</name>

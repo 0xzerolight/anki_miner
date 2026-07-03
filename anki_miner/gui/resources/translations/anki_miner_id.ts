@@ -184,32 +184,12 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Cannot build AnkiService: %1</source>
-        <translation>Tidak dapat membangun AnkiService: %1</translation>
-    </message>
-    <message>
-        <source>Enter a note type name before styling can sync.</source>
-        <translation>Masukkan nama tipe catatan sebelum penataan gaya dapat disinkronkan.</translation>
-    </message>
-    <message>
-        <source>Syncing card styling…</source>
-        <translation>Menyinkronkan penataan gaya kartu…</translation>
-    </message>
-    <message>
-        <source>Couldn't reach Anki — card styling will sync when it's back. (%1)</source>
-        <translation>Tidak dapat menjangkau Anki — penataan gaya kartu akan disinkronkan saat kembali tersambung. (%1)</translation>
-    </message>
-    <message>
-        <source>Glossary styling is live in Anki.</source>
-        <translation>Penataan gaya glosarium aktif di Anki.</translation>
-    </message>
-    <message>
-        <source>Off — Anki Miner isn't styling this note type.</source>
-        <translation>Nonaktif — Anki Miner tidak menata gaya tipe catatan ini.</translation>
-    </message>
-    <message>
         <source>Add Deck</source>
         <translation>Tambah Dek</translation>
+    </message>
+    <message>
+        <source>Cannot build AnkiService: %1</source>
+        <translation>Tidak dapat membangun AnkiService: %1</translation>
     </message>
     <message>
         <source>Could not fetch decks. Is Anki running with AnkiConnect?</source>
@@ -280,6 +260,42 @@
     <message>
         <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
         <translation>Kueri AnkiConnect untuk bidang tipe catatan ini dan isi pemetaan di bawah secara otomatis.</translation>
+    </message>
+    <message>
+        <source>Duplicate Handling</source>
+        <translation>Penanganan Duplikat</translation>
+    </message>
+    <message>
+        <source>What counts as a duplicate when adding cards. Collection (default) skips a word if it already exists in any deck. Deck limits the check to the target deck; Deck root limits it to the whole subdeck tree under the deck's root — handy when you card each show into its own subdeck.</source>
+        <translation>Apa yang dihitung sebagai duplikat saat menambahkan kartu. Koleksi (bawaan) melewati sebuah kata jika sudah ada di dek mana pun. Dek membatasi pemeriksaan pada dek target; Root dek membatasinya pada seluruh pohon subdek di bawah root dek — berguna saat Anda membuat kartu tiap acara ke subdeknya sendiri.</translation>
+    </message>
+    <message>
+        <source>Collection (whole collection)</source>
+        <translation>Koleksi (seluruh koleksi)</translation>
+    </message>
+    <message>
+        <source>Deck (target deck only)</source>
+        <translation>Dek (hanya dek target)</translation>
+    </message>
+    <message>
+        <source>Deck root (whole subdeck tree)</source>
+        <translation>Root dek (seluruh pohon subdek)</translation>
+    </message>
+    <message>
+        <source>Duplicate Scope</source>
+        <translation>Cakupan Duplikat</translation>
+    </message>
+    <message>
+        <source>Where AnkiConnect looks for an existing copy before adding a card.</source>
+        <translation>Tempat AnkiConnect mencari salinan yang sudah ada sebelum menambahkan kartu.</translation>
+    </message>
+    <message>
+        <source>Check all note types for duplicates</source>
+        <translation>Periksa duplikat di semua tipe catatan</translation>
+    </message>
+    <message>
+        <source>Also treat a matching first field in a different note type as a duplicate.</source>
+        <translation>Perlakukan juga bidang pertama yang cocok pada tipe catatan berbeda sebagai duplikat.</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -378,6 +394,46 @@
         <translation>Menyimpan kalimat sebagai kana polos.</translation>
     </message>
     <message>
+        <source>Cloze Prefix Field</source>
+        <translation>Bidang Prefiks Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
+        <translation>Menyimpan teks kalimat sebelum kata target (pemisahan cloze Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Body Field</source>
+        <translation>Bidang Isi Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
+        <translation>Menyimpan kata target seperti yang muncul dalam kalimat (pemisahan cloze Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Body Kana Field</source>
+        <translation>Bidang Kana Isi Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
+        <translation>Menyimpan bacaan kana dari kata target yang terinfleksi (pemisahan cloze Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Suffix Field</source>
+        <translation>Bidang Sufiks Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
+        <translation>Menyimpan teks kalimat setelah kata target (pemisahan cloze Yomitan).</translation>
+    </message>
+    <message>
+        <source>Conjugation Field</source>
+        <translation>Bidang Konjugasi</translation>
+    </message>
+    <message>
+        <source>Stores the deinflection chain showing how the word was conjugated.</source>
+        <translation>Menyimpan rantai deinfleksi yang menunjukkan bagaimana kata dikonjugasikan.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Bidang Data Tambahan</translation>
     </message>
@@ -416,6 +472,22 @@
     <message>
         <source>Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.</source>
         <translation>Romaji cocok dengan CSS Yomitan/Lapis; Jepang untuk catatan lama.</translation>
+    </message>
+    <message>
+        <source>Pitch Graph Field</source>
+        <translation>Bidang Grafik Nada</translation>
+    </message>
+    <message>
+        <source>Stores the SVG pitch accent graph (Yomitan-style).</source>
+        <translation>Menyimpan grafik aksen nada SVG (gaya Yomitan).</translation>
+    </message>
+    <message>
+        <source>Pitch Text Field</source>
+        <translation>Bidang Teks Nada</translation>
+    </message>
+    <message>
+        <source>Stores the overline-annotated pitch reading (Yomitan-style).</source>
+        <translation>Menyimpan bacaan nada yang dianotasi garis atas (gaya Yomitan).</translation>
     </message>
     <message>
         <source>Frequency Field</source>
@@ -502,16 +574,8 @@
         <translation>Penataan Gaya Kartu</translation>
     </message>
     <message>
-        <source>Anki Miner can style mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). It manages a single CSS block in the note type via AnkiConnect — your own card CSS is never touched. Turn it off if your note type already styles everything.</source>
-        <translation>Anki Miner dapat menata gaya glosarium kartu hasil mining dengan satu lembar gaya bawaan yang rapi (kamus yang menyertakan gaya sendiri diterapkan secara otomatis). Ini mengelola satu blok CSS di tipe catatan melalui AnkiConnect — CSS kartu Anda sendiri tidak pernah disentuh. Matikan jika tipe catatan Anda sudah menata gaya semuanya.</translation>
-    </message>
-    <message>
-        <source>Style mined-card glossaries</source>
-        <translation>Tata gaya glosarium kartu hasil mining</translation>
-    </message>
-    <message>
-        <source>Applied to the note type on Save. Your custom CSS below is appended after the built-in styles.</source>
-        <translation>Diterapkan ke tipe catatan saat Simpan. CSS kustom Anda di bawah ditambahkan setelah gaya bawaan.</translation>
+        <source>Anki Miner styles mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). The styling is embedded in each card, so it works on any note type, on mobile, and in exports — and your note type's own card CSS is never touched.</source>
+        <translation>Anki Miner menata glosarium kartu hasil mining dengan satu stylesheet bawaan yang rapi (kamus yang menyertakan gaya sendiri diterapkan secara otomatis). Penataan disematkan dalam setiap kartu, sehingga berfungsi di tipe catatan mana pun, di perangkat seluler, dan dalam ekspor — dan CSS kartu dari tipe catatan Anda sendiri tidak pernah disentuh.</translation>
     </message>
     <message>
         <source>Custom CSS:</source>
@@ -576,22 +640,6 @@
     <message>
         <source>Note type not found</source>
         <translation>Tipe catatan tidak ditemukan</translation>
-    </message>
-    <message>
-        <source>Not applied yet — Save Settings to sync to Anki.</source>
-        <translation>Belum diterapkan — Simpan Pengaturan untuk menyinkronkan ke Anki.</translation>
-    </message>
-    <message>
-        <source>Working...</source>
-        <translation>Sedang bekerja...</translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Selesai</translation>
-    </message>
-    <message>
-        <source>Failed</source>
-        <translation>Gagal</translation>
     </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
@@ -702,6 +750,14 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <translation>+ Tambah Paket Audio…</translation>
     </message>
     <message>
+        <source>+ Add Online Source…</source>
+        <translation>+ Tambah Sumber Online…</translation>
+    </message>
+    <message>
+        <source>Add a custom URL/JSON source (e.g. local-audio-yomichan) or an online scrape source</source>
+        <translation>Tambahkan sumber URL/JSON kustom (mis. local-audio-yomichan) atau sumber kikis online</translation>
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Naikkan prioritas</translation>
     </message>
@@ -712,6 +768,38 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     <message>
         <source>Remove</source>
         <translation>Hapus</translation>
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation>Coba ulang audio ekspresi yang hilang</translation>
+    </message>
+    <message>
+        <source>Forget which words JapanesePod101 had no audio for, so the next mining run tries to download them again.</source>
+        <translation>Lupakan kata-kata yang tidak memiliki audio di JapanesePod101, agar proses mining berikutnya mencoba mengunduhnya lagi.</translation>
+    </message>
+    <message>
+        <source>Google Translate (synthetic TTS)</source>
+        <translation>Google Translate (TTS sintetis)</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 dictionary (scrape)</source>
+        <translation>Kamus JapanesePod101 (kikis)</translation>
+    </message>
+    <message>
+        <source>Jisho.org (scrape)</source>
+        <translation>Jisho.org (kikis)</translation>
+    </message>
+    <message>
+        <source>Custom JSON</source>
+        <translation>JSON Kustom</translation>
+    </message>
+    <message>
+        <source>Custom URL</source>
+        <translation>URL Kustom</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 (online)</source>
+        <translation>JapanesePod101 (online)</translation>
     </message>
     <message>
         <source>Remove audio pack</source>
@@ -744,14 +832,6 @@ Paket audio tidak dihapus.</translation>
     <message>
         <source>Re-import…</source>
         <translation>Impor ulang…</translation>
-    </message>
-    <message>
-        <source>Google Translate (synthetic TTS)</source>
-        <translation>Google Translate (TTS sintetis)</translation>
-    </message>
-    <message>
-        <source>JapanesePod101 (online)</source>
-        <translation>JapanesePod101 (online)</translation>
     </message>
 </context><context>
     <name>AudioTracksDialog</name>
@@ -1658,6 +1738,14 @@ Tidak dicentang: mining setiap kata — cocok untuk membangun dek yang lengkap a
 </context><context>
     <name>DictionaryImportFlow</name>
     <message>
+        <source>Skipped %1 malformed entries.</source>
+        <translation>Melewati %1 entri yang rusak.</translation>
+    </message>
+    <message>
+        <source>%1 media file(s) could not be imported.</source>
+        <translation>%1 berkas media tidak dapat diimpor.</translation>
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zip</source>
         <translation>Pilih zip kamus Yomitan</translation>
     </message>
@@ -1811,6 +1899,44 @@ Dilewati (tidak ada sumber tersimpan — klik kanan baris kamus → Impor ulang�
         <source>Restore from Disk</source>
         <translation>Pulihkan dari Disk</translation>
     </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>Periksa Pembaruan</translation>
+    </message>
+    <message>
+        <source>No installed dictionaries to check.</source>
+        <translation>Tidak ada kamus terpasang untuk diperiksa.</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation>Memeriksa pembaruan kamus…</translation>
+    </message>
+    <message>
+        <source>Update Check Failed</source>
+        <translation>Pemeriksaan Pembaruan Gagal</translation>
+    </message>
+    <message>
+        <source>All dictionaries are up to date.</source>
+        <translation>Semua kamus sudah versi terbaru.</translation>
+    </message>
+    <message>
+        <source>Updates available:</source>
+        <translation>Pembaruan tersedia:</translation>
+    </message>
+    <message>
+        <source>  • %1: revision %2 → %3
+    %4</source>
+        <translation>  • %1: revisi %2 → %3
+    %4</translation>
+    </message>
+    <message>
+        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
+        <translation>Unduh zip baru, lalu impor ulang lewat menu Impor ulang… di baris kamus.</translation>
+    </message>
+    <message>
+        <source>Could not check:</source>
+        <translation>Tidak dapat memeriksa:</translation>
+    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1856,6 +1982,14 @@ Dilewati (tidak ada sumber tersimpan — klik kanan baris kamus → Impor ulang�
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
         <translation>Tambahkan kembali kamus yang ditemukan di folder penyimpanan yang tidak ada dalam daftar di atas (mis. setelah pengaturan disetel ulang). Tidak perlu impor ulang.</translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>Periksa Pembaruan</translation>
+    </message>
+    <message>
+        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
+        <translation>Ambil indeks online dari setiap kamus yang dapat diperbarui dan laporkan revisi yang lebih baru. Tidak ada unduhan yang dilakukan — impor ulang zip baru sendiri.</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -1981,6 +2115,18 @@ Kamus tidak dihapus.</translation>
     </message>
 </context><context>
     <name>EpisodeProcessor</name>
+    <message>
+        <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
+        <translation>Kegagalan koneksi/sertifikat sumber audio kata — audio dilewati pada proses ini, akan dicoba ulang pada proses berikutnya</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned repeated server errors — audio skipped this run, will retry next run</source>
+        <translation>Sumber audio kata mengembalikan kesalahan server berulang — audio dilewati pada proses ini, akan dicoba ulang pada proses berikutnya</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run</source>
+        <translation>Sumber audio kata mengembalikan respons non-audio (kemungkinan dibatasi laju) — audio dilewati pada proses ini, akan dicoba ulang pada proses berikutnya</translation>
+    </message>
     <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation>Langkah 1/5 — Mengurai subtitel: %1</translation>
@@ -2113,6 +2259,12 @@ Kamus tidak dihapus.</translation>
         <source>Skipped %n word(s) Anki flagged as duplicates (same Expression as an existing card or another word in this batch).</source>
         <translation>
             <numerusform>Melewati %n kata yang ditandai Anki sebagai duplikat (Expression sama dengan kartu yang ada atau kata lain dalam batch ini).</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Updated %n existing duplicate card(s): filled empty fields from this run.</source>
+        <translation>
+            <numerusform>Memperbarui %n kartu duplikat yang sudah ada: mengisi bidang kosong dari proses ini.</numerusform>
         </translation>
     </message>
     <message>
@@ -2556,6 +2708,14 @@ Kamus tidak dihapus.</translation>
         <translation>Batal</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (melewati %1 entri yang rusak)</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> Ini adalah sumber berbasis kemunculan; jumlahnya dikonversi menjadi peringkat.</translation>
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation>Sumber Frekuensi Ditambahkan</translation>
     </message>
@@ -2838,6 +2998,10 @@ Sumber frekuensi tidak dihapus.</translation>
         <translation>Wizard Penyiapan...</translation>
     </message>
     <message>
+        <source>Restyle Mined Cards...</source>
+        <translation>Tata Ulang Kartu Hasil Mining...</translation>
+    </message>
+    <message>
         <source>&amp;Help</source>
         <translation>&amp;Bantuan</translation>
     </message>
@@ -2892,6 +3056,54 @@ Sumber frekuensi tidak dihapus.</translation>
     <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>Gagal membuat pintasan desktop.</translation>
+    </message>
+    <message>
+        <source>Restyle Mined Cards</source>
+        <translation>Tata Ulang Kartu Hasil Mining</translation>
+    </message>
+    <message>
+        <source>This rewrites the styling field of your mined cards (the glossary field, or the definition field when no glossary field is mapped) to embed the built-in styling directly in each card, so cards you mined earlier match ones mined now. It's safe to run more than once and only adds styling — it never removes card content.
+
+Close Anki's card browser and any open note editor first: updating a note that is open for editing can lose your unsaved edits.
+
+Continue?</source>
+        <translation>Ini menulis ulang bidang penataan kartu hasil mining Anda (bidang glosarium, atau bidang definisi bila tidak ada bidang glosarium yang dipetakan) untuk menyematkan penataan bawaan langsung ke setiap kartu, sehingga kartu yang Anda mining sebelumnya cocok dengan yang di-mining sekarang. Aman untuk dijalankan lebih dari sekali dan hanya menambahkan penataan — tidak pernah menghapus konten kartu.
+
+Tutup browser kartu Anki dan editor catatan yang terbuka terlebih dahulu: memperbarui catatan yang sedang terbuka untuk diedit dapat menghilangkan suntingan Anda yang belum disimpan.
+
+Lanjutkan?</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards…</source>
+        <translation>Menata ulang kartu hasil mining…</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards… %1/%2</source>
+        <translation>Menata ulang kartu hasil mining… %1/%2</translation>
+    </message>
+    <message>
+        <source>Restyle complete</source>
+        <translation>Penataan ulang selesai</translation>
+    </message>
+    <message>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
+        <translation>Menata ulang %1 kartu. (%2 dipindai; %3 sudah ditata.)</translation>
+    </message>
+    <message>
+        <source>Restyle failed</source>
+        <translation>Penataan ulang gagal</translation>
+    </message>
+    <message>
+        <source>These dictionaries need to be re-imported after an app upgrade (their index format changed):</source>
+        <translation>Kamus-kamus ini perlu diimpor ulang setelah peningkatan aplikasi (format indeksnya berubah):</translation>
+    </message>
+    <message>
+        <source>Until you do, mining is blocked for them so you don't get cards with no definitions. Re-import them now?</source>
+        <translation>Sampai Anda melakukannya, mining diblokir untuk kamus tersebut agar Anda tidak mendapatkan kartu tanpa definisi. Impor ulang sekarang?</translation>
+    </message>
+    <message>
+        <source>Dictionaries need re-importing</source>
+        <translation>Kamus perlu diimpor ulang</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -3728,6 +3940,18 @@ Detail: %2</translation>
     <message>
         <source>✓ Reset to defaults</source>
         <translation>✓ Disetel ulang ke bawaan</translation>
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation>Coba ulang audio ekspresi yang hilang</translation>
+    </message>
+    <message>
+        <source>Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run.</source>
+        <translation>Menghapus %1 penanda audio-hilang. Kata-kata tersebut akan dicoba ulang pada proses mining berikutnya.</translation>
+    </message>
+    <message>
+        <source>Could not clear the markers: %1</source>
+        <translation>Tidak dapat menghapus penanda: %1</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5224,8 +5448,26 @@ Lanjutkan impor?</translation>
         <translation> (melewati %1 entri hanya-tampilan)</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (melewati %1 entri yang rusak)</translation>
+    </message>
+    <message>
         <source>Imported %1 entries from '%2'.</source>
         <translation>Mengimpor %1 entri dari '%2'.</translation>
+    </message>
+</context><context>
+    <name>_AddSourceDialog</name>
+    <message>
+        <source>Add Audio Source</source>
+        <translation>Tambah Sumber Audio</translation>
+    </message>
+    <message>
+        <source>Source type:</source>
+        <translation>Tipe sumber:</translation>
+    </message>
+    <message>
+        <source>URL template (use {term} and {reading}):</source>
+        <translation>Templat URL (gunakan {term} dan {reading}):</translation>
     </message>
 </context><context>
     <name>_ChainRow</name>
