@@ -26,6 +26,37 @@ from anki_miner.services.frequency.providers.indexed_freq_provider import (
 
 logger = logging.getLogger(__name__)
 
+# Per-source lookup result: (provider name, rank, display_value), as returned by
+# MultiFrequencyService.lookup_all / IndexedFreqProvider.lookup_detail.
+FreqSources = list[tuple[str, int, str | None]]
+
+
+def min_rank(sources: FreqSources) -> int | None:
+    """Minimum rank across an already-fetched ``lookup_all`` result, or None.
+
+    Pure derivation over the per-source list so a caller that already holds the
+    breakdown (e.g. ``EpisodeProcessor._phase2_filter``) can compute the top-N
+    filter's rank without re-running the per-source SQL.
+    """
+    ranks = [rank for _name, rank, _display in sources]
+    return min(ranks) if ranks else None
+
+
+def harmonic_rank(sources: FreqSources) -> int | None:
+    """Harmonic mean of an already-fetched ``lookup_all`` result, or None.
+
+    Yomitan ``getFrequencyHarmonic`` (upstream e2ed450): ``floor(n / Σ(1/f))``
+    over one rank per source, dropping non-positive ranks (which also rules out a
+    divide-by-zero). ``lookup_all`` yields at most one value per source, so the
+    one-value-per-dictionary dedup holds by construction. Pure derivation so the
+    sort field can be computed from a single fetch — see :func:`min_rank`.
+    """
+    ranks = [rank for _name, rank, _display in sources if rank > 0]
+    if not ranks:
+        return None
+    total = sum(1.0 / rank for rank in ranks)
+    return math.floor(len(ranks) / total)
+
 
 class MultiFrequencyService:
     """Aggregates term -> rank lookups across an ordered set of providers."""
@@ -55,29 +86,24 @@ class MultiFrequencyService:
         return results
 
     def lookup_min(self, term: str, reading: str | None = None) -> int | None:
-        """Minimum rank across all providers, or None if none rank ``term``."""
-        ranks = [rank for _name, rank, _display in self.lookup_all(term, reading)]
-        return min(ranks) if ranks else None
+        """Minimum rank across all providers, or None if none rank ``term``.
+
+        Backs the top-N frequency filter (it genuinely wants the best rank in any
+        source). Thin wrapper over :func:`min_rank`; a caller that already fetched
+        ``lookup_all`` should call :func:`min_rank` directly to avoid re-querying.
+        """
+        return min_rank(self.lookup_all(term, reading))
 
     def lookup_harmonic(self, term: str, reading: str | None = None) -> int | None:
         """Harmonic mean of the per-source ranks, or None if none rank ``term``.
 
-        Ported from Yomitan getFrequencyHarmonic
-        (ext/js/data/anki-note-data-creator.js, upstream commit e2ed450):
-        ``floor(n / Σ(1/f))`` over one rank per source. ``lookup_all`` already
-        yields at most one value per source, so Yomitan's one-value-per-
-        dictionary dedup holds by construction. Non-positive ranks are dropped
-        (mirrors upstream ``getFrequencyNumbers``' ``frequency > 0`` guard),
-        which also rules out a divide-by-zero. This drives the card's numeric
-        ``frequency_sort`` field so no single niche source dominates the sort the
-        way a bare MIN can; ``lookup_min`` still backs the top-N frequency
-        filter, which genuinely wants the best rank in any source.
+        Drives the card's numeric ``frequency_sort`` field so no single niche
+        source dominates the sort the way a bare MIN can. Thin wrapper over
+        :func:`harmonic_rank` (Yomitan getFrequencyHarmonic); a caller that
+        already fetched ``lookup_all`` should call :func:`harmonic_rank` directly
+        to avoid re-querying.
         """
-        ranks = [rank for _name, rank, _display in self.lookup_all(term, reading) if rank > 0]
-        if not ranks:
-            return None
-        total = sum(1.0 / rank for rank in ranks)
-        return math.floor(len(ranks) / total)
+        return harmonic_rank(self.lookup_all(term, reading))
 
     def close(self) -> None:
         """Close every wrapped provider's sqlite handle.
