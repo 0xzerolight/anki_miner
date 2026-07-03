@@ -1114,6 +1114,19 @@ class EpisodeProcessor:
                     skipped_duplicates,
                 )
             )
+        # Duplicate handling = update (7.4): existing duplicate notes whose empty
+        # mapped fields were coalesce-filled from this run. NOT new cards (their
+        # IDs stay out of created_note_ids / Undo); reported as a separate summary.
+        updated_notes = self.anki_service.last_updated_notes
+        if isinstance(updated_notes, int) and updated_notes > 0:
+            self.presenter.show_info(
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Updated %n existing duplicate card(s): filled empty fields from this run.",
+                    "",
+                    updated_notes,
+                )
+            )
 
         # Collect mined_forms from the cards that were actually submitted.
         # Stored as mined_form (POS-aware) to match what Anki records in the
