@@ -354,6 +354,9 @@ class YouTubeTab(MiningTabBase):
         worker.item_progress.connect(self._on_item_progress)
         worker.item_finished.connect(self._on_item_finished)
         worker.queue_finished.connect(self._on_queue_finished)
+        # Fatal pre-loop failures (schema-stale dict gate, processor build) end
+        # the run via error + queue_finished; surface the message in the log.
+        worker.error.connect(self.log_widget.append_error)
         # QThread.finished fires on every run() exit (success, cancel, exception),
         # so run-end cleanup converges here rather than only on the success path.
         worker.finished.connect(self._on_worker_finished)

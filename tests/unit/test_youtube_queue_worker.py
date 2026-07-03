@@ -969,3 +969,36 @@ def test_neither_processor_nor_factory_raises(qapp, youtube_config):
             curation_callback=None,
             preview_mode=False,
         )
+
+
+# ---------------------------------------------------------------------------
+# 4.0: schema-staleness pre-loop gate — abort once, no per-item rows
+# ---------------------------------------------------------------------------
+
+
+def test_stale_dict_aborts_queue_once(make_worker, mock_processor):
+    """A stale enabled dict slot surfaces the error exactly once (no per-item
+    rows, no fetch/mine) and still emits queue_finished so the tab recovers."""
+    from unittest.mock import patch
+
+    items = [
+        _make_item(url="https://www.youtube.com/watch?v=a", video_id="a"),
+        _make_item(url="https://www.youtube.com/watch?v=b", video_id="b"),
+    ]
+    worker = make_worker(items=items)
+    errors: list[str] = []
+    worker.error.connect(errors.append)
+    caps = _connect_all(worker)
+
+    with patch(
+        "anki_miner.gui.workers.youtube_queue_worker.stale_dict_reimport_error",
+        return_value="Dictionary 'X' needs reimport (schema upgrade) — Settings → Dictionaries → Reimport All",
+    ):
+        worker.run()
+
+    assert len(errors) == 1
+    assert "Reimport All" in errors[0]
+    assert caps["started"].calls == []
+    assert caps["finished"].calls == []
+    assert len(caps["queue_finished"].calls) == 1
+    mock_processor.process_youtube_url.assert_not_called()
