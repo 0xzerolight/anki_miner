@@ -831,6 +831,47 @@ class TestOptionalServices:
         assert "frequency" not in extra_fields
         assert extra_fields["frequency_sort"] == "9999999"
 
+    def test_conjugation_field_joins_chain_when_mapped(self, test_config, mock_services, tmp_path):
+        """Mapped conjugation field: extra_fields carries the chain joined ' « '."""
+        word = _make_word("食べる")
+        word.inflection_chain = ("-ます", "negative", "-た")
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        config = replace(test_config, anki_fields={**test_config.anki_fields, "conjugation": "Conjugation"})
+        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        extra_fields = card_data[0].extra_fields or {}
+        assert extra_fields["conjugation"] == "-ます « negative « -た"
+
+    def test_conjugation_field_omitted_when_chain_empty(self, test_config, mock_services, tmp_path):
+        """Mapped field but empty chain: no conjugation key (uninflected word)."""
+        word = _make_word("本")  # inflection_chain defaults to ()
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. book"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        config = replace(test_config, anki_fields={**test_config.anki_fields, "conjugation": "Conjugation"})
+        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        extra_fields = card_data[0].extra_fields or {}
+        assert "conjugation" not in extra_fields
+
 
 class TestPitchLemmaReading:
     """Regression tests for OVH-025: pitch lookup should use lemma_reading, not surface reading.

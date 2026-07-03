@@ -82,6 +82,14 @@ class AnkiMinerConfig:
             "frequency_sort": "",
             "source": "",
             "expression_audio": "",
+            # Yomitan getCloze split fields (3.1). All default "" (feature off,
+            # wire byte-identical via the empty-name skip in anki_note_builder).
+            "cloze_prefix": "",
+            "cloze_body": "",
+            "cloze_body_kana": "",
+            "cloze_suffix": "",
+            # Deinflection-chain provenance field (3.2). Default "" = feature off.
+            "conjugation": "",
         }
     )
     # JP Mining Note-style card-type marker. When card_type is non-empty, an "x"
@@ -276,6 +284,16 @@ class AnkiMinerConfig:
     # so duplicated surfaces in the same sentence bold only the morpheme
     # that was actually mined. See Issue #20.
     bold_target_in_sentence: bool = False
+
+    # Sentence-boundary trimming (3.3, Yomitan extractSentence). When True, the
+    # card sentence is trimmed to just the sentence containing the target,
+    # splitting multi-sentence cues and narration+「quoted dialog」. Opt-in by
+    # design: sentence audio/screenshots are cut from cue timing, so a trimmed
+    # sentence no longer transcribes the full audio clip — whole-cue stays the
+    # right default for a batch miner. Trimming happens at word emission only
+    # (parser-level); the target's carried offsets are rebased into the trimmed
+    # text so bold/cloze fields stay aligned.
+    trim_to_sentence: bool = False
 
     # Card styling (Issue #44). anki_miner emits definition HTML with its own
     # class scheme (`.yomitan-glossary`, `gloss-sc-*`, `data-sc-*`) and ships one
