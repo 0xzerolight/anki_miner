@@ -184,32 +184,12 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Cannot build AnkiService: %1</source>
-        <translation>Impossibile creare AnkiService: %1</translation>
-    </message>
-    <message>
-        <source>Enter a note type name before styling can sync.</source>
-        <translation>Inserisci il nome di un tipo di nota prima di poter sincronizzare lo stile.</translation>
-    </message>
-    <message>
-        <source>Syncing card styling…</source>
-        <translation>Sincronizzazione dello stile delle carte in corso…</translation>
-    </message>
-    <message>
-        <source>Couldn't reach Anki — card styling will sync when it's back. (%1)</source>
-        <translation>Impossibile raggiungere Anki — lo stile delle carte verrà sincronizzato al ritorno. (%1)</translation>
-    </message>
-    <message>
-        <source>Glossary styling is live in Anki.</source>
-        <translation>Lo stile del glossario è attivo in Anki.</translation>
-    </message>
-    <message>
-        <source>Off — Anki Miner isn't styling this note type.</source>
-        <translation>Disattivato — Anki Miner non applica lo stile a questo tipo di nota.</translation>
-    </message>
-    <message>
         <source>Add Deck</source>
         <translation>Aggiungi mazzo</translation>
+    </message>
+    <message>
+        <source>Cannot build AnkiService: %1</source>
+        <translation>Impossibile creare AnkiService: %1</translation>
     </message>
     <message>
         <source>Could not fetch decks. Is Anki running with AnkiConnect?</source>
@@ -280,6 +260,42 @@
     <message>
         <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
         <translation>Interroga AnkiConnect per i campi di questo tipo di nota e compila automaticamente le mappature qui sotto.</translation>
+    </message>
+    <message>
+        <source>Duplicate Handling</source>
+        <translation>Gestione dei duplicati</translation>
+    </message>
+    <message>
+        <source>What counts as a duplicate when adding cards. Collection (default) skips a word if it already exists in any deck. Deck limits the check to the target deck; Deck root limits it to the whole subdeck tree under the deck's root — handy when you card each show into its own subdeck.</source>
+        <translation>Cosa viene considerato un duplicato quando si aggiungono le carte. Collezione (impostazione predefinita) ignora una parola se esiste già in un mazzo qualsiasi. Mazzo limita il controllo al mazzo di destinazione; Radice del mazzo lo limita all'intero albero di sottomazzi sotto la radice del mazzo — comodo quando si creano le carte di ogni serie in un proprio sottomazzo.</translation>
+    </message>
+    <message>
+        <source>Collection (whole collection)</source>
+        <translation>Collezione (intera collezione)</translation>
+    </message>
+    <message>
+        <source>Deck (target deck only)</source>
+        <translation>Mazzo (solo il mazzo di destinazione)</translation>
+    </message>
+    <message>
+        <source>Deck root (whole subdeck tree)</source>
+        <translation>Radice del mazzo (intero albero di sottomazzi)</translation>
+    </message>
+    <message>
+        <source>Duplicate Scope</source>
+        <translation>Ambito dei duplicati</translation>
+    </message>
+    <message>
+        <source>Where AnkiConnect looks for an existing copy before adding a card.</source>
+        <translation>Dove AnkiConnect cerca una copia esistente prima di aggiungere una carta.</translation>
+    </message>
+    <message>
+        <source>Check all note types for duplicates</source>
+        <translation>Controlla i duplicati in tutti i tipi di nota</translation>
+    </message>
+    <message>
+        <source>Also treat a matching first field in a different note type as a duplicate.</source>
+        <translation>Considera come duplicato anche un primo campo corrispondente in un tipo di nota diverso.</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -378,6 +394,46 @@
         <translation>Memorizza la frase come kana semplice.</translation>
     </message>
     <message>
+        <source>Cloze Prefix Field</source>
+        <translation>Campo prefisso Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
+        <translation>Memorizza il testo della frase prima della parola di destinazione (suddivisione cloze di Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Body Field</source>
+        <translation>Campo corpo Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
+        <translation>Memorizza la parola di destinazione così come appare nella frase (suddivisione cloze di Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Body Kana Field</source>
+        <translation>Campo corpo Cloze kana</translation>
+    </message>
+    <message>
+        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
+        <translation>Memorizza la lettura in kana della parola di destinazione flessa (suddivisione cloze di Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Suffix Field</source>
+        <translation>Campo suffisso Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
+        <translation>Memorizza il testo della frase dopo la parola di destinazione (suddivisione cloze di Yomitan).</translation>
+    </message>
+    <message>
+        <source>Conjugation Field</source>
+        <translation>Campo di coniugazione</translation>
+    </message>
+    <message>
+        <source>Stores the deinflection chain showing how the word was conjugated.</source>
+        <translation>Memorizza la catena di deflessione che mostra come la parola è stata coniugata.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Campi di dati ausiliari</translation>
     </message>
@@ -416,6 +472,22 @@
     <message>
         <source>Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.</source>
         <translation>Il romaji corrisponde al CSS di Yomitan/Lapis; il giapponese per le note legacy.</translation>
+    </message>
+    <message>
+        <source>Pitch Graph Field</source>
+        <translation>Campo grafico accento tonale</translation>
+    </message>
+    <message>
+        <source>Stores the SVG pitch accent graph (Yomitan-style).</source>
+        <translation>Memorizza il grafico SVG dell'accento tonale (stile Yomitan).</translation>
+    </message>
+    <message>
+        <source>Pitch Text Field</source>
+        <translation>Campo testo accento tonale</translation>
+    </message>
+    <message>
+        <source>Stores the overline-annotated pitch reading (Yomitan-style).</source>
+        <translation>Memorizza la lettura tonale annotata con sopralineatura (stile Yomitan).</translation>
     </message>
     <message>
         <source>Frequency Field</source>
@@ -502,16 +574,8 @@
         <translation>Stile delle carte</translation>
     </message>
     <message>
-        <source>Anki Miner can style mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). It manages a single CSS block in the note type via AnkiConnect — your own card CSS is never touched. Turn it off if your note type already styles everything.</source>
-        <translation>Anki Miner può applicare uno stile ai glossari delle carte estratte con un solo foglio di stile integrato e pulito (i dizionari che includono i propri stili vengono applicati automaticamente). Gestisce un unico blocco CSS nel tipo di nota tramite AnkiConnect — il CSS delle tue carte non viene mai toccato. Disattivalo se il tuo tipo di nota applica già lo stile a tutto.</translation>
-    </message>
-    <message>
-        <source>Style mined-card glossaries</source>
-        <translation>Applica stile ai glossari delle carte estratte</translation>
-    </message>
-    <message>
-        <source>Applied to the note type on Save. Your custom CSS below is appended after the built-in styles.</source>
-        <translation>Applicato al tipo di nota al salvataggio. Il tuo CSS personalizzato qui sotto viene aggiunto dopo gli stili integrati.</translation>
+        <source>Anki Miner styles mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). The styling is embedded in each card, so it works on any note type, on mobile, and in exports — and your note type's own card CSS is never touched.</source>
+        <translation>Anki Miner applica ai glossari delle carte estratte un unico foglio di stile integrato e pulito (i dizionari che includono i propri stili vengono applicati automaticamente). Lo stile è incorporato in ogni carta, quindi funziona con qualsiasi tipo di nota, su dispositivi mobili e nelle esportazioni — e il CSS del proprio tipo di nota non viene mai toccato.</translation>
     </message>
     <message>
         <source>Custom CSS:</source>
@@ -576,22 +640,6 @@
     <message>
         <source>Note type not found</source>
         <translation>Tipo di nota non trovato</translation>
-    </message>
-    <message>
-        <source>Not applied yet — Save Settings to sync to Anki.</source>
-        <translation>Non ancora applicato — salva le impostazioni per sincronizzare con Anki.</translation>
-    </message>
-    <message>
-        <source>Working...</source>
-        <translation>Elaborazione in corso...</translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Fatto</translation>
-    </message>
-    <message>
-        <source>Failed</source>
-        <translation>Non riuscito</translation>
     </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
@@ -702,6 +750,14 @@ Formati supportati: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
         <translation>+ Aggiungi pacchetto audio…</translation>
     </message>
     <message>
+        <source>+ Add Online Source…</source>
+        <translation>+ Aggiungi sorgente online…</translation>
+    </message>
+    <message>
+        <source>Add a custom URL/JSON source (e.g. local-audio-yomichan) or an online scrape source</source>
+        <translation>Aggiungi una sorgente URL/JSON personalizzata (ad es. local-audio-yomichan) o una sorgente di scraping online</translation>
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Sposta su nella priorità</translation>
     </message>
@@ -712,6 +768,38 @@ Formati supportati: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
     <message>
         <source>Remove</source>
         <translation>Rimuovi</translation>
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation>Riprova l'audio dell'espressione mancante</translation>
+    </message>
+    <message>
+        <source>Forget which words JapanesePod101 had no audio for, so the next mining run tries to download them again.</source>
+        <translation>Dimentica le parole per cui JapanesePod101 non aveva audio, così la prossima esecuzione del mining proverà di nuovo a scaricarle.</translation>
+    </message>
+    <message>
+        <source>Google Translate (synthetic TTS)</source>
+        <translation>Google Translate (TTS sintetico)</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 dictionary (scrape)</source>
+        <translation>Dizionario JapanesePod101 (scraping)</translation>
+    </message>
+    <message>
+        <source>Jisho.org (scrape)</source>
+        <translation>Jisho.org (scraping)</translation>
+    </message>
+    <message>
+        <source>Custom JSON</source>
+        <translation>JSON personalizzato</translation>
+    </message>
+    <message>
+        <source>Custom URL</source>
+        <translation>URL personalizzato</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 (online)</source>
+        <translation>JapanesePod101 (online)</translation>
     </message>
     <message>
         <source>Remove audio pack</source>
@@ -744,14 +832,6 @@ Il pacchetto audio non è stato rimosso.</translation>
     <message>
         <source>Re-import…</source>
         <translation>Reimporta…</translation>
-    </message>
-    <message>
-        <source>Google Translate (synthetic TTS)</source>
-        <translation>Google Translate (TTS sintetico)</translation>
-    </message>
-    <message>
-        <source>JapanesePod101 (online)</source>
-        <translation>JapanesePod101 (online)</translation>
     </message>
 </context><context>
     <name>AudioTracksDialog</name>
@@ -1658,6 +1738,14 @@ Deselezionato: estrae ogni parola — ideale per creare un mazzo completo o cond
 </context><context>
     <name>DictionaryImportFlow</name>
     <message>
+        <source>Skipped %1 malformed entries.</source>
+        <translation>Saltate %1 voci malformate.</translation>
+    </message>
+    <message>
+        <source>%1 media file(s) could not be imported.</source>
+        <translation>Impossibile importare %1 file multimediali.</translation>
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zip</source>
         <translation>Scegliere lo zip del dizionario Yomitan</translation>
     </message>
@@ -1811,6 +1899,44 @@ Saltati (nessuna sorgente salvata — fare clic con il tasto destro su una riga 
         <source>Restore from Disk</source>
         <translation>Ripristina da disco</translation>
     </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>Controlla aggiornamenti</translation>
+    </message>
+    <message>
+        <source>No installed dictionaries to check.</source>
+        <translation>Nessun dizionario installato da controllare.</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation>Controllo degli aggiornamenti dei dizionari…</translation>
+    </message>
+    <message>
+        <source>Update Check Failed</source>
+        <translation>Controllo aggiornamenti non riuscito</translation>
+    </message>
+    <message>
+        <source>All dictionaries are up to date.</source>
+        <translation>Tutti i dizionari sono aggiornati.</translation>
+    </message>
+    <message>
+        <source>Updates available:</source>
+        <translation>Aggiornamenti disponibili:</translation>
+    </message>
+    <message>
+        <source>  • %1: revision %2 → %3
+    %4</source>
+        <translation>  • %1: revisione %2 → %3
+    %4</translation>
+    </message>
+    <message>
+        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
+        <translation>Scaricare il nuovo file zip, quindi reimportarlo tramite il menu Reimporta… della riga del dizionario.</translation>
+    </message>
+    <message>
+        <source>Could not check:</source>
+        <translation>Impossibile controllare:</translation>
+    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1856,6 +1982,14 @@ Saltati (nessuna sorgente salvata — fare clic con il tasto destro su una riga 
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
         <translation>Riaggiungi i dizionari presenti nella cartella di archiviazione ma non nell'elenco sopra (ad es. dopo un ripristino delle impostazioni). Nessuna reimportazione necessaria.</translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>Controlla aggiornamenti</translation>
+    </message>
+    <message>
+        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
+        <translation>Recupera l'indice online di ogni dizionario aggiornabile e segnala eventuali revisioni più recenti. Non viene effettuato alcun download — reimportare manualmente il nuovo file zip.</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -1981,6 +2115,18 @@ Il dizionario non è stato rimosso.</translation>
     </message>
 </context><context>
     <name>EpisodeProcessor</name>
+    <message>
+        <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
+        <translation>Errore di connessione/certificato della sorgente audio delle parole — audio ignorato in questa esecuzione, verrà riprovato alla prossima</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned repeated server errors — audio skipped this run, will retry next run</source>
+        <translation>La sorgente audio delle parole ha restituito ripetuti errori del server — audio ignorato in questa esecuzione, verrà riprovato alla prossima</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run</source>
+        <translation>La sorgente audio delle parole ha restituito risposte non audio (probabilmente limitazione di frequenza) — audio ignorato in questa esecuzione, verrà riprovato alla prossima</translation>
+    </message>
     <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation>Passo 1/5 — Analisi dei sottotitoli: %1</translation>
@@ -2120,6 +2266,13 @@ Il dizionario non è stato rimosso.</translation>
         <translation>
             <numerusform>Saltata %n parola contrassegnata da Anki come duplicata (stessa Espressione di una carta esistente o di un'altra parola in questo batch).</numerusform>
             <numerusform>Saltate %n parole contrassegnate da Anki come duplicate (stessa Espressione di una carta esistente o di un'altra parola in questo batch).</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Updated %n existing duplicate card(s): filled empty fields from this run.</source>
+        <translation>
+            <numerusform>Aggiornata %n carta duplicata esistente: campi vuoti compilati da questa esecuzione.</numerusform>
+            <numerusform>Aggiornate %n carte duplicate esistenti: campi vuoti compilati da questa esecuzione.</numerusform>
         </translation>
     </message>
     <message>
@@ -2565,6 +2718,14 @@ Il dizionario non è stato rimosso.</translation>
         <translation>Annulla</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (saltate %1 voci malformate)</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> Questa è una sorgente basata sulle occorrenze; i suoi conteggi sono stati convertiti in ranghi.</translation>
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation>Sorgente di frequenza aggiunta</translation>
     </message>
@@ -2847,6 +3008,10 @@ La sorgente di frequenza non è stata rimossa.</translation>
         <translation>Procedura guidata di configurazione...</translation>
     </message>
     <message>
+        <source>Restyle Mined Cards...</source>
+        <translation>Riapplica stile alle carte estratte...</translation>
+    </message>
+    <message>
         <source>&amp;Help</source>
         <translation>&amp;Aiuto</translation>
     </message>
@@ -2901,6 +3066,54 @@ La sorgente di frequenza non è stata rimossa.</translation>
     <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>Creazione del collegamento sul desktop non riuscita.</translation>
+    </message>
+    <message>
+        <source>Restyle Mined Cards</source>
+        <translation>Riapplica stile alle carte estratte</translation>
+    </message>
+    <message>
+        <source>This rewrites the styling field of your mined cards (the glossary field, or the definition field when no glossary field is mapped) to embed the built-in styling directly in each card, so cards you mined earlier match ones mined now. It's safe to run more than once and only adds styling — it never removes card content.
+
+Close Anki's card browser and any open note editor first: updating a note that is open for editing can lose your unsaved edits.
+
+Continue?</source>
+        <translation>Questa operazione riscrive il campo di stile delle carte estratte (il campo del glossario, o il campo della definizione quando nessun campo del glossario è mappato) per incorporare lo stile integrato direttamente in ogni carta, così le carte estratte in precedenza corrispondono a quelle estratte ora. Può essere eseguita più volte senza rischi e aggiunge solo stile — non rimuove mai il contenuto delle carte.
+
+Chiudere prima il browser delle carte di Anki e qualsiasi editor di note aperto: aggiornare una nota aperta per la modifica può far perdere le modifiche non salvate.
+
+Continuare?</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards…</source>
+        <translation>Riapplicazione dello stile alle carte estratte…</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards… %1/%2</source>
+        <translation>Riapplicazione dello stile alle carte estratte… %1/%2</translation>
+    </message>
+    <message>
+        <source>Restyle complete</source>
+        <translation>Riapplicazione dello stile completata</translation>
+    </message>
+    <message>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
+        <translation>Stile riapplicato a %1 carte. (%2 esaminate; %3 già con stile.)</translation>
+    </message>
+    <message>
+        <source>Restyle failed</source>
+        <translation>Riapplicazione dello stile non riuscita</translation>
+    </message>
+    <message>
+        <source>These dictionaries need to be re-imported after an app upgrade (their index format changed):</source>
+        <translation>Questi dizionari devono essere reimportati dopo un aggiornamento dell'app (il formato del loro indice è cambiato):</translation>
+    </message>
+    <message>
+        <source>Until you do, mining is blocked for them so you don't get cards with no definitions. Re-import them now?</source>
+        <translation>Fino ad allora, il mining è bloccato per questi dizionari, così da non ottenere carte prive di definizioni. Reimportarli ora?</translation>
+    </message>
+    <message>
+        <source>Dictionaries need re-importing</source>
+        <translation>I dizionari devono essere reimportati</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -3737,6 +3950,18 @@ Dettagli: %2</translation>
     <message>
         <source>✓ Reset to defaults</source>
         <translation>✓ Predefiniti ripristinati</translation>
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation>Riprova l'audio dell'espressione mancante</translation>
+    </message>
+    <message>
+        <source>Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run.</source>
+        <translation>Cancellati %1 marcatori di audio mancante. Quelle parole verranno riprovate alla prossima esecuzione del mining.</translation>
+    </message>
+    <message>
+        <source>Could not clear the markers: %1</source>
+        <translation>Impossibile cancellare i marcatori: %1</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5234,8 +5459,26 @@ Continuare con l'importazione?</translation>
         <translation> (saltate %1 voci solo visualizzabili)</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (saltate %1 voci malformate)</translation>
+    </message>
+    <message>
         <source>Imported %1 entries from '%2'.</source>
         <translation>Importate %1 voci da '%2'.</translation>
+    </message>
+</context><context>
+    <name>_AddSourceDialog</name>
+    <message>
+        <source>Add Audio Source</source>
+        <translation>Aggiungi sorgente audio</translation>
+    </message>
+    <message>
+        <source>Source type:</source>
+        <translation>Tipo di sorgente:</translation>
+    </message>
+    <message>
+        <source>URL template (use {term} and {reading}):</source>
+        <translation>Modello URL (usa {term} e {reading}):</translation>
     </message>
 </context><context>
     <name>_ChainRow</name>

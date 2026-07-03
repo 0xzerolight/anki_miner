@@ -184,31 +184,11 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Cannot build AnkiService: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enter a note type name before styling can sync.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Syncing card styling…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Couldn't reach Anki — card styling will sync when it's back. (%1)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Glossary styling is live in Anki.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Off — Anki Miner isn't styling this note type.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Add Deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cannot build AnkiService: %1</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -279,6 +259,42 @@
     </message>
     <message>
         <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Duplicate Handling</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>What counts as a duplicate when adding cards. Collection (default) skips a word if it already exists in any deck. Deck limits the check to the target deck; Deck root limits it to the whole subdeck tree under the deck's root — handy when you card each show into its own subdeck.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Collection (whole collection)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck (target deck only)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck root (whole subdeck tree)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Duplicate Scope</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Where AnkiConnect looks for an existing copy before adding a card.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check all note types for duplicates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Also treat a matching first field in a different note type as a duplicate.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -378,6 +394,46 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Cloze Prefix Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cloze Body Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cloze Body Kana Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cloze Suffix Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Conjugation Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the deinflection chain showing how the word was conjugated.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation type="unfinished" />
     </message>
@@ -415,6 +471,22 @@
     </message>
     <message>
         <source>Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Graph Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the SVG pitch accent graph (Yomitan-style).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Text Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the overline-annotated pitch reading (Yomitan-style).</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -502,15 +574,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Anki Miner can style mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). It manages a single CSS block in the note type via AnkiConnect — your own card CSS is never touched. Turn it off if your note type already styles everything.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Style mined-card glossaries</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Applied to the note type on Save. Your custom CSS below is appended after the built-in styles.</source>
+        <source>Anki Miner styles mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). The styling is embedded in each card, so it works on any note type, on mobile, and in exports — and your note type's own card CSS is never touched.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -575,22 +639,6 @@
     </message>
     <message>
         <source>Note type not found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Not applied yet — Save Settings to sync to Anki.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Working...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Done</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -699,6 +747,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
+        <source>+ Add Online Source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add a custom URL/JSON source (e.g. local-audio-yomichan) or an online scrape source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation type="unfinished" />
     </message>
@@ -708,6 +764,38 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Remove</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Forget which words JapanesePod101 had no audio for, so the next mining run tries to download them again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google Translate (synthetic TTS)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>JapanesePod101 dictionary (scrape)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Jisho.org (scrape)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Custom JSON</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Custom URL</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>JapanesePod101 (online)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -734,14 +822,6 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Re-import…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Google Translate (synthetic TTS)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>JapanesePod101 (online)</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -1638,6 +1718,14 @@ Unchecked: mine every word — good for building a complete or shareable deck.</
 </context><context>
     <name>DictionaryImportFlow</name>
     <message>
+        <source>Skipped %1 malformed entries.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 media file(s) could not be imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zip</source>
         <translation type="unfinished" />
     </message>
@@ -1786,6 +1874,43 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <source>Restore from Disk</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No installed dictionaries to check.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update Check Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All dictionaries are up to date.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Updates available:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>  • %1: revision %2 → %3
+    %4</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check:</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1830,6 +1955,14 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     </message>
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1951,6 +2084,18 @@ The dictionary was not removed.</source>
     </message>
 </context><context>
     <name>EpisodeProcessor</name>
+    <message>
+        <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word-audio source returned repeated server errors — audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation type="unfinished" />
@@ -2081,6 +2226,12 @@ The dictionary was not removed.</source>
     </message>
     <message numerus="yes">
         <source>Skipped %n word(s) Anki flagged as duplicates (same Expression as an existing card or another word in this batch).</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Updated %n existing duplicate card(s): filled empty fields from this run.</source>
         <translation type="unfinished">
             <numerusform />
         </translation>
@@ -2524,6 +2675,14 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation type="unfinished" />
     </message>
@@ -2799,6 +2958,10 @@ The frequency source was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Restyle Mined Cards...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&amp;Help</source>
         <translation type="unfinished" />
     </message>
@@ -2852,6 +3015,50 @@ The frequency source was not removed.</source>
     </message>
     <message>
         <source>Failed to create desktop shortcut.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restyle Mined Cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This rewrites the styling field of your mined cards (the glossary field, or the definition field when no glossary field is mapped) to embed the built-in styling directly in each card, so cards you mined earlier match ones mined now. It's safe to run more than once and only adds styling — it never removes card content.
+
+Close Anki's card browser and any open note editor first: updating a note that is open for editing can lose your unsaved edits.
+
+Continue?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restyling mined cards…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restyling mined cards… %1/%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restyle complete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restyle failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>These dictionaries need to be re-imported after an app upgrade (their index format changed):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Until you do, mining is blocked for them so you don't get cards with no definitions. Re-import them now?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries need re-importing</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3674,6 +3881,18 @@ Details: %2</source>
     </message>
     <message>
         <source>✓ Reset to defaults</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not clear the markers: %1</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5166,7 +5385,25 @@ Continue with import?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Imported %1 entries from '%2'.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>_AddSourceDialog</name>
+    <message>
+        <source>Add Audio Source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Source type:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>URL template (use {term} and {reading}):</source>
         <translation type="unfinished" />
     </message>
 </context><context>

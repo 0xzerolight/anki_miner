@@ -184,32 +184,12 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Cannot build AnkiService: %1</source>
-        <translation>Không thể tạo AnkiService: %1</translation>
-    </message>
-    <message>
-        <source>Enter a note type name before styling can sync.</source>
-        <translation>Nhập tên loại ghi chú trước khi có thể đồng bộ định kiểu.</translation>
-    </message>
-    <message>
-        <source>Syncing card styling…</source>
-        <translation>Đang đồng bộ định kiểu thẻ…</translation>
-    </message>
-    <message>
-        <source>Couldn't reach Anki — card styling will sync when it's back. (%1)</source>
-        <translation>Không thể kết nối Anki — định kiểu thẻ sẽ đồng bộ khi kết nối trở lại. (%1)</translation>
-    </message>
-    <message>
-        <source>Glossary styling is live in Anki.</source>
-        <translation>Định kiểu bảng chú giải đang hoạt động trong Anki.</translation>
-    </message>
-    <message>
-        <source>Off — Anki Miner isn't styling this note type.</source>
-        <translation>Tắt — Anki Miner không định kiểu loại ghi chú này.</translation>
-    </message>
-    <message>
         <source>Add Deck</source>
         <translation>Thêm bộ thẻ</translation>
+    </message>
+    <message>
+        <source>Cannot build AnkiService: %1</source>
+        <translation>Không thể tạo AnkiService: %1</translation>
     </message>
     <message>
         <source>Could not fetch decks. Is Anki running with AnkiConnect?</source>
@@ -280,6 +260,42 @@
     <message>
         <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
         <translation>Truy vấn AnkiConnect để lấy các trường của loại ghi chú này và tự động điền các ánh xạ bên dưới.</translation>
+    </message>
+    <message>
+        <source>Duplicate Handling</source>
+        <translation>Xử lý trùng lặp</translation>
+    </message>
+    <message>
+        <source>What counts as a duplicate when adding cards. Collection (default) skips a word if it already exists in any deck. Deck limits the check to the target deck; Deck root limits it to the whole subdeck tree under the deck's root — handy when you card each show into its own subdeck.</source>
+        <translation>Điều được coi là trùng lặp khi thêm thẻ. Bộ sưu tập (mặc định) bỏ qua một từ nếu nó đã tồn tại trong bất kỳ bộ thẻ nào. Bộ thẻ giới hạn việc kiểm tra ở bộ thẻ đích; Gốc bộ thẻ giới hạn ở toàn bộ cây bộ thẻ con dưới gốc của bộ thẻ — tiện khi bạn tạo thẻ cho mỗi chương trình vào bộ thẻ con riêng của nó.</translation>
+    </message>
+    <message>
+        <source>Collection (whole collection)</source>
+        <translation>Bộ sưu tập (toàn bộ bộ sưu tập)</translation>
+    </message>
+    <message>
+        <source>Deck (target deck only)</source>
+        <translation>Bộ thẻ (chỉ bộ thẻ đích)</translation>
+    </message>
+    <message>
+        <source>Deck root (whole subdeck tree)</source>
+        <translation>Gốc bộ thẻ (toàn bộ cây bộ thẻ con)</translation>
+    </message>
+    <message>
+        <source>Duplicate Scope</source>
+        <translation>Phạm vi trùng lặp</translation>
+    </message>
+    <message>
+        <source>Where AnkiConnect looks for an existing copy before adding a card.</source>
+        <translation>Nơi AnkiConnect tìm bản sao hiện có trước khi thêm một thẻ.</translation>
+    </message>
+    <message>
+        <source>Check all note types for duplicates</source>
+        <translation>Kiểm tra trùng lặp trên mọi loại ghi chú</translation>
+    </message>
+    <message>
+        <source>Also treat a matching first field in a different note type as a duplicate.</source>
+        <translation>Cũng coi trường đầu tiên trùng khớp trong một loại ghi chú khác là trùng lặp.</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -378,6 +394,46 @@
         <translation>Lưu câu dưới dạng kana thuần túy.</translation>
     </message>
     <message>
+        <source>Cloze Prefix Field</source>
+        <translation>Trường tiền tố Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
+        <translation>Lưu phần câu đứng trước từ mục tiêu (phân tách cloze kiểu Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Body Field</source>
+        <translation>Trường thân Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
+        <translation>Lưu từ mục tiêu như nó xuất hiện trong câu (phân tách cloze kiểu Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Body Kana Field</source>
+        <translation>Trường thân Cloze kana</translation>
+    </message>
+    <message>
+        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
+        <translation>Lưu cách đọc kana của từ mục tiêu đã chia dạng (phân tách cloze kiểu Yomitan).</translation>
+    </message>
+    <message>
+        <source>Cloze Suffix Field</source>
+        <translation>Trường hậu tố Cloze</translation>
+    </message>
+    <message>
+        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
+        <translation>Lưu phần câu đứng sau từ mục tiêu (phân tách cloze kiểu Yomitan).</translation>
+    </message>
+    <message>
+        <source>Conjugation Field</source>
+        <translation>Trường chia dạng</translation>
+    </message>
+    <message>
+        <source>Stores the deinflection chain showing how the word was conjugated.</source>
+        <translation>Lưu chuỗi khử biến cách cho thấy từ đã được chia dạng như thế nào.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Trường Dữ liệu Phụ trợ</translation>
     </message>
@@ -416,6 +472,22 @@
     <message>
         <source>Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.</source>
         <translation>Romaji khớp với CSS của Yomitan/Lapis; Tiếng Nhật cho các ghi chú cũ.</translation>
+    </message>
+    <message>
+        <source>Pitch Graph Field</source>
+        <translation>Trường đồ thị trọng âm cao độ</translation>
+    </message>
+    <message>
+        <source>Stores the SVG pitch accent graph (Yomitan-style).</source>
+        <translation>Lưu đồ thị trọng âm cao độ dạng SVG (kiểu Yomitan).</translation>
+    </message>
+    <message>
+        <source>Pitch Text Field</source>
+        <translation>Trường văn bản trọng âm cao độ</translation>
+    </message>
+    <message>
+        <source>Stores the overline-annotated pitch reading (Yomitan-style).</source>
+        <translation>Lưu cách đọc trọng âm cao độ được chú thích bằng gạch trên (kiểu Yomitan).</translation>
     </message>
     <message>
         <source>Frequency Field</source>
@@ -502,16 +574,8 @@
         <translation>Định kiểu Thẻ</translation>
     </message>
     <message>
-        <source>Anki Miner can style mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). It manages a single CSS block in the note type via AnkiConnect — your own card CSS is never touched. Turn it off if your note type already styles everything.</source>
-        <translation>Anki Miner có thể định kiểu bảng chú giải của thẻ đã khai thác bằng một stylesheet tích hợp gọn gàng (các từ điển đi kèm định kiểu riêng sẽ được áp dụng tự động). Nó quản lý một khối CSS duy nhất trong loại ghi chú qua AnkiConnect — CSS thẻ của riêng bạn không bao giờ bị chạm tới. Tắt nó đi nếu loại ghi chú của bạn đã định kiểu mọi thứ.</translation>
-    </message>
-    <message>
-        <source>Style mined-card glossaries</source>
-        <translation>Định kiểu bảng chú giải của thẻ đã khai thác</translation>
-    </message>
-    <message>
-        <source>Applied to the note type on Save. Your custom CSS below is appended after the built-in styles.</source>
-        <translation>Áp dụng cho loại ghi chú khi Lưu. CSS tùy chỉnh của bạn bên dưới được nối sau các kiểu tích hợp.</translation>
+        <source>Anki Miner styles mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). The styling is embedded in each card, so it works on any note type, on mobile, and in exports — and your note type's own card CSS is never touched.</source>
+        <translation>Anki Miner tạo kiểu cho phần chú giải của thẻ đã khai thác bằng một bảng kiểu tích hợp sẵn gọn gàng (các từ điển đi kèm kiểu riêng sẽ được áp dụng tự động). Kiểu được nhúng trong từng thẻ, nên nó hoạt động trên mọi loại ghi chú, trên di động và trong bản xuất — và CSS thẻ của loại ghi chú của bạn không bao giờ bị đụng đến.</translation>
     </message>
     <message>
         <source>Custom CSS:</source>
@@ -576,22 +640,6 @@
     <message>
         <source>Note type not found</source>
         <translation>Không tìm thấy loại ghi chú</translation>
-    </message>
-    <message>
-        <source>Not applied yet — Save Settings to sync to Anki.</source>
-        <translation>Chưa áp dụng — Lưu Cài đặt để đồng bộ với Anki.</translation>
-    </message>
-    <message>
-        <source>Working...</source>
-        <translation>Đang xử lý...</translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Xong</translation>
-    </message>
-    <message>
-        <source>Failed</source>
-        <translation>Thất bại</translation>
     </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
@@ -702,6 +750,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>+ Thêm gói âm thanh…</translation>
     </message>
     <message>
+        <source>+ Add Online Source…</source>
+        <translation>+ Thêm nguồn trực tuyến…</translation>
+    </message>
+    <message>
+        <source>Add a custom URL/JSON source (e.g. local-audio-yomichan) or an online scrape source</source>
+        <translation>Thêm nguồn URL/JSON tùy chỉnh (ví dụ local-audio-yomichan) hoặc một nguồn cào trực tuyến</translation>
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Chuyển lên trong thứ tự ưu tiên</translation>
     </message>
@@ -712,6 +768,38 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Remove</source>
         <translation>Xóa</translation>
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation>Thử lại âm thanh biểu đạt bị thiếu</translation>
+    </message>
+    <message>
+        <source>Forget which words JapanesePod101 had no audio for, so the next mining run tries to download them again.</source>
+        <translation>Quên những từ mà JapanesePod101 không có âm thanh, để lần khai thác tiếp theo thử tải lại chúng.</translation>
+    </message>
+    <message>
+        <source>Google Translate (synthetic TTS)</source>
+        <translation>Google Translate (TTS tổng hợp)</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 dictionary (scrape)</source>
+        <translation>Từ điển JapanesePod101 (cào)</translation>
+    </message>
+    <message>
+        <source>Jisho.org (scrape)</source>
+        <translation>Jisho.org (cào)</translation>
+    </message>
+    <message>
+        <source>Custom JSON</source>
+        <translation>JSON tùy chỉnh</translation>
+    </message>
+    <message>
+        <source>Custom URL</source>
+        <translation>URL tùy chỉnh</translation>
+    </message>
+    <message>
+        <source>JapanesePod101 (online)</source>
+        <translation>JapanesePod101 (trực tuyến)</translation>
     </message>
     <message>
         <source>Remove audio pack</source>
@@ -744,14 +832,6 @@ Gói âm thanh chưa được xóa.</translation>
     <message>
         <source>Re-import…</source>
         <translation>Nhập lại…</translation>
-    </message>
-    <message>
-        <source>Google Translate (synthetic TTS)</source>
-        <translation>Google Translate (TTS tổng hợp)</translation>
-    </message>
-    <message>
-        <source>JapanesePod101 (online)</source>
-        <translation>JapanesePod101 (trực tuyến)</translation>
     </message>
 </context><context>
     <name>AudioTracksDialog</name>
@@ -1658,6 +1738,14 @@ Bỏ chọn: khai thác mọi từ — phù hợp để dựng một bộ thẻ 
 </context><context>
     <name>DictionaryImportFlow</name>
     <message>
+        <source>Skipped %1 malformed entries.</source>
+        <translation>Đã bỏ qua %1 mục sai định dạng.</translation>
+    </message>
+    <message>
+        <source>%1 media file(s) could not be imported.</source>
+        <translation>Không thể nhập %1 tệp phương tiện.</translation>
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zip</source>
         <translation>Chọn tệp zip từ điển Yomitan</translation>
     </message>
@@ -1811,6 +1899,44 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <source>Restore from Disk</source>
         <translation>Khôi phục từ đĩa</translation>
     </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>Kiểm tra cập nhật</translation>
+    </message>
+    <message>
+        <source>No installed dictionaries to check.</source>
+        <translation>Không có từ điển nào đã cài đặt để kiểm tra.</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation>Đang kiểm tra cập nhật từ điển…</translation>
+    </message>
+    <message>
+        <source>Update Check Failed</source>
+        <translation>Kiểm tra cập nhật thất bại</translation>
+    </message>
+    <message>
+        <source>All dictionaries are up to date.</source>
+        <translation>Tất cả từ điển đều đã được cập nhật.</translation>
+    </message>
+    <message>
+        <source>Updates available:</source>
+        <translation>Có bản cập nhật:</translation>
+    </message>
+    <message>
+        <source>  • %1: revision %2 → %3
+    %4</source>
+        <translation>  • %1: phiên bản %2 → %3
+    %4</translation>
+    </message>
+    <message>
+        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
+        <translation>Tải tệp zip mới, sau đó nhập lại qua menu Nhập lại… ở hàng từ điển.</translation>
+    </message>
+    <message>
+        <source>Could not check:</source>
+        <translation>Không thể kiểm tra:</translation>
+    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1856,6 +1982,14 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
         <translation>Thêm lại các từ điển tìm thấy trong thư mục lưu trữ nhưng không có trong danh sách ở trên (ví dụ sau khi đặt lại cài đặt). Không cần nhập lại.</translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>Kiểm tra cập nhật</translation>
+    </message>
+    <message>
+        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
+        <translation>Tải chỉ mục trực tuyến của mỗi từ điển có thể cập nhật và báo cáo mọi bản sửa mới hơn. Không thực hiện tải xuống — bạn tự nhập lại tệp zip mới.</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -1981,6 +2115,18 @@ Từ điển chưa được xóa.</translation>
     </message>
 </context><context>
     <name>EpisodeProcessor</name>
+    <message>
+        <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
+        <translation>Nguồn âm thanh từ gặp lỗi kết nối/chứng chỉ — bỏ qua âm thanh lần này, sẽ thử lại lần sau</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned repeated server errors — audio skipped this run, will retry next run</source>
+        <translation>Nguồn âm thanh từ liên tục trả về lỗi máy chủ — bỏ qua âm thanh lần này, sẽ thử lại lần sau</translation>
+    </message>
+    <message>
+        <source>Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run</source>
+        <translation>Nguồn âm thanh từ trả về phản hồi không phải âm thanh (có thể bị giới hạn tốc độ) — bỏ qua âm thanh lần này, sẽ thử lại lần sau</translation>
+    </message>
     <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation>Bước 1/5 — Phân tích phụ đề: %1</translation>
@@ -2113,6 +2259,12 @@ Từ điển chưa được xóa.</translation>
         <source>Skipped %n word(s) Anki flagged as duplicates (same Expression as an existing card or another word in this batch).</source>
         <translation>
             <numerusform>Đã bỏ qua %n từ bị Anki đánh dấu là trùng lặp (cùng Expression với một thẻ hiện có hoặc với một từ khác trong lô này).</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Updated %n existing duplicate card(s): filled empty fields from this run.</source>
+        <translation>
+            <numerusform>Đã cập nhật %n thẻ trùng lặp hiện có: điền các trường trống từ lần chạy này.</numerusform>
         </translation>
     </message>
     <message>
@@ -2556,6 +2708,14 @@ Từ điển chưa được xóa.</translation>
         <translation>Hủy</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (đã bỏ qua %1 mục sai định dạng)</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> Đây là nguồn dựa trên số lần xuất hiện; số đếm của nó đã được chuyển thành thứ hạng.</translation>
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation>Đã thêm nguồn tần suất</translation>
     </message>
@@ -2838,6 +2998,10 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
         <translation>Trình hướng dẫn cài đặt...</translation>
     </message>
     <message>
+        <source>Restyle Mined Cards...</source>
+        <translation>Tạo lại kiểu cho thẻ đã khai thác...</translation>
+    </message>
+    <message>
         <source>&amp;Help</source>
         <translation>&amp;Trợ giúp</translation>
     </message>
@@ -2892,6 +3056,54 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
     <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>Không tạo được lối tắt trên màn hình nền.</translation>
+    </message>
+    <message>
+        <source>Restyle Mined Cards</source>
+        <translation>Tạo lại kiểu cho thẻ đã khai thác</translation>
+    </message>
+    <message>
+        <source>This rewrites the styling field of your mined cards (the glossary field, or the definition field when no glossary field is mapped) to embed the built-in styling directly in each card, so cards you mined earlier match ones mined now. It's safe to run more than once and only adds styling — it never removes card content.
+
+Close Anki's card browser and any open note editor first: updating a note that is open for editing can lose your unsaved edits.
+
+Continue?</source>
+        <translation>Thao tác này ghi lại trường tạo kiểu của các thẻ đã khai thác của bạn (trường chú giải, hoặc trường định nghĩa khi không có trường chú giải nào được ánh xạ) để nhúng kiểu tích hợp sẵn trực tiếp vào từng thẻ, nhờ đó các thẻ bạn đã khai thác trước đây khớp với các thẻ khai thác bây giờ. Có thể chạy nhiều lần một cách an toàn và chỉ thêm kiểu — không bao giờ xóa nội dung thẻ.
+
+Hãy đóng trình duyệt thẻ của Anki và mọi trình chỉnh sửa ghi chú đang mở trước: cập nhật một ghi chú đang mở để chỉnh sửa có thể làm mất những chỉnh sửa chưa lưu của bạn.
+
+Tiếp tục?</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards…</source>
+        <translation>Đang tạo lại kiểu cho thẻ đã khai thác…</translation>
+    </message>
+    <message>
+        <source>Restyling mined cards… %1/%2</source>
+        <translation>Đang tạo lại kiểu cho thẻ đã khai thác… %1/%2</translation>
+    </message>
+    <message>
+        <source>Restyle complete</source>
+        <translation>Đã tạo lại kiểu xong</translation>
+    </message>
+    <message>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
+        <translation>Đã tạo lại kiểu cho %1 thẻ. (%2 đã quét; %3 đã có kiểu.)</translation>
+    </message>
+    <message>
+        <source>Restyle failed</source>
+        <translation>Tạo lại kiểu thất bại</translation>
+    </message>
+    <message>
+        <source>These dictionaries need to be re-imported after an app upgrade (their index format changed):</source>
+        <translation>Các từ điển này cần được nhập lại sau khi nâng cấp ứng dụng (định dạng chỉ mục của chúng đã thay đổi):</translation>
+    </message>
+    <message>
+        <source>Until you do, mining is blocked for them so you don't get cards with no definitions. Re-import them now?</source>
+        <translation>Cho đến khi bạn làm vậy, việc khai thác từ chúng bị chặn để bạn không nhận được các thẻ không có định nghĩa. Nhập lại chúng ngay bây giờ?</translation>
+    </message>
+    <message>
+        <source>Dictionaries need re-importing</source>
+        <translation>Cần nhập lại từ điển</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -3728,6 +3940,18 @@ Chi tiết: %2</translation>
     <message>
         <source>✓ Reset to defaults</source>
         <translation>✓ Đã đặt lại về mặc định</translation>
+    </message>
+    <message>
+        <source>Retry missing expression audio</source>
+        <translation>Thử lại âm thanh biểu đạt bị thiếu</translation>
+    </message>
+    <message>
+        <source>Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run.</source>
+        <translation>Đã xóa %1 dấu đánh dấu thiếu âm thanh. Những từ đó sẽ được thử lại trong lần khai thác tiếp theo.</translation>
+    </message>
+    <message>
+        <source>Could not clear the markers: %1</source>
+        <translation>Không thể xóa các dấu đánh dấu: %1</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5224,8 +5448,26 @@ Tiếp tục nhập?</translation>
         <translation> (đã bỏ qua %1 mục chỉ hiển thị)</translation>
     </message>
     <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (đã bỏ qua %1 mục sai định dạng)</translation>
+    </message>
+    <message>
         <source>Imported %1 entries from '%2'.</source>
         <translation>Đã nhập %1 mục từ '%2'.</translation>
+    </message>
+</context><context>
+    <name>_AddSourceDialog</name>
+    <message>
+        <source>Add Audio Source</source>
+        <translation>Thêm nguồn âm thanh</translation>
+    </message>
+    <message>
+        <source>Source type:</source>
+        <translation>Loại nguồn:</translation>
+    </message>
+    <message>
+        <source>URL template (use {term} and {reading}):</source>
+        <translation>Mẫu URL (dùng {term} và {reading}):</translation>
     </message>
 </context><context>
     <name>_ChainRow</name>
