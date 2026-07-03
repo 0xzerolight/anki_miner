@@ -969,6 +969,31 @@ class TestImgPresentation:
         # The <img> itself is still present with the quote attribute-escaped.
         assert 'src="d1__a&quot;;b.svg"' in out
 
+    def test_monochrome_unsafe_src_downgrades_appearance_to_auto(self):
+        # A monochrome image whose resolved src is CSS-unsafe suppresses the
+        # recolor mask span. If data-appearance stayed "monochrome" the CSS
+        # would set the real <img> to opacity:0 with no mask behind it — fully
+        # invisible. So the two must be computed together: no bg span ⇒
+        # appearance downgraded to "auto" and the image stays visible.
+        node = {"tag": "img", "path": 'a";b.svg', "appearance": "monochrome"}
+        out = structured_content_to_html(node, dict_id="d1")
+        assert "gloss-image-background" not in out
+        assert "--image" not in out
+        assert 'data-appearance="monochrome"' not in out
+        assert 'data-appearance="auto"' in out
+        # The <img> itself is still present (visible, no opacity:0 trap).
+        assert 'src="d1__a&quot;;b.svg"' in out
+
+    def test_monochrome_safe_src_keeps_appearance_and_bg_span(self):
+        # The safe-src counterpart: monochrome survives and the mask span is
+        # emitted, so the recolor path stays intact when the src is clean.
+        node = {"tag": "img", "path": "svg/accent.svg", "appearance": "monochrome"}
+        out = structured_content_to_html(node, dict_id="d1")
+        assert 'data-appearance="monochrome"' in out
+        assert (
+            '<span class="gloss-image-background" ' 'style="--image: url(&quot;d1__svg_accent.svg&quot;)"></span>'
+        ) in out
+
     def test_no_background_span_without_resolvable_src(self):
         node = {"tag": "img", "path": "svg/x.svg"}  # relative, no dict_id → dropped
         out = structured_content_to_html(node)
