@@ -28,7 +28,7 @@ class TestHappyPath:
 
         text = dest.read_text(encoding="utf-8")
         lines = text.strip().splitlines()
-        assert lines[0] == "reading,kanji,pattern"
+        assert lines[0] == "reading,kanji,pattern,nasal,devoice"
         # rows sorted by reading then kanji
         assert lines[1:] == sorted(lines[1:])
 
@@ -46,7 +46,7 @@ class TestHappyPath:
         )
         dest = tmp_path / "out.csv"
         import_yomitan_pitch_zip(zip_path, dest)
-        assert dest.read_text(encoding="utf-8").splitlines()[0] == "reading,kanji,pattern"
+        assert dest.read_text(encoding="utf-8").splitlines()[0] == "reading,kanji,pattern,nasal,devoice"
 
 
 class TestMultiPosition:
@@ -78,8 +78,8 @@ class TestKanaOnly:
 
         with open(dest, encoding="utf-8") as f:
             rows = list(_csv.reader(f))
-        assert rows[0] == ["reading", "kanji", "pattern"]
-        assert rows[1] == ["ありがとう", "", "2"]
+        assert rows[0] == ["reading", "kanji", "pattern", "nasal", "devoice"]
+        assert rows[1] == ["ありがとう", "", "2", "", ""]
 
 
 class TestDisplayOnlySkip:
@@ -149,6 +149,132 @@ class TestModeFilter:
         result = import_yomitan_pitch_zip(zip_path, tmp_path / "out.csv")
         assert result.entry_count == 1
         assert result.skipped_malformed == 3
+
+
+class TestHLStringPositions:
+    def test_hl_string_position_kept(self, tmp_path: Path) -> None:
+        # A schema-legal "^[HL]+$" position must survive import (previously dropped).
+        zip_path = build_yomitan_pitch_zip(
+            tmp_path / "src.zip",
+            meta_banks=[[["箸", "pitch", {"reading": "はし", "pitches": [{"position": "LHL"}]}]]],
+        )
+        dest = tmp_path / "out.csv"
+        result = import_yomitan_pitch_zip(zip_path, dest)
+        assert result.entry_count == 1
+        service = PitchAccentService(dest)
+        service.load()
+        assert service.lookup("箸") == "LHL"
+        # "LHL" → H→L transition at index 2 → downstep position 2; はし is 2 mora
+        # so position == mora_count → 尾高.
+        _, category = service.lookup_detailed("箸", "はし")
+        assert category == "尾高"
+
+    def test_hl_and_int_positions_mix(self, tmp_path: Path) -> None:
+        zip_path = build_yomitan_pitch_zip(
+            tmp_path / "src.zip",
+            meta_banks=[[["箸", "pitch", {"reading": "はし", "pitches": [{"position": "LHL"}, {"position": 0}]}]]],
+        )
+        dest = tmp_path / "out.csv"
+        import_yomitan_pitch_zip(zip_path, dest)
+        service = PitchAccentService(dest)
+        service.load()
+        # comma-joined pattern is auto-quoted so it stays one CSV column.
+        assert service.lookup("箸") == "LHL,0"
+
+    def test_bad_string_position_skipped_as_display_only(self, tmp_path: Path) -> None:
+        zip_path = build_yomitan_pitch_zip(
+            tmp_path / "src.zip",
+            meta_banks=[
+                [
+                    ["猫", "pitch", {"reading": "ねこ", "pitches": [{"position": "high-low"}]}],
+                    ["犬", "pitch", {"reading": "いぬ", "pitches": [{"position": 2}]}],
+                ]
+            ],
+        )
+        dest = tmp_path / "out.csv"
+        result = import_yomitan_pitch_zip(zip_path, dest)
+        # "high-low" is neither int nor "^[HL]+$" → not a usable position.
+        assert result.entry_count == 1
+        assert result.skipped_display_only == 1
+
+
+class TestNasalDevoiceRetention:
+    def test_nasal_and_devoice_integers_written(self, tmp_path: Path) -> None:
+        zip_path = build_yomitan_pitch_zip(
+            tmp_path / "src.zip",
+            meta_banks=[
+                [["東", "pitch", {"reading": "ひがし", "pitches": [{"position": 0, "nasal": 2, "devoice": 1}]}]]
+            ],
+        )
+        dest = tmp_path / "out.csv"
+        import_yomitan_pitch_zip(zip_path, dest)
+        import csv as _csv
+
+        with open(dest, encoding="utf-8") as f:
+            rows = list(_csv.reader(f))
+        assert rows[0] == ["reading", "kanji", "pattern", "nasal", "devoice"]
+        assert rows[1] == ["ひがし", "東", "0", "2", "1"]
+
+    def test_nasal_and_devoice_arrays_written_as_single_field(self, tmp_path: Path) -> None:
+        zip_path = build_yomitan_pitch_zip(
+            tmp_path / "src.zip",
+            meta_banks=[
+                [
+                    [
+                        "本箱",
+                        "pitch",
+                        {"reading": "ほんばこ", "pitches": [{"position": 3, "nasal": [1, 3], "devoice": [2]}]},
+                    ]
+                ]
+            ],
+        )
+        dest = tmp_path / "out.csv"
+        import_yomitan_pitch_zip(zip_path, dest)
+        text = dest.read_text(encoding="utf-8")
+        # nasal "1,3" carries an intra-field comma → csv.writer quotes it; the
+        # column count stays 5.
+        assert '"1,3"' in text
+        import csv as _csv
+
+        with open(dest, encoding="utf-8") as f:
+            rows = list(_csv.reader(f))
+        assert rows[1] == ["ほんばこ", "本箱", "3", "1,3", "2"]
+
+    def test_nasal_devoice_survive_round_trip_to_service(self, tmp_path: Path) -> None:
+        zip_path = build_yomitan_pitch_zip(
+            tmp_path / "src.zip",
+            meta_banks=[
+                [
+                    [
+                        "本箱",
+                        "pitch",
+                        {"reading": "ほんばこ", "pitches": [{"position": 3, "nasal": [1, 3], "devoice": [2]}]},
+                    ]
+                ]
+            ],
+        )
+        dest = tmp_path / "out.csv"
+        import_yomitan_pitch_zip(zip_path, dest)
+        service = PitchAccentService(dest)
+        service.load()
+        entry = service.lookup_entry("本箱", "ほんばこ")
+        assert entry is not None
+        assert entry.pattern == "3"
+        assert entry.nasal == (1, 3)
+        assert entry.devoice == (2,)
+
+    def test_missing_nasal_devoice_are_empty_columns(self, tmp_path: Path) -> None:
+        zip_path = build_yomitan_pitch_zip(
+            tmp_path / "src.zip",
+            meta_banks=[[["猫", "pitch", {"reading": "ねこ", "pitches": [{"position": 1}]}]]],
+        )
+        dest = tmp_path / "out.csv"
+        import_yomitan_pitch_zip(zip_path, dest)
+        import csv as _csv
+
+        with open(dest, encoding="utf-8") as f:
+            rows = list(_csv.reader(f))
+        assert rows[1] == ["ねこ", "猫", "1", "", ""]
 
 
 class TestErrors:
