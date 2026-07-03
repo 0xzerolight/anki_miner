@@ -301,12 +301,19 @@ class TestProcessEpisode:
         assert len(result.errors) > 0
         mock_services["definition_service"].get_definitions_batch.assert_not_called()
 
-    def test_data_flow_between_phases(self, processor, mock_services, tmp_path):
+    def test_data_flow_between_phases(self, processor, mock_services, tmp_path, monkeypatch):
         """Verify that outputs of one phase are passed as inputs to the next."""
         video = tmp_path / "v.mkv"
         sub = tmp_path / "s.ass"
         word = _make_word()
         media = _make_media()
+
+        # Neutralize the per-card styling seam so this data-flow assertion stays
+        # focused on phase wiring: the definition field now carries a card-wide
+        # <style> block (glossary unmapped, definition mapped) — its own dedicated
+        # tests cover that. Also avoids real dictionary-registry / SQLite I/O.
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css", lambda cfg: "")
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.build_card_style_block", lambda **k: "")
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -638,12 +645,12 @@ class TestOptionalServices:
         }
 
     def test_frequency_service_attaches_ranks(self, test_config, mock_services, tmp_path):
-        """Frequency service should attach the min rank + per-source breakdown."""
+        """Frequency attaches min + harmonic + per-source breakdown from ONE fetch."""
         word = _make_word("食べる")
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("BCCWJ", 500, None)]
-        mock_frequency.lookup_min.return_value = 500
+        # Two sources so min (200) and harmonic differ, proving both are derived.
+        mock_frequency.lookup_all.return_value = [("BCCWJ", 400, None), ("JPDB", 200, None)]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -661,14 +668,17 @@ class TestOptionalServices:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        # Verify both lookups were called for the word's lemma, reading-scoped.
-        # word.reading is "タベル"; the call site hiragana-normalizes it → "たべる".
-        mock_frequency.lookup_all.assert_called_with(word.lemma, "たべる")
-        mock_frequency.lookup_min.assert_called_with(word.lemma, "たべる")
-        # Verify the word now has both the min rank (drives filtering) and the
-        # per-source breakdown (drives the card display).
-        assert word.frequency_rank == 500
-        assert word.frequency_sources == [("BCCWJ", 500, None)]
+        # A single per-source fetch, reading-scoped (word.reading "タベル" →
+        # hiragana-normalized "たべる"); min + harmonic are derived locally, so the
+        # service's lookup_min/lookup_harmonic are never re-queried.
+        mock_frequency.lookup_all.assert_called_once_with(word.lemma, "たべる")
+        mock_frequency.lookup_min.assert_not_called()
+        mock_frequency.lookup_harmonic.assert_not_called()
+        # Derived from the fetched breakdown: min = 200 (drives filtering),
+        # harmonic = floor(2 / (1/400 + 1/200)) = 266 (drives the sort field).
+        assert word.frequency_rank == 200
+        assert word.frequency_harmonic_rank == 266
+        assert word.frequency_sources == [("BCCWJ", 400, None), ("JPDB", 200, None)]
 
     def test_frequency_filter_removes_words(self, test_config, mock_services, tmp_path):
         """Frequency filter should remove words outside the threshold."""
@@ -682,7 +692,6 @@ class TestOptionalServices:
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
         mock_frequency.lookup_all.side_effect = [[("BCCWJ", 500, None)], [("BCCWJ", 5000, None)]]
-        mock_frequency.lookup_min.side_effect = [500, 5000]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -713,7 +722,6 @@ class TestOptionalServices:
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
         mock_frequency.lookup_all.return_value = [("BCCWJ", 500, None)]
-        mock_frequency.lookup_min.return_value = 500
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -844,9 +852,8 @@ class TestOptionalServices:
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
         mock_frequency.lookup_all.return_value = [("BCCWJ", 500, None), ("JPDB", 612, "612/9M")]
-        mock_frequency.lookup_min.return_value = 500
-        # floor(2 / (1/500 + 1/612)) = 550 — the harmonic mean of the two ranks.
-        mock_frequency.lookup_harmonic.return_value = 550
+        # min = 500, harmonic = floor(2 / (1/500 + 1/612)) = 550 — both derived
+        # locally from the single lookup_all fetch, not re-queried on the service.
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -887,10 +894,8 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        # No source ranks this word.
+        # No source ranks this word — min + harmonic derive to None.
         mock_frequency.lookup_all.return_value = []
-        mock_frequency.lookup_min.return_value = None
-        mock_frequency.lookup_harmonic.return_value = None
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -929,9 +934,8 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
+        # No source ranks this word — min + harmonic derive to None.
         mock_frequency.lookup_all.return_value = []
-        mock_frequency.lookup_min.return_value = None
-        mock_frequency.lookup_harmonic.return_value = None
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -2893,11 +2897,19 @@ class TestGlossaryFetch:
         assert field.endswith(glossary_html)
         assert '[data-dictionary="X"]{color:red}' in field  # scoped dict CSS embedded
         assert ".yomitan-glossary" in field  # base sheet embedded
+        # Glossary is the styling carrier here, so the definition field stays
+        # style-free (the card-wide <style> only needs to appear once).
+        assert not payload.definition.startswith("<style>")
 
-    def test_glossary_skipped_when_field_unmapped(self, test_config, mock_services, tmp_path):
-        # Default test_config has anki_fields["glossary"] == "" (after Task 4).
+    def test_glossary_skipped_when_field_unmapped(self, test_config, mock_services, tmp_path, monkeypatch):
+        # Default test_config has anki_fields["glossary"] == "" but definition
+        # mapped, so the style block is still built (it rides the definition
+        # field). Mock the CSS collection to avoid real registry / SQLite I/O.
         processor = self._build_processor(test_config, mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
+
+        collect = MagicMock(return_value="")
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css", collect)
 
         processor.process_episode(video, sub)
 
@@ -2908,6 +2920,31 @@ class TestGlossaryFetch:
         # extra_fields may be None or a dict — but must NOT contain glossary.
         if payload.extra_fields is not None:
             assert "glossary" not in payload.extra_fields
+
+    def test_style_block_prepended_to_definition_when_glossary_unmapped(
+        self, test_config, mock_services, tmp_path, monkeypatch
+    ):
+        # Default config maps definition but not glossary: the per-card <style>
+        # block (base glossary.css + scoped dict CSS) must ride the DEFINITION
+        # field so default-config cards still carry the base sheet — and it must
+        # appear exactly once, with the original definition preserved.
+        processor = self._build_processor(test_config, mock_services)
+        video, sub = self._seed_happy_path(mock_services, tmp_path)
+
+        collect = MagicMock(return_value='.yomitan-glossary [data-dictionary="X"]{color:red}')
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css", collect)
+
+        processor.process_episode(video, sub)
+
+        collect.assert_called_once()  # assembled once per episode, not per card
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        assert len(card_data) == 1
+        definition = card_data[0].definition
+        assert definition.startswith("<style>")
+        assert definition.count("<style>") == 1  # exactly once
+        assert definition.endswith("1. to eat")  # original definition preserved
+        assert ".yomitan-glossary" in definition  # base sheet embedded
+        assert '[data-dictionary="X"]{color:red}' in definition  # scoped dict CSS embedded
 
 
 class TestAudioTrackOverrideForwarding:
@@ -4643,15 +4680,15 @@ class TestAudioFailureDiagnosis:
     def test_ssl_dominant_reports_certificate_connection_message(self):
         msg = _audio_failure_diagnosis(_counts(ssl=8), attempts=10)
         assert msg is not None
-        assert "certificate/connection failure" in msg
+        assert "connection/certificate failure" in msg
 
     def test_connection_dominant_reports_certificate_connection_message(self):
         msg = _audio_failure_diagnosis(_counts(connection=6), attempts=10)
-        assert "certificate/connection failure" in msg
+        assert "connection/certificate failure" in msg
 
     def test_timeout_dominant_reports_certificate_connection_message(self):
         msg = _audio_failure_diagnosis(_counts(timeout=6), attempts=10)
-        assert "certificate/connection failure" in msg
+        assert "connection/certificate failure" in msg
 
     def test_http_status_dominant_reports_server_errors(self):
         msg = _audio_failure_diagnosis(_counts(http_status=6), attempts=10)
@@ -4664,7 +4701,7 @@ class TestAudioFailureDiagnosis:
     def test_tie_resolves_to_ssl_first(self):
         # ssl and http_status tie at 3 each; ssl wins on stable key order.
         msg = _audio_failure_diagnosis(_counts(ssl=3, http_status=3), attempts=10)
-        assert "certificate/connection failure" in msg
+        assert "connection/certificate failure" in msg
 
     def test_exactly_half_triggers(self):
         # total * 2 >= attempts boundary: 5 failures / 10 attempts fires.
@@ -4726,7 +4763,7 @@ class TestProcessorAudioFailureSummary:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
-        assert any("certificate/connection failure" in w for w in warnings)
+        assert any("connection/certificate failure" in w for w in warnings)
 
     def test_no_failures_emits_no_warning(self, test_config, mock_services, tmp_path):
         config = self._enabled_config(test_config)
