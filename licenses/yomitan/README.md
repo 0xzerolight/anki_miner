@@ -22,6 +22,7 @@ the combined work carries the same license.
 | `tests/unit/test_ja_normalize.py` (fixture slices) | `test/japanese-util.test.js` |
 | `anki_miner/services/pitch_accent_service.py` (`classify_pitch`) | `ext/js/language/ja/japanese.js` (`getPitchCategory`) |
 | `anki_miner/services/_ankiconnect.py` (`_expect_list`) | `ext/js/comm/anki-connect.js` (`_normalizeArray`) |
+| `anki_miner/services/anki_service.py` (`_probe_duplicates`, `_probe_duplicates_fallback`, `_strip_note_to_first_field`) | `ext/js/background/backend.js` (`partitionAddibleNotes`, `_findDuplicates`, `_findDuplicatesFallback`, `_stripNotesArray`), `ext/js/comm/anki-connect.js` (`canAddNotesWithErrorDetail`) |
 | `anki_miner/services/expression_audio_fetcher.py` (`_classify_request_exception` + failure-cause tally) | `ext/js/background/backend.js` (`Backend._getAudioDownloadError`) |
 | `tests/unit/data/japanese_transforms_cases.py` (case table) | `test/language/japanese-transforms.test.js` |
 | `tests/unit/test_japanese_transforms_cases.py::has_term_reasons` | `test/fixtures/language-transformer-test.js` (`hasTermReasons`) |

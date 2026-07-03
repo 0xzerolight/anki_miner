@@ -28,15 +28,17 @@ logger = logging.getLogger(__name__)
 _JAPANESE_RE = re.compile(r"[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]")
 
 
-def _is_duplicate_error(err: AnkiConnectionError) -> bool:
-    """True if an AnkiConnect error payload is (only) about duplicate notes.
+# Yomitan's backend.js `_findDuplicates` classifies a note as a duplicate iff
+# canAddNotesWithErrorDetail's per-note error string contains this exact literal
+# (ext/js/background/backend.js:656, upstream e2ed450). A bare "duplicate"
+# substring match — the previous approach — also swallowed genuine "…is a
+# duplicate…"-free rejections, mislabeling bad field mappings as duplicates.
+_DUPLICATE_ERROR_SUBSTRING = "cannot create note because it is a duplicate"
 
-    Some AnkiConnect versions surface a duplicate as a top-level ``error`` on
-    ``addNotes`` (a string, or a single-element list) instead of a ``null`` slot
-    in the result array. We recover from those by retrying per-note; any other
-    error (missing deck/model, connection) must keep propagating.
-    """
-    return "duplicate" in str(err).lower()
+# AnkiConnect returns this top-level error for an action an older build lacks.
+# Yomitan (partitionAddibleNotes) falls back to two diffed canAddNotes calls
+# when canAddNotesWithErrorDetail is unavailable (backend.js:695).
+_UNSUPPORTED_ACTION_SUBSTRING = "unsupported action"
 
 
 class AnkiService:
@@ -60,14 +62,14 @@ class AnkiService:
         self.last_created_note_ids: list[int] = []
         # Number of notes not created during the last create_cards_batch call.
         # Combines both sources:
-        #   - null slots in the addNotes result array (common path: most likely a
-        #     duplicate but could be another silent rejection — not attributable
-        #     to a specific cause, so we word it as "not created" to the user)
-        #   - per-note recovery path skips (top-level duplicate error fallback)
-        # Prior behaviour counted only the recovery-path skips; null-slot gaps
-        # were silent. An unexplained created-vs-submitted gap on every
-        # duplicate-heavy re-run is worse than imperfect attribution, so we now
-        # surface all of them. Read by the pipeline to report skips.
+        #   - notes the pre-add duplicate probe (_probe_duplicates) classified as
+        #     duplicates before submission — the authoritative, per-note-attributed
+        #     count (Anki flagged the same Expression as an existing card or another
+        #     note in the batch)
+        #   - any residual null slots in the addNotes result for notes the probe
+        #     had cleared (a rare race — a duplicate landed between probe and add);
+        #     folded in so a created-vs-submitted gap is never silent
+        # Read by the pipeline to report skips.
         self.last_skipped_duplicates: int = 0
         # Number of media files (screenshots/audio) that could not be stored in
         # Anki during the last create_cards_batch call. Read by the pipeline to
@@ -484,68 +486,52 @@ class AnkiService:
                         bold_fallback += 1
                     notes.append(built.note)
 
-                # Send batch request. `post_action` raises `AnkiConnectionError`
-                # for connection failures, transport errors, and AnkiConnect-side
-                # error payloads. Duplicates normally come back as a `null` slot in
-                # the result array (batch survives), but some AnkiConnect versions
-                # raise a top-level duplicate error for the whole batch — which used
-                # to abort the entire run with zero cards. Recover from that case by
-                # retrying per-note and skipping only the duplicates; any other
-                # error still propagates to the pipeline boundary.
-                used_per_note_recovery = False
-                try:
-                    # _expect_list enforces the addNotes contract: a list of
-                    # exactly len(notes) slots, each an id (int) or null (None).
-                    # A shorter/mistyped array now raises AnkiConnectionError
-                    # (was a post-hoc under-merge warning); length alignment is
-                    # load-bearing for the positional zip below.
+                # Pre-add duplicate probe (Yomitan partitionAddibleNotes): ask
+                # AnkiConnect which of these notes it would reject as duplicates
+                # BEFORE submitting, so we skip only real duplicates and submit
+                # the rest. `_probe_duplicates` surfaces a genuine (non-duplicate)
+                # rejection — bad field mapping, empty first field — as an error
+                # rather than silently dropping it; that error propagates to the
+                # pipeline boundary (the finally still records earlier batches).
+                is_duplicate = self._probe_duplicates(notes)
+                skipped_duplicates += sum(is_duplicate)
+                submit_notes = [note for note, dup in zip(notes, is_duplicate, strict=True) if not dup]
+                submit_payloads = [item for item, dup in zip(batch, is_duplicate, strict=True) if not dup]
+
+                # Submit only the non-duplicates. `post_action` raises
+                # `AnkiConnectionError` for connection failures, transport errors,
+                # and AnkiConnect-side error payloads. `_expect_list` enforces the
+                # addNotes contract: a list of exactly len(submit_notes) slots,
+                # each an id (int) or null (None); length alignment is load-bearing
+                # for the positional zip below.
+                if submit_notes:
                     note_ids = _expect_list(
                         post_action(
                             self.config.ankiconnect_url,
                             "addNotes",
-                            params={"notes": notes},
+                            params={"notes": submit_notes},
                             timeout=60,
                         ),
                         "addNotes",
-                        len(notes),
+                        len(submit_notes),
                         (int, type(None)),
                     )
-                except AnkiConnectionError as e:
-                    if not _is_duplicate_error(e):
-                        raise
-                    logger.warning(
-                        "addNotes reported a duplicate for the batch; retrying per-note "
-                        "and skipping duplicates already in your collection.",
-                    )
-                    note_ids, batch_skipped = self._add_notes_individually(notes)
-                    skipped_duplicates += batch_skipped
-                    used_per_note_recovery = True
+                else:
+                    note_ids = []
 
-                # Count successful creations (non-null IDs).  Null slots in the
-                # addNotes result are AnkiConnect's common way to signal a
-                # silent rejection — most often a duplicate, but the protocol
-                # gives no per-slot reason code, so we attribute them as
-                # "not created" rather than definitively "duplicate".
-                # Skip null-slot counting when the per-note recovery path ran —
-                # that path already attributed each None slot explicitly.
+                # Count successful creations (non-null IDs). A null slot here is a
+                # note the probe had cleared that addNotes still didn't create — a
+                # rare race (a duplicate landed between probe and add). Fold those
+                # into the not-created count so the gap is never silent.
                 batch_created = sum(1 for nid in note_ids if nid is not None)
-                if not used_per_note_recovery:
-                    null_slots = len(notes) - batch_created
-                    skipped_duplicates += null_slots
-                    if null_slots > 0:
-                        logger.info(
-                            "%d note(s) were not created (likely already in your collection).",
-                            null_slots,
-                        )
+                skipped_duplicates += len(submit_notes) - batch_created
                 total_created += batch_created
                 all_created_ids.extend(nid for nid in note_ids if nid is not None)
-                # note_ids align positionally with `notes` (hence `batch`) in
-                # both paths: the batch path is length-checked by _expect_list
-                # above, and the per-note-recovery path builds one slot per note.
-                # strict=False is retained defensively; the zip is now guaranteed
-                # 1:1 either way.
+                # note_ids align positionally with `submit_payloads` (both derive
+                # from the same probe partition and addNotes is length-checked by
+                # _expect_list), so only the submitted, created words are merged.
                 created_forms.extend(
-                    item.word.mined_form for item, nid in zip(batch, note_ids, strict=False) if nid is not None
+                    item.word.mined_form for item, nid in zip(submit_payloads, note_ids, strict=True) if nid is not None
                 )
 
                 if progress_callback:
@@ -592,33 +578,125 @@ class AnkiService:
             )
         return total_created
 
-    def _add_notes_individually(self, notes: list[dict]) -> tuple[list[int | None], int]:
-        """Add notes one at a time, skipping any AnkiConnect rejects as duplicates.
+    @staticmethod
+    def _strip_note_to_first_field(note: dict) -> dict:
+        """Return a shallow clone of ``note`` keeping only its first field.
 
-        Fallback for the case where ``addNotes`` raises a top-level duplicate
-        error for the whole batch instead of returning a ``null`` slot per
-        duplicate. Returns the per-note id list (``None`` for a skipped
-        duplicate) and the count of duplicates skipped. A non-duplicate error on
-        any note propagates so genuine failures (missing deck/model, connection
-        loss) are not silently swallowed.
+        Ported from Yomitan ``Backend._stripNotesArray``
+        (``ext/js/background/backend.js``, upstream e2ed450). Anki dedups on the
+        first field only, so shipping the rest — definition/glossary fields can
+        carry megabytes of rendered HTML — just to ask "is this a duplicate?"
+        wastes bandwidth and AnkiConnect time. Field insertion order is
+        preserved by dicts, so the first key is the Expression by construction
+        (see ``anki_note_builder.build_note``).
         """
-        results: list[int | None] = []
-        skipped = 0
-        for note in notes:
-            try:
-                note_id = post_action(
+        stripped = dict(note)
+        fields = note.get("fields") or {}
+        if fields:
+            first_key = next(iter(fields))
+            stripped["fields"] = {first_key: fields[first_key]}
+        else:
+            stripped["fields"] = {}
+        return stripped
+
+    def _probe_duplicates(self, notes: list[dict]) -> list[bool]:
+        """Return, per note, whether AnkiConnect would reject it as a duplicate.
+
+        Ported from Yomitan ``Backend.partitionAddibleNotes`` /
+        ``_findDuplicates`` (``ext/js/background/backend.js``) and
+        ``AnkiConnect.canAddNotesWithErrorDetail``
+        (``ext/js/comm/anki-connect.js``), upstream e2ed450. Sends first-field-only
+        clones with ``allowDuplicate: False`` (merged over each note's own
+        options, e.g. ``duplicateScope``) so ``canAdd`` reflects duplicate status,
+        then classifies a note as a duplicate iff its per-note error contains the
+        literal duplicate substring. Any OTHER non-null error (an empty first
+        field, a bad field mapping) is surfaced as an :class:`AnkiConnectionError`
+        rather than silently miscounted as a duplicate — the core fix over the old
+        null-slot inference. On an older AnkiConnect without
+        ``canAddNotesWithErrorDetail`` (top-level "unsupported action"), falls back
+        to two diffed ``canAddNotes`` calls.
+
+        Raises:
+            AnkiConnectionError: connection/transport failure, a malformed
+                response, or a per-note non-duplicate rejection.
+        """
+        if not notes:
+            return []
+
+        stripped = [self._strip_note_to_first_field(note) for note in notes]
+        # Flip allowDuplicate off (Yomitan notesNoDuplicatesAllowed) so a
+        # duplicate reports canAdd=false with the duplicate error; keep the note's
+        # own options otherwise. Normal-path notes carry no options, so this is
+        # AnkiConnect's default anyway; Deck Builder notes keep duplicateScope.
+        no_dup = [{**note, "options": {**note.get("options", {}), "allowDuplicate": False}} for note in stripped]
+
+        try:
+            result = _expect_list(
+                post_action(
                     self.config.ankiconnect_url,
-                    "addNote",
-                    params={"note": note},
+                    "canAddNotesWithErrorDetail",
+                    params={"notes": no_dup},
                     timeout=60,
-                )
-                results.append(note_id)
-            except AnkiConnectionError as e:
-                if not _is_duplicate_error(e):
-                    raise
-                results.append(None)
-                skipped += 1
-        return results, skipped
+                ),
+                "canAddNotesWithErrorDetail",
+                len(notes),
+                dict,
+            )
+        except AnkiConnectionError as e:
+            if _UNSUPPORTED_ACTION_SUBSTRING in str(e).lower():
+                return self._probe_duplicates_fallback(stripped, no_dup)
+            raise
+
+        is_duplicate: list[bool] = []
+        for i, item in enumerate(result):
+            error = item.get("error")
+            if not isinstance(error, str):
+                # canAdd=true (error null): addable, not a duplicate.
+                is_duplicate.append(False)
+            elif _DUPLICATE_ERROR_SUBSTRING in error:
+                is_duplicate.append(True)
+            else:
+                # A genuine, non-duplicate rejection: surface it instead of
+                # mislabeling it a duplicate and silently dropping the card.
+                raise AnkiConnectionError(f"AnkiConnect rejected note {i} (not a duplicate): {error}")
+        return is_duplicate
+
+    def _probe_duplicates_fallback(self, stripped: list[dict], no_dup: list[dict]) -> list[bool]:
+        """Classify duplicates via two diffed ``canAddNotes`` calls.
+
+        Ported from Yomitan ``Backend._findDuplicatesFallback``
+        (``ext/js/background/backend.js``, upstream e2ed450), used when the newer
+        ``canAddNotesWithErrorDetail`` is unavailable. A note is a duplicate iff it
+        is addable with duplicates allowed but not with duplicates disallowed.
+        ``stripped`` carries each note's own options, which for the normal mining
+        path omit ``allowDuplicate`` — so, unlike upstream (whose notes default it
+        on), we force ``allowDuplicate: True`` on the duplicates-allowed arm to
+        make the diff meaningful.
+        """
+        dup_allowed = [{**note, "options": {**note.get("options", {}), "allowDuplicate": True}} for note in stripped]
+        with_dup = _expect_list(
+            post_action(
+                self.config.ankiconnect_url,
+                "canAddNotes",
+                params={"notes": dup_allowed},
+                timeout=60,
+            ),
+            "canAddNotes",
+            len(stripped),
+            bool,
+        )
+        without_dup = _expect_list(
+            post_action(
+                self.config.ankiconnect_url,
+                "canAddNotes",
+                params={"notes": no_dup},
+                timeout=60,
+            ),
+            "canAddNotes",
+            len(no_dup),
+            bool,
+        )
+        return [w != wo for w, wo in zip(with_dup, without_dup, strict=True)]
 
     def _store_media_files_batch(
         self,
