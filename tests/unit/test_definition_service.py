@@ -1135,9 +1135,12 @@ class TestGetDefinitionsBatchFallback:
         p = _seed_rows(tmp_path, "d", "D", [DictRow(term="食べる", reading="たべる", content=_gloss("eat"))])
         service = DefinitionService(test_config, providers=[p])
         service.ensure_loaded()
-        p.lookup_fallback = MagicMock(side_effect=AssertionError("fallback ran for a hit"))
+        p.lookup_fallback = MagicMock()
         out = service.get_definitions_batch([("食べる", None)], None, {"食べる": ("", None)})
         assert out[0] is not None and "eat" in out[0]
+        # A raising mock would be swallowed by the never-raises provider
+        # boundary; only assert_not_called genuinely pins miss-only.
+        p.lookup_fallback.assert_not_called()
 
     def test_rules_validation_blocks_mismatched_pos_in_pipeline(self, test_config, tmp_path: Path):
         # A verb deinflection hypothesis must not resolve against an adj-i entry.
