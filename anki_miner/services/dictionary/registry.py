@@ -98,6 +98,28 @@ class DictionaryRegistry:
             key=lambda m: m.dict_id,
         )
 
+    def stale_enabled(self, config: AnkiMinerConfig) -> list[DictMeta]:
+        """Enabled indexed chain slots present on disk but schema-mismatched.
+
+        The migration gate's single source of truth (4.0): iterate the *enabled*
+        indexed ``dictionary_chain`` entries and return those whose resolved
+        ``DictMeta.schema_ok`` is False — a dict the user upgraded past without
+        reimporting, which ``build_provider_chain`` silently drops (reopening the
+        zero-definition window this gate exists to close). A slot missing on disk
+        (``meta is None``) is a *different* failure handled elsewhere and is not
+        reported here. Sorted by dict_id for deterministic messaging.
+
+        Does NOT call load(); callers control when the scan happens.
+        """
+        stale: list[DictMeta] = []
+        for entry in config.dictionary_chain:
+            if entry.kind != "indexed" or not entry.enabled or entry.dict_id is None:
+                continue
+            meta = self._dicts.get(entry.dict_id)
+            if meta is not None and not meta.schema_ok:
+                stale.append(meta)
+        return sorted(stale, key=lambda m: m.dict_id)
+
     def build_provider_chain(self, config: AnkiMinerConfig) -> list[DictionaryProvider]:
         """Build the ordered provider chain from config + disk state.
 
@@ -139,3 +161,43 @@ class DictionaryRegistry:
             elif entry.kind == "jisho":
                 chain.append(JishoProvider(config.jisho_api_url, config.jisho_delay))
         return chain
+
+
+def stale_enabled_dicts(config: AnkiMinerConfig) -> list[DictMeta]:
+    """Build+scan a fresh registry and return enabled slots needing reimport.
+
+    Convenience wrapper used by the startup migration prompt and the queue
+    workers' pre-loop gate: it builds a :class:`DictionaryRegistry` from
+    ``config.dicts_root``, loads it, and delegates to :meth:`stale_enabled`.
+    ``load()`` swallows scan OSErrors internally, so this never raises for a
+    missing / unreadable dicts folder (it simply reports no staleness).
+    """
+    registry = DictionaryRegistry(config.dicts_root)
+    registry.load()
+    return registry.stale_enabled(config)
+
+
+def format_stale_reimport_message(metas: list[DictMeta]) -> str:
+    """Actionable one-line error naming the schema-stale dictionaries.
+
+    Points the user at the one-click fix (Settings → Dictionaries → Reimport
+    All). Shared by the processor backstop and the queue-worker pre-loop gate so
+    every entry point speaks with one voice.
+    """
+    names = ", ".join(f"'{m.source_name}'" for m in metas)
+    verb = "need" if len(metas) != 1 else "needs"
+    noun = "Dictionaries" if len(metas) != 1 else "Dictionary"
+    return f"{noun} {names} {verb} reimport (schema upgrade) — Settings → Dictionaries → Reimport All"
+
+
+def stale_dict_reimport_error(config: AnkiMinerConfig) -> str | None:
+    """Return the actionable reimport message if any enabled slot is stale.
+
+    ``None`` when the chain is clean. The queue workers call this once before
+    their per-item loop so a stale slot aborts the whole run with a single error
+    instead of emitting one soft-failure row per queued item.
+    """
+    stale = stale_enabled_dicts(config)
+    if not stale:
+        return None
+    return format_stale_reimport_message(stale)
