@@ -12,10 +12,13 @@ visual reference, not a string-equality target).
 from __future__ import annotations
 
 from anki_miner.services.pitch_accent.render import (
+    get_kana_diacritic_info,
     get_kana_morae,
     is_mora_pitch_high,
     render_pitch_graph_field,
     render_pitch_graph_svg,
+    render_pitch_text,
+    render_pitch_text_field,
 )
 
 
@@ -168,3 +171,111 @@ class TestRenderPitchGraphField:
     def test_unparseable_pattern_returns_empty(self):
         assert render_pitch_graph_field("", "はし") == ""
         assert render_pitch_graph_field("abc", "はし") == ""
+
+
+class TestGetKanaDiacriticInfo:
+    def test_dakuten_maps_to_base(self):
+        assert get_kana_diacritic_info("が") == "か"
+        assert get_kana_diacritic_info("ゔ") == "う"
+        assert get_kana_diacritic_info("ヴ") == "ウ"
+
+    def test_handakuten_maps_to_base(self):
+        assert get_kana_diacritic_info("ぱ") == "は"
+        assert get_kana_diacritic_info("ぽ") == "ほ"
+
+    def test_plain_kana_returns_none(self):
+        assert get_kana_diacritic_info("あ") is None
+        assert get_kana_diacritic_info("は") is None
+
+
+# Hand-authored serialized snapshot: はし [heiban], morae は/し. Mora 0 is low
+# (bare mora-line), mora 1 is high with a high successor (a plain overline, no
+# downstep tick).
+_HASHI_HEIBAN_TEXT = (
+    '<span class="pronunciation-text" style="display:inline;">'
+    '<span class="pronunciation-mora" style="display:inline-block;position:relative;" '
+    'data-position="0" data-pitch="low" data-pitch-next="high">'
+    '<span class="pronunciation-character" style="display:inline;">は</span>'
+    '<span class="pronunciation-mora-line" style="border-color:currentColor;"></span>'
+    "</span>"
+    '<span class="pronunciation-mora" style="display:inline-block;position:relative;" '
+    'data-position="1" data-pitch="high" data-pitch-next="high">'
+    '<span class="pronunciation-character" style="display:inline;">し</span>'
+    '<span class="pronunciation-mora-line" style="border-color:currentColor;display:block;'
+    "user-select:none;pointer-events:none;position:absolute;top:0.1em;left:0;right:0;height:0;"
+    'border-top-width:0.1em;border-top-style:solid;"></span>'
+    "</span>"
+    "</span>"
+)
+
+
+class TestRenderPitchText:
+    def test_heiban_exact_snapshot(self):
+        assert render_pitch_text(["は", "し"], 0) == _HASHI_HEIBAN_TEXT
+
+    def test_atamadaka_first_mora_has_downstep_tick(self):
+        # position 1: mora 0 high → low. Its overline carries the right-hand tick
+        # and the mora gets the padding/margin that makes room for it.
+        html = render_pitch_text(["は", "し"], 1)
+        assert 'data-position="0" data-pitch="high" data-pitch-next="low"' in html
+        assert "padding-right:0.1em;margin-right:0.1em;" in html  # mora spacing
+        assert "border-right-width:0.1em;border-right-style:solid;" in html  # tick
+        assert 'data-position="1" data-pitch="low" data-pitch-next="low"' in html
+
+    def test_no_hardcoded_color_except_indicator_red(self):
+        html = render_pitch_text(["は", "し"], 0)
+        assert "currentColor" in html
+        assert "#" not in html  # heiban with no indicators has no hex color
+
+    def test_devoice_adds_dotted_red_indicator(self):
+        html = render_pitch_text(["し", "た"], 0, devoice=(1,))
+        assert 'data-devoice="true"' in html
+        assert 'class="pronunciation-devoice-indicator"' in html
+        assert "1.5px dotted #c83c28" in html
+
+    def test_nasal_maps_base_kana_and_adds_red_ring(self):
+        # が nasalised → base か shown, hidden combining handakuten, red ring.
+        html = render_pitch_text(["が", "く"], 2, nasal=(1,))
+        assert 'data-nasal="true"' in html
+        assert 'data-original-text="が"' in html
+        assert 'class="pronunciation-character-group"' in html
+        assert 'class="pronunciation-nasal-indicator"' in html
+        assert "1.5px solid #c83c28" in html
+        # The visible base char is か (not が) inside the group.
+        assert (
+            '<span class="pronunciation-character" style="display:inline;" ' 'data-original-text="が">か</span>' in html
+        )
+        assert "゚" in html  # combining handakuten kept (styled opacity:0)
+
+    def test_nasal_on_plain_kana_keeps_char_no_original_text(self):
+        # あ has no diacritic base → char stays あ, no data-original-text stamped.
+        html = render_pitch_text(["あ", "め"], 0, nasal=(1,))
+        assert 'data-nasal="true"' in html
+        assert "data-original-text" not in html
+        assert 'class="pronunciation-nasal-indicator"' in html
+
+    def test_devoice_and_nasal_positions_are_one_based(self):
+        # devoice=(2,) targets the SECOND mora (index 1), not the first.
+        html = render_pitch_text(["は", "し"], 0, devoice=(2,))
+        mora1, mora2 = html.split('class="pronunciation-mora"')[1:3]
+        assert 'data-devoice="true"' not in mora1
+        assert 'data-devoice="true"' in mora2
+
+
+class TestRenderPitchTextField:
+    def test_single_position(self):
+        assert render_pitch_text_field("0", "はし") == _HASHI_HEIBAN_TEXT
+
+    def test_multi_position_concatenates(self):
+        html = render_pitch_text_field("0,1", "はし")
+        assert html == render_pitch_text(["は", "し"], 0) + render_pitch_text(["は", "し"], 1)
+
+    def test_threads_nasal_and_devoice(self):
+        html = render_pitch_text_field("0", "がく", nasal=(1,), devoice=())
+        assert html == render_pitch_text(["が", "く"], 0, (1,), ())
+
+    def test_empty_reading_returns_empty(self):
+        assert render_pitch_text_field("0", "") == ""
+
+    def test_unparseable_pattern_returns_empty(self):
+        assert render_pitch_text_field("xyz", "はし") == ""
