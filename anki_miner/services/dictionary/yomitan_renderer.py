@@ -82,6 +82,7 @@ _ALLOWED_STYLE_PROPS = frozenset(
         "text-decoration-color",
         "text-emphasis",
         "text-shadow",
+        "clip-path",
         "vertical-align",
         "text-align",
         "border",
@@ -119,6 +120,7 @@ _STYLE_SHORTCUT_KEYS = frozenset(
         "textDecorationLine",
         "textDecorationStyle",
         "textDecorationColor",
+        "clipPath",
         "verticalAlign",
         "textAlign",
         "textEmphasis",
@@ -234,7 +236,9 @@ def _is_safe_url(url: str) -> bool:
     slash = url.find("/")
     if colon != -1 and (slash == -1 or colon < slash):
         scheme = url[:colon].lower()
-        return scheme in ("http", "https", "mailto")
+        # Term-bank v3 href schema admits only ^(?:https?:|\?); mailto is not a
+        # valid structured-content link scheme, so it is not allowed here.
+        return scheme in ("http", "https")
     return True  # relative path, fragment, query — all safe
 
 
@@ -324,16 +328,51 @@ def _camel_to_kebab(name: str) -> str:
     return _CAMEL_RE.sub(r"\1-\2", name).lower()
 
 
-def _coerce_style_value(value: YomitanNode) -> str | None:
-    """Stringify a Yomitan style value safely.
+def _text_to_html(text: str) -> str:
+    """Escape a plain-text string and turn its newlines into <br>.
 
-    Numbers become bare strings (Yomitan uses unitless ints for some props).
-    Strings pass through after a bad-pattern scan.
+    Mirrors Yomitan's `_stringToMultiLineHtml` / `_replaceNewlines`
+    (`ext/js/templates/anki-template-renderer.js`, upstream e2ed450): CRLF/CR
+    are folded to LF so Windows-authored text renders identically, then each
+    newline becomes a literal `<br>` (Anki collapses raw newlines in stored
+    card HTML).
+    """
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    return escape(normalized).replace("\n", "<br>")
+
+
+# Directional-margin props interpret a bare number as em; every other style
+# prop that accepts a number keeps the value unitless. Mirrors Yomitan's
+# `_setStructuredContentElementStyle` (ext/js/display/structured-content-generator.js,
+# upstream e2ed450), where only marginTop/Left/Right/Bottom do `${n}em`.
+_EM_NUMERIC_PROPS = frozenset({"margin-top", "margin-left", "margin-right", "margin-bottom"})
+# Style props whose value may be an array of strings, joined with a space. Only
+# text-decoration-line qualifies per the v3 schema; Yomitan joins the parts.
+_ARRAY_JOIN_PROPS = frozenset({"text-decoration-line"})
+
+
+def _coerce_style_value(prop: str, value: YomitanNode) -> str | None:
+    """Stringify a Yomitan style value safely, property-aware.
+
+    Numbers on directional-margin props gain an `em` unit (the schema documents
+    bare numbers as em); numbers on other props stay unitless. `text-decoration-line`
+    may be an array of strings, joined with a space. Strings pass through after a
+    bad-pattern scan. Mirrors `_setStructuredContentElementStyle`
+    (ext/js/display/structured-content-generator.js, upstream e2ed450).
     """
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        return str(value)
+        if not math.isfinite(value):
+            return None
+        num = str(int(value)) if isinstance(value, float) and value.is_integer() else str(value)
+        return f"{num}em" if prop in _EM_NUMERIC_PROPS else num
+    if isinstance(value, list):
+        # Only text-decoration-line accepts an array; every element must be a
+        # string. Reject empties/mixed and fall through to scrub the joined value.
+        if prop not in _ARRAY_JOIN_PROPS or not value or not all(isinstance(v, str) for v in value):
+            return None
+        value = " ".join(value)
     if not isinstance(value, str):
         return None
     candidate = value.strip()
@@ -372,7 +411,7 @@ def _collect_style(node: dict[str, YomitanNode], *, seed: dict[str, str] | None 
             prop = _camel_to_kebab(key)
             if prop not in _ALLOWED_STYLE_PROPS:
                 continue
-            coerced = _coerce_style_value(value)
+            coerced = _coerce_style_value(prop, value)
             if coerced is None:
                 continue
             seen[prop] = coerced
@@ -383,7 +422,7 @@ def _collect_style(node: dict[str, YomitanNode], *, seed: dict[str, str] | None 
         prop = _camel_to_kebab(key)
         if prop in seen or prop not in _ALLOWED_STYLE_PROPS:
             continue
-        coerced = _coerce_style_value(node[key])
+        coerced = _coerce_style_value(prop, node[key])
         if coerced is None:
             continue
         seen[prop] = coerced
@@ -422,7 +461,12 @@ def structured_content_to_html(
         return ""
 
     if isinstance(node, str):
-        return escape(node)
+        # Every structured-content text node gets newline→<br> at any depth,
+        # matching Yomitan's `_replaceNewlines` (ext/js/templates/
+        # anki-template-renderer.js, upstream e2ed450). Anki collapses raw
+        # newlines in stored card HTML, so without this a multi-line SC text
+        # node loses its line breaks.
+        return _text_to_html(node)
 
     if isinstance(node, list):
         return "".join(
@@ -433,14 +477,34 @@ def structured_content_to_html(
     if not isinstance(node, dict):
         return ""
 
-    # Yomitan wraps top-level entries in {"type": "structured-content", "content": ...}
-    if node.get("type") == "structured-content":
+    # Typed glossary objects (term-bank v3): {"type": "text"|"image"|
+    # "structured-content"}. Yomitan dispatches these explicitly in
+    # `_formatDictionaryTermGlossaryObject` (ext/js/dictionary/dictionary-importer.js)
+    # and `_formatGlossary` (ext/js/templates/anki-template-renderer.js), upstream
+    # e2ed450. Without the text/image cases a v3-legal typed item falls through to
+    # the `<span>` path with no `content` and renders empty — silent data loss.
+    node_type = node.get("type")
+    if node_type == "structured-content":
         return structured_content_to_html(
             node.get("content", ""),
             _depth + 1,
             dict_id=dict_id,
             media_collector=media_collector,
         )
+    if node_type == "text":
+        text = node.get("text")
+        return _text_to_html(text) if isinstance(text, str) else ""
+    if node_type == "image":
+        # The image glossary object carries the same path/width/height/title/alt
+        # keys `_render_img` already reads (no `sizeUnits` → px, per schema).
+        return _render_img(node, dict_id=dict_id, media_collector=media_collector)
+    if node_type is not None:
+        # A typed glossary object with an unrecognized `type` is NOT a
+        # structured-content element — it must not fall through to the tag path
+        # below and silently render an empty `<span>` (dropping any `text`
+        # payload). Yomitan's typed dispatch has no default element branch, so we
+        # drop the unknown object outright rather than emit a bare span.
+        return ""
 
     tag = node.get("tag", "span")
     if tag not in _ALLOWED_TAGS:
@@ -589,8 +653,17 @@ def _render_attrs(node: dict[str, YomitanNode], tag: str) -> str:
         parts.append(style_attr)
 
     href = node.get("href")
-    if isinstance(href, str) and tag == "a" and _is_safe_url(href):
-        parts.append(f'href="{escape(href, quote=True)}"')
+    if isinstance(href, str) and tag == "a":
+        if href.lstrip().startswith("?"):
+            # Yomitan-internal cross-reference (`?query=…`). These navigate to a
+            # Yomitan search page that does not exist inside an Anki webview
+            # (dead on desktop, undefined on AnkiMobile/AnkiDroid), so neuter to
+            # a no-op anchor. Mirrors Yomitan's Anki render path
+            # (ext/js/templates/anki-template-renderer-content-manager.js
+            # `prepareLink`: internal → '#'), upstream e2ed450.
+            parts.append('href="#"')
+        elif _is_safe_url(href):
+            parts.append(f'href="{escape(href, quote=True)}"')
 
     # Per-tag HTML attribute passthrough (title on most, colspan/rowspan on
     # td/th, open on details). `<img>` takes a separate path entirely — see
@@ -654,8 +727,15 @@ def render_glossary_entry(
     parts: list[str] = []
     for item in glossary:
         if isinstance(item, str):
-            normalized = item.replace("\r\n", "\n").replace("\r", "\n")
-            inner = escape(normalized).replace("\n", "<br>")
+            inner = _text_to_html(item)
+        elif isinstance(item, list):
+            # Deinflection pair [uninflected_term, rule_chain] (term-bank v3).
+            # Yomitan consumes these to build its deinflection database, never as
+            # glossary prose; we have no deinflection UI, so render just the
+            # uninflected base form. Rendering the pair as structured content
+            # would concatenate the term with the rule strings into garbage.
+            term = item[0] if item and isinstance(item[0], str) else ""
+            inner = _text_to_html(term)
         else:
             inner = structured_content_to_html(item, dict_id=dict_id, media_collector=media_collector)
         parts.append(f'<li class="gloss-item"><div class="gloss-content">{inner}</div></li>')
