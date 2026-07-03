@@ -408,3 +408,94 @@ def test_card_type_marker_fields_setter_defaults_missing_keys(qtbot):
     out = panel.get_card_type_marker_fields()
     assert out["click"] == "Custom"
     assert out["audio"] == "IsAudioCard"
+
+
+# ---------------------------------------------------------------------------
+# Cloze + conjugation field inputs (shipped opt-in keys) and unknown-key
+# preservation across a Save round-trip.
+# ---------------------------------------------------------------------------
+
+_NEW_FIELD_KEYS = (
+    "cloze_prefix",
+    "cloze_body",
+    "cloze_body_kana",
+    "cloze_suffix",
+    "conjugation",
+)
+
+
+@pytest.mark.parametrize("key", _NEW_FIELD_KEYS)
+def test_new_field_get_set_roundtrip(qtbot, key):
+    """Each cloze/conjugation key survives set_card_fields -> get_card_fields."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.set_card_fields({key: "MyField"})
+    assert panel.get_card_fields()[key] == "MyField"
+
+
+@pytest.mark.parametrize("key", _NEW_FIELD_KEYS)
+def test_new_field_default_blank(qtbot, key):
+    """Each cloze/conjugation key defaults to "" when absent from the mapping."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.set_card_fields({})
+    assert panel.get_card_fields()[key] == ""
+
+
+@pytest.mark.parametrize("key", _NEW_FIELD_KEYS)
+def test_new_field_has_labeled_input_widget(qtbot, key):
+    """Every new key has a dedicated QLineEdit input on the panel."""
+    from PyQt6.QtWidgets import QLineEdit  # noqa: PLC0415
+
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    widget = getattr(panel, f"{key}_field_input")
+    assert isinstance(widget, QLineEdit)
+
+
+def test_get_card_fields_preserves_unknown_keys(qtbot):
+    """Keys the panel does not own survive a set -> get round-trip.
+
+    Regression guard: a user who opted into a future/unexposed key via
+    gui_config.json must not have it wiped on the next Settings Save.
+    """
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.set_card_fields({"word": "Expression", "future_unknown_key": "SomeField"})
+    out = panel.get_card_fields()
+    assert out["future_unknown_key"] == "SomeField"
+    # Owned keys still come from the inputs.
+    assert out["word"] == "Expression"
+
+
+def test_get_card_fields_no_unknown_keys_when_none_loaded(qtbot):
+    """A fresh panel with no prior load contributes only owned keys."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    out = panel.get_card_fields()
+    assert "future_unknown_key" not in out
+    # Sanity: the owned + new keys are all present.
+    for key in _NEW_FIELD_KEYS:
+        assert key in out
+
+
+def test_unknown_key_survives_full_save_round_trip(qtbot):
+    """An opt-in key set in config survives load_from_config -> contribute (Save)."""
+    from dataclasses import replace  # noqa: PLC0415
+
+    from anki_miner.config import AnkiMinerConfig  # noqa: PLC0415
+
+    base = AnkiMinerConfig()
+    original = replace(base, anki_fields={**dict(base.anki_fields), "future_unknown_key": "SomeField"})
+
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(original)
+    result = panel.contribute(AnkiMinerConfig())
+
+    assert result.anki_fields["future_unknown_key"] == "SomeField"

@@ -117,6 +117,11 @@ class AnkiSettingsPanel(FormPanel):
     def __init__(self, parent=None):
         """Initialize the Anki settings panel."""
         super().__init__("Anki Configuration", parent=parent)
+        # Snapshot of the anki_fields mapping last loaded via set_card_fields.
+        # get_card_fields() folds its owned inputs over this so keys the panel
+        # doesn't expose (future/opt-in keys set via gui_config.json) survive a
+        # Save round-trip instead of being wiped.
+        self._loaded_fields: dict[str, str] = {}
         self._setup_fields()
 
     def _setup_fields(self) -> None:
@@ -332,6 +337,50 @@ class AnkiSettingsPanel(FormPanel):
             self.tr("Sentence Reading Field"),
             self.sentence_reading_field_input,
             helper=self.tr("Stores the sentence as plain kana."),
+        )
+
+        # Yomitan getCloze split fields (3.1). The sentence is sliced around the
+        # target word so the note type can build {{c1::}} cloze / colored markup
+        # itself. All default blank (feature off); leave blank to skip.
+        self.cloze_prefix_field_input = QLineEdit()
+        self.cloze_prefix_field_input.setPlaceholderText("ClozePrefix")
+        self.add_field(
+            self.tr("Cloze Prefix Field"),
+            self.cloze_prefix_field_input,
+            helper=self.tr("Stores the sentence text before the target word (Yomitan cloze split)."),
+        )
+
+        self.cloze_body_field_input = QLineEdit()
+        self.cloze_body_field_input.setPlaceholderText("ClozeBody")
+        self.add_field(
+            self.tr("Cloze Body Field"),
+            self.cloze_body_field_input,
+            helper=self.tr("Stores the target word as it appears in the sentence (Yomitan cloze split)."),
+        )
+
+        self.cloze_body_kana_field_input = QLineEdit()
+        self.cloze_body_kana_field_input.setPlaceholderText("ClozeBodyKana")
+        self.add_field(
+            self.tr("Cloze Body Kana Field"),
+            self.cloze_body_kana_field_input,
+            helper=self.tr("Stores the kana reading of the inflected target word (Yomitan cloze split)."),
+        )
+
+        self.cloze_suffix_field_input = QLineEdit()
+        self.cloze_suffix_field_input.setPlaceholderText("ClozeSuffix")
+        self.add_field(
+            self.tr("Cloze Suffix Field"),
+            self.cloze_suffix_field_input,
+            helper=self.tr("Stores the sentence text after the target word (Yomitan cloze split)."),
+        )
+
+        # Deinflection-chain provenance field (3.2). Default blank = feature off.
+        self.conjugation_field_input = QLineEdit()
+        self.conjugation_field_input.setPlaceholderText("Conjugation")
+        self.add_field(
+            self.tr("Conjugation Field"),
+            self.conjugation_field_input,
+            helper=self.tr("Stores the deinflection chain showing how the word was conjugated."),
         )
 
         # Auxiliary Data Fields section
@@ -675,8 +724,11 @@ class AnkiSettingsPanel(FormPanel):
         Returns:
             Dictionary mapping data types to Anki field names.
             Empty string values mean "skip this field during card creation".
+            Keys the panel doesn't own (present in the last-loaded mapping but
+            not exposed as inputs) are preserved so a Save never wipes an
+            opt-in/future key a user set via gui_config.json.
         """
-        return {
+        owned = {
             "word": self.expression_field_input.text().strip(),
             "sentence": self.sentence_field_input.text().strip(),
             "definition": self.definition_field_input.text().strip(),
@@ -688,12 +740,18 @@ class AnkiSettingsPanel(FormPanel):
             "expression_reading": self.expression_reading_field_input.text().strip(),
             "sentence_furigana": self.sentence_furigana_field_input.text().strip(),
             "sentence_reading": self.sentence_reading_field_input.text().strip(),
+            "cloze_prefix": self.cloze_prefix_field_input.text().strip(),
+            "cloze_body": self.cloze_body_field_input.text().strip(),
+            "cloze_body_kana": self.cloze_body_kana_field_input.text().strip(),
+            "cloze_suffix": self.cloze_suffix_field_input.text().strip(),
+            "conjugation": self.conjugation_field_input.text().strip(),
             "pitch_position": self.pitch_position_field_input.text().strip(),
             "pitch_category": self.pitch_category_field_input.text().strip(),
             "frequency": self.frequency_field_input.text().strip(),
             "frequency_sort": self.frequency_sort_field_input.text().strip(),
             "source": self.source_field_input.text().strip(),
         }
+        return {**self._loaded_fields, **owned}
 
     def set_card_fields(self, fields: Mapping[str, str]) -> None:
         """Set the card field mappings.
@@ -701,6 +759,8 @@ class AnkiSettingsPanel(FormPanel):
         Args:
             fields: Dictionary mapping data types to Anki field names
         """
+        # Snapshot so get_card_fields() can preserve any keys not owned here.
+        self._loaded_fields = dict(fields)
         self.expression_field_input.setText(fields.get("word", "Expression"))
         self.sentence_field_input.setText(fields.get("sentence", "Sentence"))
         self.definition_field_input.setText(fields.get("definition", "MainDefinition"))
@@ -712,6 +772,11 @@ class AnkiSettingsPanel(FormPanel):
         self.expression_reading_field_input.setText(fields.get("expression_reading", ""))
         self.sentence_furigana_field_input.setText(fields.get("sentence_furigana", "SentenceFurigana"))
         self.sentence_reading_field_input.setText(fields.get("sentence_reading", ""))
+        self.cloze_prefix_field_input.setText(fields.get("cloze_prefix", ""))
+        self.cloze_body_field_input.setText(fields.get("cloze_body", ""))
+        self.cloze_body_kana_field_input.setText(fields.get("cloze_body_kana", ""))
+        self.cloze_suffix_field_input.setText(fields.get("cloze_suffix", ""))
+        self.conjugation_field_input.setText(fields.get("conjugation", ""))
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.frequency_field_input.setText(fields.get("frequency", ""))
