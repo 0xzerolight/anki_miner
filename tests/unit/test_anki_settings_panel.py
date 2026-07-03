@@ -128,65 +128,36 @@ def test_expression_audio_field_defaults_empty_and_roundtrips(qtbot):
     assert panel.get_card_fields()["expression_audio"] == "ExpressionAudio"
 
 
-# === Card styling (Issue #44 / auto-sync) ===
+# === Card styling (Issue #44) ===
 
 
-def test_styling_checkbox_default_unchecked(qtbot):
+def test_no_styling_buttons_or_checkbox(qtbot):
+    """Card styling is self-contained per card — no note-type sync UI on the panel."""
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    assert panel.manage_styling_checkbox.isChecked() is False
-    assert panel.get_manage_styling() is False
+    for attr in (
+        "apply_styling_button",
+        "remove_styling_button",
+        "apply_styling_requested",
+        "remove_styling_requested",
+        "manage_styling_checkbox",
+    ):
+        assert not hasattr(panel, attr)
 
 
-def test_styling_apply_remove_buttons_removed(qtbot):
-    """The Apply/Remove buttons and their signals are gone (auto-sync replaces them)."""
+def test_custom_css_always_editable(qtbot):
+    """The Custom CSS box is always enabled — there is no manage toggle to gate it."""
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    assert not hasattr(panel, "apply_styling_button")
-    assert not hasattr(panel, "remove_styling_button")
-    assert not hasattr(panel, "apply_styling_requested")
-    assert not hasattr(panel, "remove_styling_requested")
-
-
-def test_manage_styling_get_set_round_trip(qtbot):
-    panel = AnkiSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.set_manage_styling(True)
-    assert panel.get_manage_styling() is True
-    panel.set_manage_styling(False)
-    assert panel.get_manage_styling() is False
-
-
-def test_off_disables_custom_css_box(qtbot):
-    panel = AnkiSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.set_manage_styling(True)
-    assert panel.custom_css_edit.isEnabled()
-    panel.set_manage_styling(False)
-    assert not panel.custom_css_edit.isEnabled()
-
-
-def test_user_toggle_updates_custom_css_box(qtbot):
-    panel = AnkiSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.set_manage_styling(False)
-    assert not panel.custom_css_edit.isEnabled()
-    # Simulate a real user toggle (signal fires for non-blocked changes).
-    panel.manage_styling_checkbox.setChecked(True)
     assert panel.custom_css_edit.isEnabled()
 
 
-def test_load_from_config_sets_checkbox(qtbot):
-    from anki_miner.config import create_default_config
-
+def test_custom_css_get_set_round_trip(qtbot):
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    panel.manage_styling_checkbox.setChecked(False)  # user edit, opposite of default
-    panel.load_from_config(create_default_config())
-    # Default config is ON (v2.7.8) → checked, CSS box enabled. Pins that the
-    # fresh-install checkbox reflects the new default.
-    assert panel.get_manage_styling() is True
-    assert panel.custom_css_edit.isEnabled()
+    css = '[data-sc-content|="example-sentence"] { display: none; }'
+    panel.set_custom_css(css)
+    assert panel.get_custom_css() == css
 
 
 # ---------------------------------------------------------------------------

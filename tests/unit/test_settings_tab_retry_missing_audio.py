@@ -12,15 +12,6 @@ from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSet
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
-@pytest.fixture(autouse=True)
-def _no_real_styling_writes(monkeypatch):
-    """Keep Save/Reset-triggered styling syncs off the real network (see
-    test_settings_tab.py for the full rationale)."""
-    from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
-
-    monkeypatch.setattr(AnkiProbeController, "_start_styling_write", lambda self, mode: None)
-
-
 @pytest.fixture
 def tab(test_config: AnkiMinerConfig, qtbot):
     widget = SettingsTab(test_config)

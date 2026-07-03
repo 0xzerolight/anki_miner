@@ -32,6 +32,8 @@ from anki_miner.services import (
     SubtitleParserService,
     WordFilterService,
 )
+from anki_miner.services.definition_service import collect_dictionary_css
+from anki_miner.services.dictionary.card_style_block import build_card_style_block
 from anki_miner.services.frequency.render import render_frequency_html
 from anki_miner.utils import ensure_directory, has_katakana, hiragana_to_katakana, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
@@ -1025,6 +1027,18 @@ class EpisodeProcessor:
         """
         self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 5/5 — Creating Anki cards"))
         card_data: list[CardPayload] = []
+        # Self-contained per-card glossary styling: assemble the <style> block
+        # ONCE per episode (collect_dictionary_css does registry + per-dict SQLite
+        # I/O), gated on the glossary field being mapped so unmapped runs skip the
+        # I/O. Prepended to each card's glossary field below so styling travels
+        # inside the note — no note-type CSS write. Bound unconditionally ("") so
+        # the write-site reference is always safe.
+        style_block = ""
+        if self.config.anki_fields.get("glossary"):
+            style_block = build_card_style_block(
+                custom_css=self.config.custom_card_css,
+                dict_css=collect_dictionary_css(self.config),
+            )
         for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
             media_results, definitions, glossaries, pitch_data, strict=True
         ):
@@ -1057,7 +1071,7 @@ class EpisodeProcessor:
             if self.config.anki_fields.get("conjugation") and word.inflection_chain:
                 extra_fields["conjugation"] = " « ".join(word.inflection_chain)
             if glossary:
-                extra_fields["glossary"] = glossary
+                extra_fields["glossary"] = (style_block + glossary) if style_block else glossary
             # Stamp the source unconditionally; AnkiService gates the write on a
             # non-empty configured field name (anki_fields["source"]).
             extra_fields["source"] = f"{ctx.source_label} @ {_format_timestamp(word.start_time)}"
