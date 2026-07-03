@@ -3,8 +3,11 @@
 Yomitan pitch dictionaries (e.g. NHK, Kanjium-derived) ship as a zip containing
 ``index.json`` plus one or more ``term_meta_bank_*.json`` files. Each meta-bank
 is a flat JSON array of ``[term, mode, data]`` triples; this importer extracts
-only ``mode == "pitch"`` rows and writes them to a ``reading,kanji,pattern`` CSV
-that the existing :class:`PitchAccentService` reads unchanged.
+only ``mode == "pitch"`` rows and writes them to a
+``reading,kanji,pattern,nasal,devoice`` CSV that :class:`PitchAccentService`
+reads. Integer *and* ``[HL]+`` mora-string positions are kept, and each pitch's
+nasal/devoice mora positions are retained (each of pattern/nasal/devoice is one
+csv.writer field, so an intra-field comma like ``0,2`` never shifts a column).
 
 Shared zip extraction, index validation, the strict ``format == 3`` gate, the
 per-file progress/cancel loop, and the atomic CSV write live in
@@ -15,9 +18,10 @@ per-file progress/cancel loop, and the atomic CSV write live in
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.yomitan_meta_bank import (
@@ -27,6 +31,44 @@ from anki_miner.services.yomitan_meta_bank import (
 )
 
 logger = logging.getLogger(__name__)
+
+# A pitch "position" may be an integer downstep OR an "[HL]+" mora string
+# (Yomitan term-meta-bank v3 schema: position is ``integer | "^[HL]+$"``). Both
+# are schema-legal; the earlier importer kept only the integer form and dropped
+# H/L rows plus every nasal/devoice annotation.
+_HL_PATTERN_RE = re.compile(r"^[HL]+$")
+
+
+def _valid_position(value: Any) -> int | str | None:
+    """Return a schema-legal pitch position (int >= 0 or "[HL]+"), else None.
+
+    ``bool`` is rejected explicitly — ``isinstance(True, int)`` is True in
+    Python and a JSON ``true`` must not pass as position 1.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value >= 0 else None
+    if isinstance(value, str) and _HL_PATTERN_RE.match(value):
+        return value
+    return None
+
+
+def _to_number_array(value: Any) -> list[int]:
+    """Normalize a nasal/devoice field to a list of mora positions.
+
+    Ported from Yomitan Translator._toNumberArray
+    (ext/js/language/translator.js, upstream commit e2ed450): a bare integer
+    becomes ``[n]``, a list is kept (non-int / bool members dropped), anything
+    else becomes ``[]``.
+    """
+    if isinstance(value, bool):
+        return []
+    if isinstance(value, int):
+        return [value]
+    if isinstance(value, list):
+        return [x for x in value if isinstance(x, int) and not isinstance(x, bool)]
+    return []
 
 
 @dataclass(frozen=True)
@@ -67,7 +109,8 @@ def import_yomitan_pitch_zip(
     with open_yomitan_meta_banks(zip_path, kind="pitch") as banks:
         # Key on (kanji_or_term, reading) so homographs with distinct readings
         # both survive. First occurrence wins to match PitchAccentService.load.
-        entries_out: dict[tuple[str, str], str] = {}
+        # Value: (pattern, nasal_field, devoice_field) — each a single CSV field.
+        entries_out: dict[tuple[str, str], tuple[str, str, str]] = {}
         skipped_display_only = 0
 
         for bank in banks.iter_banks(progress=progress, cancel_check=cancel_check):
@@ -89,13 +132,18 @@ def import_yomitan_pitch_zip(
                 if not isinstance(pitches, list):
                     pitches = []
 
-                positions = [
-                    p["position"]
-                    for p in pitches
-                    if isinstance(p, dict)
-                    and isinstance(p.get("position"), int)
-                    and not isinstance(p.get("position"), bool)
-                ]
+                positions: list[int | str] = []
+                nasal: list[int] = []
+                devoice: list[int] = []
+                for p in pitches:
+                    if not isinstance(p, dict):
+                        continue
+                    position = _valid_position(p.get("position"))
+                    if position is None:
+                        continue
+                    positions.append(position)
+                    nasal.extend(_to_number_array(p.get("nasal")))
+                    devoice.extend(_to_number_array(p.get("devoice")))
 
                 if not reading or not positions:
                     skipped_display_only += 1
@@ -103,9 +151,13 @@ def import_yomitan_pitch_zip(
 
                 kanji = term if term != reading else ""
                 pattern = ",".join(str(p) for p in positions)
+                # Dedupe positions preserving order (a bare integer nasal repeated
+                # across pitches shouldn't double up in the merged field).
+                nasal_field = ",".join(str(n) for n in dict.fromkeys(nasal))
+                devoice_field = ",".join(str(d) for d in dict.fromkeys(devoice))
                 key = (kanji, reading)
                 if key not in entries_out:
-                    entries_out[key] = pattern
+                    entries_out[key] = (pattern, nasal_field, devoice_field)
 
         title = banks.title
         revision = banks.revision
@@ -117,12 +169,14 @@ def import_yomitan_pitch_zip(
                 "The dictionary may use an unsupported data format."
             )
 
-        # reading,kanji,pattern — sorted by (reading, kanji) for stable output.
+        # reading,kanji,pattern,nasal,devoice — sorted by (reading, kanji).
         rows = [
-            (reading, kanji, pattern)
-            for (kanji, reading), pattern in sorted(entries_out.items(), key=lambda kv: (kv[0][1], kv[0][0]))
+            (reading, kanji, pattern, nasal_field, devoice_field)
+            for (kanji, reading), (pattern, nasal_field, devoice_field) in sorted(
+                entries_out.items(), key=lambda kv: (kv[0][1], kv[0][0])
+            )
         ]
-        atomic_write_csv(dest_csv, ["reading", "kanji", "pattern"], rows)
+        atomic_write_csv(dest_csv, ["reading", "kanji", "pattern", "nasal", "devoice"], rows)
 
     logger.info(
         "Imported %d pitch entries from '%s' (revision '%s'), skipped %d display-only, %d malformed",
