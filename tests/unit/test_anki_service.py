@@ -3623,6 +3623,37 @@ class TestProbeDuplicates:
         probe_notes = mock_post.call_args_list[0][1]["json"]["params"]["notes"]
         assert probe_notes[0]["options"] == {"allowDuplicate": False, "duplicateScope": "deck"}
 
+    def test_probe_reuses_deck_root_scope_options(self, test_config, make_tokenized_word):
+        """duplicate_scope="deck-root": the probe carries the SAME options object
+        the note carries (synthesized duplicateScopeOptions), with allowDuplicate
+        forced off — so probe and addNotes agree on scope (7.3)."""
+        import dataclasses
+
+        config = dataclasses.replace(
+            test_config,
+            anki_deck_name="Mining::Anime::ShowA",
+            duplicate_scope="deck-root",
+        )
+        service = AnkiService(config)
+        items = self._make_word_data(make_tokenized_word, n=1)
+
+        probe = _mock_response(result=[{"canAdd": True, "error": None}])
+        add = _mock_response(result=[100])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[probe, add]) as mock_post:
+            assert service.create_cards_batch(items) == 1
+
+        probe_notes = mock_post.call_args_list[0][1]["json"]["params"]["notes"]
+        assert probe_notes[0]["options"] == {
+            "allowDuplicate": False,
+            "duplicateScope": "deck",
+            "duplicateScopeOptions": {
+                "deckName": "Mining",
+                "checkChildren": True,
+                "checkAllModels": False,
+            },
+        }
+
     def test_non_duplicate_rejection_raises_not_skipped(self, test_config, make_tokenized_word):
         """A non-duplicate canAdd=false surfaces as an error, not a silent skip.
 
