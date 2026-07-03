@@ -52,8 +52,9 @@ class IndexedDictProvider:
         # This dictionary's own styles.css, scoped to its glossary markup
         # (Issue #87), as a bare CSS string (no <style> wrapper). Empty unless
         # the dict shipped a styles.css that survived scoping; computed in
-        # load(). Folded into the shared note-type managed block by
-        # collect_dictionary_css — no longer injected per card.
+        # load(). Concatenated by collect_dictionary_css and emitted in each
+        # card's per-card <style> block by build_card_style_block (assembled at
+        # the EpisodeProcessor._phase5_create seam).
         self._scoped_css = ""
 
     @property
@@ -65,8 +66,8 @@ class IndexedDictProvider:
         """This dictionary's scoped styles.css (bare CSS, no <style> wrapper).
 
         Empty for JMdict, online providers, and dicts imported before styles.css
-        capture. Concatenated into the shared note-type managed block by
-        ``collect_dictionary_css``; only valid after a successful ``load()``.
+        capture. Concatenated by ``collect_dictionary_css`` into each card's
+        per-card ``<style>`` block; only valid after a successful ``load()``.
         """
         return self._scoped_css
 
@@ -110,8 +111,8 @@ class IndexedDictProvider:
 
         # Scope the dict's own styles.css (Issue #87) once. Stored bare (no
         # <style> wrapper) and exposed via `dictionary_css`; collect_dictionary_css
-        # folds it into the shared note-type managed block. Absent for JMdict and
-        # for dicts imported before styles.css capture.
+        # concatenates it into each card's per-card <style> block. Absent for
+        # JMdict and for dicts imported before styles.css capture.
         self._scoped_css = scope_dict_css(meta.get("styles_css", ""), self._display_name)
         return True
 

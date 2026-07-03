@@ -56,7 +56,7 @@ def _config(**field_overrides) -> AnkiMinerConfig:
     """Default config with the given anki_fields keys mapped to real names."""
     fields = dict(AnkiMinerConfig().anki_fields)
     fields.update(field_overrides)
-    return AnkiMinerConfig(anki_fields=fields, manage_card_styling=False)
+    return AnkiMinerConfig(anki_fields=fields)
 
 
 class TestClozeFieldsBuilder:
@@ -102,7 +102,7 @@ class TestClozeFieldsBuilder:
 
 class TestClozeFieldsInNote:
     def test_unmapped_omits_cloze_fields(self):
-        note = build_note(_payload(_word()), AnkiMinerConfig(manage_card_styling=False), set()).note
+        note = build_note(_payload(_word()), AnkiMinerConfig(), set()).note
         for key in ("Cloze", "ClozePrefix", "ClozeBody", "ClozeBodyKana", "ClozeSuffix"):
             assert key not in note["fields"]
 
@@ -132,7 +132,7 @@ class TestClozeFieldsInNote:
         # Default config maps no cloze fields → byte-identical to a config whose
         # anki_fields never contained the cloze keys at all.
         word = _word()
-        default_note = build_note(_payload(word), AnkiMinerConfig(manage_card_styling=False), set()).note
+        default_note = build_note(_payload(word), AnkiMinerConfig(), set()).note
         legacy_fields = {
             k: v
             for k, v in AnkiMinerConfig().anki_fields.items()
@@ -140,7 +140,7 @@ class TestClozeFieldsInNote:
         }
         legacy_note = build_note(
             _payload(word),
-            AnkiMinerConfig(anki_fields=legacy_fields, manage_card_styling=False),
+            AnkiMinerConfig(anki_fields=legacy_fields),
             set(),
         ).note
         assert default_note["fields"] == legacy_note["fields"]
@@ -151,7 +151,7 @@ class TestConjugationField:
         word = _word(inflection_chain=("-ます", "negative", "-た"))
         note = build_note(
             _payload(word, extra_fields={"conjugation": "-ます « negative « -た"}),
-            AnkiMinerConfig(manage_card_styling=False),
+            AnkiMinerConfig(),
             set(),
         ).note
         assert "Conjugation" not in note["fields"]
@@ -193,13 +193,13 @@ class TestDuplicateScopeOptions:
     def test_default_config_omits_options_key(self):
         # WIRE-FORMAT REGRESSION (omit-at-default): default config (collection
         # scope, check_all_models off) emits NO options key on the note dict.
-        note = build_note(_payload(_word()), AnkiMinerConfig(manage_card_styling=False), set()).note
+        note = build_note(_payload(_word()), AnkiMinerConfig(), set()).note
         assert "options" not in note
 
     def test_deck_builder_object_unchanged(self):
         # allow_duplicate_cards takes precedence and keeps the pre-7.3 hardcoded
         # object byte-for-byte.
-        config = AnkiMinerConfig(manage_card_styling=False, allow_duplicate_cards=True)
+        config = AnkiMinerConfig(allow_duplicate_cards=True)
         note = build_note(_payload(_word()), config, set()).note
         assert note["options"] == {"allowDuplicate": True, "duplicateScope": "deck"}
 
@@ -207,7 +207,6 @@ class TestDuplicateScopeOptions:
         # Both allow_duplicate_cards and a non-default duplicate_scope set:
         # allow_duplicate_cards wins (hardcoded Deck Builder object).
         config = AnkiMinerConfig(
-            manage_card_styling=False,
             allow_duplicate_cards=True,
             duplicate_scope="deck-root",
             duplicate_check_all_models=True,
@@ -216,7 +215,7 @@ class TestDuplicateScopeOptions:
         assert note["options"] == {"allowDuplicate": True, "duplicateScope": "deck"}
 
     def test_scope_deck_emits_options(self):
-        config = AnkiMinerConfig(manage_card_styling=False, duplicate_scope="deck")
+        config = AnkiMinerConfig(duplicate_scope="deck")
         note = build_note(_payload(_word()), config, set()).note
         assert note["options"] == {
             "allowDuplicate": False,
@@ -230,7 +229,6 @@ class TestDuplicateScopeOptions:
 
     def test_scope_deck_root_synthesizes_root_and_check_children(self):
         config = AnkiMinerConfig(
-            manage_card_styling=False,
             anki_deck_name="Mining::Anime::ShowA",
             duplicate_scope="deck-root",
         )
@@ -248,7 +246,7 @@ class TestDuplicateScopeOptions:
     def test_check_all_models_alone_emits_collection_scope(self):
         # check_all_models on but scope still collection: an explicit off-default
         # choice, so the object is emitted with duplicateScope="collection".
-        config = AnkiMinerConfig(manage_card_styling=False, duplicate_check_all_models=True)
+        config = AnkiMinerConfig(duplicate_check_all_models=True)
         note = build_note(_payload(_word()), config, set()).note
         assert note["options"] == {
             "allowDuplicate": False,
@@ -262,7 +260,6 @@ class TestDuplicateScopeOptions:
 
     def test_check_all_models_with_deck_scope(self):
         config = AnkiMinerConfig(
-            manage_card_styling=False,
             duplicate_scope="deck",
             duplicate_check_all_models=True,
         )
@@ -273,7 +270,6 @@ class TestDuplicateScopeOptions:
     def test_deck_root_at_root_deck_uses_full_name(self):
         # Un-nested deck name: deck-root resolves to the deck itself.
         config = AnkiMinerConfig(
-            manage_card_styling=False,
             anki_deck_name="Mining",
             duplicate_scope="deck-root",
         )

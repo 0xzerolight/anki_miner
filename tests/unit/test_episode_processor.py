@@ -2743,7 +2743,7 @@ class TestGlossaryFetch:
             "anki_service": anki_service,
         }
 
-    def test_glossary_fetched_when_field_mapped(self, test_config, mock_services, tmp_path):
+    def test_glossary_fetched_when_field_mapped(self, test_config, mock_services, tmp_path, monkeypatch):
         cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
         processor = self._build_processor(cfg, mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
@@ -2751,15 +2751,26 @@ class TestGlossaryFetch:
         glossary_html = '<div class="yomitan-glossary"><ol><li data-dictionary="X">X def</li></ol></div>'
         mock_services["definition_service"].get_glossaries_batch.return_value = [glossary_html]
 
+        # Avoid real dictionary-registry / SQLite I/O at the per-card <style> seam.
+        collect = MagicMock(return_value='.yomitan-glossary [data-dictionary="X"]{color:red}')
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css", collect)
+
         processor.process_episode(video, sub)
 
         mock_services["definition_service"].get_glossaries_batch.assert_called_once()
+        collect.assert_called_once()  # per-card block assembled once per episode, not per card
         call_args = mock_services["anki_service"].create_cards_batch.call_args
         card_data = call_args[0][0]
         assert len(card_data) == 1
         payload = card_data[0]
         assert payload.extra_fields is not None
-        assert payload.extra_fields["glossary"] == glossary_html
+        field = payload.extra_fields["glossary"]
+        # Self-contained: a per-card <style> block (base glossary.css + scoped dict
+        # CSS) is prepended, and the glossary HTML follows verbatim.
+        assert field.startswith("<style>")
+        assert field.endswith(glossary_html)
+        assert '[data-dictionary="X"]{color:red}' in field  # scoped dict CSS embedded
+        assert ".yomitan-glossary" in field  # base sheet embedded
 
     def test_glossary_skipped_when_field_unmapped(self, test_config, mock_services, tmp_path):
         # Default test_config has anki_fields["glossary"] == "" (after Task 4).

@@ -2,11 +2,11 @@
  * Anki Miner — universal glossary stylesheet.
  *
  * The single base look for mined-card glossary HTML. There are no "presets":
- * this sheet is always the base when card styling is managed, and a dictionary's
- * own styles.css (scoped to [data-dictionary="<title>"]) plus the user's custom
- * CSS are concatenated after it into one managed block in the note type's CSS
- * (see card_styling.build_managed_block). This mirrors Yomitan's model — one base
- * stylesheet + data-driven hooks + per-dictionary author CSS scoped by name —
+ * this sheet is always the base, and a dictionary's own styles.css (scoped to
+ * [data-dictionary="<title>"]) plus the user's custom CSS are concatenated after
+ * it into a self-contained <style> block embedded in each card's glossary field
+ * (see card_style_block.build_card_style_block). This mirrors Yomitan's model —
+ * one base stylesheet + data-driven hooks + per-dictionary author CSS scoped by name —
  * adapted from Yomitan's ext/css/structured-content.css (GPL-3.0). Anki Miner is
  * GPL-3.0-or-later, so the adaptation is license-compatible; it is curated and
  * guard-rewritten, not a byte-for-byte copy.

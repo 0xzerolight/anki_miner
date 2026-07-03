@@ -3,7 +3,8 @@
 Anki Miner ships one bundled stylesheet — :mod:`resources.glossary.css` — that is
 the always-on base for mined-card glossary HTML. There are no selectable presets:
 the look is universal, and per-dictionary author CSS + the user's custom CSS are
-composed after it by :func:`card_styling.build_managed_block`.
+composed after it by :func:`card_style_block.build_card_style_block` into a
+self-contained ``<style>`` block embedded in each card.
 
 No Qt, no I/O at import time; the CSS text is read lazily via :func:`load_glossary_css`.
 """
