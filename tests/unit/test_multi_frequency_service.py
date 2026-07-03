@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
+from anki_miner.services.frequency.multi_frequency_service import (
+    MultiFrequencyService,
+    harmonic_rank,
+    min_rank,
+)
 
 
 class _FakeProvider:
@@ -193,6 +197,41 @@ def test_lookup_harmonic_ignores_nonpositive_rank():
         ]
     )
     assert svc.lookup_harmonic("猫") == 50
+
+
+class TestPureRankHelpers:
+    """min_rank/harmonic_rank derive min + harmonic from an already-fetched
+    lookup_all list, so a caller need not re-run the per-source SQL three times."""
+
+    def test_min_rank_empty(self):
+        assert min_rank([]) is None
+
+    def test_min_rank_picks_smallest(self):
+        assert min_rank([("A", 100, None), ("B", 42, None), ("C", 300, None)]) == 42
+
+    def test_harmonic_rank_empty(self):
+        assert harmonic_rank([]) is None
+
+    def test_harmonic_rank_multiple_sources(self):
+        # floor(3 / (1/100 + 1/42 + 1/300)) = 80, matching the service method.
+        assert harmonic_rank([("A", 100, None), ("B", 42, None), ("C", 300, None)]) == 80
+
+    def test_harmonic_rank_ignores_nonpositive(self):
+        assert harmonic_rank([("Bad", 0, None), ("Novel", 50, None)]) == 50
+
+    def test_helpers_agree_with_service_methods(self):
+        # The wrappers must return exactly what the pure helpers do on the same
+        # fetched list — the EpisodeProcessor single-fetch path relies on it.
+        svc = MultiFrequencyService(
+            [
+                _FakeProvider("A", {"猫": 100}),
+                _FakeProvider("B", {"猫": 42}),
+                _FakeProvider("C", {"猫": 300}),
+            ]
+        )
+        sources = svc.lookup_all("猫")
+        assert svc.lookup_min("猫") == min_rank(sources)
+        assert svc.lookup_harmonic("猫") == harmonic_rank(sources)
 
 
 def test_close_closes_each_provider_once():

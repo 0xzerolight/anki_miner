@@ -645,12 +645,12 @@ class TestOptionalServices:
         }
 
     def test_frequency_service_attaches_ranks(self, test_config, mock_services, tmp_path):
-        """Frequency service should attach the min rank + per-source breakdown."""
+        """Frequency attaches min + harmonic + per-source breakdown from ONE fetch."""
         word = _make_word("食べる")
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("BCCWJ", 500, None)]
-        mock_frequency.lookup_min.return_value = 500
+        # Two sources so min (200) and harmonic differ, proving both are derived.
+        mock_frequency.lookup_all.return_value = [("BCCWJ", 400, None), ("JPDB", 200, None)]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -668,14 +668,17 @@ class TestOptionalServices:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        # Verify both lookups were called for the word's lemma, reading-scoped.
-        # word.reading is "タベル"; the call site hiragana-normalizes it → "たべる".
-        mock_frequency.lookup_all.assert_called_with(word.lemma, "たべる")
-        mock_frequency.lookup_min.assert_called_with(word.lemma, "たべる")
-        # Verify the word now has both the min rank (drives filtering) and the
-        # per-source breakdown (drives the card display).
-        assert word.frequency_rank == 500
-        assert word.frequency_sources == [("BCCWJ", 500, None)]
+        # A single per-source fetch, reading-scoped (word.reading "タベル" →
+        # hiragana-normalized "たべる"); min + harmonic are derived locally, so the
+        # service's lookup_min/lookup_harmonic are never re-queried.
+        mock_frequency.lookup_all.assert_called_once_with(word.lemma, "たべる")
+        mock_frequency.lookup_min.assert_not_called()
+        mock_frequency.lookup_harmonic.assert_not_called()
+        # Derived from the fetched breakdown: min = 200 (drives filtering),
+        # harmonic = floor(2 / (1/400 + 1/200)) = 266 (drives the sort field).
+        assert word.frequency_rank == 200
+        assert word.frequency_harmonic_rank == 266
+        assert word.frequency_sources == [("BCCWJ", 400, None), ("JPDB", 200, None)]
 
     def test_frequency_filter_removes_words(self, test_config, mock_services, tmp_path):
         """Frequency filter should remove words outside the threshold."""
@@ -689,7 +692,6 @@ class TestOptionalServices:
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
         mock_frequency.lookup_all.side_effect = [[("BCCWJ", 500, None)], [("BCCWJ", 5000, None)]]
-        mock_frequency.lookup_min.side_effect = [500, 5000]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -720,7 +722,6 @@ class TestOptionalServices:
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
         mock_frequency.lookup_all.return_value = [("BCCWJ", 500, None)]
-        mock_frequency.lookup_min.return_value = 500
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -851,9 +852,8 @@ class TestOptionalServices:
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
         mock_frequency.lookup_all.return_value = [("BCCWJ", 500, None), ("JPDB", 612, "612/9M")]
-        mock_frequency.lookup_min.return_value = 500
-        # floor(2 / (1/500 + 1/612)) = 550 — the harmonic mean of the two ranks.
-        mock_frequency.lookup_harmonic.return_value = 550
+        # min = 500, harmonic = floor(2 / (1/500 + 1/612)) = 550 — both derived
+        # locally from the single lookup_all fetch, not re-queried on the service.
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -894,10 +894,8 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        # No source ranks this word.
+        # No source ranks this word — min + harmonic derive to None.
         mock_frequency.lookup_all.return_value = []
-        mock_frequency.lookup_min.return_value = None
-        mock_frequency.lookup_harmonic.return_value = None
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -936,9 +934,8 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
+        # No source ranks this word — min + harmonic derive to None.
         mock_frequency.lookup_all.return_value = []
-        mock_frequency.lookup_min.return_value = None
-        mock_frequency.lookup_harmonic.return_value = None
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()

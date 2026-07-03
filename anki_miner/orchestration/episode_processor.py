@@ -34,6 +34,7 @@ from anki_miner.services import (
 )
 from anki_miner.services.definition_service import collect_dictionary_css
 from anki_miner.services.dictionary.card_style_block import build_card_style_block
+from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
 from anki_miner.services.frequency.render import render_frequency_html
 from anki_miner.services.pitch_accent.render import (
     render_pitch_graph_field,
@@ -484,9 +485,15 @@ class EpisodeProcessor:
                 # the surface reading. Hiragana-normalize so a katakana subtitle
                 # reading matches a hiragana-stored frequency reading.
                 reading = katakana_to_hiragana(word.lemma_reading or word.reading)
-                word.frequency_sources = self.frequency_service.lookup_all(word.lemma, reading)
-                word.frequency_rank = self.frequency_service.lookup_min(word.lemma, reading)
-                word.frequency_harmonic_rank = self.frequency_service.lookup_harmonic(word.lemma, reading)
+                # One per-source fetch, then derive min + harmonic locally: the
+                # service's lookup_min/lookup_harmonic each re-run lookup_all
+                # internally, so calling all three would run the per-source SQL
+                # three times per word. min_rank/harmonic_rank are the same pure
+                # derivations lookup_min/lookup_harmonic wrap.
+                sources = self.frequency_service.lookup_all(word.lemma, reading)
+                word.frequency_sources = sources
+                word.frequency_rank = min_rank(sources)
+                word.frequency_harmonic_rank = harmonic_rank(sources)
             ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
             self.presenter.show_info(
                 tr_format(
