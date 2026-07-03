@@ -147,6 +147,14 @@ class FrequencyImportFlow:
                 if skipped
                 else ""
             )
+            converted_note = (
+                QCoreApplication.translate(
+                    "FrequencyImportFlow",
+                    " This is an occurrence-based source; its counts were converted to ranks.",
+                )
+                if meta.get("converted_to_ranks")
+                else ""
+            )
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("FrequencyImportFlow", "Frequency Source Added"),
@@ -155,7 +163,8 @@ class FrequencyImportFlow:
                     f"{meta.get('entry_count', 0):,}",
                     meta.get("source_name", source_id),
                 )
-                + skipped_note,
+                + skipped_note
+                + converted_note,
             )
 
         def on_failed(err: str) -> None:
