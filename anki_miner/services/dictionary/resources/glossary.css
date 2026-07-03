@@ -323,6 +323,22 @@
   background: var(--am-chip);
   color: var(--am-muted);
 }
+/* Hover chips — unioned dictionary tags that carry a tags-table row (schema v3,
+ * emitted by indexed_provider as `<span class="gloss-tag" data-category=… title=…>`).
+ * The markup joins them with no separator, so the chip supplies its own right
+ * margin. Mirrors the data-sc tag pill above so both tag kinds read alike. */
+.yomitan-glossary ol[data-count] .gloss-tag {
+  display: inline-block;
+  margin-right: 0.4em;
+  padding: 0.05em 0.4em;
+  border-radius: 0.3em;
+  font-size: 0.8em;
+  font-weight: 600;
+  vertical-align: text-bottom;
+  word-break: keep-all;
+  background: var(--am-chip);
+  color: var(--am-muted);
+}
 .yomitan-glossary ol[data-count] span[data-sc-content="part-of-speech-info"] {
   background: #565656;
   color: #fff;

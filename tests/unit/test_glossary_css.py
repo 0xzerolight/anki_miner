@@ -74,6 +74,15 @@ class TestLoadGlossaryCss:
         assert '[data-sc-content="forms"] td' in css
         assert '[data-sc-content|="example-sentence"]' in css
 
+    def test_carries_hover_tag_chip_rule(self):
+        css = _no_comments(load_glossary_css())
+        # indexed_provider emits unioned dictionary tags with a tags-table row as
+        # `<span class="gloss-tag">` chips joined with no separator; the sheet must
+        # style them (else they render as unstyled run-together text). Guarded by
+        # ol[data-count] like every miner rule (TestGlossaryYomitanLeak covers the
+        # guard invariant).
+        assert "ol[data-count] .gloss-tag" in css
+
     def test_neutralizes_host_generated_content_on_sense_items(self):
         # Cohabitation defense: a host note type's unscoped li::before separator
         # must not bleed into our sense list. The reset targets only the outer
