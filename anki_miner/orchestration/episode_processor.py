@@ -1034,6 +1034,14 @@ class EpisodeProcessor:
                 extra_fields["frequency_sort"] = (
                     str(word.frequency_harmonic_rank) if word.frequency_harmonic_rank is not None else "9999999"
                 )
+            # Conjugation-chain provenance (3.2): the deinflection trace of the
+            # accepted inflected span, joined dictionary-form-outward with the
+            # Yomitan " « " separator (food « -ます « … reads how Yomitan's
+            # {conjugation} field renders). Gated on the field being mapped AND a
+            # non-empty chain, so default-config notes stay byte-identical and
+            # uninflected words leave the field untouched.
+            if self.config.anki_fields.get("conjugation") and word.inflection_chain:
+                extra_fields["conjugation"] = " « ".join(word.inflection_chain)
             if glossary:
                 extra_fields["glossary"] = glossary
             # Stamp the source unconditionally; AnkiService gates the write on a
