@@ -184,7 +184,7 @@ class TestPitchGraphTextFields:
     def test_unmapped_omits_both_fields(self):
         note = build_note(
             _payload(_word(), extra_fields={"pitch_graph": self._GRAPH, "pitch_text": self._TEXT}),
-            AnkiMinerConfig(manage_card_styling=False),
+            AnkiMinerConfig(),
             set(),
         ).note
         assert "PitchGraph" not in note["fields"]
@@ -214,13 +214,13 @@ class TestPitchGraphTextFields:
         # A legacy config whose anki_fields never contained the pitch_graph/
         # pitch_text keys produces the identical note dict as the current default.
         word = _word()
-        default_note = build_note(_payload(word), AnkiMinerConfig(manage_card_styling=False), set()).note
+        default_note = build_note(_payload(word), AnkiMinerConfig(), set()).note
         legacy_fields = {
             k: v for k, v in AnkiMinerConfig().anki_fields.items() if k not in ("pitch_graph", "pitch_text")
         }
         legacy_note = build_note(
             _payload(word),
-            AnkiMinerConfig(anki_fields=legacy_fields, manage_card_styling=False),
+            AnkiMinerConfig(anki_fields=legacy_fields),
             set(),
         ).note
         assert default_note == legacy_note
