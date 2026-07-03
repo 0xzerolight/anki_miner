@@ -9,15 +9,19 @@ later "reimport" can re-run without the user re-picking the file.
 
 Two input shapes are supported, dispatched by suffix:
 
-* ``.zip`` — a Yomitan ``frequency`` meta-bank dictionary. ``occurrence-based``
-  dicts are rejected (rank-based only). BCCWJ-style envelope readings are kept
-  in the ``reading`` column; otherwise reading is ``NULL``. On a
-  ``(term, reading)`` collision the smaller (better) rank wins.
+* ``.zip`` — a Yomitan ``frequency`` meta-bank dictionary. BCCWJ-style envelope
+  readings are kept in the ``reading`` column; otherwise reading is ``NULL``. On
+  a ``(term, reading)`` collision the smaller (better) rank wins.
 * ``.csv`` / ``.tsv`` / ``.txt`` — a plain rank list. Delimiter is auto-detected,
   a header row is skipped, and rows are parsed with the shared
   :func:`~anki_miner.services.frequency.csv_parse._extract_word_rank`. A third
   column (``term, reading, rank``) is captured as the reading. First occurrence
   wins per ``(term, reading)`` (matching the legacy CSV loader's semantics).
+
+Occurrence-based sources (larger number = more common) — declared via Yomitan
+``frequencyMode`` or detected by :mod:`~anki_miner.services.frequency.mode_probe`
+for undeclared zips/CSVs — are auto-converted to real ranks (``1..n``, largest
+count first) before storage, so downstream rank filtering/sorting stays correct.
 """
 
 from __future__ import annotations
@@ -35,7 +39,7 @@ from typing import Callable
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.dictionary.zip_safety import raise_if_index_nested
-from anki_miner.services.frequency import storage
+from anki_miner.services.frequency import mode_probe, storage
 from anki_miner.services.frequency.csv_parse import (
     _extract_word_rank,
     _is_word_first_header,
@@ -73,6 +77,10 @@ class FreqSourceImportResult:
     # (always 0 for CSV/TSV sources). Surfaced to the user so a reduced import
     # doesn't pass unnoticed.
     skipped_malformed: int = 0
+    # True when the source was detected/declared occurrence-based and its raw
+    # counts were re-ranked to 1..n at import (see mode_probe). Surfaced so the
+    # user knows the stored ranks differ from the file's numbers.
+    converted_to_ranks: bool = False
 
 
 def import_frequency_source(
@@ -97,8 +105,8 @@ def import_frequency_source(
             aborts (partial staging files are cleaned up by the temp dir).
 
     Raises:
-        SetupError: On a missing/unsupported input, an occurrence-based Yomitan
-            dict, or a source that yields zero usable entries.
+        SetupError: On a missing/unsupported input, or a source that yields zero
+            usable entries.
     """
     if not input_path.exists():
         raise SetupError(f"Frequency source not found: {input_path}")
@@ -128,15 +136,9 @@ def _import_zip(
     cancel_check: Callable[[], bool] | None,
 ) -> FreqSourceImportResult:
     with open_yomitan_meta_banks(zip_path, kind="frequency") as banks:
-        if banks.index.frequency_mode == "occurrence-based":
-            raise SetupError(
-                f"'{banks.title}' is an occurrence-based frequency dictionary. "
-                "anki_miner only supports rank-based dictionaries (e.g. JPDB, BCCWJ). "
-                "Use a rank-based dict, or convert this one externally before importing."
-            )
-
         title = banks.title
         revision = banks.revision
+        declared_mode = banks.index.frequency_mode
         resolved_id = source_id or _derive_source_id(title)
 
         # key = (term, reading) -> (best (min) rank, display_value of that row)
@@ -175,6 +177,7 @@ def _import_zip(
             (term, reading, rank, display_value)
             for (term, reading), (rank, display_value) in sorted(ranks.items(), key=lambda kv: kv[1][0])
         ]
+        rows, converted = _apply_direction(rows, declared_mode)
 
         result = _finalize(
             input_path=zip_path,
@@ -187,6 +190,7 @@ def _import_zip(
             entry_count=len(ranks),
             skipped_display_only=skipped_display_only,
             skipped_malformed=banks.skipped_malformed,
+            converted_to_ranks=converted,
         )
 
     logger.info(
@@ -255,6 +259,9 @@ def _import_csv(
     rows: list[storage.FreqRow] = [
         (term, reading, rank, None) for (term, reading), rank in sorted(ranks.items(), key=lambda kv: kv[1])
     ]
+    # Plain CSVs never declare a direction, so always probe: an occurrence-count
+    # list re-ranks here instead of silently inverting max_frequency_rank.
+    rows, converted = _apply_direction(rows, "")
 
     result = _finalize(
         input_path=csv_path,
@@ -266,6 +273,7 @@ def _import_csv(
         rows=rows,
         entry_count=len(ranks),
         skipped_display_only=0,
+        converted_to_ranks=converted,
     )
     logger.info(
         "Imported %d frequency entries from CSV '%s' as source '%s'",
@@ -274,6 +282,26 @@ def _import_csv(
         result.source_id,
     )
     return result
+
+
+def _apply_direction(
+    rows: list[storage.FreqRow],
+    declared_mode: str,
+) -> tuple[list[storage.FreqRow], bool]:
+    """Detect direction and re-rank occurrence-based sources to ``1..n``.
+
+    ``declared_mode`` (Yomitan ``frequencyMode``) is authoritative; a blank mode
+    (CSVs, undeclared zips) triggers the statistical probe over the stored
+    values. When occurrence-based, the raw counts in the ``rank`` column are
+    converted to real ranks (largest count = rank 1). Returns the (possibly
+    re-ranked) rows and whether a conversion happened.
+    """
+    term_values: dict[str, list[int]] = {}
+    for term, _reading, value, _display in rows:
+        term_values.setdefault(term, []).append(value)
+    if mode_probe.resolve_is_occurrence(declared_mode, term_values):
+        return mode_probe.convert_to_ranks(rows), True
+    return rows, False
 
 
 def _csv_reading(row: list[str], word: str) -> str | None:
@@ -311,6 +339,7 @@ def _finalize(
     entry_count: int,
     skipped_display_only: int,
     skipped_malformed: int = 0,
+    converted_to_ranks: bool = False,
 ) -> FreqSourceImportResult:
     """Build the index under a staging dir, then atomically promote it.
 
@@ -367,6 +396,7 @@ def _finalize(
         entry_count=entry_count,
         skipped_display_only=skipped_display_only,
         skipped_malformed=skipped_malformed,
+        converted_to_ranks=converted_to_ranks,
     )
 
 
