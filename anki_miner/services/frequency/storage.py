@@ -26,7 +26,13 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 1
+# v2 (this release) adds a nullable ``display_value`` column. The change is
+# purely additive — term/reading/rank are unchanged — so a v1 index (which lacks
+# the column) is still fully readable: readers treat display_value as absent (see
+# IndexedFreqProvider.load / FrequencySourceRegistry). No reimport is ever
+# required for correctness; a reimport only *gains* display values. Any migration
+# past v2 must stay additive to keep this backward-read guarantee.
+SCHEMA_VERSION = 2
 
 # Sidecar filename living next to each ``index.sqlite``. Holds the source's
 # ``meta`` rows as JSON so a registry ``load()`` can skip the SQLite open on
@@ -35,10 +41,11 @@ _META_SIDECAR = "meta.json"
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS entries (
-    id      INTEGER PRIMARY KEY,
-    term    TEXT NOT NULL,
-    reading TEXT,
-    rank    INTEGER NOT NULL
+    id            INTEGER PRIMARY KEY,
+    term          TEXT NOT NULL,
+    reading       TEXT,
+    rank          INTEGER NOT NULL,
+    display_value TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_term ON entries(term);
 
@@ -48,8 +55,10 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 """
 
-# One row destined for the ``entries`` table.
-FreqRow = tuple[str, str | None, int]
+# One row destined for the ``entries`` table: (term, reading, rank, display_value).
+# ``display_value`` is the human string Yomitan preserves for string/displayValue
+# payloads (e.g. "1099/72000", JPDB ㋕ markers); None for plain-int/CSV ranks.
+FreqRow = tuple[str, str | None, int, str | None]
 
 
 def create_index(db_path: Path) -> None:
@@ -64,7 +73,7 @@ def create_index(db_path: Path) -> None:
 
 
 def bulk_insert(db_path: Path, rows: Iterable[FreqRow], batch_size: int = 5000) -> int:
-    """Insert ``(term, reading, rank)`` rows in batched transactions.
+    """Insert ``(term, reading, rank, display_value)`` rows in batched transactions.
 
     Returns the total number inserted. Closes the connection explicitly so the
     db file is not held open across the importer's staging-dir cleanup.
@@ -77,14 +86,14 @@ def bulk_insert(db_path: Path, rows: Iterable[FreqRow], batch_size: int = 5000) 
             batch.append(row)
             if len(batch) >= batch_size:
                 conn.executemany(
-                    "INSERT INTO entries (term, reading, rank) VALUES (?, ?, ?)",
+                    "INSERT INTO entries (term, reading, rank, display_value) VALUES (?, ?, ?, ?)",
                     batch,
                 )
                 total += len(batch)
                 batch.clear()
         if batch:
             conn.executemany(
-                "INSERT INTO entries (term, reading, rank) VALUES (?, ?, ?)",
+                "INSERT INTO entries (term, reading, rank, display_value) VALUES (?, ?, ?, ?)",
                 batch,
             )
             total += len(batch)

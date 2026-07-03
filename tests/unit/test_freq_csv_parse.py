@@ -11,31 +11,57 @@ from anki_miner.services.frequency.csv_parse import (
 
 
 class TestNormalizeFreqRank:
-    def test_plain_int(self) -> None:
-        assert normalize_freq_rank(5) == 5
+    """normalize_freq_rank returns ``(rank, display_value)`` (Yomitan displayValue
+    triple, collapsed to the two fields anki_miner stores)."""
 
-    def test_numeric_string(self) -> None:
-        assert normalize_freq_rank(" 12 ") == 12
+    def test_plain_int_has_no_display(self) -> None:
+        assert normalize_freq_rank(5) == (5, None)
+
+    def test_numeric_string_keeps_string_as_display(self) -> None:
+        # String payload: the whole (stripped) string is the display value.
+        assert normalize_freq_rank(" 12 ") == (12, "12")
+
+    def test_string_with_separator_extracts_leading_number(self) -> None:
+        # "1099/72000" is no longer rejected: rank=1099, display="1099/72000".
+        assert normalize_freq_rank("1099/72000") == (1099, "1099/72000")
+
+    def test_jpdb_marker_string_extracts_number(self) -> None:
+        assert normalize_freq_rank("1234㋕") == (1234, "1234㋕")
+
+    def test_float_string_truncates_to_int_rank(self) -> None:
+        assert normalize_freq_rank("3.9位") == (3, "3.9位")
 
     def test_bool_rejected(self) -> None:
-        assert normalize_freq_rank(True) is None
+        assert normalize_freq_rank(True) == (None, None)
 
     def test_zero_and_negative_rejected(self) -> None:
-        assert normalize_freq_rank(0) is None
-        assert normalize_freq_rank(-3) is None
+        assert normalize_freq_rank(0) == (None, None)
+        assert normalize_freq_rank(-3) == (None, None)
+        # A string whose leading number is <= 0 is unusable as a rank.
+        assert normalize_freq_rank("0/5000") == (None, None)
 
     def test_display_only_marker_rejected(self) -> None:
-        assert normalize_freq_rank("①") is None
-        assert normalize_freq_rank("高") is None
+        # No float-shaped run -> no rank -> skipped (display discarded).
+        assert normalize_freq_rank("①") == (None, None)
+        assert normalize_freq_rank("高") == (None, None)
 
     def test_frequency_envelope(self) -> None:
-        assert normalize_freq_rank({"reading": "いく", "frequency": 9}) == 9
+        assert normalize_freq_rank({"reading": "いく", "frequency": 9}) == (9, None)
 
-    def test_value_envelope(self) -> None:
-        assert normalize_freq_rank({"value": 7, "displayValue": "7"}) == 7
+    def test_frequency_envelope_with_string_frequency(self) -> None:
+        assert normalize_freq_rank({"reading": "いく", "frequency": "9/500"}) == (9, "9/500")
+
+    def test_value_envelope_keeps_display_value(self) -> None:
+        assert normalize_freq_rank({"value": 7, "displayValue": "7位"}) == (7, "7位")
+
+    def test_value_envelope_no_display(self) -> None:
+        assert normalize_freq_rank({"value": 7}) == (7, None)
+
+    def test_value_envelope_string_value_parsed(self) -> None:
+        assert normalize_freq_rank({"value": "42x", "displayValue": "42x"}) == (42, "42x")
 
     def test_value_envelope_bool_rejected(self) -> None:
-        assert normalize_freq_rank({"value": True}) is None
+        assert normalize_freq_rank({"value": True}) == (None, None)
 
 
 class TestIsWordFirstHeader:
