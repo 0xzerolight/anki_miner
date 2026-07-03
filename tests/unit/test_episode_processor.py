@@ -302,7 +302,7 @@ class TestProcessEpisode:
         # Verify definition_service gets lemmas of words with media
         mock_services["definition_service"].get_definitions_batch.assert_called_once()
         ds_args = mock_services["definition_service"].get_definitions_batch.call_args
-        assert ds_args[0][0] == ["食べる"]
+        assert ds_args[0][0] == [("食べる", "たべる")]
 
         # Verify anki_service gets combined CardPayload entries
         mock_services["anki_service"].create_cards_batch.assert_called_once()
@@ -484,7 +484,7 @@ class TestProcessEpisode:
 
         # Only 1 definition fetched (for the word with media)
         ds_args = mock_services["definition_service"].get_definitions_batch.call_args
-        assert ds_args[0][0] == ["食べる"]
+        assert ds_args[0][0] == [("食べる", "たべる")]
 
         assert result.cards_created == 1
 

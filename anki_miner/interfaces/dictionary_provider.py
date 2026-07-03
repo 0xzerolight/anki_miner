@@ -57,10 +57,14 @@ class DictionaryProvider(Protocol):
     # runtime (``callable(getattr(provider, "lookup_many", None))``) and fall
     # back to per-word ``lookup`` when absent. An implementer's contract:
     #
-    #     def lookup_many(self, words: list[str]) -> dict[str, str | None]:
-    #         """Batch variant of ``lookup``. The result for every word MUST be
-    #         byte-identical to ``lookup(word)``. Returns a dict keyed by every
-    #         requested word; a miss maps to None."""
+    #     def lookup_many(
+    #         self, pairs: list[tuple[str, str | None]]
+    #     ) -> dict[str, str | None]:
+    #         """Batch variant of ``lookup``. ``pairs`` is a list of
+    #         ``(word, reading | None)`` — the reading is a per-word ranking BOOST
+    #         (None = wildcard, no boost). The result for every word MUST be
+    #         byte-identical to ``lookup(word)`` with that word's boost applied.
+    #         Returns a dict keyed by every requested word; a miss maps to None."""
     #
     # NOTE: ``has_terms`` is a second OPTIONAL method (compound matching). Only
     # offline providers with an exact-headword index implement it; consumers

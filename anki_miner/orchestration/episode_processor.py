@@ -969,8 +969,16 @@ class EpisodeProcessor:
         """Phase 4: look up definitions, optional glossaries, and pitch accents."""
         self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 4/5 — Fetching definitions"))
         words_with_media = [word for word, _ in media_results]
+        # Thread the sentence's contextual reading into definition lookup as a
+        # ranking BOOST (5.1): a homograph like 辛い(からい/つらい) leads with the
+        # sense matching this occurrence's reading, the other survives below.
+        # lemma_reading (falling back to surface reading) hiragana-normalized to
+        # match the folded stored readings — same source pitch lookup uses below.
+        lookup_pairs: list[tuple[str, str | None]] = [
+            (w.lemma, katakana_to_hiragana(w.lemma_reading or w.reading)) for w in words_with_media
+        ]
         definitions = self.definition_service.get_definitions_batch(
-            [w.lemma for w in words_with_media],
+            lookup_pairs,
             progress_callback,
         )
         self.presenter.show_success(
@@ -985,7 +993,7 @@ class EpisodeProcessor:
         glossaries: list[str | None] = [None] * len(words_with_media)
         if self.config.anki_fields.get("glossary"):
             glossaries = self.definition_service.get_glossaries_batch(
-                [w.lemma for w in words_with_media],
+                lookup_pairs,
                 progress_callback,
             )
 

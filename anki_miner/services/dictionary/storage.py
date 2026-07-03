@@ -83,21 +83,37 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 """
 
-# Explicit ``, id`` tiebreak makes single-word ordering fully deterministic
-# (rows with equal ``(term=?)`` priority and equal/NULL ``sequence`` would
-# otherwise come back in unspecified query-plan order). This is what the batch
-# ``lookup_many`` path reproduces with its final ``row_id`` sort, so keeping the
-# tiebreak here guarantees ``lookup`` and ``lookup_many`` agree.
+# Candidate-pool size fetched per word BEFORE the provider runs content-dedup,
+# sequence grouping, and the display cap (indexed_provider._DISPLAY_LIMIT). Raised
+# from the old flat 5 so duplicate-content rows (OVH-026) and lower-ranked
+# homograph senses can no longer consume display slots ahead of dedup — the
+# "dedup before cap" invariant (plan item 5.1). The provider caps the *rendered*
+# senses; storage only bounds the pool.
+_LOOKUP_LIMIT = 20
+
+# Reading-boost ranking. Ported from Yomitan
+# ``Translator._sortTermDictionaryEntries`` (ext/js/language/translator.js,
+# upstream e2ed450): ``matchPrimaryReading`` is the FIRST key of that ranking
+# cascade — a sort BOOST, never a row filter. Here term-exact priority stays the
+# leading key (unchanged 4.6 behavior); then rows whose stored (hiragana-folded)
+# reading equals the token's contextual reading sort ahead of the other
+# homograph's senses, while every non-matching row still survives below (boost,
+# not filter). ``score DESC, sequence, id`` remain the lower tiebreaks.
 #
-# ``score DESC`` is the leading non-term tiebreak so that Yomitan popularity
-# scores govern which senses survive LIMIT 5 (OVH-027). JMdict rows carry
-# score=0, so this key is a no-op for JMdict and the existing sequence/id
-# ordering is unchanged for that dictionary.
+# NULL-binding semantics: with no reading bound (wildcard), ``(reading = NULL)``
+# is NULL for every row, so the key is inert and the ordering collapses to the
+# pre-boost cascade — the ``reading=None`` path is byte-identical to 4.6 output.
+#
+# Explicit ``, id`` tiebreak makes single-word ordering fully deterministic (rows
+# with equal priority/score and equal/NULL ``sequence`` would otherwise come back
+# in unspecified query-plan order). This is what the batch ``lookup_many`` path
+# reproduces with its final ``row_id`` sort, so keeping the tiebreak here
+# guarantees ``lookup`` and ``lookup_many`` agree.
 _LOOKUP_SQL = (
-    "SELECT content, tags FROM entries "
+    "SELECT content, tags, sequence FROM entries "
     "WHERE term = ? OR reading = ? "
-    "ORDER BY (term = ?) DESC, score DESC, sequence, id "
-    "LIMIT 5"
+    "ORDER BY (term = ?) DESC, (reading = ?) DESC, score DESC, sequence, id "
+    f"LIMIT {_LOOKUP_LIMIT}"
 )
 
 
@@ -337,17 +353,24 @@ def open_readonly(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
-def lookup(conn: sqlite3.Connection, word: str) -> list[tuple[str, str]]:
-    """Return up to 5 (content, tags) pairs matching word (term or reading).
+def lookup(conn: sqlite3.Connection, word: str, reading: str | None = None) -> list[tuple[str, str, int | None]]:
+    """Return up to ``_LOOKUP_LIMIT`` (content, tags, sequence) triples matching
+    word (term or folded reading), reading-boosted then ranked.
 
-    Readings are stored hiragana-folded, so the reading comparison binds the
-    folded query while the term comparison (and the ``(term = ?)`` priority
-    tiebreak) binds the raw word — a katakana query still matches a kanji
-    headword's folded reading (schema v3, touch point a).
+    ``reading`` is the token's contextual kana reading (e.g. ``w.lemma_reading``)
+    and acts as a ranking BOOST only: rows whose stored reading equals it sort
+    first, the rest survive below. ``None`` = wildcard (no boost) = 4.6 behavior.
+
+    Readings are stored hiragana-folded, so the reading-match WHERE clause binds
+    the folded query word and the boost binds the folded contextual reading,
+    while the term comparison (and the ``(term = ?)`` priority tiebreak) binds the
+    raw word — a katakana query still matches a kanji headword's folded reading
+    (schema v3, touch point a).
     """
-    folded = katakana_to_hiragana(word)
-    rows = conn.execute(_LOOKUP_SQL, (word, folded, word)).fetchall()
-    return [(row[0], row[1]) for row in rows]
+    folded_word = katakana_to_hiragana(word)
+    folded_boost = katakana_to_hiragana(reading) if reading is not None else None
+    rows = conn.execute(_LOOKUP_SQL, (word, folded_word, word, folded_boost)).fetchall()
+    return [(row[0], row[1], row[2]) for row in rows]
 
 
 # sqlite's default SQLITE_MAX_VARIABLE_NUMBER is 999. lookup_many binds each
@@ -356,31 +379,44 @@ def lookup(conn: sqlite3.Connection, word: str) -> list[tuple[str, str]]:
 _BIND_CHUNK = 450
 
 
-def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tuple[str, str]]]:
+def lookup_many(
+    conn: sqlite3.Connection, pairs: list[tuple[str, str | None]]
+) -> dict[str, list[tuple[str, str, int | None]]]:
     """Batch variant of :func:`lookup`.
 
+    ``pairs`` is a list of ``(word, reading | None)`` — each word's contextual
+    reading boosts *that word's own bucket* (``None`` = wildcard, no boost).
     Runs ONE query per chunk (``WHERE term IN (...) OR reading IN (...)``)
-    instead of one query per word, then reproduces ``_LOOKUP_SQL``'s ordering
-    and ``LIMIT 5`` in Python so each per-word result is byte-identical,
-    row-for-row, to ``lookup(conn, word)``.
+    instead of one query per word, then reproduces ``_LOOKUP_SQL``'s reading
+    boost, ordering, and ``LIMIT`` in Python so each per-word result is
+    byte-identical, row-for-row, to ``lookup(conn, word, reading)``.
 
-    Returns a dict keyed by every requested word (duplicates collapse). A word
-    with no matches maps to ``[]``, mirroring ``lookup``'s empty-result case.
+    Returns a dict keyed by every requested word (duplicate words collapse to the
+    first reading seen). A word with no matches maps to ``[]``, mirroring
+    ``lookup``'s empty-result case.
     """
-    # Preserve first-seen order; collapse duplicate requests to one bucket.
-    unique: list[str] = []
+    # Preserve first-seen order; collapse duplicate words to one bucket (first
+    # reading wins, matching the caller's own word-level dedup).
+    unique_pairs: list[tuple[str, str | None]] = []
     seen: set[str] = set()
-    for w in words:
-        if w not in seen:
-            seen.add(w)
-            unique.append(w)
+    for word, reading in pairs:
+        if word not in seen:
+            seen.add(word)
+            unique_pairs.append((word, reading))
 
-    result: dict[str, list[tuple[str, str]]] = {w: [] for w in unique}
-    if not unique:
+    result: dict[str, list[tuple[str, str, int | None]]] = {w: [] for w, _ in unique_pairs}
+    if not unique_pairs:
         return result
 
-    for start in range(0, len(unique), _BIND_CHUNK):
-        chunk = unique[start : start + _BIND_CHUNK]
+    # Per-word folded boost reading (hiragana-folded to match stored readings);
+    # None keeps the wildcard (no-boost) ordering for that word.
+    boost_by_word: dict[str, str | None] = {
+        w: (katakana_to_hiragana(r) if r is not None else None) for w, r in unique_pairs
+    }
+    unique_words = [w for w, _ in unique_pairs]
+
+    for start in range(0, len(unique_words), _BIND_CHUNK):
+        chunk = unique_words[start : start + _BIND_CHUNK]
         # Readings are stored hiragana-folded, so the ``reading IN`` clause must
         # bind the folded query words (touch point b) — a katakana requested
         # word still fetches the row whose folded reading it matches.
@@ -395,15 +431,18 @@ def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tu
         # Bucket each fetched row to every requested word it can satisfy. A row
         # may match one word by term and a different word by reading. Each entry
         # carries the sort keys that reproduce _LOOKUP_SQL's
-        # "ORDER BY (term=?) DESC, score DESC, sequence", plus a final ``id``
-        # tiebreak (OVH-027):
+        # "ORDER BY (term=?) DESC, (reading=?) DESC, score DESC, sequence", plus a
+        # final ``id`` tiebreak:
         #   * term_priority: 0 when this row's term equals the word (DESC puts
         #     term matches first), else 1.
+        #   * reading_priority: mirrors the reading boost ``(reading=?) DESC``
+        #     against THIS word's contextual reading (0 match / 1 differ / 2 NULL;
+        #     constant when the word has no boost). See _reading_priority.
         #   * score_key: (is_null, -score) mirrors ``score DESC`` with NULL last.
         #   * _seq_key(sequence): NULL-aware ascending sequence tiebreak.
-        #   * row_id: SQLite resolves equal (term_priority, score, sequence) ties
-        #     by rowid ascending under the single-word query's MULTI-INDEX OR
-        #     plan; replaying it here keeps lookup_many byte-identical to lookup.
+        #   * row_id: SQLite resolves equal (priority, score, sequence) ties by
+        #     rowid ascending under the single-word query's MULTI-INDEX OR plan;
+        #     replaying it here keeps lookup_many byte-identical to lookup.
         chunk_set = set(chunk)
         # Hiragana-keyed reverse map (touch point c): folded requested word →
         # the requested word(s) that fold to it. A reading-only hit is assigned
@@ -413,9 +452,12 @@ def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tu
         reading_reverse: dict[str, list[str]] = {}
         for w, wf in zip(chunk, folded_chunk, strict=True):
             reading_reverse.setdefault(wf, []).append(w)
-        buckets: dict[str, list[tuple[int, tuple[int, int], tuple[int, int], int, str, str]]] = {w: [] for w in chunk}
+        buckets: dict[str, list[tuple[int, int, tuple[int, int], tuple[int, int], int, str, str, int | None]]] = {
+            w: [] for w in chunk
+        }
         for row_id, term, reading, content, tags, score, sequence in rows:
             tags_val = tags if tags is not None else ""
+            folded_reading = katakana_to_hiragana(reading) if reading is not None else None
             seq_key = _seq_key(sequence)
             score_key = _score_key(score)
             # A row satisfies a word via term OR reading. _LOOKUP_SQL's
@@ -425,15 +467,18 @@ def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tu
             matched: dict[str, int] = {}
             if term in chunk_set:
                 matched[term] = 0
-            if reading is not None:
-                for w in reading_reverse.get(katakana_to_hiragana(reading), ()):
+            if folded_reading is not None:
+                for w in reading_reverse.get(folded_reading, ()):
                     matched.setdefault(w, 1)
             for w, term_priority in matched.items():
-                buckets[w].append((term_priority, score_key, seq_key, row_id, content, tags_val))
+                reading_priority = _reading_priority(folded_reading, boost_by_word[w])
+                buckets[w].append(
+                    (term_priority, reading_priority, score_key, seq_key, row_id, content, tags_val, sequence)
+                )
 
         for w, entries in buckets.items():
-            entries.sort(key=lambda e: (e[0], e[1], e[2], e[3]))
-            result[w] = [(content, tags) for _p, _ns, _s, _id, content, tags in entries[:5]]
+            entries.sort(key=lambda e: (e[0], e[1], e[2], e[3], e[4]))
+            result[w] = [(content, tags, seq) for *_keys, content, tags, seq in entries[:_LOOKUP_LIMIT]]
 
     return result
 
@@ -464,6 +509,19 @@ def terms_exist(conn: sqlite3.Connection, terms: list[str]) -> set[str]:
         ).fetchall()
         found.update(row[0] for row in rows)
     return found
+
+
+# Sort key mirroring SQLite "ORDER BY (reading = ?) DESC" for the reading boost.
+# With no boost bound (folded_boost is None), the SQL predicate is NULL for every
+# row so all rows tie — return a constant. With a boost: a row whose folded
+# reading equals it ranks first (SQL true 1), a differing non-NULL reading next
+# (SQL false 0), and a NULL reading last (SQL NULL sorts last under DESC).
+def _reading_priority(folded_row_reading: str | None, folded_boost: str | None) -> int:
+    if folded_boost is None:
+        return 0
+    if folded_row_reading is None:
+        return 2
+    return 0 if folded_row_reading == folded_boost else 1
 
 
 # Sort key mirroring SQLite "ORDER BY sequence": NULL sorts before any value.
