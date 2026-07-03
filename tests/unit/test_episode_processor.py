@@ -4683,15 +4683,15 @@ class TestAudioFailureDiagnosis:
     def test_ssl_dominant_reports_certificate_connection_message(self):
         msg = _audio_failure_diagnosis(_counts(ssl=8), attempts=10)
         assert msg is not None
-        assert "certificate/connection failure" in msg
+        assert "connection/certificate failure" in msg
 
     def test_connection_dominant_reports_certificate_connection_message(self):
         msg = _audio_failure_diagnosis(_counts(connection=6), attempts=10)
-        assert "certificate/connection failure" in msg
+        assert "connection/certificate failure" in msg
 
     def test_timeout_dominant_reports_certificate_connection_message(self):
         msg = _audio_failure_diagnosis(_counts(timeout=6), attempts=10)
-        assert "certificate/connection failure" in msg
+        assert "connection/certificate failure" in msg
 
     def test_http_status_dominant_reports_server_errors(self):
         msg = _audio_failure_diagnosis(_counts(http_status=6), attempts=10)
@@ -4704,7 +4704,7 @@ class TestAudioFailureDiagnosis:
     def test_tie_resolves_to_ssl_first(self):
         # ssl and http_status tie at 3 each; ssl wins on stable key order.
         msg = _audio_failure_diagnosis(_counts(ssl=3, http_status=3), attempts=10)
-        assert "certificate/connection failure" in msg
+        assert "connection/certificate failure" in msg
 
     def test_exactly_half_triggers(self):
         # total * 2 >= attempts boundary: 5 failures / 10 attempts fires.
@@ -4766,7 +4766,7 @@ class TestProcessorAudioFailureSummary:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
-        assert any("certificate/connection failure" in w for w in warnings)
+        assert any("connection/certificate failure" in w for w in warnings)
 
     def test_no_failures_emits_no_warning(self, test_config, mock_services, tmp_path):
         config = self._enabled_config(test_config)

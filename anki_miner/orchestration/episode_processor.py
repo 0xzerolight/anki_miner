@@ -112,11 +112,13 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     """Name the dominant expression-audio failure cause, or None.
 
     ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
-    failure bucket (ssl/connection/timeout/http_status/non_audio). Only surfaces
-    a diagnosis when transient failures DOMINATE the run — a genuine "word not in
-    JPod101" miss is never counted, so a high total means something systemic
-    (expired certificate, outage, rate-limit) rather than words simply being
-    absent. Scattered failures among mostly-successful fetches stay quiet.
+    failure bucket (ssl/connection/timeout/http_status/non_audio), aggregated
+    across every enabled word-audio source (packs, JPod101, custom URL/JSON,
+    scrape, gTTS). Only surfaces a diagnosis when transient failures DOMINATE the
+    run — a genuine "word not in any source" miss is never counted, so a high
+    total means something systemic (expired certificate, outage, rate-limit)
+    rather than words simply being absent. Scattered failures among
+    mostly-successful fetches stay quiet.
 
     Ties resolve to the earliest bucket (ssl first) via ``max`` over a stable
     key order, matching Yomitan's priority on the most actionable cause.
@@ -132,16 +134,16 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     if dominant in ("ssl", "connection", "timeout"):
         return QCoreApplication.translate(
             "EpisodeProcessor",
-            "JPod101 certificate/connection failure — audio skipped this run, will retry next run",
+            "Word-audio source connection/certificate failure — audio skipped this run, will retry next run",
         )
     if dominant == "http_status":
         return QCoreApplication.translate(
             "EpisodeProcessor",
-            "JPod101 returned repeated server errors — audio skipped this run, will retry next run",
+            "Word-audio source returned repeated server errors — audio skipped this run, will retry next run",
         )
     return QCoreApplication.translate(
         "EpisodeProcessor",
-        "JPod101 returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run",
+        "Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run",
     )
 
 
