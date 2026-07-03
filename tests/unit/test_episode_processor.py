@@ -4635,3 +4635,74 @@ class TestProcessorAudioFailureSummary:
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         assert result.cards_created == 1
+
+
+class TestDictionaryStalenessGate:
+    """4.0 backstop: process_episode refuses to start when an enabled indexed
+    dict slot is schema-stale, rather than silently emitting zero cards."""
+
+    def _make_meta(self, tmp_path):
+        from anki_miner.services.dictionary.registry import DictMeta
+
+        return DictMeta(
+            dict_id="old-dict",
+            source_name="Old Dict",
+            format="yomitan",
+            entry_count=0,
+            schema_ok=False,
+            db_path=tmp_path / "old-dict" / "index.sqlite",
+        )
+
+    def _make_processor(self, test_config, registry):
+        subtitle_parser = MagicMock()
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return EpisodeProcessor(
+            config=test_config,
+            subtitle_parser=subtitle_parser,
+            word_filter=MagicMock(),
+            media_extractor=media_extractor,
+            definition_service=definition_service,
+            anki_service=anki_service,
+            presenter=NullPresenter(),
+            dictionary_registry=registry,
+        )
+
+    def test_stale_enabled_slot_raises_actionable_error(self, test_config, tmp_path):
+        registry = MagicMock()
+        registry.stale_enabled.return_value = [self._make_meta(tmp_path)]
+        proc = self._make_processor(test_config, registry)
+
+        with pytest.raises(SetupError, match="Reimport All"):
+            proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")
+        # Aborted before any Anki work / parsing.
+        proc.anki_service.verify_card_target.assert_not_called()
+        proc.subtitle_parser.parse_subtitle_file.assert_not_called()
+
+    def test_no_stale_slot_proceeds(self, test_config, tmp_path):
+        registry = MagicMock()
+        registry.stale_enabled.return_value = []
+        proc = self._make_processor(test_config, registry)
+
+        proc.subtitle_parser.parse_subtitle_file.return_value = []
+        # No words → early return, but the point is it did NOT raise.
+        result = proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")
+        assert result is not None
+        proc.subtitle_parser.parse_subtitle_file.assert_called_once()
+
+    def test_preview_mode_skips_gate(self, test_config, tmp_path):
+        """Preview creates no cards, so the gate (like the card-target preflight)
+        does not fire."""
+        registry = MagicMock()
+        registry.stale_enabled.return_value = [self._make_meta(tmp_path)]
+        proc = self._make_processor(test_config, registry)
+        proc.subtitle_parser.parse_subtitle_file.return_value = []
+        # Should not raise in preview mode.
+        proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass", preview_mode=True)
+
+    def test_no_registry_is_noop(self, test_config, tmp_path):
+        proc = self._make_processor(test_config, None)
+        proc.subtitle_parser.parse_subtitle_file.return_value = []
+        proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")
+        proc.subtitle_parser.parse_subtitle_file.assert_called_once()

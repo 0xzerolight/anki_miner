@@ -21,9 +21,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from anki_miner.utils.text_utils import katakana_to_hiragana
+
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Lone UTF-16 surrogates (U+D800–U+DFFF) have no valid UTF-8 encoding, so sqlite3
 # raises ``UnicodeEncodeError: surrogates not allowed`` the moment such text is
@@ -60,11 +62,20 @@ CREATE TABLE IF NOT EXISTS entries (
     reading   TEXT,
     content   TEXT NOT NULL,
     tags      TEXT NOT NULL DEFAULT '',
+    rules     TEXT NOT NULL DEFAULT '',
     score     INTEGER DEFAULT 0,
     sequence  INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_term    ON entries(term);
 CREATE INDEX IF NOT EXISTS idx_reading ON entries(reading);
+
+CREATE TABLE IF NOT EXISTS tags (
+    name     TEXT PRIMARY KEY,
+    category TEXT,
+    ord      INTEGER,
+    notes    TEXT,
+    score    REAL
+);
 
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
@@ -98,8 +109,39 @@ class DictRow:
     reading: str | None
     content: str
     tags: str = ""
+    # Yomitan term-bank ``ruleIdentifiers`` (entry[3]): space-separated
+    # deinflection condition flags (e.g. "v5 vs"). Stored for the schema-v3
+    # deinflector-fallback consumer (plan item 5.2); no reader in 4.6.
+    rules: str = ""
     score: int = 0
     sequence: int | None = None
+
+
+@dataclass(frozen=True)
+class TagMeta:
+    """One tag-metadata row. Mirrors the ``tags`` table schema.
+
+    Ported from Yomitan ``DictionaryImporter._convertTagBankEntry``
+    (ext/js/dictionary/dictionary-importer.js, upstream e2ed450): a tag-bank
+    5-tuple ``[name, category, order, notes, score]`` — ``order`` is stored in
+    the ``ord`` column (SQL keyword clash) and drives chip sorting.
+    """
+
+    name: str
+    category: str
+    ord: int
+    notes: str
+    score: float
+
+
+def _fold_reading(reading: str | None) -> str | None:
+    """Hiragana-fold a stored reading (katakana → hiragana), preserving None.
+
+    Readings are stored hiragana-normalized so a katakana loanword reading and
+    its hiragana equivalent collate to one key; lookup folds the query side to
+    match (schema v3, plan item 5.1 match-by-kana invariant).
+    """
+    return katakana_to_hiragana(reading) if reading is not None else None
 
 
 def create_index(db_path: Path) -> None:
@@ -125,26 +167,31 @@ def bulk_insert(db_path: Path, rows: Iterable[DictRow], batch_size: int = 5000) 
     try:
         batch: list[tuple] = []
         for row in rows:
+            # reading is stored hiragana-folded so katakana/hiragana readings
+            # collate to one key (schema v3); lookup folds the query side too.
             batch.append(
                 (
                     _scrub_surrogates(row.term),
-                    _scrub_surrogates(row.reading),
+                    _scrub_surrogates(_fold_reading(row.reading)),
                     _scrub_surrogates(row.content),
                     _scrub_surrogates(row.tags),
+                    _scrub_surrogates(row.rules),
                     row.score,
                     row.sequence,
                 )
             )
             if len(batch) >= batch_size:
                 conn.executemany(
-                    "INSERT INTO entries (term, reading, content, tags, score, sequence) " "VALUES (?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO entries (term, reading, content, tags, rules, score, sequence) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
                     batch,
                 )
                 total += len(batch)
                 batch.clear()
         if batch:
             conn.executemany(
-                "INSERT INTO entries (term, reading, content, tags, score, sequence) " "VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO entries (term, reading, content, tags, rules, score, sequence) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 batch,
             )
             total += len(batch)
@@ -152,6 +199,58 @@ def bulk_insert(db_path: Path, rows: Iterable[DictRow], batch_size: int = 5000) 
     finally:
         conn.close()
     return total
+
+
+def write_tags(db_path: Path, tags: Iterable[TagMeta]) -> int:
+    """Insert tag-metadata rows into the ``tags`` table. Returns total written.
+
+    Uses ``INSERT OR REPLACE`` on the ``name`` primary key so a tag appearing in
+    more than one ``tag_bank_*.json`` (or duplicated between a tag bank and the
+    legacy ``index.json`` ``tagMeta``) collapses to its last-seen definition
+    rather than raising. Text fields are surrogate-scrubbed like every other
+    write seam (Issue #67).
+    """
+    total = 0
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.executemany(
+            "INSERT OR REPLACE INTO tags (name, category, ord, notes, score) VALUES (?, ?, ?, ?, ?)",
+            (
+                (
+                    _scrub_surrogates(t.name),
+                    _scrub_surrogates(t.category),
+                    t.ord,
+                    _scrub_surrogates(t.notes),
+                    t.score,
+                )
+                for t in tags
+            ),
+        )
+        total = conn.total_changes
+        conn.commit()
+    finally:
+        conn.close()
+    return total
+
+
+def read_tags(conn: sqlite3.Connection) -> dict[str, TagMeta]:
+    """Return all tag-metadata rows keyed by tag name.
+
+    Consumed by the provider's lazy per-dictionary tag cache to expand tag
+    names into hover chips. A dictionary with no ``tag_bank`` / legacy
+    ``tagMeta`` simply yields an empty dict (every tag then falls back to the
+    italic token line).
+    """
+    result: dict[str, TagMeta] = {}
+    for name, category, ord_, notes, score in conn.execute("SELECT name, category, ord, notes, score FROM tags"):
+        result[name] = TagMeta(
+            name=name,
+            category=category if category is not None else "",
+            ord=ord_ if ord_ is not None else 0,
+            notes=notes if notes is not None else "",
+            score=float(score) if score is not None else 0.0,
+        )
+    return result
 
 
 def write_meta(db_path: Path, items: dict[str, str]) -> None:
@@ -239,8 +338,15 @@ def open_readonly(db_path: Path) -> sqlite3.Connection:
 
 
 def lookup(conn: sqlite3.Connection, word: str) -> list[tuple[str, str]]:
-    """Return up to 5 (content, tags) pairs matching word (term or reading)."""
-    rows = conn.execute(_LOOKUP_SQL, (word, word, word)).fetchall()
+    """Return up to 5 (content, tags) pairs matching word (term or reading).
+
+    Readings are stored hiragana-folded, so the reading comparison binds the
+    folded query while the term comparison (and the ``(term = ?)`` priority
+    tiebreak) binds the raw word — a katakana query still matches a kanji
+    headword's folded reading (schema v3, touch point a).
+    """
+    folded = katakana_to_hiragana(word)
+    rows = conn.execute(_LOOKUP_SQL, (word, folded, word)).fetchall()
     return [(row[0], row[1]) for row in rows]
 
 
@@ -275,12 +381,16 @@ def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tu
 
     for start in range(0, len(unique), _BIND_CHUNK):
         chunk = unique[start : start + _BIND_CHUNK]
+        # Readings are stored hiragana-folded, so the ``reading IN`` clause must
+        # bind the folded query words (touch point b) — a katakana requested
+        # word still fetches the row whose folded reading it matches.
+        folded_chunk = [katakana_to_hiragana(w) for w in chunk]
         placeholders = ", ".join("?" for _ in chunk)
         sql = (
             "SELECT id, term, reading, content, tags, score, sequence FROM entries "
             f"WHERE term IN ({placeholders}) OR reading IN ({placeholders})"
         )
-        rows = conn.execute(sql, (*chunk, *chunk)).fetchall()
+        rows = conn.execute(sql, (*chunk, *folded_chunk)).fetchall()
 
         # Bucket each fetched row to every requested word it can satisfy. A row
         # may match one word by term and a different word by reading. Each entry
@@ -295,18 +405,31 @@ def lookup_many(conn: sqlite3.Connection, words: list[str]) -> dict[str, list[tu
         #     by rowid ascending under the single-word query's MULTI-INDEX OR
         #     plan; replaying it here keeps lookup_many byte-identical to lookup.
         chunk_set = set(chunk)
+        # Hiragana-keyed reverse map (touch point c): folded requested word →
+        # the requested word(s) that fold to it. A reading-only hit is assigned
+        # back through this map so a katakana requested word (whose raw form no
+        # longer equals the folded stored reading) is not silently dropped —
+        # the divergence that would break the lookup_many == lookup invariant.
+        reading_reverse: dict[str, list[str]] = {}
+        for w, wf in zip(chunk, folded_chunk, strict=True):
+            reading_reverse.setdefault(wf, []).append(w)
         buckets: dict[str, list[tuple[int, tuple[int, int], tuple[int, int], int, str, str]]] = {w: [] for w in chunk}
         for row_id, term, reading, content, tags, score, sequence in rows:
             tags_val = tags if tags is not None else ""
             seq_key = _seq_key(sequence)
+            score_key = _score_key(score)
             # A row satisfies a word via term OR reading. _LOOKUP_SQL's
             # ``term=? OR reading=?`` returns each row ONCE per word even when
-            # both columns match, so de-dup the (term, reading) pair here.
-            for w in {term, reading}:
-                if w is not None and w in chunk_set:
-                    term_priority = 0 if term == w else 1
-                    score_key = _score_key(score)
-                    buckets[w].append((term_priority, score_key, seq_key, row_id, content, tags_val))
+            # both columns match, so collapse to one entry per requested word,
+            # letting the term match (priority 0) win over a reading-only one.
+            matched: dict[str, int] = {}
+            if term in chunk_set:
+                matched[term] = 0
+            if reading is not None:
+                for w in reading_reverse.get(katakana_to_hiragana(reading), ()):
+                    matched.setdefault(w, 1)
+            for w, term_priority in matched.items():
+                buckets[w].append((term_priority, score_key, seq_key, row_id, content, tags_val))
 
         for w, entries in buckets.items():
             entries.sort(key=lambda e: (e[0], e[1], e[2], e[3]))

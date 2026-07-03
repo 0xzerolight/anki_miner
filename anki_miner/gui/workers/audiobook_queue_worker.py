@@ -39,6 +39,7 @@ from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.models.audiobook_queue import AudiobookQueueItem
 from anki_miner.orchestration import EpisodeProcessor
+from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +146,14 @@ class AudiobookQueueWorker(ProcessorOwningWorker):
 
     def run(self) -> None:
         """Process the queue end-to-end, one mining attempt per item."""
+        # Schema-staleness pre-loop gate (4.0): abort the whole queue once with
+        # a single actionable error when an enabled indexed dict slot needs
+        # reimport, instead of one silent zero-card failure row per item.
+        stale_msg = stale_dict_reimport_error(self._config)
+        if stale_msg is not None:
+            self.error.emit(stale_msg)
+            self.queue_finished.emit()
+            return
         # Build the processor on the worker thread when a factory was supplied,
         # keeping the GUI thread free of the slow registry/sqlite/CSV work during
         # EpisodeProcessor construction. A factory failure ends the whole run:

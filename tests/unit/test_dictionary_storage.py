@@ -10,6 +10,7 @@ import pytest
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
+    TagMeta,
     bulk_insert,
     create_index,
     lookup,
@@ -17,8 +18,10 @@ from anki_miner.services.dictionary.storage import (
     open_readonly,
     read_meta,
     read_meta_cached,
+    read_tags,
     terms_exist,
     write_meta,
+    write_tags,
 )
 
 
@@ -35,8 +38,8 @@ class TestCreateIndex:
             assert "idx_term" in indexes
             assert "idx_reading" in indexes
 
-    def test_schema_version_is_2(self):
-        assert SCHEMA_VERSION == 2
+    def test_schema_version_is_3(self):
+        assert SCHEMA_VERSION == 3
 
     def test_entries_table_has_tags_column(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"
@@ -50,6 +53,156 @@ class TestCreateIndex:
             assert tags_col[2] == "TEXT"
             assert tags_col[3] == 1  # NOT NULL
             assert tags_col[4] == "''"  # default empty string
+
+    def test_entries_table_has_rules_column(self, tmp_path: Path):
+        """schema v3 adds ``entries.rules TEXT NOT NULL DEFAULT ''``."""
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+
+        with sqlite3.connect(db_path) as conn:
+            cols = {row[1]: row for row in conn.execute("PRAGMA table_info(entries)")}
+            assert "rules" in cols
+            rules_col = cols["rules"]
+            assert rules_col[2] == "TEXT"
+            assert rules_col[3] == 1  # NOT NULL
+            assert rules_col[4] == "''"  # default empty string
+
+    def test_tags_table_created(self, tmp_path: Path):
+        """schema v3 adds a ``tags`` metadata table keyed by name."""
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+
+        with sqlite3.connect(db_path) as conn:
+            tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            assert "tags" in tables
+            cols = {row[1] for row in conn.execute("PRAGMA table_info(tags)")}
+            assert cols == {"name", "category", "ord", "notes", "score"}
+
+
+class TestRulesColumn:
+    def test_rules_round_trip(self, tmp_path: Path):
+        """DictRow.rules is written to the entries table (no reader in 4.6)."""
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [DictRow(term="走る", reading="はしる", content="<div>run</div>", rules="v5r vi", sequence=1)],
+        )
+        conn = open_readonly(db_path)
+        try:
+            got = conn.execute("SELECT rules FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
+            assert got == "v5r vi"
+        finally:
+            conn.close()
+
+    def test_rules_defaults_empty(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        bulk_insert(db_path, [DictRow(term="空", reading="そら", content="<div>sky</div>", sequence=1)])
+        conn = open_readonly(db_path)
+        try:
+            assert conn.execute("SELECT rules FROM entries WHERE term = ?", ("空",)).fetchone()[0] == ""
+        finally:
+            conn.close()
+
+
+class TestTags:
+    def test_write_then_read_tags(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        write_tags(
+            db_path,
+            [
+                TagMeta(name="uk", category="usage", ord=-2, notes="usually kana", score=0.0),
+                TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=1.0),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            tags = read_tags(conn)
+        finally:
+            conn.close()
+        assert set(tags) == {"uk", "n"}
+        assert tags["uk"] == TagMeta(name="uk", category="usage", ord=-2, notes="usually kana", score=0.0)
+        assert tags["n"].notes == "noun"
+
+    def test_write_tags_last_wins_on_duplicate_name(self, tmp_path: Path):
+        """A tag name appearing twice collapses to the last definition."""
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        write_tags(db_path, [TagMeta("x", "a", 0, "first", 0.0)])
+        write_tags(db_path, [TagMeta("x", "b", 1, "second", 2.0)])
+        conn = open_readonly(db_path)
+        try:
+            tags = read_tags(conn)
+        finally:
+            conn.close()
+        assert tags["x"] == TagMeta("x", "b", 1, "second", 2.0)
+
+    def test_read_tags_empty_when_none_written(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        conn = open_readonly(db_path)
+        try:
+            assert read_tags(conn) == {}
+        finally:
+            conn.close()
+
+
+class TestReadingNormalization:
+    """Readings are stored hiragana-folded; lookup folds the query so a
+    katakana word still matches a kanji headword's reading (schema v3)."""
+
+    def test_stored_reading_is_hiragana_folded(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        # Kanji headword with a katakana reading (硝子 / ガラス, "glass").
+        bulk_insert(db_path, [DictRow(term="硝子", reading="ガラス", content="<div>glass</div>", sequence=1)])
+        conn = open_readonly(db_path)
+        try:
+            stored = conn.execute("SELECT reading FROM entries WHERE term = ?", ("硝子",)).fetchone()[0]
+            assert stored == "がらす"  # folded at write
+        finally:
+            conn.close()
+
+    def test_katakana_query_matches_folded_reading(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        bulk_insert(db_path, [DictRow(term="硝子", reading="ガラス", content="<div>glass</div>", sequence=1)])
+        conn = open_readonly(db_path)
+        try:
+            # Query with katakana AND hiragana — both fold to がらす and hit.
+            assert lookup(conn, "ガラス") == [("<div>glass</div>", "")]
+            assert lookup(conn, "がらす") == [("<div>glass</div>", "")]
+        finally:
+            conn.close()
+
+    def test_lookup_many_equals_lookup_for_katakana_reading(self, tmp_path: Path):
+        """The bucket reverse-map fold: a reading-only katakana hit must be
+        assigned back in lookup_many exactly as single lookup returns it.
+
+        This is the guard the brief pins — without the hiragana-keyed reverse
+        map the katakana requested word is silently dropped by lookup_many
+        while single lookup still returns it."""
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="硝子", reading="ガラス", content="<div>glass</div>", sequence=1),
+                DictRow(term="林檎", reading="リンゴ", content="<div>apple</div>", sequence=2),
+            ],
+        )
+        words = ["ガラス", "がらす", "リンゴ", "りんご", "硝子", "missing"]
+        conn = open_readonly(db_path)
+        try:
+            batch = lookup_many(conn, words)
+            for w in words:
+                assert batch[w] == lookup(conn, w), f"mismatch for {w!r}"
+            # The katakana reading-only hit is present, not dropped.
+            assert batch["ガラス"] == [("<div>glass</div>", "")]
+        finally:
+            conn.close()
 
 
 class TestBulkInsertAndLookup:

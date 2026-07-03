@@ -62,6 +62,7 @@ from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.models.youtube_queue import YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
+from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 
 logger = logging.getLogger(__name__)
 
@@ -172,6 +173,15 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
 
     def run(self) -> None:
         """Process the queue end-to-end with retry-once per fetch error."""
+        # Schema-staleness pre-loop gate (4.0): abort the whole queue once with
+        # a single actionable error when an enabled indexed dict slot needs
+        # reimport — before any fetch/mine — instead of one silent zero-card
+        # failure row per queued video.
+        stale_msg = stale_dict_reimport_error(self._config)
+        if stale_msg is not None:
+            self.error.emit(stale_msg)
+            self.queue_finished.emit()
+            return
         # Build the processor on the worker thread when a factory was supplied,
         # keeping the GUI thread free of the slow registry/sqlite/CSV work during
         # EpisodeProcessor construction. A factory failure ends the whole run:
