@@ -240,6 +240,46 @@ class AnkiService:
             query += f' -deck:"{safe}"'
         return query
 
+    def find_notes(self, query: str) -> list[int]:
+        """Return note IDs matching an Anki search ``query`` (AnkiConnect ``findNotes``)."""
+        return _expect_list(
+            post_action(self.config.ankiconnect_url, "findNotes", params={"query": query}, timeout=30) or [],
+            "findNotes",
+            elem_type=int,
+        )
+
+    def notes_info(self, note_ids: list[int]) -> list[dict]:
+        """Return per-note info dicts for ``note_ids`` (``notesInfo``); ``[]`` for empty input.
+
+        Each dict carries ``noteId`` and a ``fields`` map ``{name: {"value": …}}``;
+        a deleted note comes back as ``{}``.
+        """
+        if not note_ids:
+            return []
+        return _expect_list(
+            post_action(self.config.ankiconnect_url, "notesInfo", params={"notes": note_ids}, timeout=60) or [],
+            "notesInfo",
+            elem_type=dict,
+        )
+
+    def update_notes_fields(self, updates: list[tuple[int, dict[str, str]]]) -> int:
+        """Overwrite fields on many notes in one batch (``updateNoteFields`` via ``post_multi``).
+
+        ``updates`` is ``[(note_id, {field_name: value})]``. Returns the count of
+        notes updated without an AnkiConnect error. This writes note *content*
+        (fields the app already fills at mining time), never note-type styling.
+        Returns 0 for empty input.
+        """
+        if not updates:
+            return 0
+        actions = [
+            {"action": "updateNoteFields", "version": 6, "params": {"note": {"id": nid, "fields": fields}}}
+            for nid, fields in updates
+        ]
+        results = post_multi(self.config.ankiconnect_url, actions, timeout=60)
+        errors = sum(1 for sub in results[: len(actions)] if isinstance(sub, dict) and sub.get("error"))
+        return len(actions) - errors
+
     def get_existing_vocabulary(self) -> set[str]:
         """Get all Japanese vocabulary words already in Anki.
 

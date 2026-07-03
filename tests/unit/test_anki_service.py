@@ -4027,3 +4027,49 @@ class TestDuplicateBehaviorUpdate:
         assert service.last_skipped_duplicates == 1
         assert service.last_created_note_ids == []
         assert self._actions(mock_post) == ["canAddNotesWithErrorDetail", "multi"]
+
+
+class TestNoteFieldPrimitives:
+    """find_notes / notes_info / update_notes_fields (used by the Restyle tool)."""
+
+    def test_find_notes(self, test_config):
+        service = AnkiService(test_config)
+        with patch("anki_miner.services.anki_service.post_action", return_value=[1, 2, 3]) as pa:
+            assert service.find_notes("deck:X") == [1, 2, 3]
+        assert pa.call_args[0][1] == "findNotes"
+        assert pa.call_args[1]["params"] == {"query": "deck:X"}
+
+    def test_notes_info(self, test_config):
+        service = AnkiService(test_config)
+        info = [{"noteId": 1, "fields": {"Glossary": {"value": "x"}}}]
+        with patch("anki_miner.services.anki_service.post_action", return_value=info) as pa:
+            assert service.notes_info([1]) == info
+        assert pa.call_args[0][1] == "notesInfo"
+        assert pa.call_args[1]["params"] == {"notes": [1]}
+
+    def test_notes_info_empty_short_circuits(self, test_config):
+        service = AnkiService(test_config)
+        with patch("anki_miner.services.anki_service.post_action") as pa:
+            assert service.notes_info([]) == []
+        pa.assert_not_called()
+
+    def test_update_notes_fields_batches_and_shapes(self, test_config):
+        service = AnkiService(test_config)
+        updates = [(1, {"Glossary": "a"}), (2, {"Glossary": "b"})]
+        with patch("anki_miner.services.anki_service.post_multi", return_value=[None, None]) as pm:
+            assert service.update_notes_fields(updates) == 2
+        actions = pm.call_args[0][1]
+        assert [a["action"] for a in actions] == ["updateNoteFields", "updateNoteFields"]
+        assert actions[0]["params"]["note"] == {"id": 1, "fields": {"Glossary": "a"}}
+
+    def test_update_notes_fields_subtracts_errors(self, test_config):
+        service = AnkiService(test_config)
+        updates = [(1, {"Glossary": "a"}), (2, {"Glossary": "b"})]
+        with patch("anki_miner.services.anki_service.post_multi", return_value=[None, {"error": "boom"}]):
+            assert service.update_notes_fields(updates) == 1
+
+    def test_update_notes_fields_empty_short_circuits(self, test_config):
+        service = AnkiService(test_config)
+        with patch("anki_miner.services.anki_service.post_multi") as pm:
+            assert service.update_notes_fields([]) == 0
+        pm.assert_not_called()

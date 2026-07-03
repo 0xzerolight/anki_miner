@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Restyle older cards to match the new self-contained styling.** Tools → Restyle Mined Cards embeds the built-in glossary stylesheet directly into cards you mined before the self-contained-CSS change, so they render the same as cards mined now — no re-mining needed. It's safe to run more than once and only adds styling (it never removes card content), touches only Anki Miner's own cards on your configured note type, and leaves genuine Yomitan-exported cards alone.
 - **Dictionaries can check for updates.** Settings → Dictionaries gains a "Check for Updates" action: for dictionaries that publish an index URL (Jitendex-style `isUpdatable` metadata, kept at import), it fetches the remote index, validates it, and reports "rev X → rev Y" with the download link — you import the new zip through the normal flow. All network access stays behind the explicit click.
 - **Duplicates can update the existing card instead of being skipped (opt-in).** With `duplicate_behavior: "update"`, a re-mined word fills the empty mapped fields of its existing note (never touching fields you've edited) — useful after mapping new fields like pitch or cloze. Default remains skip.
 - **Settings exposes the new card fields, and hand-edited mappings survive.** The field-mapping panel gains inputs for the cloze and conjugation fields, and saving Settings no longer wipes `anki_fields` keys the panel doesn't know about.
