@@ -279,18 +279,6 @@ class AnkiMinerConfig:
     # the Deck Builder. Default False preserves the standard dedup behaviour.
     allow_duplicate_cards: bool = False
 
-    # Pre-add duplicate-detection scope (Yomitan duplicateScope). "collection"
-    # (default) matches AnkiConnect's implicit default, so anki_note_builder emits
-    # NO options object and the wire stays byte-identical to pre-7.3. "deck"
-    # scopes the check to the target deck; "deck-root" scopes it to the whole
-    # subdeck tree under the deck root (per-show subdecks share one dedup scope,
-    # synthesized client-side via getRootDeckName + checkChildren). Moving off
-    # "collection" — or enabling duplicate_check_all_models — makes the builder
-    # emit the explicit options object, which both the pre-add probe and addNotes
-    # reuse so probe and add always agree on scope. See anki_note_builder.
-    duplicate_scope: Literal["collection", "deck", "deck-root"] = "collection"
-    duplicate_check_all_models: bool = False
-
     # Duplicate handling (7.4, Yomitan duplicateBehavior "overwrite"/coalesce).
     # "skip" (default) drops every probe-flagged duplicate — byte-identical to
     # pre-7.4 (no findNotes/notesInfo/updateNoteFields calls are ever made).
