@@ -419,6 +419,23 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes."),
         )
 
+        # Rendered pitch fields (6.3). Default blank = feature off.
+        self.pitch_graph_field_input = QLineEdit()
+        self.pitch_graph_field_input.setPlaceholderText("PitchGraph")
+        self.add_field(
+            self.tr("Pitch Graph Field"),
+            self.pitch_graph_field_input,
+            helper=self.tr("Stores the SVG pitch accent graph (Yomitan-style)."),
+        )
+
+        self.pitch_text_field_input = QLineEdit()
+        self.pitch_text_field_input.setPlaceholderText("PitchText")
+        self.add_field(
+            self.tr("Pitch Text Field"),
+            self.pitch_text_field_input,
+            helper=self.tr("Stores the overline-annotated pitch reading (Yomitan-style)."),
+        )
+
         # Frequency field (per-source breakdown of every ranked source)
         self.frequency_field_input = QLineEdit()
         self.frequency_field_input.setPlaceholderText("Frequency")
@@ -705,6 +722,8 @@ class AnkiSettingsPanel(FormPanel):
             "sentence_reading": self.sentence_reading_field_input,
             "pitch_position": self.pitch_position_field_input,
             "pitch_category": self.pitch_category_field_input,
+            "pitch_graph": self.pitch_graph_field_input,
+            "pitch_text": self.pitch_text_field_input,
             "frequency": self.frequency_field_input,
             "frequency_sort": self.frequency_sort_field_input,
             "source": self.source_field_input,
@@ -747,6 +766,8 @@ class AnkiSettingsPanel(FormPanel):
             "conjugation": self.conjugation_field_input.text().strip(),
             "pitch_position": self.pitch_position_field_input.text().strip(),
             "pitch_category": self.pitch_category_field_input.text().strip(),
+            "pitch_graph": self.pitch_graph_field_input.text().strip(),
+            "pitch_text": self.pitch_text_field_input.text().strip(),
             "frequency": self.frequency_field_input.text().strip(),
             "frequency_sort": self.frequency_sort_field_input.text().strip(),
             "source": self.source_field_input.text().strip(),
@@ -779,6 +800,8 @@ class AnkiSettingsPanel(FormPanel):
         self.conjugation_field_input.setText(fields.get("conjugation", ""))
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
+        self.pitch_graph_field_input.setText(fields.get("pitch_graph", ""))
+        self.pitch_text_field_input.setText(fields.get("pitch_text", ""))
         self.frequency_field_input.setText(fields.get("frequency", ""))
         self.frequency_sort_field_input.setText(fields.get("frequency_sort", ""))
         self.source_field_input.setText(fields.get("source", ""))
