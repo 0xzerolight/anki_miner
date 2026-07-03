@@ -128,6 +128,25 @@ class TestAddSource:
         # New entry is enabled.
         assert new_chain[-1] == FreqEntry(source_id="mylist", enabled=True)
 
+    def test_converted_note_surfaced_in_info(self, tab, monkeypatch, stub_worker, tmp_path):
+        src = tmp_path / "counts.csv"
+        src.write_text("word,count\n猫,5\n", encoding="utf-8")
+        monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(src), ""))
+        infos = _capture_infos(monkeypatch)
+        tab._frequency_import_flow._persist_chain = lambda _chain: None
+        monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
+
+        tab._frequency_import_flow.add_source()
+        instance = stub_worker.instances[0]
+        _fire_done(
+            instance,
+            "counts",
+            {"entry_count": 1, "source_name": "counts", "format": "csv", "converted_to_ranks": True},
+        )
+
+        assert infos, "success must surface an info dialog"
+        assert "converted to ranks" in infos[-1][1]
+
     def test_append_after_existing_entries(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "new.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")

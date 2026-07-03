@@ -12,11 +12,15 @@ import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.frequency import storage
+from anki_miner.services.frequency.mode_probe import LESS_COMMON_TERMS, MORE_COMMON_TERMS
 from anki_miner.services.frequency.source_importer import (
     FreqSourceImportResult,
     derive_source_id_from_zip,
     import_frequency_source,
 )
+
+_MORE_COMMON = MORE_COMMON_TERMS["ja"]
+_LESS_COMMON = LESS_COMMON_TERMS["ja"]
 
 
 def _write_zip(
@@ -118,14 +122,85 @@ class TestZipImport:
             ("生", "なま", 50),
         ]
 
-    def test_occurrence_based_rejected(self, tmp_path: Path) -> None:
+    def test_occurrence_declared_converts_to_ranks(self, tmp_path: Path) -> None:
+        # Declared occurrence-based is no longer rejected: the raw counts are
+        # re-ranked so the largest count becomes rank 1.
         zip_path = _write_zip(
             tmp_path / "occ.zip",
             frequency_mode="occurrence-based",
-            banks=[["猫", "freq", 5]],
+            banks=[["猫", "freq", 5], ["犬", "freq", 100], ["鳥", "freq", 20]],
         )
-        with pytest.raises(SetupError, match="occurrence-based"):
-            import_frequency_source(zip_path, tmp_path / "sources")
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.converted_to_ranks is True
+        assert result.entry_count == 3
+        assert _read_entries(dest, result.source_id) == [
+            ("犬", None, 1),
+            ("鳥", None, 2),
+            ("猫", None, 3),
+        ]
+
+    def test_occurrence_declared_preserves_display_value(self, tmp_path: Path) -> None:
+        zip_path = _write_zip(
+            tmp_path / "occd.zip",
+            frequency_mode="occurrence-based",
+            banks=[
+                ["猫", "freq", {"value": 5, "displayValue": "5回"}],
+                ["犬", "freq", {"value": 100, "displayValue": "100回"}],
+            ],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.converted_to_ranks is True
+        assert _read_display(dest, result.source_id) == [("犬", 1, "100回"), ("猫", 2, "5回")]
+
+    def test_rank_declared_not_converted(self, tmp_path: Path) -> None:
+        zip_path = _write_zip(
+            tmp_path / "rank.zip",
+            frequency_mode="rank-based",
+            banks=[["猫", "freq", 5], ["犬", "freq", 3]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.converted_to_ranks is False
+        assert _read_entries(dest, result.source_id) == [("犬", None, 3), ("猫", None, 5)]
+
+    def test_undeclared_occurrence_probed_and_converted(self, tmp_path: Path) -> None:
+        # No frequencyMode: the probe sees common terms with big counts and rare
+        # terms with small counts → occurrence-based → convert.
+        banks = [[t, "freq", 5000] for t in _MORE_COMMON]
+        banks += [[t, "freq", 3] for t in _LESS_COMMON]
+        zip_path = _write_zip(tmp_path / "probe_occ.zip", banks=banks)
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.converted_to_ranks is True
+        # The 10 common terms (count 5000) take ranks 1-10; rares follow.
+        entries = _read_entries(dest, result.source_id)
+        assert {term for term, _r, rank in entries if rank <= 10} == set(_MORE_COMMON)
+
+    def test_undeclared_rank_probed_not_converted(self, tmp_path: Path) -> None:
+        # Common terms with small ranks, rare terms with big ranks → rank-based.
+        banks = [[t, "freq", 10] for t in _MORE_COMMON]
+        banks += [[t, "freq", 9000] for t in _LESS_COMMON]
+        zip_path = _write_zip(tmp_path / "probe_rank.zip", banks=banks)
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.converted_to_ranks is False
+        # Ranks are stored verbatim (10 for commons, 9000 for rares).
+        by_term = {term: rank for term, _r, rank in _read_entries(dest, result.source_id)}
+        assert by_term[_MORE_COMMON[0]] == 10
+        assert by_term[_LESS_COMMON[0]] == 9000
+
+    def test_undeclared_ambiguous_not_converted(self, tmp_path: Path) -> None:
+        # No probe terms present → ambiguous → left as rank-based.
+        zip_path = _write_zip(
+            tmp_path / "amb.zip",
+            banks=[["山", "freq", 5], ["川", "freq", 3]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.converted_to_ranks is False
+        assert _read_entries(dest, result.source_id) == [("川", None, 3), ("山", None, 5)]
 
     def test_zero_usable_rejected(self, tmp_path: Path) -> None:
         # Only display-only entries → no usable ranks.
@@ -282,6 +357,28 @@ class TestCsvImport:
         dest = tmp_path / "sources"
         result = import_frequency_source(txt_path, dest)
         assert result.entry_count == 2
+
+    def test_occurrence_csv_probed_and_converted(self, tmp_path: Path) -> None:
+        # A count-based CSV (bigger = more common) is detected via the probe and
+        # re-ranked instead of silently inverting rank filtering.
+        lines = ["term,count"]
+        lines += [f"{t},5000" for t in _MORE_COMMON]
+        lines += [f"{t},3" for t in _LESS_COMMON]
+        csv_path = tmp_path / "counts.csv"
+        csv_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        dest = tmp_path / "sources"
+        result = import_frequency_source(csv_path, dest)
+        assert result.converted_to_ranks is True
+        entries = _read_entries(dest, result.source_id)
+        assert {term for term, _r, rank in entries if rank <= 10} == set(_MORE_COMMON)
+
+    def test_rank_csv_not_converted(self, tmp_path: Path) -> None:
+        csv_path = tmp_path / "ranks.csv"
+        csv_path.write_text("term,rank\n猫,5\n犬,3\n", encoding="utf-8")
+        dest = tmp_path / "sources"
+        result = import_frequency_source(csv_path, dest)
+        assert result.converted_to_ranks is False
+        assert _read_entries(dest, result.source_id) == [("犬", None, 3), ("猫", None, 5)]
 
     def test_empty_csv_rejected(self, tmp_path: Path) -> None:
         csv_path = tmp_path / "empty.csv"
