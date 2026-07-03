@@ -49,6 +49,31 @@ class TestMinifyCss:
         raw = "/* a comment */\n.x {\n    color: red;\n}\n"
         assert len(_minify_css(raw)) < len(raw)
 
+    def test_preserves_comma_inside_string(self):
+        # A comma inside a quoted value is significant text, not a CSS
+        # separator — tightening it would corrupt the rendered content.
+        assert '"a, b"' in _minify_css('.x { content: "a, b" }')
+
+    def test_preserves_semicolon_inside_string(self):
+        # Same for a semicolon: it must not be treated as a declaration end.
+        assert '"a; b"' in _minify_css('.x { content: "a; b" }')
+
+    def test_comment_marker_inside_string_is_not_stripped(self):
+        # ``/* … */`` inside a quoted value is literal text, not a comment.
+        out = _minify_css('.x { content: "/* keep */" }')
+        assert '"/* keep */"' in out
+
+    def test_still_strips_comments_and_tightens_outside_strings(self):
+        # Comments outside strings are still removed and delimiters tightened.
+        out = _minify_css("a{color:red}/* c */b{color:blue}")
+        assert "c" not in out.replace("color", "").replace("blue", "")  # comment 'c' gone
+        assert "/*" not in out
+        assert "}b{" in out  # adjacent rules tightened across the removed comment
+
+    def test_attribute_selector_string_unchanged(self):
+        # Quoted attribute-selector values (no inner comma/space) are preserved.
+        assert 'ul[data-count="0"]' in _minify_css('  ul[data-count="0"] {\n  color: red;\n}')
+
 
 class TestNoNoteTypeCssWrite:
     """The whole point of the self-contained model: Anki Miner never writes note-type CSS."""
