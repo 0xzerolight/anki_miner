@@ -139,3 +139,32 @@ class TestClozeFieldsInNote:
             set(),
         ).note
         assert default_note["fields"] == legacy_note["fields"]
+
+
+class TestConjugationField:
+    def test_unmapped_omits_field(self):
+        word = _word(inflection_chain=("-ます", "negative", "-た"))
+        note = build_note(
+            _payload(word, extra_fields={"conjugation": "-ます « negative « -た"}),
+            AnkiMinerConfig(manage_card_styling=False),
+            set(),
+        ).note
+        assert "Conjugation" not in note["fields"]
+
+    def test_mapped_writes_joined_chain(self):
+        config = _config(conjugation="Conjugation")
+        word = _word()
+        fields = build_note(
+            _payload(word, extra_fields={"conjugation": "-ます « negative « -た"}),
+            config,
+            set(),
+        ).note["fields"]
+        assert fields["Conjugation"] == "-ます « negative « -た"
+
+    def test_mapped_but_empty_chain_omits_field(self):
+        # extra_fields carries no "conjugation" key when the chain is empty
+        # (episode_processor gates on word.inflection_chain), so the mapped
+        # field is simply not written.
+        config = _config(conjugation="Conjugation")
+        fields = build_note(_payload(_word()), config, set()).note["fields"]
+        assert "Conjugation" not in fields

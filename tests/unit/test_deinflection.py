@@ -11,6 +11,7 @@ from anki_miner.services.deinflection import (
     build_condition_flags,
     conditions_match,
     find_highlight_end,
+    find_highlight_end_with_trace,
     get_japanese_deinflector,
 )
 
@@ -518,3 +519,47 @@ class TestFindHighlightEnd:
         # Fully mocked mined token: pos1 is a Mock -> immediate short-circuit.
         text = "蒔いた"
         assert find_highlight_end(text, [MagicMock()], 0, 2, MagicMock()) == 2
+
+
+class TestFindHighlightEndWithTrace:
+    """The chain returned alongside the end offset is in Yomitan attachment
+    order (dictionary form outward), matching japanese-transforms.test.js."""
+
+    def test_single_past_transform(self):
+        text = "種を蒔いた"
+        tokens = [
+            _tok("種", "名詞"),
+            _tok("を", "助詞"),
+            _tok("蒔い", "動詞", lemma="蒔く", orth_base="蒔く", ctype="五段-カ行"),
+            _tok("た", "助動詞"),
+        ]
+        assert find_highlight_end_with_trace(text, tokens, 2, 4, tokens[2]) == (5, ("-た",))
+
+    def test_te_iru_past_chain_reads_dict_form_outward(self):
+        text = "海で泳いでいた"
+        tokens = [
+            _tok("海", "名詞"),
+            _tok("で", "助詞"),
+            _tok("泳い", "動詞", lemma="泳ぐ", orth_base="泳ぐ", ctype="五段-ガ行"),
+            _tok("で", "助詞"),
+            _tok("い", "動詞", lemma="居る", orth_base="いる", ctype="上一段-ア行"),
+            _tok("た", "助動詞"),
+        ]
+        end, chain = find_highlight_end_with_trace(text, tokens, 2, 4, tokens[2])
+        assert end == 7
+        assert chain == ("-て", "-いる", "-た")
+
+    def test_no_extension_yields_empty_chain(self):
+        # 蒔いよ: よ does not deinflect to 蒔く, so no rightward extension is
+        # accepted and the chain is empty.
+        text = "蒔いよ"
+        tokens = [
+            _tok("蒔い", "動詞", lemma="蒔く", orth_base="蒔く", ctype="五段-カ行"),
+            _tok("よ", "助詞"),
+        ]
+        assert find_highlight_end_with_trace(text, tokens, 0, 2, tokens[0]) == (2, ())
+
+    def test_non_verb_short_circuits_to_empty_chain(self):
+        text = "刑務所だ"
+        tokens = [_tok("刑務所", "名詞"), _tok("だ", "助動詞")]
+        assert find_highlight_end_with_trace(text, tokens, 0, 3, tokens[0]) == (3, ())
