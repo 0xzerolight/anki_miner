@@ -28,6 +28,12 @@ from anki_miner.services.dictionary.storage import (
 
 logger = logging.getLogger(__name__)
 
+# Rendered senses shown per dictionary hit, applied AFTER content-dedup and
+# sequence grouping (dedup-before-cap, plan item 5.1). Storage fetches a larger
+# candidate pool (storage._LOOKUP_LIMIT) so duplicate-content rows can't consume
+# a display slot before dedup runs.
+_DISPLAY_LIMIT = 5
+
 
 class IndexedDictProvider:
     """SQLite-backed implementation of the DictionaryProvider Protocol.
@@ -130,14 +136,17 @@ class IndexedDictProvider:
             )
             return None
 
-    def lookup_many(self, words: list[str]) -> dict[str, str | None]:
-        """Batch lookup. Runs one IN-clause query per dictionary (chunked),
-        then renders each word's HTML through the SAME ``_render`` path as
-        :meth:`lookup`, so single and batch results are byte-identical."""
+    def lookup_many(self, pairs: list[tuple[str, str | None]]) -> dict[str, str | None]:
+        """Batch lookup over ``(word, reading | None)`` pairs. Each word's
+        contextual reading boosts that word's own ranking (``None`` = wildcard).
+        Runs one IN-clause query per dictionary (chunked), then renders each
+        word's HTML through the SAME ``_render`` path as :meth:`lookup`, so single
+        and batch results are byte-identical. Keyed by word (duplicate words
+        collapse)."""
         if self._conn is None:
-            return dict.fromkeys(words)
+            return {w: None for w, _ in pairs}
         try:
-            rows_by_word = storage_lookup_many(self._conn, words)
+            rows_by_word = storage_lookup_many(self._conn, pairs)
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during lookup_many; treating as all-miss: %s",
@@ -145,10 +154,10 @@ class IndexedDictProvider:
                 self._db_path,
                 e,
             )
-            return dict.fromkeys(words)
+            return {w: None for w, _ in pairs}
         # storage_lookup_many keys by unique requested words; re-expand to every
         # requested word (preserving duplicates) for caller convenience.
-        return {w: self._render(rows_by_word.get(w, [])) for w in words}
+        return {w: self._render(rows_by_word.get(w, [])) for w, _ in pairs}
 
     def has_terms(self, terms: list[str]) -> set[str]:
         """Batch exact-term existence probe (compound matching).
@@ -194,75 +203,126 @@ class IndexedDictProvider:
             self._tag_cache = {}
         return self._tag_cache
 
-    def _render(self, rows: list[tuple[str, str]]) -> str | None:
-        """Assemble Lapis-shape HTML from (content, tags) rows. Returns None
-        when there are no rows. Shared by lookup and lookup_many to guarantee
+    def _render(self, rows: list[tuple[str, str, int | None]]) -> str | None:
+        """Assemble Lapis-shape HTML from (content, tags, sequence) rows. Returns
+        None when there are no rows. Shared by lookup and lookup_many to guarantee
         byte-identical output.
 
-        Deduplication (OVH-026): some dictionaries double-key the same entry —
-        once under a kanji term with a kana reading, and again under the kana
-        term alone. Both rows carry identical ``content``. We keep the first-seen
-        row for each unique content blob and still UNION the tags from all
-        duplicate rows, so no information is lost.
+        Sequence grouping. Ported from Yomitan ``Translator._getRelatedDictionary
+        Entries`` + ``_createGroupedDictionaryEntry`` (ext/js/language/translator.js,
+        upstream e2ed450): rows that share a dictionary ``sequence`` belong to one
+        lexeme and are rendered as ONE sub-block with its own tag line; unrelated
+        lexemes (different sequence) get their own sub-block so tags are no longer
+        unioned across them. A row with no sequence (``None``) is its own group.
+        All sub-blocks stay inside the single ``<li data-dictionary>`` envelope so
+        Lapis/Senren dictionary-toggle CSS is unaffected.
+
+        Deduplication before the cap (OVH-026, plan item 5.1): some dictionaries
+        double-key the same entry — once under a kanji term with a kana reading,
+        and again under the kana term alone. Both rows carry identical ``content``.
+        We keep the first-seen row for each unique content blob (unioning the tags
+        from every duplicate so nothing is lost) and only THEN apply the display
+        cap, so duplicate rows can no longer consume a display slot ahead of a
+        real sense — storage over-fetches a pool for exactly this reason.
 
         Tag rendering (schema v3): a unioned tag with a ``tags``-table row is
         emitted as a hover chip (``<span class="gloss-tag" data-category=…
         title=notes>name</span>``), sorted by ``(ord, -score, name)`` — Yomitan
-        ``_mergeSimilarTags`` order. Tags without a row keep the pre-v3 italic
-        token line, so a dict with no tag metadata renders byte-identically.
+        ``_mergeSimilarTags`` order. Tags without a row keep the italic token line.
+        A single-group hit (the common case: one sequence, or all NULL) renders
+        byte-identically to the pre-5.1 single-block output.
         """
         if not rows:
             return None
 
-        # Build tag union preserving first-seen order across all hits,
-        # and deduplicate rows with identical content (keep first seen).
-        ordered_tags: list[str] = []
-        seen_tags: set[str] = set()
-        seen_content: set[str] = set()
-        unique_rows: list[tuple[str, str]] = []
-        for content, tags in rows:
-            # Always union in the tags, even from duplicate-content rows.
+        # Content-dedup into ordered "senses": first-seen content wins, tags from
+        # every duplicate content row union into that sense, and the first-seen
+        # sequence is the sense's group key. ``sense_tags`` preserves first-seen
+        # tag order per sense.
+        sense_order: list[str] = []
+        sense_seq: dict[str, int | None] = {}
+        sense_tags: dict[str, list[str]] = {}
+        sense_tags_seen: dict[str, set[str]] = {}
+        for content, tags, sequence in rows:
+            if content not in sense_seq:
+                sense_order.append(content)
+                sense_seq[content] = sequence
+                sense_tags[content] = []
+                sense_tags_seen[content] = set()
             if tags:
+                seen = sense_tags_seen[content]
+                ordered = sense_tags[content]
                 for tag in tags.split(" "):
-                    if tag and tag not in seen_tags:
-                        seen_tags.add(tag)
-                        ordered_tags.append(tag)
-            # Only keep the first occurrence of each distinct content blob.
-            if content not in seen_content:
-                seen_content.add(content)
-                unique_rows.append((content, tags))
+                    if tag and tag not in seen:
+                        seen.add(tag)
+                        ordered.append(tag)
 
-        # Merge gloss-item blobs by simple concatenation (renderer emits <li class="gloss-item">…</li>).
-        merged = "".join(content for content, _tags in unique_rows)
+        # Group senses by sequence (None = its own group), preserving first-seen
+        # group order and within-group sense order.
+        groups: list[list[str]] = []
+        group_index_by_seq: dict[int, int] = {}
+        for content in sense_order:
+            seq = sense_seq[content]
+            if seq is None:
+                groups.append([content])
+                continue
+            idx = group_index_by_seq.get(seq)
+            if idx is None:
+                group_index_by_seq[seq] = len(groups)
+                groups.append([content])
+            else:
+                groups[idx].append(content)
 
-        # Count gloss-items. Use prefix without closing '>' so future class additions still match.
-        item_count = merged.count('<li class="gloss-item"')
+        # Apply the display cap AFTER dedup + grouping: fill groups in order until
+        # _DISPLAY_LIMIT senses are shown, truncating the crossing group.
+        budget = _DISPLAY_LIMIT
+        capped_groups: list[list[str]] = []
+        for group in groups:
+            if budget <= 0:
+                break
+            kept = group[:budget]
+            budget -= len(kept)
+            capped_groups.append(kept)
 
         dict_label = self._display_name
         escaped_attr = html.escape(dict_label, quote=True)
-
-        # Partition unioned tags into chip-eligible (has a tags-table row) and
-        # italic-fallback (no row). Chips sort by (ord, -score, name); fallback
-        # tags keep first-seen order.
         tag_meta = self._tag_meta()
-        chip_metas = [tag_meta[t] for t in ordered_tags if t in tag_meta]
-        chip_metas.sort(key=lambda m: (m.ord, -m.score, m.name))
-        chips = "".join(
-            f'<span class="gloss-tag" data-category="{html.escape(m.category, quote=True)}"'
-            f' title="{html.escape(m.notes, quote=True)}">{html.escape(m.name)}</span>'
-            for m in chip_metas
-        )
-        fallback_tags = [t for t in ordered_tags if t not in tag_meta]
-        italic_parts = fallback_tags + [dict_label]
-        escaped_italic = html.escape(", ".join(italic_parts), quote=True)
+
+        # One sub-block per group: its own chips + italic tag line + gloss-list.
+        blocks: list[str] = []
+        for group in capped_groups:
+            group_tags: list[str] = []
+            group_tags_seen: set[str] = set()
+            for content in group:
+                for tag in sense_tags[content]:
+                    if tag not in group_tags_seen:
+                        group_tags_seen.add(tag)
+                        group_tags.append(tag)
+
+            merged = "".join(group)
+            item_count = merged.count('<li class="gloss-item"')
+
+            chip_metas = [tag_meta[t] for t in group_tags if t in tag_meta]
+            chip_metas.sort(key=lambda m: (m.ord, -m.score, m.name))
+            chips = "".join(
+                f'<span class="gloss-tag" data-category="{html.escape(m.category, quote=True)}"'
+                f' title="{html.escape(m.notes, quote=True)}">{html.escape(m.name)}</span>'
+                for m in chip_metas
+            )
+            fallback_tags = [t for t in group_tags if t not in tag_meta]
+            escaped_italic = html.escape(", ".join(fallback_tags + [dict_label]), quote=True)
+
+            blocks.append(
+                f"{chips}"
+                f"<i>({escaped_italic})</i>"
+                f'<ul class="gloss-list" data-count="{item_count}">{merged}</ul>'
+            )
 
         return (
             '<div class="yomitan-glossary">'
             '<ol data-count="1">'
             f'<li data-dictionary="{escaped_attr}">'
-            f"{chips}"
-            f"<i>({escaped_italic})</i>"
-            f'<ul class="gloss-list" data-count="{item_count}">{merged}</ul>'
+            f"{''.join(blocks)}"
             "</li>"
             "</ol>"
             "</div>"

@@ -5,7 +5,10 @@ import sqlite3
 from pathlib import Path
 from unittest.mock import patch
 
-from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
+from anki_miner.services.dictionary.providers.indexed_provider import (
+    _DISPLAY_LIMIT,
+    IndexedDictProvider,
+)
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -73,7 +76,11 @@ class TestIndexedDictProvider:
         assert result is not None
         assert '<li class="gloss-item">eat</li>' in result
 
-    def test_multi_hit_same_dict_merges_into_single_li_with_combined_ul(self, tmp_path: Path):
+    def test_unrelated_lexemes_render_as_separate_sequence_groups(self, tmp_path: Path):
+        """Two different lexemes sharing a reading but with DIFFERENT sequences
+        (橋 seq1 / 箸 seq2) render as two sub-blocks, each with its OWN tag line,
+        inside one <li data-dictionary> — tags are no longer unioned across the
+        unrelated lexemes (plan item 5.1 sequence grouping)."""
         db = tmp_path / "test.sqlite"
         _seed_db(
             db,
@@ -99,17 +106,21 @@ class TestIndexedDictProvider:
         result = provider.lookup("はし")
 
         assert result is not None
-        # Exactly one outer <li data-dictionary>
+        # Still exactly one outer <li data-dictionary> envelope (CSS compat).
         assert result.count("<li data-dictionary=") == 1
-        # Combined gloss-list with total sense count (1 + 2 = 3)
-        assert '<ul class="gloss-list" data-count="3">' in result
-        # All gloss-items present
-        assert '<li class="gloss-item">bridge</li>' in result
-        assert '<li class="gloss-item">chopsticks</li>' in result
-        assert '<li class="gloss-item">eating sticks</li>' in result
-        # Tag union preserves first-seen order: n, common, food (common deduped)
-        assert "<i>(n, common, food, DictName)</i>" in result
-        # No <hr> in output
+        # Two per-group gloss-lists: bridge (1 item) and chopsticks (2 items).
+        assert '<ul class="gloss-list" data-count="1"><li class="gloss-item">bridge</li></ul>' in result
+        assert (
+            '<ul class="gloss-list" data-count="2">'
+            '<li class="gloss-item">chopsticks</li><li class="gloss-item">eating sticks</li></ul>'
+        ) in result
+        # Per-group tag lines — NOT unioned across the two lexemes.
+        assert "<i>(n, common, DictName)</i>" in result
+        assert "<i>(common, food, DictName)</i>" in result
+        # The old cross-lexeme union must NOT appear.
+        assert "<i>(n, common, food, DictName)</i>" not in result
+        # Bridge (seq1) sub-block precedes chopsticks (seq2) sub-block.
+        assert result.index("bridge") < result.index("chopsticks")
         assert "<hr>" not in result
 
     def test_lookup_miss_returns_none(self, tmp_path: Path):
@@ -318,7 +329,7 @@ class TestIndexedDictProviderLookupMany:
         provider.load()
 
         words = ["食べる", "たべる", "はし", "多", "missing"]
-        batch = provider.lookup_many(words)
+        batch = provider.lookup_many([(w, None) for w in words])
         for w in words:
             assert batch[w] == provider.lookup(w), f"HTML mismatch for {w!r}"
 
@@ -327,14 +338,14 @@ class TestIndexedDictProviderLookupMany:
         self._seed(db)
         provider = IndexedDictProvider("test-dict", db, display_name="DictName")
         provider.load()
-        assert provider.lookup_many(["missing"])["missing"] is None
+        assert provider.lookup_many([("missing", None)])["missing"] is None
 
     def test_unloaded_provider_returns_none_for_all(self, tmp_path: Path):
         db = tmp_path / "test.sqlite"
         self._seed(db)
         provider = IndexedDictProvider("test-dict", db, display_name="DictName")
         # not loaded
-        res = provider.lookup_many(["食べる", "はし"])
+        res = provider.lookup_many([("食べる", None), ("はし", None)])
         assert res == {"食べる": None, "はし": None}
 
     def test_empty_list(self, tmp_path: Path):
@@ -349,6 +360,91 @@ def test_indexed_provider_is_offline(tmp_path):
     db_path = tmp_path / "dummy.sqlite"
     provider = IndexedDictProvider(dict_id="x", db_path=db_path)
     assert provider.is_online is False
+
+
+# ---------------------------------------------------------------------------
+# 5.1: dedup-before-cap + display-cap structural guard
+# ---------------------------------------------------------------------------
+
+
+class TestDedupBeforeCap:
+    """The display cap is applied AFTER content-dedup and grouping, over the
+    storage over-fetch pool — so duplicate rows can't consume display slots."""
+
+    def test_rendered_senses_capped_at_display_limit(self, tmp_path: Path):
+        """8 distinct-content senses under distinct sequences → 8 groups; only
+        _DISPLAY_LIMIT senses survive the cap (structural perf guard (c))."""
+        db = tmp_path / "t.sqlite"
+        _seed_db(
+            db,
+            [
+                DictRow(
+                    term="同",
+                    reading="どう",
+                    content=f'<li class="gloss-item">m{i}</li>',
+                    tags="",
+                    sequence=i,
+                )
+                for i in range(8)
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="D")
+        provider.load()
+        result = provider.lookup("同")
+        assert result is not None
+        # Exactly _DISPLAY_LIMIT gloss-items rendered (the first 5 by sequence).
+        assert result.count('<li class="gloss-item">') == _DISPLAY_LIMIT
+        present = [i for i in range(8) if f">m{i}</li>" in result]
+        assert present == list(range(_DISPLAY_LIMIT))  # m0..m4 kept, m5..m7 dropped
+
+    def test_single_group_capped_at_display_limit(self, tmp_path: Path):
+        """8 senses under ONE shared sequence → one group, still capped at 5
+        (打つ-style shared-sequence golden case)."""
+        db = tmp_path / "t.sqlite"
+        _seed_db(
+            db,
+            [
+                DictRow(
+                    term="打つ",
+                    reading="うつ",
+                    content=f'<li class="gloss-item">u{i}</li>',
+                    tags="",
+                    score=8 - i,
+                    sequence=3,
+                )
+                for i in range(8)
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="D")
+        provider.load()
+        result = provider.lookup("打つ")
+        assert result is not None
+        assert result.count('<li class="gloss-item">') == _DISPLAY_LIMIT
+        # One sequence ⇒ one group ⇒ one gloss-list.
+        assert result.count('<ul class="gloss-list"') == 1
+
+    def test_dedup_frees_slots_for_real_senses(self, tmp_path: Path):
+        """Duplicate content collapses BEFORE the cap, so a real sense that a
+        naive LIMIT-5-then-dedup would have dropped now survives."""
+        db = tmp_path / "t.sqlite"
+        # dup content appears twice at the front (score-forced), then 5 unique.
+        rows = [
+            DictRow(term="語", reading="ご", content='<li class="gloss-item">dup</li>', score=100, sequence=1),
+            DictRow(term="語", reading="ご", content='<li class="gloss-item">dup</li>', score=99, sequence=1),
+        ] + [
+            DictRow(term="語", reading="ご", content=f'<li class="gloss-item">s{i}</li>', score=50 - i, sequence=1)
+            for i in range(5)
+        ]
+        _seed_db(db, rows)
+        provider = IndexedDictProvider("test-dict", db, display_name="D")
+        provider.load()
+        result = provider.lookup("語")
+        assert result is not None
+        # dup once + s0..s3 == 5 unique senses (naive LIMIT-5 pre-dedup would show
+        # dup once + s0..s2 == 4). s3 surviving is the dedup-before-cap fix.
+        assert result.count('<li class="gloss-item">') == _DISPLAY_LIMIT
+        assert result.count('<li class="gloss-item">dup</li>') == 1
+        assert ">s3</li>" in result
 
 
 # ---------------------------------------------------------------------------
@@ -401,7 +497,7 @@ class TestKanaDedup:
         provider = IndexedDictProvider("test-dict", db, display_name="DictName")
         provider.load()
 
-        result = provider.lookup_many(["にほん"])["にほん"]
+        result = provider.lookup_many([("にほん", None)])["にほん"]
         assert result is not None
         assert result.count('<li class="gloss-item">Japan</li>') == 1
 
@@ -423,7 +519,7 @@ class TestKanaDedup:
         provider = IndexedDictProvider("test-dict", db, display_name="DictName")
         provider.load()
 
-        assert provider.lookup_many(["にほん"])["にほん"] == provider.lookup("にほん")
+        assert provider.lookup_many([("にほん", None)])["にほん"] == provider.lookup("にほん")
 
     def test_distinct_content_rows_all_render(self, tmp_path: Path):
         """Multiple rows with DIFFERENT content still all render (dedup is content-keyed)."""
@@ -547,7 +643,7 @@ class TestScoreRanking:
         provider.load()
 
         # byte-identical to lookup
-        assert provider.lookup_many(["テスト"])["テスト"] == provider.lookup("テスト")
+        assert provider.lookup_many([("テスト", None)])["テスト"] == provider.lookup("テスト")
 
     def test_jmdict_score_zero_no_op(self, tmp_path: Path):
         """All score=0 rows (JMdict): ordering unchanged by the new score key."""
@@ -569,7 +665,7 @@ class TestScoreRanking:
         provider.load()
 
         single = provider.lookup("水")
-        batch = provider.lookup_many(["水"])["水"]
+        batch = provider.lookup_many([("水", None)])["水"]
         assert single == batch  # consistent with each other
         # The first 5 by sequence (1..5) win; sequence=6 is dropped
         assert "water-1" in single
@@ -615,7 +711,7 @@ class TestIndexedDictProviderDatabaseErrorGuard:
             side_effect=sqlite3.DatabaseError("database disk image is malformed"),
         ):
             caplog.set_level(logging.WARNING)
-            result = provider.lookup_many(["食べる", "水"])
+            result = provider.lookup_many([("食べる", None), ("水", None)])
 
         assert result == {"食べる": None, "水": None}
         assert "test-dict" in caplog.text
@@ -642,7 +738,7 @@ class TestIndexedDictProviderDatabaseErrorGuard:
             side_effect=sqlite3.DatabaseError("malformed"),
         ):
             caplog.set_level(logging.WARNING)
-            provider.lookup_many(["x"])
+            provider.lookup_many([("x", None)])
 
         assert "test-dict" in caplog.text
         assert str(tmp_path / "test.sqlite") in caplog.text
@@ -809,7 +905,7 @@ class TestTagChips:
         provider = IndexedDictProvider("test-dict", db, display_name="D")
         provider.load()
         words = ["食べる", "x", "missing"]
-        batch = provider.lookup_many(words)
+        batch = provider.lookup_many([(w, None) for w in words])
         for w in words:
             assert batch[w] == provider.lookup(w), f"mismatch for {w!r}"
 

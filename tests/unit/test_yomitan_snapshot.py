@@ -138,3 +138,44 @@ def test_import_lookup_roundtrip_matches_snapshot(tmp_path: Path) -> None:
         f"--- expected ({len(expected)} bytes) ---\n{expected!r}\n"
         f"--- actual ({len(actual)} bytes) ---\n{actual!r}\n"
     )
+
+
+def test_import_lookup_grouped_render_separates_sequences(tmp_path: Path) -> None:
+    """Full import→lookup snapshot for the 5.1 sequence-grouping path: two term
+    entries sharing a reading (はし) but carrying DIFFERENT sequences (1 vs 2)
+    render as two sub-blocks, each with its OWN tag line, inside one
+    <li data-dictionary> envelope."""
+    zip_path = build_yomitan_zip(
+        tmp_path / "src" / "grp.zip",
+        title="grp-dict",
+        revision="1",
+        term_banks=[
+            [
+                ["橋", "はし", "n", "n", 0, ["bridge"], 1, ""],
+                ["箸", "はし", "n", "n", 0, ["chopsticks"], 2, ""],
+            ],
+        ],
+        tag_banks=[],
+    )
+
+    dest_root = tmp_path / "dicts"
+    result = import_yomitan_zip(zip_path, dest_root)
+    provider = IndexedDictProvider(
+        result.dict_id,
+        dest_root / result.dict_id / "index.sqlite",
+        display_name="grp-dict",
+    )
+    assert provider.load() is True
+    try:
+        actual = provider.lookup("はし")
+    finally:
+        provider.close()
+
+    assert actual is not None
+    # One envelope, two grouped gloss-lists, two per-group tag lines.
+    assert actual.count("<li data-dictionary=") == 1
+    assert actual.count('<ul class="gloss-list"') == 2
+    assert actual.count("<i>(n, grp-dict)</i>") == 2
+    # Both lexemes present; bridge (seq1) precedes chopsticks (seq2).
+    assert "bridge" in actual and "chopsticks" in actual
+    assert actual.index("bridge") < actual.index("chopsticks")
