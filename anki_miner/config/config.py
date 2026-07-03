@@ -285,6 +285,16 @@ class AnkiMinerConfig:
     # that was actually mined. See Issue #20.
     bold_target_in_sentence: bool = False
 
+    # Sentence-boundary trimming (3.3, Yomitan extractSentence). When True, the
+    # card sentence is trimmed to just the sentence containing the target,
+    # splitting multi-sentence cues and narration+「quoted dialog」. Opt-in by
+    # design: sentence audio/screenshots are cut from cue timing, so a trimmed
+    # sentence no longer transcribes the full audio clip — whole-cue stays the
+    # right default for a batch miner. Trimming happens at word emission only
+    # (parser-level); the target's carried offsets are rebased into the trimmed
+    # text so bold/cloze fields stay aligned.
+    trim_to_sentence: bool = False
+
     # Card styling (Issue #44). anki_miner emits definition HTML with its own
     # class scheme (`.yomitan-glossary`, `gloss-sc-*`, `data-sc-*`) and ships one
     # universal glossary stylesheet (resources/glossary.css). When
