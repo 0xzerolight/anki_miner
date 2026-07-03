@@ -2,8 +2,10 @@
 
 On startup, when an enabled indexed dictionary slot is schema-stale, the window
 offers a one-click Reimport All so the user never hits a silent zero-card run.
-The detection helper and QMessageBox are monkeypatched so no real disk scan or
-Qt modal runs; ``_maybe_prompt_stale_dictionaries`` is invoked directly.
+The sidecar scan runs off the GUI thread (``run_off_thread``) and the prompt is
+shown from the ``_on_stale_dicts_scanned`` continuation; the prompt-logic tests
+drive that continuation directly, and a separate test verifies the off-thread
+dispatch wiring. QMessageBox is monkeypatched so no real Qt modal runs.
 """
 
 from __future__ import annotations
@@ -26,6 +28,10 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
     monkeypatch.setattr(mw_module.MainWindow, "_run_validation", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
+    # Run any off-thread dispatch inline (no real QThread) so the startup
+    # stale-dict singleShot can't leak a worker into a test that never spins a
+    # loop. Individual tests re-patch run_off_thread when they assert on it.
+    monkeypatch.setattr(mw_module, "run_off_thread", lambda parent, work, on_done, *a, **kw: on_done(work()))
 
 
 @pytest.fixture
@@ -67,12 +73,11 @@ def _stub_settings_trigger(qtbot, window) -> MagicMock:
 def test_stale_prompt_yes_triggers_reimport(main_window, monkeypatch, qtbot):
     from PyQt6.QtWidgets import QMessageBox
 
-    _patch_stale(monkeypatch, [SimpleNamespace(source_name="Old Dict")])
     monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.Yes)
     trigger = _stub_settings_trigger(qtbot, main_window)
 
     main_window._stale_dict_prompt_handled = False
-    main_window._maybe_prompt_stale_dictionaries()
+    main_window._on_stale_dicts_scanned([SimpleNamespace(source_name="Old Dict")])
 
     trigger.assert_called_once()
 
@@ -80,12 +85,11 @@ def test_stale_prompt_yes_triggers_reimport(main_window, monkeypatch, qtbot):
 def test_stale_prompt_later_does_not_reimport(main_window, monkeypatch, qtbot):
     from PyQt6.QtWidgets import QMessageBox
 
-    _patch_stale(monkeypatch, [SimpleNamespace(source_name="Old Dict")])
     monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.No)
     trigger = _stub_settings_trigger(qtbot, main_window)
 
     main_window._stale_dict_prompt_handled = False
-    main_window._maybe_prompt_stale_dictionaries()
+    main_window._on_stale_dicts_scanned([SimpleNamespace(source_name="Old Dict")])
 
     trigger.assert_not_called()
 
@@ -93,13 +97,12 @@ def test_stale_prompt_later_does_not_reimport(main_window, monkeypatch, qtbot):
 def test_no_stale_dict_no_prompt(main_window, monkeypatch, qtbot):
     from PyQt6.QtWidgets import QMessageBox
 
-    _patch_stale(monkeypatch, [])
     called = MagicMock()
     monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: called() or QMessageBox.StandardButton.Yes)
     trigger = _stub_settings_trigger(qtbot, main_window)
 
     main_window._stale_dict_prompt_handled = False
-    main_window._maybe_prompt_stale_dictionaries()
+    main_window._on_stale_dicts_scanned([])  # scan found nothing
 
     called.assert_not_called()  # no dialog shown
     trigger.assert_not_called()
@@ -110,13 +113,41 @@ def test_no_stale_dict_no_prompt(main_window, monkeypatch, qtbot):
 def test_prompt_handled_once_per_session(main_window, monkeypatch, qtbot):
     from PyQt6.QtWidgets import QMessageBox
 
-    _patch_stale(monkeypatch, [SimpleNamespace(source_name="Old Dict")])
     q = MagicMock(return_value=QMessageBox.StandardButton.No)
     monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: q())
     _stub_settings_trigger(qtbot, main_window)
 
+    metas = [SimpleNamespace(source_name="Old Dict")]
     main_window._stale_dict_prompt_handled = False
-    main_window._maybe_prompt_stale_dictionaries()
-    main_window._maybe_prompt_stale_dictionaries()  # second call is a no-op
+    main_window._on_stale_dicts_scanned(metas)
+    main_window._on_stale_dicts_scanned(metas)  # second call is a no-op (guard set)
 
     assert q.call_count == 1
+
+
+def test_scan_dispatched_off_thread(main_window, monkeypatch):
+    # _maybe_prompt_stale_dictionaries offloads the sidecar scan to run_off_thread
+    # and wires _on_stale_dicts_scanned as the GUI-thread continuation.
+    from anki_miner.gui import main_window as mw_module
+
+    sentinel = [SimpleNamespace(source_name="Old Dict")]
+    _patch_stale(monkeypatch, sentinel)
+
+    captured: dict = {}
+
+    def fake_run_off_thread(parent, work, on_done, *a, **kw):
+        captured["parent"] = parent
+        captured["work_result"] = work()  # the offloaded scan
+        captured["on_done"] = on_done
+        return MagicMock()
+
+    monkeypatch.setattr(mw_module, "run_off_thread", fake_run_off_thread)
+
+    main_window._stale_dict_prompt_handled = False
+    main_window._maybe_prompt_stale_dictionaries()
+
+    assert captured["parent"] is main_window
+    # The offloaded work runs stale_enabled_dicts and returns its result.
+    assert list(captured["work_result"]) == sentinel
+    # The continuation is the GUI-thread prompt handler.
+    assert captured["on_done"] == main_window._on_stale_dicts_scanned

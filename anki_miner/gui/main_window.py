@@ -31,6 +31,7 @@ from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.gui.widgets.header_widget import HeaderWidget
@@ -625,9 +626,25 @@ class MainWindow(QMainWindow):
             self.update_config(replace(config, first_run_setup_done=True))
 
     def _maybe_prompt_stale_dictionaries(self) -> None:
-        """Prompt to Reimport All when an enabled index needs a schema upgrade (4.0).
+        """Dispatch the schema-staleness scan off-thread; prompt in the callback (4.0).
 
-        Detection reuses the registry seam (``stale_enabled_dicts`` → per-slot
+        The probe builds a fresh registry and reads every enabled dictionary's
+        index sidecar (per-dict SQLite), so it runs on a worker thread via
+        ``run_off_thread`` rather than blocking the GUI during startup. The
+        Reimport prompt is shown from ``_on_stale_dicts_scanned`` on the GUI
+        thread. The ``QTimer.singleShot`` startup deferral is unchanged.
+        """
+        if self._stale_dict_prompt_handled:
+            return
+        from anki_miner.services.dictionary.registry import stale_enabled_dicts
+
+        config = self.config
+        run_off_thread(self, lambda: stale_enabled_dicts(config), self._on_stale_dicts_scanned)
+
+    def _on_stale_dicts_scanned(self, result: object) -> None:
+        """GUI-thread continuation: prompt to Reimport All for any stale dicts found.
+
+        Detection reused the registry seam (``stale_enabled_dicts`` → per-slot
         ``DictMeta.schema_ok``), not a new scanner. When any *enabled* indexed
         chain entry is schema-stale, mining would silently drop every word for
         lack of a definition, so we surface a blocking prompt offering one-click
@@ -638,9 +655,7 @@ class MainWindow(QMainWindow):
         """
         if self._stale_dict_prompt_handled:
             return
-        from anki_miner.services.dictionary.registry import stale_enabled_dicts
-
-        stale = stale_enabled_dicts(self.config)
+        stale = list(result) if isinstance(result, list) else []
         if not stale:
             return
         # Set before exec() so a re-entrant 0ms fire inside the modal loop bails.
