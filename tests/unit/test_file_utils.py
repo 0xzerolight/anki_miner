@@ -54,7 +54,10 @@ class TestSafeFilename:
             ("file|name.txt", "file_name.txt"),
             ("file?name.txt", "file_name.txt"),
             ("file*name.txt", "file_name.txt"),
-            ('<>:"/\\|?*', "_________"),
+            # `[`/`]` terminate Anki's `[sound:...]` tag, so they must be
+            # sanitized out of media filenames (7.5 / Yomitan backend `]` strip).
+            ("word[reading].mp3", "word_reading_.mp3"),
+            ('<>:"/\\|?*[]', "___________"),
             ("", "unnamed"),
         ],
         ids=[
@@ -65,6 +68,7 @@ class TestSafeFilename:
             "pipe",
             "question_mark",
             "asterisk",
+            "square_brackets",
             "all_invalid",
             "empty_string",
         ],
