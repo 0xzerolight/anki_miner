@@ -139,8 +139,8 @@ def _import_zip(
         revision = banks.revision
         resolved_id = source_id or _derive_source_id(title)
 
-        # key = (term, reading) -> best (min) rank
-        ranks: dict[tuple[str, str | None], int] = {}
+        # key = (term, reading) -> (best (min) rank, display_value of that row)
+        ranks: dict[tuple[str, str | None], tuple[int, str | None]] = {}
         skipped_display_only = 0
 
         for bank in banks.iter_banks(progress=progress, cancel_check=cancel_check):
@@ -152,7 +152,7 @@ def _import_zip(
                 term = str(entry[0]).strip()
 
                 data = entry[2]
-                rank = normalize_freq_rank(data)
+                rank, display_value = normalize_freq_rank(data)
                 if rank is None:
                     skipped_display_only += 1
                     continue
@@ -160,8 +160,8 @@ def _import_zip(
                 reading = extract_envelope_reading(data)
                 key = (term, reading)
                 existing = ranks.get(key)
-                if existing is None or rank < existing:
-                    ranks[key] = rank
+                if existing is None or rank < existing[0]:
+                    ranks[key] = (rank, display_value)
 
         if not ranks:
             raise SetupError(
@@ -171,7 +171,10 @@ def _import_zip(
             )
 
         # Sorted by rank for stable, human-scannable storage order.
-        rows = [(term, reading, rank) for (term, reading), rank in sorted(ranks.items(), key=lambda kv: kv[1])]
+        rows = [
+            (term, reading, rank, display_value)
+            for (term, reading), (rank, display_value) in sorted(ranks.items(), key=lambda kv: kv[1][0])
+        ]
 
         result = _finalize(
             input_path=zip_path,
@@ -209,7 +212,8 @@ def _import_csv(
     resolved_id = source_id or _derive_source_id(stem)
 
     # key = (term, reading) -> rank; first occurrence wins (matches the legacy
-    # CSV loader's semantics, which kept the first rank per word).
+    # CSV loader's semantics, which kept the first rank per word). Plain rank
+    # lists carry no Yomitan display string, so display_value is always None here.
     ranks: dict[tuple[str, str | None], int] = {}
     try:
         with open(csv_path, encoding="utf-8") as f:
@@ -248,7 +252,9 @@ def _import_csv(
             "Expected a CSV/TSV with a word column and a numeric rank column."
         )
 
-    rows = [(term, reading, rank) for (term, reading), rank in sorted(ranks.items(), key=lambda kv: kv[1])]
+    rows: list[storage.FreqRow] = [
+        (term, reading, rank, None) for (term, reading), rank in sorted(ranks.items(), key=lambda kv: kv[1])
+    ]
 
     result = _finalize(
         input_path=csv_path,

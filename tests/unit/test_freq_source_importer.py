@@ -48,6 +48,15 @@ def _read_entries(dest_root: Path, source_id: str) -> list[tuple[str, str | None
         conn.close()
 
 
+def _read_display(dest_root: Path, source_id: str) -> list[tuple[str, int, str | None]]:
+    db = dest_root / source_id / "index.sqlite"
+    conn = sqlite3.connect(db)
+    try:
+        return conn.execute("SELECT term, rank, display_value FROM entries ORDER BY rank, term").fetchall()
+    finally:
+        conn.close()
+
+
 class TestZipImport:
     def test_basic_zip_to_sqlite(self, tmp_path: Path) -> None:
         zip_path = _write_zip(
@@ -136,6 +145,46 @@ class TestZipImport:
         result = import_frequency_source(zip_path, dest)
         assert result.entry_count == 1
         assert result.skipped_display_only == 2
+
+    def test_string_payload_with_number_now_imported_with_display(self, tmp_path: Path) -> None:
+        # Pre-6.5 these string-shaped ranks were rejected wholesale; now the
+        # number is extracted and the human string is preserved as display_value.
+        zip_path = _write_zip(
+            tmp_path / "str.zip",
+            banks=[["猫", "freq", "1099/72000"], ["犬", "freq", "3㋕"]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.entry_count == 2
+        assert result.skipped_display_only == 0
+        assert _read_display(dest, result.source_id) == [("犬", 3, "3㋕"), ("猫", 1099, "1099/72000")]
+
+    def test_value_envelope_display_value_stored(self, tmp_path: Path) -> None:
+        zip_path = _write_zip(
+            tmp_path / "val.zip",
+            banks=[["水", "freq", {"value": 7, "displayValue": "7位"}]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert _read_display(dest, result.source_id) == [("水", 7, "7位")]
+
+    def test_plain_int_stores_null_display(self, tmp_path: Path) -> None:
+        zip_path = _write_zip(tmp_path / "int.zip", banks=[["猫", "freq", 5]])
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert _read_display(dest, result.source_id) == [("猫", 5, None)]
+
+    def test_min_rank_collision_keeps_that_rows_display(self, tmp_path: Path) -> None:
+        # On a (term, reading) collision the min rank wins AND carries its own
+        # display string, not the loser's.
+        zip_path = _write_zip(
+            tmp_path / "coll.zip",
+            banks=[["生", "freq", "80/100"], ["生", "freq", "20/100"]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.entry_count == 1
+        assert _read_display(dest, result.source_id) == [("生", 20, "20/100")]
 
     def test_non_freq_mode_ignored(self, tmp_path: Path) -> None:
         zip_path = _write_zip(

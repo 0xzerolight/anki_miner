@@ -44,10 +44,13 @@ class TokenizedWord:
     sentence_furigana: str = ""  # Furigana for sentence, e.g. "日本語[にほんご]を食べる[たべる]。"
     sentence_reading: str = ""  # Plain kana reading of sentence, e.g. "にほんごをたべる。"
     frequency_rank: int | None = None  # Word frequency rank (1 = most common); = min across sources
-    # Per-source frequency breakdown shown on the card: (source name, rank) in
-    # chain order, only sources that rank this word. ``frequency_rank`` stays the
-    # min of these (drives filtering/sort); this is the display detail.
-    frequency_sources: list[tuple[str, int]] = field(default_factory=list)
+    # Per-source frequency breakdown shown on the card:
+    # (source name, rank, display_value) in chain order, only sources that rank
+    # this word. ``display_value`` is the human string a card shows in place of
+    # the bare rank (Yomitan displayValue; None for plain-int/CSV ranks or a v1
+    # index). ``frequency_rank`` stays the min of the ranks (drives
+    # filtering/sort); this is the display detail.
+    frequency_sources: list[tuple[str, int, str | None]] = field(default_factory=list)
     # Harmonic mean of the per-source ranks (Yomitan getFrequencyHarmonic); backs
     # the numeric ``frequency_sort`` card field. None when no source ranks the
     # word (card writes the 9999999 "missing" sentinel so it sorts last).
