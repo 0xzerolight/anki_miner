@@ -746,3 +746,62 @@ class TestTagBankImport:
         finally:
             conn.close()
         assert reading == "がらす"
+
+
+class TestUpdateMetadata:
+    """Update check-and-notify metadata read at import (plan 9.2)."""
+
+    def _import(self, tmp_path: Path, index_extra: dict) -> dict:
+        zip_path = build_yomitan_zip(tmp_path / "src" / "u.zip", index_extra=index_extra)
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        return read_meta(dest_root / result.dict_id / "index.sqlite")
+
+    def test_updatable_metadata_round_trips(self, tmp_path: Path):
+        meta = self._import(
+            tmp_path,
+            {
+                "isUpdatable": True,
+                "indexUrl": "https://jitendex.org/index.json",
+                "downloadUrl": "https://jitendex.org/jitendex.zip",
+                "author": "Stephen Kraus",
+                "attribution": "CC BY-SA 4.0",
+                "description": "A free JMdict-based dictionary.",
+            },
+        )
+        assert meta["is_updatable"] == "true"
+        assert meta["index_url"] == "https://jitendex.org/index.json"
+        assert meta["download_url"] == "https://jitendex.org/jitendex.zip"
+        assert meta["author"] == "Stephen Kraus"
+        assert meta["attribution"] == "CC BY-SA 4.0"
+        assert meta["description"] == "A free JMdict-based dictionary."
+
+    def test_non_http_urls_are_not_recorded(self, tmp_path: Path):
+        meta = self._import(
+            tmp_path,
+            {
+                "isUpdatable": True,
+                "indexUrl": "file:///tmp/index.json",
+                "downloadUrl": "https://jitendex.org/jitendex.zip",
+            },
+        )
+        assert "is_updatable" not in meta
+        assert "index_url" not in meta
+        assert "download_url" not in meta
+
+    def test_isupdatable_false_records_nothing(self, tmp_path: Path):
+        meta = self._import(
+            tmp_path,
+            {
+                "isUpdatable": False,
+                "indexUrl": "https://jitendex.org/index.json",
+                "downloadUrl": "https://jitendex.org/jitendex.zip",
+            },
+        )
+        assert "is_updatable" not in meta
+        assert "index_url" not in meta
+
+    def test_absent_update_fields_leave_meta_clean(self, tmp_path: Path):
+        meta = self._import(tmp_path, {})
+        for key in ("is_updatable", "index_url", "download_url", "author", "attribution", "description"):
+            assert key not in meta

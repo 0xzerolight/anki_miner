@@ -135,6 +135,7 @@ class DictionarySettingsPanel(FormPanel):
     reimport_dict_requested = pyqtSignal(str)
     reimport_all_requested = pyqtSignal()
     rescan_requested = pyqtSignal()
+    check_updates_requested = pyqtSignal()
     chain_changed = pyqtSignal()
     # Emitted once a dictionary has been successfully removed from both the
     # in-memory chain and disk. Distinct from ``chain_changed`` so the settings
@@ -410,6 +411,16 @@ class DictionarySettingsPanel(FormPanel):
         )
         self._restore_btn.clicked.connect(self.rescan_requested.emit)
         buttons.addWidget(self._restore_btn)
+
+        self._check_updates_btn = QPushButton(self.tr("Check for Updates"))
+        self._check_updates_btn.setToolTip(
+            self.tr(
+                "Fetch each updatable dictionary's online index and report any newer "
+                "revisions. No download is performed — re-import the new zip yourself."
+            )
+        )
+        self._check_updates_btn.clicked.connect(self.check_updates_requested.emit)
+        buttons.addWidget(self._check_updates_btn)
 
         self._up_btn = QPushButton("↑")
         self._up_btn.setToolTip(self.tr("Move up in priority"))

@@ -16,6 +16,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.services.dictionary.schema_validation import (
     ensure_bank_array,
     is_valid_term_bank_entry,
+    validate_http_url,
 )
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
@@ -216,6 +217,12 @@ def import_yomitan_zip(
             "import_date": datetime.now(UTC).isoformat(),
             "entry_count": str(total_entries),
         }
+        # Update check-and-notify metadata (plan 9.2): a dictionary that
+        # declares itself updatable ships an index/download URL so the app can
+        # later fetch the remote index.json and report a newer revision. Read it
+        # here (rides the v3 reimport, no extra cycle); the check itself is a
+        # separate, explicit user action (services/dictionary/updater.py).
+        meta.update(_read_update_meta(index))
         # Yomitan dictionaries ship a root `styles.css` that styles their
         # structured-content DOM (tag pills, example boxes, forms tables — Issue
         # #87). Capture it so the provider can emit it scoped per card, matching
@@ -268,6 +275,42 @@ def import_yomitan_zip(
             skipped_malformed=skipped_malformed,
             media_warnings=tuple(media_warnings),
         )
+
+
+# Informational index.json fields surfaced verbatim to the user. Stored when
+# present as a non-blank string.
+_INFO_FIELDS = ("author", "attribution", "description")
+
+
+def _read_update_meta(index: dict) -> dict[str, str]:
+    """Extract update + attribution metadata from a Yomitan ``index.json``.
+
+    Mirrors Yomitan ``DictionaryImporter._createSummary``
+    (ext/js/dictionary/dictionary-importer.js, upstream e2ed450): ``author`` /
+    ``attribution`` / ``description`` are copied through as strings, and the
+    ``isUpdatable`` / ``indexUrl`` / ``downloadUrl`` triple is recorded only when
+    ``isUpdatable`` is boolean-true and BOTH URLs pass the http(s)-only check.
+
+    Divergence from upstream (deliberate): Yomitan *throws* when ``isUpdatable``
+    is a boolean but the URLs are missing/invalid (or ``isUpdatable`` is
+    ``false``). This offline-first importer must never fail a valid import over
+    optional update metadata, so a malformed/disabled updatable block is simply
+    not recorded — the dictionary imports fine, it just isn't update-checkable.
+    """
+    meta: dict[str, str] = {}
+    for field in _INFO_FIELDS:
+        value = index.get(field)
+        if isinstance(value, str) and value.strip():
+            meta[field] = value
+    is_updatable = index.get("isUpdatable")
+    index_url = index.get("indexUrl")
+    download_url = index.get("downloadUrl")
+    if is_updatable is True and validate_http_url(index_url) and validate_http_url(download_url):
+        # validate_http_url guarantees both are http(s) strings.
+        meta["is_updatable"] = "true"
+        meta["index_url"] = str(index_url)
+        meta["download_url"] = str(download_url)
+    return meta
 
 
 def _collect_tags(zip_root: Path, index: dict) -> list[TagMeta]:

@@ -45,17 +45,26 @@ class TestDictionaryImportFlowIterCloseWorkers:
             notify_config_changed=MagicMock(),
         )
 
-    def test_idle_flow_returns_none_entry(self):
+    def test_idle_flow_returns_none_entries(self):
         flow = self._make_flow()
         workers = flow.iter_close_workers()
-        assert workers == (None,)
+        # Import worker + update-check worker slots, both idle.
+        assert workers == (None, None)
 
     def test_live_worker_returned(self):
         flow = self._make_flow()
         w = _fake_worker()
         flow._active_import_worker = w
         workers = flow.iter_close_workers()
-        assert workers == (w,)
+        assert w in workers
+        assert workers == (w, None)
+
+    def test_live_update_worker_returned(self):
+        flow = self._make_flow()
+        w = _fake_worker()
+        flow._active_update_worker = w
+        workers = flow.iter_close_workers()
+        assert workers == (None, w)
 
     def test_returns_tuple(self):
         flow = self._make_flow()
@@ -282,6 +291,10 @@ class TestRealSettingsTabIterCloseWorkers:
         # + 1 DictionaryImportFlow + 1 AudioPackImportFlow + 1 FrequencyImportFlow
         # + 1 ZipImportFlow = 6 entries, all None idle.
         assert len(workers) == 6
+        # 3 from AnkiProbeController (fetch fields, fetch decks, styling write)
+        # + 2 DictionaryImportFlow (import + update-check) + 1 AudioPackImportFlow
+        # + 1 FrequencyImportFlow + 1 ZipImportFlow = 8 entries, all None idle.
+        assert len(workers) == 8
         assert all(w is None for w in workers)
 
     def test_dict_import_worker_surfaces(self):
