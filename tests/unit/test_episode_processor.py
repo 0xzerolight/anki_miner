@@ -301,12 +301,19 @@ class TestProcessEpisode:
         assert len(result.errors) > 0
         mock_services["definition_service"].get_definitions_batch.assert_not_called()
 
-    def test_data_flow_between_phases(self, processor, mock_services, tmp_path):
+    def test_data_flow_between_phases(self, processor, mock_services, tmp_path, monkeypatch):
         """Verify that outputs of one phase are passed as inputs to the next."""
         video = tmp_path / "v.mkv"
         sub = tmp_path / "s.ass"
         word = _make_word()
         media = _make_media()
+
+        # Neutralize the per-card styling seam so this data-flow assertion stays
+        # focused on phase wiring: the definition field now carries a card-wide
+        # <style> block (glossary unmapped, definition mapped) — its own dedicated
+        # tests cover that. Also avoids real dictionary-registry / SQLite I/O.
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css", lambda cfg: "")
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.build_card_style_block", lambda **k: "")
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -2893,11 +2900,19 @@ class TestGlossaryFetch:
         assert field.endswith(glossary_html)
         assert '[data-dictionary="X"]{color:red}' in field  # scoped dict CSS embedded
         assert ".yomitan-glossary" in field  # base sheet embedded
+        # Glossary is the styling carrier here, so the definition field stays
+        # style-free (the card-wide <style> only needs to appear once).
+        assert not payload.definition.startswith("<style>")
 
-    def test_glossary_skipped_when_field_unmapped(self, test_config, mock_services, tmp_path):
-        # Default test_config has anki_fields["glossary"] == "" (after Task 4).
+    def test_glossary_skipped_when_field_unmapped(self, test_config, mock_services, tmp_path, monkeypatch):
+        # Default test_config has anki_fields["glossary"] == "" but definition
+        # mapped, so the style block is still built (it rides the definition
+        # field). Mock the CSS collection to avoid real registry / SQLite I/O.
         processor = self._build_processor(test_config, mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
+
+        collect = MagicMock(return_value="")
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css", collect)
 
         processor.process_episode(video, sub)
 
@@ -2908,6 +2923,31 @@ class TestGlossaryFetch:
         # extra_fields may be None or a dict — but must NOT contain glossary.
         if payload.extra_fields is not None:
             assert "glossary" not in payload.extra_fields
+
+    def test_style_block_prepended_to_definition_when_glossary_unmapped(
+        self, test_config, mock_services, tmp_path, monkeypatch
+    ):
+        # Default config maps definition but not glossary: the per-card <style>
+        # block (base glossary.css + scoped dict CSS) must ride the DEFINITION
+        # field so default-config cards still carry the base sheet — and it must
+        # appear exactly once, with the original definition preserved.
+        processor = self._build_processor(test_config, mock_services)
+        video, sub = self._seed_happy_path(mock_services, tmp_path)
+
+        collect = MagicMock(return_value='.yomitan-glossary [data-dictionary="X"]{color:red}')
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css", collect)
+
+        processor.process_episode(video, sub)
+
+        collect.assert_called_once()  # assembled once per episode, not per card
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        assert len(card_data) == 1
+        definition = card_data[0].definition
+        assert definition.startswith("<style>")
+        assert definition.count("<style>") == 1  # exactly once
+        assert definition.endswith("1. to eat")  # original definition preserved
+        assert ".yomitan-glossary" in definition  # base sheet embedded
+        assert '[data-dictionary="X"]{color:red}' in definition  # scoped dict CSS embedded
 
 
 class TestAudioTrackOverrideForwarding:

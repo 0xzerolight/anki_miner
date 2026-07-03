@@ -1051,12 +1051,18 @@ class EpisodeProcessor:
         card_data: list[CardPayload] = []
         # Self-contained per-card glossary styling: assemble the <style> block
         # ONCE per episode (collect_dictionary_css does registry + per-dict SQLite
-        # I/O), gated on the glossary field being mapped so unmapped runs skip the
-        # I/O. Prepended to each card's glossary field below so styling travels
-        # inside the note — no note-type CSS write. Bound unconditionally ("") so
-        # the write-site reference is always safe.
+        # I/O). Built when EITHER the glossary OR the definition field is mapped —
+        # an Anki <style> in any field is card-wide, so the block rides the
+        # glossary field when it's mapped and otherwise prepends to the definition
+        # field. That way the base sheet (dark-theme SVG recolor, tag chips,
+        # structured-content layout) reaches default-config cards too, which map
+        # definition="MainDefinition" but leave glossary unmapped. Skipping the
+        # build only when neither is mapped keeps the no-styling path I/O-free.
+        # Bound unconditionally ("") so the write-site reference is always safe.
+        glossary_mapped = bool(self.config.anki_fields.get("glossary"))
+        definition_mapped = bool(self.config.anki_fields.get("definition"))
         style_block = ""
-        if self.config.anki_fields.get("glossary"):
+        if glossary_mapped or definition_mapped:
             style_block = build_card_style_block(
                 custom_css=self.config.custom_card_css,
                 dict_css=collect_dictionary_css(self.config),
@@ -1119,11 +1125,20 @@ class EpisodeProcessor:
             # non-empty configured field name (anki_fields["source"]).
             extra_fields["source"] = f"{ctx.source_label} @ {_format_timestamp(word.start_time)}"
 
+            # When the glossary field isn't the styling carrier (unmapped), prepend
+            # the style block to the definition field so the card still carries the
+            # base sheet. When glossary IS mapped it already rides the glossary
+            # field above (a card-wide <style> only needs to appear once), so the
+            # definition stays untouched — keeping glossary-mapped output identical.
+            card_definition = definition
+            if style_block and not glossary_mapped:
+                card_definition = style_block + definition
+
             card_data.append(
                 CardPayload(
                     word=word,
                     media=media,
-                    definition=definition,
+                    definition=card_definition,
                     extra_fields=extra_fields if extra_fields else None,
                 )
             )
