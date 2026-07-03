@@ -54,3 +54,20 @@ def test_reimport_dict_dialog_defaults_to_dicts_dir():
 
     rsd.assert_called_once()
     assert rsd.call_args.kwargs.get("default_dir") == dicts_root
+
+
+def test_import_notes_empty_when_clean():
+    """A clean import contributes no trailing note (plan 4.7/4.8)."""
+    flow = _make_flow(Path("/x"))
+    assert flow._import_notes({"skipped_malformed": 0, "media_warnings": []}) == ""
+    assert flow._import_notes({}) == ""
+
+
+def test_import_notes_reports_malformed_and_media():
+    """Malformed-skip count and media-warning count surface in the note."""
+    flow = _make_flow(Path("/x"))
+    note = flow._import_notes({"skipped_malformed": 5, "media_warnings": ["w1", "w2"]})
+    assert "5" in note
+    assert "malformed" in note
+    assert "2" in note
+    assert "media" in note.lower()
