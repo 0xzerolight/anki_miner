@@ -9,9 +9,11 @@ from anki_miner.services.dictionary.providers.indexed_provider import IndexedDic
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
+    TagMeta,
     bulk_insert,
     create_index,
     write_meta,
+    write_tags,
 )
 
 
@@ -698,3 +700,142 @@ class TestDictionaryCss:
         assert out is not None
         assert "<style>" not in out
         assert "evil" not in out
+
+
+# ---------------------------------------------------------------------------
+# schema v3: tag chips + lazy tag-meta cache
+# ---------------------------------------------------------------------------
+
+
+class TestTagChips:
+    """A unioned tag with a tags-table row renders as a hover chip; tags with
+    no row keep the italic fallback (byte-identical to pre-v3)."""
+
+    def _seed_with_tags(self, db_path: Path, rows, tags):
+        create_index(db_path)
+        bulk_insert(db_path, rows)
+        if tags:
+            write_tags(db_path, tags)
+        write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "Test"})
+
+    def test_tag_with_row_renders_as_chip(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_with_tags(
+            db,
+            [
+                DictRow(
+                    term="食べる", reading="たべる", content='<li class="gloss-item">eat</li>', tags="uk", sequence=1
+                )
+            ],
+            [TagMeta(name="uk", category="usage", ord=-2, notes="usually kana", score=0.0)],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+        result = provider.lookup("食べる")
+        assert result is not None
+        assert '<span class="gloss-tag" data-category="usage" title="usually kana">uk</span>' in result
+        # The chip tag no longer appears in the italic token line.
+        assert "<i>(DictName)</i>" in result
+        assert "uk," not in result
+
+    def test_tag_without_row_stays_in_italic(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        # tags table empty → v1 has no row → italic fallback (pre-v3 output).
+        self._seed_with_tags(
+            db,
+            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="v1 expr", sequence=1)],
+            [],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+        result = provider.lookup("x")
+        assert result is not None
+        assert "<i>(v1, expr, DictName)</i>" in result
+        assert "gloss-tag" not in result
+
+    def test_mixed_chip_and_fallback(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_with_tags(
+            db,
+            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="n custom", sequence=1)],
+            [TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=0.0)],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+        result = provider.lookup("x")
+        assert result is not None
+        # 'n' has a row → chip; 'custom' has none → stays in italic with dict name.
+        assert '<span class="gloss-tag" data-category="partOfSpeech" title="noun">n</span>' in result
+        assert "<i>(custom, DictName)</i>" in result
+
+    def test_chips_sorted_by_ord_then_score_then_name(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_with_tags(
+            db,
+            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="c a b", sequence=1)],
+            [
+                # ord governs first: a(ord2), b(ord1), c(ord1). Among ord1, higher
+                # score first (c score5 before b score0); then name.
+                TagMeta(name="a", category="", ord=2, notes="", score=0.0),
+                TagMeta(name="b", category="", ord=1, notes="", score=0.0),
+                TagMeta(name="c", category="", ord=1, notes="", score=5.0),
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="D")
+        provider.load()
+        result = provider.lookup("x")
+        assert result is not None
+        pos_c = result.index(">c</span>")
+        pos_b = result.index(">b</span>")
+        pos_a = result.index(">a</span>")
+        # Expected order: c (ord1, score5) < b (ord1, score0) < a (ord2)
+        assert pos_c < pos_b < pos_a
+
+    def test_lookup_many_matches_lookup_with_chips(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_with_tags(
+            db,
+            [
+                DictRow(
+                    term="食べる", reading="たべる", content='<li class="gloss-item">eat</li>', tags="uk n", sequence=1
+                ),
+                DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="custom", sequence=2),
+            ],
+            [
+                TagMeta(name="uk", category="usage", ord=-2, notes="kana", score=0.0),
+                TagMeta(name="n", category="pos", ord=0, notes="noun", score=0.0),
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="D")
+        provider.load()
+        words = ["食べる", "x", "missing"]
+        batch = provider.lookup_many(words)
+        for w in words:
+            assert batch[w] == provider.lookup(w), f"mismatch for {w!r}"
+
+    def test_chip_attrs_escaped(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_with_tags(
+            db,
+            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="t", sequence=1)],
+            [TagMeta(name="t", category='c"&', ord=0, notes='a<b>"', score=0.0)],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="D")
+        provider.load()
+        result = provider.lookup("x")
+        assert result is not None
+        assert 'data-category="c&quot;&amp;"' in result
+        assert 'title="a&lt;b&gt;&quot;"' in result
+
+    def test_tag_cache_lazy_and_reused(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_with_tags(
+            db,
+            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="uk", sequence=1)],
+            [TagMeta(name="uk", category="usage", ord=0, notes="kana", score=0.0)],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="D")
+        provider.load()
+        assert provider._tag_cache is None  # not read until first render
+        provider.lookup("x")
+        assert provider._tag_cache is not None and "uk" in provider._tag_cache
