@@ -31,6 +31,9 @@ the combined work carries the same license.
 | `anki_miner/services/deinflection.py` (`find_highlight_end_with_trace` attachment-order chain) | `ext/js/language/language-transformer.js` (`_extendTrace`), `ext/js/language/translator.js` (`inflectionRules` mapping) |
 | `anki_miner/utils/sentence_extract.py` (`extract_sentence`, terminator/quote maps) | `ext/js/dom/text-source-generator.js` (`extractSentence`), `ext/data/schemas/options-schema.json` (default `terminationCharacters`) |
 | `anki_miner/services/dictionary/yomitan_renderer.py` (`structured_content_to_html` typed-glossary dispatch, `_text_to_html`, `_render_attrs` internal-link neutering, `_coerce_style_value` style-value semantics) | `ext/js/dictionary/dictionary-importer.js` (`_formatDictionaryTermGlossaryObject`), `ext/js/templates/anki-template-renderer.js` (`_formatGlossary`, `_replaceNewlines`), `ext/js/templates/anki-template-renderer-content-manager.js` (`prepareLink`), `ext/js/display/structured-content-generator.js` (`_setStructuredContentElementStyle`, `_createLinkElement`) |
+| `anki_miner/services/dictionary/zip_safety.py` (`find_redundant_index_dir`, `raise_if_index_nested`) | `ext/js/dictionary/dictionary-importer.js` (`_findRedundantDirectories`, redundant-directory branch of `_readAndValidateIndex`) |
+| `anki_miner/services/dictionary/importers/yomitan_importer.py` (`_MEDIA_EXTENSION_WHITELIST`) | `ext/js/media/media-util.js` (`getImageMediaTypeFromFileName`) |
+| `anki_miner/services/dictionary/schema_validation.py` (structural bank checks) | `ext/js/dictionary/dictionary-importer.js` (`_getDataBankSchemas` / ajv bank validation — structural subset, no vendored schemas) |
 
 Pinned upstream commit: `e2ed450c2f11a591922822e77f008e70a87daf0c`.
 

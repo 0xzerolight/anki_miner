@@ -37,6 +37,9 @@ class YomitanPitchImportResult:
     source_revision: str
     entry_count: int
     skipped_display_only: int
+    # Structurally-malformed meta-bank entries skipped during import. Surfaced
+    # to the user so a reduced import doesn't pass unnoticed.
+    skipped_malformed: int = 0
 
 
 def import_yomitan_pitch_zip(
@@ -68,14 +71,12 @@ def import_yomitan_pitch_zip(
         skipped_display_only = 0
 
         for bank in banks.iter_banks(progress=progress, cancel_check=cancel_check):
+            # Entries are already structurally validated by iter_banks (list,
+            # arity >= 3, non-blank term); only the mode/data logic remains.
             for entry in bank:
-                if not isinstance(entry, list) or len(entry) < 3:
-                    continue
                 if entry[1] != "pitch":
                     continue
-                term = str(entry[0]).strip() if entry[0] is not None else ""
-                if not term:
-                    continue
+                term = str(entry[0]).strip()
 
                 data = entry[2]
                 if not isinstance(data, dict):
@@ -124,11 +125,12 @@ def import_yomitan_pitch_zip(
         atomic_write_csv(dest_csv, ["reading", "kanji", "pattern"], rows)
 
     logger.info(
-        "Imported %d pitch entries from '%s' (revision '%s'), skipped %d display-only",
+        "Imported %d pitch entries from '%s' (revision '%s'), skipped %d display-only, %d malformed",
         len(entries_out),
         title,
         revision,
         skipped_display_only,
+        banks.skipped_malformed,
     )
 
     return YomitanPitchImportResult(
@@ -136,4 +138,5 @@ def import_yomitan_pitch_zip(
         source_revision=revision,
         entry_count=len(entries_out),
         skipped_display_only=skipped_display_only,
+        skipped_malformed=banks.skipped_malformed,
     )

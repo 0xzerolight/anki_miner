@@ -27,7 +27,11 @@ from pathlib import Path
 from typing import Any, Callable
 
 from anki_miner.exceptions import SetupError
-from anki_miner.services.dictionary.zip_safety import validate_zip_safe
+from anki_miner.services.dictionary.schema_validation import (
+    ensure_bank_array,
+    is_valid_meta_bank_entry,
+)
+from anki_miner.services.dictionary.zip_safety import raise_if_index_nested, validate_zip_safe
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +60,9 @@ class YomitanMetaBanks:
 
     index: YomitanMetaIndex
     _meta_files: list[Path]
+    # Structurally-malformed entries dropped during :meth:`iter_banks`. Read by
+    # the importers *after* the generator is exhausted and surfaced to the user.
+    skipped_malformed: int = 0
 
     @property
     def title(self) -> str:
@@ -71,7 +78,12 @@ class YomitanMetaBanks:
         progress: ProgressFn | None = None,
         cancel_check: Callable[[], bool] | None = None,
     ) -> Iterator[list[Any]]:
-        """Yield each meta-bank's parsed JSON array, one file at a time.
+        """Yield each meta-bank's *structurally-valid* entries, one file at a time.
+
+        Structurally-malformed entries (not a list, arity < 3, or a blank term)
+        are dropped and tallied on :attr:`skipped_malformed` so the caller can
+        surface the count — mode/data validity remains the importer's concern. A
+        bank file whose top-level JSON is not an array raises (wholly unreadable).
 
         Fires ``progress(file_idx, total, message)`` after each file and
         raises ``SetupError("Import cancelled")`` if ``cancel_check`` returns
@@ -87,8 +99,16 @@ class YomitanMetaBanks:
                 bank = json.loads(meta_file.read_text(encoding="utf-8"))
             except json.JSONDecodeError as e:
                 raise SetupError(f"Invalid {meta_file.name}: {e}") from e
+            bank = ensure_bank_array(bank, meta_file.name)
 
-            yield bank
+            valid: list[Any] = []
+            for entry in bank:
+                if is_valid_meta_bank_entry(entry):
+                    valid.append(entry)
+                else:
+                    self.skipped_malformed += 1
+
+            yield valid
 
             if progress:
                 progress(file_idx, total, f"Imported {meta_file.name}")
@@ -137,7 +157,8 @@ def open_yomitan_meta_banks(
 
         index_file = tmp_path / "index.json"
         if not index_file.exists():
-            raise SetupError("Zip missing required index.json")
+            nested = [str(p.relative_to(tmp_path)) for p in tmp_path.rglob("index.json")]
+            raise_if_index_nested(nested, missing_msg="Zip missing required index.json")
 
         try:
             raw_index = json.loads(index_file.read_text(encoding="utf-8"))

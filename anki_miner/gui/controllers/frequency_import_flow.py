@@ -138,6 +138,15 @@ class FrequencyImportFlow:
             self._panel.refresh_registry()
             self._panel.set_chain(new_chain)
             self._persist_chain(new_chain)
+            skipped = meta.get("skipped_malformed", 0)
+            skipped_note = (
+                tr_format(
+                    QCoreApplication.translate("FrequencyImportFlow", " (skipped %1 malformed entries)"),
+                    f"{skipped:,}",
+                )
+                if skipped
+                else ""
+            )
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("FrequencyImportFlow", "Frequency Source Added"),
@@ -145,7 +154,8 @@ class FrequencyImportFlow:
                     QCoreApplication.translate("FrequencyImportFlow", "Imported %1 entries from '%2'."),
                     f"{meta.get('entry_count', 0):,}",
                     meta.get("source_name", source_id),
-                ),
+                )
+                + skipped_note,
             )
 
         def on_failed(err: str) -> None:
