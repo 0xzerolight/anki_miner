@@ -36,23 +36,31 @@ logger = logging.getLogger(__name__)
 # mismatches still yield a rank rather than losing frequency entirely. Both sides
 # are hiragana-normalized so a katakana-stored BCCWJ envelope reading still
 # matches a hiragana query.
-def _resolve_scoped_rank(rows: list[tuple[str | None, int]], reading: str | None) -> int | None:
-    """Best rank for ``reading`` over ``rows`` of ``(stored_reading, rank)``.
+def _select_scoped_row(rows: list[tuple], reading: str | None) -> tuple | None:
+    """Return the cascade's winning row (min rank in the selected bucket), or None.
 
-    Cascade: exact-reading rows → bare (NULL-reading) rows → all rows (term-only
-    MIN). With ``reading`` falsy, only the final term-only MIN applies.
+    Each row is ``(stored_reading, rank, ...)`` — ``row[0]`` is the reading,
+    ``row[1]`` the rank; any trailing columns (e.g. ``display_value``) ride along
+    untouched. Cascade: exact-reading rows → bare (NULL-reading) rows → all rows
+    (term-only MIN). With ``reading`` falsy, only the final term-only MIN applies.
     """
     if not rows:
         return None
     if reading:
         norm = katakana_to_hiragana(reading)
-        exact = [rank for stored, rank in rows if stored is not None and katakana_to_hiragana(stored) == norm]
+        exact = [r for r in rows if r[0] is not None and katakana_to_hiragana(r[0]) == norm]
         if exact:
-            return min(exact)
-        bare = [rank for stored, rank in rows if stored is None]
+            return min(exact, key=lambda r: r[1])
+        bare = [r for r in rows if r[0] is None]
         if bare:
-            return min(bare)
-    return min(rank for _stored, rank in rows)
+            return min(bare, key=lambda r: r[1])
+    return min(rows, key=lambda r: r[1])
+
+
+def _resolve_scoped_rank(rows: list[tuple], reading: str | None) -> int | None:
+    """Winning rank for ``reading`` over ``rows`` of ``(stored_reading, rank)``."""
+    row = _select_scoped_row(rows, reading)
+    return None if row is None else int(row[1])
 
 
 class IndexedFreqProvider:
@@ -68,6 +76,9 @@ class IndexedFreqProvider:
         self._db_path = db_path
         self._display_name = display_name
         self._conn: sqlite3.Connection | None = None
+        # Set at load() from PRAGMA table_info: a v1 index predates the
+        # display_value column, so its detail lookups report display None.
+        self._has_display_value = False
 
     @property
     def name(self) -> str:
@@ -93,9 +104,12 @@ class IndexedFreqProvider:
             version = int(meta.get("schema_version", "0"))
         except ValueError:
             version = 0
-        if version != SCHEMA_VERSION:
+        # Backward-compatible read: any version from 1..SCHEMA_VERSION loads
+        # (additive-only migrations). A v1 index simply lacks display_value.
+        # A future version > SCHEMA_VERSION is rejected — unknown schema.
+        if not (1 <= version <= SCHEMA_VERSION):
             logger.warning(
-                "Frequency source %s has schema_version=%s, expected %s — needs reimport",
+                "Frequency source %s has schema_version=%s, supported range is 1..%s — needs reimport",
                 self.source_id,
                 version,
                 SCHEMA_VERSION,
@@ -107,20 +121,43 @@ class IndexedFreqProvider:
         except sqlite3.DatabaseError as e:
             logger.warning("Failed to open %s: %s", self._db_path, e)
             return False
+        self._has_display_value = self._detect_display_value(self._conn)
         return True
+
+    @staticmethod
+    def _detect_display_value(conn: sqlite3.Connection) -> bool:
+        """True when the ``entries`` table carries the v2 ``display_value`` column.
+
+        Read straight from ``PRAGMA table_info`` rather than trusting the version
+        number, so a physical schema mismatch can never mis-shape the SELECT.
+        """
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(entries)")}
+        return "display_value" in cols
 
     def lookup(self, term: str, reading: str | None = None) -> int | None:
         """Best (minimum) rank for ``term`` scoped to ``reading``, or None.
 
         With ``reading`` supplied, a homograph's rare reading no longer inherits
-        a common reading's rank (see :func:`_resolve_scoped_rank`). With
-        ``reading`` None/empty, this is the legacy term-only ``MIN(rank)``.
+        a common reading's rank (see :func:`_select_scoped_row`). With ``reading``
+        None/empty, this is the legacy term-only ``MIN(rank)``.
+        """
+        detail = self.lookup_detail(term, reading)
+        return detail[0] if detail is not None else None
+
+    def lookup_detail(self, term: str, reading: str | None = None) -> tuple[int, str | None] | None:
+        """``(rank, display_value)`` for the reading-scoped winning row, or None.
+
+        The display value is the human string of the winning row (None on a v1
+        index that predates the column, or on plain-int/CSV ranks). Feeds the
+        card's per-source breakdown; the filter/sort paths take the rank alone
+        via :meth:`lookup`.
         """
         if self._conn is None:
             return None
+        display_col = "display_value" if self._has_display_value else "NULL"
         try:
             rows = self._conn.execute(
-                "SELECT reading, rank FROM entries WHERE term = ?",
+                f"SELECT reading, rank, {display_col} FROM entries WHERE term = ?",
                 (term,),
             ).fetchall()
         except sqlite3.DatabaseError as e:
@@ -131,7 +168,10 @@ class IndexedFreqProvider:
                 e,
             )
             return None
-        return _resolve_scoped_rank(rows, reading)
+        row = _select_scoped_row(rows, reading)
+        if row is None:
+            return None
+        return int(row[1]), row[2]
 
     def lookup_many(self, terms: list[str], readings: list[str | None] | None = None) -> dict[str, int | None]:
         """Batch lookup; byte-identical to repeated :meth:`lookup`.

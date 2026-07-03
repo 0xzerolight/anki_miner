@@ -8,12 +8,15 @@ from anki_miner.services.frequency import storage
 from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
 )
+from tests.unit.test_freq_storage import build_v1_index
 
 
-def _build_source(
-    root: Path, source_id: str, rows: list[storage.FreqRow], *, schema_version: int | None = None
-) -> Path:
-    """Build a real per-source index.sqlite under root/<source_id>/, return its db path."""
+def _build_source(root: Path, source_id: str, rows: list[tuple], *, schema_version: int | None = None) -> Path:
+    """Build a real per-source index.sqlite under root/<source_id>/, return its db path.
+
+    ``rows`` may be 3-tuples ``(term, reading, rank)`` — padded to the v2 shape
+    with ``display_value=None`` — or full 4-tuples.
+    """
     db_path = root / source_id / "index.sqlite"
     meta = {
         "schema_version": str(storage.SCHEMA_VERSION if schema_version is None else schema_version),
@@ -21,7 +24,8 @@ def _build_source(
         "source_name": source_id,
         "entry_count": str(len(rows)),
     }
-    storage.build_index(db_path, rows, meta)
+    padded: list[storage.FreqRow] = [row if len(row) == 4 else (*row, None) for row in rows]
+    storage.build_index(db_path, padded, meta)
     return db_path
 
 
@@ -165,3 +169,45 @@ def test_is_available_reflects_load(tmp_path: Path):
     assert provider.is_available() is False
     assert provider.load() is True
     assert provider.is_available() is True
+
+
+def test_lookup_detail_returns_rank_and_display(tmp_path: Path):
+    db = _build_source(tmp_path, "jpdb", [("猫", "ねこ", 1099, "1099/72000"), ("犬", "いぬ", 200, None)])
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.load() is True
+    assert provider.lookup_detail("猫") == (1099, "1099/72000")
+    assert provider.lookup_detail("犬") == (200, None)
+    assert provider.lookup_detail("存在しない") is None
+    # lookup() stays rank-only.
+    assert provider.lookup("猫") == 1099
+
+
+def test_lookup_detail_reading_scoped_picks_winning_rows_display(tmp_path: Path):
+    db = _build_source(
+        tmp_path,
+        "jpdb",
+        [("方", "かた", 2000, "2000㋕"), ("方", "ほう", 30, "30㋕")],
+    )
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.load() is True
+    assert provider.lookup_detail("方", "かた") == (2000, "2000㋕")
+    assert provider.lookup_detail("方", "ほう") == (30, "30㋕")
+
+
+def test_lookup_detail_before_load_returns_none(tmp_path: Path):
+    db = _build_source(tmp_path, "jpdb", [("猫", "ねこ", 100, "x")])
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.lookup_detail("猫") is None
+
+
+def test_v1_index_loads_and_reads_with_absent_display(tmp_path: Path):
+    # A legacy v1 index (no display_value column) must load after the 1->2 bump
+    # and read as before, with display_value reported absent.
+    db = tmp_path / "old" / "index.sqlite"
+    build_v1_index(db, [("猫", "ねこ", 100), ("生", "せい", 80), ("生", "なま", 500)])
+    provider = IndexedFreqProvider("old", db, "Old")
+    assert provider.load() is True
+    assert provider.is_available() is True
+    assert provider.lookup("猫") == 100
+    assert provider.lookup("生", "なま") == 500  # reading-scoping still works on v1
+    assert provider.lookup_detail("猫") == (100, None)  # display absent on v1

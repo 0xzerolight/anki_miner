@@ -37,23 +37,26 @@ class MultiFrequencyService:
         """True if any wrapped provider is available."""
         return any(p.is_available() for p in self._providers)
 
-    def lookup_all(self, term: str, reading: str | None = None) -> list[tuple[str, int]]:
-        """``(provider name, rank)`` for each provider that ranks ``term``.
+    def lookup_all(self, term: str, reading: str | None = None) -> list[tuple[str, int, str | None]]:
+        """``(provider name, rank, display_value)`` for each provider ranking ``term``.
 
         Returned in provider (chain) order; providers with no rank are omitted.
-        This is the per-source breakdown rendered on the card. ``reading`` scopes
-        the per-source lookup so homographs no longer inherit each other's ranks.
+        This is the per-source breakdown rendered on the card — ``display_value``
+        is the human string a card shows in place of the bare rank (None for
+        plain-int/CSV ranks or v1 indexes). ``reading`` scopes the per-source
+        lookup so homographs no longer inherit each other's ranks.
         """
-        results: list[tuple[str, int]] = []
+        results: list[tuple[str, int, str | None]] = []
         for provider in self._providers:
-            rank = provider.lookup(term, reading)
-            if rank is not None:
-                results.append((provider.name, rank))
+            detail = provider.lookup_detail(term, reading)
+            if detail is not None:
+                rank, display_value = detail
+                results.append((provider.name, rank, display_value))
         return results
 
     def lookup_min(self, term: str, reading: str | None = None) -> int | None:
         """Minimum rank across all providers, or None if none rank ``term``."""
-        ranks = [rank for _name, rank in self.lookup_all(term, reading)]
+        ranks = [rank for _name, rank, _display in self.lookup_all(term, reading)]
         return min(ranks) if ranks else None
 
     def lookup_harmonic(self, term: str, reading: str | None = None) -> int | None:
@@ -70,7 +73,7 @@ class MultiFrequencyService:
         way a bare MIN can; ``lookup_min`` still backs the top-N frequency
         filter, which genuinely wants the best rank in any source.
         """
-        ranks = [rank for _name, rank in self.lookup_all(term, reading) if rank > 0]
+        ranks = [rank for _name, rank, _display in self.lookup_all(term, reading) if rank > 0]
         if not ranks:
             return None
         total = sum(1.0 / rank for rank in ranks)

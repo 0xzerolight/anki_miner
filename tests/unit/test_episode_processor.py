@@ -586,7 +586,7 @@ class TestOptionalServices:
         word = _make_word("食べる")
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("BCCWJ", 500)]
+        mock_frequency.lookup_all.return_value = [("BCCWJ", 500, None)]
         mock_frequency.lookup_min.return_value = 500
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
@@ -612,7 +612,7 @@ class TestOptionalServices:
         # Verify the word now has both the min rank (drives filtering) and the
         # per-source breakdown (drives the card display).
         assert word.frequency_rank == 500
-        assert word.frequency_sources == [("BCCWJ", 500)]
+        assert word.frequency_sources == [("BCCWJ", 500, None)]
 
     def test_frequency_filter_removes_words(self, test_config, mock_services, tmp_path):
         """Frequency filter should remove words outside the threshold."""
@@ -625,7 +625,7 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.side_effect = [[("BCCWJ", 500)], [("BCCWJ", 5000)]]
+        mock_frequency.lookup_all.side_effect = [[("BCCWJ", 500, None)], [("BCCWJ", 5000, None)]]
         mock_frequency.lookup_min.side_effect = [500, 5000]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
@@ -656,7 +656,7 @@ class TestOptionalServices:
         word1 = _make_word("食べる")
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("BCCWJ", 500)]
+        mock_frequency.lookup_all.return_value = [("BCCWJ", 500, None)]
         mock_frequency.lookup_min.return_value = 500
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1]
@@ -721,7 +721,7 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("BCCWJ", 500), ("JPDB", 612)]
+        mock_frequency.lookup_all.return_value = [("BCCWJ", 500, None), ("JPDB", 612, "612/9M")]
         mock_frequency.lookup_min.return_value = 500
         # floor(2 / (1/500 + 1/612)) = 550 — the harmonic mean of the two ranks.
         mock_frequency.lookup_harmonic.return_value = 550
@@ -751,9 +751,11 @@ class TestOptionalServices:
         assert extra_fields is not None
         assert extra_fields["pitch_position"] == "0"
         assert extra_fields["pitch_category"] == "平板"
-        # frequency is the rendered per-source bullet list; frequency_sort carries
-        # the harmonic-mean rank (not the bare MIN) for Anki's numeric sort column.
-        assert extra_fields["frequency"] == "<ul><li>BCCWJ: 500</li><li>JPDB: 612</li></ul>"
+        # frequency is the rendered per-source bullet list — JPDB carries a
+        # display_value ("612/9M") that wins over its bare rank on the card, while
+        # frequency_sort keeps the numeric harmonic-mean rank (not the display,
+        # not the bare MIN) for Anki's numeric sort column.
+        assert extra_fields["frequency"] == "<ul><li>BCCWJ: 500</li><li>JPDB: 612/9M</li></ul>"
         assert extra_fields["frequency_sort"] == "550"
 
     def test_word_absent_from_all_sources_gets_no_frequency_fields(self, test_config, mock_services, tmp_path):

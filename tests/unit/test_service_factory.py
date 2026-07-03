@@ -227,8 +227,9 @@ class TestFrequencyServiceWiring:
         assert isinstance(services.frequency_service, MultiFrequencyService)
         assert services.frequency_service.is_available()
         assert services.frequency_service.lookup_min("食べる") == 3
-        # lookup_all reports (display name, rank); the CSV stem is the source name.
-        assert services.frequency_service.lookup_all("猫") == [("ranks", 1)]
+        # lookup_all reports (display name, rank, display_value); the CSV stem is
+        # the source name, and a CSV rank has no display string (None).
+        assert services.frequency_service.lookup_all("猫") == [("ranks", 1, None)]
         # Human-readable info line mentions source count + total entries.
         joined = " ".join(services.load_result.info)
         assert "Frequency data loaded" in joined

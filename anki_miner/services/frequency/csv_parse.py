@@ -18,9 +18,18 @@ Two concerns live here:
 from __future__ import annotations
 
 import logging
+import math
+import re
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# Ported from Yomitan Translator._numberRegex / _convertStringToNumber
+# (ext/js/language/translator.js, upstream commit e2ed450): the first
+# float-shaped run in a display string is its sortable rank. Lets string payloads
+# like "1099/72000" or JPDB "1234㋕" keep the human string AND yield a number,
+# instead of being rejected wholesale as display-only.
+_NUMBER_RE = re.compile(r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?")
 
 # Header first-column values that unambiguously declare (word, rank) column order.
 # The Yomitan freq importer writes ``['term', 'rank']`` as its header; we recognise
@@ -125,52 +134,60 @@ def _extract_word_rank(row: list[str], *, word_first: bool = False) -> tuple[str
     return "", None
 
 
-def normalize_freq_rank(data: Any) -> int | None:
-    """Extract an integer rank from any of Yomitan's five ``freq`` data shapes.
+def normalize_freq_rank(data: Any) -> tuple[int | None, str | None]:
+    """Extract ``(rank, display_value)`` from any of Yomitan's ``freq`` shapes.
 
-    Returns ``None`` for display-only entries (e.g. ``"①"``) and for ranks
-    outside the valid range (rank must be >= 1; a "0th most common word" is
-    nonsense). Invalid-rank entries are lumped into the caller's display-only
-    count by design — they're equally unusable downstream.
+    ``rank`` is the sortable integer; ``display_value`` is the human string a
+    card should show instead of the bare rank (Yomitan's ``displayValue`` — set
+    for string payloads and ``{value, displayValue}`` objects, None for plain
+    ints). Returns ``(None, None)`` for display-only entries (e.g. ``"①"``, which
+    has no numeric content) and for ranks outside the valid range (rank must be
+    >= 1; a "0th most common word" is nonsense) — such entries are unusable and
+    the importer skips them.
     """
-    rank = _normalize_freq_rank_raw(data)
+    rank, display_value = _normalize_freq_rank_raw(data)
     if rank is None or rank < 1:
-        return None
-    return rank
+        return None, None
+    return rank, display_value
 
 
-def _normalize_freq_rank_raw(data: Any) -> int | None:
-    """Raw shape-dispatch for the five spec-defined ``freq`` data shapes.
+def _normalize_freq_rank_raw(data: Any) -> tuple[int | None, str | None]:
+    """Raw shape-dispatch for the spec-defined ``freq`` data shapes.
 
-    Validity gating (rank >= 1) is applied by :func:`normalize_freq_rank`.
+    Returns ``(rank, display_value)``; validity gating (rank >= 1) is applied by
+    :func:`normalize_freq_rank`.
     """
     if isinstance(data, bool):
         # bool is a subclass of int; reject before the int branch below.
-        return None
+        return None, None
 
     if isinstance(data, int):
-        return data
+        return data, None
 
     if isinstance(data, str):
-        return _try_int(data)
+        # String payload: the whole string is the display value; the rank is its
+        # first float-shaped run (Yomitan _getFrequencyInfo string branch).
+        return _string_to_rank(data), (data.strip() or None)
 
     if isinstance(data, dict):
         # Outer envelope with `reading` + `frequency` (BCCWJ-style entries).
         # The reading itself is handled by the caller (it inspects the envelope
-        # separately); here we recurse into `frequency` for the rank only.
+        # separately); here we recurse into `frequency` for the rank + display.
         if "frequency" in data:
             return _normalize_freq_rank_raw(data["frequency"])
         # Inner `GenericFrequencyData`: `{value, displayValue?}`.
         if "value" in data:
             value = data["value"]
+            raw_display = data.get("displayValue")
+            display = raw_display if isinstance(raw_display, str) else None
             if isinstance(value, bool):
-                return None
+                return None, display
             if isinstance(value, int):
-                return value
+                return value, display
             if isinstance(value, str):
-                return _try_int(value)
+                return _string_to_rank(value), display
 
-    return None
+    return None, None
 
 
 def extract_envelope_reading(data: Any) -> str | None:
@@ -189,16 +206,23 @@ def extract_envelope_reading(data: Any) -> str | None:
     return None
 
 
-def _try_int(s: str) -> int | None:
-    """Best-effort string→int conversion that tolerates surrounding whitespace.
+def _string_to_rank(s: str) -> int | None:
+    """Sortable integer rank from a display string, or None if it has no number.
 
-    Returns ``None`` for display-only markers like ``"①"`` or ``"高"`` that
-    have no integer interpretation.
+    Uses Yomitan's float-regex (:data:`_NUMBER_RE`) so "1099/72000" → 1099 and
+    "1234㋕" → 1234, where the old ``int()`` parse rejected the whole string.
+    Pure display-only markers ("①", "高") have no float-shaped run → None. The
+    matched float is truncated toward zero (ranks are integers); a non-positive
+    result is returned as-is and left for ``normalize_freq_rank`` to reject
+    (rank must be >= 1).
     """
-    s = s.strip()
-    if not s:
+    match = _NUMBER_RE.search(s)
+    if match is None:
         return None
     try:
-        return int(s)
-    except ValueError:
+        value = float(match.group(0))
+    except ValueError:  # pragma: no cover - regex guarantees a valid float literal
         return None
+    if not math.isfinite(value):
+        return None
+    return int(value)
