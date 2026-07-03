@@ -99,6 +99,10 @@ class AnkiMinerConfig:
             "sentence_reading": "",
             "pitch_position": "",
             "pitch_category": "",
+            # Inline pitch graph SVG / overline text (6.3). Both default ""
+            # (feature off; wire byte-identical via the empty-name skip).
+            "pitch_graph": "",
+            "pitch_text": "",
             "frequency": "",
             "frequency_sort": "",
             "source": "",

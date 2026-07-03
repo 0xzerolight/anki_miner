@@ -175,6 +175,57 @@ class TestConjugationField:
         assert "Conjugation" not in fields
 
 
+class TestPitchGraphTextFields:
+    """Raw-HTML insertion of the 6.3 pitch graph / overline fields."""
+
+    _GRAPH = '<svg class="pronunciation-graph"><path d="M25 75"/></svg>'
+    _TEXT = '<span class="pronunciation-text"><span>は</span></span>'
+
+    def test_unmapped_omits_both_fields(self):
+        note = build_note(
+            _payload(_word(), extra_fields={"pitch_graph": self._GRAPH, "pitch_text": self._TEXT}),
+            AnkiMinerConfig(manage_card_styling=False),
+            set(),
+        ).note
+        assert "PitchGraph" not in note["fields"]
+        assert "PitchText" not in note["fields"]
+
+    def test_mapped_inserts_raw_html_not_escaped(self):
+        config = _config(pitch_graph="PitchGraph", pitch_text="PitchText")
+        fields = build_note(
+            _payload(_word(), extra_fields={"pitch_graph": self._GRAPH, "pitch_text": self._TEXT}),
+            config,
+            set(),
+        ).note["fields"]
+        # Verbatim: the <svg>/<span> markup is NOT html.escape()d.
+        assert fields["PitchGraph"] == self._GRAPH
+        assert fields["PitchText"] == self._TEXT
+        assert "&lt;" not in fields["PitchGraph"]
+
+    def test_mapped_but_no_data_omits_field(self):
+        # extra_fields carries no pitch keys (episode_processor gates on the
+        # render output being non-empty) → mapped field left untouched, not blanked.
+        config = _config(pitch_graph="PitchGraph", pitch_text="PitchText")
+        fields = build_note(_payload(_word()), config, set()).note["fields"]
+        assert "PitchGraph" not in fields
+        assert "PitchText" not in fields
+
+    def test_default_config_wire_unchanged(self):
+        # A legacy config whose anki_fields never contained the pitch_graph/
+        # pitch_text keys produces the identical note dict as the current default.
+        word = _word()
+        default_note = build_note(_payload(word), AnkiMinerConfig(manage_card_styling=False), set()).note
+        legacy_fields = {
+            k: v for k, v in AnkiMinerConfig().anki_fields.items() if k not in ("pitch_graph", "pitch_text")
+        }
+        legacy_note = build_note(
+            _payload(word),
+            AnkiMinerConfig(anki_fields=legacy_fields, manage_card_styling=False),
+            set(),
+        ).note
+        assert default_note == legacy_note
+
+
 class TestGetRootDeckName:
     def test_unnested_returns_self(self):
         assert _get_root_deck_name("Mining") == "Mining"
