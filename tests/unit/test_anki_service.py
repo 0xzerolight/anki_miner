@@ -24,6 +24,23 @@ def _mock_response(result=None, error=None):
     return resp
 
 
+@pytest.fixture(autouse=True)
+def _stub_duplicate_probe(request):
+    """Neutralize the pre-add duplicate probe by default (all non-duplicate).
+
+    Keeps every ``create_cards_batch`` test that isn't about duplicates on its
+    existing addNotes-only POST sequence and call count — the probe would
+    otherwise add a ``canAddNotesWithErrorDetail`` POST per batch. Tests marked
+    ``real_probe`` opt out to exercise the real probe and supply their own
+    ``canAddNotesWithErrorDetail`` / ``canAddNotes`` responses.
+    """
+    if "real_probe" in request.keywords:
+        yield
+        return
+    with patch.object(AnkiService, "_probe_duplicates", side_effect=lambda notes: [False] * len(notes)):
+        yield
+
+
 class TestExpectList:
     """Direct tests for the _expect_list response-shape validator."""
 
@@ -590,29 +607,6 @@ class TestCreateCardsBatch:
 
         assert result == 3
 
-    def test_top_level_duplicate_error_recovers_per_note(self, test_config, make_tokenized_word):
-        """A top-level duplicate error must not abort the run: retry per-note,
-        skip duplicates, create the rest, and report the skipped count."""
-        service = AnkiService(test_config)
-        items = self._make_word_data(make_tokenized_word, n=3)
-
-        # addNotes raises a top-level duplicate error; then per-note addNote:
-        # note 0 ok, note 1 duplicate (skipped), note 2 ok.
-        batch_dup = _mock_response(error=["cannot create note because it is a duplicate"])
-        note0 = _mock_response(result=100)
-        note1_dup = _mock_response(error="cannot create note because it is a duplicate")
-        note2 = _mock_response(result=102)
-
-        with patch(
-            "anki_miner.services._ankiconnect.requests.post",
-            side_effect=[batch_dup, note0, note1_dup, note2],
-        ):
-            result = service.create_cards_batch(items)
-
-        assert result == 2
-        assert service.last_skipped_duplicates == 1
-        assert service.last_created_note_ids == [100, 102]
-
     def test_non_duplicate_batch_error_propagates(self, test_config, make_tokenized_word):
         """A non-duplicate addNotes error (e.g. missing deck) still aborts."""
         service = AnkiService(test_config)
@@ -659,24 +653,6 @@ class TestCreateCardsBatch:
         assert service._existing_vocab_cache is not None
         assert "食べる" in service._existing_vocab_cache
         assert "既知" in service._existing_vocab_cache
-
-    def test_non_duplicate_error_during_per_note_fallback_propagates(self, test_config, make_tokenized_word):
-        """If a non-duplicate error surfaces while recovering per-note, raise it."""
-        service = AnkiService(test_config)
-        items = self._make_word_data(make_tokenized_word, n=2)
-
-        batch_dup = _mock_response(error=["cannot create note because it is a duplicate"])
-        note0 = _mock_response(result=100)
-        note1_fatal = _mock_response(error="model was not found: Lapis")
-
-        with (
-            patch(
-                "anki_miner.services._ankiconnect.requests.post",
-                side_effect=[batch_dup, note0, note1_fatal],
-            ),
-            pytest.raises(AnkiConnectionError, match="model was not found"),
-        ):
-            service.create_cards_batch(items)
 
     def test_progress_callback_lifecycle(self, test_config, make_tokenized_word, recording_progress):
         """Should call on_start, on_progress, and on_complete in order."""
@@ -3440,15 +3416,14 @@ class TestCardTypeMarker:
 
 
 class TestNullSlotSkipCount:
-    """Null slots in addNotes result are counted and surfaced honestly (OVH-040).
+    """Residual addNotes null slots are counted and surfaced honestly (OVH-040).
 
-    AnkiConnect's common path for a duplicate (or other silent rejection) is a
-    ``null`` slot in the result array, NOT a top-level error.  Prior to this
-    fix, those were invisible — the user saw "Successfully created N cards" with
-    M silently missing.  Now null slots are counted in
-    ``last_skipped_duplicates`` and an INFO log line is emitted with the
-    user-facing wording "note(s) were not created (likely already in your
-    collection)".
+    Duplicates are now caught by the pre-add probe (see ``TestProbeDuplicates``);
+    these tests run with the probe stubbed to "all addable", so any ``null`` slot
+    in the addNotes result is a residual rejection the probe had cleared. Such a
+    slot must still be counted in ``last_skipped_duplicates`` and surfaced via the
+    INFO log ("note(s) were not created (likely already in your collection)") so
+    a created-vs-submitted gap is never silent.
     """
 
     def _make_word_data(self, make_tokenized_word, n=1):
@@ -3502,30 +3477,6 @@ class TestNullSlotSkipCount:
         assert result == 3
         assert service.last_skipped_duplicates == 0
 
-    def test_null_slots_not_double_counted_on_per_note_recovery(self, test_config, make_tokenized_word):
-        """When the per-note recovery path ran, null slots are NOT counted again.
-
-        The recovery path already attributed each None slot via batch_skipped;
-        adding null_slots on top would double-count.
-        """
-        service = AnkiService(test_config)
-        items = self._make_word_data(make_tokenized_word, n=3)
-
-        # addNotes raises a top-level duplicate error; per-note retry: ok, dup, ok.
-        batch_dup = _mock_response(error=["cannot create note because it is a duplicate"])
-        note0 = _mock_response(result=100)
-        note1_dup = _mock_response(error="cannot create note because it is a duplicate")
-        note2 = _mock_response(result=102)
-
-        with patch(
-            "anki_miner.services._ankiconnect.requests.post",
-            side_effect=[batch_dup, note0, note1_dup, note2],
-        ):
-            service.create_cards_batch(items)
-
-        # Recovery path: 1 explicit skip — must NOT be inflated to 2 by null-slot count.
-        assert service.last_skipped_duplicates == 1
-
     def test_null_slots_accumulated_across_multiple_batches(self, test_config, make_tokenized_word):
         """Null slots from multiple addNotes batches are summed into one counter."""
         service = AnkiService(test_config)
@@ -3545,3 +3496,205 @@ class TestNullSlotSkipCount:
 
         assert result == 197
         assert service.last_skipped_duplicates == 3
+
+
+class TestProbeDuplicates:
+    """The pre-add duplicate probe (Yomitan partitionAddibleNotes port).
+
+    These tests run the REAL ``_probe_duplicates`` (marked ``real_probe`` to opt
+    out of the module autouse stub) and drive it through ``create_cards_batch``
+    against mocked ``canAddNotesWithErrorDetail`` / ``canAddNotes`` responses.
+    """
+
+    pytestmark = pytest.mark.real_probe
+
+    def _make_word_data(self, make_tokenized_word, n=1):
+        items = []
+        for i in range(n):
+            word = make_tokenized_word(lemma=f"word_{i}")
+            items.append(CardPayload(word=word, media=MediaData(), definition=f"def_{i}"))
+        return items
+
+    @staticmethod
+    def _actions(mock_post):
+        return [c[1]["json"]["action"] for c in mock_post.call_args_list]
+
+    def test_empty_notes_probe_makes_no_request(self, test_config):
+        """The probe short-circuits an empty batch without touching AnkiConnect."""
+        service = AnkiService(test_config)
+        with patch("anki_miner.services._ankiconnect.requests.post") as mock_post:
+            assert service._probe_duplicates([]) == []
+        mock_post.assert_not_called()
+
+    def test_strip_note_to_first_field_keeps_only_first(self):
+        """First-field-only clone (Yomitan _stripNotesArray); original untouched."""
+        note = {
+            "deckName": "D",
+            "modelName": "M",
+            "tags": ["t"],
+            "fields": {"Expression": "食べる", "Meaning": "eat", "Sentence": "彼は食べる"},
+            "options": {"allowDuplicate": True},
+        }
+        stripped = AnkiService._strip_note_to_first_field(note)
+        assert stripped["fields"] == {"Expression": "食べる"}
+        assert stripped["deckName"] == "D"
+        assert stripped["options"] == {"allowDuplicate": True}
+        # Source note is not mutated.
+        assert set(note["fields"]) == {"Expression", "Meaning", "Sentence"}
+
+    def test_probe_skips_duplicates_and_submits_rest(self, test_config, make_tokenized_word):
+        """Probe-flagged duplicates are skipped; only the rest reach addNotes."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=3)
+
+        # note 0 addable, note 1 duplicate, note 2 addable.
+        probe = _mock_response(
+            result=[
+                {"canAdd": True, "error": None},
+                {"canAdd": False, "error": "cannot create note because it is a duplicate"},
+                {"canAdd": True, "error": None},
+            ]
+        )
+        add = _mock_response(result=[100, 102])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[probe, add]) as mock_post:
+            result = service.create_cards_batch(items)
+
+        assert result == 2
+        assert service.last_skipped_duplicates == 1
+        assert service.last_created_note_ids == [100, 102]
+        assert self._actions(mock_post) == ["canAddNotesWithErrorDetail", "addNotes"]
+        # addNotes received only the 2 non-duplicates.
+        add_call = mock_post.call_args_list[1]
+        assert len(add_call[1]["json"]["params"]["notes"]) == 2
+
+    def test_all_duplicates_skips_addnotes_entirely(self, test_config, make_tokenized_word):
+        """When every note is a duplicate, no addNotes request is made."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=2)
+
+        probe = _mock_response(
+            result=[
+                {"canAdd": False, "error": "cannot create note because it is a duplicate"},
+                {"canAdd": False, "error": "cannot create note because it is a duplicate"},
+            ]
+        )
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[probe]) as mock_post:
+            result = service.create_cards_batch(items)
+
+        assert result == 0
+        assert service.last_skipped_duplicates == 2
+        assert self._actions(mock_post) == ["canAddNotesWithErrorDetail"]
+
+    def test_probe_strips_to_first_field_and_flips_allow_duplicate(self, test_config, make_tokenized_word):
+        """Probe clones carry only the first field and allowDuplicate=False."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=1)
+
+        probe = _mock_response(result=[{"canAdd": True, "error": None}])
+        add = _mock_response(result=[100])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[probe, add]) as mock_post:
+            service.create_cards_batch(items)
+
+        payload = mock_post.call_args_list[0][1]["json"]
+        assert payload["action"] == "canAddNotesWithErrorDetail"
+        probe_notes = payload["params"]["notes"]
+        assert len(probe_notes) == 1
+        assert len(probe_notes[0]["fields"]) == 1
+        assert probe_notes[0]["options"]["allowDuplicate"] is False
+
+    def test_probe_preserves_duplicate_scope_for_deck_builder(self, test_config, make_tokenized_word):
+        """allow_duplicate_cards=True: probe keeps duplicateScope, forces allowDuplicate off."""
+        import dataclasses
+
+        config = dataclasses.replace(test_config, allow_duplicate_cards=True)
+        service = AnkiService(config)
+        items = self._make_word_data(make_tokenized_word, n=1)
+
+        probe = _mock_response(result=[{"canAdd": True, "error": None}])
+        add = _mock_response(result=[100])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[probe, add]) as mock_post:
+            result = service.create_cards_batch(items)
+
+        assert result == 1
+        probe_notes = mock_post.call_args_list[0][1]["json"]["params"]["notes"]
+        assert probe_notes[0]["options"] == {"allowDuplicate": False, "duplicateScope": "deck"}
+
+    def test_non_duplicate_rejection_raises_not_skipped(self, test_config, make_tokenized_word):
+        """A non-duplicate canAdd=false surfaces as an error, not a silent skip.
+
+        This is the core fix: the old null-slot inference mislabeled genuine
+        rejections (empty first field, bad field mapping) as duplicates.
+        """
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=1)
+
+        probe = _mock_response(result=[{"canAdd": False, "error": "cannot create note because it is empty"}])
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=probe),
+            pytest.raises(AnkiConnectionError, match="not a duplicate"),
+        ):
+            service.create_cards_batch(items)
+
+        # It was NOT miscounted as a skipped duplicate.
+        assert service.last_skipped_duplicates == 0
+
+    def test_fallback_diffs_two_can_add_notes_calls(self, test_config, make_tokenized_word):
+        """Older AnkiConnect (no canAddNotesWithErrorDetail): diff two canAddNotes."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=2)
+
+        unsupported = _mock_response(error="unsupported action")
+        # duplicates-allowed arm: both addable; no-duplicates arm: note1 not addable.
+        with_dup = _mock_response(result=[True, True])
+        without_dup = _mock_response(result=[True, False])
+        add = _mock_response(result=[100])
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[unsupported, with_dup, without_dup, add],
+        ) as mock_post:
+            result = service.create_cards_batch(items)
+
+        assert result == 1
+        assert service.last_skipped_duplicates == 1  # note1 is the duplicate
+        assert self._actions(mock_post) == [
+            "canAddNotesWithErrorDetail",
+            "canAddNotes",
+            "canAddNotes",
+            "addNotes",
+        ]
+        # The duplicates-allowed arm forces allowDuplicate=True so the diff is meaningful.
+        dup_allowed_notes = mock_post.call_args_list[1][1]["json"]["params"]["notes"]
+        assert dup_allowed_notes[0]["options"]["allowDuplicate"] is True
+
+    def test_probe_transport_error_propagates(self, test_config, make_tokenized_word):
+        """A connection failure during the probe aborts the run (not a fallback)."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=1)
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=requests.exceptions.ConnectionError("down"),
+            ),
+            pytest.raises(AnkiConnectionError, match="Cannot connect"),
+        ):
+            service.create_cards_batch(items)
+
+    def test_probe_malformed_response_propagates(self, test_config, make_tokenized_word):
+        """A non-list probe response is not an 'unsupported action' fallback trigger."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=1)
+
+        bad = _mock_response(result=None)  # not a list
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=bad),
+            pytest.raises(AnkiConnectionError, match="canAddNotesWithErrorDetail"),
+        ):
+            service.create_cards_batch(items)

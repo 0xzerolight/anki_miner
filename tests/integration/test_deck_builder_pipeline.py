@@ -68,6 +68,7 @@ def _make_post_action(known_words: set[str], config: AnkiMinerConfig | None = No
     - ``createDeck``      → fake deck ID.
     - ``findNotes``       → one synthetic ID per known word.
     - ``notesInfo``       → field dicts for the known words.
+    - ``canAddNotesWithErrorDetail`` → every submitted note addable (no duplicates).
     - ``addNotes``        → sequential IDs for the submitted batch.
     - anything else       → None (safe default).
     """
@@ -87,6 +88,10 @@ def _make_post_action(known_words: set[str], config: AnkiMinerConfig | None = No
         if action == "notesInfo":
             requested = len((params or {}).get("notes", []))
             return [{"fields": {"word": {"value": w}}} for w in list(known_words)[:requested]]
+        if action == "canAddNotesWithErrorDetail":
+            # Pre-add duplicate probe: report every submitted note as addable.
+            notes = (params or {}).get("notes", [])
+            return [{"canAdd": True, "error": None} for _ in notes]
         if action == "addNotes":
             notes = (params or {}).get("notes", [])
             start = _note_id_counter[0]
