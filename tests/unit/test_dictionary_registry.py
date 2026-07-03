@@ -349,6 +349,18 @@ def _seed_stale_dict(root: Path, dict_id: str, source_name: str):
 
 
 class TestStaleEnabled:
+    def test_v2_slot_flags_schema_not_ok(self, tmp_path: Path):
+        """A v2 dict (the pre-schema-v3 format) flags schema_ok=False."""
+        folder = tmp_path / "v2-dict"
+        folder.mkdir(parents=True, exist_ok=True)
+        db = folder / "index.sqlite"
+        create_index(db)
+        write_meta(db, {"schema_version": "2", "source_name": "V2", "format": "yomitan", "entry_count": "0"})
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        meta = registry.get("v2-dict")
+        assert meta is not None and meta.schema_ok is False
+
     def test_enabled_stale_slot_flagged(self, tmp_path: Path):
         _seed_stale_dict(tmp_path, "old-dict", "Old Dict")
         config = replace(
