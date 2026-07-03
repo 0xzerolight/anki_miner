@@ -563,9 +563,11 @@ class TestImgEnvelope:
         node = {"tag": "img", "path": "svg/accent.svg"}
         out = structured_content_to_html(node, dict_id="d1")
         assert out == (
-            '<a class="gloss-image-link" data-path="svg/accent.svg">'
+            '<a class="gloss-image-link" data-path="svg/accent.svg" '
+            'data-appearance="auto" data-image-rendering="auto" data-background="true">'
             '<span class="gloss-image-container">'
             '<img class="gloss-image anki-miner-dict-media" src="d1__svg_accent.svg">'
+            '<span class="gloss-image-background" style="--image: url(&quot;d1__svg_accent.svg&quot;)"></span>'
             "</span></a>"
         )
 
@@ -573,9 +575,12 @@ class TestImgEnvelope:
         node = {"tag": "img", "path": "https://example.com/x.png"}
         out = structured_content_to_html(node)
         assert out == (
-            '<a class="gloss-image-link" data-path="https://example.com/x.png">'
+            '<a class="gloss-image-link" data-path="https://example.com/x.png" '
+            'data-appearance="auto" data-image-rendering="auto" data-background="true">'
             '<span class="gloss-image-container">'
             '<img class="gloss-image" src="https://example.com/x.png">'
+            '<span class="gloss-image-background" '
+            'style="--image: url(&quot;https://example.com/x.png&quot;)"></span>'
             "</span></a>"
         )
         assert DICT_MEDIA_CLASS not in out
@@ -672,16 +677,18 @@ class TestImgSizing:
             "verticalAlign": "middle",
         }
         out = structured_content_to_html(node, dict_id="d")
-        assert out.count("style=") == 1
-        assert "height: 1em" in out
-        assert "vertical-align: middle" in out
+        # Size + verticalAlign merge into a single style attr on the <img> (the
+        # gloss-image-background span carries its own separate --image style).
+        assert 'style="height: 1em; vertical-align: middle"' in out
 
     def test_non_positive_and_nonfinite_dimensions_dropped(self):
         for bad in (0, -3, float("inf"), float("nan")):
             node = {"tag": "img", "path": "svg/x.svg", "height": bad, "sizeUnits": "em"}
             out = structured_content_to_html(node, dict_id="d")
             assert "height:" not in out
-            assert "style=" not in out
+            # The <img> carries no style attr; only the background span's --image
+            # style remains in the envelope.
+            assert '<img class="gloss-image anki-miner-dict-media" src="d__svg_x.svg">' in out
 
     def test_em_dimension_capped(self):
         node = {"tag": "img", "path": "svg/x.svg", "height": 9999, "sizeUnits": "em"}
@@ -845,10 +852,13 @@ class TestTypedGlossaryObjects:
         node = {"type": "image", "path": "https://example.com/x.png", "width": 350, "height": 350}
         out = structured_content_to_html(node)
         assert out == (
-            '<a class="gloss-image-link" data-path="https://example.com/x.png">'
+            '<a class="gloss-image-link" data-path="https://example.com/x.png" '
+            'data-appearance="auto" data-image-rendering="auto" data-background="true">'
             '<span class="gloss-image-container">'
             '<img class="gloss-image" src="https://example.com/x.png" '
             'style="width: 350px; height: 350px">'
+            '<span class="gloss-image-background" '
+            'style="--image: url(&quot;https://example.com/x.png&quot;)"></span>'
             "</span></a>"
         )
         assert DICT_MEDIA_CLASS not in out
@@ -878,6 +888,91 @@ class TestTypedGlossaryObjects:
         # outright, NOT fall through to the tag path and emit an empty <span>.
         node = {"type": "foo"}
         assert structured_content_to_html(node) == ""
+
+
+class TestImgPresentation:
+    """Image presentation attrs + monochrome recolor layer (Yomitan
+    createDefinitionImage dataset stamping). Black-stroke accent SVGs
+    (sankoku8-class) are invisible on dark note types without the monochrome
+    hook: the CSS masks currentColor through the image alpha via the
+    `--image` custom property stamped on the sibling background span."""
+
+    def test_default_presentation_attrs_stamped(self):
+        node = {"tag": "img", "path": "https://example.com/x.png"}
+        out = structured_content_to_html(node)
+        assert 'data-appearance="auto"' in out
+        assert 'data-image-rendering="auto"' in out
+        assert 'data-background="true"' in out
+        # No sizeUnits on the node → no data-size-units attr.
+        assert "data-size-units" not in out
+
+    def test_appearance_monochrome_stamped(self):
+        node = {"tag": "img", "path": "svg/accent.svg", "appearance": "monochrome"}
+        out = structured_content_to_html(node, dict_id="d1")
+        assert 'data-appearance="monochrome"' in out
+
+    def test_pixelated_bool_maps_to_image_rendering(self):
+        node = {"tag": "img", "path": "https://example.com/x.png", "pixelated": True}
+        out = structured_content_to_html(node)
+        assert 'data-image-rendering="pixelated"' in out
+
+    def test_explicit_image_rendering_wins_over_pixelated(self):
+        node = {
+            "tag": "img",
+            "path": "https://example.com/x.png",
+            "imageRendering": "crisp-edges",
+            "pixelated": True,
+        }
+        out = structured_content_to_html(node)
+        assert 'data-image-rendering="crisp-edges"' in out
+
+    def test_background_false_stamped(self):
+        node = {"tag": "img", "path": "https://example.com/x.png", "background": False}
+        out = structured_content_to_html(node)
+        assert 'data-background="false"' in out
+
+    def test_size_units_stamped_when_present(self):
+        node = {"tag": "img", "path": "svg/x.svg", "height": 1, "sizeUnits": "em"}
+        out = structured_content_to_html(node, dict_id="d1")
+        assert 'data-size-units="em"' in out
+
+    def test_background_span_carries_image_custom_property(self):
+        node = {"tag": "img", "path": "svg/accent.svg", "appearance": "monochrome"}
+        out = structured_content_to_html(node, dict_id="d1")
+        assert (
+            '<span class="gloss-image-background" ' 'style="--image: url(&quot;d1__svg_accent.svg&quot;)"></span>'
+        ) in out
+
+    def test_background_span_uses_same_src_as_img(self):
+        # The mask references the same uploaded media filename as the <img>, so
+        # no extra AnkiConnect upload is required.
+        node = {"tag": "img", "path": "svg/accent.svg"}
+        out = structured_content_to_html(node, dict_id="d1")
+        assert out.count("d1__svg_accent.svg") == 2  # once in <img src>, once in --image
+
+    def test_hostile_enum_value_falls_back_to_default(self):
+        # A crafted appearance value that could break out of the attribute must
+        # not survive verbatim.
+        node = {"tag": "img", "path": "https://example.com/x.png", "appearance": 'x" onload="evil'}
+        out = structured_content_to_html(node)
+        assert "onload" not in out
+        assert 'data-appearance="auto"' in out
+
+    def test_unsafe_src_suppresses_background_span(self):
+        # A path whose resolved src contains a `"`/`)`/`;` would let the url("…")
+        # inside the style attr inject sibling CSS declarations — drop the
+        # background span but still emit the (attribute-escaped) <img>.
+        node = {"tag": "img", "path": 'a";b.svg'}  # no colon (would flag as scheme)
+        out = structured_content_to_html(node, dict_id="d1")
+        assert "gloss-image-background" not in out
+        assert "--image" not in out
+        # The <img> itself is still present with the quote attribute-escaped.
+        assert 'src="d1__a&quot;;b.svg"' in out
+
+    def test_no_background_span_without_resolvable_src(self):
+        node = {"tag": "img", "path": "svg/x.svg"}  # relative, no dict_id → dropped
+        out = structured_content_to_html(node)
+        assert out == "<img>"
 
     def test_unknown_type_with_text_payload_dropped(self):
         # The payload of an unknown-type object is not salvaged as text and does

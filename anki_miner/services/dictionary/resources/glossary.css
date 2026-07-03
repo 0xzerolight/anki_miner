@@ -199,6 +199,56 @@
 .yomitan-glossary ol[data-count] .gloss-image-container {
   display: inline-block;
   vertical-align: middle;
+  /* Positioning context for the absolutely-placed .gloss-image-background
+   * recolor layer below. */
+  position: relative;
+}
+
+/* Monochrome accent SVGs (sankoku8-class): the source art is black strokes on a
+ * transparent field — invisible on the dark note types most JP decks use.
+ * Yomitan recolors them to the text color with zero JS: a sibling
+ * .gloss-image-background span masks `currentColor` through the image's alpha
+ * (the --image url is stamped inline by the renderer), and the real <img> is
+ * hidden. Ported from ext/data/structured-content-style.json (upstream e2ed450). */
+.yomitan-glossary ol[data-count] .gloss-image-background {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center center;
+  -webkit-mask-mode: alpha;
+  -webkit-mask-size: contain;
+  -webkit-mask-image: var(--image);
+  mask-repeat: no-repeat;
+  mask-position: center center;
+  mask-mode: alpha;
+  mask-size: contain;
+  mask-image: var(--image);
+  background-color: currentColor;
+}
+
+/* The recolor layer must be inert for every non-monochrome image — otherwise it
+ * would paint a solid currentColor block over the real bitmap. */
+.yomitan-glossary ol[data-count] .gloss-image-link:not([data-appearance=monochrome]) .gloss-image-background {
+  display: none;
+}
+
+/* For a monochrome image the recolored mask above replaces it, so hide the
+ * original black-stroke bitmap. */
+.yomitan-glossary ol[data-count] .gloss-image-link[data-appearance=monochrome] .gloss-image {
+  opacity: 0;
+}
+
+/* Pixel-art dictionaries (kanji stroke-order bitmaps, retro glyphs) ask for
+ * nearest-neighbor scaling so they stay crisp instead of blurring. Ordered
+ * fallbacks: the last value a WebView understands wins. */
+.yomitan-glossary ol[data-count] .gloss-image-link[data-image-rendering=pixelated] .gloss-image,
+.yomitan-glossary ol[data-count] .gloss-image-link[data-image-rendering=pixelated] .gloss-image-background {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 /* Collapsible notes / conjugation tables. Scope the accent summary to glossary
