@@ -120,6 +120,20 @@ class TestDetectPackFormat:
         (tmp_path / "media").mkdir()
         assert detect_pack_format(tmp_path) == "ajt"
 
+    def test_index_json_invalid_utf8_bytes_does_not_raise(self, tmp_path):
+        """An index.json with non-UTF-8 bytes must not raise during detection.
+
+        ``read_text(encoding="utf-8")`` raises ``UnicodeDecodeError`` (a
+        ``ValueError``, not an ``OSError``) on invalid bytes; the peek must
+        swallow it so detection degrades to the same not-ozk5 result rather than
+        escaping past the import flow's OSError guard.
+        """
+        # 0xFF is never a valid UTF-8 lead byte.
+        (tmp_path / "index.json").write_bytes(b"\xff\xfe\x00garbage")
+        (tmp_path / "media").mkdir()
+        # peek fails cleanly (ozk5 rejected) → falls back to the ajt signature.
+        assert detect_pack_format(tmp_path) == "ajt"
+
 
 # ---------------------------------------------------------------------------
 # parse_ajt
