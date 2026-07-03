@@ -9,6 +9,7 @@ from anki_miner.services import anki_media_store
 from anki_miner.services.anki_media_store import (
     AnkiMediaStore,
     _build_store_media_action,
+    _content_addressed_name,
     _stream_encode_chunks,
 )
 
@@ -50,10 +51,13 @@ class TestStreamEncodeChunks:
         chunks = list(_stream_encode_chunks([(fname, path)]))
         assert len(chunks) == 1
         assert len(chunks[0]) == 1
-        fn, action = chunks[0][0]
-        assert fn == fname
+        orig, stored, action = chunks[0][0]
+        assert orig == fname
+        # Card media is content-hashed: the sent name carries the sha1 suffix.
+        assert stored == _content_addressed_name(fname, path.read_bytes())
+        assert stored != fname
         assert action["action"] == "storeMediaFile"
-        assert action["params"]["filename"] == fname
+        assert action["params"]["filename"] == stored
         assert "data" in action["params"]
 
     def test_output_base64_matches_build_store_media_action(self, tmp_path):
@@ -66,7 +70,7 @@ class TestStreamEncodeChunks:
 
         chunks = list(_stream_encode_chunks([(fname, path)]))
         assert len(chunks) == 1
-        _, action = chunks[0][0]
+        _, _, action = chunks[0][0]
         assert action["params"]["data"] == expected["params"]["data"]
 
     def test_count_budget_splits_into_multiple_chunks(self, tmp_path):
@@ -136,15 +140,17 @@ class TestStoreBatchLazyEncoding:
         # 3 files with budget=1 so each file gets its own chunk.
         pairs = _make_files(tmp_path, 3)
         items = self._make_items(make_tokenized_word, pairs)
+        # POST bodies carry the content-hashed (sent) name, not the orig name.
+        hashed = {fname: _content_addressed_name(fname, path.read_bytes()) for fname, path in pairs}
 
         encode_order: list[str] = []
         post_order: list[str] = []  # which filenames were in each POST call
 
         orig_build = anki_media_store._build_store_media_action
 
-        def spying_build(filename, src_path):
+        def spying_build(filename, src_path, content_hash=False):
             encode_order.append(filename)
-            return orig_build(filename, src_path)
+            return orig_build(filename, src_path, content_hash=content_hash)
 
         success_resp = _mock_response(result=[None])
 
@@ -165,7 +171,7 @@ class TestStoreBatchLazyEncoding:
 
         # file_0 encoded, file_0 POSTed, file_1 encoded, file_1 POSTed, file_2 encoded, file_2 POSTed
         assert encode_order == ["file_0.jpg", "file_1.jpg", "file_2.jpg"]
-        assert post_order == ["file_0.jpg", "file_1.jpg", "file_2.jpg"]
+        assert post_order == [hashed["file_0.jpg"], hashed["file_1.jpg"], hashed["file_2.jpg"]]
 
         # Key ordering check: file_1 must be encoded AFTER file_0 is POSTed.
         # We verify this by checking that file_1's encode happens AFTER file_0's POST
@@ -174,9 +180,9 @@ class TestStoreBatchLazyEncoding:
 
         orig_build2 = anki_media_store._build_store_media_action
 
-        def spying_build2(filename, src_path):
+        def spying_build2(filename, src_path, content_hash=False):
             combined.append(("encode", filename))
-            return orig_build2(filename, src_path)
+            return orig_build2(filename, src_path, content_hash=content_hash)
 
         def spying_post2(*args, **kwargs):
             json_body = kwargs.get("json", {})
@@ -191,16 +197,19 @@ class TestStoreBatchLazyEncoding:
             patch("anki_miner.services._ankiconnect.requests.post", side_effect=spying_post2),
         ):
             store2 = AnkiMediaStore(test_config)
-            store2.store_batch(items)
+            # Fresh payloads: the first store_batch mutated `items`' filenames to
+            # the hashed names, and re-hashing an already-hashed name would double
+            # the suffix.
+            store2.store_batch(self._make_items(make_tokenized_word, pairs))
 
         # Expected interleaving: encode-0, post-0, encode-1, post-1, encode-2, post-2
         assert combined == [
             ("encode", "file_0.jpg"),
-            ("post", "file_0.jpg"),
+            ("post", hashed["file_0.jpg"]),
             ("encode", "file_1.jpg"),
-            ("post", "file_1.jpg"),
+            ("post", hashed["file_1.jpg"]),
             ("encode", "file_2.jpg"),
-            ("post", "file_2.jpg"),
+            ("post", hashed["file_2.jpg"]),
         ]
 
     def test_output_equivalence_small_fixture(self, test_config, make_tokenized_word, tmp_path):
@@ -221,7 +230,11 @@ class TestStoreBatchLazyEncoding:
             store = AnkiMediaStore(test_config)
             stored = store.store_batch(items)
 
-        assert stored == {fname for fname, _ in pairs}
+        hashed = {fname: _content_addressed_name(fname, path.read_bytes()) for fname, path in pairs}
+        assert stored == set(hashed.values())
+        # The content-hashed name is propagated onto each payload's MediaData.
+        for item, (fname, _) in zip(items, pairs, strict=True):
+            assert item.media.screenshot_filename == hashed[fname]
 
         # Verify each action in the POST contains the correct base64 data
         import base64 as _b64
@@ -233,7 +246,7 @@ class TestStoreBatchLazyEncoding:
 
         for fname, path in pairs:
             expected_b64 = _b64.b64encode(path.read_bytes()).decode("utf-8")
-            matching = [a for a in all_actions if a["params"]["filename"] == fname]
+            matching = [a for a in all_actions if a["params"]["filename"] == hashed[fname]]
             assert len(matching) == 1, f"Expected exactly one action for {fname}"
             assert matching[0]["params"]["data"] == expected_b64
 
@@ -265,9 +278,9 @@ class TestStoreBatchLazyEncoding:
 
         orig_build = anki_media_store._build_store_media_action
 
-        def tracking_build(filename, src_path):
+        def tracking_build(filename, src_path, content_hash=False):
             build_calls.append(filename)
-            return orig_build(filename, src_path)
+            return orig_build(filename, src_path, content_hash=content_hash)
 
         with (
             patch("anki_miner.services.anki_media_store._build_store_media_action", side_effect=tracking_build),
@@ -279,4 +292,95 @@ class TestStoreBatchLazyEncoding:
         # cover.jpg must be encoded exactly once despite appearing in 3 payloads
         assert build_calls.count("cover.jpg") == 1
         assert len(build_calls) == 4  # cover + 3 audio clips
-        assert "cover.jpg" in stored
+        cover_hashed = _content_addressed_name("cover.jpg", b"cover-data")
+        assert cover_hashed in stored
+        # The single content-hashed cover name is propagated onto all 3 payloads.
+        for item in items:
+            assert item.media.screenshot_filename == cover_hashed
+
+
+# ---------------------------------------------------------------------------
+# TestContentHashNames (7.5) — collision hardening + returned-name adoption
+# ---------------------------------------------------------------------------
+
+
+class TestContentAddressedName:
+    """The content-addressing helper itself."""
+
+    def test_same_bytes_same_name(self):
+        assert _content_addressed_name("w_5000.mp3", b"abc") == _content_addressed_name("w_5000.mp3", b"abc")
+
+    def test_different_bytes_different_name(self):
+        a = _content_addressed_name("w_5000.mp3", b"AAAA")
+        b = _content_addressed_name("w_5000.mp3", b"BBBB")
+        assert a != b
+
+    def test_preserves_stem_and_extension(self):
+        name = _content_addressed_name("w_5000.mp3", b"abc")
+        assert name.startswith("w_5000_")
+        assert name.endswith(".mp3")
+        # sha1 hex truncated to 12 chars between stem and extension.
+        digest = name[len("w_5000_") : -len(".mp3")]
+        assert len(digest) == 12
+
+
+class TestContentHashStoreBatch:
+    """store_batch content-hashes card media and adopts AnkiConnect's returned name."""
+
+    def _item(self, make_tokenized_word, path: Path, filename: str) -> CardPayload:
+        media = MediaData(audio_path=path, audio_filename=filename)
+        return CardPayload(word=make_tokenized_word(lemma="w"), media=media, definition="d")
+
+    def test_same_name_different_bytes_get_distinct_stored_names(self, test_config, make_tokenized_word, tmp_path):
+        """Two episodes both emit ``w_5000.mp3`` at the same offset but with
+        different audio bytes; content-hashing must give them distinct Anki names
+        so the second no longer overwrites the first's clip (7.5)."""
+        ep_a = tmp_path / "a"
+        ep_a.mkdir()
+        ep_b = tmp_path / "b"
+        ep_b.mkdir()
+        (ep_a / "w_5000.mp3").write_bytes(b"AAAA")
+        (ep_b / "w_5000.mp3").write_bytes(b"BBBB")
+
+        resp = _mock_response(result=[None])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            store = AnkiMediaStore(test_config)
+            item_a = self._item(make_tokenized_word, ep_a / "w_5000.mp3", "w_5000.mp3")
+            stored_a = store.store_batch([item_a])
+            item_b = self._item(make_tokenized_word, ep_b / "w_5000.mp3", "w_5000.mp3")
+            stored_b = store.store_batch([item_b])
+
+        assert item_a.media.audio_filename != item_b.media.audio_filename
+        assert stored_a != stored_b
+        assert item_a.media.audio_filename in stored_a
+        assert item_b.media.audio_filename in stored_b
+
+    def test_returned_name_adopted_when_anki_renames(self, test_config, make_tokenized_word, tmp_path):
+        """storeMediaFile returns the name it stored under; when it differs from
+        the sent (hashed) name we adopt it onto the payload and the returned set."""
+        path = tmp_path / "w_100.mp3"
+        path.write_bytes(b"data")
+        item = self._item(make_tokenized_word, path, "w_100.mp3")
+
+        resp = _mock_response(result=[{"result": "renamed_by_anki.mp3", "error": None}])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            stored = AnkiMediaStore(test_config).store_batch([item])
+
+        assert item.media.audio_filename == "renamed_by_anki.mp3"
+        assert stored == {"renamed_by_anki.mp3"}
+
+    def test_error_subresult_excludes_and_counts_failure(self, test_config, make_tokenized_word, tmp_path):
+        """A per-file error sub-result excludes the file and leaves the payload's
+        pre-hash name untouched (media dropped by build_note), counted as failure."""
+        path = tmp_path / "w_100.mp3"
+        path.write_bytes(b"data")
+        item = self._item(make_tokenized_word, path, "w_100.mp3")
+
+        resp = _mock_response(result=[{"result": None, "error": "cannot store"}])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            store = AnkiMediaStore(test_config)
+            stored = store.store_batch([item])
+
+        assert stored == set()
+        assert item.media.audio_filename == "w_100.mp3"  # unchanged (not renamed)
+        assert store.last_store_failures == 1

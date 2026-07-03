@@ -195,6 +195,39 @@ class AnkiSettingsPanel(FormPanel):
         self.fetch_fields_button.clicked.connect(self._on_fetch_fields)
         self.add_widget(self.fetch_fields_button)
 
+        # Duplicate Handling section (7.3). Controls the AnkiConnect duplicateScope
+        # used by both the pre-add probe and addNotes. "Collection" (default) emits
+        # no options object (byte-identical to the pre-7.3 wire).
+        self.add_section(self.tr("Duplicate Handling"))
+
+        dup_helper = QLabel(
+            self.tr(
+                "What counts as a duplicate when adding cards. Collection (default) skips a word "
+                "if it already exists in any deck. Deck limits the check to the target deck; "
+                "Deck root limits it to the whole subdeck tree under the deck's root — handy when "
+                "you card each show into its own subdeck."
+            )
+        )
+        dup_helper.setObjectName("helper-text")
+        dup_helper.setWordWrap(True)
+        self.add_widget(dup_helper)
+
+        self.duplicate_scope_combo = QComboBox()
+        self.duplicate_scope_combo.addItem(self.tr("Collection (whole collection)"), "collection")
+        self.duplicate_scope_combo.addItem(self.tr("Deck (target deck only)"), "deck")
+        self.duplicate_scope_combo.addItem(self.tr("Deck root (whole subdeck tree)"), "deck-root")
+        self.add_field(
+            self.tr("Duplicate Scope"),
+            self.duplicate_scope_combo,
+            helper=self.tr("Where AnkiConnect looks for an existing copy before adding a card."),
+        )
+
+        self.duplicate_check_all_models_checkbox = QCheckBox(self.tr("Check all note types for duplicates"))
+        self.duplicate_check_all_models_checkbox.setToolTip(
+            self.tr("Also treat a matching first field in a different note type as a duplicate.")
+        )
+        self.add_widget(self.duplicate_check_all_models_checkbox)
+
         # Card Field Mappings section
         self.add_section(self.tr("Card Field Mappings"))
 
@@ -737,6 +770,28 @@ class AnkiSettingsPanel(FormPanel):
         for key, widget in self._card_type_inputs.items():
             widget.setText(mapping.get(key, _CARD_TYPE_MARKER_DEFAULTS[key]))
 
+    # === Duplicate Handling (7.3) ===
+    def get_duplicate_scope(self) -> str:
+        """Return the selected duplicate scope ("collection" when unset)."""
+        value = self.duplicate_scope_combo.currentData()
+        return value if isinstance(value, str) else "collection"
+
+    def set_duplicate_scope(self, value: str) -> None:
+        """Select the duplicate-scope dropdown by id, falling back to "collection"."""
+        index = self.duplicate_scope_combo.findData(value)
+        if index < 0:
+            index = self.duplicate_scope_combo.findData("collection")
+        if index >= 0:
+            self.duplicate_scope_combo.setCurrentIndex(index)
+
+    def get_duplicate_check_all_models(self) -> bool:
+        """Return whether duplicate detection spans all note types."""
+        return self.duplicate_check_all_models_checkbox.isChecked()
+
+    def set_duplicate_check_all_models(self, value: bool) -> None:
+        """Set the check-all-models checkbox."""
+        self.duplicate_check_all_models_checkbox.setChecked(value)
+
     # === Card Styling (Issue #44 / auto-sync) ===
     def _on_styling_choice_changed(self) -> None:
         """React to a user edit of the manage toggle / custom CSS.
@@ -855,6 +910,8 @@ class AnkiSettingsPanel(FormPanel):
         self.set_pitch_category_format(config.pitch_category_format)
         self.set_card_type(config.card_type)
         self.set_card_type_marker_fields(config.card_type_marker_fields)
+        self.set_duplicate_scope(config.duplicate_scope)
+        self.set_duplicate_check_all_models(config.duplicate_check_all_models)
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.
@@ -881,4 +938,9 @@ class AnkiSettingsPanel(FormPanel):
                 self.get_card_type(),
             ),
             card_type_marker_fields=self.get_card_type_marker_fields(),
+            duplicate_scope=cast(
+                Literal["collection", "deck", "deck-root"],
+                self.get_duplicate_scope(),
+            ),
+            duplicate_check_all_models=self.get_duplicate_check_all_models(),
         )
