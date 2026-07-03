@@ -54,6 +54,19 @@ class TestLoadGlossaryCss:
         assert ".gloss-sc-rt" in css
         assert ".gloss-image" in css
 
+    def test_carries_image_presentation_hooks(self):
+        css = _no_comments(load_glossary_css())
+        # Monochrome recolor: mask currentColor through the image alpha so black-
+        # stroke accent SVGs (sankoku8-class) are visible on dark note types.
+        assert "[data-appearance=monochrome]" in css
+        assert "mask-image: var(--image)" in css
+        assert "background-color: currentColor" in css
+        # The recolor layer must be inert for non-monochrome images.
+        assert ":not([data-appearance=monochrome]) .gloss-image-background" in css
+        # Pixel-art dictionaries opt into nearest-neighbor scaling.
+        assert "[data-image-rendering=pixelated]" in css
+        assert "image-rendering: pixelated" in css
+
     def test_carries_structured_content_hooks(self):
         css = load_glossary_css()
         # Generic data-sc-* hooks for dicts that ship no styles.css (Issue #87).
@@ -137,8 +150,6 @@ class TestCuratedExclusions:
             "data-glossary-layout-mode",
             "data-collapsed",
             "data-collapsible",
-            "data-image-rendering",
-            "data-appearance",
             ".entry",
             ".definition-item",
         ):

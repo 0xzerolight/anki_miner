@@ -252,6 +252,69 @@ DICT_MEDIA_CLASS = "anki-miner-dict-media"
 # dict-bundled assets.
 _GLOSS_IMAGE_CLASS = "gloss-image"
 
+# Presentation enum values (appearance/imageRendering/sizeUnits) are short ASCII
+# tokens. Anything outside this shape is a hostile value — drop it to the safe
+# default rather than risk breaking out of the data-* attribute.
+_IMG_ENUM_RE = re.compile(r"^[A-Za-z][A-Za-z0-9-]{0,31}$")
+
+# Characters that would let a resolved image src break out of the `url("…")` we
+# stamp into the `.gloss-image-background` `--image` custom property — and thus
+# inject sibling declarations through the inline style attr. A legitimate
+# Anki-media filename or http(s) URL never contains these.
+_CSS_URL_UNSAFE_RE = re.compile(r"""[\s"'()\\;{}<>`]""")
+
+
+def _img_presentation_attrs(node: dict[str, YomitanNode], *, bg_suppressed: bool = False) -> str:
+    """Build the presentation `data-*` attrs for the gloss-image-link envelope.
+
+    Ported from Yomitan's `createDefinitionImage` dataset stamping
+    (ext/js/display/structured-content-generator.js, upstream e2ed450). These
+    drive the monochrome-recolor and pixelated CSS hooks in glossary.css:
+      - data-appearance: verbatim `appearance` (e.g. 'monochrome'), else 'auto'.
+      - data-image-rendering: verbatim `imageRendering`, else 'pixelated' when
+        the `pixelated` bool is true, else 'auto'.
+      - data-background: 'true'/'false' from the `background` bool, default 'true'.
+      - data-size-units: the `sizeUnits` string when present (forward-compat hook
+        for author/user CSS; our container is not font-size-collapsed like
+        Yomitan's `.gloss-image-container`, so no built-in rule consumes it).
+
+    Enum values are constrained to `_IMG_ENUM_RE`; anything else falls back to the
+    safe default so a hostile dict can't inject markup through the attribute.
+
+    `bg_suppressed` means `_render_img` did not emit the `.gloss-image-background`
+    recolor layer (its `--image` url would be CSS-unsafe). A `monochrome`
+    appearance zeroes the real `<img>`'s opacity in glossary.css on the assumption
+    that mask layer is behind it; with no mask, the image would vanish entirely.
+    So when the layer is suppressed we downgrade the effective appearance to
+    'auto' — the two must be computed together to keep the image visible.
+    """
+    appearance = node.get("appearance")
+    ap = appearance if isinstance(appearance, str) and _IMG_ENUM_RE.match(appearance) else "auto"
+    if bg_suppressed and ap == "monochrome":
+        ap = "auto"
+
+    image_rendering = node.get("imageRendering")
+    pixelated = node.get("pixelated")
+    if isinstance(image_rendering, str) and _IMG_ENUM_RE.match(image_rendering):
+        ir = image_rendering
+    elif isinstance(pixelated, bool) and pixelated:
+        ir = "pixelated"
+    else:
+        ir = "auto"
+
+    background = node.get("background")
+    bg = ("true" if background else "false") if isinstance(background, bool) else "true"
+
+    parts = [
+        f'data-appearance="{ap}"',
+        f'data-image-rendering="{ir}"',
+        f'data-background="{bg}"',
+    ]
+    size_units = node.get("sizeUnits")
+    if isinstance(size_units, str) and _IMG_ENUM_RE.match(size_units):
+        parts.append(f'data-size-units="{size_units}"')
+    return " " + " ".join(parts)
+
 
 def _resolve_img_src(
     raw_path: YomitanNode | None,
@@ -610,10 +673,24 @@ def _render_img(
     extras_str = (" " + " ".join(extras)) if extras else ""
     raw_path = node.get("path")
     data_path = escape(raw_path, quote=True) if isinstance(raw_path, str) else ""
+    src_attr = escape(img_src, quote=True)
+    # Sibling recolor layer for monochrome art: glossary.css masks currentColor
+    # through the image alpha via the `--image` custom property, making black-
+    # stroke accent SVGs visible on dark note types. Suppressed when the src could
+    # break out of the url("…") we embed in the style attr (see _CSS_URL_UNSAFE_RE).
+    bg_span = ""
+    bg_suppressed = bool(_CSS_URL_UNSAFE_RE.search(img_src))
+    if not bg_suppressed:
+        bg_span = '<span class="gloss-image-background" ' f'style="--image: url(&quot;{src_attr}&quot;)"></span>'
+    # data-appearance must be decided with the bg span, not independently: a
+    # suppressed mask + data-appearance=monochrome would leave the img at
+    # opacity:0 with nothing behind it (invisible). Downgrade to 'auto' instead.
+    pres_attrs = _img_presentation_attrs(node, bg_suppressed=bg_suppressed)
     return (
-        f'<a class="gloss-image-link" data-path="{data_path}">'
+        f'<a class="gloss-image-link" data-path="{data_path}"{pres_attrs}>'
         f'<span class="gloss-image-container">'
-        f'<img class="{img_class}" src="{escape(img_src, quote=True)}"{extras_str}>'
+        f'<img class="{img_class}" src="{src_attr}"{extras_str}>'
+        f"{bg_span}"
         f"</span></a>"
     )
 
