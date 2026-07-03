@@ -1,7 +1,8 @@
 """Audio pack format detection and per-format parsers.
 
-Three physical formats for local-audio-yomichan packs:
-  ajt       — index.json + media/ directory
+Five physical formats for local-audio-yomichan packs:
+  ajt       — index.json (``headwords`` map) + media/ directory
+  ozk5      — index.json (``entries`` array + ``kana_index``/``kanji_index``)
   nhk16     — entries.json + audio/ directory
   forvo     — speaker subdirectories containing audio files
   jpod_legacy — flat/nested audio files with "{reading} - {expression}" stems
@@ -52,22 +53,57 @@ def detect_pack_format(pack_dir: Path) -> str | None:
 
 
 def _detect_index_driven_format(pack_dir: Path) -> str | None:
-    """Detect only the index-file-driven formats (ajt/nhk16).
+    """Detect only the index-file-driven formats (ozk5/ajt/nhk16).
 
     Unlike the forvo/jpod_legacy heuristics, these formats are identified by a
     specific index file and cannot be triggered by audio files belonging to
     nested child packs — safe to apply to a parent directory whose children
     are themselves packs.
+
+    ozk5 and ajt both use ``index.json``; they are told apart by content —
+    ozk5 has an ``entries`` array plus a ``kana_index``/``kanji_index`` map,
+    ajt has a ``headwords`` map — so ozk5 is checked first.
     """
-    # ajt: index.json + media/ directory
-    if (pack_dir / "index.json").is_file() and (pack_dir / "media").is_dir():
-        return "ajt"
+    index_path = pack_dir / "index.json"
+    if index_path.is_file():
+        if _looks_like_ozk5(_peek_json(index_path)):
+            return "ozk5"
+        # ajt: index.json + media/ directory
+        if (pack_dir / "media").is_dir():
+            return "ajt"
 
     # nhk16: entries.json + audio/ directory
     if (pack_dir / "entries.json").is_file() and (pack_dir / "audio").is_dir():
         return "nhk16"
 
     return None
+
+
+def _peek_json(path: Path) -> object | None:
+    """Best-effort parse of *path* for format detection; None if unreadable.
+
+    Detection must never raise on a malformed index — parsing is where the
+    ValueError surfaces — so read errors and bad JSON fall through to None.
+    """
+    try:
+        data: object = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data
+
+
+def _looks_like_ozk5(data: object | None) -> bool:
+    """True if parsed index.json carries the ozk5 signature.
+
+    Signature: a JSON object with an ``entries`` array and at least one of the
+    ``kana_index`` / ``kanji_index`` maps. This is disjoint from ajt, whose
+    index.json is keyed by ``headwords`` and has no ``entries`` array.
+    """
+    if not isinstance(data, dict):
+        return False
+    if not isinstance(data.get("entries"), list):
+        return False
+    return isinstance(data.get("kana_index"), dict) or isinstance(data.get("kanji_index"), dict)
 
 
 def _looks_like_forvo(pack_dir: Path) -> bool:
@@ -195,12 +231,177 @@ def parse_ajt(pack_dir: Path, source: str) -> Iterator[AudioPackRow]:
 # NHK16 parser
 # ---------------------------------------------------------------------------
 
+# Kanji-numeral map for expanding NHK16 counter subentries.
+# Ported from local-audio-yomichan plugin/source/nhk16.py (`num_map`),
+# upstream commit 2cbabbc.
+_NHK16_NUM_MAP: dict[int, str] = {
+    0: "零",
+    1: "一",
+    2: "二",
+    3: "三",
+    4: "四",
+    5: "五",
+    6: "六",
+    7: "七",
+    8: "八",
+    9: "九",
+    10: "十",
+    11: "十一",
+    12: "十二",
+    13: "十三",
+    14: "十四",
+    15: "十五",
+    16: "十六",
+    17: "十七",
+    18: "十八",
+    19: "十九",
+    20: "二十",
+    21: "二十一",
+    22: "二十二",
+    23: "二十三",
+    24: "二十四",
+    25: "二十五",
+    26: "二十六",
+    27: "二十七",
+    28: "二十八",
+    29: "二十九",
+    30: "三十",
+    31: "三十一",
+    32: "三十二",
+    33: "三十三",
+    34: "三十四",
+    35: "三十五",
+    36: "三十六",
+    37: "三十七",
+    38: "三十八",
+    39: "三十九",
+    40: "四十",
+    41: "四十一",
+    42: "四十二",
+    43: "四十三",
+    44: "四十四",
+    45: "四十五",
+    46: "四十六",
+    47: "四十七",
+    48: "四十八",
+    49: "四十九",
+    50: "五十",
+    51: "五十一",
+    52: "五十二",
+    53: "五十三",
+    54: "五十四",
+    55: "五十五",
+    56: "五十六",
+    57: "五十七",
+    58: "五十八",
+    59: "五十九",
+    60: "六十",
+    61: "六十一",
+    62: "六十二",
+    63: "六十三",
+    64: "六十四",
+    65: "六十五",
+    66: "六十六",
+    67: "六十七",
+    68: "六十八",
+    69: "六十九",
+    70: "七十",
+    71: "七十一",
+    72: "七十二",
+    73: "七十三",
+    74: "七十四",
+    75: "七十五",
+    76: "七十六",
+    77: "七十七",
+    78: "七十八",
+    79: "七十九",
+    80: "八十",
+    81: "八十一",
+    82: "八十二",
+    83: "八十三",
+    84: "八十四",
+    85: "八十五",
+    86: "八十六",
+    87: "八十七",
+    88: "八十八",
+    89: "八十九",
+    90: "九十",
+    91: "九十一",
+    92: "九十二",
+    93: "九十三",
+    94: "九十四",
+    95: "九十五",
+    96: "九十六",
+    97: "九十七",
+    98: "九十八",
+    99: "九十九",
+    100: "百",
+    1000: "千",
+    10000: "一万",
+}
+
+_NUM2FULLWIDTH = str.maketrans("0123456789", "０１２３４５６７８９")
+
+
+def _split_headwords(headword_list: object, delimiter: str) -> list[str]:
+    """Split each string in *headword_list* on *delimiter*, stripped, no empties.
+
+    Ported from local-audio-yomichan plugin/source/nhk16.py
+    (`NHK16AudioSource.parse_headwords`), upstream commit 2cbabbc. Non-list
+    inputs and non-string members are tolerated (yield nothing) so a malformed
+    ``kanji``/``kanjiNotUsed`` field never aborts the parse.
+    """
+    if not isinstance(headword_list, list):
+        return []
+    out: list[str] = []
+    for headword in headword_list:
+        if not isinstance(headword, str):
+            continue
+        for part in headword.split(delimiter):
+            stripped = part.strip()
+            if stripped:
+                out.append(stripped)
+    return out
+
+
+def _nhk16_numbers(number: object) -> list[str]:
+    """Expand an NHK16 counter ``number`` to its written headword forms.
+
+    Ported from local-audio-yomichan plugin/source/nhk16.py
+    (`NHK16AudioSource.get_numbers`), upstream commit 2cbabbc. Returns the
+    fullwidth-digit form plus the kanji-numeral form (kanji-only above 100);
+    the 何［ナン］ sentinel maps to 何. Unparseable / out-of-table numbers
+    degrade to whatever forms are available rather than raising (the upstream
+    KeyErrors on numbers >100 outside {1000, 10000}).
+    """
+    if number == "何［ナン］":
+        return ["何"]
+    if not isinstance(number, (str, int)):
+        return []
+    try:
+        n = int(number)
+    except ValueError:
+        return []
+    fullwidth = str(number).translate(_NUM2FULLWIDTH)
+    kanji_num = _NHK16_NUM_MAP.get(n)
+    if n > 100:
+        return [kanji_num] if kanji_num is not None else [fullwidth]
+    forms = [fullwidth]
+    if kanji_num is not None:
+        forms.append(kanji_num)
+    return forms
+
 
 def parse_nhk16(pack_dir: Path, source: str) -> Iterator[AudioPackRow]:
     """Parse an NHK16-format audio pack.
 
     Reads ``entries.json`` (JSON array). Yields one row per (headword,
     accent soundFile) pair.
+
+    The ``kanjiNotUsed`` filter (drop spellings NHK marks as unused) and the
+    numeric-headword expansion (counter subentries → fullwidth + kanji numeral
+    forms) are ported from local-audio-yomichan plugin/source/nhk16.py
+    (`NHK16AudioSource.add_entries`), upstream commit 2cbabbc.
 
     Raises :exc:`ValueError` on malformed top-level JSON structure.
     """
@@ -215,52 +416,60 @@ def parse_nhk16(pack_dir: Path, source: str) -> Iterator[AudioPackRow]:
 
     audio_dir = pack_dir / "audio"
 
+    def _sound_rel(accent: object) -> str | None:
+        """Return posix ``audio/<file>`` for a present soundFile, else None."""
+        if not isinstance(accent, dict):
+            return None
+        sound_file = accent.get("soundFile")
+        if not sound_file:
+            return None
+        if not (audio_dir / sound_file).is_file():
+            logger.debug("nhk16: skipping missing audio file %s", audio_dir / sound_file)
+            return None
+        return f"audio/{sound_file}"
+
     for entry in data:
         if not isinstance(entry, dict):
             continue
         kana: str = entry.get("kana", "") or ""
         kanji_raw = entry.get("kanji", [])
-        if not isinstance(kanji_raw, list):
-            kanji_raw = []
 
         # Sub-split each headword on fullwidth comma ，
-        expressions: list[str] = []
-        for k in kanji_raw:
-            if not isinstance(k, str):
-                continue
-            parts = k.split("，")
-            expressions.extend(p.strip() for p in parts if p.strip())
+        expressions = _split_headwords(kanji_raw, "，")
 
-        # If no kanji headwords, fall back to kana as expression
-        if not expressions:
-            if kana:
-                expressions = [kana]
-            else:
-                continue
+        # Drop spellings NHK explicitly marks unused (substring match, mirroring
+        # upstream): an expression containing any kanjiNotUsed token is removed.
+        kanji_not_used = _split_headwords(entry.get("kanjiNotUsed", []), "，")
+        if kanji_not_used:
+            expressions = [e for e in expressions if not any(nu in e for nu in kanji_not_used)]
 
         accents = entry.get("accents", [])
         if not isinstance(accents, list):
             accents = []
 
         for accent in accents:
-            if not isinstance(accent, dict):
+            rel = _sound_rel(accent)
+            if rel is None:
                 continue
-            sound_file = accent.get("soundFile")
-            if not sound_file:
-                continue
-            audio_path = audio_dir / sound_file
-            if not audio_path.is_file():
-                logger.debug("nhk16: skipping missing audio file %s", audio_path)
-                continue
-
-            for expr in expressions:
+            if expressions:
+                for expr in expressions:
+                    yield AudioPackRow(
+                        expression=expr,
+                        reading=kana if kana else None,
+                        source=source,
+                        speaker=None,
+                        display=None,
+                        file=rel,
+                    )
+            elif kana:
+                # No (retained) kanji headwords → fall back to the kana form.
                 yield AudioPackRow(
-                    expression=expr,
-                    reading=kana if kana else None,
+                    expression=kana,
+                    reading=kana,
                     source=source,
                     speaker=None,
                     display=None,
-                    file=f"audio/{sound_file}",
+                    file=rel,
                 )
 
         # Subentries
@@ -270,42 +479,60 @@ def parse_nhk16(pack_dir: Path, source: str) -> Iterator[AudioPackRow]:
         for sub in subentries:
             if not isinstance(sub, dict):
                 continue
-            if "head" not in sub:
-                # Numeric counter entry — skip
-                continue
-            head: str = sub.get("head", "") or ""
-            if not head:
-                continue
-
             sub_accents = sub.get("accents", [])
             if not isinstance(sub_accents, list):
                 continue
 
-            # reading rule: kana heads get reading=head, kanji heads get reading=None
-            if _is_kana(head):
-                sub_reading: str | None = head
+            if "head" in sub:
+                head: str = sub.get("head", "") or ""
+                if not head:
+                    continue
+                # kana heads get reading=head, kanji heads get reading=None
+                sub_reading: str | None = head if _is_kana(head) else None
+                for accent in sub_accents:
+                    rel = _sound_rel(accent)
+                    if rel is None:
+                        continue
+                    yield AudioPackRow(
+                        expression=head,
+                        reading=sub_reading,
+                        source=source,
+                        speaker=None,
+                        display=None,
+                        file=rel,
+                    )
             else:
-                sub_reading = None
-
-            for accent in sub_accents:
-                if not isinstance(accent, dict):
-                    continue
-                sound_file = accent.get("soundFile")
-                if not sound_file:
-                    continue
-                audio_path = audio_dir / sound_file
-                if not audio_path.is_file():
-                    logger.debug("nhk16: skipping missing subentry audio %s", audio_path)
-                    continue
-
-                yield AudioPackRow(
-                    expression=head,
-                    reading=sub_reading,
-                    source=source,
-                    speaker=None,
-                    display=None,
-                    file=f"audio/{sound_file}",
-                )
+                # Number (+counter) section: expand the number to its written
+                # forms and prepend it to each ・-split counter kanji (or, with
+                # no kanji, to the reading — blanked when it is the 整数 marker).
+                counter_exprs = _split_headwords(kanji_raw, "・")
+                numbers = _nhk16_numbers(sub.get("number"))
+                counter_reading = "" if kana == "整数" else kana
+                for accent in sub_accents:
+                    rel = _sound_rel(accent)
+                    if rel is None:
+                        continue
+                    if counter_exprs:
+                        for expr in counter_exprs:
+                            for number in numbers:
+                                yield AudioPackRow(
+                                    expression=f"{number}{expr}",
+                                    reading=None,
+                                    source=source,
+                                    speaker=None,
+                                    display=None,
+                                    file=rel,
+                                )
+                    else:
+                        for number in numbers:
+                            yield AudioPackRow(
+                                expression=f"{number}{counter_reading}",
+                                reading=None,
+                                source=source,
+                                speaker=None,
+                                display=None,
+                                file=rel,
+                            )
 
 
 # ---------------------------------------------------------------------------
@@ -378,6 +605,87 @@ def parse_jpod_legacy(pack_dir: Path, source: str) -> Iterator[AudioPackRow]:
 
 
 # ---------------------------------------------------------------------------
+# OZK5 parser
+# ---------------------------------------------------------------------------
+
+
+def parse_ozk5(pack_dir: Path, source: str) -> Iterator[AudioPackRow]:
+    """Parse an OZK5-format audio pack.
+
+    Ported from local-audio-yomichan plugin/source/ozk5.py
+    (`OZK5AudioSource.add_entries`), upstream commit 2cbabbc.
+
+    Reads ``index.json`` — a JSON object with a ``meta`` block (``media_dir``
+    defaults to ``"media"``) and an ``entries`` array of
+    ``{kanji, kana, audio_file}``. Yields one row per entry keyed to its
+    ``kanji`` (or ``kana`` when there is no kanji); a kanji entry additionally
+    yields a kana-keyed row so the audio is findable by reading, matching
+    upstream. Entries whose audio file is absent are skipped.
+
+    Raises :exc:`ValueError` on malformed top-level JSON structure. ``display``
+    is left unset: it is cosmetic (never read back by the fetcher), so the
+    upstream katakana-mora rendering is intentionally not reproduced.
+    """
+    index_path = pack_dir / "index.json"
+    try:
+        data = json.loads(index_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Malformed index.json in {pack_dir}: {exc}") from exc
+
+    if not isinstance(data, dict):
+        raise ValueError(f"index.json in {pack_dir} must be a JSON object")
+
+    entries = data.get("entries", [])
+    if not isinstance(entries, list):
+        raise ValueError(f"index.json 'entries' must be an array in {pack_dir}")
+
+    meta = data.get("meta")
+    media_dir = meta.get("media_dir", "media") if isinstance(meta, dict) else "media"
+    if not isinstance(media_dir, str) or not media_dir:
+        media_dir = "media"
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        kanji = entry.get("kanji") or ""
+        kana = entry.get("kana") or ""
+        audio_file = entry.get("audio_file") or ""
+        if not audio_file:
+            continue
+
+        expression = kanji or kana  # use kana if no kanji
+        if not expression:
+            continue
+
+        full_path = pack_dir / media_dir / audio_file
+        if not full_path.is_file():
+            logger.debug("ozk5: skipping missing audio file %s", full_path)
+            continue
+        rel = (Path(media_dir) / audio_file).as_posix()
+
+        yield AudioPackRow(
+            expression=expression,
+            reading=kana if kana else None,
+            source=source,
+            speaker=None,
+            display=None,
+            file=rel,
+        )
+
+        # A kanji entry also yields a kana-keyed row (unless kanji == kana,
+        # which would duplicate) so lookups by reading find the same audio.
+        if kanji and kanji != kana and kana:
+            yield AudioPackRow(
+                expression=kana,
+                reading=kana,
+                source=source,
+                speaker=None,
+                display=None,
+                file=rel,
+            )
+
+
+# ---------------------------------------------------------------------------
 # Parser dispatch table
 # ---------------------------------------------------------------------------
 
@@ -385,6 +693,7 @@ ParserFn = Callable[[Path, str], Iterator[AudioPackRow]]
 
 PARSERS: dict[str, ParserFn] = {
     "ajt": parse_ajt,
+    "ozk5": parse_ozk5,
     "nhk16": parse_nhk16,
     "forvo": parse_forvo,
     "jpod_legacy": parse_jpod_legacy,

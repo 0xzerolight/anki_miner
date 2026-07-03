@@ -14,6 +14,7 @@ from anki_miner.services.audio_packs.formats import (
     parse_forvo,
     parse_jpod_legacy,
     parse_nhk16,
+    parse_ozk5,
     scan_importable_packs,
 )
 
@@ -77,6 +78,46 @@ class TestDetectPackFormat:
         (tmp_path / "media").mkdir()
         speaker = tmp_path / "bob"
         _make_audio(speaker, "word.mp3")
+        assert detect_pack_format(tmp_path) == "ajt"
+
+    def test_ozk5(self, tmp_path):
+        _write_json(
+            tmp_path / "index.json",
+            {
+                "meta": {"media_dir": "media"},
+                "entries": [{"kanji": "亜", "kana": "あ", "audio_file": "a.aac"}],
+                "kanji_index": {"亜": [0]},
+                "kana_index": {"あ": [0]},
+            },
+        )
+        (tmp_path / "media").mkdir()
+        assert detect_pack_format(tmp_path) == "ozk5"
+
+    def test_ozk5_disambiguated_from_ajt(self, tmp_path):
+        """An ozk5 index (entries + kana_index) must not be mis-detected as ajt.
+
+        Both formats key off index.json; ozk5 is recognised by its ``entries``
+        array + ``kana_index``/``kanji_index`` signature, ajt by ``headwords``.
+        """
+        _write_json(
+            tmp_path / "index.json",
+            {
+                "meta": {},
+                "entries": [{"kanji": "犬", "kana": "いぬ", "audio_file": "x.aac"}],
+                "kana_index": {"いぬ": [0]},
+            },
+        )
+        (tmp_path / "media").mkdir()
+        assert detect_pack_format(tmp_path) == "ozk5"
+
+    def test_ozk5_malformed_index_falls_back_to_ajt_check(self, tmp_path):
+        """Unreadable index.json must not raise during detection.
+
+        A malformed index.json + media/ is not ozk5 (peek fails) and satisfies
+        the ajt file/dir signature, so it detects as ajt (parse then raises).
+        """
+        (tmp_path / "index.json").write_text("not json", encoding="utf-8")
+        (tmp_path / "media").mkdir()
         assert detect_pack_format(tmp_path) == "ajt"
 
 
@@ -362,6 +403,138 @@ class TestParseNhk16:
         rows = list(parse_nhk16(tmp_path, "nhk"))
         assert rows == []
 
+    def test_kanji_not_used_expression_dropped(self, tmp_path):
+        """A kanji headword that appears in kanjiNotUsed is filtered out.
+
+        Negative case: NHK explicitly marks 綺麗 as an unused spelling, so only
+        the retained spelling 奇麗 (and never 綺麗) is keyed to the audio.
+        """
+        (tmp_path / "audio").mkdir()
+        (tmp_path / "audio" / "kirei.mp3").touch()
+        entries = [
+            {
+                "kana": "きれい",
+                "kanji": ["奇麗，綺麗"],
+                "kanjiNotUsed": ["綺麗"],
+                "accents": [{"soundFile": "kirei.mp3"}],
+                "subentries": [],
+            }
+        ]
+        _write_json(tmp_path / "entries.json", entries)
+        rows = list(parse_nhk16(tmp_path, "nhk"))
+        expressions = {r.expression for r in rows}
+        assert "奇麗" in expressions
+        assert "綺麗" not in expressions
+
+    def test_kanji_not_used_all_dropped_falls_back_to_kana(self, tmp_path):
+        """If kanjiNotUsed removes every kanji spelling, fall back to the kana."""
+        (tmp_path / "audio").mkdir()
+        (tmp_path / "audio" / "only.mp3").touch()
+        entries = [
+            {
+                "kana": "あお",
+                "kanji": ["蒼"],
+                "kanjiNotUsed": ["蒼"],
+                "accents": [{"soundFile": "only.mp3"}],
+                "subentries": [],
+            }
+        ]
+        _write_json(tmp_path / "entries.json", entries)
+        rows = list(parse_nhk16(tmp_path, "nhk"))
+        assert len(rows) == 1
+        assert rows[0].expression == "あお"
+        assert rows[0].reading == "あお"
+
+    def test_missing_kanji_not_used_key_ok(self, tmp_path):
+        """Packs without a kanjiNotUsed key parse unchanged (backward compat)."""
+        (tmp_path / "audio").mkdir()
+        (tmp_path / "audio" / "ok.mp3").touch()
+        entries = [
+            {
+                "kana": "いぬ",
+                "kanji": ["犬"],
+                "accents": [{"soundFile": "ok.mp3"}],
+                "subentries": [],
+            }
+        ]
+        _write_json(tmp_path / "entries.json", entries)
+        rows = list(parse_nhk16(tmp_path, "nhk"))
+        assert len(rows) == 1
+        assert rows[0].expression == "犬"
+
+    def test_numeric_subentry_expands_kanji_and_fullwidth(self, tmp_path):
+        """A number subentry expands to fullwidth-digit + kanji-numeral headwords.
+
+        Counter entry: kanji 本 + number 3 → 「３本」 and 「三本」, reading None.
+        """
+        (tmp_path / "audio").mkdir()
+        (tmp_path / "audio" / "hon.mp3").touch()
+        entries = [
+            {
+                "kana": "ほん",
+                "kanji": ["本"],
+                "accents": [],
+                "subentries": [{"number": "3", "accents": [{"soundFile": "hon.mp3"}]}],
+            }
+        ]
+        _write_json(tmp_path / "entries.json", entries)
+        rows = list(parse_nhk16(tmp_path, "nhk"))
+        expressions = {r.expression for r in rows}
+        assert expressions == {"３本", "三本"}
+        assert all(r.reading is None for r in rows)
+
+    def test_numeric_subentry_nan_special_case(self, tmp_path):
+        """The 何［ナン］ sentinel expands to only 何 (no fullwidth form)."""
+        (tmp_path / "audio").mkdir()
+        (tmp_path / "audio" / "nan.mp3").touch()
+        entries = [
+            {
+                "kana": "ぼん",
+                "kanji": ["本"],
+                "accents": [],
+                "subentries": [{"number": "何［ナン］", "accents": [{"soundFile": "nan.mp3"}]}],
+            }
+        ]
+        _write_json(tmp_path / "entries.json", entries)
+        rows = list(parse_nhk16(tmp_path, "nhk"))
+        assert {r.expression for r in rows} == {"何本"}
+
+    def test_numeric_subentry_integer_counter_no_kanji(self, tmp_path):
+        """整数 (bare integer) reading is blanked; no-kanji entry yields number-only.
+
+        entry.kanji empty + reading 整数 + number 5 → 「５」 and 「五」.
+        """
+        (tmp_path / "audio").mkdir()
+        (tmp_path / "audio" / "int.mp3").touch()
+        entries = [
+            {
+                "kana": "整数",
+                "kanji": [],
+                "accents": [],
+                "subentries": [{"number": "5", "accents": [{"soundFile": "int.mp3"}]}],
+            }
+        ]
+        _write_json(tmp_path / "entries.json", entries)
+        rows = list(parse_nhk16(tmp_path, "nhk"))
+        assert {r.expression for r in rows} == {"５", "五"}
+        assert all(r.reading is None for r in rows)
+
+    def test_numeric_subentry_without_number_yields_nothing(self, tmp_path):
+        """A headless subentry lacking a 'number' key produces no rows (no crash)."""
+        (tmp_path / "audio").mkdir()
+        (tmp_path / "audio" / "c.mp3").touch()
+        entries = [
+            {
+                "kana": "いち",
+                "kanji": ["一"],
+                "accents": [],
+                "subentries": [{"accents": [{"soundFile": "c.mp3"}]}],
+            }
+        ]
+        _write_json(tmp_path / "entries.json", entries)
+        rows = list(parse_nhk16(tmp_path, "nhk"))
+        assert rows == []
+
     def test_malformed_json_raises(self, tmp_path):
         (tmp_path / "audio").mkdir()
         (tmp_path / "entries.json").write_text("{broken", encoding="utf-8")
@@ -373,6 +546,100 @@ class TestParseNhk16:
         _write_json(tmp_path / "entries.json", {"key": "value"})
         with pytest.raises(ValueError):
             list(parse_nhk16(tmp_path, "nhk"))
+
+
+# ---------------------------------------------------------------------------
+# parse_ozk5
+# ---------------------------------------------------------------------------
+
+
+class TestParseOzk5:
+    def _write_index(self, tmp_path: Path, entries: list, media_dir: str = "media") -> None:
+        _write_json(
+            tmp_path / "index.json",
+            {
+                "meta": {"media_dir": media_dir},
+                "entries": entries,
+                "kanji_index": {},
+                "kana_index": {},
+            },
+        )
+
+    def test_kanji_entry_yields_kanji_and_kana_rows(self, tmp_path):
+        (tmp_path / "media").mkdir()
+        (tmp_path / "media" / "t.aac").touch()
+        self._write_index(tmp_path, [{"kanji": "食べる", "kana": "たべる", "audio_file": "t.aac"}])
+        rows = list(parse_ozk5(tmp_path, "ozk5"))
+        assert len(rows) == 2
+        by_expr = {r.expression: r for r in rows}
+        assert by_expr["食べる"].reading == "たべる"
+        assert by_expr["食べる"].file == "media/t.aac"
+        assert by_expr["食べる"].source == "ozk5"
+        # second row makes the entry findable by its kana too
+        assert by_expr["たべる"].reading == "たべる"
+        assert by_expr["たべる"].file == "media/t.aac"
+
+    def test_kana_only_entry_single_row(self, tmp_path):
+        (tmp_path / "media").mkdir()
+        (tmp_path / "media" / "a.aac").touch()
+        self._write_index(tmp_path, [{"kanji": "", "kana": "あ", "audio_file": "a.aac"}])
+        rows = list(parse_ozk5(tmp_path, "ozk5"))
+        assert len(rows) == 1
+        assert rows[0].expression == "あ"
+        assert rows[0].reading == "あ"
+
+    def test_kanji_equals_kana_no_duplicate_row(self, tmp_path):
+        """When kanji == kana there is no separate kana row (would duplicate)."""
+        (tmp_path / "media").mkdir()
+        (tmp_path / "media" / "k.aac").touch()
+        self._write_index(tmp_path, [{"kanji": "アア", "kana": "アア", "audio_file": "k.aac"}])
+        rows = list(parse_ozk5(tmp_path, "ozk5"))
+        assert len(rows) == 1
+        assert rows[0].expression == "アア"
+
+    def test_missing_audio_file_skipped(self, tmp_path):
+        (tmp_path / "media").mkdir()
+        self._write_index(tmp_path, [{"kanji": "犬", "kana": "いぬ", "audio_file": "ghost.aac"}])
+        rows = list(parse_ozk5(tmp_path, "ozk5"))
+        assert rows == []
+
+    def test_custom_media_dir(self, tmp_path):
+        (tmp_path / "audio2").mkdir()
+        (tmp_path / "audio2" / "x.aac").touch()
+        self._write_index(
+            tmp_path,
+            [{"kanji": "猫", "kana": "ねこ", "audio_file": "x.aac"}],
+            media_dir="audio2",
+        )
+        rows = list(parse_ozk5(tmp_path, "ozk5"))
+        assert rows[0].file == "audio2/x.aac"
+
+    def test_default_media_dir_when_meta_missing(self, tmp_path):
+        (tmp_path / "media").mkdir()
+        (tmp_path / "media" / "d.aac").touch()
+        _write_json(
+            tmp_path / "index.json",
+            {"entries": [{"kanji": "山", "kana": "やま", "audio_file": "d.aac"}], "kana_index": {}},
+        )
+        rows = list(parse_ozk5(tmp_path, "ozk5"))
+        assert rows[0].file == "media/d.aac"
+
+    def test_entry_missing_expression_skipped(self, tmp_path):
+        (tmp_path / "media").mkdir()
+        (tmp_path / "media" / "e.aac").touch()
+        self._write_index(tmp_path, [{"kanji": "", "kana": "", "audio_file": "e.aac"}])
+        rows = list(parse_ozk5(tmp_path, "ozk5"))
+        assert rows == []
+
+    def test_malformed_json_raises(self, tmp_path):
+        (tmp_path / "index.json").write_text("not json", encoding="utf-8")
+        with pytest.raises(ValueError, match="Malformed"):
+            list(parse_ozk5(tmp_path, "ozk5"))
+
+    def test_not_object_raises(self, tmp_path):
+        _write_json(tmp_path / "index.json", [1, 2, 3])
+        with pytest.raises(ValueError):
+            list(parse_ozk5(tmp_path, "ozk5"))
 
 
 # ---------------------------------------------------------------------------
@@ -504,7 +771,7 @@ class TestParseJpodLegacy:
 
 class TestParsersDict:
     def test_all_formats_present(self):
-        assert set(PARSERS.keys()) == {"ajt", "nhk16", "forvo", "jpod_legacy"}
+        assert set(PARSERS.keys()) == {"ajt", "nhk16", "forvo", "jpod_legacy", "ozk5"}
 
     def test_parsers_are_callable(self):
         for fmt, fn in PARSERS.items():
