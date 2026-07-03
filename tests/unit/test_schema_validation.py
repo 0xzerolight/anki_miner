@@ -10,8 +10,10 @@ import pytest
 from anki_miner.exceptions import SetupError
 from anki_miner.services.dictionary.schema_validation import (
     ensure_bank_array,
+    is_valid_dictionary_index,
     is_valid_meta_bank_entry,
     is_valid_term_bank_entry,
+    validate_http_url,
 )
 from anki_miner.services.dictionary.zip_safety import (
     find_redundant_index_dir,
@@ -104,3 +106,52 @@ class TestRaiseIfIndexNested:
     def test_absent_index_raises_fallback(self) -> None:
         with pytest.raises(SetupError, match="fallback"):
             raise_if_index_nested(["term_bank_1.json"], missing_msg="fallback")
+
+
+class TestValidateHttpUrl:
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://example.com/i.json",
+            "https://example.com/i.json",
+            "HTTPS://Example.com/i.json",
+        ],
+    )
+    def test_accepts_http_and_https(self, url: str) -> None:
+        assert validate_http_url(url) is True
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "file:///etc/passwd",
+            "ftp://example.com/x",
+            "javascript:alert(1)",
+            "not a url",
+            "",
+            None,
+            123,
+        ],
+    )
+    def test_rejects_non_http(self, url: object) -> None:
+        assert validate_http_url(url) is False
+
+
+class TestIsValidDictionaryIndex:
+    def test_accepts_minimal_index(self) -> None:
+        assert is_valid_dictionary_index({"title": "Jitendex", "revision": "2024"}) is True
+
+    def test_rejects_missing_title(self) -> None:
+        assert is_valid_dictionary_index({"revision": "2024"}) is False
+
+    def test_rejects_blank_title(self) -> None:
+        assert is_valid_dictionary_index({"title": "  ", "revision": "2024"}) is False
+
+    def test_rejects_missing_revision(self) -> None:
+        assert is_valid_dictionary_index({"title": "Jitendex"}) is False
+
+    def test_rejects_non_string_revision(self) -> None:
+        assert is_valid_dictionary_index({"title": "Jitendex", "revision": 2024}) is False
+
+    def test_rejects_non_object(self) -> None:
+        assert is_valid_dictionary_index(["title", "revision"]) is False
+        assert is_valid_dictionary_index(None) is False
