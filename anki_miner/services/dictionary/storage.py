@@ -116,6 +116,17 @@ _LOOKUP_SQL = (
     f"LIMIT {_LOOKUP_LIMIT}"
 )
 
+# Same shape as _LOOKUP_SQL but also returns the ``rules`` column and takes no
+# reading boost (fallback candidates carry no contextual reading). The lookup-miss
+# fallback (plan item 5.2) needs each candidate row's rules to run Yomitan's POS
+# check before rendering, so this is the schema-v3 ``rules`` column's first reader.
+_LOOKUP_RULES_SQL = (
+    "SELECT content, tags, sequence, rules FROM entries "
+    "WHERE term = ? OR reading = ? "
+    "ORDER BY (term = ?) DESC, score DESC, sequence, id "
+    f"LIMIT {_LOOKUP_LIMIT}"
+)
+
 
 @dataclass(frozen=True)
 class DictRow:
@@ -371,6 +382,21 @@ def lookup(conn: sqlite3.Connection, word: str, reading: str | None = None) -> l
     folded_boost = katakana_to_hiragana(reading) if reading is not None else None
     rows = conn.execute(_LOOKUP_SQL, (word, folded_word, word, folded_boost)).fetchall()
     return [(row[0], row[1], row[2]) for row in rows]
+
+
+def lookup_with_rules(conn: sqlite3.Connection, word: str) -> list[tuple[str, str, int | None, str]]:
+    """Return (content, tags, sequence, rules) rows matching ``word`` by term or
+    folded reading, ranked like :func:`lookup` (no reading boost).
+
+    The lookup-miss fallback (plan item 5.2) probes deinflection/variant
+    candidates through this so it can POS-check each row's ``rules`` before
+    rendering. A NULL/absent ``rules`` column normalises to ``""`` (accept
+    unconditionally at the caller). Katakana folding matches ``lookup``: a
+    katakana candidate still matches a kanji headword's hiragana-folded reading.
+    """
+    folded_word = katakana_to_hiragana(word)
+    rows = conn.execute(_LOOKUP_RULES_SQL, (word, folded_word, word)).fetchall()
+    return [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in rows]
 
 
 # sqlite's default SQLITE_MAX_VARIABLE_NUMBER is 999. lookup_many binds each

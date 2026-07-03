@@ -74,3 +74,14 @@ class DictionaryProvider(Protocol):
     #     def has_terms(self, terms: list[str]) -> set[str]:
     #         """Return the subset of ``terms`` that exist as exact headwords
     #         (term column, NOT reading). Never raises; degrade to empty set."""
+    #
+    # NOTE: ``lookup_fallback`` is a third OPTIONAL method (lookup-miss fallback,
+    # plan item 5.2). Offline indexed providers implement it; consumers probe via
+    # ``getattr`` and skip providers without it. Contract:
+    #
+    #     def lookup_fallback(self, word: str, conditions: int) -> str | None:
+    #         """Look up a deinflection/variant candidate, keeping only entries
+    #         whose stored ``rules`` (POS) are compatible with the hypothesis
+    #         ``conditions`` (0 = spelling/kana variant, passes unconditionally;
+    #         empty rules accept unconditionally). Renders identically to
+    #         ``lookup``. Never raises; degrade to None."""

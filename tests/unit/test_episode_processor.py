@@ -336,6 +336,8 @@ class TestProcessEpisode:
         mock_services["definition_service"].get_definitions_batch.assert_called_once()
         ds_args = mock_services["definition_service"].get_definitions_batch.call_args
         assert ds_args[0][0] == [("食べる", "たべる")]
+        # Lookup-miss fallback context (5.2): lemma → (orth_base, cType=None).
+        assert ds_args[0][2] == {"食べる": ("", None)}
 
         # Verify anki_service gets combined CardPayload entries
         mock_services["anki_service"].create_cards_batch.assert_called_once()
@@ -351,6 +353,27 @@ class TestProcessEpisode:
             definition="1. to eat",
             extra_fields={"source": expected_source},
         )
+
+    def test_fallback_context_carries_orth_base(self, processor, mock_services, tmp_path):
+        """5.2: the miss-only fallback context threads each lemma's orth_base
+        (source-orthography variant) so 乞う resolves when the lemma is 請う."""
+        video = tmp_path / "v.mkv"
+        sub = tmp_path / "s.ass"
+        word = _make_word(lemma="請う")
+        word.orth_base = "乞う"
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to beg"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor.process_episode(video, sub)
+
+        ds_args = mock_services["definition_service"].get_definitions_batch.call_args
+        assert ds_args[0][2] == {"請う": ("乞う", None)}
 
     def test_audio_only_flag_reaches_extract_media_batch(self, processor, mock_services, tmp_path):
         """audio_only=True is threaded down to extract_media_batch."""
@@ -2498,7 +2521,7 @@ class TestProcessYoutubeUrlCancelPropagation:
         processor, _ = self._build(test_config, mock_services, tmp_path)
         cancel_event = threading.Event()
 
-        def _define_then_cancel(lemmas, cb):
+        def _define_then_cancel(lemmas, cb, fallback_context=None):
             cancel_event.set()
             return ["1. to eat"]
 
