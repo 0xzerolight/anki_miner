@@ -145,6 +145,41 @@ class TestZipImport:
         dest = tmp_path / "sources"
         result = import_frequency_source(zip_path, dest)
         assert result.entry_count == 1
+        # Mode-mismatches are not structural malformations.
+        assert result.skipped_malformed == 0
+
+    def test_malformed_meta_entries_counted_and_surfaced(self, tmp_path: Path) -> None:
+        """4.8: structurally-bad meta entries are counted, not silently dropped."""
+        zip_path = _write_zip(
+            tmp_path / "m.zip",
+            banks=[
+                ["猫", "freq", 5],  # valid
+                ["犬"],  # arity 1 < 3 → malformed
+                "nope",  # not a list → malformed
+                ["", "freq", 3],  # blank term → malformed
+            ],
+        )
+        result = import_frequency_source(zip_path, tmp_path / "sources")
+        assert result.entry_count == 1
+        assert result.skipped_malformed == 3
+
+    def test_non_array_meta_bank_raises(self, tmp_path: Path) -> None:
+        """4.8: a meta bank whose top-level JSON is not an array raises."""
+        zip_path = tmp_path / "bad.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("index.json", json.dumps({"title": "T", "revision": "r", "format": 3}))
+            zf.writestr("term_meta_bank_1.json", json.dumps({"oops": 1}))
+        with pytest.raises(SetupError, match="term_meta_bank_1.json"):
+            import_frequency_source(zip_path, tmp_path / "sources")
+
+    def test_nested_index_raises_rezip_diagnostic(self, tmp_path: Path) -> None:
+        """4.7b: a folder-zipped-instead-of-contents freq zip is diagnosed."""
+        zip_path = tmp_path / "nested.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("Sub/index.json", json.dumps({"title": "T", "revision": "r", "format": 3}))
+            zf.writestr("Sub/term_meta_bank_1.json", json.dumps([["猫", "freq", 5]]))
+        with pytest.raises(SetupError, match="re-zip the folder CONTENTS"):
+            import_frequency_source(zip_path, tmp_path / "sources")
 
 
 class TestCsvImport:
@@ -299,4 +334,11 @@ class TestDeriveSourceIdFromZip:
             zf.writestr("index.json", json.dumps({"format": 3}))
             zf.writestr("term_meta_bank_1.json", json.dumps([["猫", "freq", 5]]))
         with pytest.raises(SetupError, match="missing required 'title'"):
+            derive_source_id_from_zip(zip_path)
+
+    def test_nested_index_raises_rezip_diagnostic(self, tmp_path: Path) -> None:
+        zip_path = tmp_path / "nested.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("Sub/index.json", json.dumps({"title": "T", "revision": "r", "format": 3}))
+        with pytest.raises(SetupError, match="re-zip the folder CONTENTS"):
             derive_source_id_from_zip(zip_path)
