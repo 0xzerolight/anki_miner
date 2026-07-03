@@ -314,6 +314,56 @@ def test_migrate_expression_audio_chain_absent_key_is_noop():
     assert "expression_audio_chain" not in result
 
 
+def test_migrate_expression_audio_chain_rebuilds_custom_with_url():
+    """A custom URL entry rebuilds into an AudioSourceEntry preserving url."""
+    data = {
+        "expression_audio_chain": [
+            {"kind": "custom", "url": "http://localhost:5050/?term={term}&reading={reading}", "enabled": True},
+            {"kind": "jpod101"},
+        ]
+    }
+    result = GUIConfigManager._migrate_expression_audio_chain(data)
+    chain = result["expression_audio_chain"]
+    assert chain[0] == AudioSourceEntry(
+        kind="custom",
+        url="http://localhost:5050/?term={term}&reading={reading}",
+        enabled=True,
+    )
+
+
+def test_migrate_expression_audio_chain_rebuilds_custom_json_and_scrapes():
+    """custom_json + scrape kinds survive the JSON→dataclass rebuild."""
+    data = {
+        "expression_audio_chain": [
+            {"kind": "custom_json", "url": "http://localhost:5050/list?term={term}", "enabled": False},
+            {"kind": "jpod101_scrape", "enabled": True},
+            {"kind": "jisho_scrape", "enabled": False},
+            {"kind": "jpod101"},
+        ]
+    }
+    result = GUIConfigManager._migrate_expression_audio_chain(data)
+    kinds = [e.kind for e in result["expression_audio_chain"]]
+    assert kinds[:4] == ["custom_json", "jpod101_scrape", "jisho_scrape", "jpod101"]
+    assert result["expression_audio_chain"][0].url == "http://localhost:5050/list?term={term}"
+    assert result["expression_audio_chain"][1].url is None
+
+
+def test_save_then_load_preserves_custom_and_scrape_entries(tmp_config: Path):
+    """A chain with custom + scrape entries survives a real save/load round-trip."""
+    chain = (
+        AudioSourceEntry(kind="custom", url="http://host/?t={term}&r={reading}", enabled=True),
+        AudioSourceEntry(kind="jpod101_scrape", enabled=False),
+        AudioSourceEntry(kind="jisho_scrape", enabled=False),
+        AudioSourceEntry(kind="jpod101", enabled=True),
+        AudioSourceEntry(kind="googletts", enabled=False),
+    )
+    config = replace(AnkiMinerConfig(), expression_audio_chain=chain)
+    GUIConfigManager.save_config(config)
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.expression_audio_chain == chain
+
+
 # ---------------------------------------------------------------------------
 # frequency_chain migration tests
 # ---------------------------------------------------------------------------
