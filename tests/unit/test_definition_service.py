@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.services.definition_service import DefinitionService, collect_dictionary_css
+from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -1002,3 +1003,178 @@ class TestOfflineTermsExist:
         service = DefinitionService(test_config, providers=[p])
         assert service.offline_terms_exist(["走り出す", "走り出す"]) == {"走り出す"}
         assert p.has_terms.call_args[0][0] == ["走り出す"]
+
+
+# ---------------------------------------------------------------------------
+# Lookup-miss fallback chain (plan item 5.2): deinflection + orthBase + kana
+# variants, validated against the entry's rules column (Yomitan's POS check).
+# ---------------------------------------------------------------------------
+
+
+def _seed_rows(root: Path, dict_id: str, name: str, rows: list[DictRow]) -> IndexedDictProvider:
+    """Seed a real index with the given rows and return a loaded provider."""
+    folder = root / dict_id
+    folder.mkdir(parents=True, exist_ok=True)
+    db = folder / "index.sqlite"
+    create_index(db)
+    bulk_insert(db, rows)
+    write_meta(
+        db,
+        {
+            "schema_version": str(SCHEMA_VERSION),
+            "source_name": name,
+            "format": "yomitan",
+            "entry_count": str(len(rows)),
+        },
+    )
+    provider = IndexedDictProvider(dict_id, db, display_name=name)
+    provider.load()
+    return provider
+
+
+def _gloss(text: str) -> str:
+    return f'<li class="gloss-item">{text}</li>'
+
+
+class TestFallbackCandidates:
+    """``DefinitionService._fallback_candidates`` — the variant/deinflection fan-out."""
+
+    def test_orth_base_first_with_wildcard_conditions(self):
+        cands = DefinitionService._fallback_candidates("請う", "乞う", None)
+        assert cands[0] == ("乞う", 0)
+
+    def test_orth_base_equal_to_word_not_emitted(self):
+        cands = DefinitionService._fallback_candidates("乞う", "乞う", None)
+        assert all(text != "乞う" for text, _ in cands)
+
+    def test_katakana_fold_emitted_for_katakana_word(self):
+        cands = DefinitionService._fallback_candidates("ネコ", "", None)
+        texts = [t for t, _ in cands]
+        assert "ねこ" in texts  # katakana → hiragana fold
+
+    def test_exact_word_never_reemitted(self):
+        cands = DefinitionService._fallback_candidates("食べた", "", None)
+        assert all(text != "食べた" for text, _ in cands)
+
+    def test_deinflection_hypothesis_carries_conditions(self):
+        # 食べさせられた deinflects to 食べる (an ichidan verb, condition bit v1=3).
+        cands = DefinitionService._fallback_candidates("食べさせられた", "", None)
+        by_text = dict(cands)
+        assert "食べる" in by_text
+        assert by_text["食べる"] != 0  # non-wildcard, carries the terminal v1 flag
+
+    def test_ordered_fewest_steps_first_after_variants(self):
+        # 食べさせられる (1 step) precedes 食べる (3 steps) in the deinflection tail.
+        cands = DefinitionService._fallback_candidates("食べさせられた", "", None)
+        texts = [t for t, _ in cands]
+        assert texts.index("食べさせられる") < texts.index("食べる")
+
+
+class TestLookupFallbackProvider:
+    """``IndexedDictProvider.lookup_fallback`` — rules-column POS validation."""
+
+    def test_empty_rules_accepted_unconditionally(self, tmp_path: Path):
+        p = _seed_rows(tmp_path, "d", "D", [DictRow(term="食べる", reading="たべる", content=_gloss("eat"), rules="")])
+        # Non-wildcard v1 hypothesis; empty rules ⇒ accept.
+        html = p.lookup_fallback("食べる", 3)
+        assert html is not None and "eat" in html
+
+    def test_v1_hypothesis_rejected_against_adjective_ruled_entry(self, tmp_path: Path):
+        # Entry mis-ruled as an い-adjective (adj-i). A v1-verb hypothesis (v1=3)
+        # must NOT match — Yomitan's POS check rejects the cross-category hit.
+        p = _seed_rows(
+            tmp_path, "d", "D", [DictRow(term="食べる", reading="たべる", content=_gloss("adj"), rules="adj-i")]
+        )
+        assert p.lookup_fallback("食べる", 3) is None
+
+    def test_v1_hypothesis_accepted_against_v1_ruled_entry(self, tmp_path: Path):
+        p = _seed_rows(
+            tmp_path, "d", "D", [DictRow(term="食べる", reading="たべる", content=_gloss("eat"), rules="v1")]
+        )
+        html = p.lookup_fallback("食べる", 3)
+        assert html is not None and "eat" in html
+
+    def test_variant_conditions_zero_accepted_against_any_rules(self, tmp_path: Path):
+        # A pure spelling/kana variant (conditions=0) passes even a mismatched-POS
+        # entry: it is not a deinflection hypothesis.
+        p = _seed_rows(tmp_path, "d", "D", [DictRow(term="乞う", reading="こう", content=_gloss("beg"), rules="v5")])
+        html = p.lookup_fallback("乞う", 0)
+        assert html is not None and "beg" in html
+
+    def test_miss_returns_none(self, tmp_path: Path):
+        p = _seed_rows(tmp_path, "d", "D", [DictRow(term="食べる", reading="たべる", content=_gloss("eat"))])
+        assert p.lookup_fallback("走る", 0) is None
+
+
+class TestGetDefinitionsBatchFallback:
+    """Miss-only fallback inside ``get_definitions_batch`` (pipeline path)."""
+
+    def test_orth_base_variant_resolves_lemma_miss(self, test_config, tmp_path: Path):
+        # Dict stores only the source-orthography variant 乞う; the lemma 請う misses.
+        p = _seed_rows(tmp_path, "d", "D", [DictRow(term="乞う", reading="こう", content=_gloss("beg"), rules="v5")])
+        service = DefinitionService(test_config, providers=[p])
+        # Without context: pure miss.
+        assert service.get_definitions_batch([("請う", None)]) == [None]
+        # With context mapping lemma → (orth_base, cType): fallback resolves it.
+        out = service.get_definitions_batch([("請う", None)], None, {"請う": ("乞う", None)})
+        assert out[0] is not None and "beg" in out[0]
+
+    def test_katakana_lemma_matches_hiragana_headword(self, test_config, tmp_path: Path):
+        p = _seed_rows(tmp_path, "d", "D", [DictRow(term="ねこ", reading="ねこ", content=_gloss("cat"), rules="")])
+        service = DefinitionService(test_config, providers=[p])
+        out = service.get_definitions_batch([("ネコ", None)], None, {"ネコ": ("", None)})
+        assert out[0] is not None and "cat" in out[0]
+
+    def test_no_context_means_no_fallback(self, test_config, tmp_path: Path):
+        p = _seed_rows(tmp_path, "d", "D", [DictRow(term="乞う", reading="こう", content=_gloss("beg"), rules="v5")])
+        service = DefinitionService(test_config, providers=[p])
+        assert service.get_definitions_batch([("請う", None)]) == [None]
+
+    def test_fallback_skipped_for_resolved_words(self, test_config, tmp_path: Path):
+        # 食べる resolves directly; its fallback must never run (miss-only).
+        p = _seed_rows(tmp_path, "d", "D", [DictRow(term="食べる", reading="たべる", content=_gloss("eat"))])
+        service = DefinitionService(test_config, providers=[p])
+        service.ensure_loaded()
+        p.lookup_fallback = MagicMock(side_effect=AssertionError("fallback ran for a hit"))
+        out = service.get_definitions_batch([("食べる", None)], None, {"食べる": ("", None)})
+        assert out[0] is not None and "eat" in out[0]
+
+    def test_rules_validation_blocks_mismatched_pos_in_pipeline(self, test_config, tmp_path: Path):
+        # A verb deinflection hypothesis must not resolve against an adj-i entry.
+        p = _seed_rows(
+            tmp_path, "d", "D", [DictRow(term="食べる", reading="たべる", content=_gloss("adj"), rules="adj-i")]
+        )
+        service = DefinitionService(test_config, providers=[p])
+        # 食べた → 食べる (v1); entry is adj-i → rejected → still a miss.
+        out = service.get_definitions_batch([("食べた", None)], None, {"食べた": ("", None)})
+        assert out == [None]
+
+
+class TestLookupAllOfflineFallback:
+    """Unconditional fallback in ``lookup_all_offline`` (in-app lookup UX)."""
+
+    def test_inflected_user_input_resolves_base_form(self, test_config, tmp_path: Path):
+        p = _seed_rows(
+            tmp_path, "d", "D", [DictRow(term="食べる", reading="たべる", content=_gloss("eat"), rules="v1")]
+        )
+        service = DefinitionService(test_config, providers=[p])
+        out = service.lookup_all_offline("食べさせられた")
+        assert len(out) == 1
+        assert out[0][0] == "D"
+        assert "eat" in out[0][1]
+
+    def test_exact_and_fallback_deduped_by_html(self, test_config, tmp_path: Path):
+        # Exact 食べる hit plus the katakana/deinflection candidates that re-render
+        # the same entry collapse to a single result (dedup by rendered HTML).
+        p = _seed_rows(
+            tmp_path, "d", "D", [DictRow(term="食べる", reading="たべる", content=_gloss("eat"), rules="v1")]
+        )
+        service = DefinitionService(test_config, providers=[p])
+        out = service.lookup_all_offline("食べる")
+        assert len(out) == 1
+        assert "eat" in out[0][1]
+
+    def test_no_fallback_hit_returns_empty(self, test_config, tmp_path: Path):
+        p = _seed_rows(tmp_path, "d", "D", [DictRow(term="食べる", reading="たべる", content=_gloss("eat"))])
+        service = DefinitionService(test_config, providers=[p])
+        assert service.lookup_all_offline("走らせた") == []

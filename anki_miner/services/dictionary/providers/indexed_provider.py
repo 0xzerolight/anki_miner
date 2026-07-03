@@ -23,6 +23,9 @@ from anki_miner.services.dictionary.storage import (
     lookup_many as storage_lookup_many,
 )
 from anki_miner.services.dictionary.storage import (
+    lookup_with_rules as storage_lookup_with_rules,
+)
+from anki_miner.services.dictionary.storage import (
     terms_exist as storage_terms_exist,
 )
 
@@ -158,6 +161,45 @@ class IndexedDictProvider:
         # storage_lookup_many keys by unique requested words; re-expand to every
         # requested word (preserving duplicates) for caller convenience.
         return {w: self._render(rows_by_word.get(w, [])) for w, _ in pairs}
+
+    def lookup_fallback(self, word: str, conditions: int) -> str | None:
+        """Rules-validated lookup for a deinflection/variant fallback candidate.
+
+        Ported from Yomitan ``Translator._matchEntriesToDeinflections``
+        (ext/js/language/translator.js, upstream e2ed450): each candidate row is
+        kept only when its stored ``rules`` (mapped to condition flags) is
+        compatible with the hypothesis ``conditions`` — upstream's
+        ``partsOfSpeechFilter`` POS check. ``conditions`` is the deinflection
+        hypothesis's condition bitmask (0 for a pure spelling/kana variant, which
+        then passes unconditionally). A row with EMPTY ``rules`` (older imports,
+        rule-less dicts) is accepted unconditionally so the column degrades
+        gracefully. Surviving rows render through the SAME ``_render`` path as
+        :meth:`lookup`, so a validated fallback hit is byte-identical to a direct
+        hit. Optional method (probed via ``getattr`` like ``lookup_many`` /
+        ``has_terms``); never raises — a corrupt index degrades to a miss.
+        """
+        if self._conn is None:
+            return None
+        # Lazy import: keeps the deinflection rule table off this module's import
+        # path (mirrors find_highlight_end's lazy pull) and avoids a cycle.
+        from anki_miner.services.deinflection import condition_flags_from_rules, conditions_match
+
+        try:
+            rows = storage_lookup_with_rules(self._conn, word)
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Dictionary '%s' (%s) raised DatabaseError during lookup_fallback; treating as miss: %s",
+                self.dict_id,
+                self._db_path,
+                e,
+            )
+            return None
+        kept: list[tuple[str, str, int | None]] = [
+            (content, tags, sequence)
+            for content, tags, sequence, rules in rows
+            if not rules or conditions_match(conditions, condition_flags_from_rules(rules))
+        ]
+        return self._render(kept)
 
     def has_terms(self, terms: list[str]) -> set[str]:
         """Batch exact-term existence probe (compound matching).

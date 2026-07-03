@@ -336,6 +336,29 @@ def conditions_match_mask(result_conditions: int, target_mask: int) -> bool:
     return target_mask == 0 or (result_conditions & target_mask) != 0
 
 
+# Ported from Yomitan (upstream e2ed450c2f11a591922822e77f008e70a87daf0c),
+# ext/js/language/language-transformer.js
+# ``LanguageTransformer.getConditionFlagsFromPartsOfSpeech`` + ``_getConditionFlags``.
+# Maps a dictionary entry's stored ``rules`` string (term-bank ruleIdentifiers,
+# e.g. "v5 vt" or "adj-i") to the OR of each name's condition-flag bitmask; an
+# unknown name contributes 0, exactly as upstream. Used by the lookup-miss
+# fallback's POS check (``translator.js`` ``_matchEntriesToDeinflections``): a
+# deinflection hypothesis is kept for an entry only when its conditions match
+# these flags. Behavior-preserving deviation: upstream restricts the lookup to
+# the ``isDictionaryForm`` subset (``_partOfSpeechToConditionFlagsMap``); this
+# reads the full condition-flag map. Term-bank ruleIdentifiers are always
+# dictionary-form POS names, so the two agree on every real input, and any
+# non-POS name still resolves to 0.
+def condition_flags_from_rules(rules: str) -> int:
+    """Bitmask for a space-separated ``entries.rules`` string; 0 when empty
+    or when no name maps to a known condition."""
+    deinflector = get_japanese_deinflector()
+    flags = 0
+    for name in rules.split():
+        flags |= deinflector.condition_flags(name)
+    return flags
+
+
 def _extract_lemma_safe(token: Any) -> object:
     from anki_miner.services.morphology import extract_lemma
 

@@ -983,9 +983,19 @@ class EpisodeProcessor:
         lookup_pairs: list[tuple[str, str | None]] = [
             (w.lemma, katakana_to_hiragana(w.lemma_reading or w.reading)) for w in words_with_media
         ]
+        # Lookup-miss fallback context (5.2): lemma → (orth_base, cType). Only
+        # consulted for lemmas the whole chain misses, so a dictionary storing
+        # only the source-orthography variant (乞う vs canonical lemma 請う) still
+        # resolves. cType is unavailable on TokenizedWord post-parse, so the
+        # deinflection mask stays inert here and the rules-column POS check does
+        # the gating. First-seen orth_base wins, mirroring the batch's dedup.
+        fallback_context: dict[str, tuple[str, str | None]] = {}
+        for w in words_with_media:
+            fallback_context.setdefault(w.lemma, (w.orth_base, None))
         definitions = self.definition_service.get_definitions_batch(
             lookup_pairs,
             progress_callback,
+            fallback_context,
         )
         self.presenter.show_success(
             QCoreApplication.translate(
