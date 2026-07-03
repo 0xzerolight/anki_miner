@@ -33,7 +33,7 @@ from anki_miner.services import (
     WordFilterService,
 )
 from anki_miner.services.frequency.render import render_frequency_html
-from anki_miner.utils import ensure_directory, has_katakana, hiragana_to_katakana
+from anki_miner.utils import ensure_directory, has_katakana, hiragana_to_katakana, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -462,9 +462,15 @@ class EpisodeProcessor:
         # harmonic-mean rank (frequency_harmonic_rank) that drives the sort field.
         if self.frequency_service and self.frequency_service.is_available():
             for word in all_words:
-                word.frequency_sources = self.frequency_service.lookup_all(word.lemma)
-                word.frequency_rank = self.frequency_service.lookup_min(word.lemma)
-                word.frequency_harmonic_rank = self.frequency_service.lookup_harmonic(word.lemma)
+                # Reading-scope the lookup so homographs stop inheriting each
+                # other's ranks. The lemma reading (dictionary-form reading) is
+                # the right key since ranks are keyed on word.lemma; fall back to
+                # the surface reading. Hiragana-normalize so a katakana subtitle
+                # reading matches a hiragana-stored frequency reading.
+                reading = katakana_to_hiragana(word.lemma_reading or word.reading)
+                word.frequency_sources = self.frequency_service.lookup_all(word.lemma, reading)
+                word.frequency_rank = self.frequency_service.lookup_min(word.lemma, reading)
+                word.frequency_harmonic_rank = self.frequency_service.lookup_harmonic(word.lemma, reading)
             ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
             self.presenter.show_info(
                 tr_format(

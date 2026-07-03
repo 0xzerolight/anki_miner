@@ -34,11 +34,60 @@ def test_lookup_returns_rank(tmp_path: Path):
 
 
 def test_lookup_min_over_homographs(tmp_path: Path):
-    # Same term, two readings/ranks: MIN(rank) wins.
+    # Same term, two readings/ranks, NO reading given: MIN(rank) wins (legacy).
     db = _build_source(tmp_path, "jpdb", [("生", "なま", 500), ("生", "せい", 80)])
     provider = IndexedFreqProvider("jpdb", db, "JPDB")
     assert provider.load() is True
     assert provider.lookup("生") == 80
+
+
+def test_lookup_reading_scoped_picks_exact_reading(tmp_path: Path):
+    # 方: かた (rare, rank 2000) must NOT inherit ほう's (common, rank 30) rank.
+    db = _build_source(tmp_path, "jpdb", [("方", "かた", 2000), ("方", "ほう", 30)])
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.load() is True
+    assert provider.lookup("方", "かた") == 2000
+    assert provider.lookup("方", "ほう") == 30
+    # No reading → legacy term-only MIN.
+    assert provider.lookup("方") == 30
+
+
+def test_lookup_reading_scoped_bare_row_applies_to_all_readings(tmp_path: Path):
+    # A reading-less (NULL) row applies to every reading (Yomitan bare-row rule).
+    db = _build_source(tmp_path, "csv", [("走る", None, 100)])
+    provider = IndexedFreqProvider("csv", db, "CSV")
+    assert provider.load() is True
+    assert provider.lookup("走る", "はしる") == 100
+    assert provider.lookup("走る", "でたらめ") == 100
+
+
+def test_lookup_reading_scoped_prefers_exact_over_bare(tmp_path: Path):
+    # Exact-reading row wins over a bare row; an unknown reading falls to bare.
+    db = _build_source(tmp_path, "mix", [("term", "よみ", 50), ("term", None, 200)])
+    provider = IndexedFreqProvider("mix", db, "MIX")
+    assert provider.load() is True
+    assert provider.lookup("term", "よみ") == 50
+    assert provider.lookup("term", "ちがう") == 200
+    assert provider.lookup("term") == 50  # no reading → MIN(50, 200)
+
+
+def test_lookup_reading_scoped_falls_back_to_term_min(tmp_path: Path):
+    # No exact match and no bare row → term-only MIN (reading-less compat path).
+    db = _build_source(tmp_path, "jpdb", [("生", "なま", 500), ("生", "せい", 80)])
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.load() is True
+    assert provider.lookup("生", "き") == 80
+
+
+def test_lookup_reading_scoped_normalizes_katakana_both_sides(tmp_path: Path):
+    # BCCWJ envelopes may store katakana readings; a hiragana query must match,
+    # and a katakana query against a hiragana store must match too.
+    db = _build_source(tmp_path, "bccwj", [("生", "ナマ", 500), ("生", "せい", 80)])
+    provider = IndexedFreqProvider("bccwj", db, "BCCWJ")
+    assert provider.load() is True
+    assert provider.lookup("生", "なま") == 500  # hiragana query vs katakana store
+    assert provider.lookup("生", "ナマ") == 500  # katakana query vs katakana store
+    assert provider.lookup("生", "セイ") == 80  # katakana query vs hiragana store
 
 
 def test_lookup_missing_term_returns_none(tmp_path: Path):
@@ -77,6 +126,17 @@ def test_lookup_many_before_load(tmp_path: Path):
     db = _build_source(tmp_path, "jpdb", [("猫", "ねこ", 100)])
     provider = IndexedFreqProvider("jpdb", db, "JPDB")
     assert provider.lookup_many(["猫", "犬"]) == {"猫": None, "犬": None}
+
+
+def test_lookup_many_reading_scoped_matches_repeated_lookup(tmp_path: Path):
+    db = _build_source(tmp_path, "jpdb", [("方", "かた", 2000), ("方", "ほう", 30), ("生", "せい", 80)])
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.load() is True
+    terms = ["方", "方", "生"]
+    readings = ["かた", "ほう", "せい"]
+    # Duplicate term "方" with different readings: last reading (ほう→30) wins,
+    # exactly as {t: lookup(t, r) for t, r in zip(...)} would collapse the dict.
+    assert provider.lookup_many(terms, readings) == {"方": 30, "生": 80}
 
 
 def test_load_false_on_schema_mismatch(tmp_path: Path):

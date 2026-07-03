@@ -605,9 +605,10 @@ class TestOptionalServices:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        # Verify both lookups were called for the word's lemma.
-        mock_frequency.lookup_all.assert_called_with(word.lemma)
-        mock_frequency.lookup_min.assert_called_with(word.lemma)
+        # Verify both lookups were called for the word's lemma, reading-scoped.
+        # word.reading is "タベル"; the call site hiragana-normalizes it → "たべる".
+        mock_frequency.lookup_all.assert_called_with(word.lemma, "たべる")
+        mock_frequency.lookup_min.assert_called_with(word.lemma, "たべる")
         # Verify the word now has both the min rank (drives filtering) and the
         # per-source breakdown (drives the card display).
         assert word.frequency_rank == 500

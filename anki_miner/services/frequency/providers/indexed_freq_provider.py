@@ -4,10 +4,10 @@ Mirrors :class:`~anki_miner.services.dictionary.providers.indexed_provider.Index
 opens the per-source ``index.sqlite`` (built by the frequency source importer)
 read-only, validates its ``schema_version``, and exposes term -> rank lookups.
 
-The lookup key is the ``term`` column alone; the ``reading`` column is stored
-for display/import provenance but never used to match. When a term has multiple
-homograph rows (different readings, different ranks), ``MIN(rank)`` wins — the
-best (most frequent) reading represents the surface form.
+Lookups are reading-scoped (see :func:`_resolve_scoped_rank`): a homograph's rare
+reading no longer inherits a common reading's rank. When the caller supplies no
+reading, the term-only ``MIN(rank)`` is used (unchanged legacy behavior, and the
+compatibility path for reading-less sources).
 
 Threading: the read-only connection is opened with ``check_same_thread=False``
 so one provider instance is safe to share across threads (constructed on the GUI
@@ -22,8 +22,37 @@ import sqlite3
 from pathlib import Path
 
 from anki_miner.services.frequency.storage import SCHEMA_VERSION, read_meta_cached
+from anki_miner.utils.text_utils import katakana_to_hiragana
 
 logger = logging.getLogger(__name__)
+
+
+# Ported semantics from Yomitan Translator (ext/js/language/translator.js, the
+# ``freq`` case of the term-meta loop, upstream commit e2ed450): a frequency row
+# carrying a reading applies only to that reading (``data.reading !== reading``
+# → skip); a reading-less (bare) row applies to every reading. We resolve one
+# best rank per (term, reading) with a cascade — exact reading first, then bare
+# rows, then a term-only fallback so reading-less sources and parser/dict reading
+# mismatches still yield a rank rather than losing frequency entirely. Both sides
+# are hiragana-normalized so a katakana-stored BCCWJ envelope reading still
+# matches a hiragana query.
+def _resolve_scoped_rank(rows: list[tuple[str | None, int]], reading: str | None) -> int | None:
+    """Best rank for ``reading`` over ``rows`` of ``(stored_reading, rank)``.
+
+    Cascade: exact-reading rows → bare (NULL-reading) rows → all rows (term-only
+    MIN). With ``reading`` falsy, only the final term-only MIN applies.
+    """
+    if not rows:
+        return None
+    if reading:
+        norm = katakana_to_hiragana(reading)
+        exact = [rank for stored, rank in rows if stored is not None and katakana_to_hiragana(stored) == norm]
+        if exact:
+            return min(exact)
+        bare = [rank for stored, rank in rows if stored is None]
+        if bare:
+            return min(bare)
+    return min(rank for _stored, rank in rows)
 
 
 class IndexedFreqProvider:
@@ -80,15 +109,20 @@ class IndexedFreqProvider:
             return False
         return True
 
-    def lookup(self, term: str) -> int | None:
-        """Best (minimum) rank for ``term``, or None if not found / not loaded."""
+    def lookup(self, term: str, reading: str | None = None) -> int | None:
+        """Best (minimum) rank for ``term`` scoped to ``reading``, or None.
+
+        With ``reading`` supplied, a homograph's rare reading no longer inherits
+        a common reading's rank (see :func:`_resolve_scoped_rank`). With
+        ``reading`` None/empty, this is the legacy term-only ``MIN(rank)``.
+        """
         if self._conn is None:
             return None
         try:
-            row = self._conn.execute(
-                "SELECT MIN(rank) FROM entries WHERE term = ?",
+            rows = self._conn.execute(
+                "SELECT reading, rank FROM entries WHERE term = ?",
                 (term,),
-            ).fetchone()
+            ).fetchall()
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Frequency source '%s' (%s) raised DatabaseError during lookup; treating as miss: %s",
@@ -97,26 +131,28 @@ class IndexedFreqProvider:
                 e,
             )
             return None
-        if row is None or row[0] is None:
-            return None
-        return int(row[0])
+        return _resolve_scoped_rank(rows, reading)
 
-    def lookup_many(self, terms: list[str]) -> dict[str, int | None]:
+    def lookup_many(self, terms: list[str], readings: list[str | None] | None = None) -> dict[str, int | None]:
         """Batch lookup; byte-identical to repeated :meth:`lookup`.
 
-        One IN-clause query gathers the per-term minimum rank, then every
-        requested term (including duplicates and misses) is re-expanded so the
-        result matches calling ``lookup`` once per term.
+        ``readings`` is an optional parallel list (``readings[i]`` scopes
+        ``terms[i]``); when omitted every term is looked up reading-less. One
+        IN-clause query gathers the candidate rows, then each requested
+        ``(term, reading)`` pair is resolved so the result matches calling
+        ``lookup`` once per pair (duplicate terms: last reading wins, exactly as
+        a ``{t: lookup(t, r) ...}`` comprehension would).
         """
         if self._conn is None:
             return dict.fromkeys(terms)
+        pairs = list(zip(terms, readings if readings is not None else [None] * len(terms), strict=False))
         unique = list(dict.fromkeys(terms))
         if not unique:
             return {}
         placeholders = ",".join("?" * len(unique))
         try:
             rows = self._conn.execute(
-                f"SELECT term, MIN(rank) FROM entries WHERE term IN ({placeholders}) GROUP BY term",
+                f"SELECT term, reading, rank FROM entries WHERE term IN ({placeholders})",
                 unique,
             ).fetchall()
         except sqlite3.DatabaseError as e:
@@ -127,8 +163,10 @@ class IndexedFreqProvider:
                 e,
             )
             return dict.fromkeys(terms)
-        by_term: dict[str, int | None] = {term: (int(rank) if rank is not None else None) for term, rank in rows}
-        return {t: by_term.get(t) for t in terms}
+        by_term: dict[str, list[tuple[str | None, int]]] = {}
+        for term, reading, rank in rows:
+            by_term.setdefault(term, []).append((reading, rank))
+        return {t: _resolve_scoped_rank(by_term.get(t, []), r) for t, r in pairs}
 
     @staticmethod
     def _open_readonly(db_path: Path) -> sqlite3.Connection:

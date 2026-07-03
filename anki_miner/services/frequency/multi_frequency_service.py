@@ -37,25 +37,26 @@ class MultiFrequencyService:
         """True if any wrapped provider is available."""
         return any(p.is_available() for p in self._providers)
 
-    def lookup_all(self, term: str) -> list[tuple[str, int]]:
+    def lookup_all(self, term: str, reading: str | None = None) -> list[tuple[str, int]]:
         """``(provider name, rank)`` for each provider that ranks ``term``.
 
         Returned in provider (chain) order; providers with no rank are omitted.
-        This is the per-source breakdown rendered on the card.
+        This is the per-source breakdown rendered on the card. ``reading`` scopes
+        the per-source lookup so homographs no longer inherit each other's ranks.
         """
         results: list[tuple[str, int]] = []
         for provider in self._providers:
-            rank = provider.lookup(term)
+            rank = provider.lookup(term, reading)
             if rank is not None:
                 results.append((provider.name, rank))
         return results
 
-    def lookup_min(self, term: str) -> int | None:
+    def lookup_min(self, term: str, reading: str | None = None) -> int | None:
         """Minimum rank across all providers, or None if none rank ``term``."""
-        ranks = [rank for _name, rank in self.lookup_all(term)]
+        ranks = [rank for _name, rank in self.lookup_all(term, reading)]
         return min(ranks) if ranks else None
 
-    def lookup_harmonic(self, term: str) -> int | None:
+    def lookup_harmonic(self, term: str, reading: str | None = None) -> int | None:
         """Harmonic mean of the per-source ranks, or None if none rank ``term``.
 
         Ported from Yomitan getFrequencyHarmonic
@@ -69,7 +70,7 @@ class MultiFrequencyService:
         way a bare MIN can; ``lookup_min`` still backs the top-N frequency
         filter, which genuinely wants the best rank in any source.
         """
-        ranks = [rank for _name, rank in self.lookup_all(term) if rank > 0]
+        ranks = [rank for _name, rank in self.lookup_all(term, reading) if rank > 0]
         if not ranks:
             return None
         total = sum(1.0 / rank for rank in ranks)
