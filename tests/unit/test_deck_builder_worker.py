@@ -816,3 +816,36 @@ def test_final_proc_not_closed_when_exception_in_phase2(qapp):
         ep1.close.assert_not_called()
     finally:
         worker._stop_patch.stop()
+
+
+# --------------------------------------------------------------------------- #
+# 4.0: schema-staleness gate — build aborts once, before preview
+# --------------------------------------------------------------------------- #
+
+
+def test_stale_dict_aborts_build_before_preview(qapp):
+    """A stale enabled dict slot fails the build up front (before aggregate /
+    preview) with the actionable error, and emits no preview / build_finished."""
+    from anki_miner.exceptions import SetupError
+
+    base = _fake_processor(collections.Counter({"a": 1}))
+    base.check_dictionary_staleness.side_effect = SetupError(
+        "Dictionary 'X' needs reimport (schema upgrade) — Settings → Dictionaries → Reimport All"
+    )
+    worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base])
+    try:
+        errors = _collect(worker.error)
+        previews = _collect(worker.preview_ready)
+        builds = _collect(worker.build_finished)
+        worker.confirm()  # even a pre-confirmed gate must not reach the build
+        worker.run()
+
+        assert len(errors) == 1
+        assert "Reimport All" in errors[0]
+        assert previews == []
+        assert builds == []
+        # Aborted before aggregate() ran.
+        base.subtitle_parser.count_lemmas.assert_not_called()
+        base.process_episode.assert_not_called()
+    finally:
+        worker._stop_patch.stop()

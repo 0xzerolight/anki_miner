@@ -172,6 +172,13 @@ class DeckBuilderWorker(ProcessorOwningWorker):
             base = create_episode_processor(self.config, self.presenter, self.stats_service)
             if self.check_cancelled():
                 return
+            # 4.0 staleness gate: the build routes cards through process_episode
+            # (which needs live definitions), so a schema-stale enabled slot would
+            # silently build zero cards. Fail up front — before the expensive
+            # aggregate and the preview the user would otherwise confirm — with the
+            # same actionable error. Raises SetupError → the outer except surfaces
+            # it once via ``error``; process_episode re-checks as a backstop.
+            base.check_dictionary_staleness()
             counts = aggregate(base.subtitle_parser, self.request.pairs, cancel_check=self.check_cancelled)
             if self.check_cancelled():
                 return
