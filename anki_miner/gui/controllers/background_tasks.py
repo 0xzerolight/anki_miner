@@ -36,10 +36,13 @@ if TYPE_CHECKING:
     from anki_miner.gui.workers.cuda_pack_download_worker import CudaPackDownloadWorker
     from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
     from anki_miner.gui.workers.onnx_pack_download_worker import OnnxPackDownloadWorker
+    from anki_miner.gui.workers.restyle_cards_worker import RestyleCardsWorker
     from anki_miner.gui.workers.update_worker import UpdateWorkerThread
     from anki_miner.gui.workers.vulkan_model_download_worker import VulkanModelDownloadWorker
     from anki_miner.gui.workers.ytdlp_update_worker import YtdlpUpdateWorker
     from anki_miner.services import ValidationService
+    from anki_miner.services.anki_service import AnkiService
+    from anki_miner.services.card_restyler import RestyleResult
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +120,7 @@ class BackgroundTaskController(QObject):
         self.cuda_pack_download_worker: CudaPackDownloadWorker | None = None
         self.onnx_pack_download_worker: OnnxPackDownloadWorker | None = None
         self.vulkan_model_download_worker: VulkanModelDownloadWorker | None = None
+        self.restyle_cards_worker: RestyleCardsWorker | None = None
         # Best-effort cache prewarm worker, scheduled by ``app.main()`` after
         # the first paint and adopted via set_prewarm(); cleared once it
         # finishes.
@@ -227,6 +231,34 @@ class BackgroundTaskController(QObject):
         # on real thread exit — including the cancel path, where result_ready
         # never fires. Mirrors validation/update/ytdlp workers.
         worker.finished.connect(lambda w=worker: self._release_worker("asr_model_download_worker", w))
+        worker.start()
+
+    def start_restyle_cards(
+        self,
+        service: AnkiService,
+        config: AnkiMinerConfig,
+        on_progress: Callable[[int, int], None],
+        on_result: Callable[[RestyleResult], None],
+        on_error: Callable[[str], None],
+    ) -> None:
+        """Start the one-time Restyle Mined Cards worker unless one is already running.
+
+        Mirrors :meth:`start_asr_model_download`: concurrency guard, lazy import,
+        connect ``progress``/``result_ready``/``error`` to the caller's slots, and
+        release the handle on the native ``QThread.finished`` (covers the cancel
+        path, where ``result_ready`` never fires).
+        """
+        if self.restyle_cards_worker is not None and self.restyle_cards_worker.isRunning():
+            return
+
+        from anki_miner.gui.workers.restyle_cards_worker import RestyleCardsWorker
+
+        worker = RestyleCardsWorker(service, config, parent=self)
+        self.restyle_cards_worker = worker
+        worker.progress.connect(on_progress)
+        worker.result_ready.connect(on_result)
+        worker.error.connect(on_error)
+        worker.finished.connect(lambda w=worker: self._release_worker("restyle_cards_worker", w))
         worker.start()
 
     def start_alass_download(
@@ -445,6 +477,7 @@ class BackgroundTaskController(QObject):
         join(self.cuda_pack_download_worker)
         join(self.onnx_pack_download_worker)
         join(self.vulkan_model_download_worker)
+        join(self.restyle_cards_worker)
 
         # The best-effort prewarm worker has no cancel hook (it's a short,
         # uninterruptible cache warm), so join it without timeout instead of

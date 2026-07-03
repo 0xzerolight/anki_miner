@@ -264,6 +264,10 @@ class MainWindow(QMainWindow):
         assert setup_wizard_action is not None
         setup_wizard_action.triggered.connect(self._run_setup_wizard_tool)
 
+        restyle_action = tools_menu.addAction(self.tr("Restyle Mined Cards..."))
+        assert restyle_action is not None
+        restyle_action.triggered.connect(self._restyle_mined_cards)
+
         # Help menu
         help_menu = menu_bar.addMenu(self.tr("&Help"))
         assert help_menu is not None
@@ -538,6 +542,56 @@ class MainWindow(QMainWindow):
         new_config = run_setup_wizard(self, self.config)
         if new_config is not None:
             self.update_config(new_config)
+
+    def _restyle_mined_cards(self) -> None:
+        """Tools-menu handler: embed the built-in glossary styling into already-mined cards.
+
+        One-time, idempotent, additive: prepends the same self-contained ``<style>``
+        block emitted at mining time to existing miner cards that lack the base
+        sheet (see :func:`card_restyler.restyle_mined_cards`). Runs off-thread via
+        ``BackgroundTaskController`` (joined at close).
+        """
+        from anki_miner.services.card_restyler import RestyleResult
+
+        reply = QMessageBox.question(
+            self,
+            self.tr("Restyle Mined Cards"),
+            self.tr(
+                "This rewrites the glossary field of your mined cards to embed the built-in "
+                "styling directly in each card, so cards you mined earlier match ones mined "
+                "now. It's safe to run more than once and only adds styling — it never removes "
+                "card content.\n\nContinue?"
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        service = AnkiService(self.config)
+        self.status_bar.set_operation(self.tr("Restyling mined cards…"), "info")
+
+        def on_progress(scanned: int, total: int) -> None:
+            self.status_bar.set_operation(tr_format(self.tr("Restyling mined cards… %1/%2"), scanned, total), "info")
+
+        def on_result(result: RestyleResult) -> None:
+            self.status_bar.set_operation(self.tr("Restyle complete"), "success")
+            QMessageBox.information(
+                self,
+                self.tr("Restyle Mined Cards"),
+                tr_format(
+                    self.tr("Restyled %1 card(s). (%2 scanned; %3 already styled.)"),
+                    result.restyled,
+                    result.scanned,
+                    result.skipped_styled,
+                ),
+            )
+
+        def on_error(message: str) -> None:
+            self.status_bar.set_operation(self.tr("Restyle failed"), "error")
+            QMessageBox.warning(self, self.tr("Restyle Mined Cards"), message)
+
+        self.background_tasks.start_restyle_cards(service, self.config, on_progress, on_result, on_error)
 
     def _maybe_offer_first_run_setup(self) -> None:
         """Offer the guided setup wizard on first launch; persist the flag.
