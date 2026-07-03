@@ -100,6 +100,8 @@ class DictionaryImportWorker(CancellableWorker):
             meta: dict[str, Any] = {
                 "entry_count": getattr(result, "entry_count", 0),
                 "source_name": getattr(result, "source_name", getattr(result, "dict_id", "")),
+                "skipped_malformed": getattr(result, "skipped_malformed", 0),
+                "media_warnings": list(getattr(result, "media_warnings", ())),
             }
             self.import_finished.emit(result.dict_id, meta)
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
