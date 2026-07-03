@@ -62,7 +62,7 @@ class CapabilityBrowser(QDialog):
 
         layout = QVBoxLayout(self)
 
-        intro = QLabel(_tr("Search everything Anki Miner can do. Click Open to jump to the setting."))
+        intro = QLabel(_tr("Search every Anki Miner feature."))
         intro.setWordWrap(True)
         layout.addWidget(intro)
 

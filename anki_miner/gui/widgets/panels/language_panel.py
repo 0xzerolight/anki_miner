@@ -54,7 +54,7 @@ class LanguagePanel(QWidget):
         layout.addLayout(row)
 
         # Hidden until a change is made; restart-to-apply hint.
-        self.restart_note = QLabel(self.tr("Restart Anki Miner to apply the new language."))
+        self.restart_note = QLabel(self.tr("Restart to apply."))
         self.restart_note.setWordWrap(True)
         self.restart_note.setVisible(False)
         layout.addWidget(self.restart_note)

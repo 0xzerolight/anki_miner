@@ -288,7 +288,7 @@ class MainWindow(QMainWindow):
 
         open_log_action = help_menu.addAction(self.tr("Open Log Folder"))
         assert open_log_action is not None
-        open_log_action.setToolTip(self.tr("Open the folder containing anki_miner.log in your file manager"))
+        open_log_action.setToolTip(self.tr("Open the log folder in your file manager"))
         open_log_action.triggered.connect(self._open_log_folder)
 
         # Top-right corner of the menu bar holds a small button bar. A QMenuBar
@@ -558,13 +558,10 @@ class MainWindow(QMainWindow):
             self,
             self.tr("Restyle Mined Cards"),
             self.tr(
-                "This rewrites the styling field of your mined cards (the glossary field, or "
-                "the definition field when no glossary field is mapped) to embed the built-in "
-                "styling directly in each card, so cards you mined earlier match ones mined "
-                "now. It's safe to run more than once and only adds styling — it never removes "
-                "card content.\n\nClose Anki's card browser and any open note editor first: "
-                "updating a note that is open for editing can lose your unsaved edits."
-                "\n\nContinue?"
+                "Embed the built-in styling into cards you mined earlier so they match "
+                "new ones. Safe to re-run and only adds styling.\n\nClose Anki's card "
+                "browser and any open note editor first — editing an open note can lose "
+                "unsaved edits.\n\nContinue?"
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -666,12 +663,9 @@ class MainWindow(QMainWindow):
 
         names = "\n".join(f"  • {m.source_name}" for m in stale)
         body = (
-            self.tr("These dictionaries need to be re-imported after an app upgrade " "(their index format changed):")
+            self.tr("These dictionaries need re-importing after an app upgrade (their index format changed):")
             + f"\n\n{names}\n\n"
-            + self.tr(
-                "Until you do, mining is blocked for them so you don't get "
-                "cards with no definitions. Re-import them now?"
-            )
+            + self.tr("Mining is blocked for them until you do. Re-import them now?")
         )
         reply = QMessageBox.question(
             self,

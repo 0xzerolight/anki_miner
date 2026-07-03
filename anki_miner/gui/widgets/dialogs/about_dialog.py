@@ -1,7 +1,7 @@
 """About dialog for Anki Miner.
 
 Replaces the old ``QMessageBox.about`` HTML blob with a themed
-:class:`EnhancedDialog`: logo + name + version + tagline, a short blurb, the
+:class:`EnhancedDialog`: logo + name + version, a short blurb, the
 keyboard-shortcut list, and a GitHub link.
 
 Bundled-FFmpeg (GPLv3) attribution lives in ``licenses/ffmpeg/`` in the repo,
@@ -21,11 +21,9 @@ from anki_miner.utils.i18n import tr_format
 
 GITHUB_URL = "https://github.com/0xzerolight/anki_miner"
 
-ABOUT_TAGLINE = QT_TRANSLATE_NOOP("AboutDialog", "Turn Immersion Into Vocabulary")
 ABOUT_BLURB = QT_TRANSLATE_NOOP(
     "AboutDialog",
-    "Mine Japanese vocabulary cards straight from video — screenshots, audio, "
-    "and definitions, automatically into Anki.",
+    "Mine Japanese vocabulary cards from video into Anki — screenshots, " "audio, and definitions, automatically.",
 )
 
 ABOUT_SHORTCUTS: list[tuple[str, str]] = [
@@ -78,12 +76,8 @@ class AboutDialog(EnhancedDialog):
         ver = QLabel(tr_format(self.tr("Version %1"), version))
         ver.setObjectName("caption")
 
-        tagline = QLabel(self.tr(ABOUT_TAGLINE))
-        tagline.setObjectName("caption")
-
         text_layout.addWidget(name)
         text_layout.addWidget(ver)
-        text_layout.addWidget(tagline)
         layout.addWidget(text, 1)
 
         return row

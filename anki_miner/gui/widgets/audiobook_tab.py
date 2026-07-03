@@ -294,10 +294,14 @@ class AudiobookTab(MiningTabBase):
         if not audio_text and not sub_text:
             return
         if not audio_text or not Path(audio_text).is_file():
-            self.log_widget.append_error(f"Audio file not found: {audio_text or '(none selected)'}")
+            self.log_widget.append_error(
+                tr_format(self.tr("Audio file not found: %1"), audio_text or self.tr("(none selected)"))
+            )
             return
         if not sub_text or not Path(sub_text).is_file():
-            self.log_widget.append_error(f"Subtitle file not found: {sub_text or '(none selected)'}")
+            self.log_widget.append_error(
+                tr_format(self.tr("Subtitle file not found: %1"), sub_text or self.tr("(none selected)"))
+            )
             return
 
         item = self._queue.add(Path(audio_text), Path(sub_text))

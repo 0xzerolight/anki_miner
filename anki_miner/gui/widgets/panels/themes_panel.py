@@ -196,7 +196,7 @@ class ThemesPanel(QWidget):
 
         # Hidden until the user changes zoom; mirrors the language picker's
         # restart-to-apply hint (language_panel.py).
-        self.zoom_restart_note = QLabel(self.tr("Restart Anki Miner to apply the new zoom."))
+        self.zoom_restart_note = QLabel(self.tr("Restart to apply."))
         self.zoom_restart_note.setWordWrap(True)
         self.zoom_restart_note.setVisible(False)
         layout.addWidget(self.zoom_restart_note)
@@ -233,9 +233,7 @@ class ThemesPanel(QWidget):
         self.open_folder_btn = ModernButton(self.tr("Open themes folder"), variant="secondary")
         self.open_folder_btn.setToolTip(
             tr_format(
-                self.tr(
-                    "Open %1 in your file manager. Drop Anki Miner theme JSON files here to install them; they appear here on next launch."
-                ),
+                self.tr("Open %1; drop theme JSON files here to install on next launch."),
                 self._themes_root,
             )
         )

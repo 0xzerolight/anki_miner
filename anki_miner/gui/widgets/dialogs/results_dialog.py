@@ -54,11 +54,9 @@ class ResultsDialog(EnhancedDialog):
 
         # Set header based on result
         if self.processing_result.success:
-            self.set_header("complete", self.tr("Success!"), self.tr("Processing completed successfully"))
+            self.set_header("complete", self.tr("Success!"))
         else:
-            self.set_header(
-                "error", self.tr("Completed with Errors"), self.tr("Some issues occurred during processing")
-            )
+            self.set_header("error", self.tr("Completed with Errors"))
 
         # Statistics cards in a frame
         stats_container = QFrame()

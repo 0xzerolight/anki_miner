@@ -58,7 +58,7 @@ class StatusBarWidget(QStatusBar):
         self.addWidget(separator1)
 
         # Center section: Statistics
-        self.stats_label = QLabel(self.tr("0 cards this session"))
+        self.stats_label = QLabel(self.tr("%n card(s) this session", "", self._cards_created_session))
         self.stats_label.setObjectName("status-stats")
         stats_font = QFont()
         stats_font.setPixelSize(FONT_SIZES.caption)

@@ -211,10 +211,6 @@ class SingleEpisodeTab(MiningTabBase):
         process_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
         process_shortcut.activated.connect(self._on_process_clicked)
 
-        # Update button tooltips to show shortcuts
-        self.preview_button.setToolTip(self.tr("Preview discovered words before creating cards (Ctrl+P)"))
-        self.process_button.setToolTip(self.tr("Create Anki cards from the episode (Ctrl+Enter)"))
-
         # Set accessibility properties
         self._setup_accessibility()
 
@@ -306,22 +302,6 @@ class SingleEpisodeTab(MiningTabBase):
         offset_layout.addWidget(self.offset_spinbox)
         offset_layout.addStretch()
         layout.addLayout(offset_layout)
-
-        # Add spacing before helper text
-        layout.addSpacing(4)
-
-        # Helper text
-        helper_label = QLabel(self.tr("Adjust if subtitles are out of sync"))
-        helper_label.setObjectName("helper-text")
-        helper_label.setWordWrap(True)  # Allow text to wrap if needed
-        from PyQt6.QtGui import QFont
-
-        from anki_miner.gui.resources.styles import FONT_SIZES
-
-        helper_font = QFont()
-        helper_font.setPixelSize(FONT_SIZES.small)
-        helper_label.setFont(helper_font)
-        layout.addWidget(helper_label)
 
         group.setLayout(layout)
 

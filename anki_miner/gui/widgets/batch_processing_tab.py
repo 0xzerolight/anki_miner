@@ -308,13 +308,8 @@ class BatchProcessingTab(MiningTabBase):
                 self,
                 self.tr("No Pairs Found"),
                 self.tr(
-                    "No matching video/subtitle pairs found.\n\n"
-                    "Files are paired by episode number, so point each folder at a "
-                    "single show:\n"
-                    "- episode_01.mp4 <-> episode_01.ass\n"
-                    "- episode_02.mp4 <-> episode_02.ass\n\n"
-                    "Mixing multiple shows in one folder can mispair episodes that "
-                    "share a number — add each show as its own queue item."
+                    "No matching video/subtitle pairs found.\n"
+                    "Files pair by episode number — point each folder at a single show."
                 ),
             )
             return
@@ -717,7 +712,7 @@ class BatchProcessingTab(MiningTabBase):
         failed = sum(1 for r in results if not r.success)
         summary = tr_format(self.tr("Processed %1 episodes\nTotal cards created: %2"), len(results), total_cards)
         if failed > 0:
-            summary += tr_format(self.tr("\n%1 episode(s) failed - see log for details"), failed)
+            summary += tr_format(self.tr("\n%1 episode(s) failed"), failed)
             QMessageBox.warning(self, self.tr("Batch Processing Complete"), summary)
         else:
             QMessageBox.information(self, self.tr("Batch Processing Complete"), summary)

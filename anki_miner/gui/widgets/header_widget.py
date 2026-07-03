@@ -46,7 +46,7 @@ class HeaderWidget(QWidget):
 
         # Left side: App branding
         branding_layout = QVBoxLayout()
-        branding_layout.setSpacing(2)  # Tight spacing for title/subtitle
+        branding_layout.setSpacing(2)
 
         # App title
         title_label = QLabel("Anki Miner")
@@ -56,14 +56,6 @@ class HeaderWidget(QWidget):
         title_label.setFont(title_font)
         title_label.setObjectName("heading2")
         branding_layout.addWidget(title_label)
-
-        # Subtitle
-        subtitle_label = QLabel(self.tr("Turn Immersion Into Vocabulary"))
-        subtitle_label.setObjectName("caption")
-        subtitle_font = QFont()
-        subtitle_font.setPixelSize(FONT_SIZES.caption)
-        subtitle_label.setFont(subtitle_font)
-        branding_layout.addWidget(subtitle_label)
 
         layout.addLayout(branding_layout)
         layout.addStretch()

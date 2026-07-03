@@ -352,13 +352,7 @@ class AudioPackSettingsPanel(FormPanel):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(
-            QLabel(
-                self.tr(
-                    "Top entry is tried first. Local audio packs are recommended; they're faster than JPod101 online."
-                )
-            )
-        )
+        layout.addWidget(QLabel(self.tr("Top entry is tried first.")))
 
         self._list = QListWidget()
         self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
@@ -372,9 +366,7 @@ class AudioPackSettingsPanel(FormPanel):
         buttons.addWidget(self._add_btn)
 
         self._add_online_btn = QPushButton(self.tr("+ Add Online Source…"))
-        self._add_online_btn.setToolTip(
-            self.tr("Add a custom URL/JSON source (e.g. local-audio-yomichan) or an online scrape source")
-        )
+        self._add_online_btn.setToolTip(self.tr("Add a custom audio URL or online scrape source"))
         self._add_online_btn.clicked.connect(self._on_add_online_source)
         buttons.addWidget(self._add_online_btn)
 
@@ -399,12 +391,7 @@ class AudioPackSettingsPanel(FormPanel):
         # by hand). The unlink sweep is dispatched by the settings tab.
         retry_row = QHBoxLayout()
         self._retry_missing_btn = QPushButton(self.tr("Retry missing expression audio"))
-        self._retry_missing_btn.setToolTip(
-            self.tr(
-                "Forget which words JapanesePod101 had no audio for, so the next "
-                "mining run tries to download them again."
-            )
-        )
+        self._retry_missing_btn.setToolTip(self.tr("Re-try words JapanesePod101 had no audio for on the next run"))
         self._retry_missing_btn.clicked.connect(self.retry_missing_audio_requested.emit)
         retry_row.addWidget(self._retry_missing_btn)
         retry_row.addStretch()

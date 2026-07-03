@@ -158,9 +158,7 @@ class SubtitleRetimeTab(QWidget):
         layout.addWidget(self.engine_notice_label)
 
         # Input description
-        input_desc = QLabel(
-            self.tr("Resync a subtitle file to its video by matching audio. Pick a video and the subtitle to align.")
-        )
+        input_desc = QLabel(self.tr("Resync a subtitle file to its video by matching audio."))
         input_desc.setObjectName("helper-text")
         input_desc.setWordWrap(True)
         layout.addWidget(input_desc)
@@ -285,10 +283,7 @@ class SubtitleRetimeTab(QWidget):
         self.fps_correction_checkbox = QCheckBox(self.tr("Correct frame-rate differences"))
         self.fps_correction_checkbox.setChecked(False)
         self.fps_correction_checkbox.setToolTip(
-            self.tr(
-                "Leave off when the subtitle already matches this video's framerate. "
-                "Only enable for subs from a different release/framerate."
-            )
+            self.tr("Enable only for subtitles from a different-framerate release.")
         )
         layout.addWidget(self.fps_correction_checkbox)
 
@@ -311,9 +306,6 @@ class SubtitleRetimeTab(QWidget):
         self.split_penalty_spinbox.setRange(_SPLIT_PENALTY_MIN, _SPLIT_PENALTY_MAX)
         self.split_penalty_spinbox.setValue(_SPLIT_PENALTY_DEFAULT)
         self.split_penalty_spinbox.setSingleStep(_SPLIT_PENALTY_STEP)
-        self.split_penalty_spinbox.setToolTip(
-            self.tr("Lower = more cut points for ad breaks; " "1–20 is the useful range; default 7")
-        )
         penalty_row.addWidget(self.split_penalty_spinbox)
         penalty_row.addStretch()
         layout.addLayout(penalty_row)

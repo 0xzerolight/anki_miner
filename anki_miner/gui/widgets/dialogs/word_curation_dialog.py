@@ -230,10 +230,7 @@ class WordCurationDialog(QDialog):
 
         controls_layout.addSpacing(16)
 
-        _bulk_tooltip = self.tr(
-            "Acts on highlighted rows when 2 or more are selected "
-            "(Ctrl+Click or Shift+Click to select). Otherwise acts on all visible rows."
-        )
+        _bulk_tooltip = self.tr("Acts on 2+ highlighted rows (Ctrl/Shift+Click), else all visible rows.")
         self.select_all_button = ModernButton(self.tr("Select All"), variant="secondary")
         self.select_all_button.clicked.connect(self._select_all)
         self.select_all_button.setToolTip(_bulk_tooltip)
@@ -249,13 +246,7 @@ class WordCurationDialog(QDialog):
         # all visible rows, to avoid ignoring the whole list by accident.
         self.add_known_button = ModernButton(self.tr("Add to Known Words"), variant="secondary")
         self.add_known_button.clicked.connect(self._on_add_to_known)
-        self.add_known_button.setToolTip(
-            self.tr(
-                "Permanently ignore the highlighted row(s) — adds them to your local "
-                "Known Words list so they are never mined again. Falls back to the "
-                "current row when none are highlighted."
-            )
-        )
+        self.add_known_button.setToolTip(self.tr("Add highlighted rows to your Known Words list — never mined again."))
         controls_layout.addWidget(self.add_known_button)
 
         controls_layout.addStretch()

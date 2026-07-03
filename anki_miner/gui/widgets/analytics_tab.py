@@ -142,7 +142,7 @@ class AnalyticsTab(QWidget):
         header = SectionHeader(self.tr("Recent Sessions"))
         layout.addWidget(header)
 
-        self.sessions_empty_label = QLabel(self.tr("No sessions yet. Process an episode to see your history here."))
+        self.sessions_empty_label = QLabel(self.tr("No sessions yet — process an episode to see your history."))
         self.sessions_empty_label.setObjectName("helper-text")
         self.sessions_empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.sessions_empty_label.setMinimumHeight(80)
@@ -184,12 +184,7 @@ class AnalyticsTab(QWidget):
         header = SectionHeader(self.tr("Series Difficulty Ranking"))
         layout.addWidget(header)
 
-        explanation = QLabel(
-            self.tr(
-                "Difficulty is based on the ratio of unknown words. "
-                "Lower scores mean easier content for your current level."
-            )
-        )
+        explanation = QLabel(self.tr("Share of unknown words per series — lower means easier for your current level."))
         explanation.setWordWrap(True)
         explanation.setObjectName("helper-text")
         layout.addWidget(explanation)

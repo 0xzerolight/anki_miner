@@ -68,12 +68,7 @@ class YouTubeSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Cookies file"),
             self.cookies_file_selector,
-            helper=self.tr(
-                "Optional. Overrides the browser dropdown above. Export a Netscape "
-                "cookies.txt with a 'Get cookies.txt LOCALLY' browser extension — works "
-                "with ANY browser (Safari, Brave, Arc...). Keep the file private; it "
-                "holds your YouTube login."
-            ),
+            helper=self.tr("Overrides the browser dropdown. Keep the file private — it holds your YouTube login."),
         )
 
         # Max duration (minutes)

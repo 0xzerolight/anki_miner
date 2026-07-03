@@ -212,10 +212,7 @@ class DeckBuilderTab(MiningTabBase):
         self.collection_filter_checkbox = QCheckBox(self.tr("Skip words already in my Anki collection"))
         self.collection_filter_checkbox.setChecked(True)
         self.collection_filter_checkbox.setToolTip(
-            self.tr(
-                "Checked: subtract your known words — good for personal study.\n"
-                "Unchecked: mine every word — good for building a complete or shareable deck."
-            )
+            self.tr("Checked: skip your known words; unchecked: mine every word.")
         )
         layout.addWidget(self.collection_filter_checkbox)
 
@@ -235,7 +232,7 @@ class DeckBuilderTab(MiningTabBase):
         button_layout.setSpacing(SPACING.xs)
 
         self.preview_button = ModernButton(self.tr("Preview"), variant="secondary")
-        self.preview_button.setToolTip(self.tr("Analyse the corpus and preview which words will be included"))
+        self.preview_button.setToolTip(self.tr("Analyze the corpus and preview which words will be included"))
 
         self.build_button = ModernButton(self.tr("Build Deck"), variant="primary")
         self.build_button.setToolTip(self.tr("Create the Anki cards for the previewed word list"))
@@ -410,7 +407,7 @@ class DeckBuilderTab(MiningTabBase):
                     old_processor.close()
 
         self.log_widget.clear_log()
-        self.log_widget.append_info(self.tr("Analysing corpus…"))
+        self.log_widget.append_info(self.tr("Analyzing corpus…"))
         self.preview_frame.hide()
         self._set_buttons_running()
 
